@@ -1,0 +1,9 @@
+# This is $(TOP)/tools/Jamfile
+SubDir TOP tools ;
+
+# Command-line app used by Posix-based libstorage to
+# convert an entry ref to an absolute pathname
+Main EntryRefToPath : EntryRefToPath.cpp ;
+LinkSharedOSLibs EntryRefToPath : 
+/boot/develop/lib/x86/libstdc++.r4.so
+/boot/develop/lib/x86/libbe.so ;
