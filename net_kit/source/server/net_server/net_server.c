@@ -23,13 +23,16 @@
 #include "nhash.h"
 #include "sys/socket.h"
 #include "netinet/in_pcb.h"
+#include "net/route.h"
 
-static loaded_net_module *global_modules;
+loaded_net_module *global_modules;
 static int nmods = 0;
-static int prot_table[255];
+int prot_table[255];
 
-static ifnet *devices;
-static int ndevs = 0;
+struct ifnet *devices;
+struct ifnet *pdevices;		/* pseudo devices - loopback etc */
+int ndevs = 0;
+sem_id dev_lock;
 
 /* This is just a hack.  Don't know what a sensible figure is... */
 #define MAX_DEVICES 16
@@ -37,30 +40,21 @@ static int ndevs = 0;
 
 #define RECV_MSGS	100
 
-struct local_address {
-        struct local_address *next;
-        struct sockaddr addr;
-        ifnet *ifn;
-};
-
-net_hash *localhash;
-struct local_address *local_addrs;
-
 static int32 if_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
 	status_t status;
-	char buffer[i->mtu];
-	size_t len = i->mtu;
+	char buffer[i->if_mtu];
+	size_t len = i->if_mtu;
 	int count = 0;
 
-	while ((status = read(i->dev, buffer, len)) >= B_OK && count < RECV_MSGS) {
+	while ((status = read(i->devid, buffer, len)) >= B_OK && count < RECV_MSGS) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
 		if (i->input)
-			i->input(mb);
-
+			i->input(mb, 0);
+		atomic_add(&i->if_ipackets, 1);
 		count++;
-		len = i->mtu;
+		len = i->if_mtu;
 	}
 	printf("%s: terminating if_thread\n", i->name);
 	return 0;
@@ -81,7 +75,7 @@ static int32 rx_thread(void *data)
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
 		if (i->input)
-                	i->input(m);
+                	i->input(m, 0);
 		else
 			printf("%s%d: no input function!\n", i->name, i->unit);
         }
@@ -111,7 +105,7 @@ static int32 tx_thread(void *data)
 		else 
 			len = m->m_len;
 
-		if (len > 2048) {
+		if (len > i->if_mtu) {
 			printf("%s%d: tx_thread: packet was too big!\n", i->name, i->unit);
 			m_freem(m);
 			continue;
@@ -120,12 +114,13 @@ static int32 tx_thread(void *data)
 		m_copydata(m, 0, len, buffer);
 
 #if SHOW_DEBUG
-		printf("TXMIT %d: %ld bytes to dev %d\n", txc++, len ,i->dev);
+		printf("TXMIT %d: %ld bytes to dev %d\n", txc++, len ,i->devid);
 #endif
 		m_freem(m);
-		/* this is soooooooo useful, but not currently needed */
-		//dump_buffer(buffer, len);
-		status = write(i->dev, buffer, len);
+#if SHOW_DEBUG
+		dump_buffer(buffer, len);
+#endif
+		status = write(i->devid, buffer, len);
 		if (status < B_OK) {
 			printf("Error sending data [%s]!\n", strerror(status));
 		}
@@ -136,7 +131,8 @@ static int32 tx_thread(void *data)
 	
 ifq *start_ifq(void)
 {
-	ifq *nifq = malloc(sizeof(ifq));
+	ifq *nifq;
+	nifq = malloc(sizeof(ifq));
 
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
@@ -152,13 +148,30 @@ ifq *start_ifq(void)
 
 void net_server_add_device(ifnet *ifn)
 {
+	char dname[16];
+
 	if (!ifn)
 		return;
-	if (devices)
-		ifn->next = devices;
-	ifn->id = ndevs;
-	ndevs++;
-	devices = ifn;
+
+	sprintf(dname, "%s%d", ifn->name, ifn->unit);
+	ifn->if_name = strdup(dname);
+
+	if (ifn->devid < 0) {
+		/* pseudo device... */
+		if (pdevices)
+			ifn->next = pdevices;
+		else
+			ifn->next = NULL;
+		pdevices = ifn;
+	} else {
+		if (devices)
+			ifn->next = devices;
+		else
+			ifn->next = NULL;
+		ifn->id = ndevs++;
+		devices = ifn;
+	}
+printf("add_device: added %s\n", ifn->if_name);	
 }
 
 static void start_devices(void)
@@ -167,9 +180,11 @@ static void start_devices(void)
 	char tname[32];
 	int priority = B_REAL_TIME_DISPLAY_PRIORITY;
 
+	acquire_sem(dev_lock);
+
 	while (d) {
 		sprintf(tname, "%s%d_rx_thread", d->name, d->unit);
-		if (d->type == IFD_ETHERNET) {
+		if (d->if_type == IFT_ETHER) {
 			d->rx_thread = spawn_thread(if_thread, tname, priority,
 							d);
 		} else {
@@ -183,7 +198,6 @@ static void start_devices(void)
 		} else {
 			resume_thread(d->rx_thread);
 		}
-
 		d->txq = start_ifq();
 		if (!d->txq) {
 			kill_thread(d->rx_thread);
@@ -201,7 +215,37 @@ static void start_devices(void)
                 }
 		d = d->next; 
 	}
-	printf("\n");
+	release_sem(dev_lock);
+}
+
+static void merge_devices(void)
+{
+	struct ifnet *d;
+
+	if (!devices) {
+		printf("No devices!\n");
+		exit(-1);
+	}
+
+acquire_sem(dev_lock);
+	/* Now append the pseudo devices and then start them. */
+	for (d = devices; d->next != NULL; d = d->next) {
+		continue;
+	}
+	if (pdevices) {
+		if (d) {
+			d->next = pdevices;
+			d = d->next;
+		} else {
+			devices = pdevices;
+			d = devices;
+		}
+		while (d) {
+			d->id = ndevs++;
+			d = d->next;
+		}
+	}
+	release_sem(dev_lock);
 }
 
 static void list_devices(void)
@@ -212,12 +256,8 @@ static void list_devices(void)
 		"=== ============ ==== ================= ===========================\n");
 	
 	while (d) {
-		printf("%2d  %s%d       %4d ", i++, d->name, d->unit, d->mtu);
-		if (d->link_addr) {
-			print_ether_addr((ether_addr*)&d->link_addr->sa_data);
-		} else {
-			printf("                 ");
-		}
+		printf("%2d  %s%d       %4ld ", i++, d->name, d->unit, d->if_mtu);
+		printf("                 ");
 		if (d->flags & IFF_UP)
 			printf(" UP");
 		if (d->flags & IFF_RUNNING)
@@ -233,17 +273,9 @@ static void list_devices(void)
 			ifaddr *ifa = d->if_addrlist;
 			printf("\t\t Addresses:\n");
 			while (ifa) {
-				printf("\t\t\t");
-				if (ifa->if_addr.sa_family == AF_LINK) {
-					printf("Link Address: ");
-			                print_ether_addr((ether_addr*)&ifa->if_addr.sa_data);
-				}
-				if (ifa->if_addr.sa_family == AF_INET) {
-					printf("IPv4: ");
-					print_ipv4_addr((ipv4_addr*)&ifa->if_addr.sa_data);
-				}
+				dump_sockaddr(ifa->ifa_addr);
 				printf("\n");
-				ifa = ifa->next;
+				ifa = ifa->ifn_next;
 			}
 		}
 
@@ -251,9 +283,12 @@ static void list_devices(void)
 	}
 }
 
-static void init_devices(void) {
+static void init_devices(void) 
+{
 	ifnet *d = devices;
 	int i;
+
+	merge_devices();
 
 	while (d) {
 	 	for (i=0;i<nmods;i++) {
@@ -271,7 +306,7 @@ static void close_devices(void)
 	while (d) {
 		kill_thread(d->rx_thread);
 		kill_thread(d->tx_thread);
-		close(d->dev);
+		close(d->devid);
 		d = d->next;
 	}
 }
@@ -337,19 +372,26 @@ static void list_modules(void)
 	}
 	printf("\n");
 }
-
+/*
 void insert_local_address(struct sockaddr *sa, ifnet *dev)
 {
-        if (!nhash_get(localhash, sa->sa_data, sa->sa_len)) {
+	void *ptr;
+	if (sa->sa_family == AF_INET)
+		ptr = &((struct sockaddr_in*)sa)->sin_addr.s_addr;
+	else
+		ptr = &sa->sa_data;
+	
+        if (!nhash_get(localhash, ptr, sa->sa_len)) {
                 struct local_address *la = malloc(sizeof(struct local_address));
-                la->addr = *sa;
+                la->addr.sa_len = sa->sa_len;
+		memcpy(&la->addr.sa_data, ptr, sa->sa_len);
+		la->addr.sa_family = sa->sa_family;
                 la->ifn = dev;
+
 		nhash_set(localhash, &la->addr.sa_data, la->addr.sa_len, la);
                 if (local_addrs)
                         la->next = local_addrs;
                 local_addrs = la;
-		if (!in_ifaddr && dev->type == IFD_ETHERNET && sa->sa_family == AF_INET)
-			in_ifaddr = &la->addr;
 	}
 }
 
@@ -372,6 +414,7 @@ ifnet *interface_for_address(void *data, int len)
                 return NULL;
         return la->ifn;
 }
+*/
 
 net_module *pffindtype(int domain, int type)
 {
@@ -413,12 +456,9 @@ int main(int argc, char **argv)
 	char *bigbuf = malloc(sizeof(char) * 1024);
 
 	mbinit();
-	localhash = nhash_make();
 
 	sockets_init();
 	inpcb_init();
-
-	in_ifaddr = NULL;
 
 	printf( "Net Server Test App!\n"
 		"====================\n\n");
@@ -427,7 +467,10 @@ int main(int argc, char **argv)
 		printf("timer service won't work!\n");
 
 	devices = NULL;
-	local_addrs = NULL;
+	pdevices = NULL;
+	dev_lock = create_sem(1, "device lock");
+
+	route_init();
 
 	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
 	if (!global_modules) {
@@ -437,7 +480,6 @@ int main(int argc, char **argv)
 
 	find_modules();
 	init_devices();
-	start_devices();
 
 	if (ndevs == 0) {
 		printf("\nFATAL: no devices configured!\n");
@@ -446,6 +488,8 @@ int main(int argc, char **argv)
 
 	list_devices();
 	list_modules();
+
+	start_devices();
 
 	/* Just to see if it works! */
 	s = socket(AF_INET, SOCK_DGRAM, 0);
@@ -459,18 +503,18 @@ int main(int argc, char **argv)
 	else 
 		printf("Call to bind was OK: port = %d\n", ntohs(sin.sin_port));
 
-
-	for (i=0;i<100;i+=2) {
-		data[i] = 0xde;
-		data[i+1] = 0xad;
+	for (i=0;i<100;i+=5) {
+		data[i] = 'h'; data[i+1] = 'e'; data[i+2] = 'l';
+		data[i+3] = 'l'; data[i+4] = 'o';
 	}
 
 	sin.sin_addr.s_addr = htonl(0xc0a8006e);
+	dump_ipv4_addr("Sending 100 bytes of data to port 7777 on ", &sin.sin_addr);
 	rv = sendto(s, data, 100, 0, (struct sockaddr*)&sin, sizeof(sin));
 	if (rv < 0)
 		printf("sendto gave %d [%s]\n", rv, strerror(rv));
 	else
-		printf("WooHoo - we sent %d bytes!\n", rv);
+		printf("sendto completed, we sent %d bytes\n", rv);
 
 	rv = recvfrom(s, bigbuf, 1024, 0, (struct sockaddr*)&sin, sizeof(sin));
 	if (rv < 0)
@@ -478,9 +522,23 @@ int main(int argc, char **argv)
 	else
 		printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
 
+	sin.sin_addr.s_addr = INADDR_LOOPBACK;
+        rv = sendto(s, data, 100, 0, (struct sockaddr*)&sin, sizeof(sin));
+        if (rv < 0)
+                printf("sendto gave %d [%s]\n", rv, strerror(rv));
+        else
+                printf("sendto completed, we sent %d bytes\n", rv);
+
+        rv = recvfrom(s, bigbuf, 1024, 0, (struct sockaddr*)&sin, sizeof(sin));
+        if (rv < 0)
+                printf("recvfrom gave %d [%s]\n", rv, strerror(rv));
+        else
+                printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
+
+
 	d = devices;
 	while (d) {
-		if (d->rx_thread  && d->type == IFD_ETHERNET) {
+		if (d->rx_thread  && d->if_type == IFT_ETHER) {
 			printf("waiting on thread for %s%d\n", d->name, d->unit);
 			wait_for_thread(d->rx_thread, &status);
 		}

@@ -11,13 +11,15 @@
 #include "netinet/in.h"
 #include "netinet/in_pcb.h"
 #include "if.h"
+#include "net_module.h"
+#include "netinet/in_var.h"
  
 static struct pool_ctl *pcbpool;
 static struct in_addr zeroin_addr;
 
-/* XXX - Debug hack */
-#undef NET_DEBUG
-#define NET_DEBUG 1
+extern loaded_net_module *global_modules;
+extern int prot_table[255];
+extern struct in_ifaddr *primary_addr;
 
 int inpcb_init(void)
 {
@@ -61,6 +63,9 @@ void in_pcbdetach(struct inpcb *inp)
 	struct socket *so = inp->inp_socket;
 
 	so->so_pcb = NULL;
+	if (inp->inp_route.ro_rt)
+		rtfree(inp->inp_route.ro_rt);
+
 	/* free socket! */
 
 	inp->inp_prev->inp_next = inp->inp_next;
@@ -80,6 +85,15 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 
 	if (inp->lport || inp->laddr.s_addr != INADDR_ANY)
 		return EINVAL;
+
+	/* XXX - yuck! Try to format this better */
+	/* This basically checks all the options that might be set that allow
+	 * us to use wildcard searches.
+	 */
+	if (((so->so_options & (SO_REUSEADDR | SO_REUSEPORT)) == 0) &&
+	    ((so->so_proto->flags & PR_CONNREQUIRED) == 0 ||
+	    (so->so_options & SO_ACCEPTCONN) == 0))
+		wild = INPLOOKUP_WILDCARD;
 
 	if (nam) {
 		sin = mtod(nam, struct sockaddr_in *);
@@ -108,8 +122,10 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 			if (so->so_options & SO_REUSEADDR)
 				reuseport = SO_REUSEADDR | SO_REUSEPORT;
 		} else if (sin->sin_addr.s_addr != INADDR_ANY) {
-			if (! is_address_local(&sin->sin_addr.s_addr, 4))
+			sin->sin_port = 0; /* must be zero for next step */
+			if (ifa_ifwithaddr((struct sockaddr*)sin) == NULL)
 				return EADDRNOTAVAIL;
+
 		}
 		if (lport) {
 			struct inpcb *t;
@@ -136,12 +152,13 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 					inp->laddr, lport, wild));
 	}
 
-#ifdef NET_DEBUG
+#ifdef SHOW_DEBUG
 	/* if we're using an ephemereal port we don't set it back into
 	 * the sockaddr structure, so this is the onyl way we have of 
 	 * checking that we're assigning correctly...
 	 */
-	printf("bound to port %d\n", htons(lport));
+	printf("bound to port %d for ", htons(lport));
+	dump_ipv4_addr("address ", &inp->laddr);
 #endif
 
 	inp->lport = lport;
@@ -163,7 +180,11 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 		if (inp->lport != lport)
 			continue; /* local portsdon't match */
 		wildcard = 0;
-		if (inp->laddr.s_addr == INADDR_ANY) {
+		/* Here we try to find the best match. wildcard is set to 0
+		 * and bumped by one every time we find something that doesn't match
+		 * so we can have a suitable match at the end
+		 */
+		if (inp->laddr.s_addr != INADDR_ANY) {
 			if (laddr.s_addr == INADDR_ANY)
 				wildcard++;
 			else if (inp->laddr.s_addr != laddr.s_addr)
@@ -173,7 +194,7 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 				wildcard++;
 		}
 		
-		if (inp->faddr.s_addr == INADDR_ANY) {
+		if (inp->faddr.s_addr != INADDR_ANY) {
 			if (faddr.s_addr == INADDR_ANY)
 				wildcard++;
 			else if (inp->faddr.s_addr != faddr.s_addr ||
@@ -183,7 +204,7 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 			if (faddr.s_addr != INADDR_ANY)
 				wildcard++;
 		}
- 		if (wildcard && (flags & INPLOOKUP_WILDCARD) == 0)
+ 		if (wildcard && ((flags & INPLOOKUP_WILDCARD) == 0))
 			continue; /* wildcard match is not allowed!! */
 
 		if (wildcard < matchwild) {
@@ -199,7 +220,8 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 /* XXX - This needs a LOT of work! */
 int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 {
-	struct sockaddr_in ifaddr;
+	struct in_ifaddr *ia = NULL;
+	struct sockaddr_in *ifaddr = NULL;
 	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
 
 	if (nam->m_len != sizeof(*sin))
@@ -211,23 +233,57 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 		return EADDRNOTAVAIL;
 	}
 	
-	/* foreign IP address */
-	if (sin->sin_addr.s_addr == INADDR_ANY)
-		/* assign primary if address */
-		sin->sin_addr.s_addr = *(uint32*)&in_ifaddr->sa_data;
+	if (primary_addr) {
+		if (sin->sin_addr.s_addr == INADDR_ANY)
+			sin->sin_addr = IA_SIN(primary_addr)->sin_addr;
+
+		/* we need to handle INADDR_BROADCAST here as well */
+		
+	}
 	
 	if (inp->laddr.s_addr == INADDR_ANY) {
-		/* we're sending from INADDR_ANY, so here we need
-		 * to find a suitable interface to use!
-		 * XXX - This needs to be reviewed once we have routing in place.
-		 */
-		ifaddr.sin_addr.s_addr = *(uint32*)&in_ifaddr->sa_data;
-		ifaddr.sin_family = in_ifaddr->sa_family;
-		ifaddr.sin_len = in_ifaddr->sa_len;
+		struct route *ro;
+
+		ro = &inp->inp_route;
+
+		if (ro && ro->ro_rt &&
+		    (satosin(&ro->ro_dst)->sin_addr.s_addr != sin->sin_addr.s_addr
+		    || inp->inp_socket->so_options & SO_DONTROUTE)) {
+			RTFREE(ro->ro_rt);
+			ro->ro_rt = NULL;
+		}
+		if ((inp->inp_socket->so_options & SO_DONTROUTE) == 0
+		    && (ro->ro_rt == NULL 
+			|| ro->ro_rt->rt_ifp == NULL)) {
+			/* we don't have a route, try to get one */
+			ro->ro_dst.sa_family = AF_INET;
+			ro->ro_dst.sa_len = sizeof(struct sockaddr_in);
+			((struct sockaddr_in*)&ro->ro_dst)->sin_addr = sin->sin_addr;
+			rtalloc(ro);
+		}
+		/* did we find a route?? */
+		if (ro->ro_rt && (ro->ro_rt->rt_ifp->flags & IFF_LOOPBACK))
+			ia = ifatoia(ro->ro_rt->rt_ifa);
+
+		if (ia == NULL) {
+			uint16 fport = sin->sin_port;
+
+			sin->sin_port = 0;
+			ia = ifatoia(ifa_ifwithdstaddr(sintosa(sin)));
+			if (ia == NULL)
+				ia = ifatoia(ifa_ifwithnet(sintosa(sin)));
+			sin->sin_port = fport;
+			if (ia == NULL)
+				ia = primary_addr;
+			if (ia == NULL)
+				return EADDRNOTAVAIL;
+		}
+		/* XXX - handle multicast */
+		ifaddr = (struct sockaddr_in*) &ia->ia_addr;
 	}
 
 	if (in_pcblookup(inp->inp_head, sin->sin_addr, sin->sin_port, 
-			 inp->laddr.s_addr ? inp->laddr : ifaddr.sin_addr,
+			 inp->laddr.s_addr ? inp->laddr : ifaddr->sin_addr,
 			 inp->lport, 0)) {
 		return EADDRINUSE;
 	}
@@ -236,10 +292,22 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 	if (inp->laddr.s_addr == INADDR_ANY) {
 		if (inp->lport == 0)
 			in_pcbbind(inp, NULL);
-		inp->laddr = ifaddr.sin_addr;
+		inp->laddr = ifaddr->sin_addr;
 	}
 	inp->faddr = sin->sin_addr;
 	inp->fport = sin->sin_port;
 	return 0;
+}
+
+int in_pcbdisconnect(struct inpcb *inp)
+{
+	inp->faddr.s_addr = INADDR_ANY;
+	inp->fport = 0;
+	/* XXX - this directly from BSD. Basiaclly if we don't have a 
+	 * reference to an FD we release the PCB... Not sure what our
+	 * equivalent is
+	 */
+	if (inp->inp_socket->so_state & SS_NOFDREF)
+		in_pcbdetach(inp);
 }
 

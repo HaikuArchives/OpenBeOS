@@ -1,10 +1,11 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=../net_srv
 LOBJS=	../util/*.o
-CFLAGS= -Wall
 SOCKET_OBJS = 	socket.o \
 		sockbuf.o \
-		inpcb.o
+		inpcb.o \
+		radix.o \
+		route.o
 
 all:	$(TARGET)
 

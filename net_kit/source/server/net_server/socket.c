@@ -40,8 +40,8 @@ static benaphore sockets_lock;
 
 
 /* XXX - Hack for debugging */
-#undef NET_DEBUG
-#define NET_DEBUG 1
+#undef SHOW_DEBUG
+#define SHOW_DEBUG 1
 
 /* for now - should be moved to be_error.h */
 #define EDESTADDRREQ EINVAL
@@ -264,7 +264,6 @@ int sendit(int sock, struct msghdr *mp, int flags, size_t *retsize)
 	}
 	if (error == 0)
 		*retsize = len - auio.uio_resid; /* tell them how much we did send */
-
 bad:
 	if (to)
 		m_freem(to);
@@ -736,7 +735,7 @@ int socket(int dom, int type, int proto)
 		sfd->next = sfd->prev = sfd;
 		sockets = sfd;
 	}
-#if NET_DEBUG
+#if SHOW_DEBUG
 	printf("Just created socket #%d (%s)\n",  sfd->fd, sfd->so->so_proto->name);
 #endif
 
@@ -774,6 +773,7 @@ int sendto(int sock, caddr_t buf, size_t len, int flags,
 	struct msghdr msg;
 	struct iovec aiov;
 	size_t retval = 0;
+	int error = 0;
 
 	msg.msg_name = (caddr_t)to;
 	msg.msg_namelen = tolen;
@@ -784,7 +784,9 @@ int sendto(int sock, caddr_t buf, size_t len, int flags,
 	aiov.iov_base = (char*)buf;
 	aiov.iov_len = len;
 
-	sendit(sock, &msg, flags, &retval);
+	error = sendit(sock, &msg, flags, &retval);
+	if (error < 0)
+		return error;
 	return retval;
 }
 
@@ -808,7 +810,8 @@ int recvfrom(int sock, caddr_t buf, size_t len, int flags,
 	aiov.iov_len = len;
 	
 	error = recvit(sock, &msg, NULL, &retval);
+	if (error < 0)
+		return error;
 	return retval;
 }
-
 

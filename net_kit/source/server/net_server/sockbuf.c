@@ -28,7 +28,6 @@ int sbreserve(struct sockbuf *sb, uint32 cc)
         if (cc == 0) 
 		return 0;
 	if (dd > ee)
-//(uint64)((sb_max * MCLBYTES) / (MSIZE + MCLBYTES)))
 		return 0;
 
         sb->sb_hiwat = cc;
@@ -253,7 +252,7 @@ void sbdroprecord(struct sockbuf *sb)
 
 int sbwait(struct sockbuf *sb)
 {
-	status_t rv;
+	status_t rv = 0;
 	sb->sb_flags |= SB_WAIT;
 	if (sb->sb_pop > 0)
 		rv = acquire_sem(sb->sb_pop);
