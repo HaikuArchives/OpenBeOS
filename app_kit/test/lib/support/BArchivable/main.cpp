@@ -10,7 +10,7 @@
 // Project Includes ------------------------------------------------------------
 
 // Local Includes --------------------------------------------------------------
-#include "common.h"
+#include "LocalCommon.h"
 #include "BArchivableTester.h"
 #include "ValidateInstantiationTester.h"
 #include "InstantiateObjectTester.h"
