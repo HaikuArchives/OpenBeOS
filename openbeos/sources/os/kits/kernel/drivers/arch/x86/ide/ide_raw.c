@@ -308,7 +308,6 @@ static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     unsigned char cylHigh;
     unsigned char status;
     uint16        *buffer = (uint16*)output;
-    int           i;
 
 //  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
 //  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
@@ -614,7 +613,7 @@ static void dumpHexBuffer(uint8 *buffer, int size)
 {
   int	numberPerLine = 8;
   int	numberOfLines = size / numberPerLine;
-  int	i, j;
+  int	i;
 
   for(i=0; i<numberOfLines; i++)
     {

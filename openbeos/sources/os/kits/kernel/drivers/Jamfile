@@ -7,8 +7,15 @@ KernelStaticLibrary libdrivers :
 	<$(SOURCE_GRIST)>fb_console/fb_console.c
 	<$(SOURCE_GRIST)>common/null.c
 	<$(SOURCE_GRIST)>common/zero.c
+	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/console/console.c
+	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/keyboard/keyboard.c
+	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/ps2mouse/ps2mouse.c
+
+	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/ide/ide.c
+	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/ide/ide_raw.c
+
 	:
 	-fno-pic
 	;
 
-SubInclude OBOS_TOP sources os kits kernel drivers arch ;
+#SubInclude OBOS_TOP sources os kits kernel drivers arch ;

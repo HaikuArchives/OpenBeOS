@@ -156,7 +156,6 @@ static void insert_in_buf(char c)
 static int handle_keyboard_interrupt(void* data)
 {
 	unsigned char key;
-	int k;
 	int retval = INT_NO_RESCHEDULE;
 
 	key = in8(0x60);

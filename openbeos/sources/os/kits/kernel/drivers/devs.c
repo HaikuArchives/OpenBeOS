@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-#ifdef ARCH_i386
+#ifdef ARCH_x86
 #include <arch/x86/ide_bus.h>
 #include <arch/x86/console_dev.h>
 #include <arch/x86/keyboard.h>
@@ -31,12 +31,12 @@ int devs_init(kernel_args *ka)
 
 	null_dev_init(ka);
 	zero_dev_init(ka);
-#ifdef ARCH_i386
+#ifdef ARCH_x86
 //	ide_bus_init(ka);
 	keyboard_dev_init(ka);
 //	mouse_dev_init(ka);
 	console_dev_init(ka);
-	rtl8139_dev_init(ka);
+//	rtl8139_dev_init(ka);
 //	netblock_dev_init(ka);
 #endif
 

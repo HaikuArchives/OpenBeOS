@@ -54,6 +54,8 @@
 #include <arch/int.h>
 #include <sem.h>
 #include <string.h>
+
+#define _PS2MOUSE_
 #include <arch/x86/ps2mouse.h>
 
 /////////////////////////////////////////////////////////////////////////
