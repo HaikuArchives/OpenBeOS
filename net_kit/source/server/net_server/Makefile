@@ -1,6 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=../modules/core
 LOBJS=	../util/*.o
+XMAP_DIR=/boot/home/config/add-ons/kernel/drivers/dev/net
 DEBUG_OBJS=##area_malloc.o
 CORE_OBJS= 	socket.o \
 		sockbuf.o \
@@ -34,10 +35,14 @@ kernel:
 		$(CC) $(KCFLAGS) $(INCLUDES) -c $$obj || exit 1;  \
 	done
 	@$(CC) $(KLDFLAGS) -o core $(CORE_OBJS)
-	$(CC) $(KLDFLAGS) -Wl,-M=core.xMAP *.o
+	@$(CC) $(KLDFLAGS) -Wl,-M=core.xMAP *.o
 
 installkernel: kernel
 	@cp core /boot/home/config/add-ons/kernel/network/core
+	@if test -e $(XMAP_DIR)/core.xMAP; then rm $(XMAP_DIR)/core.xMAP; fi
+	@if ! test -L $(XMAP_DIR)/core.xMAP; then \
+		ln -s `pwd`/core.xMAP $(XMAP_DIR); \
+	fi
 
 clean:
 	@rm -f $(TARGET)
