@@ -151,6 +151,7 @@ int     sogetopt(void *, int, int, void *, size_t *);
 int     sogetpeername(void *, struct sockaddr *, uint32 *);
 int     sogetsockname(void *, struct sockaddr *, uint32 *);
 
+int     soaccept(void *sp, struct sockaddr *sa, uint32 *alen);
 
 /* these are all private to the stack...although may be shared with 
  * other network modules.
