@@ -5,7 +5,7 @@
 #include <Locker.h>
 #include <Application.h>
 #include <List.h>
-#include <Window.h>	// for window_look
+//#include <Window.h>	// for window_look
 #include "Decorator.h"
 
 class Layer;
@@ -25,7 +25,7 @@ public:
 	void Picasso(void);
 
 private:
-	friend Decorator *instantiate_decorator(Layer *lay, uint32 dflags, window_look wlook);
+	friend Decorator *instantiate_decorator(Layer *lay, uint32 dflags, uint32 wlook);
 
 	void DispatchMessage(int32 code, int8 *buffer);
 	static int32 PollerThread(void *data);
@@ -46,5 +46,5 @@ private:
 	DisplayDriver *driver;
 };
 
-Decorator *instantiate_decorator(Layer *lay, uint32 dflags, window_look wlook);
+Decorator *instantiate_decorator(Layer *lay, uint32 dflags, uint32 wlook);
 #endif

@@ -387,7 +387,7 @@ void AppServer::LoadDefaultDecorator(void)
 	
 }
 
-Decorator *instantiate_decorator(Layer *lay, uint32 dflags, window_look wlook)
+Decorator *instantiate_decorator(Layer *lay, uint32 dflags, uint32 wlook)
 {
 printf("AppServer:: instantiate_decorator()\n");
 	Decorator *decor=NULL;
@@ -448,7 +448,7 @@ void AppServer::Poller(void)
 					// 2) float - x coordinate of mouse click
 					// 3) float - y coordinate of mouse click
 					// 4) int32 - buttons down
-					
+
 					index=msgbuffer;
 
 					// Time sent is not necessary for cursor processing.

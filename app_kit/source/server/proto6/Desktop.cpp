@@ -3,7 +3,7 @@
 		Code necessary to handle the Desktop, defined as the collection of workspaces.
 */
 
-#define DEBUG_WORKSPACES
+//#define DEBUG_WORKSPACES
 
 #include <List.h>
 #include <Path.h>
@@ -16,6 +16,7 @@
 #include "DisplayDriver.h"
 #include "ViewDriver.h"
 #include "SecondDriver.h"
+#include "ScreenDriver.h"
 #include "Desktop.h"
 #include "WindowBorder.h"
 
@@ -133,6 +134,7 @@ printf("init_desktop(%d)\n",workspaces);
 	// Instantiate and initialize display driver
 	gfxdriver=new ViewDriver();
 //	gfxdriver=new SecondDriver();
+//	gfxdriver=new ScreenDriver();
 	gfxdriver->Initialize();
 
 	workspacelock=new BLocker();
@@ -173,6 +175,7 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 
 	// Activate workspace 0
 	pactive_workspace=(Workspace *)desktop->ItemAt(0);
+	pactive_workspace->screendata.spaces=B_32_BIT_640x480;
 	gfxdriver->SetScreen(pactive_workspace->screendata.spaces);
 
 	// Clear the screen

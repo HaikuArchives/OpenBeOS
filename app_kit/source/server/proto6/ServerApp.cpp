@@ -218,61 +218,7 @@ printf("%s: Loop()\n",app_sig.String());
 					applink->Flush();
 					break;
 				}
-/*				case CREATE_WINDOW:
 
-				case LAYER_CREATE:
-				case LAYER_DELETE:
-				case SHOW_CURSOR:
-				case HIDE_CURSOR:
-				case OBSCURE_CURSOR:
-				case SET_CURSOR_BCURSOR:
-				case SET_CURSOR_DATA:
-				case SET_CURSOR_BBITMAP:
-
-				case GFX_MOVEPENBY:
-				case GFX_MOVEPENTO:
-				case GFX_SETPENSIZE:
-				case GFX_COUNT_WORKSPACES:
-				case GFX_SET_WORKSPACE_COUNT:
-				case GFX_CURRENT_WORKSPACE:
-				case GFX_ACTIVATE_WORKSPACE:
-				case GFX_SYSTEM_COLORS:
-				case GFX_SET_SCREEN_MODE:
-				case GFX_GET_SCROLLBAR_INFO:
-				case GFX_SET_SCROLLBAR_INFO:
-				case GFX_IDLE_TIME:
-				case GFX_SELECT_PRINTER_PANEL:
-				case GFX_ADD_PRINTER_PANEL:
-				case GFX_RUN_BE_ABOUT:
-				case GFX_SET_FOCUS_FOLLOWS_MOUSE:
-				case GFX_FOCUS_FOLLOWS_MOUSE:
-
-				// Graphics messages
-				case GFX_SET_HIGH_COLOR:
-				case GFX_SET_LOW_COLOR:
-				case GFX_DRAW_STRING:
-				case GFX_SET_FONT_SIZE:
-				case GFX_STROKE_ARC:
-				case GFX_STROKE_BEZIER:
-				case GFX_STROKE_ELLIPSE:
-				case GFX_STROKE_LINE:
-				case GFX_STROKE_POLYGON:
-				case GFX_STROKE_RECT:
-				case GFX_STROKE_ROUNDRECT:
-				case GFX_STROKE_SHAPE:
-				case GFX_STROKE_TRIANGLE:
-				case GFX_FILL_ARC:
-				case GFX_FILL_BEZIER:
-				case GFX_FILL_ELLIPSE:
-				case GFX_FILL_POLYGON:
-				case GFX_FILL_RECT:
-				case GFX_FILL_REGION:
-				case GFX_FILL_ROUNDRECT:
-				case GFX_FILL_SHAPE:
-				case GFX_FILL_TRIANGLE:
-					DispatchMessage(msgcode, msgbuffer);
-					break;
-*/
 // -------------- Messages received from the Server ------------------------
 				// Mouse messages simply get passed onto the active app for now
 				case B_MOUSE_UP:
@@ -346,18 +292,18 @@ int8 *index=buffer;
 
 			// Find the necessary data
 			port_id reply_port=*((port_id*)index); index+=sizeof(port_id);
-
 			BRect rect=*((BRect*)index); index+=sizeof(BRect);
 
+			uint32 winlook=*((uint32*)index); index+=sizeof(uint32);
+			uint32 winfeel=*((uint32*)index); index+=sizeof(uint32);
 			uint32 winflags=*((uint32*)index); index+=sizeof(uint32);
 
 			port_id win_port=*((port_id*)index); index+=sizeof(port_id);
-
 			uint32 workspace=*((uint32*)index); index+=sizeof(uint32);
 
 			// Create the ServerWindow object for this window
 			ServerWindow *newwin=new ServerWindow(rect,(const char *)index,
-				winflags,this,win_port,workspace);
+				winlook, winfeel, winflags,this,win_port,workspace);
 			winlist->AddItem(newwin);
 
 			// Window looper is waiting for our reply. Send back the
@@ -374,6 +320,8 @@ printf("ServerApp: Create Window()\n");
 printf("Frame: "); rect.PrintToStream();
 printf("Title: %s\n",(const char*)index);
 printf("SenderPort: %ld\n",win_port);
+printf("Look: 0x%lx\n",winlook);
+printf("Feel: 0x%lx\n",winfeel);
 printf("Flags: 0x%lx\n",winflags);
 printf("Workspace: 0x%lx\n",workspace);
 #endif

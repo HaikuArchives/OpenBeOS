@@ -8,7 +8,7 @@
 #include "Decorator.h"
 #include "Desktop.h"
 
-#define DEBUG_WINBORDER
+//#define DEBUG_WINBORDER
 
 #ifdef DEBUG_WINBORDER
 #include <stdio.h>
@@ -19,13 +19,15 @@ bool is_resizing_window=false;
 WindowBorder *activeborder=NULL;
 
 WindowBorder::WindowBorder(ServerWindow *win, const char *bordertitle)
- : Layer(win->frame,win->title->String())
+ : Layer((win==NULL)?BRect(0,0,0,0):win->frame,
+   (win==NULL)?NULL:win->title->String())
 {
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder()\n");
 #endif
 	mbuttons=0;
 	swin=win;
+
 	title=new BString(bordertitle);
 	hresizewin=false;
 	vresizewin=false;
@@ -48,47 +50,12 @@ void WindowBorder::MouseDown(BPoint pt, uint32 buttons)
 	{
 		case CLICK_MOVETOBACK:
 		{
-#ifdef DEBUG_WINBORDER
-printf("WindowBorder(): MoveToBack\n");
-#endif
-			swin->SetFocus(false);
-
-			// Move the window to the back (the top of the tree)
-			Layer *top=GetRootLayer();
-			ASSERT(top!=NULL);
-			layerlock->Lock();
-			top->RemoveChild(this);
-			top->AddChild(this);
-			swin->SetFocus(false);
-			decor->SetFocus(false);
-			decor->Draw();
-			layerlock->Unlock();
+			MoveToBack();
 			break;
 		}
 		case CLICK_MOVETOFRONT:
 		{
-#ifdef DEBUG_WINBORDER
-printf("WindowBorder(): MoveToFront\n");
-#endif
-			swin->SetFocus(true);
-
-			// Move the window to the front by making it the bottom
-			// child of the root layer
-			Layer *top=GetRootLayer();
-			layerlock->Lock();
-			top->RemoveChild(this);
-			uppersibling=top->bottomchild;
-			lowersibling=NULL;
-			top->bottomchild=this;
-			if(top->topchild==NULL)
-				top->topchild=this;
-			parent=top;
-			swin->SetFocus(true);
-			decor->SetFocus(true);
-			decor->Draw();
-			layerlock->Unlock();
-			is_moving_window=true;
-			activeborder=this;
+			MoveToFront();
 			break;
 		}
 		case CLICK_CLOSE:
@@ -258,7 +225,7 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 void WindowBorder::Draw(BRect update_rect)
 {
 	// Just a hard-coded placeholder for now
-	if(decor->Look()==B_NO_BORDER_WINDOW_LOOK)
+	if(decor->Look()==WLOOK_NO_BORDER)
 		return;
 
 #ifdef DEBUG_WINBORDER
@@ -280,6 +247,9 @@ void WindowBorder::SetDecorator(Decorator *newdecor)
 	// under OBOS doesn't belong to the border - it belongs to the
 	// ServerWindow, so the ServerWindow will handle all (de)allocation
 	// tasks. We just need to update the pointer.
+#ifdef DEBUG_WINBORDER
+printf("WindowBorder::SetDecorator(%p)\n",newdecor);
+#endif
 	decor=newdecor;
 }
 
@@ -290,8 +260,7 @@ ServerWindow *WindowBorder::Window(void) const
 
 void WindowBorder::RequestDraw(void)
 {
-/*
-	if(invalid)
+/*	if(invalid)
 	{
 		for(int32 i=0; i<invalid->CountRects();i++)
 			decor->Draw(ConvertToTop(invalid->RectAt(i)));
@@ -300,4 +269,49 @@ void WindowBorder::RequestDraw(void)
 		is_dirty=false;
 	}
 */
+}
+
+void WindowBorder::MoveToBack(void)
+{
+#ifdef DEBUG_WINBORDER
+printf("WindowBorder(): MoveToBack\n");
+#endif
+	swin->SetFocus(false);
+
+	// Move the window to the back (the top of the tree)
+	Layer *top=GetRootLayer();
+	ASSERT(top!=NULL);
+	layerlock->Lock();
+	top->RemoveChild(this);
+	top->AddChild(this);
+	swin->SetFocus(false);
+	decor->SetFocus(false);
+	decor->Draw();
+	layerlock->Unlock();
+}
+
+void WindowBorder::MoveToFront(void)
+{
+#ifdef DEBUG_WINBORDER
+printf("WindowBorder(): MoveToFront\n");
+#endif
+	swin->SetFocus(true);
+
+	// Move the window to the front by making it the bottom
+	// child of the root layer
+	Layer *top=GetRootLayer();
+	layerlock->Lock();
+	top->RemoveChild(this);
+	uppersibling=top->bottomchild;
+	lowersibling=NULL;
+	top->bottomchild=this;
+	if(top->topchild==NULL)
+		top->topchild=this;
+	parent=top;
+	swin->SetFocus(true);
+	decor->SetFocus(true);
+	decor->Draw();
+	layerlock->Unlock();
+	is_moving_window=true;
+	activeborder=this;
 }

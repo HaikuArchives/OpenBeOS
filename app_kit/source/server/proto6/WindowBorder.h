@@ -21,6 +21,8 @@ public:
 	void SetDecorator(Decorator *newdecor);
 	ServerWindow *Window(void) const;
 	void RequestDraw(void);
+	void MoveToBack(void);
+	void MoveToFront(void);
 
 	ServerWindow *swin;
 	BString *title;

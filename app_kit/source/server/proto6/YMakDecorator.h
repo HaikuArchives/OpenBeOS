@@ -5,7 +5,7 @@
 
 class YMakDecorator: public Decorator{
 public:
-   YMakDecorator(Layer *lay, uint32 dflags, window_look wlook);
+   YMakDecorator(Layer *lay, uint32 dflags, uint32 wlook);
    ~YMakDecorator(void);
    
    click_type Clicked(BPoint pt, uint32 buttons);
@@ -14,7 +14,7 @@ public:
    BPoint GetMinimumSize(void);
    void SetTitle(const char *newtitle);
    void SetFlags(uint32 flags);
-   void SetLook(window_look wlook);
+   void SetLook(uint32 wlook);
    void UpdateFont(void);
    void UpdateTitle(const char *string);
    void SetFocus(bool focused);

@@ -16,7 +16,7 @@
 		VDView - doesn't do all that much except display the rendered bitmap
 */
 
-#define DEBUG_DRIVER_MODULE
+//#define DEBUG_DRIVER_MODULE
 //#define DEBUG_SERVER_EMU
 
 //#define DISABLE_SERVER_EMU

@@ -24,8 +24,8 @@
 int32 view_counter=0;
 bool movewin=false;
 
-ServerWindow::ServerWindow(BRect rect, const char *string, uint32 winflags,
-	ServerApp *winapp,  port_id winport, uint32 index)
+ServerWindow::ServerWindow(BRect rect, const char *string, uint32 wlook,
+	uint32 wfeel, uint32 wflags, ServerApp *winapp,  port_id winport, uint32 index)
 {
 	title=new BString;
 	if(string)
@@ -40,13 +40,25 @@ printf("ServerWindow() %s\n",title->String());
 	// to be valid
 	frame=rect;
 
-	winborder=new WindowBorder(this, title->String());
+	// set these early also - the decorator will also need them
+	winflags=wflags;
+	winlook=wlook;
+	winfeel=wfeel;
 	
+
+	winborder=new WindowBorder(this, title->String());
+
 	// hard code this for now - window look also needs to be attached and sent to
 	// server by BWindow constructor
-	decorator=instantiate_decorator(winborder, winflags, B_TITLED_WINDOW_LOOK);
+	decorator=instantiate_decorator(winborder, winflags, wlook);
+#ifdef DEBUG_SERVERWIN
+if(decorator==NULL)
+	printf("ServerWindow() %s: NULL decorator returned\n",title->String());
+#endif
 	winborder->SetDecorator(decorator);
-
+#ifdef DEBUG_SERVERWIN
+printf("ServerWindow() %s: decorator set\n",title->String());
+#endif
 
 	// sender is the monitored app's event port
 	sender=winport;
@@ -56,6 +68,9 @@ printf("ServerWindow() %s\n",title->String());
 		applink=new PortLink(winapp->receiver);
 	else
 		applink=NULL;
+#ifdef DEBUG_SERVERWIN
+printf("ServerWindow() %s: PortLink established\n",title->String());
+#endif
 	
 	// receiver is the port to which the app sends messages for the server
 	receiver=create_port(30,title->String());
@@ -67,10 +82,16 @@ printf("ServerWindow() %s\n",title->String());
 	thread=spawn_thread(MonitorWin,title->String(),B_NORMAL_PRIORITY,this);
 	if(thread!=B_NO_MORE_THREADS && thread!=B_NO_MEMORY)
 		resume_thread(thread);
+#ifdef DEBUG_SERVERWIN
+printf("ServerWindow() %s: MonitorThread spawned\n",title->String());
+#endif
 
 	workspace=index;
 
 	AddWindowToDesktop(this,index);
+#ifdef DEBUG_SERVERWIN
+printf("ServerWindow() %s: Added to Desktop\n",title->String());
+#endif
 }
 
 ServerWindow::~ServerWindow(void)

@@ -19,8 +19,8 @@ class WindowBorder;
 class ServerWindow
 {
 public:
-	ServerWindow(BRect rect, const char *string, uint32 winflags,
-		ServerApp *winapp,  port_id winport, uint32 index);
+	ServerWindow(BRect rect, const char *string, uint32 wlook, uint32 wfeel,
+		uint32 wflags, ServerApp *winapp,  port_id winport, uint32 index);
 	~ServerWindow(void);
 	
 	void ReplaceDecorator(void);
@@ -51,7 +51,7 @@ public:
 	void Loop(void);
 	
 	BString *title;
-	int32 flags;
+	int32 winlook, winfeel, winflags;
 	int32 workspace;
 	bool active;
 	

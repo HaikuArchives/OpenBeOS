@@ -38,8 +38,10 @@
 /*******************************************************
 *   @description
 *******************************************************/
-YMakDecorator::YMakDecorator(Layer *lay, uint32 dflags, window_look wlook):Decorator(lay, dflags, wlook){
-   if(flags & B_NO_BORDER_WINDOW_LOOK){
+YMakDecorator::YMakDecorator(Layer *lay, uint32 flags, uint32 wlook)
+ :Decorator(lay, flags, wlook)
+{
+   if(dflags & WLOOK_NO_BORDER){
       LeftBorder = 0;
       TopBorder = 0;
       RightBorder = 0;
@@ -117,8 +119,8 @@ BPoint YMakDecorator::GetMinimumSize(void){
 /*******************************************************
 *   @description
 *******************************************************/
-void YMakDecorator::SetFlags(uint32 dflags){
-	flags=dflags;
+void YMakDecorator::SetFlags(uint32 flags){
+	dflags=flags;
 }
 
 /*******************************************************
@@ -317,7 +319,7 @@ printf("do done\n");
    }
 
    
-/*   if((flags & WND_NO_TITLE) == 0){
+/*   if((dflags & WND_NO_TITLE) == 0){
       // Stroke The title Text
       driver->SetFgColor(cL.red,cL.green,cL.blue,cL.alpha);
       b.left = 30;
@@ -344,15 +346,15 @@ printf("do done\n");
 */
    
    
-   if(!(flags & B_NOT_CLOSABLE)){
+   if(!(dflags & NOT_CLOSABLE)){
       DrawClose(CloseRect);
    }
-   if(!(flags & B_NOT_ZOOMABLE)){
+   if(!(dflags & NOT_ZOOMABLE)){
       DrawZoom(ZoomRect);
    }
 
 
-/*	if(!(flags & B_NOT_RESIZABLE))
+/*	if(!(dflags & NOT_RESIZABLE))
 */
 }
 
@@ -519,7 +521,7 @@ printf("do done\n");
    }
 
    
-/*   if((flags & WND_NO_TITLE) == 0){
+/*   if((dflags & WND_NO_TITLE) == 0){
       // Stroke The title Text
       driver->SetFgColor(cL.red,cL.green,cL.blue,cL.alpha);
       b.left = 30;
@@ -546,10 +548,10 @@ printf("do done\n");
 */
    
    
-   if(!(flags & B_NOT_CLOSABLE)){
+   if(!(dflags & NOT_CLOSABLE)){
       DrawClose(CloseRect);
    }
-   if(!(flags & B_NOT_ZOOMABLE)){
+   if(!(dflags & NOT_ZOOMABLE)){
       DrawZoom(ZoomRect);
    }
 
@@ -568,7 +570,7 @@ void YMakDecorator::DrawZoom(BRect r){
 void YMakDecorator::DrawClose(BRect r){
     BRect b = CloseRect;
 
-  // if((Flags & WND_NO_CLOSE_BUT)){ return; }
+  // if((dflags & WND_NO_CLOSE_BUT)){ return; }
 //   if(!HasFocus){ return; }
    
    
@@ -636,30 +638,30 @@ void YMakDecorator::DrawClose(BRect r){
 /*******************************************************
 *   @description
 *******************************************************/
-void YMakDecorator::SetLook(window_look wlook){
-   look = wlook;
+void YMakDecorator::SetLook(uint32 wlook){
+   dlook = wlook;
 }
 
 /*******************************************************
 *   @description
 *******************************************************/
 void YMakDecorator::CalculateBorders(void){
-	switch(look)
+	switch(dlook)
 	{
-		case B_NO_BORDER_WINDOW_LOOK:
+		case WLOOK_NO_BORDER:
 		{
 //			bsize.Set(0,0,0,0);
 			break;
 		}
-		case B_TITLED_WINDOW_LOOK:
-		case B_DOCUMENT_WINDOW_LOOK:
-		case B_BORDERED_WINDOW_LOOK:
+		case WLOOK_TITLED:
+		case WLOOK_DOCUMENT:
+		case WLOOK_BORDERED:
 		{
 //			bsize.top=18;
 			break;
 		}
-		case B_MODAL_WINDOW_LOOK:
-		case B_FLOATING_WINDOW_LOOK:
+		case WLOOK_MODAL:
+		case WLOOK_FLOATING:
 		{
 //			bsize.top=15;
 			break;

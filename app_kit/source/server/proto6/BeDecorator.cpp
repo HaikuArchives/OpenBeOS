@@ -2,6 +2,7 @@
 #include "DisplayDriver.h"
 #include <View.h>
 #include "BeDecorator.h"
+#include "ColorUtils.h"
 
 //#define DEBUG_DECOR
 
@@ -9,15 +10,7 @@
 #include <stdio.h>
 #endif
 
-void SetRGBColor(rgb_color *col,uint8 r, uint8 g, uint8 b, uint8 a=255)
-{
-	col->red=r;
-	col->green=g;
-	col->blue=b;
-	col->alpha=a;
-}
-
-BeDecorator::BeDecorator(Layer *lay, uint32 dflags, window_look wlook)
+BeDecorator::BeDecorator(Layer *lay, uint32 dflags, uint32 wlook)
  : Decorator(lay, dflags, wlook)
 {
 #ifdef DEBUG_DECOR
@@ -26,20 +19,6 @@ printf("BeDecorator()\n");
 	zoomstate=false;
 	closestate=false;
 	taboffset=0;
-
-	// These particular colors will disappear once I get the "attribute"
-	// or "part" colors fully implemented
-	SetRGBColor(&blue,100,100,255);
-	SetRGBColor(&blue2,150,150,255);
-	SetRGBColor(&black,0,0,0);
-
-	SetRGBColor(&gray,224,224,224);
-	SetRGBColor(&white,224,224,224);
-	SetRGBColor(&yellow,255,203,0);
-
-	SetRGBColor(&ltyellow,255,236,33);
-	SetRGBColor(&mdyellow,255,203,0);
-	SetRGBColor(&dkyellow,234,181,0);
 
 	// These hard-coded assignments will go bye-bye when the system colors 
 	// API is implemented
@@ -195,9 +174,9 @@ BPoint BeDecorator::GetMinimumSize(void)
 	return minsize;
 }
 
-void BeDecorator::SetFlags(uint32 dflags)
+void BeDecorator::SetFlags(uint32 wflags)
 {
-	flags=dflags;
+	dflags=wflags;
 }
 
 void BeDecorator::UpdateFont(void)
@@ -247,16 +226,17 @@ void BeDecorator::SetZoomButton(bool down)
 
 void BeDecorator::Draw(BRect update)
 {
-#ifdef DEBUG_DECOR
-printf("BeDecorator()::Draw():"); update.PrintToStream();
-#endif
 	// We need to draw a few things: the tab, the resize thumb, the borders,
 	// and the buttons
 
-	DrawTab();
+	if(tabrect.Intersects(update))
+		DrawTab();
 
 	// Draw the top view's client area - just a hack :)
-	driver->FillRect(borderrect,blue);
+	rgb_color blue={100,100,255,255};
+
+	if(borderrect.Intersects(update))
+		driver->FillRect(borderrect,blue);
 	
 	DrawFrame();
 
@@ -270,6 +250,7 @@ void BeDecorator::Draw(void)
 	DrawTab();
 
 	// Draw the top view's client area - just a hack :)
+	rgb_color blue={100,100,255,255};
 	driver->FillRect(borderrect,blue);
 	
 	DrawFrame();
@@ -313,9 +294,9 @@ void BeDecorator::DrawTab(void)
 	UpdateTitle(layer->name->String());
 
 	// Draw the buttons if we're supposed to	
-	if(!(flags & B_NOT_CLOSABLE))
+	if(!(dflags & NOT_CLOSABLE))
 		DrawClose(closerect);
-	if(!(flags & B_NOT_ZOOMABLE))
+	if(!(dflags & NOT_ZOOMABLE))
 		DrawZoom(zoomrect);
 }
 
@@ -391,80 +372,88 @@ void BeDecorator::DrawFrame(void)
 		frame_lowcol);
 	
 	// Draw the resize thumb if we're supposed to
-	if(!(flags & B_NOT_RESIZABLE))
+	if(!(dflags & NOT_RESIZABLE))
 	{
 		r=resizerect;
 
 		int32 w=r.IntegerWidth(),  h=r.IntegerHeight();
-	
-		rgb_color tmpcol,halfcol, startcol, endcol;
-		float rstep,gstep,bstep,i;
-	
-		int steps=(w<h)?w:h;
-	
-		if(down)
+		
+		// This code is strictly for B_DOCUMENT_WINDOW looks
+		if(dlook==WLOOK_DOCUMENT)
 		{
-			startcol=frame_lowcol;
-			endcol=frame_highcol;
+			rgb_color tmpcol,halfcol, startcol, endcol;
+			float rstep,gstep,bstep,i;
+		
+			int steps=(w<h)?w:h;
+		
+			if(down)
+			{
+				startcol=frame_lowcol;
+				endcol=frame_highcol;
+			}
+			else
+			{
+				startcol=frame_highcol;
+				endcol=frame_lowcol;
+			}
+		
+			SetRGBColor(&halfcol,(startcol.red+endcol.red)/2,
+				(startcol.green+endcol.green)/2,
+				(startcol.blue+endcol.blue)/2);
+		
+			rstep=(startcol.red-halfcol.red)/steps;
+			gstep=(startcol.green-halfcol.green)/steps;
+			bstep=(startcol.blue-halfcol.blue)/steps;
+		
+			for(i=0;i<=steps; i++)
+			{
+				SetRGBColor(&tmpcol, uint8(startcol.red-(i*rstep)),
+					uint8(startcol.green-(i*gstep)),
+					uint8(startcol.blue-(i*bstep)));
+				driver->StrokeLine(BPoint(r.left,r.top+i),
+					BPoint(r.left+i,r.top),tmpcol);
+		
+				SetRGBColor(&tmpcol, uint8(halfcol.red-(i*rstep)),
+					uint8(halfcol.green-(i*gstep)),
+					uint8(halfcol.blue-(i*bstep)));
+				driver->StrokeLine(BPoint(r.left+steps,r.top+i),
+					BPoint(r.left+i,r.top+steps),tmpcol);
+		
+			}
+			
+			SetRGBColor(&tmpcol, 128,128,0);
+			driver->StrokeRect(r,tmpcol);
 		}
 		else
 		{
-			startcol=frame_highcol;
-			endcol=frame_lowcol;
+			
 		}
-	
-		SetRGBColor(&halfcol,(startcol.red+endcol.red)/2,
-			(startcol.green+endcol.green)/2,
-			(startcol.blue+endcol.blue)/2);
-	
-		rstep=(startcol.red-halfcol.red)/steps;
-		gstep=(startcol.green-halfcol.green)/steps;
-		bstep=(startcol.blue-halfcol.blue)/steps;
-	
-		for(i=0;i<=steps; i++)
-		{
-			SetRGBColor(&tmpcol, uint8(startcol.red-(i*rstep)),
-				uint8(startcol.green-(i*gstep)),
-				uint8(startcol.blue-(i*bstep)));
-			driver->StrokeLine(BPoint(r.left,r.top+i),
-				BPoint(r.left+i,r.top),tmpcol);
-	
-			SetRGBColor(&tmpcol, uint8(halfcol.red-(i*rstep)),
-				uint8(halfcol.green-(i*gstep)),
-				uint8(halfcol.blue-(i*bstep)));
-			driver->StrokeLine(BPoint(r.left+steps,r.top+i),
-				BPoint(r.left+i,r.top+steps),tmpcol);
-	
-		}
-		
-		SetRGBColor(&tmpcol, 128,128,0);
-		driver->StrokeRect(r,tmpcol);
 	}
 }
 
-void BeDecorator::SetLook(window_look wlook)
+void BeDecorator::SetLook(uint32 wlook)
 {
-	look=wlook;
+	dlook=wlook;
 }
 
 void BeDecorator::CalculateBorders(void)
 {
-	switch(look)
+	switch(dlook)
 	{
-		case B_NO_BORDER_WINDOW_LOOK:
+		case WLOOK_NO_BORDER:
 		{
 			bsize.Set(0,0,0,0);
 			break;
 		}
-		case B_TITLED_WINDOW_LOOK:
-		case B_DOCUMENT_WINDOW_LOOK:
-		case B_BORDERED_WINDOW_LOOK:
+		case WLOOK_TITLED:
+		case WLOOK_DOCUMENT:
+		case WLOOK_BORDERED:
 		{
 			bsize.top=18;
 			break;
 		}
-		case B_MODAL_WINDOW_LOOK:
-		case B_FLOATING_WINDOW_LOOK:
+		case WLOOK_MODAL:
+		case WLOOK_FLOATING:
 		{
 			bsize.top=15;
 			break;

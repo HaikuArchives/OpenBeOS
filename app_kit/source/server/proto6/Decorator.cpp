@@ -1,12 +1,12 @@
 #include "Decorator.h"
 
-Decorator::Decorator(Layer *lay, uint32 windowflags, window_look wlook) 
+Decorator::Decorator(Layer *lay, uint32 windowflags, uint32 wlook) 
 {
 	layer=lay;
-	flags=windowflags;
+	dflags=windowflags;
 	minsize.Set(0,0); 
 	bsize.Set(1,1,1,1);
-	look=wlook;
+	dlook=wlook;
 	focused=true;
 	driver=get_gfxdriver();
 }
@@ -45,20 +45,32 @@ BPoint Decorator::GetMinimumSize(void)
 
 void Decorator::SetFlags(uint32 flags)
 {
+	dflags=flags;
 }
 
 uint32 Decorator::Flags(void)
 {
-	return flags;
+	return dflags;
 }
 
-void Decorator::SetLook(window_look wlook)
+void Decorator::SetLook(uint32 wlook)
 {
+	dlook=(uint32)wlook;
 }
 
 uint32 Decorator::Look(void)
 {
-	return look;
+	return dlook;
+}
+
+void Decorator::SetFeel(uint32 wfeel)
+{
+	dfeel=(uint32)wfeel;
+}
+
+uint32 Decorator::Feel(void)
+{
+	return dfeel;
 }
 
 void Decorator::UpdateTitle(const char *string)

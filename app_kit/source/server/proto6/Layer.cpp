@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <OS.h>
 
-#define DEBUG_LAYERS
+//#define DEBUG_LAYERS
 
 Layer::Layer(BRect rect, const char *layername, ServerWindow *srvwin,
 	int32 viewflags, int32 token)
