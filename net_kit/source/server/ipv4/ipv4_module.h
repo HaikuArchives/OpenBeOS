@@ -6,13 +6,21 @@
 #define IPV4_MODULE_H
 
 #ifdef _KERNEL_MODE
-
 #include <KernelExport.h>
 #include <module.h>
+#define IPV4_MODULE_PATH	"network/protocol/ipv4"
+
+#else /* _KERNEL_MODE */
+
+#define IPV4_MODULE_PATH	"modules/protocol/ipv4"
+
+#endif /* _KERNEL_MODE */
 
 struct ipv4_module_info {
+#ifdef _KERNEL_MODE
 	module_info info;
-	int (*ip_output)(struct mbuf *, 
+#endif
+	int (*output)(struct mbuf *, 
 	                 struct mbuf *, 
 	                 struct route *,
 	                 int, void *);
@@ -21,10 +29,10 @@ struct ipv4_module_info {
 	                 struct socket *,
                      int, int,
                      struct mbuf **);
+	struct mbuf *(*ip_srcroute)(void);
+	void (*ip_stripoptions)(struct mbuf *, 
+	                        struct mbuf *);
+
 };
-
-#define IPV4_MODULE_PATH	"network/protocol/ipv4"
-
-#endif /* _KERNEL_MODE */
 
 #endif /* IPV4_MODULE_H */

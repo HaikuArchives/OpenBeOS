@@ -2,7 +2,9 @@
  * simple ipv4 implementation
  */
 
+#ifndef _KERNEL_MODE
 #include <stdio.h>
+#endif
 #include <unistd.h>
 #include <kernel/OS.h>
 #include <sys/time.h>
@@ -19,11 +21,13 @@
 #include "sys/protosw.h"
 #include "sys/domain.h"
 
+#include "ipv4_module.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "ipv4_module.h"
 #include "net_server/core_module.h"
 
+#define m_get               core->m_get
 #define m_free              core->m_free
 #define m_freem             core->m_freem
 #define m_adj               core->m_adj
@@ -45,13 +49,11 @@
 
 static struct core_module_info *core = NULL;
 
-#else
-#define IPV4_MODULE_PATH	"modules/interface/ipv4"
 #endif
 
 struct protosw *proto[IPPROTO_MAX];
-static uint16 ip_identifier = 0;
 struct in_ifaddr *in_ifaddr;
+uint16 ip_id = 0;
 
 #if SHOW_DEBUG
 static void dump_ipv4_header(struct mbuf *buf)
@@ -64,8 +66,6 @@ static void dump_ipv4_header(struct mbuf *buf)
 	printf("            : tos           : %d\n", ip->ip_tos);
 	printf("            : total length  : %d\n", ntohs(ip->ip_len));
 	printf("            : id            : %d\n", ntohs(ip->ip_id));
-//	printf("            : flags         : 0x%02x\n", IPV4_FLAGS(ip));
-//	printf("            : frag offset   : %d\n", ntohs(IPV4_FRAG(ip)));
 	printf("            : ttl           : %d\n", ip->ip_ttl);
 	dump_ipv4_addr("            : src address   :", &ip->ip_src);
 	dump_ipv4_addr("            : dst address   :", &ip->ip_dst);
@@ -83,10 +83,74 @@ static void dump_ipv4_header(struct mbuf *buf)
 			printf("TCP\n");
 			break;
 		default:
-			printf("unknown (0x%02x)\n", ip->prot);
+			printf("unknown (0x%02x)\n", ip->ip_p);
 	}
 }
 #endif
+
+
+/* IP Options variables and structures... */
+int ip_nhops = 0;
+static struct ip_srcrt {
+	struct in_addr dst;
+	char nop;
+	char srcopt[IPOPT_OFFSET + 1];
+	struct in_addr route[MAX_IPOPTLEN / sizeof(struct in_addr)];
+} ip_srcrt;
+
+/*
+ * Strip out IP options, at higher
+ * level protocol in the kernel.
+ * Second argument is buffer to which options
+ * will be moved, and return value is their length.
+ * XXX should be deleted; last arg currently ignored.
+ */
+void ip_stripoptions(struct mbuf *m, struct mbuf *mopt)
+{
+	int i;
+	struct ip *ip = mtod(m, struct ip *);
+	caddr_t opts;
+	int olen;
+
+	olen = (ip->ip_hl<<2) - sizeof (struct ip);
+	opts = (caddr_t)(ip + 1);
+	i = m->m_len - (sizeof (struct ip) + olen);
+	memcpy(opts, opts  + olen, (unsigned)i);
+	m->m_len -= olen;
+	if (m->m_flags & M_PKTHDR)
+		m->m_pkthdr.len -= olen;
+	ip->ip_hl = sizeof(struct ip) >> 2;
+}
+
+struct mbuf * ip_srcroute(void)
+{
+	struct in_addr *p, *q;
+	struct mbuf *m;
+	
+	if (ip_nhops == 0)
+		return NULL;
+	m = m_get(MT_SOOPTS);
+	if (!m)
+		return NULL;
+#define OPTSIZ (sizeof(ip_srcrt.nop) + sizeof(ip_srcrt.srcopt))
+
+	m->m_len = ip_nhops * sizeof(struct in_addr) + sizeof(struct in_addr) + OPTSIZ;
+	
+	p = &ip_srcrt.route[ip_nhops-1];
+	*(mtod(m, struct in_addr*)) = *p--;
+	ip_srcrt.nop = IPOPT_NOP;
+	ip_srcrt.srcopt[IPOPT_OFFSET] = IPOPT_MINOFF;
+	memcpy(mtod(m, caddr_t) + sizeof(struct in_addr), &ip_srcrt.nop, OPTSIZ);
+	q = (struct in_addr*)(mtod(m, caddr_t) + sizeof(struct in_addr) + OPTSIZ);
+#undef OPTSIZ
+
+	while (p >= ip_srcrt.route) {
+		*q++ = *q--;
+	}
+	
+	*q = ip_srcrt.dst;
+	return m;
+}
 
 int ipv4_input(struct mbuf *buf, int hdrlen)
 {
@@ -147,12 +211,14 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 	if ((flags & (IP_FORWARDING | IP_RAWOUTPUT)) == 0) {
 		ip->ip_v = IPVERSION;
 		ip->ip_off &= IP_DF;
-		ip->ip_id = htons(ip_identifier++);
+		ip->ip_id = htons(ip_id);
 		ip->ip_hl = hlen >> 2;
 		ipstat.ips_localout++;
 	} else
 		hlen = ip->ip_hl << 2;
 		
+printf("ip->ip_id = %d, ip_id(%p) = %d\n", ip->ip_id, &ip_id, ip_id);		
+
 	/* route the packet! */
 	if (!ro) {
 		ro = &iproute;
@@ -255,10 +321,10 @@ bad:
 	goto done;
 }
 
-uint16 ip_id(void)
+uint16 get_ip_id(void)
 {
 /* XXX - locking */
-	return ip_identifier++;
+	return ip_id++;
 /* XXX - unlocking */
 }
 
@@ -340,8 +406,10 @@ static void ipv4_init(void)
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	if (ip_identifier == 0)
-		ip_identifier = tv.tv_sec & 0xffff;
+	if (ip_id == 0)
+		ip_id = tv.tv_sec & 0xffff;
+
+printf("ip_id = %d\n", ip_id);
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
 #ifndef _KERNEL_MODE
@@ -384,6 +452,14 @@ struct protocol_info protocol_info = {
 	&ipv4_protocol_init
 };
 
+struct ipv4_module_info ipv4_module_info = {
+	ipv4_output,
+	get_ip_id,
+	ipv4_ctloutput,
+	ip_srcroute,
+	ip_stripoptions
+};
+
 #else /* kernel setup */
 
 static int k_init(void)
@@ -412,14 +488,17 @@ static status_t ipv4_ops(int32 op, ...)
 }
 
 static struct ipv4_module_info my_module = {
-		{
-		IPV4_MODULE_PATH,
-		B_KEEP_LOADED,
-		ipv4_ops
-		},
-		ipv4_output,
-		ip_id,
-		ipv4_ctloutput
+{
+	IPV4_MODULE_PATH,
+	B_KEEP_LOADED,
+	ipv4_ops
+	},
+
+	ipv4_output,
+	get_ip_id,
+	ipv4_ctloutput,
+	ip_srcroute,
+	ip_stripoptions
 };
 
 _EXPORT module_info *modules[] = {
