@@ -5,10 +5,12 @@
 //  File Name: Node.cpp
 //---------------------------------------------------------------------
 
+#include <fs_attr.h> // for struct attr_info
+#include <string.h>
+
 #include <Node.h>
 #include <Entry.h>
-#include <errno.h>
-#include <fs_attr.h> // for struct attr_info
+
 #include "kernel_interface.h"
 #include "storage_support.h"
 
@@ -309,7 +311,7 @@ BNode::Unlock() {
 */
 status_t
 BNode::Sync() {
-	return (fCStatus != B_OK) ? fCStatus : StorageKit::sync(fFd) ;
+	return (fCStatus != B_OK) ? B_FILE_ERROR : StorageKit::sync(fFd) ;
 }
 
 /*!	\brief Writes data from a buffer to an attribute.
@@ -339,7 +341,7 @@ BNode::WriteAttr(const char *attr, type_code type, off_t offset,
 		return B_FILE_ERROR;
 	else {
 		ssize_t result = StorageKit::write_attr(fFd, attr, type, offset, buffer, len);
-		return (result >= 0) ? result : errno ;
+		return result;
 	}
 }
 
@@ -365,7 +367,7 @@ BNode::ReadAttr(const char *attr, type_code type, off_t offset,
 		return B_FILE_ERROR;
 	else {
 		ssize_t result = StorageKit::read_attr(fFd, attr, type, offset, buffer, len);
-		return (result >= 0) ? result : errno ;
+		return result;
 	}
 }
 
@@ -479,28 +481,27 @@ BNode::GetNextAttrName(char *buffer) {
 		return B_BAD_VALUE;	// /new R5 crashed when passed NULL
 
 	if (InitAttrDir() != B_OK)
-		return B_ENTRY_NOT_FOUND;
+		return B_FILE_ERROR;
 		
-	StorageKit::DirEntry *entry = StorageKit::read_attr_dir(fAttrFd);
-	if (entry == NULL) {
-		buffer[0] = 0;
-		return errno;
-	} else {
-		strncpy(buffer, entry->d_name, B_ATTR_NAME_LENGTH);
+	StorageKit::LongDirEntry entry;
+	status_t error = StorageKit::read_attr_dir(fAttrFd, entry);
+	if (error == B_OK) {
+		strncpy(buffer, entry.d_name, B_ATTR_NAME_LENGTH);
 		return B_OK;
 	}
+	return error;
 }
 
 /*! \brief Resets the object's attribute pointer to the first attribute in the
 	list.
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_ADDRESS: Some error occured.
+	- \c B_FILE_ERROR: Some error occured.
 */
 status_t
 BNode::RewindAttrs() {
 	if (InitAttrDir() != B_OK)
-		return B_BAD_ADDRESS;	// This is what R5::BNode actually returns. Go figure...	
+		return B_FILE_ERROR;
 	
 	StorageKit::rewind_attr_dir(fAttrFd);
 
@@ -525,10 +526,15 @@ BNode::RewindAttrs() {
 */
 status_t
 BNode::WriteAttrString(const char *name, const BString *data) {
-/*	return (data == NULL) ? B_BAD_VALUE :
-		WriteAttr(name, B_STRING_TYPE, 0, data->String(), data->Length()); */
-		
-	return B_ERROR;
+	status_t error = (data == NULL) ? B_BAD_VALUE : B_OK;
+	if (error == B_OK) {
+		int32 len = data->Length();
+		ssize_t sizeWritten = WriteAttr(name, B_STRING_TYPE, 0, data->String(),
+										len);
+		if (sizeWritten != len)
+			error = sizeWritten;
+	}
+	return error;
 }
 
 /*!	\brief Reads the data of the specified attribute into the pre-allocated
@@ -544,7 +550,7 @@ BNode::WriteAttrString(const char *name, const BString *data) {
 */
 status_t
 BNode::ReadAttrString(const char *name, BString *result) const {
-/*	if (result == NULL)
+	if (result == NULL)
 		return B_BAD_VALUE;
 	
 	attr_info info;
@@ -574,9 +580,7 @@ BNode::ReadAttrString(const char *name, BString *result) const {
 		
 	result->UnlockBuffer(bytes+1);
 	
-	return r; */
-	
-	return B_ERROR;
+	return r;
 }
 
 /*!	\brief Reinitializes the object as a copy of the \a node.
