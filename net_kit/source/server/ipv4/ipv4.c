@@ -71,6 +71,24 @@ int ipv4_input(struct mbuf *buf)
 	return 0; 
 }
 
+int ipv4_output(struct mbuf *buf, int proto, struct sockaddr *tgt)
+{
+	ipv4_header *ip = mtod(buf, ipv4_header*);
+
+	switch (proto) {
+		case NS_ICMP:
+			/* assume all filled in correctly...just need to set the 
+			 * tgt address */
+		default:
+	}
+
+	memcpy(&ip->dst, &tgt->sa_data, 4);
+	ip->hdr_cksum = 0;
+	ip->hdr_cksum = in_cksum(buf, (ip->hl * 4), 0);
+	buf->m_pkthdr.rcvif->output(buf, NS_IPV4, tgt);
+	return 0;
+}
+
 int ipv4_init(loaded_net_module *ln, int *pt)
 {
 	net_modules = ln;
@@ -111,7 +129,7 @@ net_module net_module_data = {
 	&ipv4_init,
 	&ipv4_dev_init,
 	&ipv4_input, 
-	NULL,
+	&ipv4_output,
 	NULL
 };
 

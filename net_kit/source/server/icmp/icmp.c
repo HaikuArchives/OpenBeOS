@@ -57,6 +57,7 @@ int icmp_input(struct mbuf *buf)
 			struct sockaddr sa;
 			ie->hdr.type = ICMP_ECHO_RPLY;
 
+			/* fill in target structure... */
 			sa.sa_family = AF_INET;
 			sa.sa_len = 4;
 			memcpy(&sa.sa_data, &ip->src, 4);
@@ -64,11 +65,8 @@ int icmp_input(struct mbuf *buf)
 			ie->hdr.cksum = 0;
 			ie->hdr.cksum = in_cksum(buf, icl, (ip->hl * 4));
 			ip->src = ip->dst;
-			memcpy(&ip->dst, &sa.sa_data, 4);
-			ip->hdr_cksum = 0;
-			ip->hdr_cksum = in_cksum(buf, (ip->hl * 4), 0);
 
-			global_modules[prot_table[NS_ETHER]].mod->output(buf, NS_IPV4, &sa);
+			global_modules[prot_table[NS_IPV4]].mod->output(buf, NS_ICMP, &sa);
 
 			return 0;
 			break;
