@@ -13,6 +13,7 @@ DataStream
 
  - growing/shrinking the stream size is not implemented for the double indirect range
  - only files are trimmed back (in bfs_close()), but every inode has a preallocated stream...
+ - merging of block_runs doesn't work between range/block boundaries
 
 
 Queries
@@ -42,6 +43,7 @@ BPlusTree
 Inode
 
  - sometimes the inode's last modified time seems to be wrong, and is therefore not found in the b+tree (assuming that the b+tree is working correctly, what I do)
+ - Inode::FillGapWithZeros() currently disabled; apart from being slow, it really shouldn't be executed while a transaction is running, because that stops all other threads from doing anything (which can be a long time for a 100 MB file)
 
 
 Indices
@@ -58,7 +60,7 @@ Volume
 
 kernel_interface
 
- - missing functions, maybe they are not all needed (but most of them are): bfs_rename_attr(), bfs_rename_index(), bfs_initialize(), bfs_sync(), bfs_setflags(), bfs_fsync(), bfs_link()
+ - missing functions, maybe they are not all needed (but most of them are): bfs_rename_attr(), bfs_rename_index(), bfs_initialize(), bfs_setflags(), bfs_link()
  - bfs_rename() currently doesn't respect any permissions
 
 

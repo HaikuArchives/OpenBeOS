@@ -884,27 +884,30 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 		} else {
 			// access to indirect blocks
 
-			CachedBlock cached(fVolume,Node()->data.indirect);
-			block_run *indirect = (block_run *)cached.Block();
-			if (indirect == NULL)
-				RETURN_ERROR(B_ERROR);
-
-			int32 indirectRuns = (data->indirect.length << fVolume->BlockShift()) / sizeof(block_run);
-
+			int32 indirectRuns = fVolume->BlockSize() / sizeof(block_run);
 			off_t runBlockEnd = data->max_direct_range;
-			int32 current = -1;
 
-			while (++current < indirectRuns) {
-				if (indirect[current].IsZero())
-					break;
+			CachedBlock cached(fVolume);
+			off_t block = fVolume->ToBlock(data->indirect);
 
-				runBlockEnd += indirect[current].length << fVolume->BlockShift();
-				if (runBlockEnd > pos) {
-					run = indirect[current];
-					offset = runBlockEnd - (run.length << fVolume->BlockShift());
-					//printf("reading from indirect block: %ld,%d\n",fRun.allocation_group,fRun.start);
-					//printf("### indirect-run[%ld] = (%ld,%d,%d), offset = %Ld\n",fCurrent,fRun.allocation_group,fRun.start,fRun.length,fRunFileOffset);
-					return fVolume->IsValidBlockRun(run);
+			for (int32 i = 0;i < data->indirect.length;i++) {
+				block_run *indirect = (block_run *)cached.SetTo(block + i);
+				if (indirect == NULL)
+					RETURN_ERROR(B_IO_ERROR);
+
+				int32 current = -1;
+				while (++current < indirectRuns) {
+					if (indirect[current].IsZero())
+						break;
+
+					runBlockEnd += indirect[current].length << fVolume->BlockShift();
+					if (runBlockEnd > pos) {
+						run = indirect[current];
+						offset = runBlockEnd - (run.length << fVolume->BlockShift());
+						//printf("reading from indirect block: %ld,%d\n",fRun.allocation_group,fRun.start);
+						//printf("### indirect-run[%ld] = (%ld,%d,%d), offset = %Ld\n",fCurrent,fRun.allocation_group,fRun.start,fRun.length,fRunFileOffset);
+						return fVolume->IsValidBlockRun(run);
+					}
 				}
 			}
 			RETURN_ERROR(B_ERROR);
@@ -1220,7 +1223,7 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 status_t
 Inode::FillGapWithZeros(off_t pos,off_t newSize)
 {
-	if (pos >= newSize)
+	//if (pos >= newSize)
 		return B_OK;
 
 	block_run run;
@@ -1394,7 +1397,7 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 				// insert the block_run in the first block
 				runs = (block_run *)cached.SetTo(block,true);
 			} else {
-				uint32 numberOfRuns = ((uint32)data->indirect.length << fVolume->BlockShift()) / sizeof(block_run);
+				uint32 numberOfRuns = fVolume->BlockSize() / sizeof(block_run);
 				block = fVolume->ToBlock(data->indirect);
 
 				// search first empty entry
