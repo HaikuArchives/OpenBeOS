@@ -4,7 +4,6 @@
 #include <Entry.h>
 #include <File.h>
 #include <Path.h>
-//#include <SupportKit.h>		
 
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
@@ -634,8 +633,7 @@ FileTest::AssignmentTest()
 		CPPUNIT_ASSERT( file.InitCheck() == B_NO_INIT );
 		BFile file2(file);
 		// R5 returns B_BAD_VALUE instead of B_NO_INIT
-//			CPPUNIT_ASSERT( file2.InitCheck() == B_NO_INIT );
-		CPPUNIT_ASSERT( file2.InitCheck() != B_OK );
+		CPPUNIT_ASSERT( equals(file2.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	}
 	// existing file, different open modes
 	nextSubTest();
@@ -673,8 +671,7 @@ FileTest::AssignmentTest()
 		BFile file2;
 		file2 = file;
 		// R5 returns B_BAD_VALUE instead of B_NO_INIT
-//			CPPUNIT_ASSERT( file2.InitCheck() == B_NO_INIT );
-		CPPUNIT_ASSERT( file2.InitCheck() != B_OK );
+		CPPUNIT_ASSERT( equals(file2.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	}
 	nextSubTest();
 	{
@@ -683,8 +680,7 @@ FileTest::AssignmentTest()
 		CPPUNIT_ASSERT( file2.InitCheck() == B_OK );
 		file2 = file;
 		// R5 returns B_BAD_VALUE instead of B_NO_INIT
-//			CPPUNIT_ASSERT( file2.InitCheck() == B_NO_INIT );
-		CPPUNIT_ASSERT( file2.InitCheck() != B_OK );
+		CPPUNIT_ASSERT( equals(file2.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	}
 	// existing file, different open modes
 	nextSubTest();

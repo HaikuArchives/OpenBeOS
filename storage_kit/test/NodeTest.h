@@ -25,10 +25,10 @@ public:
 	virtual void CreateRWNodes(TestNodes& testEntries);
 	virtual void CreateUninitializedNodes(TestNodes& testEntries);
 
-	// This function called before *each* test added in Suite()
+	// This function is called before *each* test added in Suite()
 	void setUp();
 	
-	// This function called after *each* test added in Suite()
+	// This function is called after *each* test added in Suite()
 	void tearDown();
 
 	// Tests
@@ -50,7 +50,7 @@ public:
 	void AttrTest(BNode &node);
 	void AttrRenameTest(BNode &node);
 	void AttrInfoTest(BNode &node);
-	void AttrBStringTest(BNode &node); // Requires an OpenBeOS implementation of BString to test these
+	void AttrBStringTest(BNode &node);
 	void DupTest(BNode &node);
 	void LockTest(BNode &node, const char *entryName);
 	void EqualityTest(BNode &n1, BNode &n2, BNode &y1a, BNode &y1b, BNode &y2);

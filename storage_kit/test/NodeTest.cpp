@@ -1,3 +1,5 @@
+// NodeTest.cpp
+
 #include <cppunit/TestCase.h>
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
@@ -5,8 +7,8 @@
 
 #include <errno.h>
 #include <fs_attr.h>	// For struct attr_info
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/stat.h>	// For struct stat
 
 #include <Directory.h>
@@ -287,7 +289,6 @@ NodeTest::InitTest1()
 		CPPUNIT_ASSERT( node.InitCheck() == B_OK );
 
 	}
-/* BEntry doesn't seem to check the entry name length. */
 	nextSubTest();
 	{
 		BEntry entry(tooLongEntryname);
@@ -400,7 +401,6 @@ NodeTest::InitTest1()
 		BNode node(&pathDir, existingRelDir);
 		CPPUNIT_ASSERT( node.InitCheck() == B_OK );
 	}
-/* BEntry doesn't seem to check the entry name length. */
 	nextSubTest();
 	{
 		BDirectory pathDir(tooLongSuperEntryname);
@@ -498,7 +498,6 @@ NodeTest::InitTest2()
 	CPPUNIT_ASSERT( entry.SetTo(existingDir) == B_OK );
 	CPPUNIT_ASSERT( node.SetTo(&entry) == B_OK );
 	CPPUNIT_ASSERT( node.InitCheck() == B_OK );
-/* BEntry doesn't seem to check the entry name length. */
 	//
 	nextSubTest();
 	// R5 returns E2BIG instead of B_NAME_TOO_LONG
@@ -581,7 +580,6 @@ NodeTest::InitTest2()
 	CPPUNIT_ASSERT( pathDir.SetTo(existingSuperDir) == B_OK );
 	CPPUNIT_ASSERT( node.SetTo(&pathDir, existingRelDir) == B_OK );
 	CPPUNIT_ASSERT( node.InitCheck() == B_OK );
-/* BEntry doesn't seem to check the entry name length. */
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( pathDir.SetTo(tooLongSuperEntryname) == B_OK );

@@ -19,10 +19,10 @@ public:
 	virtual void CreateRWNodes(TestNodes& testEntries);
 	virtual void CreateUninitializedNodes(TestNodes& testEntries);
 
-	// This function called before *each* test added in Suite()
+	// This function is called before *each* test added in Suite()
 	void setUp();
 	
-	// This function called after *each* test added in Suite()
+	// This function is called after *each* test added in Suite()
 	void tearDown();
 
 	// test methods
