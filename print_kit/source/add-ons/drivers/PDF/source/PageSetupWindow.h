@@ -33,6 +33,11 @@ THE SOFTWARE.
 #define PAGESETUPWINDOW_H
 
 #include <InterfaceKit.h>
+#include <Message.h>
+#include <Messenger.h>
+#include <File.h>
+#include <FindDirectory.h>
+#include <Path.h>
 
 class MarginView;
 
@@ -70,6 +75,21 @@ private:
 	void					UpdateSetupMessage();
 
 	MarginView * 			marginView;
+	
+	// settings stuff
+	BMessage * 				settings;
+	BPath					settingsPath;
+	BString					printerDirName;
+
+	status_t	LoadSettings();
+	status_t	SaveSettings();
+	status_t	SaveString(const char *name, const char *string);
+	status_t	SaveInt32(const char *name, int32 i);
+	status_t	SaveRect(const char *name, BRect r);
+
+	//private class constants
+	static const int MARGIN = 10;
+	static const int OFFSET = 200;
 };
 
 #endif

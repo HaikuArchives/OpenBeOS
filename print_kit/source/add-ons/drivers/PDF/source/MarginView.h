@@ -6,7 +6,7 @@ Copyright (c) 2001 OpenBeOS.
 
 Author: Simon Gauvin
 
-Version 12.13.2001
+Version 2001.12.27
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -35,7 +35,7 @@ THE SOFTWARE.
 
 	There are two interfaces for the MarginView component:
 	
-	1) Set methods to change:
+	1) Set methods:
 		- page size
 		- orientation
 	   
@@ -43,13 +43,13 @@ THE SOFTWARE.
 		- margins
 		- page size
 		
-		The method interface is available for the parent Window to call on 
+		The method interface is available for the parent Component to call on 
 		the MarginView in response to the Window receiveing messages from
-		other BControls that it contantains, such as a Page Size popup. The
+		other BControls that it contains, such as a Page Size popup. The
 		Get methods are used to extract the page size and margins so that 
 		the printer driver may put these values into a BMessage for printing.
 		
-	2) 'Optional' Message interface to change:
+	2) 'Optional' Message interface:
 		- Set Page Size
 		- Flip Orientation
 	
@@ -57,7 +57,7 @@ THE SOFTWARE.
 		messages to the MarginView if the parent Window is not used to handle
 		the messages. 
 
-	General Use:
+	General Use of MarginView component:
 	
 		1) Simply construct a new MarginView object with the margins 
 			you want as defaults and add this view to the parent view 
@@ -67,6 +67,13 @@ THE SOFTWARE.
 			mv = new MarginView(viewSizeRect, pageWidth, pageHeight);
 			parentView->AddChild(mv);
 
+			* you can also set the margins in the constructor, and the units:
+			
+			mv = new MarginView(viewSizeRect, pageWidth, pageHeight
+						marginRect, UNIT_POINTS);
+
+			! but remeber to have the marginRect values match the UNITS :-)
+			
 		2) Set Page Size with methods:
 
 			mv-SetPageSize( pageWidth, pageHeight );
@@ -77,7 +84,7 @@ THE SOFTWARE.
 			BMessage* msg = new BMessage(CHANGE_PAGE_SIZE);
 			msg->AddFloat("width", pageWidth);
 			msg->AddFloat("height", pageHeight);
-			mv->GetMessageHandler()->SendMessage(msg);
+			mv->GetMessageHandler()->PostMessage(msg);
 
 		4) Flip Page with methods:
 		
@@ -87,7 +94,7 @@ THE SOFTWARE.
 		5) Flip Page with BMessage: 
 		
 			BMessage* msg = new BMessage(FLIP_PAGE);
-			mv->GetMessageHandler()->SendMessage(msg);
+			mv->GetMessageHandler()->PostMessage(msg);
 
 		Note: the MarginView DOES NOT keep track of the orientation. This
 				should be done by the code for the Page setup dialog.
@@ -114,35 +121,41 @@ THE SOFTWARE.
 #define MARGIN_VIEW_H
 
 #include <InterfaceKit.h>
-
 #include <Looper.h>
 
 class MarginManager;
 
 // Messages that the MarginManager accepts
+const uint32 TOP_MARGIN_CHANGED = 'tchg';
+const uint32 RIGHT_MARGIN_CHANGED = 'rchg';
+const uint32 LEFT_MARGIN_CHANGED = 'lchg';
+const uint32 BOTTOM_MARGIN_CHANGED = 'bchg';
 const uint32 MARGIN_CHANGED = 'mchg';
 const uint32 CHANGE_PAGE_SIZE = 'chps';
 const uint32 FLIP_PAGE = 'flip';
 
-// used to index unitFormat array
-typedef enum {
-	UNIT_INCH = 0,
-	UNIT_CM,
-	UNIT_POINT
-};
-	
+
 /**
  * Class MarginView
  */
 class MarginView : public BBox 
 {
 friend MarginManager;
-	
+
+public:
+	// used to index unitFormat array
+	typedef enum {
+		UNIT_INCH = 0,
+		UNIT_CM,
+		UNIT_POINT
+	};
+
 private:
 
 	// GUI components
 	BBox *box;
 	BTextControl *top, *bottom, *left, *right;
+	//BTextView *right;
 	BPopUpMenu *menu;
 	BMenuItem *item;
 	BMenuField *mf;
@@ -170,13 +183,16 @@ private:
 	float viewWidth;
 
 	// Calculate the view size for the margins
-	void CalculateViewSize(void);
+	void CalculateViewSize(uint32 msg);
 
 	// performed internally using the supplied popup
 	void  SetUnits(uint32 unit);
 
 	// performed internally using text fields
 	void  SetMargin(BRect margin);
+
+	// utility method
+	void AllowOnlyNumbers(BTextControl *textControl, int maxNum);
 	
 public:
 	MarginView(BRect rect,
@@ -203,7 +219,7 @@ public:
 	uint32 GetUnits(void);
 
 	// will cause a recalc and redraw
-	void UpdateView(void);
+	void UpdateView(uint32 msg);
 
 	// return handler to send messages to View
 	BLooper* GetMessageHandler();
@@ -231,5 +247,6 @@ public:
 	// Handle messages
 	void MessageReceived(BMessage *msg);
 };
+
 
 #endif //MARGIN_VIEW_H

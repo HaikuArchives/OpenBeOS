@@ -1,6 +1,6 @@
 /*
 
-PDF Writer printer driver.
+MessagePrinter.h
 
 Copyright (c) 2001 OpenBeOS. 
 
@@ -29,15 +29,31 @@ THE SOFTWARE.
 
 */
 
-#include <AppKit.h>
+#ifndef MSG_PRINTER_H
+#define MSG_PRINTER_H 
 
-extern "C"
+#include <StorageKit.h>
+#include <SupportKit.h>
+#include <string.h>
+
+const char FILE_NAME[] = "MessageFile";
+
+/**
+ * Class
+ */
+class MessagePrinter
 {
-__declspec(dllexport) BMessage * take_job(BFile * spool_file, BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) BMessage * config_page(BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) BMessage * config_job(BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) char * add_printer(char * printer_name);
-__declspec(dllexport) BMessage * default_settings(BNode * printer);
-}
+private:
+	BNode node;
+	status_t _err;
+	char msgFileName[B_FILE_NAME_LENGTH];
+	
+public:
+	MessagePrinter() { strcpy(msgFileName, FILE_NAME);	}
+	MessagePrinter(const char *fileName) { strcpy(msgFileName, fileName); }
+	~MessagePrinter() { }
 
+	status_t Print(BMessage *msg);
+};
 
+#endif

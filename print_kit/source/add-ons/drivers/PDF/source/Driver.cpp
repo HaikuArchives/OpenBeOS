@@ -37,41 +37,81 @@ THE SOFTWARE.
 
 #include "Driver.h"
 #include "PDFWriter.h"
+#include "PrinterSettings.h"
 
 static PrinterDriver *instanciate_driver(BNode *spoolDir);
 
+/*  ======== For testing only ================== */
 
-BMessage * 
-take_job(BFile *spoolFile, BNode *spoolDir, BMessage *msg) 
+//#include "MessagePrinter.h"
+//static MessagePrinter* make_Printer();
+
+/**
+ * Static initilizer function
+ *
+ * @param none
+ * @return MessagePrinter* instance 
+ */
+//static MessagePrinter* make_Printer() {
+//	return new MessagePrinter();
+//}
+
+//  ======== For testing only ==================
+
+BMessage* take_job(BFile *spoolFile, BNode *spoolDir, BMessage *msg) 
 {
 	PrinterDriver *driver;
 	
 	driver = instanciate_driver(spoolDir);
-	if (driver->PrintJob(spoolFile, spoolDir, msg) == B_OK)
+	if (driver->PrintJob(spoolFile, spoolDir, msg) == B_OK) {
 		msg = new BMessage('okok');
-	else	
+	} else {	
 		msg = new BMessage('baad');
-	
+	}
 	delete driver;
 			
 	return msg;
 }
 
 
-BMessage * 
-config_page(BNode *spoolDir, BMessage *msg) 
+BMessage* config_page(BNode *spoolDir, BMessage *msg) 
 {
 	BMessage		*pagesetupMsg;
 	PrinterDriver	*driver;
 	const char		*printerName;
-	char			buffer[128];
+	char			buffer[B_ATTR_NAME_LENGTH+1];
 
 	pagesetupMsg = new BMessage(*msg);
+	
+	// Validate the message so that it is good for PDF Writer GUI 
+	PrinterSettings *ps = new PrinterSettings(*spoolDir);
+	if (ps->Validate(pagesetupMsg) != B_OK) {
+		// check for previously saved settings
+		if (ps->ReadSettings(pagesetupMsg) != B_OK) {
+			// if there were none, then create a default set...
+			ps->GetDefaults(pagesetupMsg);
+			// ...and save them
+			ps->WriteSettings(pagesetupMsg);
+		}
+	}
+	delete ps;
+
+/* ======== For testing only ==================
+	
+	MessagePrinter *mp = make_Printer();
+	if (mp->Print(pagesetupMsg) == B_OK) {
+		(new BAlert("", "config_page:MessagePrinter", "OK"))->Go(); 
+	} else {
+		(new BAlert("", "config_page:MessagePrinter", "ERROR"))->Go(); 
+	}
+	
+  ======== For testing only ================== */ 
 
 	// retrieve the printer (spool) name.
 	printerName = NULL;
-	if (spoolDir->ReadAttr("Printer Name", B_STRING_TYPE, 0, buffer, sizeof(buffer)) > 0)
+	if (spoolDir->ReadAttr("Printer Name", B_STRING_TYPE, 1, buffer, B_ATTR_NAME_LENGTH+1) > 0) {
 		printerName = buffer;
+	}
 
 	driver = instanciate_driver(spoolDir);
 	if (driver->PageSetup(pagesetupMsg, printerName) == B_OK) {
@@ -87,26 +127,48 @@ config_page(BNode *spoolDir, BMessage *msg)
 }
 
 
-
-BMessage * 
-config_job(BNode *spoolDir, BMessage *msg)
+BMessage* config_job(BNode *spoolDir, BMessage *msg)
 {
 	BMessage		*jobsetupMsg;
 	PrinterDriver	*driver;
 	const char		*printerName;
-	char			buffer[128];
+	char			buffer[B_ATTR_NAME_LENGTH+1];
 
 	jobsetupMsg = new BMessage(*msg);
 
+	// Validate the message so that it is good for PDF Writer GUI 
+	PrinterSettings *ps = new PrinterSettings(*spoolDir);
+	if (ps->Validate(jobsetupMsg) != B_OK) {
+		// check for previously saved settings
+		if (ps->ReadSettings(jobsetupMsg) != B_OK) {
+			// if there were none, then create a default set...
+			ps->GetDefaults(jobsetupMsg);
+			// ...and save them
+			ps->WriteSettings(jobsetupMsg);
+		}
+	}
+	delete ps;
+
+/* ======== For testing only ==================
+
+	MessagePrinter *mp = make_Printer();
+	if (mp->Print(jobsetupMsg) == B_OK) {
+		(new BAlert("", "config_job:MessagePrinter", "OK"))->Go(); 
+	} else {
+		(new BAlert("", "config_job:MessagePrinter", "ERROR"))->Go(); 
+	}		
+	
+  ======== For testing only ================== */ 
+
 	// retrieve the printer (spool) name.
 	printerName = NULL;
-	if (spoolDir->ReadAttr("Printer Name", B_STRING_TYPE, 0, buffer, sizeof(buffer)) > 0)
+	if (spoolDir->ReadAttr("Printer Name", B_STRING_TYPE, 1, buffer, B_ATTR_NAME_LENGTH+1) > 0) {
 		printerName = buffer;
-
+	}
 	driver = instanciate_driver(spoolDir);
-	if (driver->JobSetup(jobsetupMsg, printerName) == B_OK)
+	if (driver->JobSetup(jobsetupMsg, printerName) == B_OK) {
 		jobsetupMsg->what = 'okok';
-	else {
+	} else {
 		delete jobsetupMsg;
 		jobsetupMsg = NULL;
 	}
@@ -118,16 +180,37 @@ config_job(BNode *spoolDir, BMessage *msg)
 
 
 
-char * 
-add_printer(char *printerName)
-{
+char* add_printer(char *printerName) {
 	return printerName; 
 }
 
 
-static PrinterDriver * 
-instanciate_driver(BNode *spoolDir)
-{
+static PrinterDriver* instanciate_driver(BNode *spoolDir) {
 	return new PDFWriter();
+}
+
+/**
+ * default_settings  
+ *
+ * @param BNode* printer spool directory
+ * @return BMessage* the settings
+ */
+BMessage* default_settings(BNode* printer)
+{
+// (new BAlert("", "default_settings()", "Driver.cpp"))->Go(); 
+	
+	PrinterSettings *ps = new PrinterSettings(*printer);
+	BMessage *msg = new BMessage();
+
+	// first read the settings from the spool dir
+	if (ps->ReadSettings(msg) != B_OK) {
+		// if there were none, then create a default set...
+		ps->GetDefaults(msg);
+		// ...and save them
+		ps->WriteSettings(msg);
+	}
+	delete ps;
+	
+	return msg;
 }
 

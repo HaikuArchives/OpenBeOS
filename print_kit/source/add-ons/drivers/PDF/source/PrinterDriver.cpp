@@ -41,6 +41,7 @@ THE SOFTWARE.
 #include "PageSetupWindow.h"
 #include "JobSetupWindow.h"
 #include "StatusWindow.h"
+#include "PrinterSettings.h"
 
 // Private prototypes
 // ------------------
@@ -168,6 +169,7 @@ PrinterDriver::PrinterSetup(char *printerName)
 
 status_t PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
 {
+	/*
 	BRect paperRect;
 	BRect printRect;
 
@@ -195,8 +197,26 @@ status_t PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
 	if (!setupMsg->HasRect("printable_rect"))
 		setupMsg->AddRect("printable_rect", printRect);
 	 		
-	if (!setupMsg->HasFloat("scaling"))
-		setupMsg->AddFloat("scaling", kScreen);
+	*/
+
+	// check to see if the messag is built correctly...
+	if (setupMsg->HasFloat("scaling") != B_OK)
+	{
+		PrinterSettings *ps = new PrinterSettings(printerName);
+
+		if (ps->InitCheck() == B_OK) {
+			// first read the settings from the spool dir
+			if (ps->ReadSettings(setupMsg) != B_OK) {
+				// if there were none, then create a default set...
+				ps->GetDefaults(setupMsg);
+				// ...and save them
+				ps->WriteSettings(setupMsg);
+			}
+		} else {
+// Temp
+(new BAlert("", "Problem Loading Settings", "PrinterDriver"))->Go();
+		}			
+	}
 
 	PageSetupWindow *psw;
 	

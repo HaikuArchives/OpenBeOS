@@ -39,6 +39,18 @@ THE SOFTWARE.
 
 // Simon: added
 #include "MarginView.h"
+#include "PrinterSettings.h"
+
+/*
+#include <stdio.h>
+#include <stdlib.h>
+
+static void ShowFloat(const char *name, float f) {
+	BString str;
+	str << name << " = " <<  f;
+	(new BAlert("",str.String(), "OK"))->Go();
+}
+*/
 
 // static global variables
 static struct {
@@ -71,9 +83,14 @@ static struct {
 	{NULL, 0}
 };
 
-static	const char * pdf_compatibility[] = {"1.2", "1.3", "1.4", NULL};
+static const char *pdf_compatibility[] = {"1.2", "1.3", "1.4", NULL};
 
-// Simon changed: window size 200,200 -> 400,250
+/**
+ * Constuctor
+ *
+ * @param 
+ * @return
+ */
 PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	:	BWindow(BRect(0,0,400,220), "Page Setup", B_TITLED_WINDOW_LOOK,
  			B_MODAL_APP_WINDOW_FEEL, B_NOT_RESIZABLE | B_NOT_MINIMIZABLE |
@@ -82,19 +99,16 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	fSetupMsg	= msg;
 	fExitSem 	= create_sem(0, "PageSetup");
 	fResult		= B_ERROR;
-
-	if (printerName) {
+	
+	if ( printerName ) {
 		BString	title;
 		
 		title << printerName << " Job Setup";
-		SetTitle(title.String());
-	}
-	
-// Simon changed 6 -> 10
-#define MARGIN 10
+		SetTitle( title.String() );
 
-// Simon added
-#define OFFSET 200 
+		// save the printer name
+		printerDirName = printerName;
+	}
 
 	// ---- Ok, build a default page setup user interface
 	BRect		r;
@@ -105,52 +119,61 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	BMenuItem	*item;
 	float       width, height;
 	int32       orient;
-	BRect		margin, page;
-	
-	if (B_OK == fSetupMsg->FindRect("paper_rect", &r)) {
-		width = r.Width(); height = r.Height();
-	} else {
-		width = a4_width; height = a4_height;
-	}		
+	BRect		page;
+	BRect		margin(0,0,0,0);
+	int32 		units;
+	int32 		compression;
+	BString 	setting_value;
+
+	// load orientation
+	fSetupMsg->FindInt32("orientation", &orient);
+//	(new BAlert("", "orientation not in msg", "Shit"))->Go(); 
+
+	// load page rect
+	fSetupMsg->FindRect("paper_rect", &r);
+	width = r.Width();
+	height = r.Height();
 	page = r;
 	
-	// if (B_OK != fSetupMsg->FindInt32("orientation", &orient)) orient = 0;
-	orient = PrinterDriver::PORTRAIT_ORIENTATION;
+	// Load compression
+	fSetupMsg->FindInt32("pdf_compression", &compression);
 	
-	r = Bounds();
+	// Load units
+	fSetupMsg->FindInt32("units", &units);
 
+	// Load printable rect
+	fSetupMsg->FindRect("printable_rect", &margin);
+	
+	// Load pdf compatability
+	fSetupMsg->FindString("pdf_compatibility", &setting_value);
+	
 	// add a *dialog* background
+	r = Bounds();
 	panel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
 					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
 					B_PLAIN_BORDER);
 
-	// Create the margin view
+	////////////// Create the margin view //////////////////////
+	
+	// re-calculate the margin from the printable rect in points
+	margin.top -= page.top;
+	margin.left -= page.left;
+	margin.right = page.right - margin.right;
+	margin.bottom = page.bottom - margin.bottom;
 
-	if (B_OK == fSetupMsg->FindRect("printable_rect", &margin)) 
-	{
-		// re-calculate the margin from the printable rect
-		//margin.top -= page.top;
-		margin.left -= page.left;
-		margin.right = page.right - margin.right;
-		margin.bottom = page.bottom - margin.bottom;
-
-		marginView = new MarginView(BRect(20,20,200,160), width, height,
-			margin, UNIT_POINT);
-	} else {
-		marginView = new MarginView(BRect(20,20,200,160), width, height);
-	}
+	marginView = new MarginView(BRect(20,20,200,160), width, height,
+			margin, units);
 	panel->AddChild(marginView);
 	
 	// add page format menu
-	//x = r.left + MARGIN; y = r.top + MARGIN;
 	// Simon Changed to OFFSET popups
 	x = r.left + MARGIN * 2 + OFFSET; y = r.top + MARGIN * 2;
-		
-	BMenu* m = new BMenu("popupmenu");
+
+	BPopUpMenu* m = new BPopUpMenu("page_size");
 	m->SetRadioMode(true);
 
 	// Simon changed width 200->140
-	BMenuField * mf = new BMenuField(BRect(x, y, x + 140, y + 20), "page_size", 
+	BMenuField *mf = new BMenuField(BRect(x, y, x + 140, y + 20), "page_size", 
 		"Page Size:", m);
 	fPageSizeMenu = mf;
 	mf->ResizeToPreferred();
@@ -171,22 +194,23 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 		m->AddItem(mi);
 	
 		if (width == pageFormat[i].width && height == pageFormat[i].height) {
-			item = mi; orient = PrinterDriver::PORTRAIT_ORIENTATION;
+			item = mi; 
 		}
 		if (height == pageFormat[i].width && width == pageFormat[i].height) {
-			item = mi; orient = PrinterDriver::LANDSCAPE_ORIENTATION;
+			item = mi; 
 		}
 	}
 	mf->Menu()->SetLabelFromMarked(true);
-	if (!item)
+	if (!item) {
 		item = m->ItemAt(0);
+	}
 	item->SetMarked(true);
 	mf->MenuItem()->SetLabel(item->Label());
 
 	// add orientation menu
 	y += h + MARGIN;
 	 
-	m = new BMenu("orientation");
+	m = new BPopUpMenu("orientation");
 	m->SetRadioMode(true);
 	
 	// Simon changed 200->140
@@ -207,18 +231,23 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 		BMenuItem* mi = new BMenuItem(orientation[i].label, msg);
 		m->AddItem(mi);
 		
-		if (orient == orientation[i].orientation) item = mi;
+		if (orient == orientation[i].orientation) {
+			item = mi;
+		}
 	}
 	mf->Menu()->SetLabelFromMarked(true);
-	if (!item)
+// SHOULD BE REMOVED
+	if (!item) {
 		item = m->ItemAt(0);
+	}
+///////////////////
 	item->SetMarked(true);
 	mf->MenuItem()->SetLabel(item->Label());
 
 	// add PDF comptibility  menu
 	y += h + MARGIN;
 	 
-	m = new BMenu("pdf_compatibility");
+	m = new BPopUpMenu("pdf_compatibility");
 	m->SetRadioMode(true);
 	mf = new BMenuField(BRect(x, y, x + 200, y + 20), "pdf_compatibility", "PDF Compatibility:", m);
 	fPDFCompatibilityMenu = mf;
@@ -227,19 +256,25 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	r.top += h;
 
 	item = NULL;
-	for (int i = 0; pdf_compatibility[i] != NULL; i++) {
-		const char * setting_value;
-		
+	for (int i = 0; pdf_compatibility[i] != NULL; i++) 
+	{	
 		BMenuItem* mi = new BMenuItem(pdf_compatibility[i], NULL);
 		m->AddItem(mi);
 		
-		if ( (fSetupMsg->FindString("pdf_compatibility", &setting_value) == B_OK) &&
-			 strcmp(setting_value, pdf_compatibility[i]) == 0)
+//(new BAlert("", setting_value.String(), pdf_compatibility[i]))->Go(); 
+		if (setting_value == pdf_compatibility[i]) {
 			item = mi;
+		}
 	}
+
 	mf->Menu()->SetLabelFromMarked(true);
-	if (!item)
-		item = m->ItemAt(1);	// "1.3" by default
+
+/// SHOULD BE REMOVED
+if (!item) {
+		item = m->ItemAt(0);
+	}
+////////////////////
+
 	item->SetMarked(true);
 	mf->MenuItem()->SetLabel(item->Label());
 
@@ -258,9 +293,6 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	slider->ResizeToPreferred();
 	slider->GetPreferredSize(&w, &h);
 	
-	int32 compression;
-	if (fSetupMsg->FindInt32("pdf_compression", &compression) != B_OK)
-		compression = 6;
 	slider->SetValue(compression);
 	
 	// add a "OK" button, and make it default
@@ -298,19 +330,18 @@ PageSetupWindow::~PageSetupWindow()
 }
 
 
-bool 
-PageSetupWindow::QuitRequested()
+bool PageSetupWindow::QuitRequested()
 {
 	release_sem(fExitSem);
 	return true;
 }
 
 
-void 
-PageSetupWindow::UpdateSetupMessage() 
+void PageSetupWindow::UpdateSetupMessage() 
 {
 	BMenuItem *item;
 	int32 orientation = 0;
+
 	item = fOrientationMenu->Menu()->FindMarked();
 	if (item) {
 		BMessage *msg = item->Message();
@@ -326,10 +357,11 @@ PageSetupWindow::UpdateSetupMessage()
 			fSetupMsg->AddString("pdf_compatibility", item->Label());
 	}
 			
-	if (fSetupMsg->HasInt32("pdf_compression"))
+	if (fSetupMsg->HasInt32("pdf_compression")) {
 		fSetupMsg->ReplaceInt32("pdf_compression", fPDFCompressionSlider->Value());
-	else
+	} else {
 		fSetupMsg->AddInt32("pdf_compression", fPDFCompressionSlider->Value());
+	}
 
 	item = fPageSizeMenu->Menu()->FindMarked();
 	if (item) {
@@ -344,28 +376,36 @@ PageSetupWindow::UpdateSetupMessage()
 			r.Set(0, 0, h, w);
 		fSetupMsg->ReplaceRect("paper_rect", r);
 		
-	// Simon Todo: Add Margin values to setup message
-	/*
-		Philippe: not sure what to do here, what it the 
-			printable_rect supposed to be? I also need a way
-			to save the units in the message, and assume that
-			all your calculations are performed by PDFLib
-			in points?...
-	*/
-		// calculate the printable_rect like this?
-		
+		// Save the printable_rect 
 		BRect margin = marginView->GetMargin();
-		r.top += margin.top;
-		r.right -= margin.right;
-		r.left += margin.left;
-		r.bottom -= margin.bottom;
-		fSetupMsg->ReplaceRect("printable_rect", r);
+		if (orientation == 0) {
+			margin.right = w - margin.right;
+			margin.bottom = h - margin.bottom;
+		} else {
+			margin.right = h - margin.right;
+			margin.bottom = w - margin.bottom;
+		}
+		fSetupMsg->ReplaceRect("printable_rect", margin);
+
+		// save the units used
+		int32 units = marginView->GetUnits();
+		if (fSetupMsg->HasInt32("units")) {
+			fSetupMsg->ReplaceInt32("units", units);
+		} else {
+			fSetupMsg->AddInt32("units", units);
+		}	
 	}
+
+	// save the settings to be new defaults
+	PrinterSettings *ps = new PrinterSettings(printerDirName.String());
+	if (ps->InitCheck() == B_OK) {
+		ps->WriteSettings(fSetupMsg);
+	}
+	delete ps;
 }
 
 
-void 
-PageSetupWindow::MessageReceived(BMessage *msg)
+void PageSetupWindow::MessageReceived(BMessage *msg)
 {
 	switch (msg->what){
 		case OK_MSG:
@@ -395,7 +435,7 @@ PageSetupWindow::MessageReceived(BMessage *msg)
 					} else {
 						marginView->SetPageSize(h, w);
 					}
-					marginView->UpdateView();
+					marginView->UpdateView(MARGIN_CHANGED);
 				}
 			}
 			break;
@@ -409,12 +449,12 @@ PageSetupWindow::MessageReceived(BMessage *msg)
 				if (orientation == PrinterDriver::LANDSCAPE_ORIENTATION
 					&& p.y > p.x) { 
 					marginView->SetPageSize(p.y, p.x);
-					marginView->UpdateView();
+					marginView->UpdateView(MARGIN_CHANGED);
 				}
 				if (orientation == PrinterDriver::PORTRAIT_ORIENTATION
 					&& p.x > p.y) {
 					marginView->SetPageSize(p.y, p.x);
-					marginView->UpdateView();
+					marginView->UpdateView(MARGIN_CHANGED);
 				}
 			}
 			break;
@@ -426,9 +466,7 @@ PageSetupWindow::MessageReceived(BMessage *msg)
 	}
 }
 			
-
-status_t 
-PageSetupWindow::Go()
+status_t PageSetupWindow::Go()
 {
 	MoveTo(300,300);
 	Show();
@@ -438,3 +476,5 @@ PageSetupWindow::Go()
 
 	return fResult;
 }
+
+

@@ -50,6 +50,9 @@ extern "C" {
 };	
 
 
+/**
+ * Class
+ */
 class PrinterDriver {
 public:
 	// constructors / destructor

@@ -1,14 +1,14 @@
 /*
 
-PDF Writer printer driver.
+PrinterPrefs.h
 
-Copyright (c) 2001 OpenBeOS. 
+Copyright (c) 2002 OpenBeOS. 
 
 Authors: 
 	Philippe Houdoin
-	Simon Gauvin	
+	Simon Gauvin
 	Michael Pfeiffer
-	
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
@@ -29,15 +29,29 @@ THE SOFTWARE.
 
 */
 
-#include <AppKit.h>
+#ifndef PRINTER_PREFS_H
+#define PRINTER_PREFS_H
 
-extern "C"
+#include <StorageKit.h>
+#include <SupportKit.h>
+
+const char SETTINGS_FILE_NAME[] = "pdf_printer_settings";
+
+/**
+ * Class
+ */
+class PrinterPrefs 
 {
-__declspec(dllexport) BMessage * take_job(BFile * spool_file, BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) BMessage * config_page(BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) BMessage * config_job(BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) char * add_printer(char * printer_name);
-__declspec(dllexport) BMessage * default_settings(BNode * printer);
-}
+private:
+	BPath		settingsPath;
+	BString		printerDirName;
 
+public:	
+	PrinterPrefs();
+	~PrinterPrefs();
 
+	status_t	LoadSettings(BMessage* settings);
+	status_t	SaveSettings(BMessage* settings);
+};
+
+#endif

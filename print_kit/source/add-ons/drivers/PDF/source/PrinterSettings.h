@@ -1,6 +1,6 @@
 /*
 
-PDF Writer printer driver.
+PrinterSettings.h
 
 Copyright (c) 2001 OpenBeOS. 
 
@@ -29,15 +29,49 @@ THE SOFTWARE.
 
 */
 
-#include <AppKit.h>
+#ifndef PRINTER_SETTINGS_H
+#define PRINTER_SETTINGS_H 
 
-extern "C"
+#include <StorageKit.h>
+
+#include "PrinterDriver.h"
+
+// Constants
+const char ATTR_NAME[] = "printer_settings";
+const char PDF_COMPATIBILITY[] = "1.3";
+const char PRINTER_SETTINGS_PATH[] = "printers/";
+const int64 XRES = 360;
+const int64 YRES = 360;
+const int32 ORIENTATION = PrinterDriver::PORTRAIT_ORIENTATION;
+const float RES = 72.0f;
+const int32 PDF_COMPRESSION = 3;
+const int32 UNITS = 1;
+const float LETTER_W = 8.5f * RES;
+const float LETTER_H = 11.0f * RES;
+const BRect PAPER_RECT(0, 0, LETTER_W, LETTER_H);
+const BRect PRINT_RECT(0, 0, LETTER_W, LETTER_H);
+
+/**
+ * Class
+ */
+class PrinterSettings
 {
-__declspec(dllexport) BMessage * take_job(BFile * spool_file, BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) BMessage * config_page(BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) BMessage * config_job(BNode * spool_dir, BMessage * msg);
-__declspec(dllexport) char * add_printer(char * printer_name);
-__declspec(dllexport) BMessage * default_settings(BNode * printer);
-}
+private:
+	BNode node;
+	status_t _err;
 
+public:
+	PrinterSettings() { }
+	PrinterSettings(const char *printer); 
+	PrinterSettings(BNode &printer);
+	~PrinterSettings();
+
+	status_t InitCheck();
+	status_t WriteSettings(BMessage *msg);
+	status_t ReadSettings(BMessage *msg);
+	status_t GetDefaults(BMessage *msg);
+	status_t Validate(const BMessage *msg);
+};
+
+#endif
 
