@@ -1,6 +1,10 @@
 /* Query - query parsing and evaluation
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
+** The pattern matching is roughly based on code originally written
+** by J. Kercheval, and on code written by Kenneth Almquist, though
+** it shares no code.
+**
 ** This file may be used under the terms of the OpenBeOS License.
 */
 
@@ -27,10 +31,6 @@
 // the query code, virtuals aren't that bad anyway, and the query code
 // shouldn't be in the kernel.
 //
-// It now parses the whole query string correctly. What's still missing is
-// the handling of "!" (not), but I remember to have read something about
-// it in Dominic's book.
-//
 // The parser has a very static design, but it will do what is required.
 //
 // ParseOr(), ParseAnd(), ParseEquation() are guarantying the operator
@@ -56,7 +56,17 @@ enum ops {
 
 enum match {
 	NO_MATCH = 0,
-	MATCH_OK = 1
+	MATCH_OK = 1,
+	
+	MATCH_BAD_PATTERN = -2,
+	MATCH_INVALID_CHARACTER
+};
+
+// return values from isValidPattern()
+enum {
+	PATTERN_INVALID_ESCAPE = -3,
+	PATTERN_INVALID_RANGE,
+	PATTERN_INVALID_SET
 };
 
 union value {
@@ -131,7 +141,7 @@ class Equation : public Term {
 		union value fValue;
 		type_code	fType;
 		size_t		fSize;
-		bool		fIsRegExp;
+		bool		fIsPattern;
 		
 		int32		fScore;
 		bool		fHasIndex;
@@ -182,11 +192,242 @@ skipWhitespaceReverse(char **expr,char *stop)
 //	#pragma mark -
 
 
+uint32
+utf8ToUnicode(char **string)
+{
+	uint8 *bytes = (uint8 *)*string;
+	int32 length;
+	uint8 mask = 0x1f;
+
+	switch (bytes[0] & 0xf0) {
+		case 0xc0:
+		case 0xd0:	length = 2; break;
+		case 0xe0:	length = 3; break;
+		case 0xf0:
+			mask = 0x0f;
+			length = 4;
+			break;
+		default:
+			// valid 1-byte character
+			// and invalid characters
+			(*string)++;
+			return bytes[0];
+	}
+	uint32 c = bytes[0] & mask;
+	int32 i = 1;
+	for (;i < length && (bytes[i] & 0x80) > 0;i++)
+		c = (c << 6) | (bytes[i] & 0x3f);
+
+	if (i < length) {
+		// invalid character
+		(*string)++;
+		return (uint32)bytes[0];
+	}
+	*string += length;
+	return c;
+}
+
+
+int32
+getFirstPatternSymbol(char *string)
+{
+	char c;
+
+	for (int32 index = 0;(c = *string++);index++) {
+		if (c == '*' || c == '?' || c == '[')
+			return index;
+	}
+	return -1;
+}
+
+
+bool
+isPattern(char *string)
+{
+	return getFirstPatternSymbol(string) >= 0 ? true : false;
+}
+
+
+status_t
+isValidPattern(char *pattern)
+{
+	while (*pattern) {
+		switch (*pattern++) {
+			case '\\':
+				// the escape character must not be at the end of the pattern
+				if (!*pattern++)
+					return PATTERN_INVALID_ESCAPE;
+				break;
+
+			case '[':
+				if (pattern[0] == ']' || !pattern[0])
+					return PATTERN_INVALID_SET;
+
+				while (*pattern != ']') {
+					if (*pattern == '\\' && !*++pattern)
+						return PATTERN_INVALID_ESCAPE;
+
+					if (!*pattern)
+						return PATTERN_INVALID_SET;
+
+					if (pattern[0] == '-' && pattern[1] == '-')
+						return PATTERN_INVALID_RANGE;
+
+					pattern++;
+				}
+				break;
+		}
+	}
+	return B_OK;
+}
+
+
+/**	Matches the string against the given wildcard pattern.
+ *	Returns either MATCH_OK, or NO_MATCH when everything went fine,
+ *	or values < 0 (see enum at the top of Query.cpp) if an error
+ *	occurs
+ */
+
+status_t
+matchString(char *pattern,char *string)
+{
+	while (*pattern) {
+		// end of string == valid end of pattern?
+		if (!string[0]) {
+			while (pattern[0] == '*')
+				pattern++;
+			return !pattern[0] ? MATCH_OK : NO_MATCH;
+		}
+
+		switch (*pattern++) {
+			case '?':
+			{
+				// match exactly one UTF-8 character; we are
+				// not interested in the result
+				utf8ToUnicode(&string);
+				break;
+			}
+
+			case '*':
+			{
+				// compact pattern
+				while (true) {
+					if (pattern[0] == '?') {
+						if (!*++string)
+							return NO_MATCH;
+					} else if (pattern[0] != '*')
+						break;
+
+					pattern++;
+				}
+
+				// if the pattern is done, we have matched the string
+				if (!pattern[0])
+					return MATCH_OK;
+
+				while(true) {
+					// we have removed all occurences of '*' and '?'
+					if (pattern[0] == string[0]
+						|| pattern[0] == '['
+						|| pattern[0] == '\\') {
+						status_t status = matchString(pattern,string);
+						if (status < B_OK || status == MATCH_OK)
+							return status;
+					}
+
+					if (!*++string)
+						return NO_MATCH;
+				}
+				break;
+			}
+
+			case '[':
+			{
+				bool invert = false;
+				if (pattern[0] == '^' || pattern[0] == '!') {
+					invert = true;
+					pattern++;
+				}
+				
+				if (!pattern[0] || pattern[0] == ']')
+					return MATCH_BAD_PATTERN;
+
+				uint32 c = utf8ToUnicode(&string);
+				bool matched = false;
+
+				while (pattern[0] != ']') {
+					if (!pattern[0])
+						return MATCH_BAD_PATTERN;
+
+					if (pattern[0] == '\\')
+						pattern++;
+
+					uint32 first = utf8ToUnicode(&pattern);
+
+					// Does this character match, or is this a range?
+					if (first == c) {
+						matched = true;
+						break;
+					} else if (pattern[0] == '-' && pattern[1] != ']' && pattern[1]) {
+						pattern++;
+
+						if (pattern[0] == '\\') {
+							pattern++;
+							if (!pattern[0])
+								return MATCH_BAD_PATTERN;
+						}
+						uint32 last = utf8ToUnicode(&pattern);
+
+						if (c >= first && c <= last) {
+							matched = true;
+							break;
+						}
+					}
+				}
+
+				if (invert)
+					matched = !matched;
+
+				if (matched) {
+					while (pattern[0] != ']') {
+						if (!pattern[0])
+							return MATCH_BAD_PATTERN;
+						pattern++;
+					}
+					pattern++;
+					break;
+				}
+				return NO_MATCH;
+			}
+
+            case '\\':
+				if (!pattern[0])
+					return MATCH_BAD_PATTERN;
+				// supposed to fall through
+			default:
+				if (pattern[-1] != string[0])
+					return NO_MATCH;
+				string++;
+				break;
+		}
+	}
+
+	if (string[0])
+		return NO_MATCH;
+	
+	return MATCH_OK;
+}
+
+
+//	#pragma mark -
+
+
 Equation::Equation(char **expr)
 	: Term(OP_EQUATION),
 	fAttribute(NULL),
 	fString(NULL),
-	fType(0)
+	fType(0),
+	fIsPattern(false)
 {
 	char *string = *expr;
 	char *start = string;
@@ -287,8 +528,16 @@ Equation::Equation(char **expr)
 	if (fString == NULL)
 		return;
 
-	// this isn't checked for yet
-	fIsRegExp = false;
+	// patterns are only allowed for these operations (and strings)
+	if (fOp == OP_EQUAL || fOp == OP_UNEQUAL) {
+		fIsPattern = isPattern(fString);
+		if (fIsPattern && isValidPattern(fString) < B_OK) {
+			// we only want to have valid patterns; setting fString
+			// to NULL will cause InitCheck() to fail
+			free(fString);
+			fString = NULL;
+		}
+	}
 
 	*expr = string;
 }
@@ -407,6 +656,11 @@ Equation::ConvertValue(type_code type)
 			// should we fail here or just do a safety int32 conversion?
 			return B_ERROR;
 	}
+
+	// patterns are only allowed for string types
+	if (fType != B_STRING_TYPE && fIsPattern)
+		fIsPattern = false;
+
 	return B_OK;
 }
 
@@ -418,7 +672,17 @@ Equation::ConvertValue(type_code type)
 bool
 Equation::CompareTo(uint8 *value,uint16 size)
 {
-	int32 compare = compareKeys(fType,value,size,Value(),fSize);
+	int32 compare;
+
+	// fIsPattern is only true if it's a string type, and fOp OP_EQUAL, or OP_UNEQUAL
+	if (fIsPattern) {
+		// we have already validated the pattern, so we don't check for failing
+		// here - if something is broken, and matchString() returns an error,
+		// we just don't match
+		compare = matchString(fValue.String,(char *)value) == MATCH_OK ? 0 : 1;
+	} else
+		compare = compareKeys(fType,value,size,Value(),fSize);
+
 	switch (fOp) {
 		case OP_EQUAL:
 			return compare == 0;
@@ -568,11 +832,23 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 	if (*iterator == NULL)
 		return B_NO_MEMORY;
 
-	if ((fOp == OP_EQUAL || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL)
-		&& fHasIndex && !fIsRegExp) {
+	if ((fOp == OP_EQUAL || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL || fIsPattern)
+		&& fHasIndex) {
 		// set iterator to the exact position
-		
+
 		int32 keySize = index->KeySize();
+		
+		// at this point, fIsPattern is only true if it's a string type, and fOp
+		// is either OP_EQUAL or OP_UNEQUAL
+		if (fIsPattern) {
+			// let's see if we can use the beginning of the key for positioning
+			// the iterator and adjust the key size; if not, just leave the
+			// iterator at the start and return success
+			keySize = getFirstPatternSymbol(fString);
+			if (keySize <= 0)
+				return B_OK;
+		}
+
 		if (keySize == 0) {
 			if (fType == B_STRING_TYPE)
 				keySize = strlen(fValue.String);
@@ -580,9 +856,9 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 				RETURN_ERROR(B_ENTRY_NOT_FOUND);
 		}
 		status = (*iterator)->Find(Value(),keySize);
-		if (fOp == OP_EQUAL)
+		if (fOp == OP_EQUAL && !fIsPattern)
 			return status;
-		else if (status == B_ENTRY_NOT_FOUND && (fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL))
+		else if (status == B_ENTRY_NOT_FOUND && (fIsPattern || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL))
 			return B_OK;
 
 		RETURN_ERROR(status);
@@ -605,9 +881,15 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 		if (status < B_OK)
 			return status;
 
+		// only compare against the index entry when this is the correct
+		// index for the equation
 		if (fHasIndex && !CompareTo((uint8 *)&indexValue,keyLength)) {
-			// they aren't equal? let the operation decide what to do
-			if (fOp == OP_LESS_THAN || OP_LESS_THAN_OR_EQUAL)
+			// They aren't equal? let the operation decide what to do
+			// Since we always start at the beginning of the index (or the correct
+			// position), only some needs to be stopped if the entry doesn't fit.
+			if (fOp == OP_LESS_THAN
+				|| fOp == OP_LESS_THAN_OR_EQUAL
+				|| (fOp == OP_EQUAL && !fIsPattern))
 				return B_ENTRY_NOT_FOUND;
 			continue;
 		}
@@ -619,6 +901,8 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 			// try with next
 			continue;
 		}
+
+		// check user permissions here!
 
 		// go up in the tree until a &&-operator is found, and check if the
 		// inode matches with the rest of the expression - we don't have to
@@ -828,9 +1112,7 @@ Expression::Expression(char *expr)
 		D(__out("\n"));
 		if (*expr != '\0')
 			PRINT(("Unexpected end of string: \"%s\"!\n",expr));
-	} else
-		PRINT(("Expression not parsed, terminated at: \"%s\"!\n",expr));
-	);
+	});
 	fPosition = expr;
 }
 
