@@ -5,17 +5,15 @@
 
 #include <unistd.h>
 #include <syscalls.h>
+#include <errno.h>
 
-
-int
-close(int fd)
+int close(int fd)
 {
-	int retval;
+	int retval = sys_close(fd);
 
-	retval= sys_close(fd);
-
-	if(retval< 0) {
-		// set errno
+	if (retval < 0) {
+		errno = retval;
+		retval = -1;
 	}
 
 	return retval;

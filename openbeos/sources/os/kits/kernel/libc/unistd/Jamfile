@@ -6,7 +6,8 @@ KernelObjects
 	<$(SOURCE_GRIST)>dup2.c 
 	<$(SOURCE_GRIST)>getopt.c
 	<$(SOURCE_GRIST)>lseek.c 
-	<$(SOURCE_GRIST)>open.c 
+	<$(SOURCE_GRIST)>open.c
+	<$(SOURCE_GRIST)>opendir.c
 	<$(SOURCE_GRIST)>pread.c 
 	<$(SOURCE_GRIST)>pwrite.c 
 	<$(SOURCE_GRIST)>read.c 
