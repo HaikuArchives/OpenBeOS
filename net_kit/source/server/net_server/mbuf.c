@@ -69,13 +69,13 @@ struct mbuf *m_free(struct mbuf *mfree)
 /* Free the entire chain */
 void m_freem(struct mbuf *m)
 {
-	struct mbuf *n;
+	struct mbuf *n = NULL;
 
 	if (!m)
 		return;
 	do {
 		MFREE(m, n);
-	} while ((m = n));
+	} while ((m = n) != NULL);
 }
 
 struct mbuf *m_prepend(struct mbuf *m, int len)
@@ -383,30 +383,31 @@ struct mbuf *m_pullup(struct mbuf *n, int len)
 {
 	struct mbuf *m;
 	int count;
-        int space;
+	int space;
+printf("m_pullup!\n");
 
-        /*
-         * If first mbuf has no cluster, and has room for len bytes
-         * without shifting current data, pullup into it,
-         * otherwise allocate a new mbuf to prepend to the chain.
-         */
-        if ((n->m_flags & M_EXT) == 0 &&
-            n->m_data + len < &n->m_dat[MLEN] && n->m_next) {
-                if (n->m_len >= len)
-                        return (n);
-                m = n;
-                n = n->m_next;
-                len -= m->m_len;
-        } else {
-                if (len > MHLEN)
-                        goto bad;
-                MGET(m, n->m_type);
-                if (m == NULL)
-                        goto bad;
-                m->m_len = 0;
-                if (n->m_flags & M_PKTHDR)
-                        M_MOVE_PKTHDR(m, n);
-        }
+	/*
+	 * If first mbuf has no cluster, and has room for len bytes
+	 * without shifting current data, pullup into it,
+	 * otherwise allocate a new mbuf to prepend to the chain.
+	 */
+	if ((n->m_flags & M_EXT) == 0 &&
+	    n->m_data + len < &n->m_dat[MLEN] && n->m_next) {
+		if (n->m_len >= len)
+			return (n);
+		m = n;
+		n = n->m_next;
+		len -= m->m_len;
+	} else {
+		if (len > MHLEN)
+			goto bad;
+		MGET(m, n->m_type);
+		if (m == NULL)
+			goto bad;
+		m->m_len = 0;
+		if (n->m_flags & M_PKTHDR)
+			M_MOVE_PKTHDR(m, n);
+	}
         space = &m->m_dat[MLEN] - (m->m_data + m->m_len);
         do {
                 count = min(min(max(len, max_protohdr), space), n->m_len);
@@ -425,6 +426,7 @@ struct mbuf *m_pullup(struct mbuf *n, int len)
                 (void)m_free(m);
                 goto bad;
         }
+        printf("m_pullup: setting m->m_next = %p\n", n);
         m->m_next = n;
         return (m);
 bad:
