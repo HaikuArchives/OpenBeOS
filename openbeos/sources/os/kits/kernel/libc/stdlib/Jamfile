@@ -3,7 +3,7 @@ SubDir OBOS_TOP sources os kits kernel libc stdlib ;
 KernelObjects 
 	<$(SOURCE_GRIST)>assert.c 
 	<$(SOURCE_GRIST)>atoi.c 
-	<$(SOURCE_GRIST)>bsearch.c 
+	<$(SOURCE_GRIST)>bsearch.c
 	<$(SOURCE_GRIST)>heapsort.c 
 	<$(SOURCE_GRIST)>merge.c 
 	<$(SOURCE_GRIST)>qsort.c 

@@ -1,4 +1,5 @@
 SubDir OBOS_TOP sources os kits kernel libc stdio ;
 
-KernelObjects <$(SOURCE_GRIST)>stdio.c 
-	<$(SOURCE_GRIST)>vsprintf.c ;
+KernelObjects 
+	<$(SOURCE_GRIST)>stdio.c
+ 	<$(SOURCE_GRIST)>vsprintf.c ;
