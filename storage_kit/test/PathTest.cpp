@@ -32,14 +32,14 @@ PathTest::Suite() {
 	return suite;
 }		
 
-// This function called before *each* test added in Suite()
+// setUp
 void
 PathTest::setUp()
 {
 	BasicTest::setUp();
 }
 	
-// This function called after *each* test added in Suite()
+// tearDown
 void
 PathTest::tearDown()
 {
