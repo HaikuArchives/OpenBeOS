@@ -33,18 +33,18 @@ struct inpcb {
 	struct inpcb *inp_prev;
 	struct inpcb *inp_head;
 
-	struct in_addr faddr;	/* foreign address */
-	uint16  fport;		/* foreign port # */	
-	struct in_addr laddr;	/* local address */
-	uint16  lport;		/* local port # */
+	struct in_addr faddr;       /* foreign address */
+	uint16  fport;              /* foreign port # */	
+	struct in_addr laddr;       /* local address */
+	uint16  lport;              /* local port # */
 
 	struct socket *inp_socket;
-
-	struct ip inp_ip;	/* header prototype */	
-	int inp_flags;		/* flags */
-	struct mbuf *inp_options; /* IP options */
+	caddr_t inp_ppcb;           /* pointer to a per protocol pcb*/
+	struct ip inp_ip;	        /* header prototype */	
+	int inp_flags;		        /* flags */
+	struct mbuf *inp_options;   /* IP options */
 	/* more will be required */
-	struct route inp_route;	/* the route to host */
+	struct route inp_route;	    /* the route to host */
 };
 
 int      in_pcballoc (struct socket *, struct inpcb *head);

@@ -32,6 +32,14 @@ struct rt_metrics {
         u_long  rmx_pksent;     /* packets sent using this route */
 };
 
+/*
+ * rmx_rtt and rmx_rttvar are stored as microseconds;
+ * RTTTOPRHZ(rtt) converts to a value suitable for use
+ * by a protocol slowtimo counter.
+ */
+#define	RTM_RTTUNIT     1000000 /* units for rtt, rttvar, as units per sec */
+#define	RTTTOPRHZ(r)	((r) / (RTM_RTTUNIT / PR_SLOWHZ))
+
 struct rtentry {
         struct  radix_node rt_nodes[2]; /* tree glue, and other values */
         struct  sockaddr *rt_gateway;   /* value */

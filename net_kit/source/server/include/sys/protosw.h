@@ -55,6 +55,8 @@ struct protosw {
 #define PR_ABRTACPTDIS  0x20            /* abort on accept(2) to disconnected
                                            socket */
 
+#define PR_SLOWHZ        2              /* 2 timeouts per second... */
+#define PR_FASTHZ        5              /* 5 timeouts per second */
 /*
  * Defines for the userreq function req field are below.
  * 
