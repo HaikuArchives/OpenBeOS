@@ -34,12 +34,23 @@ struct rw_lock {
 
 typedef struct rw_lock rw_lock;
 
-
+#ifndef _KERNEL_MODE
 #define INIT_BENAPHORE(lock,name) \
 	{ \
 		(lock).count = 1; \
 		(lock).sem = create_sem(0, name); \
 	}
+
+#else
+
+#define INIT_BENAPHORE(lock,name) \
+        { \
+                (lock).count = 1; \
+                (lock).sem = create_sem(0, name); \
+                set_sem_owner((lock).sem, B_SYSTEM_TEAM); \
+        }
+#endif
+
 
 #define CHECK_BENAPHORE(lock) \
 	((lock).sem)
@@ -57,7 +68,7 @@ typedef struct rw_lock rw_lock;
 	}
 
 /* read/write lock */
-
+#ifndef _KERNEL_MODE
 #define INIT_RW_LOCK(lock,name) \
 	{ \
 		(lock).sem = create_sem(0, name); \
@@ -65,6 +76,17 @@ typedef struct rw_lock rw_lock;
 		INIT_BENAPHORE((lock).writeLock, "r/w write lock"); \
 	}
 
+#else
+
+#define INIT_RW_LOCK(lock,name) \
+        { \
+                (lock).sem = create_sem(0, name); \
+                set_sem_owner((lock).sem, B_SYSTEM_TEAM); \
+                (lock).count = MAX_READERS; \
+                INIT_BENAPHORE((lock).writeLock, "r/w write lock"); \
+        }
+
+#endif
 #define CHECK_RW_LOCK(lock) \
 	((lock).sem)
 

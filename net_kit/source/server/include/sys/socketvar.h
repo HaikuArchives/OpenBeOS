@@ -118,12 +118,16 @@ struct socket {
 
 #define sorwakeup(so)   { sowakeup((so), &(so)->so_rcv); }
 
+
 /* Function prototypes */
-int     soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
-int	initsocket(void **aso);
-int     socreate (int dom, void *aso, int type, int proto);
-int     sobind (struct socket *so, struct mbuf *nam);
-int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
+int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
+
+int	initsocket(void **spp);
+int	socreate (int dom, void *aso, int type, int proto);
+
+int	sobind (void *so, struct mbuf *nam);
+
+int	sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
            struct mbuf *control, int flags);
 
 void    sbrelease (struct sockbuf *sb);
@@ -145,7 +149,7 @@ int     soreceive (struct socket *so, struct mbuf **paddr, struct uio *uio,
 void    sowakeup(struct socket *so, struct sockbuf *sb);
 int     sbwait(struct sockbuf *sb);
 
-int 	soo_ioctl(void *sp, int cmd, caddr_t data);
+int	soo_ioctl(void *sp, int cmd, caddr_t data);
 int	soclose(void *sp);
 
 #endif /* SYS_SOCKETVAR_H */
