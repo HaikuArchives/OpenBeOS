@@ -190,7 +190,7 @@ public:
 	
 	/*! Returns a POSIX file descriptor to the node this object refers to. Remember
 		to call close() on the file descriptor when you're through with it. */
-	int Dup();
+	int Dup();  // This should be "const" but R5's is not... Ugggh.
 
 private:
 

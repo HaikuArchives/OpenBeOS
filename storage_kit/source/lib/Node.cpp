@@ -266,17 +266,42 @@ BNode::ReadAttrString(const char *name, BString *result) const {
 
 BNode&
 BNode::operator=(const BNode &node) {
+	// No need to do any assignment if already equal
+	if (*this == node)
+		return *this;
+	
+	// Close down out current state
+	close_fd();
+	
+	// We have to manually dup the node, because R5::BNode::Dup()
+	// is not declared to be const (which IMO is retarded).
+	fFd = StorageKit::dup(node.fFd);
+	fCStatus = (fFd == -1) ? B_NO_INIT : B_OK ;
+
 	return *this;
 }
 
 bool
 BNode::operator==(const BNode &node) const {
-	return false;
+	if (fCStatus == B_NO_INIT && node.InitCheck() == B_NO_INIT)
+		return true;
+		
+	if (fCStatus == B_OK && node.InitCheck() == B_OK) {
+		// Check if they're identical
+		StorageKit::Stat s1, s2;
+		if (GetStat(&s1) != B_OK)
+			return false;
+		if (node.GetStat(&s2) != B_OK)
+			return false;
+		return (s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino);
+	}
+	
+	return false;	
 }
 
 bool
 BNode::operator!=(const BNode &node) const {
-	return true;
+	return !(*this == node);
 }
 
 int
