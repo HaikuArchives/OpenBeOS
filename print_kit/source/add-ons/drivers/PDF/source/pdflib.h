@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------*
  |              PDFlib - A library for generating PDF on the fly             |
  +---------------------------------------------------------------------------+
- | Copyright (c) 1997-2001 PDFlib GmbH and Thomas Merz. All rights reserved. |
+ | Copyright (c) 1997-2002 PDFlib GmbH and Thomas Merz. All rights reserved. |
  +---------------------------------------------------------------------------+
  |    This software is NOT in the public domain.  It can be used under two   |
  |    substantially different licensing terms:                               |
@@ -98,8 +98,8 @@ typedef struct PDF_s PDF;
 /* do not change this (version.sh will do it for you :) */
 #define PDFLIB_MAJORVERSION	4	/* PDFlib major version number */
 #define PDFLIB_MINORVERSION	0	/* PDFlib minor version number */
-#define PDFLIB_REVISION		1	/* PDFlib revision number */
-#define PDFLIB_VERSIONSTRING	"4.0.1"	/* The whole bunch */
+#define PDFLIB_REVISION		2	/* PDFlib revision number */
+#define PDFLIB_VERSIONSTRING	"4.0.2"	/* The whole bunch */
 
 /*
  * Allow for the external and internal float type to be easily redefined.
@@ -231,6 +231,9 @@ PDF_findfont(PDF *p, const char *fontname, const char *encoding, int embed);
 PDFLIB_API void PDFLIB_CALL
 PDF_setfont(PDF *p, int font, float fontsize);
 
+/* Request a glyph name from a custom encoding (unsupported). */
+PDFLIB_API const char * PDFLIB_CALL
+PDF_encoding_get_name(PDF *p, const char *encoding, int slot);
 
 /* 
  * ----------------------------------------------------------------------
