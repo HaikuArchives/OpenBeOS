@@ -38,7 +38,7 @@ struct rtentry {
         uint	rt_flags;               /* up/down?, host/net */
         int     rt_refcnt;              /* # held references */
         uint32	rt_use;                 /* raw # packets forwarded */
-        struct  ifnet *rt_ifp;          /* the answer: interface to use */
+        struct  ifnet  *rt_ifp;         /* the answer: interface to use */
         struct  ifaddr *rt_ifa;         /* the answer: interface to use */
         struct  sockaddr *rt_genmask;   /* for generation of cloned routes */
         caddr_t rt_llinfo;              /* pointer to link level info cache */

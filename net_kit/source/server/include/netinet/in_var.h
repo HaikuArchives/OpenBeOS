@@ -19,7 +19,7 @@ struct in_ifaddr {
 	struct sockaddr_in	ia_sockmask;
 	/*XXX - milticast address list */
 };
-#define ia_ifp		ia_ifa.ifn
+#define ia_ifp		ia_ifa.ifa_ifp
 #define ia_flags	ia_ifa.ifa_flags
 #define ia_broadaddr	ia_dstaddr
 

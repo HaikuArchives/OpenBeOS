@@ -80,7 +80,7 @@ struct ifq {
 
 struct ifaddr {
 	struct ifaddr 	*ifa_next;      /* the next address for the interface */
-	struct ifnet 	*ifn;           /* pointer to the interface structure */
+	struct ifnet 	*ifa_ifp;           /* pointer to the interface structure */
 
 	struct sockaddr *ifa_addr;	    /* the address - cast to be a suitable type, so we
 		                             * use this structure to store any type of address that
@@ -124,16 +124,17 @@ struct if_data {
 };
 	
 struct ifnet {
-	struct ifnet *next;		/* next device */
-	struct ifaddr *if_addrlist;		/* linked list of addresses */
-	int devid;			/* our device id if we have one... */
-	int id;				/* id within the stack's device list */
-	char *name;			/* name of driver e.g. tulip */
-	int unit;			/* number of unit e.g  0 */
-	char *if_name;			/* full name, e.g. tulip0 */
-	struct if_data ifd;		/* if_data structure, shortcuts below */
-	int flags;			/* if flags */
-	int if_index;           /* our index in ifnet_addrs and interfaces */
+	struct ifnet *if_next;       /* next device */
+	struct ifaddr *if_addrlist;  /* linked list of addresses */
+	int devid;                   /* our device id if we have one... */
+	int id;                      /* id within the stack's device list */
+	char *name;                  /* name of driver e.g. tulip */
+	int unit;                    /* number of unit e.g  0 */
+	char *if_name;               /* full name, e.g. tulip0 */
+	struct if_data ifd;	         /* if_data structure, shortcuts below */
+	int if_flags;                /* if flags */
+	int if_index;                /* our index in ifnet_addrs and interfaces */
+
 	ifq *rxq;
 	thread_id rx_thread;
 	ifq *txq;
@@ -146,13 +147,12 @@ struct ifnet {
 			  struct sockaddr*, struct rtentry *); 
 	int	(*ioctl) (struct ifnet *, int, caddr_t);
 };
-
-#define if_mtu		ifd.ifi_mtu
-#define if_type		ifd.ifi_type
-#define if_addrlen	ifd.ifi_addrlen
-#define if_hdrlen	ifd.ifi_hdrlen
-#define if_metric	ifd.ifi_metric
-#define if_baudrate	ifd.ifi_baurdate
+#define if_mtu          ifd.ifi_mtu
+#define if_type         ifd.ifi_type
+#define if_addrlen      ifd.ifi_addrlen
+#define if_hdrlen       ifd.ifi_hdrlen
+#define if_metric       ifd.ifi_metric
+#define if_baudrate	    ifd.ifi_baurdate
 #define if_ipackets     ifd.ifi_ipackets
 #define if_ierrors      ifd.ifi_ierrors
 #define if_opackets     ifd.ifi_opackets

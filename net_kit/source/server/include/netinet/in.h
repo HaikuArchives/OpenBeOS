@@ -4,7 +4,10 @@
 
 #include <ByteOrder.h> /* for htonl */
 
+#ifdef _NETWORK_STACK
 #include "net_misc.h"
+#endif
+#include "net/if.h"
 
 /* XXX - This really doesn't belong in here... */
 typedef uint32	in_addr_t; 
@@ -127,8 +130,13 @@ struct sockaddr_in {
 /* some helpful macro's :) */
 #define in_hosteq(s,t)  ((s).s_addr == (t).s_addr)
 #define in_nullhost(x)  ((x).s_addr == INADDR_ANY)
-
 #define satosin(sa)     ((struct sockaddr_in *)(sa))
 #define sintosa(sin)    ((struct sockaddr *)(sin))
+
+/* Prototypes... */
+int  in_broadcast  (struct in_addr, struct ifnet *); 
+int  in_canforward (struct in_addr);
+int  in_localaddr  (struct in_addr);
+void in_socktrim   (struct sockaddr_in*);
 
 #endif /* NETINET_IN_H */

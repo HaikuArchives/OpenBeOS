@@ -10,6 +10,8 @@
 #include "sys/socket.h"
 
 struct selinfo {
+	struct selinfo *sel_next;
+	uint8 event;
 	void *sync;
 	uint32 ref;
 };
@@ -21,7 +23,7 @@ struct  sockbuf {
 	uint32  sb_mbmax;		/* max chars of mbufs to use */
 	int32   sb_lowat;		/* low water mark */
 	struct  mbuf *sb_mb;	/* the mbuf chain */
-	struct  selinfo sb_sel;
+	struct  selinfo *sb_sel;
 	int16   sb_flags;		/* flags, see below */
 	int32   sb_timeo;		/* timeout for read/write */
 	sem_id	sb_pop;			/* sem to wait on... */
@@ -141,6 +143,7 @@ int     recvit(void *, struct msghdr *, caddr_t, int *);
 int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, 
                struct mbuf *top, struct mbuf *control, int flags);
 int     soselect(void *, uint8, uint32, void *);
+int     sodeselect(void *, uint8 , void *);
 int     sosetopt(void *, int, int, const void *, size_t);
 int     sogetopt(void *, int, int, void *, size_t *);
 
