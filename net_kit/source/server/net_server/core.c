@@ -386,8 +386,6 @@ void add_domain(struct domain *dom, int fam)
 	struct domain *dm = domains;
 	struct domain *ndm;
 
-dprintf("add_domain: %d\n", fam);
-
 	for(; dm; dm = dm->dom_next) {
 		if (dm->dom_family == fam)
 			/* already done */
@@ -409,7 +407,6 @@ dprintf("add_domain: %d\n", fam);
 					dm->dom_next = ndm;
 				else
 					domains = ndm;
-				dprintf("Added AF_INET domain\n");
 				return;
 			default:
 				dprintf("Don't know how to add domain %d\n", fam);
@@ -427,8 +424,6 @@ void add_protocol(struct protosw *pr, int fam)
 {
 	struct protosw *psw = protocols;
 	struct domain *dm = domains;
-	
-	dprintf("add_protocol: %s\n", pr->name);
 	
 	/* first find the correct domain... */
 	for (; dm; dm= dm->dom_next) {
@@ -474,13 +469,25 @@ void add_protocol(struct protosw *pr, int fam)
 	return;
 }
 
+void add_protosw(struct protosw *prt[], int layer)
+{
+	struct protosw *p;
+	
+	for (p = protocols; p; p = p->pr_next) {
+		if (p->layer == layer)
+			prt[p->pr_protocol] = p;
+		if (layer == NET_LAYER3 && p->layer == NET_LAYER2)
+			prt[p->pr_protocol] = p;
+		if (layer == NET_LAYER1 && p->layer == NET_LAYER2)
+			prt[p->pr_protocol] = p;
+	}
+}
+
 static void domain_init(void)
 {
 	struct domain *d;
 	struct protosw *p;
 
-dprintf("domain_init()\n");
-	
 	for (d = domains;d;d = d->dom_next) {
 		if (d->dom_init)
 			d->dom_init();
@@ -708,6 +715,7 @@ static struct core_module_info core_info = {
 	stop_stack,
 	add_domain,
 	add_protocol,
+	add_protosw,
 
 	soo_ioctl,
 
@@ -734,8 +742,13 @@ static struct core_module_info core_info = {
 
 	net_server_add_device,
 
+	rtalloc,
 	rtalloc1,
 	rtfree,
+	
+	ifa_ifwithdstaddr,
+	ifa_ifwithnet,
+	
 	get_primary_addr
 };
 

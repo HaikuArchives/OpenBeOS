@@ -18,6 +18,7 @@ struct core_module_info {
 	int (*stop)(void);
 	void (*add_domain)(struct domain *, int);
 	void (*add_protocol)(struct protosw *, int);
+	void (*add_protosw)(struct protosw *prt[], int layer);
 	
 	/* Add the required functions here... */
 	int (*soo_ioctl)(void *, int, caddr_t);
@@ -52,9 +53,14 @@ struct core_module_info {
 	void (*add_device)(ifnet *);
 
 	/* routing */
+	void (*rtalloc)(struct route *ro);
 	struct rtentry *(*rtalloc1)(struct sockaddr *, int);
 	void (*rtfree)(struct rtentry *);
 
+	/* ifnet functions */
+	struct ifaddr *(*ifa_ifwithdstaddr)(struct sockaddr *addr);
+	struct ifaddr *(*ifa_ifwithnet)(struct sockaddr *addr);
+	
 	struct in_ifaddr * (*get_primary_addr)(void);	
 };
 
