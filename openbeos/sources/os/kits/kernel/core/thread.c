@@ -528,17 +528,18 @@ int thread_suspend_thread(thread_id id)
 		t = thread_get_thread_struct_locked(id);
 	}
 
-	if(t != NULL) {
-		if(t->proc == kernel_proc) {
+	if (t != NULL) {
+		if (t->proc == kernel_proc) {
 			// no way
 			retval = ERR_NOT_ALLOWED;
-		} else if(t->in_kernel == true) {
+		} else if (t->in_kernel == true) {
 			t->pending_signals |= SIG_SUSPEND;
+			retval = NO_ERROR;
 		} else {
 			t->next_state = THREAD_STATE_SUSPENDED;
 			global_resched = true;
+			retval = NO_ERROR;
 		}
-		retval = NO_ERROR;
 	} else {
 		retval = ERR_INVALID_HANDLE;
 	}
