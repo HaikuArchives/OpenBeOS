@@ -250,9 +250,9 @@ BStatable::GetVolume(BVolume *vol) const
   error = GetStat(&statData);
   if (error == B_OK) {
 	if(vol != 0) {
-	  vol->SetTo(statData.st_dev);
+//	  vol->SetTo(statData.st_dev);
 	} else {
-	  vol = new BVolume(statData.st_dev);
+//	  vol = new BVolume(statData.st_dev);
 	}
   }
 
