@@ -31,17 +31,12 @@ int main(int, char**)
 
 KeyboardApplication::KeyboardApplication():BApplication("application/x-vnd.OpenBeOS-KYBD")
 {//KeyboardApplication::KeyboardApplication()
-	BRect				aRect;
 	
 	//Create the settings object
 	theseSettings = new KeyboardSettings();
 
-	// set up a rectangle and instantiate a new window
-	aRect.left=theseSettings->corner.x;
-	aRect.top=theseSettings->corner.y;
-	aRect.right=aRect.left+229;
-	aRect.bottom=aRect.top+221;
-	aWindow = new KeyboardWindow(aRect);
+	// Instantiate a new window using the settings file.
+	aWindow = new KeyboardWindow(theseSettings);
 			
 	// make window visible
 	aWindow->Show();

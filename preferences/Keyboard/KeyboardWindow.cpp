@@ -20,11 +20,11 @@
 #include <Button.h>
 #endif
 
-KeyboardWindow::KeyboardWindow(BRect frame)
-				: BWindow(frame, "Keyboard", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE )
+KeyboardWindow::KeyboardWindow(KeyboardSettings *Settings)
+				: BWindow(Settings->WindowPosition(), "Keyboard", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE )
 {//KeyboardWindow::KeyboardWindow
 	// set up a rectangle and instantiate a new view
-	
+	fSettings = Settings;
 	BRect aRect( Bounds() );
 	aView = new KeyboardView(aRect);
 	// add view to window
@@ -58,6 +58,17 @@ void KeyboardWindow::MessageReceived(BMessage *message)
 			break;
 		case BUTTON_REVERT:
 			{//BUTTON_REVERT
+				//Uncomment when I know the file operations are working.
+				if (set_key_repeat_rate(fSettings->KeyboardRepeatRate())!=B_OK) 
+	  			{
+	    			be_app->PostMessage(ERROR_DETECTED);
+	  			};
+	  			aView->rateSlider->SetValue(fSettings->KeyboardRepeatRate());
+				if (set_key_repeat_delay(fSettings->KeyboardDelayRate())!=B_OK) 
+	  			{
+	    			be_app->PostMessage(ERROR_DETECTED);
+	  			};
+	  			aView->delaySlider->SetValue(fSettings->KeyboardDelayRate());	  			
 				aView->revertButton->SetEnabled(false);
 			}//BUTTON_REVERT
 			break;
@@ -98,3 +109,15 @@ void KeyboardWindow::MessageReceived(BMessage *message)
 			break;
 	}//Switch
 }//KeyboardWindow::MessageReceived
+
+KeyboardWindow::~KeyboardWindow()
+{//
+	//We only want to write the slider rates at the end of the program
+	fSettings->SetKeyboardRepeatRate(aView->rateSlider->Value());
+	fSettings->SetKeyboardDelayRate(aView->rateSlider->Value());
+}//
+
+void KeyboardWindow::FrameMoved(BPoint origin)
+{//KeyboardWindow::FrameMoved
+	fSettings->SetWindowPosition(Frame());
+}//KeyboardWindow::FrameMoved

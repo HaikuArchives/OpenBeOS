@@ -30,10 +30,15 @@ KeyboardSettings::KeyboardSettings()
 		if (file.InitCheck() != B_OK)
 			be_app->PostMessage(ERROR_DETECTED);
 		// Now read in the data
-		file.Read(&settings, sizeof(kb_settings));
-		file.Read(&corner, sizeof(BPoint));
-
+		if (file.Read(&fsettings, sizeof(kb_settings)) != sizeof(kb_settings))
+			be_app->PostMessage(ERROR_DETECTED);
+		if (file.Read(&fcorner, sizeof(BPoint)) != sizeof(BPoint))
+			be_app->PostMessage(ERROR_DETECTED);
 	}
+	fWindowFrame.left=fcorner.x;
+	fWindowFrame.top=fcorner.y;
+	fWindowFrame.right=fWindowFrame.left+229;
+	fWindowFrame.bottom=fWindowFrame.top+221;
 
 }//KeyboardSettings::KeyboardSettings
 
@@ -48,7 +53,24 @@ KeyboardSettings::~KeyboardSettings()
 	BFile file(path.Path(), B_WRITE_ONLY | B_CREATE_FILE);
 	if (file.InitCheck() == B_OK)
 	{
-		file.Write(&settings, sizeof(kb_settings));
-		file.Write(&corner, sizeof(BPoint));
+		file.Write(&fsettings, sizeof(kb_settings));
+		file.Write(&fcorner, sizeof(BPoint));
 	}
 }//KeyboardSettings::~KeyboardSettings
+
+void KeyboardSettings::SetKeyboardRepeatRate(int32 f)
+{//KeyboardSettings::SetKeyboardRepeatRate
+	fsettings.key_repeat_rate=f;
+}//KeyboardSettings::SetKeyboardRepeatRate
+
+void KeyboardSettings::SetKeyboardDelayRate(bigtime_t f)
+{//KeyboardSettings::SetKeyboardDelayRate
+	fsettings.key_repeat_delay=f;
+}//KeyboardSettings::SetKeyboardDelayRate
+
+void KeyboardSettings::SetWindowPosition(BRect f)
+{//KeyboardSettings::SetWindowFrame
+	fcorner.x=f.left;
+	fcorner.y=f.top;
+}//KeyboardSettings::SetWindowFrame
+
