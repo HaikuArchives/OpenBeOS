@@ -15,12 +15,14 @@
 #include <OS.h>
 #include <stdio.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 
 void  usage       (void);
 void  do_unchop   (char *, char *);
-void  concatenate (FILE *, FILE *);
+void  concatenate (int, int);
 bool  valid_file  (char *);
 void  replace     (char *, char *);
 char *temp_file   ();
@@ -30,10 +32,10 @@ char *temp_file   ();
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // globals
 
-#define BLOCKSIZE 64000         // file data is read in BLOCKSIZE blocks
+#define BLOCKSIZE 64 * 1024     // file data is read in BLOCKSIZE blocks
 static char Block[BLOCKSIZE];   // and stored in the global Block array
 
-int Errors = 0;
+static int Errors = 0;
 
 
 
@@ -85,8 +87,10 @@ main (int argc, char *argv[])
 void
 do_unchop (char *outfile, char *basename)
 	{
-	FILE *fout = fopen (outfile, "ab");
-	if (fout)
+	int fdout = open (outfile, O_WRONLY|O_CREAT|O_APPEND);
+	if (fdout < 0)
+		fprintf (stderr, "can't open '%s': %s\n", outfile, strerror (errno));
+	else
 		{
 		int  i;
 		char fnameN[256];
@@ -97,46 +101,42 @@ do_unchop (char *outfile, char *basename)
 			
 			if (valid_file (fnameN))
 				{
-				FILE *fin = fopen (fnameN, "rb");
-				if (fin)
+				int fdin = open (fnameN, O_RDONLY);
+				if (fdin < 0)
 					{
-					concatenate (fin, fout);
-					fclose (fin);
+					fprintf (stderr, "can't open '%s': %s\n", fnameN, strerror (errno));
+					++Errors;
 					}
 				else
 					{
-					fprintf (stderr, "'%s': %s\n", fnameN, strerror (errno));
-					++Errors;
+					concatenate (fdin, fdout);
+					close (fdin);
 					}
 				}
 			else
 				{
 				if (i == 0)
 					printf ("No chunk files present (%s)", fnameN);
-					
-				// run out of chunk files to concatenate
 				break;
 				}
 			}
-		fclose (fout);
+		close (fdout);
 		}
-	else
-		fprintf (stderr, "'%s': %s\n", outfile, strerror (errno));
 	}
 
 
 void
-concatenate (FILE *fin, FILE *fout)
+concatenate (int fdin, int fdout)
 	{
-	int got;
+	ssize_t got;
 	
 	for (;;)
 		{
-		got = fread (Block, 1, BLOCKSIZE, fin);
-		if (got == 0)
+		got = read (fdin, Block, BLOCKSIZE);
+		if (got <= 0)
 			break;
 		
-		fwrite (Block, 1, got, fout);
+		write (fdout, Block, got);
 		}
 	}
 
