@@ -33,8 +33,7 @@ DirectoryTest::Suite()
 						   &DirectoryTest::IsRootTest) );
 	suite->addTest( new TC("BDirectory::FindEntry Test",
 						   &DirectoryTest::FindEntryTest) );
-	suite->addTest( new TC("BDirectory::Contains Test"
-						   " (NOTE: this fails with R5 libraries)",
+	suite->addTest( new TC("BDirectory::Contains Test",
 						   &DirectoryTest::ContainsTest) );
 	suite->addTest( new TC("BDirectory::GetStatFor Test",
 						   &DirectoryTest::GetStatForTest) );
@@ -1016,15 +1015,16 @@ DirectoryTest::ContainsTest()
 	dir.Unset();
 	entry.Unset();
 	// existing entry (file), initialized BDirectory, matching node kind
-	// R5 bug: returns false
+// R5 bug: returns false
+#if !SK_TEST_R5
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(existingSuperFile) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entry.SetTo(existingFile) == B_OK);
 	CPPUNIT_ASSERT( dir.Contains(&entry, B_FILE_NODE) == true );
-//	CPPUNIT_ASSERT( dir.Contains(&entry, B_FILE_NODE) == false );	// R5
 	dir.Unset();
 	entry.Unset();
+#endif
 	// existing entry (file), initialized BDirectory, mismatching node kind
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(existingSuperFile) == B_OK );
@@ -1034,25 +1034,27 @@ DirectoryTest::ContainsTest()
 	dir.Unset();
 	entry.Unset();
 	// existing entry (link), initialized BDirectory, matching node kind
-	// R5 bug: returns false
+// R5 bug: returns false
+#if !SK_TEST_R5
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(dirSuperLink) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entry.SetTo(dirLink) == B_OK);
 	CPPUNIT_ASSERT( dir.Contains(&entry, B_SYMLINK_NODE) == true );
-//	CPPUNIT_ASSERT( dir.Contains(&entry, B_SYMLINK_NODE) == false );	// R5
 	dir.Unset();
 	entry.Unset();
+#endif
 	// existing entry (link), initialized BDirectory, mismatching node kind
-	// R5 bug: returns true
+// R5 bug: returns true
+#if !SK_TEST_R5
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(dirSuperLink) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entry.SetTo(dirLink) == B_OK);
 	CPPUNIT_ASSERT( dir.Contains(&entry, B_DIRECTORY_NODE) == false );
-//	CPPUNIT_ASSERT( dir.Contains(&entry, B_DIRECTORY_NODE) == true );	// R5
 	dir.Unset();
 	entry.Unset();
+#endif
 }
 
 // GetStatForTest
