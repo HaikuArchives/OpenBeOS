@@ -34,6 +34,8 @@ enum {
 	NET_STACK_SYSCTL,							// sysctl_args *
 	NET_STACK_SELECT,							// select_args *
 	NET_STACK_GET_COOKIE,						// void **
+	
+	NET_STACK_STOP,                             /* stop the stack */
 
 	NET_STACK_IOCTL_MAX
 };
@@ -75,7 +77,7 @@ struct accept_args {	// used by NET_STACK_ACCEPT
 };
 
 struct select_args {	// used by NET_STACK_SELECT
-	int nbits;
+	int    nbits;
 	struct fd_set *rbits;
 	struct fd_set *wbits;
 	struct fd_set *ebits;
