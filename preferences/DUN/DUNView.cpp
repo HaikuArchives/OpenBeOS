@@ -26,8 +26,8 @@ void DUNView::Draw (BRect updateRect) {
    //MovePenTo(BPoint(40,54));
    //DrawString ("<Create a connection profile to continue.>");
    
-   MovePenTo(BPoint(40,124));
-   DrawString ("Call waiting may be enabled.");
+   //MovePenTo(BPoint(40,124));
+   //DrawString ("Call waiting may be enabled.");
          
    MovePenTo(BPoint(22,178));
    DrawString ("No Connection");
