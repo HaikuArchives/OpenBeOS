@@ -35,12 +35,21 @@ LinkSharedOSLibs Test.StorageKit.R5 :
 
 HDRS += "$(TOP)/source/lib" ;
 
+# Make a test/lib directory and copy libbeadapter.so into it.
+DEPENDS $(TOP)/test/lib/libbeadapter.so :
+	$(TOP)/source/lib/libbeadapter.so $(TOP)/test/lib ;
+MkDir $(TOP)/test/lib ;
+Bulk $(TOP)/test/lib : $(TOP)/source/lib/libbeadapter.so ;
+
 LibraryFromPOSIXSources $(TOP)/test/libstoragetest.POSIX.a :  $(SOURCE_FILES) ;
 Main Test.StorageKit.OpenBeOS : Test.StorageKit.cpp ;
 LinkLibraries Test.StorageKit.OpenBeOS : 
 	$(TOP)/test/libstoragetest.POSIX.a 
 	$(TOP)/cppunit/cppunit.a 
 	$(TOP)/source/lib/libstorage.a
+;
+LinkSharedOSLibs Test.StorageKit.OpenBeOS :
+	$(TOP)/source/lib/libbeadapter.so
 ;
 LinkSharedOSLibs Test.StorageKit.OpenBeOS :
 	/boot/develop/lib/x86/libstdc++.r4.so
