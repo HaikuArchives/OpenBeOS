@@ -277,9 +277,11 @@ ifq *start_ifq(void)
 	
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
+#ifdef _KERNEL_MODE
 	set_sem_owner(nifq->lock, B_SYSTEM_TEAM);
 	set_sem_owner(nifq->pop, B_SYSTEM_TEAM);
-	
+#endif
+
 	if (nifq->lock < B_OK || nifq->pop < B_OK)
 		return NULL;
 
@@ -878,7 +880,9 @@ static int start_stack(void)
 	if_init();
 	
 	dev_lock = create_sem(1, "device_lock");
+#ifdef _KERNEL_MODE
 	set_sem_owner(dev_lock, B_SYSTEM_TEAM);
+#endif
 
 	find_interface_modules();
 
