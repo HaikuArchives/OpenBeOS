@@ -125,6 +125,8 @@ _EXPORT struct core_module_info core_info = {
 	in_pcbrtentry,
 	in_setsockaddr,
 	in_setpeeraddr,
+	in_pcbnotify,
+	inetctlerr,
 
 	m_gethdr,
 	m_get,
@@ -226,12 +228,18 @@ static int32 rx_thread(void *data)
 }
 
 /* This is the same regardless of either method of getting the packets... */
+/* The buffer size is now a variable. Why?
+ * MTU's vary, but they don't take into account the size of possible media headers,
+ * so while an ethernet cards mtu is 1500, a valid packet can be up to 1514, mtu + if_hdrlen!
+ * However, loopback MTU is 16k, so our previous 2k buffer was too small for loopback and wasteful
+ * for ethernet cards. So, now we make it flexible and correctly sized.
+ */
 static int32 tx_thread(void *data)
 {
 	struct ifnet *i = (struct ifnet *)data;
 	struct mbuf *m;
-	char buffer[2048];
-	size_t len = 0;
+	char buffer[i->if_mtu + i->if_hdrlen];
+	size_t len = 0, maxlen = i->if_mtu + i->if_hdrlen;
 	status_t status;
 #if SHOW_DEBUG
 	int txc = 0;
@@ -244,34 +252,28 @@ static int32 tx_thread(void *data)
 
 		IFQ_DEQUEUE(i->txq, m);
 
-		if (!m)
-			continue;
-		
-		if (m->m_flags & M_PKTHDR) 
-			len = m->m_pkthdr.len;
-		else 
-			len = m->m_len;
+		if (m) {
+			if (m->m_flags & M_PKTHDR) 
+				len = m->m_pkthdr.len;
+			else 
+				len = m->m_len;
 
-		if (len > i->if_mtu) {
-			printf("%s: tx_thread: packet was too big!\n", i->if_name);
+			if (len > maxlen) {
+				printf("%s: tx_thread: packet was too big (%ld bytes vs max size of %ld)!\n", i->if_name,
+			    	   len, maxlen);
+			} else {
+				m_copydata(m, 0, len, buffer);
+#if SHOW_DEBUG
+				dump_buffer(buffer, len);
+#endif
+				status = write(i->devid, buffer, len);
+				if (status < B_OK) {
+					printf("Error sending data [%s]!\n", strerror(status));
+					/* ??? - should we exit at this point? */
+				}
+			}
 			m_freem(m);
-			continue;
 		}
-
-		m_copydata(m, 0, len, buffer);
-
-#if SHOW_DEBUG
-		printf("TXMIT %d: %ld bytes to dev %d\n", txc++, len ,i->devid);
-#endif
-		m_freem(m);
-#if SHOW_DEBUG
-		dump_buffer(buffer, len);
-#endif
-		status = write(i->devid, buffer, len);
-		if (status < B_OK) {
-			printf("Error sending data [%s]!\n", strerror(status));
-		}
-
 	}
 	printf("%s: terminating tx_thread\n", i->if_name);
 	return 0;
@@ -995,9 +997,7 @@ static status_t core_std_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
-#ifdef _KERNEL_MODE
 			load_driver_symbols("core");
-#endif
 			break;
 		case B_MODULE_UNINIT:
 			// the stack is keeping loaded, so don't stop it
