@@ -3,8 +3,6 @@
 #ifndef NET_DEVICE_H
 #define NET_DEVICE_H
 
-#include "if.h"
-
 typedef struct device_module_info {
 	module_info module;
 	

@@ -5,7 +5,7 @@
 
 #include <module.h>
 #include "mbuf.h"
-#include "if.h"
+#include "net/if.h"
 #include "net_module.h"
 
 #define LOOP_MODULE_PATH "network/interface/loop"

@@ -6,7 +6,8 @@
 #include <malloc.h>
 
 #include "mbuf.h"
-#include "if.h"
+#include "net/if.h"
+#include "net/if_dl.h"
 #include "net_misc.h"
 #include "arp/arp.h"
 #include "protocols.h"
@@ -14,7 +15,6 @@
 #include "nhash.h"
 #include "pools.h"
 #include "net_misc.h"
-#include "net_timer.h"
 #include "ethernet/ethernet.h"
 #include "netinet/in_var.h"
 #include "arp_module.h"
@@ -30,6 +30,10 @@ status_t arp_ops(int32 op, ...);
   #define malloc dbg_malloc
   #define free dbg_free
   #endif
+
+#else /* userland */
+
+#include "net_timer.h"
 
 #endif
 

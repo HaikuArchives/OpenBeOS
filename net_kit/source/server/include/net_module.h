@@ -7,7 +7,7 @@
 #include <image.h>
 
 #include "mbuf.h"
-#include "if.h"
+#include "net/if.h"
 #include "net_misc.h"
 #include "net/route.h"
 #include "sys/socketvar.h"

@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "netinet/in.h"
-#include "if.h"
+#include "net/if.h"
 #include "sys/socketvar.h"
 #include "sys/sockio.h"
 #include "netinet/in_var.h"

@@ -24,7 +24,7 @@
 #include "core_module.h"
 #include "net_device.h"
 
-#include "if.h"	/* for ifnet definition */
+#include "net/if.h"	/* for ifnet definition */
 #include "net_server/net_server.h"
 #include "protocols.h"
 #include "net_module.h"

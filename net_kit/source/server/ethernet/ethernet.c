@@ -16,6 +16,7 @@
 #include "sys/protosw.h"
 #include "ethernet/ethernet.h"
 #include "arp/arp_module.h"
+#include "net/if_dl.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -29,7 +30,7 @@ static struct core_module_info *core = NULL;
 
 /* forward prototypes */
 int ether_dev_start(ifnet *dev);
-int ether_dev_stop(ifnet *dev);
+int ether_dev_stop (ifnet *dev);
 #endif
 
 static struct arp_module_info *arp = NULL;

@@ -5,7 +5,8 @@
 #include <string.h>
 
 #include "netinet/in.h"
-#include "if.h"
+#include "net/if.h"
+#include "net/if_dl.h"
 #include "sys/socketvar.h"
 #include "sys/sockio.h"
 #include "netinet/in_var.h"
@@ -14,7 +15,6 @@
 
 extern ifnet *devices;
 extern int ndevs;
-#define IFA_ROUTE	RTF_UP
 
 /* global pointer to all interfaces list... */
 struct ifaddr **ifnet_addrs;
@@ -343,3 +343,4 @@ void if_attach(struct ifnet *ifp)
 			sdl->sdl_data[--namelen] = 0xff;
 	}
 }
+
