@@ -38,6 +38,20 @@
 // Initialize static member variable
 BTranslatorRoster *BTranslatorRoster::fspDefaultTranslators = NULL;
 
+// Extensions used in the extension BMessage, defined in TranslatorFormats.h
+char B_TRANSLATOR_EXT_HEADER_ONLY[]			= "/headerOnly";
+char B_TRANSLATOR_EXT_DATA_ONLY[]			= "/dataOnly";
+char B_TRANSLATOR_EXT_COMMENT[]				= "/comment";
+char B_TRANSLATOR_EXT_TIME[]				= "/time";
+char B_TRANSLATOR_EXT_FRAME[]				= "/frame";
+char B_TRANSLATOR_EXT_BITMAP_RECT[]			= "bits/Rect";
+char B_TRANSLATOR_EXT_BITMAP_COLOR_SPACE[]	= "bits/space";
+char B_TRANSLATOR_EXT_BITMAP_PALETTE[]		= "bits/palette";
+char B_TRANSLATOR_EXT_SOUND_CHANNEL[]		= "nois/channel";
+char B_TRANSLATOR_EXT_SOUND_MONO[]			= "nois/mono";
+char B_TRANSLATOR_EXT_SOUND_MARKER[]		= "nois/marker";
+char B_TRANSLATOR_EXT_SOUND_LOOP[]			= "nois/loop";
+
 // ---------------------------------------------------------------
 // Constructor
 //
@@ -308,7 +322,7 @@ BTranslatorRoster::Version(int32 *outCurVersion, int32 *outMinVersion,
 	static char vString[50];
 	static char vDate[] = __DATE__;
 	if (!vString[0]) {
-		sprintf(vString, "Datatypes Library v%d.%d.%d %s\n",
+		sprintf(vString, "Translation Kit v%d.%d.%d %s\n",
 			B_TRANSLATION_CURRENT_VERSION/100,
 			(B_TRANSLATION_CURRENT_VERSION/10)%10,
 			B_TRANSLATION_CURRENT_VERSION%10,
