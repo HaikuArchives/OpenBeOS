@@ -2,6 +2,7 @@
  */
 
 #include "ipv4/ipv4.h"
+#include "netinet/in.h"
 
 
 #ifndef OBOS_UDP_H
@@ -28,9 +29,14 @@ typedef struct pudp_header {
         uint8           zero;
         uint8           prot;
         uint16          length;
-	ipv4_addr	src;
-	ipv4_addr	dest;
+	struct in_addr	src;
+	struct in_addr	dest;
 } _PACKED pudp_header;
+
+struct udpiphdr {
+	struct pudp_header ip;
+	struct udp_header  udp;
+};
 
 #endif /* OBOS_UDP_H */
 

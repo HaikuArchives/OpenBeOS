@@ -14,6 +14,9 @@
 int *prot_table;
 loaded_net_module *net_modules;
 static struct inpcb udb;	/* head of the UDP PCB list! */
+static struct inpcb *udp_last_inpcb = NULL;
+static struct sockaddr_in udp_in;
+static int udpcksum = 1;	/* do we calculate the UDP checksum? */
 
 static uint32 udp_sendspace;	/* size of send buffer */
 static uint32 udp_recvspace;	/* size of recieve buffer */
@@ -35,6 +38,74 @@ static void dump_udp(struct mbuf *buf)
         printf("            : udp length    : %d bytes\n", ntohs(udp->length));
 }
 #endif /* SHOW_DEBUG */
+
+int udp_output(struct inpcb *inp, struct mbuf *m, struct mbuf *addr,struct mbuf *control)
+{
+	struct udpiphdr *ui;
+	uint16 len = m->m_pkthdr.len;
+	uint16 hdrlen = len + (uint16)sizeof(struct udpiphdr);
+	struct in_addr laddr;
+	int error = 0;
+	struct sockaddr sin;
+
+	if (control)
+		m_freem(control);
+
+	if (addr) {
+		laddr = inp->laddr;
+		if (inp->faddr.s_addr != INADDR_ANY) {
+			error = EISCONN;
+			goto release;
+		}
+		error = in_pcbconnect(inp, addr);
+		if (error)
+			goto release;
+
+	} else {
+		if (inp->faddr.s_addr == INADDR_ANY) {
+			error = ENOTCONN;
+			goto release;
+		}
+	}
+
+	M_PREPEND(m, sizeof(*ui));
+	if (!m) {
+		error = ENOMEM;
+		goto release;
+	}
+
+	ui = mtod(m, struct udpiphdr *);
+	ui->ip.lead = ui->ip.lead2 = 0;
+	ui->ip.zero = 0;
+	ui->ip.prot = IPPROTO_UDP;
+	ui->ip.length = htons(len + sizeof(struct udp_header));	
+	ui->ip.src = inp->laddr;
+	ui->ip.dest = inp->faddr;
+	ui->udp.src_port = inp->lport;
+	ui->udp.dst_port = inp->fport;
+	ui->udp.length = ui->ip.length;
+	ui->udp.cksum = 0;
+
+	if (udpcksum)
+		ui->udp.cksum = in_cksum(m, hdrlen, 0);
+
+	if (ui->udp.cksum == 0)
+		ui->udp.cksum = 0xffff;
+
+	((ipv4_header*)ui)->length = htons(hdrlen);
+	((ipv4_header*)ui)->ttl = 64;	/* XXX - Fix this! */
+	((ipv4_header*)ui)->tos = 0;	/* XXX - Fix this! */
+
+	sin.sa_family = AF_INET;
+	sin.sa_len = 4;
+	memcpy(&sin.sa_data, &inp->faddr.s_addr, 4); /* we always use network order */
+
+	error = net_modules[prot_table[IPPROTO_IP]].mod->output(m, IPPROTO_IP, &sin);
+
+release:
+	m_freem(m);
+	return error;
+}
 
 int udp_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr, struct mbuf *ctrl)
 {
@@ -66,6 +137,9 @@ int udp_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr, s
 			/* XXX - locking */
 			error = in_pcbbind(inp, addr);
 			break;
+		case PRU_SEND:
+			/* we can use this as we're in the same module... */
+			return udp_output(inp, m, addr, ctrl);
 	}
 
 release:
@@ -85,27 +159,81 @@ int udp_input(struct mbuf *buf)
 	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->hl * 4));
 	pudp_header *p = (pudp_header *)ip;
 	uint16 ck = 0;
-	int len = ntohs(udp->length) + sizeof(ipv4_header);
-	/* save a copy in case we need it... */
-/* XXX - currently unused...
-	ipv4_header saved = *ip;
-*/
+	int iphlen = (ip->hl * 4);
+	int len;
+	ipv4_header saved_ip;
+	struct mbuf *opts = NULL;
+	struct inpcb *inp;
 
 #if SHOW_DEBUG
         dump_udp(buf);
 #endif
+	/* check and adjust sizes as required... */
+	len = ntohs(ip->length) - iphlen;
+	if (len != ntohs(udp->length)) {
+		if (ntohs(udp->length) > ip->length)
+			/* we got a corrupt packet as we are missing data... */
+			goto bad;
+		m_adj(buf, len - ntohs(udp->length));
+	}
+	saved_ip = *ip;
 
 	p->length = udp->length;
 	p->zero = 0; /* just to make sure */
 	p->lead = 0;
 	p->lead2 = 0;
 
-	if ((ck = in_cksum(buf, len, 0)) != 0) {
+	if ((ck = in_cksum(buf, len + sizeof(ipv4_header), 0)) != 0) {
 		printf("UDP Checksum check failed. (%d over %d bytes)\n", ck, len);
-		m_freem(buf);
+		goto bad;
+	}
+
+	inp = udp_last_inpcb;
+	if (!inp || inp->lport != udp->dst_port ||
+		inp->fport != udp->src_port ||
+		inp->faddr.s_addr != ip->src.s_addr ||
+		inp->laddr.s_addr != ip->dst.s_addr) {
+		
+		inp = in_pcblookup(&udb, ip->src, udp->src_port,
+				   ip->dst, udp->dst_port, INPLOOKUP_WILDCARD);
+		if (inp)
+			udp_last_inpcb = inp;
+	}
+	if (!inp) {
+		if (buf->m_flags & (M_BCAST | M_MCAST)) {
+			goto bad;
+		}
+		*ip = saved_ip;
+		ip->length += iphlen;
+printf("UDP: we'd send an ICMP reply...\n");
+		/* XXX - send ICMP reply... */
 		return 0;
 	}
 
+	udp_in.sin_port = udp->src_port;
+	udp_in.sin_addr = ip->src;
+
+	if (inp->inp_flags & INP_CONTROLOPT) {
+		printf("INP Control Options to process!\n");
+		/* XXX - add code to do this... */
+	}
+
+	iphlen += sizeof(udp_header);
+	buf->m_len -= iphlen;
+	buf->m_pkthdr.len -= iphlen;
+	buf->m_data += iphlen;
+
+	if (sbappendaddr(&inp->inp_socket->so_rcv, (struct sockaddr*)&udp_in,
+			buf, opts) == 0) {
+		goto bad;
+	}
+
+	sorwakeup(inp->inp_socket);
+	return 0;
+
+bad:
+	if (opts)
+		m_freem(opts);
 	m_freem(buf);
 
 	return 0;
@@ -129,6 +257,7 @@ net_module net_module_data = {
 	NET_LAYER3,
 	AF_INET,
 	SOCK_DGRAM,
+	PR_ATOMIC | PR_ADDR,
 
 	&udp_init,
 	NULL,
