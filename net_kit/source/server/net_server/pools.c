@@ -5,13 +5,25 @@
 #include <string.h>
 #include "pools.h"
 #include "net_misc.h"
+#include "net_malloc.h"
+
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
 
 #define ROUND_TO_PAGE_SIZE(x) (((x) + (B_PAGE_SIZE) - 1) & ~((B_PAGE_SIZE) - 1))
 
-#ifdef USE_DEBUG_MALLOC
-#define malloc dbg_malloc
-#define free dbg_free
-#endif
+void walk_pool_list(struct pool_ctl *p)
+{
+	struct pool_mem *pb = p->list;
+
+	printf("Pool: %p\n", p);
+	printf("    -> list = %p\n", pb);
+	while (pb) {
+		printf("    -> mem_block %p, %p\n", pb, pb->next);
+		pb = pb->next;
+	}
+}
 
 void pool_debug_walk(struct pool_ctl *p)
 {
@@ -52,14 +64,13 @@ static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 	int32 where; /* where should new block be allocated */
 	int32 how; /* what type of memory do we want */
 
-#if SHOW_MALLOC_USAGE
-	printf("pools.c: get_mem_block: malloc(%ld)\n",
-		sizeof(struct pool_mem));
-#endif
 	block = (struct pool_mem *)malloc(sizeof(struct pool_mem));
 	if (block == NULL)
 		return NULL;
 
+printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
+	block, (char*)block + sizeof(struct pool_mem));
+	
 #ifndef _KERNEL_MODE
 	where = B_ANY_ADDRESS;
 	how = B_LAZY_LOCK|B_CONTIGUOUS;
@@ -93,6 +104,8 @@ static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 			block->next = pool->list;
 
 		pool->list = block;
+
+walk_pool_list(pool);
 		
 		#if POOL_USES_BENAPHORES
 			RELEASE_BENAPHORE(pool->lock);
@@ -119,13 +132,12 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 	if (size < sizeof(struct free_blk)) 
 		return B_BAD_VALUE;
 
-#if SHOW_MALLOC_USAGE
-	printf("pools.c: pool_init: malloc(%ld)\n",
-		sizeof(struct pool_ctl));
-#endif
 	pool = (struct pool_ctl*)malloc(sizeof(struct pool_ctl));
 	if (pool == NULL)
 		return B_NO_MEMORY;
+
+printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
+	pool, (char*)pool + sizeof(struct pool_ctl));
 
 	memset(pool, 0, sizeof(*pool));
 	
@@ -188,7 +200,7 @@ char *pool_get(struct pool_ctl *p)
 			printf("%s: allocating %p, setting freelist to %p\n",
 				p->name, p->freelist, 
 				((struct free_blk*)rv)->next);
-	
+
 		p->freelist = ((struct free_blk*)rv)->next;
 
 		#if POOL_USES_BENAPHORES
@@ -261,12 +273,12 @@ void pool_put(struct pool_ctl *p, void *ptr)
 		printf("%s: adding %p, setting next = %p\n",
 			p->name, ptr, p->freelist);
 	}
-	
+
 	p->freelist = ptr;
 
 	if (p->debug)
 		printf("%s: freelist = %p\n", p->name, p->freelist);
-	
+
 	#if POOL_USES_BENAPHORES
 		RELEASE_BENAPHORE(p->lock);
 	#else
