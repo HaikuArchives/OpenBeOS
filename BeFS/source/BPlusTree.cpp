@@ -651,13 +651,32 @@ BPlusTree::SplitNode(bplustree_node *node,off_t nodeOffset,bplustree_node *other
 
 	int32 total = bytesBefore + bytesAfter;
 
-	// if we have split an index node, we have to drop the first key
-	// of the next node (which can also be the new key to insert)
+	// these variables are for the key that will be returned
+	// to the parent node
+	uint8 *newKey = NULL;
+	uint16 newLength;
+	bool newAllocated = false;
+
+	// If we have split an index node, we have to drop the first key
+	// of the next node (which can also be the new key to insert).
+	// The dropped key is also the one which has to be inserted in
+	// the parent node, so we will set the "newKey" already here.
 	if (node->overflow_link != BPLUSTREE_NULL) {
 		if (in == keyIndex) {
+			newKey = key;
+			newLength = *_keyLength;
+
 			other->overflow_link = *_value;
 			keyIndex--;
 		} else {
+			// if a key is dropped (is not the new key), we have to copy
+			// it, because it would be lost if not
+			uint8 *droppedKey = node->KeyAt(in,&newLength);
+			newKey = (uint8 *)malloc(newLength);
+			if (newKey == NULL)
+				return B_NO_MEMORY;
+			memcpy(newKey,droppedKey,newLength);
+
 			other->overflow_link = inKeyValues[in];
 			total = inKeyLengths[in++];
 		}
@@ -741,13 +760,19 @@ BPlusTree::SplitNode(bplustree_node *node,off_t nodeOffset,bplustree_node *other
 		outKeyValues[keyIndex] = *_value;
 	}
 
-	// prepare key to insert in the parent node
-	
-	uint16 length;
-	uint8 *lastKey = other->KeyAt(other->all_key_count - 1,&length);
-	memcpy(key,lastKey,length);
-	*_keyLength = length;
+	// Prepare the key that will be inserted in the parent node which
+	// is either the dropped key or the last of the other node.
+	// If it's the dropped key, "newKey" was already set earlier.
+
+	if (newKey == NULL)
+		newKey = other->KeyAt(other->all_key_count - 1,&newLength);
+
+	memcpy(key,newKey,newLength);
+	*_keyLength = newLength;
 	*_value = otherOffset;
+
+	if (newAllocated)
+		free(newKey);
 
 	return B_OK;
 }
