@@ -1,0 +1,118 @@
+OS:          BeOS R5
+Module:      BEntry
+Location:    BEntry(const BDirectory*, const char*),
+             SetTo(const BDirectory*, const char*)
+Description: Crash when passing a NULL BDirectory.
+
+
+OS:          BeOS R5
+Module:      BEntry
+Location:    MoveTo()
+Description: Crashs when passing a NULL BDirectory.
+
+
+OS:          BeOS R5
+Module:      BPath
+Location:    BPath(const BDirectory*, const char*, bool),
+             SetTo(const BDirectory*, const char*, bool)
+Description: Crash when passing a NULL BDirectory.
+
+
+OS:          BeOS R5
+Module:      BPath
+Location:    GetParent()
+Description: Crashs when called on an uninitialized object or when passing
+             a NULL BPath.
+
+
+OS:          BeOS R5
+Module:      BPath
+Location:    operator==(), operator!=()
+Description: Uninitialized paths are not equal. An initialized path equals
+             a (const char*)NULL, an uninitialized path does not.
+
+
+OS:          BeOS R5
+Module:      BPath
+Location:    Flatten()
+Description: Crashs when passing a NULL buffer and doesn't check the buffer
+             size.
+
+
+OS:          BeOS R5
+Module:      BStatable
+Location:    destructor
+Description: Is not virtual.
+
+
+OS:          BeOS R5
+Module:      BStatable
+Location:    GetAccessTime(), SetAccessTime()
+Description: Access time unused.
+
+
+OS:          BeOS R5
+Module:      BStatable
+Location:    GetPermissions()
+Description: Doesn't filter the mode flags, thus not only the permissions are
+             returned.
+
+
+OS:          BeOS R5
+Module:      BStatable
+Location:    Get*()
+Description: Crash when passing a NULL pointer.
+
+
+OS:          OBOS POSIX
+Module:      BStatable
+Location:    SetPermissions/ModificationTime/CreationTime()
+Description: Don't work due to set_stat(FileDescriptor, StatMember)
+             limitations.
+
+
+OS:          OBOS POSIX
+Module:      kernel_interface
+Location:    set_stat(FileDescriptor, StatMember)
+Description: WSTAT_MODE, WSTAT_*TIME can't be implemented due to missing
+             fchmod()/FD time setters.
+
+
+OS:          BeOS R5
+Module:      libroot
+Location:    fchown()
+Description: fchown(file, 0xFFFFFFFF, gid) sets the UID to 0xFFFFFFFF, which
+             is a bug.
+
+
+OS:          BeOS R5
+Module:      libroot
+Location:    readdir(), fs_read_attr_dir()
+Description: The d_reclen field of a dirent structure does not contain the
+             length of the whole structure (unlike stated in
+             BeBook::BEntryList), but only the length of the d_name field.
+             If the terminating '\0' is counted or not seems to depend on the
+             file system.
+
+
+OS:          OBOS POSIX
+Module:      kernel_interface
+Location:    read_link(FileDescriptor, char*, size_t)
+Description: Can't be implemented due to the lack of an FD readlink() version.
+
+
+OS:          BeOS R5
+Module:      BSymLink
+Location:    MakeLinkedPath(const char*, BPath*)
+Description: The dirPath seems to be converted into a BDirectory, which
+             causes links to be resolved, i.e. a "/tmp" dirPath expands to
+             "/boot/var/tmp". That does also mean, that the dirPath must
+             exists!
+
+
+OS:          BeOS R5
+Module:      BSymLink
+Location:    MakeLinkedPath()
+Description: Crashs when passing a NULL const char* or BDirectory.
+
+

@@ -1,0 +1,81 @@
+Module:      BEntry
+Location:    Entry.cpp
+Description: Definition of SYMLINK_MAX belongs to some header file. Remove it.
+Priority:    low
+Requires:    
+
+
+Module:      BEntry
+Location:    SetTo(const BDirectory *, const char *, bool)
+Description: Reimplement! Concatenating dir and leaf to an absolute path
+             prevents the user from accessing entries with longer absolute
+             path. R5 handles this without problems.
+Priority:    medium
+Requires:    
+
+
+Module:      BEntry
+Location:    SetTo(const BDirectory *, const char *, bool)
+Description: Reimplement! Implemented using entry_ref_to_path().
+Priority:    low
+Requires:    
+
+
+Module:      EntryTest
+Location:    InitTest1(), InitTest2()
+Description: Enable tests with strlen(dir + leaf) > B_PATH_NAME_LENGTH.
+Priority:    low
+Requires:    - reimpl. of SetTo(const BDirectory *, const char *, bool)
+
+
+Module:      BPath
+Location:    Flatten()
+Description: Reimplement for performance reasons. Don't call FlattenedSize().
+Priority:    low
+Requires:    
+
+
+Module:      BVolume
+Location:    operator==()
+Description: Implement.
+Priority:    high
+Requires:    
+
+
+Module:      StatableTest
+Location:    GetXYZTest()
+Description: Uncomment GetVolume() test, when BVolume::==() is implemented.
+Priority:    low
+Requires:    - implementation of BVolume::operator==()
+
+
+Module:      kernel_interface
+Location:    set_stat(const char*, StatMember)
+Description: Implement WSTAT_CRTIME.
+Priority:    medium
+Requires:    
+
+
+Module:      kernel_interface
+Location:    remove_attr()
+Description: Verify return behavior of fs_remove_attr().
+Priority:    medium
+Requires:    
+
+
+Module:      BeOS R5::libroot
+Location:    
+Description: Propose a project wide common handling of the
+             B_FILE/PATH_NAME_LENGTH (+ 1?) issue.
+Priority:    low
+Requires:    
+
+
+Module:      BSymLink
+Location:    
+Description: Remove the work-around introduced because of the missing FD
+             version of readlink().
+Priority:    medium
+Requires:    - OBOS kernel
+
+
