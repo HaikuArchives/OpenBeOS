@@ -8,8 +8,8 @@
 #define KEYBOARD_VIEW_H
 
 
-#ifndef _VIEW_H
-#include <View.h>
+#ifndef _BOX_H
+#include <Box.h>
 #endif
 #ifndef _SLIDER_H
 #include <Slider.h>
@@ -24,9 +24,11 @@
 #include <Application.h>
 #endif
 
-class KeyboardView : public BView 
+class KeyboardView : public BBox
 {
 public:
+		typedef BBox	inherited;
+
 		KeyboardView(BRect frame);
 		virtual void	Draw(BRect frame);
 		int32	GetRepeatRate() const { return rateSlider->Value(); }

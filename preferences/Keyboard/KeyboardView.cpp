@@ -33,14 +33,13 @@
 #endif
 
 KeyboardView::KeyboardView(BRect rect)
-	   	   : BView(rect, "keyboard_view", B_FOLLOW_ALL, B_WILL_DRAW)
+	   	   : BBox(rect, "keyboard_view",
+					B_FOLLOW_ALL, B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
+					B_PLAIN_BORDER)
 {
 	BRect 		aRect;
 	BButton 	*aButton;
 	BTextControl *aTextControl;
-	
-	// Set the color to grey...
-	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 	
 	icon_bitmap = BTranslationUtils::GetBitmap("key_bmap");
 	clock_bitmap = BTranslationUtils::GetBitmap("clock_bmap");
@@ -118,6 +117,7 @@ void KeyboardView::SetRevertButton(bool val)
 
 void KeyboardView::Draw(BRect updateFrame)
 {
+	inherited::Draw(updateFrame);
 	aBox->DrawBitmap(icon_bitmap,BPoint(178,26));
 	aBox->DrawBitmap(clock_bitmap,BPoint(178,83));	
 }
