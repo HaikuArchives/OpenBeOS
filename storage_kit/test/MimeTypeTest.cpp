@@ -104,6 +104,8 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::InitTest) );
 	suite->addTest( new TC("BMimeType::MIME String Test",
 						   &MimeTypeTest::StringTest) );
+	suite->addTest( new TC("BMimeType::MIME Monitoring Test",
+						   &MimeTypeTest::MonitoringTest) );
 
 	return suite;
 }		
@@ -362,6 +364,11 @@ MimeTypeTest::tearDown()
 		delete fApplication;
 		fApplication = NULL;
 	}
+	// remove the types we added
+	BMimeType type(testType);
+	type.Delete();
+	type.SetTo(testTypeApp);
+	type.Delete();
 	BasicTest::tearDown();
 }
 
@@ -1631,6 +1638,369 @@ MimeTypeTest::StringTest()
 	}
 }
 
+// an easy to construct equivalent of a notification message
+class NotificationMessage {
+public:
+	NotificationMessage(int32 which, string type, string extraType,
+						bool largeIcon)
+		: which(which), type(type), hasExtraType(true), extraType(extraType),
+		  hasLargeIcon(true), largeIcon(largeIcon)
+	{
+	}
+
+	NotificationMessage(int32 which, string type, string extraType)
+		: which(which), type(type), hasExtraType(true), extraType(extraType),
+		  hasLargeIcon(false), largeIcon(false)
+	{
+	}
+
+	NotificationMessage(int32 which, string type, bool largeIcon)
+		: which(which), type(type), hasExtraType(false), extraType(),
+		  hasLargeIcon(true), largeIcon(largeIcon)
+	{
+	}
+
+	NotificationMessage(int32 which, string type)
+		: which(which), type(type), hasExtraType(false), extraType(),
+		  hasLargeIcon(false), largeIcon(false)
+	{
+	}
+
+public:
+	int32	which;
+	string	type;
+	bool	hasExtraType;
+	string	extraType;
+	bool	hasLargeIcon;
+	bool	largeIcon;
+};
+
+// FillAttrInfo
+static
+void
+FillAttrInfo(BMessage &info, int32 variation = 0)
+{
+	switch (variation) {
+		case 0:
+		default:
+			CHK(info.AddString("attr:name", "attribute1") == B_OK);
+			CHK(info.AddString("attr:public_name", "Nice Attribute1") == B_OK);
+			CHK(info.AddInt32("attr:type", B_STRING_TYPE) == B_OK);
+			CHK(info.AddBool("attr:public", true) == B_OK);
+			CHK(info.AddBool("attr:editable", true) == B_OK);
+			break;
+		case 1:
+			CHK(info.AddString("attr:name", "attribute2") == B_OK);
+			CHK(info.AddString("attr:public_name", "Nice Attribute2") == B_OK);
+			CHK(info.AddInt32("attr:type", B_BOOL_TYPE) == B_OK);
+			CHK(info.AddBool("attr:public", false) == B_OK);
+			CHK(info.AddBool("attr:editable", false) == B_OK);
+			break;
+	}
+}
+
+// MonitoringTest
+void
+MimeTypeTest::MonitoringTest()
+{
+	// tests:
+	// * Start/StopWatching()
+	// * updates
+	
+	// test:
+	// * StartWatching()
+	// * change something, check message queue (not empty)
+	//   - add type
+	//   - set icon, preferred app, attr info, file ext., short/long desc.,
+	//     icon for, app hint, sniffer rule
+	//   - remove type
+	// * StopWatching(anotherTarget)
+	// * change something, check message queue (not empty)
+	// * StopWatching()
+	// * change something, check message queue (empty)
+
+	CHK(fApplication != NULL);
+	nextSubTest();
+	// StartWatching()
+	BMessenger target(&fApplication->Handler(), fApplication);
+	CHK(BMimeType::StartWatching(target) == B_OK);
+	// install
+	BMimeType type(testType);
+	CHK(type.InitCheck() == B_OK);
+	CHK(type.IsInstalled() == false);
+	CHK(type.Install() == B_OK);
+	// icon
+	IconHelper iconHelperLarge(B_LARGE_ICON);
+	IconHelper iconHelperMini(B_MINI_ICON);
+	CHK(type.SetIcon(iconHelperLarge.Bitmap1(), B_LARGE_ICON) == B_OK);
+	CHK(type.SetIcon(iconHelperMini.Bitmap1(), B_MINI_ICON) == B_OK);
+	// preferred app
+	CHK(type.SetPreferredApp(testTypeApp) == B_OK);
+	// attr info
+	BMessage attrInfo;
+	FillAttrInfo(attrInfo);
+	CHK(type.SetAttrInfo(&attrInfo) == B_OK);
+	// file extensions
+	BMessage extensions;
+	CHK(extensions.AddString("extensions", "arg") == B_OK);
+	CHK(extensions.AddString("extensions", "ugh") == B_OK);
+	CHK(type.SetFileExtensions(&extensions) == B_OK);
+	// long/short description
+	CHK(type.SetLongDescription("quite short for a long description") == B_OK);
+	CHK(type.SetShortDescription("short description") == B_OK);
+	// icon for type
+	CHK(type.SetIconForType("text/plain", iconHelperLarge.Bitmap1(),
+							B_LARGE_ICON) == B_OK);
+	CHK(type.SetIconForType("text/plain", iconHelperMini.Bitmap1(),
+							B_MINI_ICON) == B_OK);
+	// app hint
+	entry_ref appHintRef;
+	CHK(get_ref_for_path("/boot/beos/apps/StyledEdit", &appHintRef) == B_OK);
+	CHK(type.SetAppHint(&appHintRef) == B_OK);
+	// sniffer rule
+	const char *snifferRule = "0.5 [0:0] ('ARGH')";
+	CHK(type.SetSnifferRule(snifferRule) == B_OK);
+	{
+	//   - set icon, preferred app, attr info, file ext., short/long desc.,
+	//     icon for, app hint, sniffer rule
+		typedef NotificationMessage NM;
+		NotificationMessage messages[] = {
+			NM(B_MIME_TYPE_CREATED, testType),
+			NM(B_ICON_CHANGED, testType, true),
+			NM(B_ICON_CHANGED, testType, false),
+			NM(B_PREFERRED_APP_CHANGED, testType),
+			NM(B_ATTR_INFO_CHANGED, testType),
+			NM(B_FILE_EXTENSIONS_CHANGED, testType),
+			NM(B_LONG_DESCRIPTION_CHANGED, testType),
+			NM(B_SHORT_DESCRIPTION_CHANGED, testType),
+			NM(B_ICON_FOR_TYPE_CHANGED, testType, "text/plain", true),
+			NM(B_ICON_FOR_TYPE_CHANGED, testType, "text/plain", false),
+			NM(B_APP_HINT_CHANGED, testType),
+			NM(B_SNIFFER_RULE_CHANGED, testType),
+		};
+		CheckNotificationMessages(messages, sizeof(messages) / sizeof(NM));
+	}
+
+	// set the same values once again
+	nextSubTest();
+	// icon
+	CHK(type.SetIcon(iconHelperLarge.Bitmap1(), B_LARGE_ICON) == B_OK);
+	CHK(type.SetIcon(iconHelperMini.Bitmap1(), B_MINI_ICON) == B_OK);
+	// preferred app
+	CHK(type.SetPreferredApp(testTypeApp) == B_OK);
+	// attr info
+	CHK(type.SetAttrInfo(&attrInfo) == B_OK);
+// file extensions
+	CHK(extensions.AddString("extensions", "arg") == B_OK);
+	CHK(extensions.AddString("extensions", "ugh") == B_OK);
+	CHK(type.SetFileExtensions(&extensions) == B_OK);
+	// long/short description
+	CHK(type.SetLongDescription("quite short for a long description") == B_OK);
+	CHK(type.SetShortDescription("short description") == B_OK);
+	// icon for type
+	CHK(type.SetIconForType("text/plain", iconHelperLarge.Bitmap1(),
+							B_LARGE_ICON) == B_OK);
+	CHK(type.SetIconForType("text/plain", iconHelperMini.Bitmap1(),
+							B_MINI_ICON) == B_OK);
+	// app hint
+	CHK(type.SetAppHint(&appHintRef) == B_OK);
+	// sniffer rule
+	CHK(type.SetSnifferRule(snifferRule) == B_OK);
+	{
+	//   - set icon, preferred app, attr info, file ext., short/long desc.,
+	//     icon for, app hint, sniffer rule
+		typedef NotificationMessage NM;
+		NotificationMessage messages[] = {
+			NM(B_ICON_CHANGED, testType, true),
+			NM(B_ICON_CHANGED, testType, false),
+			NM(B_PREFERRED_APP_CHANGED, testType),
+			NM(B_ATTR_INFO_CHANGED, testType),
+			NM(B_FILE_EXTENSIONS_CHANGED, testType),
+			NM(B_LONG_DESCRIPTION_CHANGED, testType),
+			NM(B_SHORT_DESCRIPTION_CHANGED, testType),
+			NM(B_ICON_FOR_TYPE_CHANGED, testType, "text/plain", true),
+			NM(B_ICON_FOR_TYPE_CHANGED, testType, "text/plain", false),
+			NM(B_APP_HINT_CHANGED, testType),
+			NM(B_SNIFFER_RULE_CHANGED, testType),
+		};
+		CheckNotificationMessages(messages, sizeof(messages) / sizeof(NM));
+	}
+
+	// set different values
+	nextSubTest();
+	// icon
+	CHK(type.SetIcon(iconHelperLarge.Bitmap2(), B_LARGE_ICON) == B_OK);
+	CHK(type.SetIcon(iconHelperMini.Bitmap2(), B_MINI_ICON) == B_OK);
+	// preferred app
+	CHK(type.SetPreferredApp("application/x-vnd.Be-STEE") == B_OK);
+	// attr info
+	BMessage attrInfo2;
+	FillAttrInfo(attrInfo2, 1);
+	CHK(type.SetAttrInfo(&attrInfo2) == B_OK);
+	// file extensions
+	CHK(extensions.AddString("extensions", "uff") == B_OK);
+	CHK(extensions.AddString("extensions", "err") == B_OK);
+	CHK(type.SetFileExtensions(&extensions) == B_OK);
+	// long/short description
+	CHK(type.SetLongDescription("not that short description") == B_OK);
+	CHK(type.SetShortDescription("pretty short description") == B_OK);
+	// icon for type
+	CHK(type.SetIconForType("text/plain", iconHelperLarge.Bitmap2(),
+							B_LARGE_ICON) == B_OK);
+	CHK(type.SetIconForType("text/plain", iconHelperMini.Bitmap2(),
+							B_MINI_ICON) == B_OK);
+	// app hint
+	entry_ref appHintRef2;
+	CHK(get_ref_for_path("/boot/beos/apps/NetPositive", &appHintRef2) == B_OK);
+	CHK(type.SetAppHint(&appHintRef2) == B_OK);
+	// sniffer rule
+	const char *snifferRule2 = "0.7 [0:5] ('YEAH!')";
+	CHK(type.SetSnifferRule(snifferRule2) == B_OK);
+	// delete
+	CHK(type.Delete() == B_OK);
+	{
+	//   - set icon, preferred app, attr info, file ext., short/long desc.,
+	//     icon for, app hint, sniffer rule
+		typedef NotificationMessage NM;
+		NotificationMessage messages[] = {
+			NM(B_ICON_CHANGED, testType, true),
+			NM(B_ICON_CHANGED, testType, false),
+			NM(B_PREFERRED_APP_CHANGED, testType),
+			NM(B_ATTR_INFO_CHANGED, testType),
+			NM(B_FILE_EXTENSIONS_CHANGED, testType),
+			NM(B_LONG_DESCRIPTION_CHANGED, testType),
+			NM(B_SHORT_DESCRIPTION_CHANGED, testType),
+			NM(B_ICON_FOR_TYPE_CHANGED, testType, "text/plain", true),
+			NM(B_ICON_FOR_TYPE_CHANGED, testType, "text/plain", false),
+			NM(B_APP_HINT_CHANGED, testType),
+			NM(B_SNIFFER_RULE_CHANGED, testType),
+			NM(B_MIME_TYPE_DELETED, testType),
+		};
+		CheckNotificationMessages(messages, sizeof(messages) / sizeof(NM));
+	}
+
+	// StopWatching() and try again -- no messages should be sent anymore
+	CHK(BMimeType::StopWatching(target) == B_OK);
+	// install
+	CHK(type.InitCheck() == B_OK);
+	CHK(type.IsInstalled() == false);
+	CHK(type.Install() == B_OK);
+	// icon
+	CHK(type.SetIcon(iconHelperLarge.Bitmap1(), B_LARGE_ICON) == B_OK);
+	CHK(type.SetIcon(iconHelperMini.Bitmap1(), B_MINI_ICON) == B_OK);
+	// preferred app
+	CHK(type.SetPreferredApp(testTypeApp) == B_OK);
+	// attr info
+	CHK(type.SetAttrInfo(&attrInfo) == B_OK);
+	// file extensions
+	CHK(extensions.AddString("extensions", "arg") == B_OK);
+	CHK(extensions.AddString("extensions", "ugh") == B_OK);
+	CHK(type.SetFileExtensions(&extensions) == B_OK);
+	// long/short description
+	CHK(type.SetLongDescription("quite short for a long description") == B_OK);
+	CHK(type.SetShortDescription("short description") == B_OK);
+	// icon for type
+	CHK(type.SetIconForType("text/plain", iconHelperLarge.Bitmap1(),
+							B_LARGE_ICON) == B_OK);
+	CHK(type.SetIconForType("text/plain", iconHelperMini.Bitmap1(),
+							B_MINI_ICON) == B_OK);
+	// app hint
+	CHK(type.SetAppHint(&appHintRef) == B_OK);
+	// sniffer rule
+	CHK(type.SetSnifferRule(snifferRule) == B_OK);
+	// delete
+	CHK(type.Delete() == B_OK);
+	{
+		CheckNotificationMessages(NULL, 0);
+	}
+
+	// bad args
+	// StopWatching() another target
+	nextSubTest();
+	// install
+	CHK(type.InitCheck() == B_OK);
+	CHK(type.IsInstalled() == false);
+	CHK(type.Install() == B_OK);
+	// try to start/stop watching with an invalid target, stop the wrong target
+	BMessenger target2(fApplication);
+	CHK(target2.IsValid() == true);
+	BMessenger target3("application/does-not_exist");
+	CHK(target3.IsValid() == false);
+// R5: An invalid messenger is fine for any reason?!
+#if !SK_TEST_R5
+	CHK(RES(BMimeType::StartWatching(target3)) == B_BAD_VALUE);
+#endif
+	CHK(BMimeType::StartWatching(target) == B_OK);
+#if !SK_TEST_R5
+	CHK(BMimeType::StopWatching(target3) == B_BAD_VALUE);
+#endif
+	CHK(BMimeType::StopWatching(target2) == B_BAD_VALUE);
+	CHK(BMimeType::StopWatching(target) == B_OK);
+	// delete
+	CHK(type.Delete() == B_OK);
+}
+
+// CheckNotificationMessage
+void
+MimeTypeTest::CheckNotificationMessages(const NotificationMessage *messages,
+										int32 count)
+{
+	// wait for the messages
+	snooze(100000);
+	if (fApplication) {
+		BMessageQueue &queue = fApplication->Handler().Queue();
+		CPPUNIT_ASSERT( queue.Lock() );
+		try {
+			int32 messageNum = 0;
+			while (BMessage *_message = queue.NextMessage()) {
+				BMessage message(*_message);
+				delete _message;
+//printf("\nmessage: %ld\n", messageNum);
+//message.PrintToStream();
+				CPPUNIT_ASSERT( messageNum < count );
+				const NotificationMessage &entry = messages[messageNum];
+				CPPUNIT_ASSERT( message.what == B_META_MIME_CHANGED );
+				// which
+				int32 which;
+				CPPUNIT_ASSERT( message.FindInt32("be:which", &which)
+								== B_OK );
+				CPPUNIT_ASSERT( entry.which == which );
+				// type
+				const char *type;
+				CPPUNIT_ASSERT( message.FindString("be:type", &type) == B_OK );
+				CPPUNIT_ASSERT( entry.type == type );
+				// extra type
+				const char *extraType;
+				if (entry.hasExtraType) {
+					CPPUNIT_ASSERT( message.FindString("be:extra_type",
+													   &extraType) == B_OK);
+					CPPUNIT_ASSERT( entry.extraType == extraType );
+				} else {
+					CPPUNIT_ASSERT( message.FindString("be:extra_type",
+										&extraType) == B_NAME_NOT_FOUND);
+				}
+				// large icon
+				bool largeIcon;
+				if (entry.hasLargeIcon) {
+					CPPUNIT_ASSERT( message.FindBool("be:large_icon",
+													 &largeIcon) == B_OK);
+					CPPUNIT_ASSERT( entry.largeIcon == largeIcon );
+				} else {
+					CPPUNIT_ASSERT( message.FindBool("be:large_icon",
+										&largeIcon) == B_NAME_NOT_FOUND);
+				}
+				messageNum++;
+			}
+			CPPUNIT_ASSERT( messageNum == count );
+		} catch (CppUnit::Exception exception) {
+			queue.Unlock();
+			throw exception;
+		}
+		queue.Unlock();
+	}
+}
+
+
 
 /* Ingo's functions:
 
@@ -1655,8 +2025,8 @@ MimeTypeTest::StringTest()
 +	bool operator==(const char *type) const;
 
 	// MIME database monitoring
-	static status_t StartWatching(BMessenger target);
-	static status_t StopWatching(BMessenger target);
++	static status_t StartWatching(BMessenger target);
++	static status_t StopWatching(BMessenger target);
 
 	// C functions
 	int update_mime_info(const char *path, int recursive, int synchronous,

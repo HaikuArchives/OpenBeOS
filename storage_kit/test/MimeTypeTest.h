@@ -17,6 +17,7 @@ typedef status_t (BMimeType::*SetDescriptionFunc)(const char* description);
 
 class IconHelper;
 class IconForTypeHelper;
+class NotificationMessage;
 
 class MimeTypeTest : public BasicTest {
 public:
@@ -44,6 +45,7 @@ public:
 
 	void InitTest();
 	void StringTest();
+	void MonitoringTest();
 
 	//------------------------------------------------------------
 	// Helper functions
@@ -51,6 +53,9 @@ public:
 	void DescriptionTest(GetDescriptionFunc getDescr, SetDescriptionFunc setDescr);
 	void IconTest(IconHelper &helper);
 	void IconForTypeTest(IconForTypeHelper &helper);
+
+	void CheckNotificationMessages(const NotificationMessage *messages,
+								   int32 count);
 
 private:
 	TestApp	*fApplication;
