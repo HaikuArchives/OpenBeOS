@@ -4,10 +4,6 @@ TGT=../modules/protocol/$(TARGET)
 LOBJS=../net_server/cksum.o
 OBJS=udp.o
 
-KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
-KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=../net_server/cksum.o
-
 all:	$(TARGET)
 
 clean:
@@ -16,8 +12,8 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c udp.c
-	@$(CC) $(KLDFLAGS) $(KLOBJS) -o udp udp.o
+	@$(CC) $(CFLAGS) $(INCLUDES) -c udp.c
+	@$(CC) $(LDFLAGS) $(LOBJS) -o udp udp.o
 
 installkernel:	kernel
 	@cp udp /boot/home/config/add-ons/kernel/network/protocol/udp

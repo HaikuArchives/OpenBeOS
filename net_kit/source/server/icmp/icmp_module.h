@@ -9,9 +9,9 @@
 #ifdef _KERNEL_
 #include <KernelExport.h>
 #define ICMP_MODULE_PATH	"network/protocol/icmp"
-#else /* _KERNEL_MODE */
+#else /* _KERNEL_ */
 #define ICMP_MODULE_PATH	"modules/protocol/icmp"
-#endif /* _KERNEL_MODE */
+#endif /* _KERNEL_ */
 
 struct icmp_module_info {
 	struct kernel_net_module_info info;

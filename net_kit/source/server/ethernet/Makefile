@@ -19,9 +19,9 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c ethernet.c
-	@$(CC) $(KLDFLAGS) $(KLOBJS) -o ethernet ethernet.o
-	@$(CC) $(KLDFLAGS) -Wl,-M=ethernet.xMAP *.o
+	@$(CC) $(CFLAGS) $(INCLUDES) -c ethernet.c
+	@$(CC) $(LDFLAGS) -o ethernet ethernet.o
+	@$(CC) $(LDFLAGS) -Wl,-M=ethernet.xMAP *.o
 
 installkernel:  kernel
 	@cp ethernet /boot/home/config/add-ons/kernel/network/interface/ethernet

@@ -25,7 +25,7 @@
 #include "icmp_module.h"
 #include "../ipv4/ipv4_module.h"
 
-#ifdef _KERNEL
+#ifdef _KERNEL_
 #include <KernelExport.h>
 static status_t icmp_ops(int32 op, ...);
 #else
@@ -38,7 +38,7 @@ static struct raw_module_info *raw = NULL;
 static struct protosw* proto[IPPROTO_MAX];
 static struct in_ifaddr *ic_ifaddr = NULL;
 static struct ipv4_module_info *ipm = NULL;
-#ifndef _KERNEL
+#ifndef _KERNEL_
 static image_id ipid = -1;
 #endif
 
@@ -416,7 +416,7 @@ static int icmp_protocol_init(void *cpp)
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 
-#ifndef _KERNEL
+#ifndef _KERNEL_
 	if (!ipm) {
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
@@ -451,7 +451,7 @@ static int icmp_protocol_stop(void)
 	return 0;
 }
 
-#ifndef _KERNEL
+#ifndef _KERNEL_
 void set_core(struct core_module_info *cp)
 {
 	core = cp;
@@ -468,13 +468,13 @@ struct icmp_module_info protocol_info = {
 		icmp_protocol_init,
 		icmp_protocol_stop
 	},
-#ifndef _KERNEL
+#ifndef _KERNEL_
 	set_core,
 #endif
 	icmp_error
 };
 
-#ifdef _KERNEL
+#ifdef _KERNEL_
 static status_t icmp_ops(int32 op, ...)
 {
 	switch(op) {

@@ -24,7 +24,7 @@
 #include "core_funcs.h"
 #include "../icmp/icmp_module.h"
 
-#ifdef _KERNEL
+#ifdef _KERNEL_
 #include <KernelExport.h>
 static status_t udp_ops(int32 op, ...);
 #define UDP_MODULE_PATH		"network/protocol/udp"
@@ -42,7 +42,7 @@ static struct udpstat udpstat;
 static uint32 udp_sendspace;	/* size of send buffer */
 static uint32 udp_recvspace;	/* size of recieve buffer */
 static struct icmp_module_info *icmp = NULL;
-#ifndef _KERNEL
+#ifndef _KERNEL_
 static image_id icmpid = -1;
 #endif
 
@@ -380,7 +380,7 @@ static int udp_module_init(void *cpp)
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 
-#ifndef _KERNEL
+#ifndef _KERNEL_
 	if (!icmp) {
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
@@ -425,7 +425,7 @@ _EXPORT struct kernel_net_module_info protocol_info = {
 	udp_module_stop
 };
 
-#ifdef _KERNEL
+#ifdef _KERNEL_
 static status_t udp_ops(int32 op, ...)
 {
 	switch(op) {

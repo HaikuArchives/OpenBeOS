@@ -10,9 +10,9 @@
 #ifdef _KERNEL_
 #include <KernelExport.h>
 #define IPV4_MODULE_PATH	"network/protocol/ipv4"
-#else /* _KERNEL_MODE */
+#else /* _KERNEL_ */
 #define IPV4_MODULE_PATH	"modules/protocol/ipv4"
-#endif /* _KERNEL_MODE */
+#endif /* _KERNEL_ */
 
 struct ipv4_module_info {
 	struct kernel_net_module_info info;

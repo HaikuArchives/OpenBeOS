@@ -4,14 +4,11 @@ CFLAGS+=-nostart
 LOBJS=../net_server/misc.o
 OBJS=loop.o
 
-KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
-KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-
 all:	$(TARGET)
 
 kernel:
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c loop.c
-	@$(CC) $(KLDFLAGS) $(KLOBJS) -o loop loop.o
+	@$(CC) $(CFLAGS) $(INCLUDES) -c loop.c
+	@$(CC) $(LDFLAGS) -o loop loop.o
 
 installkernel:	kernel
 	@cp loop /boot/home/config/add-ons/kernel/network/interface/loop

@@ -22,17 +22,15 @@ CORE_OBJS= 	socket.o \
 
 CORE_C:=	$(CORE_OBJS:.o=.c)
 
-CFLAGS+=-D_NETWORK_STACK
-
 all:	$(TARGET)
 
 kernel:
 	@if test -e socket.o; then rm *.o; fi
-	@for obj in $(CORE_C); do \
-		$(CC) $(KCFLAGS) $(INCLUDES) -c $$obj || exit 1;  \
+	for obj in $(CORE_C); do \
+		$(CC) $(CFLAGS) $(INCLUDES) -c $$obj || exit 1;  \
 	done
-	@$(CC) $(KLDFLAGS) -o core $(CORE_OBJS)
-	@$(CC) $(KLDFLAGS) -Wl,-M=core.xMAP *.o
+	@$(CC) $(LDFLAGS) -o core $(CORE_OBJS)
+	@$(CC) $(LDFLAGS) -Wl,-M=core.xMAP *.o
 
 installkernel: kernel
 	@cp core /boot/home/config/add-ons/kernel/network/core

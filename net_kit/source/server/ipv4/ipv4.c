@@ -2,7 +2,7 @@
  * simple ipv4 implementation
  */
 
-#ifndef _KERNEL
+#ifndef _KERNEL_
 #include <stdio.h>
 #endif
 #include <unistd.h>
@@ -27,12 +27,12 @@
 #include "ipv4_module.h"
 #include "../icmp/icmp_module.h"
 
-#ifdef _KERNEL
+#ifdef _KERNEL_
 #include <KernelExport.h>
 static status_t ipv4_ops(int32 op, ...);
 #else
 #define ipv4_ops NULL
-#endif	/* _KERNEL */
+#endif	/* _KERNEL_ */
 
 #define INA struct in_ifaddr *
 #define SA  struct sockaddr *
@@ -46,7 +46,7 @@ static uint16 ip_id = 0;
 static sem_id id_lock = -1;
 static struct in_ifaddr *ip_ifaddr = NULL;
 static struct icmp_module_info *icmp = NULL;
-#ifndef _KERNEL
+#ifndef _KERNEL_
 static image_id icmpid = -1;
 #endif
 static struct ipq ipq;
@@ -1172,7 +1172,7 @@ static int ipv4_module_init(void *cpp)
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 
-#ifndef _KERNEL
+#ifndef _KERNEL_
 	if (!icmp) {
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
@@ -1227,7 +1227,7 @@ _EXPORT struct ipv4_module_info protocol_info = {
 		ipv4_module_stop
 	},
 
-#ifndef _KERNEL
+#ifndef _KERNEL_
 	set_core,
 #endif
 	
@@ -1239,7 +1239,7 @@ _EXPORT struct ipv4_module_info protocol_info = {
 	ip_srcroute
 };
 
-#ifdef _KERNEL
+#ifdef _KERNEL_
 static status_t ipv4_ops(int32 op, ...)
 {
 	switch (op) {

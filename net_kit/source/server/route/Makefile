@@ -16,8 +16,8 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c $(TARGET).c
-	@$(CC) $(KLDFLAGS) $(KLOBJS) -o $(TARGET) $(TARGET).o
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $(TARGET).c
+	@$(CC) $(LDFLAGS) -o $(TARGET) $(TARGET).o
 
 installkernel:	kernel
 	@cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)

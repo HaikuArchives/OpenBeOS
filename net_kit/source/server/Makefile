@@ -12,7 +12,7 @@ ifeq ($(USERLAND), true)
 	CFLAGS = -O0 -g -Wall -DUSER -fPIC -DPIC
 	LDFLAGS = -nostart
 else
-	CFLAGS = -nostart -no-fpic -D_KERNEL_
+	CFLAGS = -g -Wall -no-fpic -D_KERNEL_
 	LDFLAGS = -nostdlib /boot/develop/lib/x86/_KERNEL_
 endif
 
@@ -39,7 +39,7 @@ subdirs: $(OBJS)
 
 kernel:
 	@for i in $(KERNELDIRS); do \
-		(cd $$i && $(MAKE) kernel) || exit 1; \
+		(cd $$i  CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" && $(MAKE) kernel) || exit 1; \
 	done
 
 installkernel: clean
@@ -50,7 +50,7 @@ installkernel: clean
 		mkdir /boot/home/config/add-ons/kernel/network/misc; \
 	fi
 	@for i in $(KERNELDIRS); do \
-		(cd $$i && $(MAKE) installkernel) || exit 1; \
+		(cd $$i &&  CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(MAKE) installkernel) || exit 1; \
 	done
 	@echo '***** WARNING *****'
 	@echo "Before trying to use the kernel implementation of the"

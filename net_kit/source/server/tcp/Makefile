@@ -1,14 +1,8 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=tcp
 TGT=../modules/protocol/$(TARGET)
-LOBJS=../net_server/cksum.o ../net_server/net_timer.o
+LOBJS=../net_server/cksum.o
 OBJS=arc4random.o tcp_output.o tcp_input.o tcp_timer.o tcp_debug.o $(TARGET).o
-
-CFLAGS+=-D_NETWORK_STACK
-
-KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
-KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=../net_server/cksum.o
 
 all:	$(TARGET)
 
@@ -20,13 +14,13 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c arc4random.c
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_input.c
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_output.c
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_timer.c
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_debug.c
-	@$(CC) $(KCFLAGS) $(INCLUDES) -c $(TARGET).c
-	@$(CC) $(KLDFLAGS) $(KLOBJS) -o $(TARGET) $(OBJS)
+	@$(CC) $(CFLAGS) $(INCLUDES) -c arc4random.c
+	@$(CC) $(CFLAGS) $(INCLUDES) -c tcp_input.c
+	@$(CC) $(CFLAGS) $(INCLUDES) -c tcp_output.c
+	@$(CC) $(CFLAGS) $(INCLUDES) -c tcp_timer.c
+	@$(CC) $(CFLAGS) $(INCLUDES) -c tcp_debug.c
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $(TARGET).c
+	@$(CC) $(LDFLAGS) $(LOBJS) -o $(TARGET) $(OBJS)
 
 installkernel:	kernel
 	@cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)
