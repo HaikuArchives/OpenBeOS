@@ -19,13 +19,15 @@ HDRS += "$(TOP)/source/lib" ;
 
 
 # Version of our test suite that links with OpenBeOS libraries
-Main Test.StorageKit.OpenBeOS : Test.StorageKit.cpp ;
+Main Test.StorageKit.OpenBeOS : Test.StorageKit.cpp TestUtils.cpp
+	FileTest.cpp ;
 LinkLibraries Test.StorageKit.OpenBeOS : $(TOP)/cppunit/cppunit.a $(TOP)/source/lib/libstorage.a ;
 LinkSharedOSLibs Test.StorageKit.OpenBeOS : /boot/develop/lib/x86/libstdc++.r4.so ;
 
 
 # Version of our test suite that links with Be's R5 libraries
-Main Test.StorageKit.R5 : Test.StorageKit.cpp ;
+Main Test.StorageKit.R5 : Test.StorageKit.cpp TestUtils.cpp
+	FileTest.cpp ;
 LinkLibraries Test.StorageKit.R5 : $(TOP)/cppunit/cppunit.a ;
 LinkSharedOSLibs Test.StorageKit.R5 : /boot/develop/lib/x86/libstdc++.r4.so /boot/develop/lib/x86/libbe.so ;
 
