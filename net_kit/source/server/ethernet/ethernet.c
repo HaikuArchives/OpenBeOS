@@ -30,7 +30,7 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-
+#define spawn_thread spawn_kernel_thread
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
 /* forward prototypes */
@@ -42,12 +42,22 @@ static int32 ether_ops(int32 op, ...);
 #define ETHERNET_MODULE_PATH "interface/ethernet"
 #endif
 
+/* Local variables */
+static struct protosw *proto[IPPROTO_MAX];
 static struct core_module_info *core = NULL;
 static net_timer_id arptimer_id;
-struct protosw *proto[IPPROTO_MAX];
 static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices */
+static struct ifq *etherq = NULL;
+static thread_id ether_rxt = -1;
+static int arpt_prune = (5 * 60); 	/* time interval we prune the arp cache? 5 minutes */
+static int arpt_keep  = (20 * 60);	/* length of time we keep entries... (20 mins) */
+static int arpt_down = 20;      /* seconds between arp flooding */																																																											
+static int arp_maxtries = 5;    /* max tries before a pause */
+static int32 arp_inuse = 0;	/* how many entries do we have? */
+static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 
-void ether_input(struct mbuf *buf);
+/* Prototypes */
+int32 ether_input(void *data);
 int  ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
 		 struct rtentry *rt0);
 int  ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data);
@@ -56,40 +66,17 @@ int  ether_dev_stop(ifnet *dev);
 void arp_rtrequest(int req, struct rtentry *rt, struct sockaddr *sa);
 static void arpinput(struct mbuf *m);
 
-#define DRIVER_DIRECTORY "/dev/net"
 
+#define DRIVER_DIRECTORY "/dev/net"
 #define SIN(s)   ((struct sockaddr_in*)s)
 #define SDL(s)   ((struct sockaddr_dl*)s)
 #define rt_expire rt_rmx.rmx_expire
 
-uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+static uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-/* these are in seconds... */
-static int arpt_prune = (5 * 60); 	/* time interval we prune the arp cache? 5 minutes */
-static int arpt_keep  = (20 * 60);	/* length of time we keep entries... (20 mins) */
-static int arpt_down = 20;      /* seconds between arp flooding */																																																											
-
-
-static int arp_maxtries = 5;    /* max tries before a pause */
-
-/* stats */
-static int32 arp_inuse = 0;	/* how many entries do we have? */
-static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 
 struct llinfo_arp llinfo_arp;
 struct in_ifaddr *primary_addr;
-
-#define INARPQ(la, head) do { \
-	(la)->la_prev = (head)->la_next->la_prev; \
-	(la)->la_next = (head)->la_next; \
-	(head)->la_next->la_prev = (la); \
-	(head)->la_next = (la); \
-} while (0)
-
-#define REMARPQ(la) do { \
-	(la)->la_prev->la_next = (la)->la_next; \
-	(la)->la_next->la_prev = (la)->la_prev; \
-} while (0)
 
 static char digits[] = "0123456789abcdef";
 
@@ -173,8 +160,9 @@ static void attach_device(int devid, char *driver, char *devno)
 	
 	ifp->rx_thread = -1;
 	ifp->tx_thread = -1;
-
-	ifp->input = &ether_input;
+	ifp->devq = etherq;
+	
+	ifp->input = NULL;//&ether_input;
 	ifp->output = &ether_output;
 	ifp->stop = &ether_dev_stop;
 	ifp->ioctl = &ether_ioctl;
@@ -307,40 +295,49 @@ static void dump_ether_details(struct mbuf *buf)
 }
 #endif
 
-void ether_input(struct mbuf *m)
+int32 ether_input(void *data)
 {
-	struct ether_header *eth = mtod(m, struct ether_header *);
-	int len = sizeof(struct ether_header);
+	struct mbuf *m;	
+	struct ether_header *eth;
+	int len;
 	
-	eth->ether_type = ntohs(eth->ether_type);
+	while (1) {
+		len = sizeof(struct ether_header);
+		acquire_sem_etc(etherq->pop, 1, B_CAN_INTERRUPT, 0);
+		IFQ_DEQUEUE(etherq, m);
+		if (!m)
+			continue;
+			
+		eth = mtod(m, struct ether_header *);
+		eth->ether_type = ntohs(eth->ether_type);
 
-	if (memcmp((void*)&eth->ether_dhost, (void*)&ether_bcast, 6) == 0)
-		m->m_flags |= M_BCAST;
-	if (eth->ether_dhost[0] & 1)
-		m->m_flags |= M_MCAST;
+		if (memcmp((void*)&eth->ether_dhost, (void*)&ether_bcast, 6) == 0)
+			m->m_flags |= M_BCAST;
+		if (eth->ether_dhost[0] & 1)
+			m->m_flags |= M_MCAST;
 		
 #if SHOW_DEBUG	
-	dump_ether_details(buf);
+		dump_ether_details(buf);
 #endif
-	m_adj(m, len);
+		m_adj(m, len);
 	
-	switch(eth->ether_type) {
-		case ETHERTYPE_ARP:
-			arpinput(m);
-			break;
-		case ETHERTYPE_IP:
-			if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
-				return proto[IPPROTO_IP]->pr_input(m, 0);
-			else
-				printf("proto[%d] = %p, not called...\n", IPPROTO_IP,
-					proto[IPPROTO_IP]);
-			break;
-		default:
-			printf("Couldn't process unknown protocol %04x\n", eth->ether_type);
+		switch(eth->ether_type) {
+			case ETHERTYPE_ARP:
+				arpinput(m);
+				break;
+			case ETHERTYPE_IP:
+				if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
+					proto[IPPROTO_IP]->pr_input(m, 0);
+				else
+					printf("proto[%d] = %p, not called...\n", IPPROTO_IP,
+					       proto[IPPROTO_IP]);
+				break;
+			default:
+				printf("Couldn't process unknown protocol %04x\n", eth->ether_type);
+		}
 	}
-
-	m_freem(m);
-	return;	
+	
+	return 0;	
 }
 
 #define senderr(e)	{ error = (e); goto bad; }
@@ -646,7 +643,7 @@ void arp_rtrequest(int req, struct rtentry *rt, struct sockaddr *sa)
 			
 			la->la_rt = rt;
 			rt->rt_flags |= RTF_LLINFO;
-			INARPQ(la, &llinfo_arp);
+			insque(la, &llinfo_arp);
 			
 			if (SIN(rt_key(rt))->sin_addr.s_addr == 
 			    (IA_SIN(rt->rt_ifa))->sin_addr.s_addr) {
@@ -665,7 +662,7 @@ XXX - add function to get the ifnet * for the loopback from the "core"
 			if (!la)
 				break;
 			arp_inuse--;
-			REMARPQ(la);
+			remque(la);
 			rt->rt_llinfo = NULL;
 			rt->rt_flags &= ~ RTF_LLINFO;
 			if (la->la_hold)
@@ -865,9 +862,15 @@ static int ether_init(void *cpp)
 {
 	if (cpp)
 		core = cpp;
+
+	etherq = start_ifq();
+	ether_rxt = spawn_thread(ether_input, "ethernet_input", 50, NULL);
+	if (ether_rxt > 0)
+		resume_thread(ether_rxt);
 	
 	find_devices();
 
+	
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
 	add_protosw(proto, NET_LAYER2);
 	arp_init();
@@ -878,7 +881,8 @@ static int ether_init(void *cpp)
 static int ether_stop()
 {
 	struct ether_device *dptr = ether_devices, *odev;
-
+	kill_thread(ether_rxt);
+	
 	while (dptr) {
 		odev = dptr;
 		dptr = odev->next;

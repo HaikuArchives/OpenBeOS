@@ -1,7 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ethernet
 TGT=../modules/interface/$(TARGET)
-LOBJS=../net_server/net_timer.o
+LOBJS=
 OBJS=ethernet.o
 XMAP_DIR=/boot/home/config/add-ons/kernel/drivers/dev/net
 
@@ -9,7 +9,7 @@ CFLAGS += -D_NETWORK_STACK
 
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=../net_server/misc.o #../net_server/area_malloc.o
+KLOBJS=#../net_server/area_malloc.o
 
 all:    $(TARGET)
 
