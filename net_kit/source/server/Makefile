@@ -4,8 +4,13 @@ SUBDIRS=util net_server ipv4 udp ethernet arp icmp loop test
 #CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
 #LDFLAGS=-p
 # for a normal build use these 2 lines
-CFLAGS=-O2 -g -Wall -fPIC -DPIC
-LDFLAGS=
+CFLAGS=-O2 -g -Wall
+LDFLAGS=-nostdlib -L/boot/beos/system/lib -L/boot/develop/lib/x86 -lroot -lbe /boot/develop/lib/x86/start_dyn.o
+
+# Uncomment these to build a device driver!
+#CFLAGS=-nostart -no-fpic -D_KERNEL_MODE
+#LDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
+
 
 INCLUDES=-I. -I./include
 
