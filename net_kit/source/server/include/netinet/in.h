@@ -101,4 +101,6 @@ struct sockaddr_in {
 #define satosin(sa)     ((struct sockaddr_in *)(sa))
 #define sintosa(sin)    ((struct sockaddr *)(sin))
 
+int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp);
+
 #endif /* NETINET_IN_H */

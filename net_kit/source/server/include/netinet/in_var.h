@@ -41,6 +41,8 @@ struct in_aliasreq {
  */
 #define IA_SIN(ia) (&(((struct in_ifaddr *)(ia))->ia_addr))
 
+struct in_ifaddr *in_ifaddr;
+
 int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
                 int scrub);
 
