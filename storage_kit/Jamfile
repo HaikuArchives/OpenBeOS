@@ -5,4 +5,5 @@ SubDir TOP ;
 SubInclude TOP cppunit ;
 SubInclude TOP source ;
 SubInclude TOP test ;
+SubInclude TOP tools ;
 
