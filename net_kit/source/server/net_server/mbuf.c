@@ -376,3 +376,116 @@ nospace:
         return (0);
 }
 
+/* Rearrange an mbuf chain so that len bytes are contiguous
+ * and in the data area of an mbuf (so that mtod and dtom
+ * will work for a structure of size len).  Returns the resulting
+ * mbuf chain on success, frees it and returns null on failure.
+ * If there is room, it will add up to max_protohdr-len extra bytes to the
+ * contiguous region in an attempt to avoid being called next time.
+ */
+int MPFail;
+
+struct mbuf *m_pullup(struct mbuf *n, int len)
+{
+	struct mbuf *m;
+	int count;
+        int space;
+
+        /*
+         * If first mbuf has no cluster, and has room for len bytes
+         * without shifting current data, pullup into it,
+         * otherwise allocate a new mbuf to prepend to the chain.
+         */
+        if ((n->m_flags & M_EXT) == 0 &&
+            n->m_data + len < &n->m_dat[MLEN] && n->m_next) {
+                if (n->m_len >= len)
+                        return (n);
+                m = n;
+                n = n->m_next;
+                len -= m->m_len;
+        } else {
+                if (len > MHLEN)
+                        goto bad;
+                MGET(m, n->m_type);
+                if (m == NULL)
+                        goto bad;
+                m->m_len = 0;
+                if (n->m_flags & M_PKTHDR)
+                        M_MOVE_PKTHDR(m, n);
+        }
+        space = &m->m_dat[MLEN] - (m->m_data + m->m_len);
+        do {
+                count = min(min(max(len, max_protohdr), space), n->m_len);
+                memcpy(mtod(m, caddr_t), mtod(n, caddr_t) + m->m_len,
+                    (unsigned)count);
+                len -= count;
+                m->m_len += count;
+                n->m_len -= count;
+                space -= count;
+                if (n->m_len)
+                        n->m_data += count;
+                else
+                        n = m_free(n);
+        } while (len > 0 && n);
+        if (len > 0) {
+                (void)m_free(m);
+                goto bad;
+        }
+        m->m_next = n;
+        return (m);
+bad:
+        m_freem(n);
+        MPFail++;
+        return (NULL);
+}
+
+/*
+ * Copy data from a buffer back into the indicated mbuf chain,
+ * starting "off" bytes from the beginning, extending the mbuf
+ * chain if necessary. The mbuf needs to be properly initalized
+ * including the setting of m_len.
+ */
+void m_copyback(struct mbuf *m0, int off, int len, caddr_t cp)
+{
+	int mlen;
+	struct mbuf *m = m0, *n;
+        int totlen = 0;
+
+        if (m0 == 0)
+                return;
+        while (off > (mlen = m->m_len)) {
+                off -= mlen;
+                totlen += mlen;
+                if (m->m_next == 0) {
+                        n = m_getclr(m->m_type);
+                        if (n == 0)
+                                goto out;
+                        n->m_len = min(MLEN, len + off);
+                        m->m_next = n;
+                }
+                m = m->m_next;
+        }
+        while (len > 0) {
+                mlen = min (m->m_len - off, len);
+                memcpy(off + mtod(m, caddr_t), cp, (unsigned)mlen);
+                cp += mlen;
+                len -= mlen;
+                mlen += off;
+                off = 0;
+                totlen += mlen;
+                if (len == 0)
+                        break;
+                if (m->m_next == 0) {
+                        n = m_get(m->m_type);
+                        if (n == 0)
+                                break;
+                        n->m_len = min(MLEN, len);
+                        m->m_next = n;
+                }
+                m = m->m_next;
+        }
+out:
+	if (((m = m0)->m_flags & M_PKTHDR) && (m->m_pkthdr.len < totlen))
+                m->m_pkthdr.len = totlen;
+}
+
