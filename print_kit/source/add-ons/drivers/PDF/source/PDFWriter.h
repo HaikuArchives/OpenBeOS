@@ -93,7 +93,7 @@ class PDFWriter : public PrinterDriver
 		void		DrawString(char *string, float deltax, float deltay);
 		void		DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		void		SetClippingRects(BRect *rects, uint32 numRects);
-		void    	ClipToPicture(BPicture *picture, BPoint point, uint32 unknown);
+		void    	ClipToPicture(BPicture *picture, BPoint point, bool clip_to_inverse_picture);
 		void		PushState();
 		void		PopState();
 		void		EnterStateChange();
@@ -204,11 +204,18 @@ class PDFWriter : public PrinterDriver
 		void GetFontName(BFont *font, char *fontname, int *embed);
 		int FindFont(char *fontname, int embed);
 
+		void PushInternalState();
+		bool PopInternalState();
+
 		void SetColor(rgb_color toSet);
 		void SetColor();
 		
 		void StrokeOrClip();
 		void FillOrClip();
+		void Paint(bool stroke);
+		void PaintRoundRect(BRect rect, BPoint radii, bool stroke);
+		void PaintArc(BPoint center, BPoint radii, float startTheta, float arcTheta, int stroke);
+		void PaintEllipse(BPoint center, BPoint radii, bool stroke);
 	};
 
 
@@ -260,7 +267,7 @@ void	_FillShape(void *p, BShape *shape);
 void	_DrawString(void *p, char *string, float deltax, float deltay);
 void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 void	_SetClippingRects(void *p, BRect *rects, uint32 numRects);
-void	_ClipToPicture(void *p, BPicture *picture, BPoint point, uint32 unknown);
+void	_ClipToPicture(void *p, BPicture *picture, BPoint point, bool clip_to_inverse_picture);
 void	_PushState(void *p);
 void	_PopState(void *p);
 void	_EnterStateChange(void *p);

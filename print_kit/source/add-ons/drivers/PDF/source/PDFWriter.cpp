@@ -74,7 +74,7 @@ playbackHandlers[] = {
 		_DrawPixels,			// 18	DrawPixels(void *user, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
 		_op19,					// 19	*reserved*
 		_SetClippingRects,		// 20	SetClippingRects(void *user, BRect *rects, uint32 numRects)
-		_ClipToPicture,			// 21	ClipToPicture(void *user, BPicture *picture, BPoint pt, uint32 unknown)
+		_ClipToPicture,			// 21	ClipToPicture(void *user, BPicture *picture, BPoint pt, bool clip_to_inverse_picture)
 		_PushState,				// 22	PushState(void *user)
 		_PopState,				// 23	PopState(void *user)
 		_EnterStateChange,		// 24	EnterStateChange(void *user)
@@ -341,6 +341,29 @@ PDFWriter::ErrorHandler(int	type, const char *msg)
 
 
 // --------------------------------------------------
+void
+PDFWriter::PushInternalState() {
+	fprintf(fLog, "PushInternalState\n");
+	fState = new State(fState); fStateDepth ++;
+}
+
+// --------------------------------------------------
+bool
+PDFWriter::PopInternalState() {
+	fprintf(fLog, "PopInternalState\n");
+	if (fStateDepth != 0) {
+		State* s = fState; fStateDepth --;
+		fState = fState->prev;
+		delete s;
+		fprintf(fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0);
+		return true;
+	} else {
+		fprintf(fLog, "State stack underflow!\n");
+		return false;
+	}
+}
+
+// --------------------------------------------------
 void 
 PDFWriter::SetColor(rgb_color color) 
 {
@@ -373,6 +396,16 @@ PDFWriter::FillOrClip() {
 		PDF_fill(fPdf);
 	} else {
 		PDF_clip(fPdf);
+	}
+}
+
+// --------------------------------------------------
+void
+PDFWriter::Paint(bool stroke) {
+	if (stroke) {
+		StrokeOrClip();
+	} else {
+		FillOrClip();
 	}
 }
 
@@ -609,9 +642,11 @@ DrawShape::IterateLineTo(int32 lineCount, BPoint *linePoints)
 	BPoint *p = linePoints;
 	for (int32 i = 0; i < lineCount; i++) {
 		fprintf(Log(), "(%f, %f) ", p->x, p->y);
+
 		PDF_lineto(Pdf(), tx(p->x), ty(p->y));
 		p++;
 	}
+	fprintf(Log(), "\n");
 	return B_OK;
 }
 
@@ -628,8 +663,6 @@ DrawShape::IterateMoveTo(BPoint *point)
 #ifdef CODEWARRIOR
 	#pragma mark -- BPicture playback handlers
 #endif
-
-// BPicture::Play() handlers
 
 // --------------------------------------------------
 void PDFWriter::Op(int number)
@@ -672,7 +705,6 @@ void PDFWriter::StrokeRect(BRect rect)
 	SetColor();			
 	PDF_rect(fPdf, tx(rect.left), ty(rect.bottom), scale(rect.Width()), scale(rect.Height()));
 	StrokeOrClip();
-
 }
 
 
@@ -686,9 +718,61 @@ PDFWriter::FillRect(BRect rect)
 	SetColor();			
 	PDF_rect(fPdf, tx(rect.left), ty(rect.bottom), scale(rect.Width()), scale(rect.Height()));
 	FillOrClip();
-
 }
 
+
+// --------------------------------------------------
+// The quarter ellipses in the corners of the rectangle are
+// approximated with bezier curves.
+// The constant 0.555... is taken from gobeProductive.
+void	
+PDFWriter::PaintRoundRect(BRect rect, BPoint radii, bool stroke) {
+	BPoint center;
+	
+	float sx = scale(radii.x);
+	float sy = scale(radii.y);
+	
+	float ax = sx;
+	float bx = 0.5555555555555 * sx;
+	float ay = sy;
+	float by = 0.5555555555555 * sy;
+
+	SetColor();
+
+	center.x = tx(rect.left) + sx;
+	center.y = ty(rect.top) - sy;
+	
+	PDF_moveto(fPdf, center.x - ax, center.y);
+	PDF_curveto(fPdf, 
+		center.x - ax, center.y + by,
+		center.x - bx, center.y + ay,
+		center.x     , center.y + ay);
+	
+	center.x = tx(rect.right) - sx;
+	PDF_lineto(fPdf, center.x, center.y + ay);
+	PDF_curveto(fPdf, 
+		center.x + bx, center.y + ay,
+		center.x + ax, center.y + by,
+		center.x + ax, center.y);
+		
+	center.y = ty(rect.bottom) + sy;
+	PDF_lineto(fPdf, center.x + sx, center.y); 
+	PDF_curveto(fPdf, 
+		center.x + ax, center.y - by,
+		center.x + bx, center.y - ay,
+		center.x     , center.y - ay);
+	
+	center.x = tx(rect.left) + sx;	
+	PDF_lineto(fPdf, center.x, center.y - ay);
+	PDF_curveto(fPdf, 
+		center.x - bx, center.y - ay,
+		center.x - ax, center.y - by,
+		center.x - ax, center.y);
+
+	PDF_closepath(fPdf);
+	
+	Paint(stroke);
+}
 
 // --------------------------------------------------
 void	
@@ -696,7 +780,7 @@ PDFWriter::StrokeRoundRect(BRect rect, BPoint radii)
 {
 	fprintf(fLog, "StrokeRoundRect center=[%f, %f, %f, %f], radii=[%f, %f]\n",
 			rect.left, rect.top, rect.right, rect.bottom, radii.x, radii.y);
-	StrokeRect(rect);
+	PaintRoundRect(rect, radii, true);
 }
 
 
@@ -706,7 +790,7 @@ PDFWriter::FillRoundRect(BRect rect, BPoint	radii)
 {
 	fprintf(fLog, "FillRoundRect rect=[%f, %f, %f, %f], radii=[%f, %f]\n",
 			rect.left, rect.top, rect.right, rect.bottom, radii.x, radii.y);
-	FillRect(rect);
+	PaintRoundRect(rect, radii, false);
 }
 
 
@@ -740,15 +824,30 @@ PDFWriter::FillBezier(BPoint *control)
 
 
 // --------------------------------------------------
+// Note the pen size is also scaled!
+// We should approximate it with bezier curves too!
+void
+PDFWriter::PaintArc(BPoint center, BPoint radii, float startTheta, float arcTheta, int stroke) {
+	float sx = scale(radii.x);
+	float sy = scale(radii.y);
+	float smax = sx > sy ? sx : sy;
+	SetColor();
+
+	PDF_save(fPdf);
+	PDF_scale(fPdf, sx, sy);
+	PDF_setlinewidth(fPdf, fState->penSize / smax);
+	PDF_arc(fPdf, tx(center.x) / sx, ty(center.y) / sy, 1, startTheta, startTheta + arcTheta);	
+	Paint(stroke);
+	PDF_restore(fPdf);
+}
+
+// --------------------------------------------------
 void
 PDFWriter::StrokeArc(BPoint center, BPoint radii, float startTheta, float arcTheta)
 {
 	fprintf(fLog, "StrokeArc center=[%f, %f], radii=[%f, %f], startTheta=%f, arcTheta=%f\n",
 			center.x, center.y, radii.x, radii.y, startTheta, arcTheta);
-	float r = fmin(radii.x, radii.y);
-	SetColor();
-	PDF_arc(fPdf, tx(center.x), ty(center.y), scale(r), startTheta, arcTheta);
-	StrokeOrClip();
+	PaintArc(center, radii, startTheta, arcTheta, true);
 }
 
 
@@ -758,13 +857,46 @@ PDFWriter::FillArc(BPoint center, BPoint radii, float startTheta, float arcTheta
 {
 	fprintf(fLog, "FillArc center=[%f, %f], radii=[%f, %f], startTheta=%f, arcTheta=%f\n",
 			center.x, center.y, radii.x, radii.y, startTheta, arcTheta);
-	float r = fmin(radii.x, radii.y);
-	SetColor();
-	PDF_arc(fPdf, tx(center.x), ty(center.y), scale(r), startTheta, arcTheta);
-	PDF_closepath(fPdf);
-	FillOrClip();
+	PaintArc(center, radii, startTheta, arcTheta, false);
 }
 
+// --------------------------------------------------
+void
+PDFWriter::PaintEllipse(BPoint center, BPoint radii, bool stroke) {
+	float sx = scale(radii.x);
+	float sy = scale(radii.y);
+	
+	center.x = tx(center.x); center.y = ty(center.y);
+
+	float ax = sx;
+	float bx = 0.5555555555555 * sx;
+	float ay = sy;
+	float by = 0.5555555555555 * sy;
+
+	SetColor();
+
+	PDF_moveto(fPdf, center.x - ax, center.y);
+	PDF_curveto(fPdf, 
+		center.x - ax, center.y - by,
+		center.x - bx, center.y - ay,
+		center.x     , center.y - ay);
+	PDF_curveto(fPdf, 
+		center.x + bx, center.y - ay,
+		center.x + ax, center.y - by,
+		center.x + ax, center.y);
+	PDF_curveto(fPdf, 
+		center.x + ax, center.y + by,
+		center.x + bx, center.y + ay,
+		center.x     , center.y + ay);
+	PDF_curveto(fPdf, 
+		center.x - bx, center.y + ay,
+		center.x - ax, center.y + by,
+		center.x - ax, center.y);
+	
+	PDF_closepath(fPdf);
+	
+	Paint(stroke);
+}
 
 // --------------------------------------------------
 void
@@ -772,10 +904,7 @@ PDFWriter::StrokeEllipse(BPoint center, BPoint radii)
 {
 	fprintf(fLog, "StrokeEllipse center=[%f, %f], radii=[%f, %f]\n",
 			center.x, center.y, radii.x, radii.y);
-	float r = fmin(radii.x, radii.y);
-	SetColor();
-	PDF_circle(fPdf, tx(center.x), ty(center.y), scale(r));
-	StrokeOrClip();
+	PaintEllipse(center, radii, true);
 }
 
 
@@ -785,10 +914,7 @@ PDFWriter::FillEllipse(BPoint center, BPoint radii)
 {
 	fprintf(fLog, "FillEllipse center=[%f, %f], radii=[%f, %f]\n",
 			center.x, center.y, radii.x, radii.y);
-	float r = fmin(radii.x, radii.y);
-	SetColor();
-	PDF_circle(fPdf, tx(center.x), ty(center.y), scale(r));
-	FillOrClip();
+	PaintEllipse(center, radii, false);
 }
 
 
@@ -869,13 +995,27 @@ void PDFWriter::FillShape(BShape *shape)
 
 // --------------------------------------------------
 void
-PDFWriter::ClipToPicture(BPicture *picture, BPoint point, uint32 unknown)
+PDFWriter::ClipToPicture(BPicture *picture, BPoint point, bool clip_to_inverse_picture)
 {
-	fprintf(fLog, "ClipToPicture at (%f, %f) unknown = %ld\n", point.x, point.y, unknown);
+	fprintf(fLog, "ClipToPicture at (%f, %f) clip_to_inverse_picture = %s\n", point.x, point.y, clip_to_inverse_picture ? "true" : "false");
+	if (clip_to_inverse_picture) {
+		fprintf(fLog, "Clipping to inverse picture not implemented!\n");
+		return;
+	}
 	if (fMode == kDrawingMode) {
+		const bool set_origin = point.x != 0 || point.y != 0;
+		if (set_origin) { 
+			PushInternalState(); SetOrigin(point); PushInternalState();
+		}
+
 		fMode = kClippingMode;
 		picture->Play(playbackHandlers, 50, this);
 		fMode = kDrawingMode;
+
+		if (set_origin) {
+			PopInternalState(); PopInternalState();
+		}
+
 		fprintf(fLog, "Returning from ClipToPicture\n");
 	} else {
 		fprintf(fLog, "Nested call of ClipToPicture not implemented yet!\n");
@@ -1123,7 +1263,7 @@ PDFWriter::SetClippingRects(BRect *rects, uint32 numRects)
 	
 	fprintf(fLog, "SetClippingRects numRects=%ld\nrects=",
 			numRects);
-			
+	
 	for ( i = 0; i < numRects; i++, rects++ ) {
 		fprintf(fLog, " [%f, %f, %f, %f]",
 				rects->left, rects->top, rects->right, rects->bottom);
@@ -1142,8 +1282,7 @@ PDFWriter::SetClippingRects(BRect *rects, uint32 numRects)
 void
 PDFWriter::PushState()
 {
-	fprintf(fLog, "PushState\n");
-	fState = new State(fState); fStateDepth ++;
+	PushInternalState();
 	fprintf(fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0);
 	PDF_save(fPdf);
 }
@@ -1153,15 +1292,8 @@ PDFWriter::PushState()
 void
 PDFWriter::PopState()
 {
-	fprintf(fLog, "PopState\n");
-	if (fStateDepth != 0) {
-		State* s = fState; fStateDepth --;
-		fState = fState->prev;
-		delete s;
-		fprintf(fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0);
+	if (PopInternalState()) {
 		PDF_restore(fPdf);
-	} else {
-		fprintf(fLog, "State stack underflow!\n");
 	}
 }
 
@@ -1324,7 +1456,9 @@ PDFWriter::SetStipplePattern(pattern pat)
 {
 	fprintf(fLog, "SetStipplePattern\n");
 	fState->pattern = pat;
-	// XXX don't know how to convert this to PDF drawing primitives
+	// MP: PDF 1.2 and later supports patterns
+	// We need to map the Be pattern to PDF pattern.
+	// I don't know if xpdf and BePDF support them.
 }
 
 
@@ -1454,7 +1588,7 @@ void	_DrawString(void *p, char *string, float deltax, float deltay)							{ retu
 void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
 						{ return ((PDFWriter *) p)->DrawPixels(src, dest, width, height, bytesPerRow, pixelFormat, flags, data); }
 void	_SetClippingRects(void *p, BRect *rects, uint32 numRects)								{ return ((PDFWriter *) p)->SetClippingRects(rects, numRects); }
-void	_ClipToPicture(void * p, BPicture *picture, BPoint point, uint32 unknown)				{ return ((PDFWriter *) p)->ClipToPicture(picture, point, unknown); }
+void	_ClipToPicture(void * p, BPicture *picture, BPoint point, bool clip_to_inverse_picture)	{ return ((PDFWriter *) p)->ClipToPicture(picture, point, clip_to_inverse_picture); }
 void	_PushState(void *p)  																	{ return ((PDFWriter *) p)->PushState(); }
 void	_PopState(void *p)  																	{ return ((PDFWriter *) p)->PopState(); }
 void	_EnterStateChange(void *p) 															{ return ((PDFWriter *) p)->EnterStateChange(); }
