@@ -1,8 +1,8 @@
 INCLUDES=-I. -I.. -I../include
-TARGET=arp
-CFLAGS=-Wall -g -O0 -fPIC -DPIC -nostart
+TARGET=net_srv
+CFLAGS=-Wall -g -O2 
 LOBJS=../mbuf.o ../pools.o
-LDFLAGS=../_APP_
+LDFLAGS=
 
 all:	$(TARGET)
 
@@ -10,4 +10,4 @@ clean:
 	@if test -e ../modules/$(TARGET); then rm $(TARGET); fi
 
 $(TARGET):
-	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o ../modules/$(TARGET) $(TARGET).c
+	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../$(TARGET) net_server.c

@@ -1,9 +1,12 @@
 INCLUDES=-I. -I.. -I../include
-
+TARGET=udp
 CFLAGS=-Wall -g -O0 -fPIC -DPIC -nostart
 LDFLAGS=../_APP_
 
-all:	udp.so
+all:	$(TARGET)
 
-udp.so:
-	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o ../modules/udp.so udp.c
+clean:
+	@if test -e ../modules/$(TARGET); then rm ../modules/$(TARGET); fi
+
+udp:
+	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o ../modules/$(TARGET) $(TARGET).c
