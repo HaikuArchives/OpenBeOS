@@ -14,4 +14,7 @@ cp bookmarks/* /boot/home/config/settings/PDF\ Writer/bookmarks
 mkdir /boot/home/config/settings/PDF\ Writer/xrefs
 cp bookmarks/* /boot/home/config/settings/PDF\ Writer/xrefs
 
+# restart print_server
+/boot/beos/system/servers/print_server
+
 alert --info "PDF Writer driver is installed"
