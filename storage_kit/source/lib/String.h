@@ -11,8 +11,13 @@ class BString {
 public:
 	BString();
 	BString(const char *str);
+	BString(const char *str, int32 charCount);
 	BString(const BString &str);
 	virtual ~BString();
+
+	BString &SetTo(const char *str);
+	BString &SetTo(const char *str, int32 charCount);
+	BString &SetTo(const BString &str);
 
 	const char *String() const;
 	int32 Length() const;

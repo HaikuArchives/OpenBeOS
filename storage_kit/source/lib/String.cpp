@@ -18,7 +18,14 @@ BString::BString()
 BString::BString(const char *str)
 	   : fData(NULL)
 {
-	_Init(str);
+	SetTo(str);
+}
+
+// constructor
+BString::BString(const char *str, int32 charCount)
+	   : fData(NULL)
+{
+	SetTo(str, charCount);
 }
 
 // copy constructor
@@ -32,6 +39,29 @@ BString::BString(const BString &str)
 BString::~BString()
 {
 	delete[] fData;
+}
+
+// SetTo
+BString &
+BString::SetTo(const char *str)
+{
+	_Init(str);
+	return *this;
+}
+
+// SetTo
+BString &
+BString::SetTo(const char *str, int32 charCount)
+{
+	_Init(str, charCount);
+	return *this;
+}
+
+// SetTo
+BString &
+BString::SetTo(const BString &str)
+{
+	return (*this = str);
 }
 
 // String
