@@ -13,11 +13,12 @@
 StorageKit::Error::Error(int errorCode, const char* errorMessage)
 : fErrorCode(errorCode), fErrorMessage(NULL) {
 	SetErrorMessage(errorMessage);
-	if (kDebug)
+	if (DEBUG)
 		PrintDebugInfo();
 }
 
-void StorageKit::Error::SetErrorMessage(const char* errorMessage) {
+void
+StorageKit::Error::SetErrorMessage(const char* errorMessage) {
 	if (fErrorMessage != NULL)			// Check for previous message
 		delete fErrorMessage;			// Free it if necessary
 
@@ -40,16 +41,19 @@ StorageKit::Error::~Error() {
 	delete fErrorMessage;
 }
 
-const int StorageKit::Error::ErrorCode() const {
+const int
+StorageKit::Error::ErrorCode() const {
 	return fErrorCode;
 }
 
-const char* StorageKit::Error::ErrorMessage() const {
+const char*
+StorageKit::Error::ErrorMessage() const {
 	return (fErrorMessage != NULL) ? fErrorMessage : kDefaultErrorMessage;
 }
 
 
-void StorageKit::Error::PrintDebugInfo() const {
+void
+StorageKit::Error::PrintDebugInfo() const {
 	/*! /todo It'd be nice to be able to get the name of the call
 		at run time. I'm not sure if this is something RTTI will do
 		for us or not. I'll just have to look it up when I get the

@@ -48,7 +48,7 @@ protected:
 	/*! Class-wide flag to enable or disable debugging messages to standard output. If
 		true, a message is printed each time an Error object is constructed specifying
 		the object's type and its associated error message. */
-	static const bool kDebug = true;
+	static const bool DEBUG = false;
 	
 	//! Default error message.
 	/*! Default error message. Returned by ErrorMessage() if the error message specified
