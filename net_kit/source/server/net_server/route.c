@@ -3,6 +3,12 @@
 #include <kernel/OS.h>
 #include <stdio.h>
 
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
+
+#include "net_malloc.h"
+
 #include "net_module.h"
 #include "net/route.h" /* includes net/radix.h */
 #include "protocols.h"

@@ -37,17 +37,24 @@
 #include <kernel/OS.h>
 #include <strings.h>
 #include <stdio.h>
+
+#include "net_malloc.h"
+
 #include "netinet/in.h"
+
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
 
 /*
  * Routines to build and maintain radix trees for routing lookups.
  */
 #ifndef _RADIX_H_
-#include <malloc.h>
 #define	M_DONTWAIT M_NOWAIT
 #include <stdlib.h>
 #include "net/radix.h"
 #endif
+
 #include "sys/domain.h"
 
 static int	rn_walktree_from (struct radix_node_head *h, void *a,
