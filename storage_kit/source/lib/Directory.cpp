@@ -104,6 +104,12 @@ BDirectory::BDirectory(const BDirectory *dir, const char *path)
 */
 BDirectory::~BDirectory()
 {
+	// Also called by the BNode destructor, but we rather try to avoid
+	// problems with calling virtual functions in the base class destructor.
+	// Depending on the compiler implementation an object may be degraded to
+	// an object of the base class after the destructor of the derived class
+	// has been executed.
+	close_fd();
 }
 
 // SetTo
@@ -126,6 +132,7 @@ BDirectory::~BDirectory()
 status_t
 BDirectory::SetTo(const entry_ref *ref)
 {
+	Unset();	
 	char path[B_PATH_NAME_LENGTH];
 	status_t error = (ref ? B_OK : B_BAD_VALUE);
 	if (error == B_OK)
@@ -154,11 +161,13 @@ BDirectory::SetTo(const entry_ref *ref)
 status_t
 BDirectory::SetTo(const node_ref *nref)
 {
+	Unset();	
 	status_t error = (nref ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
 		entry_ref ref(nref->device, nref->node, ".");
 		error = SetTo(&ref);
 	}
+	set_status(error);
 	return error;
 }
 
@@ -182,6 +191,7 @@ BDirectory::SetTo(const node_ref *nref)
 status_t
 BDirectory::SetTo(const BEntry *entry)
 {
+	Unset();	
 	entry_ref ref;
 	status_t error = (entry ? B_OK : B_BAD_VALUE);
 	if (error == B_OK && entry->InitCheck() != B_OK)
@@ -214,8 +224,8 @@ BDirectory::SetTo(const BEntry *entry)
 status_t
 BDirectory::SetTo(const char *path)
 {
-	status_t result = (path ? B_OK : B_BAD_VALUE);
 	Unset();	
+	status_t result = (path ? B_OK : B_BAD_VALUE);
 	StorageKit::FileDescriptor newFd = -1;
 	if (result == B_OK)
 		result = StorageKit::open_dir(path, newFd);
@@ -253,6 +263,7 @@ BDirectory::SetTo(const char *path)
 status_t
 BDirectory::SetTo(const BDirectory *dir, const char *path)
 {
+	Unset();
 	status_t error = (dir && path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK && StorageKit::is_absolute_path(path))
 		error = B_BAD_VALUE;
@@ -661,7 +672,7 @@ BDirectory::Rewind()
 	GetNextRef() and GetNextDirents(). It does a Rewind(), iterates through
 	the entries and Rewind()s again. The entries "." and ".." are not counted.
 	\return
-	- \c B_OK: Everything went fine.
+	- the number of entries in the directory (not counting "." and "..").
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
 	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.

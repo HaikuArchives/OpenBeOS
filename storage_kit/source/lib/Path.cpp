@@ -252,6 +252,8 @@ BPath::SetTo(const BDirectory *dir, const char *path, bool normalize)
 	// let the other version do the work
 	if (error == B_OK)
 		error = SetTo(dirPath.Path(), path, normalize);
+	if (error != B_OK)
+		Unset();
 	fCStatus = error;
 	return error;
 }
@@ -284,6 +286,9 @@ BPath::Append(const char *path, bool normalize)
 	status_t error = (InitCheck() == B_OK ? B_OK : B_BAD_VALUE);
 	if (error == B_OK)
 		error = SetTo(Path(), path, normalize);
+	if (error != B_OK)
+		Unset();
+	fCStatus = error;
 	return error;
 }
 	
