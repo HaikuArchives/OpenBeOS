@@ -8,20 +8,37 @@
 #include "net_misc.h"
 #include "net_module.h"
 #include "protocols.h"
+#include "ipv4/ipv4.h"
 
 int *prot_table;
 loaded_net_module *net_modules;
 
+/* temporary hack */
+#undef SHOW_DEBUG
+#define SHOW_DEBUG 1
+
+#if SHOW_DEBUG
+static void dump_udp(struct mbuf *buf)
+{
+	ipv4_header *ip = mtod(buf, ipv4_header*);
+	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->hl * 4));
+
+        printf("udp_header  :\n");
+        printf("            : src_port      : %d\n", ntohs(udp->src_port));
+        printf("            : dst_port      : %d\n", ntohs(udp->dst_port));
+        printf("            : udp length    : %d bytes\n", ntohs(udp->length));
+}
+#endif /* SHOW_DEBUG */
+
 int udp_input(struct mbuf *buf)
 {
-	udp_header *udp = mtod(buf, udp_header *);
+	ipv4_header *ip = mtod(buf, ipv4_header*);
+	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->hl * 4));
 
-	printf("udp_header  :\n");
-	printf("            : src_port      : %d\n", ntohs(udp->src_port));
-	printf("            : dst_port      : %d\n", ntohs(udp->dst_port));
-	printf("            : udp length    : %d bytes\n", ntohs(udp->length));
+#if SHOW_DEBUG
+	dump_udp(buf);
+#endif
 
-	/* hmm, not sure about this, but seems to be needed :-? */
 	m_freem(buf);
 
 	return 0;
