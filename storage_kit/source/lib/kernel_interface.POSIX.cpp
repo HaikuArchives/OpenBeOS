@@ -319,6 +319,14 @@ StorageKit::get_stat(FileDescriptor file, Stat *s) {
 	return (::fstat(file, s) == -1) ? errno : B_OK ;
 }
 
+status_t
+StorageKit::get_stat(entry_ref &ref, Stat *result) {
+	char path[B_PATH_NAME_LENGTH];
+	status_t status;
+	
+	status = StorageKit::entry_ref_to_path(&ref, path, B_PATH_NAME_LENGTH);
+	return (status != B_OK) ? status : StorageKit::get_stat(path, result);
+}		
 
 status_t
 StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
@@ -404,6 +412,18 @@ StorageKit::find_dir( Dir dir, const char *name, DirEntry *&result ) {
 	
 	result = NULL;
 	return status;
+}
+
+status_t
+StorageKit::find_dir( Dir dir, const char *name, entry_ref &result ) {
+	DirEntry *entry;
+	status_t status = StorageKit::find_dir(dir, name, entry);
+	if (status != B_OK)
+		return status;
+		
+	result.device = entry->d_pdev;
+	result.directory = entry->d_pino;
+	return result.set_name(entry->d_name);
 }
 
 status_t

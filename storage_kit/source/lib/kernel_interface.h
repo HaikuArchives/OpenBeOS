@@ -101,7 +101,8 @@ status_t sync( FileDescriptor file );
 
 /*! Returns statistical information for the given file. */
 status_t get_stat(const char *path, Stat *s);
-status_t get_stat( FileDescriptor file, Stat *s );
+status_t get_stat(FileDescriptor file, Stat *s);
+status_t get_stat(entry_ref &ref, Stat *s);
 
 /*! Modifies a given portion of the file's statistical information. */
 status_t set_stat( FileDescriptor file, Stat &s, StatMember what );
@@ -172,6 +173,11 @@ status_t rewind_dir( Dir dir );
 	<b>Note:</b> This call modifies the internal position marker of dir. */
 status_t find_dir( Dir dir, const char *name, DirEntry *&result );
 
+/*! Calls the other version of StorageKit::find_dir() and stores the results
+	in the given entry_ref. */
+status_t find_dir( Dir dir, const char *name, entry_ref &result );
+
+
 /*! Creates a duplicated of the given directory and places it in result if successful,
 	returning B_OK. Returns an error code and sets result to StorageKit::NullDir if
 	unsuccessful. */
@@ -198,7 +204,7 @@ ssize_t read_link( const char *path, char *result, int size );
 //------------------------------------------------------------------------------
 /*! Converts the given entry_ref into an absolute pathname, returning
 	the result in the string of length size pointed to by result (a size
-	of B_PATH_NAME_LENGTH+1 is a good idea).
+	of B_PATH_NAME_LENGTH is a good idea).
 	
 	Returns B_OK if successful.
 	
