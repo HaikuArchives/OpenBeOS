@@ -118,6 +118,10 @@ int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
 		}
 	}
 
+	if (dev->if_type == IFT_ETHER) {
+		ia->ia_ifa.ifa_flags |= RTF_CLONING;
+	}
+	
 	if (scrub) {
 		ia->ia_ifa.ifa_addr = (struct sockaddr*)&oldsin;
 		in_scrubprefix(ia);
