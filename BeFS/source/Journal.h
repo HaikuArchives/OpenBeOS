@@ -34,31 +34,26 @@ class Transaction {
 	public:
 		Transaction(Volume *volume,off_t refBlock)
 			:
-			fVolume(volume)
+			fVolume(volume),
+			fCount(0)
 		{
 		}
 
 		Transaction(Volume *volume,block_run refRun)
 			:
-			fVolume(volume)
+			fVolume(volume),
+			fCount(0)
 		{
 		}
 
-		~Transaction()
-		{
-		}
+		~Transaction();
 
-		void Done()
-		{
-		}
-
-		status_t WriteBlocks(off_t blockNumber,const uint8 *buffer,size_t numBlocks = 1)
-		{
-			return cached_write(fVolume->Device(),blockNumber,buffer,numBlocks,fVolume->BlockSize());
-		}
+		status_t WriteBlocks(off_t blockNumber,const uint8 *buffer,size_t numBlocks = 1);
+		void Done();
 
 	//protected:
 		Volume	*fVolume;
+		int32	fCount;
 };
 
 #endif	/* JOURNAL_H */

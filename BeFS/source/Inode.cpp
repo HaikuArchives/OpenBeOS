@@ -274,7 +274,7 @@ Inode::RemoveSmallData(small_data *item,int32 index)
 
 	// update all current iterators
 	AttributeIterator *iterator = NULL;
-	while ((fIterators.Next(iterator)) != NULL)
+	while ((iterator = fIterators.Next(iterator)) != NULL)
 		iterator->Update(index,-1);
 
 	return B_OK;
@@ -440,9 +440,9 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 
 	// update all current iterators
 	AttributeIterator *iterator = NULL;
-	while ((fIterators.Next(iterator)) != NULL)
+	while ((iterator = fIterators.Next(iterator)) != NULL)
 		iterator->Update(index,1);
-	
+
 	return B_OK;
 }
 

@@ -226,7 +226,7 @@ Index::Update(Transaction *transaction,const char *name,int32 type,const uint8 *
 		status = tree->Remove(transaction,(const uint8 *)oldKey,oldLength,id);
 		if (status == B_ENTRY_NOT_FOUND) {
 			// That's not nice, but should be no reason to let the whole thing fail
-			FATAL(("Could not find value in index \"%s\"!",name));
+			FATAL(("Could not find value in index \"%s\"!\n",name));
 		} else if (status < B_OK)
 			return status;
 	}

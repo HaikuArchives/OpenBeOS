@@ -387,15 +387,19 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 	if (status < B_OK)
 		return status;
 
-	// Free attributes, and remove their indices
-	AttributeIterator iterator(inode);
-			
-	char name[B_FILE_NAME_LENGTH];
-	uint32 type;
-	size_t length;
-	vnode_id id;
-	while ((status = iterator.GetNext(name,&length,&type,&id)) == B_OK)
-		inode->RemoveAttribute(&transaction,name);
+	// Free all attributes, and remove their indices
+	{
+		// We have to limit the scope of AttributeIterator, so that its
+		// destructor is not called after the inode is deleted
+		AttributeIterator iterator(inode);
+
+		char name[B_FILE_NAME_LENGTH];
+		uint32 type;
+		size_t length;
+		vnode_id id;
+		while ((status = iterator.GetNext(name,&length,&type,&id)) == B_OK)
+			inode->RemoveAttribute(&transaction,name);
+	}
 
 	if ((status = volume->Free(&transaction,inode->BlockRun())) == B_OK) {
 		transaction.Done();

@@ -18,8 +18,7 @@ DataStream
 
 Queries
 
- - There shouldn't be any cases where you can speed up a query with reordering
-   the query expression - test it
+ - There shouldn't be any cases where you can speed up a query with reordering the query expression - test it
  - Check permissions of the parent directories
  - Live-Queries aren't implemented yet
  - Special handling of the last_modified index needed
@@ -28,14 +27,12 @@ Queries
 
 Journal
 
- - The transaction class currently does nothing else than writing the blocks
-   directly to disk.
+ - The transaction class currently does nothing else than writing the blocks directly to disk.
 
 
 BPlusTree
 
  - BPlusTree::Remove() could trigger CachedNode::Free() to go through the free nodes list and free all pages at the end of the data stream
- - removing duplicates is not yet implemented
  - duplicate_array::Insert() should do a binary search to speed up finding the value if there are more than a certain number (e.g. 8) of entries
  - updating the TreeIterators doesn't work yet for duplicates (which may be a problem if a duplicate node will go away after a remove)
  - BPlusTree::RemoveDuplicate() could spread the contents of duplicate node with only a few entries to save some space (right now, only empty nodes are freed)
@@ -46,13 +43,12 @@ Inode
 
 Indices
 
- - Support for Live-Queries is also missing
+ - Support for Live-Queries is missing
 
 
 Attributes
 
  - bfs_write_attr() doesn't check if the attribute data may fit into the small_data region if there already is that attribute as an attribute file
- - The attribute traversal in the small_data section is not safe against changes to that section - that needs to be changed, probably using a similar mechanism as for the TreeIterator.
 
 
 Volume
