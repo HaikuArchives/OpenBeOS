@@ -9,6 +9,9 @@
 
 #include <stdio.h>
 
+#include <sys/stat.h>
+#include <kernel_interface.h>
+
 #include "TestUtils.h"
 
 class NodeTest : public CppUnit::TestCase
@@ -20,6 +23,7 @@ public:
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Init Test", &NodeTest::InitTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Directory Test", &NodeTest::AttrDirTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Test", &NodeTest::AttrTest) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Stat Test", &NodeTest::StatTest) );
 //		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Locking Test", &NodeTest::LockTest) );
 		
 		return suite;
@@ -84,7 +88,24 @@ public:
 		CPPUNIT_ASSERT( node.RemoveAttr(attr) == B_OK );
 		CPPUNIT_ASSERT( node.ReadAttr(attr, B_STRING_TYPE, 0, data, len) == B_ENTRY_NOT_FOUND );
 	}
+	
+	// Doesn't do very thorough testing yet (I'll leave that to Mike :-)
+	void StatTest() {
+		StorageKit::Stat s;
+	
+		BNode node;
+		CPPUNIT_ASSERT( node.GetStat(&s) == B_NO_INIT );
+		
+		node.SetTo("./");
+		CPPUNIT_ASSERT( node.GetStat(&s) == B_OK );
+	
+		CPPUNIT_ASSERT( node.SetOwner( s.st_uid ) == B_OK );
+		CPPUNIT_ASSERT( node.SetGroup( s.st_gid ) == B_OK );
+		
+	
+	}
 
+	// Locking isn't really implemented yet...
 	void LockTest() {
 		BNode node;
 		
