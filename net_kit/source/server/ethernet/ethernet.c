@@ -45,13 +45,6 @@ static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices *
 image_id arpid;
 #endif
 
-#ifdef USE_DEBUG_MALLOC
-void *dbg_malloc(int size);
-void dbg_free(void *ptr);
-#define malloc dbg_malloc
-#define free dbg_free
-#endif
-
 int ether_dev_start(ifnet *dev);
 int ether_dev_stop(ifnet *dev);
 
@@ -92,6 +85,7 @@ static void open_device(char *driver, char *devno)
 	ed = malloc(sizeof(struct ether_device));
 	if (!ed)
 		return;	
+
 	memset(ed, 0, sizeof(*ed));
 
 	ed->devid = dev;
