@@ -40,7 +40,6 @@ struct node_ref {
 };
 
 
-
 // I'll uncomment these forward declarations as needed:
 //class BStatable;
 //class BEntry;
@@ -200,28 +199,28 @@ private:
 	friend class BDirectory;
 	friend class BSymLink;
 
-	/*! Currently unused. */
+	/*! (currently unused) */
 	virtual void _RudeNode1(); 	
 
-	/*! Currently unused. */
+	/*! (currently unused) */
 	virtual void _RudeNode2();
 
-	/*! Currently unused. */
+	/*! (currently unused) */
 	virtual void _RudeNode3();
 
-	/*! Currently unused. */
+	/*! (currently unused) */
 	virtual void _RudeNode4();
 
-	/*! Currently unused. */
+	/*! (currently unused) */
 	virtual void _RudeNode5();
 
-	/*! Currently unused. */
+	/*! (currently unused) */
 	virtual void _RudeNode6();
 	
 	/*! Attribute directory */
 	StorageKit::Dir *fAttrDir;	
 	
-	/*! Currently unused. */
+	/*! (currently unused) */
 	uint32 rudeData[3];
 	
 	
@@ -230,31 +229,34 @@ private:
 		file-type specific system calls for opening file descriptors. */
 	status_t set_fd(int fd);
 	
-	/*! Implemented to close the file descriptor using the proper system call
-		for the given file-type. */
+	/*! To be implemented by subclasses to close the file descriptor using the
+		proper system call for the given file-type. This implementation calls
+		StorageKit::close(fFd) and also StorageKit::close_attr_dir(fAttrDir)
+		if necessary. */
 	virtual void close_fd();
 
-	/*! (to be determined) */
+	/*! (currently unused) */
 	status_t clear_virtual();
 	
-	/*! (to be determined) */
+	/*! (currently unused) */
 	status_t clear();
 	
 	
-	/*! (to be determined) */
+	/*! Modifies a certain setting for this node based on what and the
+		corresponding value in st. Inherited from and called by BStatable. */
 	virtual status_t set_stat(struct stat &st, uint32 what);
 	
 
-	/*! (to be determined) */
+	/*! (currently unused) */
 	status_t set_to(const entry_ref *ref, bool traverse = false);
 	
-	/*! (to be determined) */
+	/*! (currently unused) */
 	status_t set_to(const BEntry *entry, bool traverse = false);
 	
-	/*! (to be determined) */
+	/*! (currently unused) */
 	status_t set_to(const char *path, bool traverse = false);
 	
-	/*! (to be determined) */
+	/*! (currently unused) */
 	status_t set_to(const BDirectory *dir, const char *path, bool traverse = false);
 	
 
@@ -263,13 +265,9 @@ private:
 	
 	/*! This appears to be passed to the attribute directory functions
 		like a StorageKit::Dir would be, but it's actually a file descriptor.
-		I can't figure out how to do what needs to be done attribute-wise
-		with only a file descriptor, so I've added a DIR*, fAttrDir, to
-		the class. Should that turn out to be all that's necessary, as I
-		believe it will, we can just replace this file descriptor with
-		a pointer to a StorageKit::Dir without affecting binary compatibility
-		(since we'll be re-implementing any classes that would have
-		access to this data member). */
+		Best I can figure, the R5 syscall for reading attributes must've
+		just taken a file descriptor. Depending on what our kernel ends up
+		providing, this may or may not be replaced with an Dir*  */
 	int fAttrFd;
 	
 	/*! The object's initialization status. */

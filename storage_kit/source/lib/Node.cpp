@@ -8,11 +8,6 @@
 #include <Node.h>
 #include <errno.h>
 #include <fs_attr.h> // for struct attr_info
-#include "kernel_interface.h"
-#include "Error.h"
-
-
-#include <iostream>
 
 BNode::BNode() : fFd(-1), fAttrFd(-1), fAttrDir(NULL), fCStatus(B_NO_INIT) {
 }
@@ -59,18 +54,9 @@ BNode::SetTo(const BEntry *entry) {
 
 status_t
 BNode::SetTo(const char *path) {
-	try {
-
-		set_fd(StorageKit::open(path, StorageKit::READ_WRITE));
-		fCStatus = B_OK;
-
-	} catch (StorageKit::EEntryNotFound *e) {
-
-		set_fd(-1);
-		fCStatus = B_ENTRY_NOT_FOUND;
-		delete e;
-
-	}	
+	close_fd();	
+	fCStatus = StorageKit::open(path, StorageKit::READ_WRITE, fFd);	
+	return fCStatus;
 }
 
 status_t
@@ -85,23 +71,25 @@ BNode::Unset() {
 
 status_t
 BNode::Lock() {
-	if (fCStatus == B_NO_INIT)
-		return B_NO_INIT;
+	if (fCStatus != B_OK)
+		return fCStatus;
 
-	StorageKit::FileLock lock;
-	try {
-		StorageKit::lock(fFd, StorageKit::READ, &lock);
-	} catch (StorageKit::Error *e) {
-		delete e;
-		return B_BUSY;
-	}
-	
-	return B_OK;
+	// This will have to wait for the new kenel
+	return B_FILE_ERROR;
+
+	// We'll need to keep lock around if the kernel function
+	// doesn't just work on file descriptors
+//	StorageKit::FileLock lock;
+//	return StorageKit::lock(fFd, StorageKit::READ_WRITE, &lock);
 }
 
 status_t
 BNode::Unlock() {
-	return B_ERROR;
+	if (fCStatus != B_OK)
+		return fCStatus;
+
+	// This will have to wait for the new kenel
+	return B_FILE_ERROR;
 }
 
 status_t
@@ -199,7 +187,7 @@ BNode::GetNextAttrName(char *buffer) {
 	StorageKit::DirEntry *entry = StorageKit::read_attr_dir(fAttrDir);
 	if (entry == NULL) {
 		buffer[0] = 0;
-		return B_ENTRY_NOT_FOUND;
+		return errno;
 	} else {
 		strncpy(buffer, entry->d_name, B_ATTR_NAME_LENGTH);
 		return B_OK;
