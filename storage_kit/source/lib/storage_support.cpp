@@ -12,6 +12,15 @@
 
 namespace StorageKit {
 
+/*!	\param path the path
+	\return \c true, if \a path is not \c NULL and absolute, \c false otherwise
+*/
+bool
+StorageKit::is_absolute_path(const char *path)
+{
+	return (path && path[0] == '/');
+}
+
 // parse_path
 static
 void

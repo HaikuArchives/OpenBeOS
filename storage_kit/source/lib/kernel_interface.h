@@ -310,9 +310,6 @@ status_t get_canonical_dir_path(const char *path, char *result, size_t size);
 	existing directory. */
 status_t get_canonical_dir_path(const char *path, char *&result);
 
-//! Returns whether the supplied path is absolute.
-bool is_absolute_path(const char *path);
-
 /*! Returns true if the given entry_ref represents the root directory, false otherwise. */
 bool entry_ref_is_root_dir( entry_ref &ref );
 

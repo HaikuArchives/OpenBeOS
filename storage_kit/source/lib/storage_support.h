@@ -11,6 +11,9 @@
 /*! Private Storage Kit Namespace */
 namespace StorageKit {
 
+//! Returns whether the supplied path is absolute.
+bool is_absolute_path(const char *path);
+
 //!	\brief splits a path name into directory path and leaf name
 bool split_path(const char *fullPath, char *&path, char *&leaf);
 

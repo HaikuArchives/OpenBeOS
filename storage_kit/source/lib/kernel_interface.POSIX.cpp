@@ -1129,15 +1129,6 @@ StorageKit::get_canonical_dir_path(const char *path, char *&result)
 	return error;
 }
 
-/*!	\param path the path
-	\return \c true, if \a path is not \c NULL and absolute, \c false otherwise
-*/
-bool
-StorageKit::is_absolute_path(const char *path)
-{
-	return (path && path[0] == '/');
-}
-
 bool
 StorageKit::entry_ref_is_root_dir( entry_ref &ref ) {
 	return ref.directory == 1 && ref.device == 1 && ref.name[0] == '.' && ref.name[1] == 0;
