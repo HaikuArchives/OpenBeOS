@@ -1,4 +1,4 @@
-/*	BBitmapStream.cpp
+/*	BitmapStream.cpp
  */
 
 #include "BitmapStream.h"
@@ -15,6 +15,7 @@ BBitmapStream::BBitmapStream(
 	fDetached = false;
 	fPosition = 0;
 	fSize = 0;
+	fpBigEndianHeader = NULL;
 	/*	Extract header if needed */
 	if (fMap) {
 		fHeader.magic = B_TRANSLATOR_BITMAP;
@@ -22,7 +23,8 @@ BBitmapStream::BBitmapStream(
 		fHeader.rowBytes = fMap->BytesPerRow();
 		fHeader.colors = fMap->ColorSpace();
 		fHeader.dataSize = uint32( (fHeader.bounds.Height()+1)*fHeader.rowBytes );
-		fSize = sizeof(BBitmap)+fHeader.dataSize;
+		fSize = sizeof(TranslatorBitmap)+fHeader.dataSize;
+		SetBigEndianHeader();
 	}
 }
 
@@ -31,6 +33,9 @@ BBitmapStream::~BBitmapStream()
 {
 	if (fMap && !fDetached)
 		delete fMap;
+		
+	if (fpBigEndianHeader)
+		delete fpBigEndianHeader;
 }
 
 
@@ -50,19 +55,18 @@ BBitmapStream::ReadAt(
 	long toRead;
 	void *source;
 
-	if (fPosition < sizeof(BBitmap)) {
-		toRead = sizeof(BBitmap)-pos;
-		source = ((char *)&fHeader)+pos;
+	if (fPosition < sizeof(TranslatorBitmap)) {
+		toRead = sizeof(TranslatorBitmap)-pos;
+		source = ((char *)fpBigEndianHeader)+pos;
 	} else {
 		toRead = fSize-pos;
-		source = ((char *)fMap->Bits())+fPosition-sizeof(BBitmap);
+		source = ((char *)fMap->Bits())+fPosition-sizeof(TranslatorBitmap);
 	}
 	if (toRead > size)
 		toRead = size;
 	memcpy(buffer, source, toRead);
 	return toRead;
 }
-
 
 status_t
 BBitmapStream::WriteAt(
@@ -77,17 +81,18 @@ BBitmapStream::WriteAt(
 		long toWrite;
 		void *dest;
 		/*	We depend on writing the header separately in detecting changes to it */
-		if (pos < sizeof(BBitmap)) {
-			toWrite = sizeof(BBitmap)-pos;
+		if (pos < sizeof(TranslatorBitmap)) {
+			toWrite = sizeof(TranslatorBitmap)-pos;
 			dest = ((char *)&fHeader)+pos;
 		} else {
-			toWrite = fHeader.dataSize-pos+sizeof(BBitmap);
-			dest = ((char *)fMap->Bits())+pos-sizeof(BBitmap);
+			toWrite = fHeader.dataSize-pos+sizeof(TranslatorBitmap);
+			dest = ((char *)fMap->Bits())+pos-sizeof(TranslatorBitmap);
 		}
 		if (toWrite > size)
 			toWrite = size;
 		if (!toWrite && size)	//	i e we've been told to write too much
 			return B_BAD_VALUE;
+
 		memcpy(dest, data, toWrite);
 		pos += toWrite;
 		written += toWrite;
@@ -96,7 +101,9 @@ BBitmapStream::WriteAt(
 		if (pos > fSize)
 			fSize = pos;
 		/*	If we change the header, the rest goes */
-		if (pos == sizeof(BBitmap)) {
+		if (pos == sizeof(TranslatorBitmap)) {
+			ConvertBEndianToHost(&fHeader);
+			SetBigEndianHeader();
 			if (fMap && ((fMap->Bounds() != fHeader.bounds) ||
 					(fMap->ColorSpace() != fHeader.colors) ||
 					(fMap->BytesPerRow() != fHeader.rowBytes))) {
@@ -109,12 +116,11 @@ BBitmapStream::WriteAt(
 				if ((fHeader.bounds.left > 0.0) || (fHeader.bounds.top > 0.0))
 					DEBUGGER("non-origin bounds!");
 				fMap = new BBitmap(fHeader.bounds, fHeader.colors);
-				if (fMap->BytesPerRow() != fHeader.rowBytes) {
+				if (fMap->BytesPerRow() != fHeader.rowBytes)
 					return B_MISMATCHED_VALUES;
-				}
 			}
 			if (fMap) {
-				fSize = sizeof(BBitmap)+fMap->BitsLength();
+				fSize = sizeof(TranslatorBitmap)+fMap->BitsLength();
 			}
 		}
 	}
@@ -131,10 +137,12 @@ BBitmapStream::Seek(	//	returns 0 for success
 		position += fPosition;
 	if (whence == SEEK_END)
 		position += fSize;
+
 	if (position < 0)
 		return B_BAD_VALUE;
 	if (position > fSize)
 		return B_BAD_VALUE;
+		
 	fPosition = position;
 	return fPosition;
 }
@@ -160,7 +168,7 @@ BBitmapStream::SetSize(	//	returns 0 for success
 {
 	if (size < 0)
 		return B_BAD_VALUE;
-	if (fMap && (size > fHeader.dataSize+sizeof(BBitmap)))
+	if (fMap && (size > fHeader.dataSize+sizeof(TranslatorBitmap)))
 		return B_BAD_VALUE;
 	/*	Problem:
 	 *	What if someone calls SetSize() before writing the header, so we don't know what 
@@ -179,13 +187,51 @@ status_t
 BBitmapStream::DetachBitmap(
 	BBitmap * *	outBitmap)
 {
-	outBitmap = NULL;
-	if (!fMap)
+	if (!outBitmap || !fMap)
 		return B_BAD_VALUE;
 	if (fDetached)
 		return B_ERROR;
+		
 	fDetached = true;
 	*outBitmap = fMap;
+	
 	return B_NO_ERROR;
+}
+
+status_t
+BBitmapStream::ConvertBEndianToHost(TranslatorBitmap *pheader)
+{
+	return swap_data(B_UINT32_TYPE, pheader, sizeof(TranslatorBitmap),
+		B_SWAP_BENDIAN_TO_HOST);
+}
+
+// assumes fHeader is in host format
+status_t
+BBitmapStream::SetBigEndianHeader()
+{
+	if (!fpBigEndianHeader)
+		fpBigEndianHeader = new TranslatorBitmap;
+		
+	fpBigEndianHeader->magic = fHeader.magic;
+	fpBigEndianHeader->bounds = fHeader.bounds;
+	fpBigEndianHeader->rowBytes = fHeader.rowBytes;
+	fpBigEndianHeader->colors = fHeader.colors;
+	fpBigEndianHeader->dataSize = fHeader.dataSize;
+	
+	return swap_data(B_UINT32_TYPE, fpBigEndianHeader, sizeof(TranslatorBitmap),
+		B_SWAP_HOST_TO_BENDIAN);
+}
+
+////////////
+// Private virtual functions for binary compatibility
+////////////
+void
+BBitmapStream::_ReservedBitmapStream1()
+{
+}
+
+void
+BBitmapStream::_ReservedBitmapStream2()
+{
 }
 
