@@ -69,8 +69,12 @@ static int loop_dev_stop(ifnet *dev)
 
 	dev->flags &= ~IFF_UP;
 
-	kill_thread(dev->rx_thread);
-	kill_thread(dev->tx_thread);
+	if (dev->rx_thread > 0)
+		kill_thread(dev->rx_thread);
+	if (dev->tx_thread > 0)
+		kill_thread(dev->tx_thread);
+
+	dev->flags &= ~IFF_RUNNING;
 	
 	return 0;
 }
@@ -81,9 +85,16 @@ static int loop_dev_start(ifnet *dev)
 		return EINVAL;
 
 	dev->if_mtu = 16384; /* can be as large as we want */
-	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_MULTICAST|IFF_LOOPBACK);
+	dev->flags |= (IFF_UP|IFF_MULTICAST|IFF_LOOPBACK);
 	dev->stop = &loop_dev_stop;
 	
+	if (dev->rx_thread < 0)
+		start_rx_thread(dev);
+	if (dev->tx_thread < 0)
+		start_tx_thread(dev);
+
+	if (dev->rx_thread > 0 && dev->tx_thread > 0)
+		dev->flags |= IFF_RUNNING;	
 	return 0;
 }
 
