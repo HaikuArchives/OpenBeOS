@@ -15,5 +15,6 @@ Node.cpp
 Path.cpp
 Statable.cpp
 SymLink.cpp
-kernel_interface.POSIX.cpp ;
+kernel_interface.POSIX.cpp
+storage_support.cpp ;
 
