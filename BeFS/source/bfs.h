@@ -16,7 +16,6 @@
 #	define B_BAD_DATA B_ERROR
 #endif
 
-extern const uint8 bfs_bootsector[512];
 
 struct block_run
 {

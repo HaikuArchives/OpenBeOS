@@ -496,7 +496,7 @@ BPlusTree::InsertKey(bplustree_node *node,uint8 *key,uint16 keyLength,off_t valu
 status_t
 BPlusTree::InsertDuplicate(bplustree_node */*node*/,uint16 /*index*/)
 {
-//	printf("DUPLICATE ENTRY!!\n");
+	PRINT(("DUPLICATE ENTRY - that's not yet implemented!!\n"));
 
 	return B_OK;
 }
