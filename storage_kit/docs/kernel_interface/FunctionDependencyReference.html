@@ -1,3 +1,4 @@
+<!-- saved from url=(0022)http://internet.e-mail -->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html>
 	<head>
@@ -9,6 +10,12 @@
 		<ul>
 			<li><a href='#open'> open </a></li>
 			<li><a href='#close'> close </a></li>
+
+			<li><a href='#rstat'> rstat </a></li>
+			<li><a href='#getcwd'> getcwd </a></li>
+			<li><a href='#setcwd'> setcwd </a></li>
+			<li><a href='#dup'>	dup </a></li>
+			<li><a href='#dup2'> dup2 </a></li>
 
 <!-- TEMPLATE:
 
@@ -54,6 +61,98 @@
 		<br>
 		<br>
 
+
+		<!-- RSTAT -->
+		<a name='rstat'>
+		<hr>
+		<h1> rstat </h1>
+		<b>NewOS:</b><br>
+		<code>
+		int user_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat);<br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "sys/stat.h"<br>
+		#include "unistd.h"<br>
+		int stat(const char *file_name, struct stat *buf);<br>
+		</code>
+		<br>
+		<br>
+
+		<!-- GETCWD -->
+		<a name='getcwd'>
+		<hr>
+		<h1> getcwd </h1>
+		<b>NewOS:</b><br>
+		<code>
+		int user_getcwd(char *buf, size_t size);<br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "unistd.h"<br>
+		int getcwd(char *buf, size_t size);<br>
+		</code>
+		<br>
+		<br>
+
+		<!-- SETCWD -->
+		<a name='setcwd'>
+		<hr>
+		<h1> setcwd </h1>
+		<b>NewOS:</b><br>
+		<code>
+		int user_setcwd(const char *buf);<br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "unistd.h"<br>
+        int chdir(const char *path);<br>
+		</code>
+		<br>
+		<br>
+
+		<!-- DUP -->
+		<a name='dup'>
+		<hr>
+		<h1> dup </h1>
+		<b>NewOS:</b><br>
+		<code>
+		int user_dup( int fd );<br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "unistd.h"<br>
+		int dup(int fd);<br>
+		</code>
+		<br>
+		<br>
+
+		<!-- DUP2 -->
+		<a name='dup2'>
+		<hr>
+		<h1> dup2 </h1>
+		<b>NewOS:</b><br>
+		<code>
+		int user_dup2( int ofd, int nfd );<br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "unistd.h"<br>
+		int dup2(int ofd, int nfd);<br>
+		</code>
+		<br>
+		<br>
+
 <!--	TEMPLATE (NOTE that the comment immediately
 			following this one is not finished, you'll need
 			to add an extra "-" to close it off)
@@ -75,9 +174,8 @@
 		</code>
 		<br>
 		<br>
-
 -->
-		
+
 		<hr>
 	</body>
 </html>
