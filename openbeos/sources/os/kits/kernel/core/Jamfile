@@ -39,3 +39,4 @@ SubInclude OBOS_TOP sources os kits kernel core addons ;
 SubInclude OBOS_TOP sources os kits kernel core arch ;
 SubInclude OBOS_TOP sources os kits kernel core fs ;
 SubInclude OBOS_TOP sources os kits kernel core vm ;
+SubInclude OBOS_TOP sources os kits kernel core net ;

@@ -148,9 +148,11 @@ KernelLd kernel
 	<$(SOURCE_GRIST)!core>sem.o 
 	<$(SOURCE_GRIST)!core>smp.o
 	<$(SOURCE_GRIST)!core>syscalls.o 
+	<$(SOURCE_GRIST)!core>sysctl.o
 	<$(SOURCE_GRIST)!core>thread.o 
 	<$(SOURCE_GRIST)!core>timer.o
-	<$(SOURCE_GRIST)!core>sysctl.o
+
+	<$(SOURCE_GRIST)!core!net>pools.o
 
 	linkhack.so
 
@@ -190,8 +192,11 @@ KernelLd kernel.so
 	<$(SOURCE_GRIST)!core>sem.o 
 	<$(SOURCE_GRIST)!core>smp.o
 	<$(SOURCE_GRIST)!core>syscalls.o 
+	<$(SOURCE_GRIST)!core>sysctl.o
 	<$(SOURCE_GRIST)!core>thread.o 
 	<$(SOURCE_GRIST)!core>timer.o
+
+	<$(SOURCE_GRIST)!core!net>pools.o
 
 	linkhack.so
 
