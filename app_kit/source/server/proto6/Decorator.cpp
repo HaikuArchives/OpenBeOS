@@ -33,9 +33,9 @@ void Decorator::MoveBy(BPoint pt)
 {
 }
 
-BRect Decorator::GetBorderSize(void)
+BRegion *Decorator::GetBorderSize(void)
 {
-	return BRect(0,0,0,0);
+	return NULL;
 }
 
 BPoint Decorator::GetMinimumSize(void)
