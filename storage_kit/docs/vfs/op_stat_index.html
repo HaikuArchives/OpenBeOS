@@ -2,16 +2,16 @@
 <html>
 	<head>
 		<title>
-			op_stat_attr
+			op_stat_index
 		</title>
 	</head>
 	<body>
 		<h1>
-			op_stat_attr - Returns information for an attribute.
+			op_stat_index - Returns information on an index.
 		</h1>
 		<p>
-			Returns information (attr_info - type and size) on
-			a named attribute.
+			Returns information (index_info - type, size, last modified and creation
+			date) on a named index.
 		</p>
 		<h2>
 			Declaration
@@ -32,13 +32,13 @@
 			<code>ns</code> - pointer to a volume structure<br>
 			<code>node</code> - pointer to a valid node structure
 				representing a file on the volume<br>
-			<code>name</code> - The attribute you want information about.<br>
+			<code>name</code> - The index you want information about.<br>
 		</p>
 		<h3>
 			Output
 		</h3>
 		<p>
-			<code>buf</code> - The returned attr_info<br>
+			<code>buf</code> - The returned index_info<br>
 		</p>
 		<h2>
 			Return
@@ -46,7 +46,7 @@
 		<p>
 			<code>B_OK</code> - Operation completed <br>
 			<code>ENOMEM</code> - Not enough memory<br>
-			<code>ENOENT</code> - Attribute entry does not exist<br>
+			<code>B_BAD_VALUE</code> - Invaild Parameters<br>
 		</p>
 		<h2>
 			Notes

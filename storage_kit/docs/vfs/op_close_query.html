@@ -2,24 +2,22 @@
 <html>
 	<head>
 		<title>
-			op_read_indexdir
+			op_close_query
 		</title>
 	</head>
 	<body>
 		<h1>
-			op_read_indexdir - Reads the next entry(s) in the index.
+			op_close_query - Closes a query.
 		</h1>
 		<p>
-			Reads the next entry(s) in the index, and returns them as a
-			<code>dirent</code>. The number of dirent's is specified by 
-			<code>num</code>.
+			Closes a query.
 		</p>
 		<h2>
 			Declaration
 		</h2>
 		<p>
 			<code>
-			int op_read_indexdir(void *ns, void *cookie, long *num, struct dirent *buf, size_t bufsize);
+				int op_close_query(void *ns, void *cookie);
 			</code>
 		</p>
 		<h2>
@@ -30,16 +28,15 @@
 		</h3>
 		<p>
 			<code>ns</code> - pointer to a volume structure<br>
-			<code>cookie</code> - The index's cookie<br>
-			<code>bufize</code> - Ignored by implementations seen so far<br>
+			<code>cookie</code> - the cookie to close<br>
 		</p>
+		<!--
 		<h3>
 			Outputs
 		</h3>
 		<p>
-			<code>num</code> - The number of attributes returned in buf.<br>
-			<code>buf</code> - The <code>dirent</code>s.<br>
 		</p>
+		-->
 		<h2>
 			Return
 		</h2>
@@ -47,7 +44,6 @@
 			<code>B_OK</code> - Operation completed <br>
 			<code>ENOMEM</code> - Not enough memory<br>
 			<code>EINVAL</code> - Invaild parameters<br>
-			<code>B_BAD_VALUE</code> - Invaild parameters<br>
 		</p>
 		<h2>
 			Notes
