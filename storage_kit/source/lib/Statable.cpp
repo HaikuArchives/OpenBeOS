@@ -2,7 +2,9 @@
 
 #include "kernel_interface.h"
 #include <posix/sys/stat.h>
+
 #include <Node.h>
+#include <Volume.h>
 
 bool
 BStatable::IsFile() const
@@ -53,19 +55,34 @@ BStatable::GetNodeRef(node_ref *ref) const
 status_t 
 BStatable::GetOwner(uid_t *owner) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	*owner = statData.st_uid;
+  }
+
+  return error;
 }
 
 status_t 
 BStatable::SetOwner(uid_t owner)
 {
-	return B_BAD_VALUE;
+  
+  return B_BAD_VALUE;
 }
 	
 status_t
 BStatable::GetGroup(gid_t *group) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	*group = statData.st_gid;
+  }
+
+  return error;
 }
 
 status_t
@@ -77,7 +94,14 @@ BStatable::SetGroup(gid_t group)
 status_t
 BStatable::GetPermissions(mode_t *perms) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	*perms = statData.st_mode;
+  }
+
+  return error;
 }
 
 status_t
@@ -89,13 +113,27 @@ BStatable::SetPermissions(mode_t perms)
 status_t
 BStatable::GetSize(off_t *size) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	*size = statData.st_size;
+  }
+
+  return error;
 }
 	
 status_t
 BStatable::GetModificationTime(time_t *mtime) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	*mtime = statData.st_mtime;
+  }
+
+  return error;
 }
 
 status_t
@@ -107,7 +145,14 @@ BStatable::SetModificationTime(time_t mtime)
 status_t
 BStatable::GetCreationTime(time_t *ctime) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	*ctime = statData.st_ctime;
+  }
+
+  return error;
 }
 
 status_t
@@ -119,7 +164,14 @@ BStatable::SetCreationTime(time_t ctime)
 status_t
 BStatable::GetAccessTime(time_t *atime) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	*atime = statData.st_atime;
+  }
+
+  return error;
 }
 
 status_t
@@ -131,5 +183,16 @@ BStatable::SetAccessTime(time_t atime)
 status_t
 BStatable::GetVolume(BVolume *vol) const
 {
-	return B_BAD_VALUE;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if (error == B_OK) {
+	if(vol != null) {
+	  vol->SetTo(statData.device);
+	} else {
+	  vol = new BVolume(statData.device);
+	}
+  }
+
+  return error;
 }
