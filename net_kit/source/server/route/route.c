@@ -238,8 +238,6 @@ int route_output(struct mbuf *m, struct socket *so)
 	struct ifnet *ifp = NULL;
 	struct ifaddr *ifa = NULL;
 	
-	printf("route_output (m = %p)\n", m);
-
 #define snderr(e) { error = e; goto flush; }
 
 	if (m == NULL || ((m->m_len < sizeof(int32)) &&
@@ -289,7 +287,6 @@ int route_output(struct mbuf *m, struct socket *so)
 	
 	switch (rtm->rtm_type) {
 		case RTM_ADD:
-			printf("route_output: RTM_ADD\n");
 			if (info.rti_info[RTAX_GATEWAY] == NULL) {
 				printf("route_output: EINVAL\n");
 				snderr(EINVAL);
@@ -303,16 +300,12 @@ int route_output(struct mbuf *m, struct socket *so)
 			}
 			break;
 		case RTM_DELETE:
-			printf("route_output: RTM_DELETE\n");
 			error = rtrequest(RTM_DELETE, info.rti_info[RTAX_DST], info.rti_info[RTAX_GATEWAY],
 			                  info.rti_info[RTAX_NETMASK], rtm->rtm_flags, NULL);
 			break;
 		case RTM_GET:
-			printf("route_output: RTM_GET (fallthrough)\n");
 		case RTM_CHANGE:
-			printf("route_output: RTM_CHANGE (fallthrough)\n");
 		case RTM_LOCK:
-			printf("route_output: RTM_LOCK\n");
 			rt = rtalloc1(info.rti_info[RTAX_DST], 0);
 			if (rt == NULL) {
 				printf("route_output: ESRCH\n");
@@ -337,8 +330,6 @@ int route_output(struct mbuf *m, struct socket *so)
 			}
 			switch (rtm->rtm_type) {
 				case RTM_GET:
-					printf("route_output: RTM_GET\n");
-
 					info.rti_info[RTAX_DST] = rt_key(rt);
 					info.rti_info[RTAX_GATEWAY] = rt->rt_gateway;
 					info.rti_info[RTAX_NETMASK] = rt_mask(rt);
@@ -369,7 +360,6 @@ int route_output(struct mbuf *m, struct socket *so)
 					rtm->rtm_addrs = info.rti_addrs;
 					break;
 				case RTM_CHANGE:
-					printf("route_output: RTM_CHANGE\n");
 					if (info.rti_info[RTAX_GATEWAY] && rt_setgate(rt, rt_key(rt), info.rti_info[RTAX_GATEWAY])) {
 						printf("route_output: EDQUOT\n");
 						snderr(EINVAL); //EDQUOT ???
@@ -690,7 +680,7 @@ int route_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *nam,
 			route_cb.ip_count--;
 		route_cb.any_count--;
 	}
-	printf("route_userreq: %p, %p, %p\n", m, nam, control);
+
 	error = raw_userreq(so, req, m, nam, control);
 	rp = sotorawcb(so);
 	if (req == PRU_ATTACH && rp) {
