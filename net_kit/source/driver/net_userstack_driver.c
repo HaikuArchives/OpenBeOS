@@ -22,9 +22,7 @@
 #include "sys/sockio.h"
 #include "sys/socket.h"
 #include "net/if.h"
-//#include "netinet/in_var.h"
-//#include "sys/protosw.h"
-//#include "sys/select.h"
+#include "sys/select.h"
 
 
 /* these are missing from KernelExport.h ... */
@@ -248,7 +246,6 @@ set_command_areas(net_command *command)
 		case NET_STACK_SELECT:
 		{
 			struct select_args *args = (struct select_args *)data;
-
 			/* shouldn't be even needed at all... */
 			get_area_from_address(&command->area[1],args->sync);
 			break;
