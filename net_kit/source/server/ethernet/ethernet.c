@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <string.h>
+#include <malloc.h>
 
 #include "net_module.h"
 #include "protocols.h"
@@ -39,6 +40,13 @@ static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices *
 image_id arpid;
 #endif
 
+#ifdef USE_DEBUG_MALLOC
+void *dbg_malloc(int size);
+void dbg_free(void *ptr);
+#define malloc dbg_malloc
+#define free dbg_free
+#endif
+
 int ether_dev_start(ifnet *dev);
 int ether_dev_stop(ifnet *dev);
 
@@ -48,12 +56,10 @@ uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 static void open_device(char *driver, char *devno)
 {
-	struct ether_device *ed = malloc(sizeof(struct ether_device));
+	struct ether_device *ed;
 	char path[PATH_MAX];
 	int dev;
 	status_t status = -1;
-
-	memset(ed, 0, sizeof(*ed));
 	
 	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
 	printf("open_device: %s\n", path);
@@ -77,6 +83,12 @@ static void open_device(char *driver, char *devno)
 	 * The type we set is just the generic IFT_ETHER but it could be
 	 * more accurate if the driver set it. Oh well.
 	 */
+	 
+	ed = malloc(sizeof(struct ether_device));
+	if (!ed)
+		return;	
+	memset(ed, 0, sizeof(*ed));
+
 	ed->devid = dev;
 	ed->ed_devid = dev;	/* we use this to match... */
 	ed->ed_name = strdup(driver);
@@ -107,15 +119,11 @@ static void open_device(char *driver, char *devno)
 #endif
 
 #ifndef _KERNEL_MODE
-	net_server_add_device(&ed->ifn);
+	if_attach(&ed->ifn);
 #else
-	core->add_device(&ed->ifn);
+	core->if_attach(&ed->ifn);
 #endif
-
-	return;
-
 badcard:
-	free(ed);
 	return;
 };
 
@@ -158,7 +166,6 @@ static void find_devices(void)
                        		    
 				open_device(de->d_name, dre->d_name);
 			}
-			printf("closing the directory...\n");
 			closedir(driv_dir);
 		}
 	}
@@ -216,7 +223,6 @@ int ether_input(struct mbuf *buf)
 		e8->type = ntohs(e8->type);
 		printf("It's an 802.x encapsulated packet - type %04x\n", e8->type);
 		len = sizeof(eth802_header);
-dump_buffer(mtod(buf, void*), len);
 		eth->type = e8->type;
 	}
 
@@ -242,6 +248,7 @@ dump_buffer(mtod(buf, void*), len);
 		default:
 			printf("Couldn't process unknown protocol %04x\n", eth->type);
 	}
+
 
 #ifndef _KERNEL_MODE
 	m_freem(buf);
@@ -357,6 +364,7 @@ printf("flags & RTF_REJECT\n");
 			/* add code to loopback copy if required */
 			break;
 		case AF_UNSPEC: /* packet is complete... */
+			eth->type = htons(eth->type);
 			break;
 		default:
 			printf("ether_output: Unknown dst type %d!\n", dst->sa_family);
@@ -402,17 +410,23 @@ printf("setting ether_device ip address to %08x\n", ntohl(IA_SIN(dev)->sin_addr.
 }
 */
 
+int ether_dev_stop(ifnet *dev)
+{
+	dev->flags &= ~IFF_UP;
+
+	/* should find better ways of doing this... */
+	kill_thread(dev->rx_thread);
+	kill_thread(dev->tx_thread);
+	
+	return 0;
+}
+
 int ether_dev_start(ifnet *dev)
 {
 	status_t status;
-	int on = 1;
 	struct ether_device *ed = (struct ether_device *)dev;
-	char tname[12];
-	struct sockaddr_dl *sdl;
+	struct sockaddr_dl *sdl = NULL;
 	struct ifaddr *ifa;
- 	size_t mem_sz, namelen;
-	size_t masklen; /* smaller of the 2 */
-	size_t socklen; /* the sockaddr_dl with link level address */ 
 
 	if (!ed || dev->if_type != IFT_ETHER)
 		return -1;
@@ -422,6 +436,7 @@ int ether_dev_start(ifnet *dev)
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
 		strcat(path, "/" ARP_MODULE_PATH);
+
 		arpid = load_add_on(path);
 		if (arpid > 0) {
 			status_t rv = get_image_symbol(arpid, "arp_module_info",
@@ -437,9 +452,6 @@ int ether_dev_start(ifnet *dev)
 	}
 #endif
 
-	sprintf(tname, "%s%d", dev->name, dev->unit); /* make name */
-	namelen = strlen(tname);
-
 	/* try to get the MAC address */
 	status = ioctl(dev->devid, IF_GETADDR, &ed->e_addr, 6);
 	if (status < B_OK) {
@@ -447,64 +459,23 @@ int ether_dev_start(ifnet *dev)
 		return -1;
 	}
 
-	/* memory: we need to allocate enough memory for the following...
-	 * struct ifaddr
-	 * struct sockaddr_dl that will hold the link level address and name
-	 * struct sockaddr_dl that will hold the mask
-	 */
-	masklen = ((int)((caddr_t)&((struct sockaddr_dl*)NULL)->sdl_data[0]))
-		  + namelen;
-	socklen = masklen + dev->if_addrlen;
-	/* round to nearest 4 byte boundry */
-	socklen = 1 + ((socklen - 1) | (sizeof(uint32) - 1));
+	for (ifa = dev->if_addrlist; ifa; ifa = ifa->ifa_next) {
+		if ((sdl = (struct sockaddr_dl*)ifa->ifa_addr) &&
+		    sdl->sdl_family == AF_LINK) {
+			sdl->sdl_type = IFT_ETHER;
+			sdl->sdl_alen = dev->if_addrlen;
+			memcpy(LLADDR(sdl), &ed->e_addr, dev->if_addrlen);
+			break;
+		}
+	}	
 
-	if (socklen < sizeof(*sdl))
-		socklen = sizeof(*sdl);
-
-	mem_sz = sizeof(*ifa) + 2 * socklen;
-
-	ifa = (struct ifaddr*)malloc(mem_sz);
-	memset(ifa, 0, mem_sz);
-
-	sdl = (struct sockaddr_dl *)(ifa + 1);
-	sdl->sdl_len = socklen;
-	sdl->sdl_family = AF_LINK;
-	memcpy(&sdl->sdl_data, tname, strlen(tname));
-	memcpy((caddr_t)sdl->sdl_data + strlen(tname), &ed->e_addr, 6);
-	sdl->sdl_nlen = strlen(tname);
-	sdl->sdl_alen = 6;
-	sdl->sdl_index = dev->id;
-	sdl->sdl_type = dev->if_type;
-	ifa->ifn = dev;
-	ifa->ifa_next = dev->if_addrlist;
-	ifa->ifa_addr = (struct sockaddr*)sdl;
-	dev->if_addrlist = ifa;
-
-	/* now do mask... */
-	sdl = (struct sockaddr_dl *)((caddr_t)sdl + socklen);
-	ifa->ifa_netmask = (struct sockaddr*)sdl;
-	sdl->sdl_len = masklen;
-	/* build the mask */
-	while (socklen != 0)
-		sdl->sdl_data[socklen--] = 0xff;
-
+	dev->if_mtu = ETHERMTU;
 	dev->input = &ether_input;
 	dev->output = &ether_output;
-#ifdef _KERNEL_MODE
 	dev->stop = &ether_dev_stop;
-#endif
 	/* XXX - ioctl needs to be added back in... */
 	
-	status = ioctl(dev->devid, IF_SETPROMISC, &on, 1);
-	if (status == B_OK) {
-		dev->flags |= IFF_PROMISC;
-	} else {
-		/* not a hanging offence */
-		printf("Failed to set %s%d into promiscuous mode\n", dev->name, dev->unit);
-	}
-
 	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_BROADCAST|IFF_MULTICAST);
-	dev->if_mtu = ETHERMTU;
 	
 	return 0;
 }
@@ -550,16 +521,6 @@ static int k_uninit(void)
 	return 0;
 }
 
-int ether_dev_stop(ifnet *dev)
-{
-	dev->flags &= ~IFF_UP;
-
-	/* should find better ways of doing this... */
-	kill_thread(dev->rx_thread);
-	kill_thread(dev->tx_thread);
-	
-	return 0;
-}
 
 static int32 ether_ops(int32 op, ...)
 {
@@ -567,7 +528,7 @@ static int32 ether_ops(int32 op, ...)
 		case B_MODULE_INIT:
 			if (get_module(CORE_MODULE_PATH,
 				(module_info**)&core) != B_OK) {
-				dprintf("Failed to get core pointer, declining!\n");
+				printf("Failed to get core pointer, declining!\n");
 				return B_ERROR;
 			}
 			break;

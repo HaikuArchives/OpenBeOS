@@ -31,29 +31,33 @@ typedef struct eth802_header {
  *       from an ifnet* to a struct ether_device*
  */
 struct ether_device {
-	struct ifnet	ifn;		/* our ifnet structure... */
-	struct ether_device *next;      /* next ether_device */
-	int		devid;		/* io handle */
+	struct ifnet ifn;           /* our ifnet structure... */
+	struct ether_device *next;  /* next ether_device */
+
+	int  devid;                 /* io handle, ie the system fd */
 	ether_addr 	e_addr;
-	struct in_addr	i_addr; /* ipv4 only :( */
-	ether_addr	*e_multi;	/* we can have a list of multicast ethernet
-					 * addresses we respond to, so we keep a list here
-					 * which is e_multilen long (starts at 0)
-					 */
+	struct in_addr	i_addr;     /* ipv4 only :( */
+
+
+	ether_addr  *e_multi;       /* we can have a list of multicast ethernet
+	                             * addresses we respond to, so we keep a 
+	                             * list here which is e_multilen long but
+	                             * starts at 0
+	                             */
 	int		e_multilen;
 };
 
-#define ed_name		ifn.name
-#define ed_type		ifn.if_type
-#define ed_unit		ifn.unit
-#define ed_if_addrlist	ifn.if_addrlist
-#define ed_rx_thread	ifn.rx_thread
-#define ed_tx_thread	ifn.tx_thread
-#define ed_txq		ifn.txq
-#define ed_devid	ifn.devid
-#define ed_hdrlen	ifn.if_hdrlen
-#define ed_addrlen	ifn.if_addrlen
-#define ed_start	ifn.start
+#define ed_name         ifn.name
+#define ed_type         ifn.if_type
+#define ed_unit         ifn.unit
+#define ed_if_addrlist  ifn.if_addrlist
+#define ed_rx_thread    ifn.rx_thread
+#define ed_tx_thread    ifn.tx_thread
+#define ed_txq          ifn.txq
+#define ed_devid        ifn.devid
+#define ed_hdrlen       ifn.if_hdrlen
+#define ed_addrlen      ifn.if_addrlen
+#define ed_start        ifn.start
 
 #define ETHERMTU 1500
 
