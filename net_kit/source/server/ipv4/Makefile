@@ -1,6 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ipv4
-LOBJS=../_APP_ ../util/misc.o ../util/cksum.o
+LOBJS=../_APP_ ../net_server/misc.o ../net_server/cksum.o
 INSTALL_DIR=../modules/protocol
 TGT=$(INSTALL_DIR)/$(TARGET)
 OBJS=$(TARGET).o
