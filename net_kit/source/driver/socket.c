@@ -18,6 +18,7 @@
 #include "sys/protosw.h"
 #include "net_server/core_module.h"
 #include "net_structures.h"
+#include "sys/select.h"
 
 #define SHOW_INSANE_DEBUGGING	0
 #define SERIAL_DEBUGGING	1
@@ -131,7 +132,6 @@ static status_t net_socket_open(const char *devName,
                                 void **cpp)
 {
 	int rv;
-	struct sock_ptr *sp;
 
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: net_socket_open!\n");
@@ -203,11 +203,11 @@ static status_t net_socket_control(void *cookie,
 			for (i=2; i < sa->mfd;i++) {
 				dprintf("socket %d: ", i);
 				if (sa->rbits && FD_ISSET(i, sa->rbits))
-					dprintf(" read bit ", i);
+					dprintf(" read bit ");
 				if (sa->wbits && FD_ISSET(i, sa->wbits))
-					dprintf(" write bit ", i);
+					dprintf(" write bit ");
 				if (sa->ebits && FD_ISSET(i, sa->ebits))
-					dprintf(" except bit ", i);
+					dprintf(" except bit ");
 					
 				dprintf("\n");
 			}
@@ -240,7 +240,6 @@ static status_t net_socket_control(void *cookie,
 			return error;
 		}	
 		default:
-			dprintf("unknown opcode %d\n", op);
 			return core->soo_ioctl(cookie, op, data);
 	}
 }
@@ -270,7 +269,7 @@ static status_t net_socket_select(void *cookie,
 {
 	dprintf("net_socket_select!\n");
 	dprintf("\tevent = %d\n", event);
-	dprintf("\tref = %d\n", ref);;
+	dprintf("\tref = %ld\n", ref);;
 	dprintf("\tsync = %p\n", sync);
 	
 	return B_OK;

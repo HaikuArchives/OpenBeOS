@@ -1,4 +1,4 @@
-CFLAGS=-nostart -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
+CFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 LDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 INCLUDES=-I../server/ -I../server/include -I../libnet
 DRIVER_BIN=/boot/home/config/add-ons/kernel/drivers/bin/socket
