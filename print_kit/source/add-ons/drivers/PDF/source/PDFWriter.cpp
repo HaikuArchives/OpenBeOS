@@ -133,8 +133,8 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 		_FillEllipse,			// 12	FillEllipse(void *user, BPoint center, BPoint radii)
 		_StrokePolygon,			// 13	StrokePolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
 		_FillPolygon,			// 14	FillPolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
-		_op15,					// 15	*reserved*
-		_op16,					// 16	*reserved*
+		_StrokeShape,			// 15	*reserved*
+		_FillShape,				// 16	*reserved*
 		_DrawString,			// 17	DrawString(void *user, char *string, float deltax, float deltay)
 		_DrawPixels,			// 18	DrawPixels(void *user, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
 		_op19,					// 19	*reserved*
@@ -375,7 +375,7 @@ PDFWriter::CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 fla
 
 // --------------------------------------------------
 BBitmap *
-PDFWriter::ConvertBitmap(BRect src,int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
+PDFWriter::ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
 {
 	void	*buffer;
 	uint8	*in;
@@ -443,6 +443,86 @@ void PDFWriter::Op(int number)
 
 
 // --------------------------------------------------
+void PDFWriter::Op21(BPicture *picture, int32 a, int32 b, int32 c, int32 d)
+{
+	fprintf(fLog, "Unhandled operand Op21 %x %x %x %x %x\n", picture, a, b, c, d);
+}
+
+
+// --------------------------------------------------
+DrawShape::DrawShape(PDFWriter *writer, bool stroke)
+	: fWriter(writer)
+	, fStroke(stroke)
+{
+}
+
+// --------------------------------------------------
+status_t 
+DrawShape::IterateBezierTo(int32 bezierCount, BPoint *control)
+{
+	for (int32 i = 0; i < bezierCount; i++, control += 3) {
+		PDF_curveto(Pdf(), 
+			tx(control[0].x), ty(control[0].y),
+			tx(control[1].x), ty(control[1].y),
+	    	tx(control[2].x), ty(control[2].y));
+	}
+	return B_OK;
+}
+
+// --------------------------------------------------
+status_t 
+DrawShape::IterateClose(void)
+{
+	PDF_closepath(Pdf());
+	if (fStroke) 
+		PDF_stroke(Pdf()); 
+	else {
+		PDF_fill(Pdf());
+	}
+	return B_OK;
+}
+
+// --------------------------------------------------
+status_t 
+DrawShape::IterateLineTo(int32 lineCount, BPoint *linePoints)
+{
+	BPoint *p = linePoints;
+	for (int32 i = 0; i < lineCount; i++) {
+		PDF_lineto(Pdf(), tx(p->x), ty(p->y)); p++;
+		PDF_lineto(Pdf(), tx(p->x), ty(p->y)); p++;
+	}
+	return B_OK;
+}
+
+// --------------------------------------------------
+status_t 
+DrawShape::IterateMoveTo(BPoint *point)
+{
+	PDF_moveto(Pdf(), tx(point->x), ty(point->y)); 
+	return B_OK;
+}
+
+// --------------------------------------------------
+void PDFWriter::StrokeShape(BShape *shape)
+{
+	fprintf(fLog, "StrokeShape\n");
+	SetColor();			
+	DrawShape iterator(this, true);
+	iterator.Iterate(shape);
+}
+
+
+// --------------------------------------------------
+void PDFWriter::FillShape(BShape *shape)
+{
+	fprintf(fLog, "FillShape\n");
+	SetColor();			
+	DrawShape iterator(this, false);
+	iterator.Iterate(shape);
+}
+
+
+// --------------------------------------------------
 void	
 PDFWriter::MovePenBy(BPoint delta)
 {
@@ -478,7 +558,6 @@ void PDFWriter::StrokeRect(BRect rect)
 	PDF_stroke(fPdf);
 
 }
-
 
 
 // --------------------------------------------------
@@ -1249,6 +1328,8 @@ void	_StrokeEllipse(void *p, BPoint center, BPoint radii)									{ return ((PDF
 void	_FillEllipse(void *p, BPoint center, BPoint radii)										{ return ((PDFWriter *) p)->FillEllipse(center, radii); }
 void	_StrokePolygon(void *p, int32 numPoints, BPoint *points, bool isClosed) 				{ return ((PDFWriter *) p)->StrokePolygon(numPoints, points, isClosed); }
 void	_FillPolygon(void *p, int32 numPoints, BPoint *points, bool isClosed)					{ return ((PDFWriter *) p)->FillPolygon(numPoints, points, isClosed); }
+void	_StrokeShape(void * p, BShape *shape)													{ return ((PDFWriter *) p)->StrokeShape(shape); }
+void	_FillShape(void * p, BShape *shape)														{ return ((PDFWriter *) p)->FillShape(shape); }
 void	_DrawString(void *p, char *string, float deltax, float deltay)							{ return ((PDFWriter *) p)->DrawString(string, deltax, deltay); }
 void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
 						{ return ((PDFWriter *) p)->DrawPixels(src, dest, width, height, bytesPerRow, pixelFormat, flags, data); }
@@ -1280,10 +1361,8 @@ void	_SetFontFace(void * p, int32 flags)														{ return ((PDFWriter *) p)
 
 // undefined or undocumented operation handlers...
 void	_op0(void * p)	{ return ((PDFWriter *) p)->Op(0); }
-void	_op15(void * p)	{ return ((PDFWriter *) p)->Op(15); }
-void	_op16(void * p)	{ return ((PDFWriter *) p)->Op(16); }
 void	_op19(void * p)	{ return ((PDFWriter *) p)->Op(19); }
-void	_op21(void * p)	{ return ((PDFWriter *) p)->Op(21); }
+void	_op21(void * p, BPicture *picture, int32 a, int32 b, int32 c, int32 d)	{ return ((PDFWriter *) p)->Op21(picture, a, b, c, d); }
 void	_op45(void * p)	{ return ((PDFWriter *) p)->Op(45); }
 void	_op47(void * p)	{ return ((PDFWriter *) p)->Op(47); }
 void	_op48(void * p)	{ return ((PDFWriter *) p)->Op(48); }

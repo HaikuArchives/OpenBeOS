@@ -45,8 +45,13 @@ THE SOFTWARE.
 #define LETTER_WIDTH 8.5
 #define LETTER_HEIGHT 11
 
+class DrawShape;
+
 class PDFWriter : public PrinterDriver
 	{
+	
+	friend class DrawShape;
+	
 	public:
 		// constructors / destructor
 		PDFWriter();
@@ -82,9 +87,12 @@ class PDFWriter : public PrinterDriver
 		void		FillEllipse(BPoint center, BPoint radii);
 		void		StrokePolygon(int32 numPoints, BPoint *points, bool isClosed);
 		void		FillPolygon(int32 numPoints, BPoint *points, bool isClosed);
+		void        StrokeShape(BShape *shape);
+		void        FillShape(BShape *shape);
 		void		DrawString(char *string, float deltax, float deltay);
 		void		DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		void		SetClippingRects(BRect *rects, uint32 numRects);
+		void        Op21(BPicture *picture, int32 a, int32 b, int32 c, int32 d);
 		void		PushState();
 		void		PopState();
 		void		EnterStateChange();
@@ -109,6 +117,8 @@ class PDFWriter : public PrinterDriver
 		void		SetFontFlags(int32 flags);
 		void		SetFontShear(float shear);
 		void		SetFontFace(int32 flags);
+
+	
 		
 	private:
 	
@@ -193,6 +203,25 @@ class PDFWriter : public PrinterDriver
 	};
 
 
+class DrawShape : public BShapeIterator {
+	PDFWriter *fWriter;
+	bool       fStroke;
+	BPoint     fPoint;
+	
+	inline FILE *Log()			{ return fWriter->fLog; }
+	inline PDF *Pdf()			{ return fWriter->fPdf; }
+	inline float tx(float x)	{ return fWriter->tx(x); }
+	inline float ty(float y)	{ return fWriter->ty(y); }
+	
+public:
+	DrawShape(PDFWriter *writer, bool stroke);
+	status_t IterateBezierTo(int32 bezierCount, BPoint *bezierPoints);
+	status_t IterateClose(void);
+	status_t IterateLineTo(int32 lineCount, BPoint *linePoints);
+	status_t IterateMoveTo(BPoint *point);
+};
+
+
 // PDFLib C callbacks class instance redirectors
 size_t	_WriteData(PDF *p, void *data, size_t size);
 void	_ErrorHandler(PDF *p, int type, const char *msg);
@@ -212,6 +241,8 @@ void	_StrokeEllipse(void *p, BPoint center, BPoint radii);
 void	_FillEllipse(void *p, BPoint center, BPoint radii);
 void	_StrokePolygon(void *p, int32 numPoints, BPoint *points, bool isClosed);
 void	_FillPolygon(void *p, int32 numPoints, BPoint *points, bool isClosed);
+void	_StrokeShape(void *p, BShape *shape);
+void	_FillShape(void *p, BShape *shape);
 void	_DrawString(void *p, char *string, float deltax, float deltay);
 void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 void	_SetClippingRects(void *p, BRect *rects, uint32 numRects);
@@ -242,10 +273,8 @@ void	_SetFontFace(void *p, int32 flags);
 
 // undefined or undocumented operation handlers...
 void	_op0(void *p);
-void	_op15(void *p);
-void	_op16(void *p);
 void	_op19(void *p);
-void	_op21(void *p);
+void	_op21(void *p, BPicture *picture, int32 a, int32 b, int32 c, int32 d);
 void	_op45(void *p);
 void	_op47(void *p);
 void	_op48(void *p);
