@@ -28,6 +28,7 @@ struct timer_info {
 	sem_id				ti_lock;
 	sem_id				ti_wait;
 	int32				ti_counter;
+	volatile int32		ti_inUse;
 };
 
 int32 net_timer(void *_data);
@@ -62,11 +63,16 @@ void
 net_shutdown_timer(void)
 {
 	struct timer_entry *te,*next;
+	int32 tries = 20;
 
 	delete_sem(gTimerInfo.ti_wait);
 	delete_sem(gTimerInfo.ti_lock);
 	gTimerInfo.ti_wait = -1;
 	gTimerInfo.ti_lock = -1;
+
+	// make sure the structure isn't used anymore
+	while (gTimerInfo.ti_inUse != 0 && tries-- > 0)
+		snooze(1000);
 
 	// free the remaining timer entries
 	for (te = gTimerInfo.ti_first;te;te = next) {
@@ -132,13 +138,18 @@ net_add_timer(net_timer_hook hook,void *data,bigtime_t interval)
 	if (interval < 100)
 		return B_BAD_VALUE;
 
+	atomic_add(&gTimerInfo.ti_inUse,1);
+
 	// get access to the timer info structure
 	status = acquire_sem(gTimerInfo.ti_lock);
-	if (status < B_OK)
+	if (status < B_OK) {
+		atomic_add(&gTimerInfo.ti_inUse,-1);
 		return status;
+	}
 
 	te = (struct timer_entry *)malloc(sizeof(struct timer_entry));
 	if (te == NULL) {
+		atomic_add(&gTimerInfo.ti_inUse,-1);
 		release_sem(gTimerInfo.ti_lock);
 		return B_NO_MEMORY;
 	}
@@ -153,6 +164,7 @@ net_add_timer(net_timer_hook hook,void *data,bigtime_t interval)
 	te->te_next = gTimerInfo.ti_first;
 	gTimerInfo.ti_first = te;
 
+	atomic_add(&gTimerInfo.ti_inUse,-1);
 	release_sem(gTimerInfo.ti_lock);
 	
 	// notify timer about the change
@@ -171,10 +183,14 @@ net_remove_timer(net_timer_id id)
 	if (id <= B_OK)
 		return B_BAD_VALUE;
 
+	atomic_add(&gTimerInfo.ti_inUse,1);
+
 	// get access to the timer info structure
 	status = acquire_sem(gTimerInfo.ti_lock);
-	if (status < B_OK)
+	if (status < B_OK) {
+		atomic_add(&gTimerInfo.ti_inUse,-1);
 		return status;
+	}
 
 	// search the list for the right timer
 	
@@ -189,6 +205,7 @@ net_remove_timer(net_timer_id id)
 		}
 		last = te;
 	}
+	atomic_add(&gTimerInfo.ti_inUse,-1);
 	release_sem(gTimerInfo.ti_lock);
 
 	if (te == NULL)
