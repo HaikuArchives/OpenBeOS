@@ -87,6 +87,9 @@ _EXPORT struct core_module_info core_info = {
 	
 	net_add_timer,
 	net_remove_timer,
+	
+	start_ifq,
+	stop_ifq,
 
 	pool_init,
 	pool_get,
@@ -125,6 +128,7 @@ _EXPORT struct core_module_info core_info = {
 
 	m_gethdr,
 	m_get,
+	m_cat,
 	m_adj,
 	m_prepend,
 	m_pullup,
@@ -188,11 +192,8 @@ static int32 if_thread(void *data)
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
 		if (!(i->if_flags & IFF_UP))
 			break;
-		if (mb) {
-			if (i->input)
-				i->input(mb);
-			atomic_add(&i->if_ipackets, 1);
-		}
+		IFQ_ENQUEUE(i->devq, mb);
+		atomic_add(&i->if_ipackets, 1);
 		len = ETHER_MAX_LEN;
 	}
 	printf("%s: terminating if_thread\n", i->if_name);
@@ -276,29 +277,6 @@ static int32 tx_thread(void *data)
 	return 0;
 }
 	
-ifq *start_ifq(void)
-{
-	ifq *nifq = NULL;
-	
-	nifq = (ifq*)malloc(sizeof(*nifq));
-	memset(nifq, 0, sizeof(*nifq));
-	
-	nifq->lock = create_sem(1, "ifq_lock");
-	nifq->pop = create_sem(0, "ifq_pop");
-#ifdef _KERNEL_MODE
-	set_sem_owner(nifq->lock, B_SYSTEM_TEAM);
-	set_sem_owner(nifq->pop, B_SYSTEM_TEAM);
-#endif
-
-	if (nifq->lock < B_OK || nifq->pop < B_OK)
-		return NULL;
-
-	nifq->len = 0;
-	nifq->maxlen = 50;
-	nifq->head = nifq->tail = NULL;
-	return nifq;
-}
-
 /* Start an RX thread and an RX queue if reqd */
 void start_rx_thread(struct ifnet *dev)
 {

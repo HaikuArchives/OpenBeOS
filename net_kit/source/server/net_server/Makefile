@@ -10,6 +10,7 @@ CORE_OBJS= 	socket.o \
 		route.o \
 		mbuf.o \
 		if.o \
+		ifq.o \
 		misc.o \
 		cksum.o \
 		nhash.o \
