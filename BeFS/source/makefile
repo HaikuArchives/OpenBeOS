@@ -98,9 +98,7 @@ INSTALL_DIR=/boot/home/config/add-ons/kernel/file_systems
 include /boot/develop/etc/makefile-engine
 
 install::
-#	rescan $(NAME)
-	sync
-
+	cp obj.x86/$(NAME) $(INSTALL_DIR)
 
 tar zip backup:
 	zip -y $(NAME)-`date +%Y-%m-%d`.zip *.[ch]* makefile *.rsrc test/*.[ch]* test/makefile
