@@ -55,8 +55,9 @@ BMimeType::~BMimeType()
 	Supertype	::= "application" | "audio" | "image" | "message"
 					| "multipart" | "text" | "video"
 	Subtype		::= MIMEChar MIMEChar*
-	MIMEChar	::= any character except white spaces and '/', '<', '>', '@',
-					',', ';', ':', '"', '(', ')', '[', ']', '?', '='
+	MIMEChar	::= any character except white spaces, CTLs and '/', '<', '>',
+					'@',, ',', ';', ':', '"', '(', ')', '[', ']', '?', '=', '\'
+					(Note: RFC1341 also forbits '.', but it is allowed here.)
 
 	Currently the supertype is not restricted to one of the seven types given,
 	but can be an arbitrary string (obeying the same rule as the subtype).
