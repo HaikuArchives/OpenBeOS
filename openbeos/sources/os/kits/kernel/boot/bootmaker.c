@@ -28,9 +28,9 @@
 ** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include "../include/boot/bootdir.h"
+#include "../../../../../headers/obos/private/kernel/bootdir.h"
 
-#include "sparcbootblock.h"
+//#include "sparcbootblock.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -196,6 +196,7 @@ void *loadstripfile(char *file, int *size)
 // write a boot block to the head of the dir.
 // note: the first 0x20 bytes are removed by the sparc prom
 // which makes the whole file off by 0x20 bytes
+/*
 int writesparcbootblock(int fd, unsigned int blocks)
 {
 	unsigned char bb[0x200+0x20];
@@ -204,7 +205,8 @@ int writesparcbootblock(int fd, unsigned int blocks)
 	memcpy(bb, sparcbootblock, sizeof(sparcbootblock));
 
 	return write(fd, bb, sizeof(bb));
- }
+}
+*/
 
 typedef struct _nvpair 
 {
@@ -480,10 +482,11 @@ void makeboot(section *s, char *outfile)
         die("cannot write to \"%s\"",outfile);
     }
 
+/* XXX - Hope this isn't needed :(
     if(make_sparcboot) {
         writesparcbootblock(fd, nextpage+1);
     }
-    
+*/
     for(i=0;i<c;i++){
         write(fd, rawdata[i], rawsize[i]);
         if(rawsize[i]%4096) 
