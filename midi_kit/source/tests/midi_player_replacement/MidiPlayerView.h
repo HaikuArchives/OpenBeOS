@@ -5,11 +5,8 @@
 #include <Box.h>
 
 //----------------------------------------------------------
-
 #define INPUT_CHANGE_TO_FILE 'icfi'
-//#define INPUT_CHANGE_TO_BEOS_SYNTH_FILE 'icbs'
 #define INPUT_CHANGE_TO_MIDIPORT 'icmp'
-#define INPUT_CHANGE_TO_OUTPUT 'icop'
 //--------------
 #define OUTPUT_CHANGE_TO_FILE 'ocfi'
 #define OUTPUT_CHANGE_TO_BEOS_SYNTH 'ocbs'
@@ -18,6 +15,11 @@
 //--------------
 #define VIEW_CHANGE_TO_NONE 'vcno'
 #define VIEW_CHANGE_TO_SCOPE 'vcsc'
+#define VIEW_CHANGE_TO_ACTIVITY 'vcta'
+//--------------
+//--------------
+//--------------
+//--------------
 //--------------
 #define REWIND_INPUT_FILE 'reif'
 #define PLAY_INPUT_FILE 'plif'
@@ -29,11 +31,6 @@
 #define CHANGE_OUTPUT_FILE 'chof'
 #define CHANGE_INPUT_MIDIPORT 'chim'
 #define CHANGE_OUTPUT_MIDIPORT 'chom'
-//--------------
-//#define CHANGE_INPUT_BEOS_SYNTH_FILE 'chib'
-//#define REWIND_INPUT_BEOS_SYNTH_FILE 'reib'
-//#define PLAY_INPUT_BEOS_SYNTH_FILE 'plib'
-//#define PAUSE_INPUT_BEOS_SYNTH_FILE 'paib'
 //--------------
 #define CHANGE_OUTPUT_BEOS_SYNTH_FILE 'chob'
 #define REWIND_OUTPUT_BEOS_SYNTH_FILE 'reob'

@@ -1,15 +1,20 @@
 #include "MidiPlayerWindow.h"
 #include "MidiDelay.h"
+#include "Activity.h"
 
 #include <Application.h>
+#include <Roster.h>
+#include <Resources.h>
 #include <Alert.h>
 #include <PopUpMenu.h>
 #include <MenuItem.h>
 #include <StringView.h>
-#include <File.h>
 #include <String.h>
-#include <Roster.h>
-#include <Resources.h>
+#include <File.h>
+#include <MidiStore.h>
+#include <MidiPort.h>
+#include <MidiSynth.h>
+#include <MidiSynthFile.h>
 
 //----------------------------------------------------------
 
@@ -86,10 +91,10 @@ MidiPlayerWindow::MidiPlayerWindow(BPoint start)
 							B_TITLED_WINDOW, B_NOT_RESIZABLE),
 					fMidiInput(NULL),
 					fMidiOutput(NULL),
-					fMidiView(NULL),
+					fMidiDisplay(NULL),
 					fInputType(0),
 					fOutputType(0),
-					fViewType(0),
+					fDisplayType(0),
 					fInputFilePanel(NULL),
 					fOutputFilePanel(NULL),
 					fInputCurrentEvent(0),
@@ -135,6 +140,9 @@ entry_ref ref;
 	switch (msg->what)
 	{
 //--------------
+//For The Input
+//--------------
+//--------------
 		case INPUT_CHANGE_TO_FILE :
 				if (fInputType == FILE)
 					break;
@@ -150,23 +158,6 @@ entry_ref ref;
 				Connect();
 				PostMessage(msg, fStandartView);
 				break;
-//--------------
-//		case INPUT_CHANGE_TO_BEOS_SYNTH_FILE :
-//				if (fInputType == BEOS_SYNTH_FILE)
-//					break;
-//				fInputType = BEOS_SYNTH_FILE;
-//				Disconnect();
-//				delete fMidiInput;
-//				fMidiInput = new BMidiSynthFile();
-//				if (!fMidiInput)
-//				{
-//					(new BAlert(NULL, "Can't initialise a BMidiSynthFile object", "OK"))->Go();
-//					break;
-//				}
-//				Connect();
-//				((BMidiSynthFile*)fMidiInput)->EnableInput(true, true);
-//				PostMessage(msg, fStandartView);
-//				break;
 //--------------
 		case INPUT_CHANGE_TO_MIDIPORT :
 				if (fInputType == MIDIPORT)
@@ -192,26 +183,7 @@ entry_ref ref;
 				PostMessage(msg, fStandartView);
 				break;
 //--------------
-//		case INPUT_CHANGE_TO_OUTPUT :
-//				if (InputType == msg->what) break;
-//				switch (OutputType)
-//				{
-//					case OUTPUT_CHANGE_TO_FILE :
-//							InputType = INPUT_CHANGE_TO_FILE;
-//							break;
-//					case OUTPUT_CHANGE_TO_BEOSSYNTH :
-//							InputType = INPUT_CHANGE_TO_BEOSSYNTH;
-//							break;
-//					case OUTPUT_CHANGE_TO_MIDIPORT :
-//							InputType = INPUT_CHANGE_TO_MIDIPORT;
-//							break;
-//				}
-//				Disconnect();
-//				if (MidiInput) delete (MidiInput);
-//				MidiInput = MidiOutput;
-//				Connect();
-//				PostMessage(InputType, TheView);
-//				break;
+//For the Output
 //--------------
 //--------------
 		case OUTPUT_CHANGE_TO_FILE :
@@ -288,14 +260,35 @@ entry_ref ref;
 				PostMessage(msg, fStandartView);
 				break;
 //--------------
+//For the display view
+//--------------
+//--------------
 		case VIEW_CHANGE_TO_NONE :
+				if (fDisplayType == 0)
+					break;
+				fDisplayType = 0;
+				if (fMidiDisplay != NULL)
+					fMidiDelay->Disconnect(fMidiDisplay); //Object will be deleted in MidiPlayerView::RemoveAll
 				PostMessage(msg, fStandartView);
 				break;
 //--------------
 		case VIEW_CHANGE_TO_SCOPE :
+				if (fDisplayType == SCOPE)
+					break;
+				fDisplayType = SCOPE;
 				PostMessage(msg, fStandartView);
 				break;
 //--------------
+		case VIEW_CHANGE_TO_ACTIVITY :
+				if (fDisplayType == ACTIVITY)
+					break;
+				fDisplayType = ACTIVITY;
+				fMidiDisplay = (BMidi*)new Activity(BRect(10, 25, 340, 340));
+				fMidiDelay->Connect(fMidiDisplay);
+				((Activity*)fMidiDisplay)->Start();
+				msg->AddPointer("View", fMidiDisplay);
+				PostMessage(msg, fStandartView);
+				break;
 //--------------
 //--------------
 		case CHANGE_INPUT_FILE :
@@ -371,6 +364,8 @@ entry_ref ref;
 				}
 				break;
 //--------------
+//--------------
+//--------------
 		case REWIND_INPUT_FILE :
 				((BMidiStore*)fMidiInput)->Stop();
 				if (fMidiOutput) fMidiOutput->AllNotesOff();
@@ -387,6 +382,8 @@ entry_ref ref;
 				((BMidiStore*)fMidiInput)->Stop();
 				if (fMidiOutput) fMidiOutput->AllNotesOff();
 				break;
+//--------------
+//--------------
 //--------------
 		case REWIND_OUTPUT_FILE :
 				Disconnect();
@@ -405,6 +402,8 @@ entry_ref ref;
 				((BMidiStore*)fMidiOutput)->Export(&fOutputFile, 0);
 				break;
 //--------------
+//--------------
+//--------------
 		case CHANGE_INPUT_MIDIPORT :
 				if (msg->FindPointer("source", (void**)&item) == B_OK)
 				{
@@ -412,6 +411,8 @@ entry_ref ref;
 					((BMidiPort*)fMidiInput)->Start();
 				}
 				break;
+//--------------
+//--------------
 //--------------
 		case CHANGE_OUTPUT_MIDIPORT :
 				if (msg->FindPointer("source", (void**)&item) == B_OK)
@@ -421,42 +422,7 @@ entry_ref ref;
 				}
 				break;
 //--------------
-//		case CHANGE_INPUT_BEOS_SYNTH_FILE:
-//				if (fInputFilePanel)
-//				{
-//					msg->FindRef("refs", &File);
-//					if (((BMidiSynthFile*)fMidiInput)->LoadFile(&File) == B_OK)
-//					{
-//						msg->FindPointer("StringView", (void**)&aStringView);
-//						aStringView->SetText(File.name);
-//					}
-//					delete fInputFilePanel;
-//					fInputFilePanel = NULL;
-//				}
-//				else
-//				{
-//					fInputFilePanel = new BFilePanel(B_OPEN_PANEL, new BMessenger(this), NULL, B_FILE_NODE, false, msg);
-//					fInputFilePanel->Show();
-//				}
-//				break;
 //--------------
-//		case REWIND_INPUT_BEOS_SYNTH_FILE :
-//				((BMidiSynthFile*)fMidiInput)->Stop();
-//				fInputCurrentEvent = 0;
-//				return;
-//--------------
-//		case PLAY_INPUT_BEOS_SYNTH_FILE :
-//				if (fInputCurrentEvent == 1)
-//					((BMidiSynthFile*)fMidiInput)->Resume();
-//				else
-//					((BMidiSynthFile*)fMidiInput)->Start();
-//				fInputCurrentEvent = 0;
-//				break;
-//--------------
-//		case PAUSE_INPUT_BEOS_SYNTH_FILE :
-//				fInputCurrentEvent = 1;
-//				((BMidiSynthFile*)fMidiInput)->Pause();
-//				break;
 //--------------
 		case CHANGE_OUTPUT_BEOS_SYNTH_FILE:
 				if (fOutputFilePanel)
@@ -495,6 +461,8 @@ entry_ref ref;
 				fOutputCurrentEvent = 1;
 				((BMidiSynthFile*)fMidiOutput)->Pause();
 				break;
+//--------------
+//--------------
 //--------------
 		case CHANGE_SAMPLE_RATE_SYNTH :
 				msg->FindInt32("index", (int32*)&temp);
@@ -579,6 +547,8 @@ entry_ref ref;
 				be_synth->SetSampleVolume(temp / 2000);
 				break;
 //--------------
+//For the drag and drop function
+//--------------
 //--------------
 		case B_SIMPLE_DATA : //A file had been dropped into application
 				if (msg->FindRef("refs", &ref) == B_OK)
@@ -626,7 +596,7 @@ entry_ref ref;
 //----------------------------------------------------------
 
 void MidiPlayerWindow::Disconnect(void)
-{
+{//This function must be rewrited for a better disconnection
 	if (fMidiInput != NULL)
 	{
 		fMidiInput->AllNotesOff(false);
@@ -642,7 +612,7 @@ void MidiPlayerWindow::Disconnect(void)
 //----------------------------------------------------------
 
 void MidiPlayerWindow::Connect(void)
-{
+{//This function must be rewrited for a better connection
 	if (fMidiInput != NULL)
 		fMidiInput->Connect(fMidiDelay);
 	if (fMidiOutput != NULL)

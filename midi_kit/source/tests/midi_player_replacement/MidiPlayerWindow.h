@@ -4,16 +4,17 @@
 #include "MidiPlayerView.h"
 
 #include <Window.h>
-#include <MidiKit.h>
+#include <Midi.h>
 #include <FilePanel.h>
 
 //----------------------------------------------------------
-
-#define FILE			'file'
-#define BEOS_SYNTH		'besy'
-#define BEOS_SYNTH_FILE	'besf'
-#define MIDIPORT		'mipo'
-
+#define FILE 'file'
+#define BEOS_SYNTH 'besy'
+#define BEOS_SYNTH_FILE 'besf'
+#define MIDIPORT 'mipo'
+//--------------
+#define SCOPE 'scop'
+#define ACTIVITY 'actv'
 //----------------------------------------------------------
 //----------------------------------------------------------
 //----------------------------------------------------------
@@ -38,12 +39,12 @@ private:
 
 	BMidi *fMidiInput;
 	BMidi *fMidiOutput;
-	BMidi *fMidiView;
+	BMidi *fMidiDisplay;
 	BMidi *fMidiDelay;
 	
 	uint32 fInputType;
 	uint32 fOutputType;
-	uint32 fViewType;
+	uint32 fDisplayType;
 
 	BFilePanel *fInputFilePanel;
 	BFilePanel *fOutputFilePanel;

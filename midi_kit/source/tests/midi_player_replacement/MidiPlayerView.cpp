@@ -1,12 +1,13 @@
 #include "MidiPlayerView.h"
 #include "Scope.h"
+#include "Activity.h"
 
-#include <MenuField.h>
-#include <MenuItem.h>
-#include <PopUpMenu.h>
-#include <Window.h>
 #include <StringView.h>
+#include <PopUpMenu.h>
+#include <MenuItem.h>
+#include <MenuField.h>
 #include <Button.h>
+#include <Window.h>
 #include <Synth.h>
 #include <Directory.h>
 #include <Slider.h>
@@ -15,7 +16,8 @@
 //----------------------------------------------------------
 
 MidiPlayerView::MidiPlayerView(void)
-				: BView(BRect(0, 0, 660, 360), "StandartView", B_FOLLOW_ALL, B_WILL_DRAW)
+				: BView(BRect(0, 0, 660, 360), "StandartView",
+					B_FOLLOW_ALL, B_WILL_DRAW)
 {
 	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 	fInputStringView = new BStringView(BRect(10, 20, 200, 40), NULL, "None");
@@ -42,13 +44,8 @@ BMessage *msg = NULL;
 	Menu = new BPopUpMenu("Select Input");
 	msg = new BMessage(INPUT_CHANGE_TO_FILE);
 	Menu->AddItem(new BMenuItem("From File", msg));
-	
-//	msg = new BMessage(INPUT_CHANGE_TO_BEOS_SYNTH_FILE);
-//	Menu->AddItem(new BMenuItem("From Midi Synth File", msg));
 	msg = new BMessage(INPUT_CHANGE_TO_MIDIPORT);
 	Menu->AddItem(new BMenuItem("From MidiPort", msg));
-//	msg = new BMessage(INPUT_CHANGE_TO_OUTPUT);
-//	Menu->AddItem(new BMenuItem("Select the Output", msg));
 	Field = new BMenuField(BRect(0, 0, 150, 20), NULL, NULL, Menu);
 	fInputBox->SetLabel((BView*)Field);
 	
@@ -71,7 +68,9 @@ BMessage *msg = NULL;
 	Menu->AddItem(new BMenuItem("None", msg));
 	msg = new BMessage(VIEW_CHANGE_TO_SCOPE);
 	Menu->AddItem(new BMenuItem("Scope", msg));
-	Menu->SetTargetForItems(this);
+	msg = new BMessage(VIEW_CHANGE_TO_ACTIVITY);
+	Menu->AddItem(new BMenuItem("Midi activity", msg));
+//	Menu->SetTargetForItems(this);
 	Field = new BMenuField(BRect(0, 0, 150, 20), NULL, NULL, Menu);
 	fViewBox->SetLabel((BView*)Field);
 	
@@ -81,34 +80,19 @@ BMessage *msg = NULL;
 
 void MidiPlayerView::MessageReceived(BMessage *msg)
 {
-//BMessage *NewMsg = NULL;
-//BView *temp = NULL;
 BPopUpMenu *popupmenu = NULL;
 BMenuField *Field = NULL;
+Activity *view = NULL;
 	switch (msg->what)
 	{
 		case INPUT_CHANGE_TO_FILE :
 				RemoveAll(fInputBox);
 				fInputBox->AddChild(fInputStringView);
-//				NewMsg = new BMessage(CHANGE_INPUT_FILE);
-//				NewMsg->AddPointer("StringView", temp);
 				fInputBox->AddChild(new BButton(BRect(220, 20, 270, 40), NULL, "Select", new BMessage(CHANGE_INPUT_FILE)));
 				fInputBox->AddChild(new BButton(BRect(50, 140, 100, 160), NULL, "Rewind", new BMessage(REWIND_INPUT_FILE)));
 				fInputBox->AddChild(new BButton(BRect(110, 140, 160, 160), NULL, "Play", new BMessage(PLAY_INPUT_FILE)));
 				fInputBox->AddChild(new BButton(BRect(170, 140, 220, 160), NULL, "Pause", new BMessage(PAUSE_INPUT_FILE)));
 				break;
-//--------------
-//		case INPUT_CHANGE_TO_BEOS_SYNTH_FILE :
-//				RemoveAll(fInputBox);
-//				fInputBox->AddChild(temp = new BStringView(BRect(10, 20, 200, 40), NULL, "None"));
-//				NewMsg = new BMessage(CHANGE_INPUT_BEOS_SYNTH_FILE);
-//				NewMsg->AddPointer("StringView", temp);
-//				fInputBox->AddChild(new BButton(BRect(220, 20, 270, 40), NULL, "Select", NewMsg));
-//				fInputBox->AddChild(new BButton(BRect(50, 110, 100, 130), NULL, "Rewind", new BMessage(REWIND_INPUT_BEOS_SYNTH_FILE)));
-//				fInputBox->AddChild(new BButton(BRect(110, 110, 160, 130), NULL, "Play", new BMessage(PLAY_INPUT_BEOS_SYNTH_FILE)));
-//				fInputBox->AddChild(new BButton(BRect(170, 110, 220, 130), NULL, "Pause", new BMessage(PAUSE_INPUT_BEOS_SYNTH_FILE)));
-//				SetBeOSSynthView(fInputBox);
-//				break;
 //--------------
 		case INPUT_CHANGE_TO_MIDIPORT :
 				RemoveAll(fInputBox);
@@ -121,8 +105,6 @@ BMenuField *Field = NULL;
 		case OUTPUT_CHANGE_TO_FILE :
 				RemoveAll(fOutputBox);
 				fOutputBox->AddChild(fOutputStringView);
-//				NewMsg = new BMessage(CHANGE_OUTPUT_FILE);
-//				NewMsg->AddPointer("StringView", temp);
 				fOutputBox->AddChild(new BButton(BRect(220, 20, 270, 40), NULL, "Select", new BMessage(CHANGE_OUTPUT_FILE)));
 				fOutputBox->AddChild(new BButton(BRect(50, 140, 100, 160), NULL, "Rewind", new BMessage(REWIND_OUTPUT_FILE)));
 				fOutputBox->AddChild(new BButton(BRect(170, 140, 220, 160), NULL, "Save", new BMessage(SAVE_OUTPUT_FILE)));
@@ -136,8 +118,6 @@ BMenuField *Field = NULL;
 		case OUTPUT_CHANGE_TO_BEOS_SYNTH_FILE :
 				RemoveAll(fOutputBox);
 				fOutputBox->AddChild(fOutputStringView);
-//				NewMsg = new BMessage(CHANGE_OUTPUT_BEOS_SYNTH_FILE);
-//				NewMsg->AddPointer("StringView", temp);
 				fOutputBox->AddChild(new BButton(BRect(220, 20, 270, 40), NULL, "Select", new BMessage(CHANGE_OUTPUT_BEOS_SYNTH_FILE)));
 				fOutputBox->AddChild(new BButton(BRect(50, 140, 100, 160), NULL, "Rewind", new BMessage(REWIND_OUTPUT_BEOS_SYNTH_FILE)));
 				fOutputBox->AddChild(new BButton(BRect(110, 140, 160, 160), NULL, "Play", new BMessage(PLAY_OUTPUT_BEOS_SYNTH_FILE)));
@@ -162,9 +142,12 @@ BMenuField *Field = NULL;
 				fViewBox->AddChild(new Scope(BRect(10, 25, 340, 340)));
 				break;
 //--------------
-//		case B_SIMPLE_DATA : //A file had been dropped into application
-//				temp++;
-//				break;
+		case VIEW_CHANGE_TO_ACTIVITY :
+				RemoveAll(fViewBox);
+				msg->FindPointer("View", (void**)&view);
+//				view = new Activity(BRect(10, 25, 340, 340));
+				fViewBox->AddChild(view);
+				break;
 //--------------
 //--------------
 //--------------
