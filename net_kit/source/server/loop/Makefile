@@ -1,18 +1,18 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=loop
 CFLAGS+=-nostart
-LOBJS=../util/misc.o
-LDFLAGS=../_APP_
+LOBJS=../_APP_ ../util/misc.o
 OBJS=loop.o
 
-KCFLAGS=-nostart -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
+KCFLAGS=-no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
+KLOBJS=
 
 all:	$(TARGET)
 
 kernel:
 	$(CC) $(KCFLAGS) $(INCLUDES) -c loop.c
-	$(CC) $(KLDFLAGS) -o loop loop.o
+	$(CC) $(KLDFLAGS) $(KLOBJS) -o loop loop.o
 
 installkernel:	kernel
 	cp loop /boot/home/config/add-ons/kernel/network/interface/loop
