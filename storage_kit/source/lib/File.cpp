@@ -11,9 +11,9 @@
 #include <Entry.h>
 #include <File.h>
 
-enum {
-	NOT_IMPLEMENTED	= B_ERROR,
-};
+#ifdef USE_OPENBEOS_NAMESPACE
+namespace OpenBeOS {
+#endif
 
 // constructor
 BFile::BFile()
@@ -216,8 +216,6 @@ BFile::SetTo(const char *path, uint32 openMode)
 	} else
 		result = B_BAD_VALUE;
 	set_fd(newFd);
-	// Uhh, that's rude: We should not touch the private member vars of BNode,
-	// but there seems to be no other way.
 	if (result == B_OK)
 		set_status(B_OK);
 	else
@@ -236,12 +234,20 @@ BFile::SetTo(const char *path, uint32 openMode)
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
-	\todo Implement!
+	\todo Implemented using SetTo(BEntry*, uint32). Check, if necessary
+		  to reimplement!
 */
 status_t
 BFile::SetTo(const BDirectory *dir, const char *path, uint32 openMode)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (dir && path ? B_OK : B_BAD_VALUE);
+	BEntry entry;
+	if (error == B_OK)
+		error = entry.SetTo(dir, path);
+	if (error == B_OK)
+		error = SetTo(&entry, openMode);
+	set_status(error);
+	return error;
 }
 
 // Unset
@@ -373,7 +379,7 @@ BFile::Position() const
 {
 	off_t result = (InitCheck() == B_OK ? B_OK : B_FILE_ERROR);
 	if (result == B_OK)
-		result = StorageKit::seek(get_fd(), 0, SEEK_CUR);	// any better way?
+		result = StorageKit::get_position(get_fd());
 	return result;
 }
 
@@ -462,3 +468,7 @@ BFile::set_status(status_t newStatus)
 	fCStatus = newStatus;
 }
 
+
+#ifdef USE_OPENBEOS_NAMESPACE
+};		// namespace OpenBeOS
+#endif
