@@ -14,7 +14,8 @@ TGTS=	test1 \
 	select_test2 \
 	tcp_test \
 	at_srv \
-	at_client
+	at_client \
+	stop_stack
 
 all:	$(TGTS)
 	@for i in $(SUBDIRS); do \
@@ -53,6 +54,9 @@ at_srv: libnet $(OBJS) at_srv.o
 
 at_client: libnet $(OBJS) at_client.o
 	@$(CC) $(LDFLAGS) -o at_client $(OBJS) at_client.o
+
+stop_stack: $(OBJS) stop_stack.o
+	@$(CC) $(LDFLAGS) -o stop_stack $(OBJS) stop_stack.o
 
 libnet:
 	@cd ../libnet;make;cd ../apps
