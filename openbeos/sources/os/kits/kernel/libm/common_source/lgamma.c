@@ -79,7 +79,7 @@ static int endian;
 static double small_lgam(double);
 static double large_lgam(double);
 static double neg_lgam(double);
-static /*double zero = 0.0,*/ int one = 1.0;
+static /*double zero = 0.0,*/ double one = 1.0;
 int signgam;
 
 #define UNDERFL (1e-1020 * 1e-1020)
