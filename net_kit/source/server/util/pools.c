@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include "pools.h"
 
+
+#define ROUND_TO_PAGE_SIZE(x) (((x) + (B_PAGE_SIZE) - 1) & ~((B_PAGE_SIZE) - 1))
+
+
 void pool_debug_walk(struct pool_ctl *p)
 {
 	char *ptr;
@@ -11,68 +15,91 @@ void pool_debug_walk(struct pool_ctl *p)
 	
 	printf("%ld byte blocks allocated, but now free:\n\n", p->alloc_size);
 
-	acquire_sem(p->lock);
+	ACQUIRE_READ_LOCK(p->lock);
 	ptr = p->freelist;	
 	while (ptr) {
 		printf("  %02d: %p\n", i++, ptr);
 		ptr = ((struct free_blk*)ptr)->next;
 	}
-	release_sem(p->lock);
+	RELEASE_READ_LOCK(p->lock);
 }
 
-static void get_mem_block(size_t size, struct pool_ctl *p)
+
+static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 {
-	struct pool_mem *blk = malloc(sizeof(struct pool_mem));
-	blk->aid = create_area("net_stack_pools_block", (void**)&blk->base_addr,
-						B_ANY_ADDRESS, size, B_LAZY_LOCK, 
+	struct pool_mem *block = malloc(sizeof(struct pool_mem));
+	if (block == NULL)
+		return NULL;
+
+	block->aid = create_area("net_stack_pools_block", (void**)&block->base_addr,
+						B_ANY_ADDRESS, pool->block_size, B_LAZY_LOCK, 
 						B_READ_AREA|B_WRITE_AREA);
-	if (!blk->aid)
-		return;
+	if (block->aid < B_OK) {
+		free(block);
+		return NULL;
+	}
+
+	block->mem_size = block->avail = pool->block_size;
+	block->ptr = block->base_addr;
+	INIT_BENAPHORE(block->lock, "pool_mem_lock");
+
+	if (CHECK_BENAPHORE(block->lock) >= B_OK) {
+		ACQUIRE_WRITE_LOCK(pool->lock);
+
+		// insert block at the beginning of the pools
+		if (pool->list)
+			block->next = pool->list;
+
+		pool->list = block;
+		RELEASE_WRITE_LOCK(pool->lock);
+
+		return block;
+	}
+	UNINIT_BENAPHORE(block->lock);
 	
-	blk->mem_size = blk->avail = size;
-	blk->ptr = blk->base_addr;
-	blk->lock = create_sem(1, "pool_mem_lock");
+	delete_area(block->aid);
+	free(block);
 
-	if (!blk->ptr || blk->lock < B_OK)
-		return;
-
-	acquire_sem(p->lock);
-	if (p->list)
-		blk->next = p->list;
-	p->list = blk;
-	release_sem(p->lock);
-
-	return;
+	return NULL;
 }
 
-void pool_init(struct pool_ctl **p, size_t sz)
+
+status_t pool_init(struct pool_ctl **_newPool, size_t size)
 {
-	struct pool_ctl *pnew = malloc(sizeof(struct pool_ctl));
-	size_t alloc_sz = B_PAGE_SIZE;
-		
-	if (!pnew)
-		return;	
+	struct pool_ctl *pool;
 
 	/* minimum block size is sizeof the free_blk structure */
-	if (sz < sizeof(struct free_blk))
-		return;
+	if (size < sizeof(struct free_blk)) 
+		return B_BAD_VALUE;
 
-	/* normally we allocate 4096 bytes... */
-	if (sz > alloc_sz)
-		alloc_sz = sz;
+	pool = malloc(sizeof(struct pool_ctl));
+	if (pool == NULL)
+		return B_NO_MEMORY;
 
-	pnew->lock = create_sem(1, "pool_lock");
-			
+	if ((pool->lock = CREATE_RW_LOCK("pool_lock")) < B_OK) {
+		free(pool);
+		return B_ERROR;
+	}
+
+	// 4 puddles will always fit in one pool
+	pool->block_size = ROUND_TO_PAGE_SIZE(size * 4);
+	pool->alloc_size = size;
+	pool->list = NULL;
+	pool->freelist = NULL;
+
 	/* now add a first block */
-	get_mem_block(alloc_sz, pnew);
-	if (!pnew->list)
-		return;
-	
-	pnew->freelist = NULL;
-	pnew->alloc_size = sz;
+	get_mem_block(pool);
+	if (!pool->list) {
+		DELETE_RW_LOCK(pool->lock);
+		free(pool);
+		return B_NO_MEMORY;
+	}
 
-	(*p) = pnew;
+	*_newPool = pool;
+	
+	return B_OK;
 }
+
 
 char *pool_get(struct pool_ctl *p)
 {
@@ -80,68 +107,86 @@ char *pool_get(struct pool_ctl *p)
 	struct pool_mem *mp = p->list;
 	char *rv = NULL;
 
-	acquire_sem(p->lock);
+	ACQUIRE_READ_LOCK(p->lock);
+
 	if (p->freelist) {
 		/* woohoo, just grab a block! */
 		rv = p->freelist;
+		
+		RELEASE_READ_LOCK(p->lock);
+
+		/* we need to hold the write lock for that piece of code */
+		ACQUIRE_WRITE_LOCK(p->lock);
 		p->freelist = ((struct free_blk*)rv)->next;
-		release_sem(p->lock);
+
+		RELEASE_WRITE_LOCK(p->lock);
 		return rv;
 	}
-	release_sem(p->lock);
 
-	/* no free blocks, try to allocate of the top of the memory blocks */
+	/* no free blocks, try to allocate of the top of the memory blocks
+	** we must hold the global pool lock while iterating through the list!
+	*/
+	
 	do {
-		acquire_sem(mp->lock);
+		ACQUIRE_BENAPHORE(mp->lock);
+
 		if (mp->avail >= p->alloc_size) {
 			rv = mp->ptr;
 			mp->ptr += p->alloc_size;
 			mp->avail -= p->alloc_size;
-			release_sem(mp->lock);
+			RELEASE_BENAPHORE(mp->lock);
 			break;
 		}
-		release_sem(mp->lock);
+		RELEASE_BENAPHORE(mp->lock);
 	} while ((mp = mp->next) != NULL);
+
+	RELEASE_READ_LOCK(p->lock);
 
 	if (rv)
 		return rv;
 
-	get_mem_block(B_PAGE_SIZE, p);
-	mp = p->list;
-	acquire_sem(mp->lock);
+	mp = get_mem_block(p);
+	if (mp == NULL)
+		return NULL;
+
+	ACQUIRE_BENAPHORE(mp->lock);
+
 	if (mp->avail >= p->alloc_size) {
 		rv = mp->ptr;
-        	mp->ptr += p->alloc_size;
-        	mp->avail -= p->alloc_size;
+		mp->ptr += p->alloc_size;
+		mp->avail -= p->alloc_size;
 	}
-	release_sem(mp->lock);
+	RELEASE_BENAPHORE(mp->lock);
 
 	return rv;
 }
 
+
 void pool_put(struct pool_ctl *p, void *ptr)
 {
-	acquire_sem(p->lock);
+	ACQUIRE_WRITE_LOCK(p->lock);
 	if (p->freelist) {
 		((struct free_blk*)ptr)->next = p->freelist;
 	}
 	p->freelist = ptr;
-	release_sem(p->lock);
+	RELEASE_WRITE_LOCK(p->lock);
 }
+
 
 void pool_destroy(struct pool_ctl *p)
 {
 	struct pool_mem *mp = p->list;
 	struct pool_mem *temp;
-	
-	do {
+
+	while (mp != NULL) {
 		delete_area(mp->aid);
 		temp = mp;
 		mp = mp->next;
-		delete_sem(mp->lock);
+		UNINIT_BENAPHORE(mp->lock);
 		free(temp);
-	} while (mp);
-	delete_sem(p->lock);
+	}
+
+	DELETE_RW_LOCK(p->lock);
 	free(p);
 }
 

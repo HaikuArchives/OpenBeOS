@@ -12,11 +12,23 @@ INCLUDES=-I. -I../include
 
 all: test_mbuf timer_test test_cpy test_pools test_hash
 
-0 test: test_mbuf
+test: 0 1 2 3 4
+
+0: test_mbuf
 	@test_mbuf
 
 1: timer_test
 	@timer_test
+
+2: test_pools
+	@test_pools
+
+3: test_hash
+	@test_hash
+
+4: test_cpy
+	@test_cpy
+
 
 test_mbuf:
 	$(CC) $(CFLAGS) $(INCLUDES) -o test_mbuf $(MBUF_OBJS) test_mbuf.c
@@ -34,7 +46,7 @@ test_hash: test_hash.o $(HASH_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o test_hash $(HASH_OBJS) test_hash.o
 
 clean:
-	@rm -f test_mbuf timer_test
+	@rm -f test_mbuf timer_test *.o *.dbg
 
 .SUFFIXES:
 .SUFFIXES: .c .o

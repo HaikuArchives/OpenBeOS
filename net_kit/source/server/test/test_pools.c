@@ -6,56 +6,76 @@
 
 #include "pools.h"
 
-#define SIZE	200
-#define LOOPS	5
+#define SIZE			200
+#define INNER_LOOPS 	1000
+#define LOOPS			50
+#define PUDDLE_SIZE 	4096
+
+#define PRINT_SINGLE	0
+
 
 int main(int argc, char **argv)
 {
-	char *ptrs[100];
+	char *ptrs[INNER_LOOPS];
 	int i,j;
-	bigtime_t tm, intv, cum = 0;
-	pool_ctl *p;
+	bigtime_t tm, intv;
+	bigtime_t malloc_total = 0,free_total = 0;
+	bigtime_t get_total = 0,put_total = 0;
 
-	pool_init(&p, 20);
+	pool_ctl *pool;
+	pool_init(&pool, PUDDLE_SIZE);
 
-	for (j=0;j<LOOPS;j++) {
-		tm=real_time_clock_usecs();
-		for (i=0;i<100;i++) {
-			ptrs[i] = malloc(20);
+	for (j = 0;j < LOOPS;j++) {
+		tm = real_time_clock_usecs();
+		for (i = 0;i < INNER_LOOPS;i++) {
+			ptrs[i] = malloc(PUDDLE_SIZE);
 		}
 		intv = real_time_clock_usecs()- tm;
-		printf("malloc took %lld\n", intv);
-		cum += intv;
+		#if PRINT_SINGLE
+			printf("malloc took %lld\n", intv);
+		#endif
+		malloc_total += intv;
 
-        	tm=real_time_clock_usecs();
-        	for (i=0;i<100;i++) {
-                	free(ptrs[i]);
-        	}
-        	intv = real_time_clock_usecs() - tm;
-        	printf("free took %lld\n", intv);
-		cum += intv;
-	}
-
-	printf("For %d loops, took %lld\n", LOOPS, cum);
-	cum = 0;
-
-	for (j=0;j<LOOPS;j++) {
-		tm=real_time_clock_usecs();
-		for (i=0;i<100;i++) {
-			ptrs[i] = pool_get(p);
+		tm = real_time_clock_usecs();
+		for (i = 0;i < INNER_LOOPS;i++) {
+			free(ptrs[i]);
 		}
 		intv = real_time_clock_usecs() - tm;
-		printf("pool_get took %lld\n", intv);
-		cum+= intv;
+		#if PRINT_SINGLE
+			printf("free took %lld\n", intv);
+		#endif
+		free_total += intv;
+	}
 
-		tm=real_time_clock_usecs();
-		for (i=0;i<100;i++) {
-			pool_put(p, ptrs[i]);
+	printf("For %d loops malloc()/free() took %lld\n", LOOPS, malloc_total + free_total);
+	printf("\tmalloc() took %lld\n", malloc_total);
+	printf("\tfree() took %lld\n", free_total);
+
+	for (j = 0;j < LOOPS;j++) {
+		tm = real_time_clock_usecs();
+		for (i = 0;i < INNER_LOOPS;i++) {
+			ptrs[i] = pool_get(pool);
 		}
 		intv = real_time_clock_usecs() - tm;
-		printf("pool_put took %lld\n", intv);
+		#if PRINT_SINGLE
+			printf("pool_get took %lld\n", intv);
+		#endif
+		get_total += intv;
+
+		tm = real_time_clock_usecs();
+		for (i = 0;i < INNER_LOOPS;i++) {
+			pool_put(pool, ptrs[i]);
+		}
+		intv = real_time_clock_usecs() - tm;
+		#if PRINT_SINGLE
+			printf("pool_put took %lld\n", intv);
+		#endif
+		put_total += intv;
 	}
-	printf("For %d loops, took %lld\n", LOOPS, cum);
+	printf("For %d loops pool_get()/pool_put() took %lld (%Ld%%)\n", LOOPS,
+			get_total + put_total, 100*(get_total + put_total)/(malloc_total + free_total));
+	printf("\tpool_get() took %lld (%Ld%%)\n", get_total, 100*get_total/malloc_total);
+	printf("\tpool_put() took %lld (%Ld%%)\n", put_total, 100*put_total/free_total);
 
 	return 0;
 }
