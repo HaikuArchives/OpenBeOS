@@ -19,6 +19,9 @@ Contents
 
  - When the app starts up, it pops up a dialog while scanning for devices.
  - The window is resizeable.
+ - There doesn't seem to be any way to get the information that I need 
+   easily: I suspect that some direct reading of the partition map is
+   needed.  For now, a fake struct with the info I need will suffice.
  
 2: Display View
 ---------------
@@ -64,7 +67,7 @@ Mount
 Unmount
  - Only available when there is a mounted partition on the selected drive.
  
- *[List of mounted partitions on the selected drive, with all partitions
+ *[List of mounted partitions on the selected drive, with all mounted partitions
    selectable except /boot]
   - Action: Unmounts the selected partition.
   
