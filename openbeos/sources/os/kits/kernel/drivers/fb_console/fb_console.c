@@ -10,6 +10,7 @@
 #include <vm.h>
 #include <lock.h>
 #include <devfs.h>
+#include <drivers.h>
 #include <errors.h>
 
 #include <arch/cpu.h>
@@ -238,41 +239,42 @@ static void tab(void)
 	}
 }
 
-static int console_open(dev_ident ident, dev_cookie *cookie)
+static int console_open(const char *name, uint32 flags, void **cookie)
 {
 	return 0;
 }
 
-static int console_freecookie(dev_cookie cookie)
+static int console_freecookie(void * cookie)
 {
 	return 0;
 }
 
-static int console_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int console_seek(void * cookie, off_t pos, seek_type st)
 {
 //	dprintf("console_seek: entry\n");
 
 	return ERR_NOT_ALLOWED;
 }
 
-static int console_close(dev_cookie cookie)
+static int console_close(void * cookie)
 {
 //	dprintf("console_close: entry\n");
 
 	return 0;
 }
 
-static ssize_t console_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t console_read(void * cookie, off_t pos, void *buf, 
+                            size_t *len)
 {
-	return sys_read(console.keyboard_fd, buf, 0, len);
+	return sys_read(console.keyboard_fd, buf, 0, *len);
 }
 
-static ssize_t _console_write(const void *buf, size_t len)
+static ssize_t _console_write(const void *buf, size_t *len)
 {
 	size_t i;
 	const char *c;
 
-	for(i=0; i<len; i++) {
+	for(i=0; i < *len; i++) {
 		c = &((const char *)buf)[i];
 		switch(*c) {
 			case '\n':
@@ -294,10 +296,11 @@ static ssize_t _console_write(const void *buf, size_t len)
 				console_putch(*c);
 		}
 	}
-	return len;
+	return 0;
 }
 
-static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t console_write(void * cookie, off_t pos, 
+                             const void *buf, size_t *len)
 {
 	ssize_t err;
 
@@ -314,10 +317,11 @@ static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 	return err;
 }
 
-static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
+static int console_ioctl(void * cookie, uint32 op, void *buf, size_t len)
 {
 	int err;
-
+	size_t wlen;
+	
 	switch(op) {
 		case CONSOLE_OP_WRITEXY: {
 			int x,y;
@@ -328,7 +332,8 @@ static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 
 			save_cur();
 //			gotoxy(x, y);
-			if(_console_write(((char *)buf) + 2*sizeof(int), len - 2*sizeof(int)) > 0)
+			wlen = len - 2 * sizeof(int);
+			if(_console_write(((char *)buf) + 2*sizeof(int), &wlen) == 0)
 				err = 0; // we're okay
 			else
 				err = ERR_IO_ERROR;
@@ -343,18 +348,17 @@ static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 	return err;
 }
 
-static struct dev_calls console_hooks = {
+device_hooks fb_console_hooks = {
 	&console_open,
 	&console_close,
 	&console_freecookie,
-	&console_seek,
 	&console_ioctl,
 	&console_read,
 	&console_write,
-	/* cannot page from /dev/console */
 	NULL,
 	NULL,
-	NULL
+//	NULL,
+//	NULL
 };
 
 int fb_console_dev_init(kernel_args *ka)
@@ -432,7 +436,7 @@ int fb_console_dev_init(kernel_args *ka)
 			panic("fb_console_dev_init: error opening /dev/keyboard\n");
 
 		// create device node
-		devfs_publish_device("console", NULL, &console_hooks);
+		devfs_publish_device("console", NULL, &fb_console_hooks);
 
 #if 0
 {
