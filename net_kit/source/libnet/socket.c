@@ -16,13 +16,10 @@
 
 #include "net_stack_driver.h"
 
-// global variables
 const char * g_stack_driver_path = "/dev/" NET_STACK_DRIVER_PATH;
 
-// global libraries data are per team
 bool g_beos_r5_compatibility = false;
 
-// local definition
 struct beosr5_sockaddr_in {
 	uint16 sin_family;
 	uint16 sin_port;
@@ -30,14 +27,9 @@ struct beosr5_sockaddr_in {
 	char sin_zero[4];
 };
 
-// static prototypes
 static void convert_from_beos_r5_sockaddr(struct sockaddr *to, const struct sockaddr *from);
 static void convert_to_beos_r5_sockaddr(struct sockaddr *to, const struct sockaddr *from);
 static void	convert_from_beos_r5_sockopt(int * level, int * optnum);
-
-#ifdef CODEWARRIOR
-	#pragma mark [BSD sockets API]
-#endif
 
 _EXPORT int socket(int family, int type, int protocol)
 {
@@ -49,12 +41,22 @@ _EXPORT int socket(int family, int type, int protocol)
 	if (sock < 0)
 		return sock;
 
-	/* work around the old Be header values... */
+	/* work around the old Be header values... *
+	 *
+	 * This really sucks...
+	 *
+	 * Basically we've modified the new stack SOCK_ values to be
+	 * start at 10, so if it's below that we're being called by
+	 * an R5 app.
+	 *
+	 * NB
+	 * Of course this places a lot of restrictions on what we can
+	 * do with library replacements and improvements as no other
+	 * component of the "team" can be built using the new 
+	 * stack.
+	 */
 	if (type < SOCK_DGRAM) {
-		// if caller use type value between 0 and 2, it was linked
-		// against old R5 net socket-like API.
-		g_beos_r5_compatibility = true;
-		
+		g_beos_r5_compatibility = true;	
 		/* we have old be types... convert... */
 		if (type == 1)
 			type = SOCK_DGRAM;
@@ -78,7 +80,7 @@ _EXPORT int socket(int family, int type, int protocol)
 	if (rv == 0)
 		rv = args.rv;
 
-	if (rv < 0) {	// socket creation failure...
+	if (rv < 0) {
 		close(sock);
 		sock = rv;
 	};
@@ -437,10 +439,6 @@ _EXPORT int sysctl (int *name, uint namelen, void *oldp, size_t *oldlenp,
 	return (rv < 0) ? rv : sa.rv;
 }
 	
-#ifdef CODEWARRIOR
-	#pragma mark [Private routines]
-#endif
-
 /* 
  * Private routines
  * ----------------
@@ -473,10 +471,24 @@ static void	convert_from_beos_r5_sockopt(int * level, int * optnum)
 		*level = SOL_SOCKET;
 		
 	switch (*optnum) {
-	case 1: *optnum = SO_DEBUG; break;
-	case 2: *optnum = SO_REUSEADDR; break;
-	// case 3: *optnum = SO_NONBLOCK; break;
-	case 4: *optnum = SO_REUSEPORT; break;
-	// case 5: *optnum = SO_FIONREAD; break;
+		case 1: 
+			*optnum = SO_DEBUG; 
+			break;
+		case 2: 
+			*optnum = SO_REUSEADDR; 
+			break;
+/*
+		case 3: 
+			*optnum = SO_NONBLOCK; 
+			break;
+*/
+		case 4: 
+			*optnum = SO_REUSEPORT; 
+			break;
+/*
+		case 5: 
+			*optnum = SO_FIONREAD; 
+			break;
+*/
 	};
 }
