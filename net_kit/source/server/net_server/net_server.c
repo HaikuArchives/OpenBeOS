@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 	sprintf(path, "%s/udp.so", cdir);
 	printf("Trying to load %s\n", path);
 	
-	/* dirty hack...proof of concept... */
+	/* dirty hack...proof of concept.... */
 	u = load_add_on(path);
 	if (u > 0) {
 		net_mod[nnmod].iid = u;
