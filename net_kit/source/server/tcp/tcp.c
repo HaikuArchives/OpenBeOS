@@ -6,7 +6,6 @@
 #include <string.h>
 #endif
 
-#include "mbuf.h"
 #include "pools.h"
 #include "net_misc.h"
 #include "net_module.h"

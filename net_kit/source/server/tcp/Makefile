@@ -2,7 +2,7 @@ INCLUDES=-I. -I.. -I../include
 TARGET=tcp
 TGT=../modules/protocol/$(TARGET)
 LOBJS=../_APP_
-OBJS=arc4random.o tcp_output.o tcp_input.o tcp_timer.o $(TARGET).o
+OBJS=arc4random.o tcp_output.o tcp_input.o tcp_timer.o tcp_debug.o $(TARGET).o
 
 CFLAGS+=-D_NETWORK_STACK
 
@@ -24,6 +24,7 @@ kernel:
 	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_input.c
 	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_output.c
 	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_timer.c
+	@$(CC) $(KCFLAGS) $(INCLUDES) -c tcp_debug.c
 	@$(CC) $(KCFLAGS) $(INCLUDES) -c $(TARGET).c
 	@$(CC) $(KLDFLAGS) $(KLOBJS) -o $(TARGET) $(OBJS)
 

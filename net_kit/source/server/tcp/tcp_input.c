@@ -75,7 +75,6 @@
 #include <sys/param.h>
 #include <kernel/OS.h>
 
-#include "mbuf.h"
 #include "sys/protosw.h"
 #include "sys/socket.h"
 #include "sys/socketvar.h"
@@ -95,7 +94,7 @@
 #include <netinet/tcp_var.h>
 #include <netinet/tcpip.h>
 
-//#include <netinet/tcp_debug.h>
+#include <netinet/tcp_debug.h>
 
 #include "ipv4/ipv4_module.h"
 
@@ -314,7 +313,7 @@ static void show_tp(struct tcpcb *tp)
  * TCP input routine, follows pages 65-76 of the
  * protocol specification dated September, 1981 very closely.
  */
-int tcp_input(struct mbuf *m, int iphlen)
+void tcp_input(struct mbuf *m, int iphlen)
 {
 	struct inpcb *inp;
 	caddr_t optp = NULL;
@@ -348,8 +347,7 @@ int tcp_input(struct mbuf *m, int iphlen)
 	if (m->m_len < sizeof(struct tcpiphdr)) {
 		if ((m = m_pullup(m, sizeof(struct tcpiphdr))) == NULL) {
 			tcpstat.tcps_rcvshort++;
-			printf("tcp_input: ENOBUFS\n");
-			return ENOBUFS;
+			return;
 		}
 		ti = mtod(m, struct tcpiphdr*);
 	}
@@ -383,8 +381,7 @@ int tcp_input(struct mbuf *m, int iphlen)
 		if (m->m_len < sizeof(struct ip) + off) {
 			if ((m = m_pullup(m, sizeof(struct ip) + off)) == NULL) {
 				tcpstat.tcps_rcvshort++;
-				printf("tcp_input: ENOBUFS (2)\n");
-				return ENOBUFS;
+				return;
 			}
 			ti = mtod(m, struct tcpiphdr*);
 		}
@@ -576,7 +573,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				if (so->so_snd.sb_cc) {
 					(void) tcp_output(tp);
 				}
-				return -1;
+				return;
 			}
 		} else if (ti->ti_ack == tp->snd_una &&
 		    tp->seg_next == (struct tcpiphdr*)tp &&
@@ -599,7 +596,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 			sbappend(&so->so_rcv, m);
 			sorwakeup(so);
 			tp->t_flags |= TF_DELACK;
-			return -1;
+			return;
 		}
 	}
 
@@ -1381,8 +1378,8 @@ dodata:							/* XXX */
 	}
 
 	if (so->so_options & SO_DEBUG) {
-//		tcp_trace(TA_INPUT, ostate, tp, (caddr_t) &tcp_saveti,
-//		          0, tlen);
+		tcp_trace(TA_INPUT, ostate, tp, (caddr_t) &tcp_saveti,
+		          0, tlen);
 	}
 
 	/*
@@ -1391,7 +1388,7 @@ dodata:							/* XXX */
 	if (needoutput || (tp->t_flags & TF_ACKNOW)) {
 		(void) tcp_output(tp);
 	}
-	return 0;
+	return;
 
 dropafterack:
 //	printf("tcp_input: dropafterack\n");
@@ -1405,7 +1402,7 @@ dropafterack:
 	m_freem(m);
 	tp->t_flags |= TF_ACKNOW;
 	(void) tcp_output(tp);
-	return 0;
+	return;
 
 dropwithreset:
 //	printf("tcp_input: dropwithreset\n");
@@ -1427,24 +1424,23 @@ dropwithreset:
 	/* destroy temporarily created socket */
 	if (dropsocket)
 		(*so->so_proto->pr_userreq)(so, PRU_ABORT, NULL, NULL, NULL);
-	return 0;
+	return;
 
 drop:
 	/*
 	 * Drop space held by incoming segment and return.
 	 */
-//	if (tp && (tp->t_inpcb->inp_socket->so_options & SO_DEBUG)) {
-//		tcp_trace(TA_DROP, ostate, tp, (caddr_t) &tcp_saveti,
-//		          0, tlen);
-//	}
+	if (tp && (tp->t_inpcb->inp_socket->so_options & SO_DEBUG)) {
+		tcp_trace(TA_DROP, ostate, tp, (caddr_t) &tcp_saveti,
+		          0, tlen);
+	}
 
 	m_freem(m);
 	/* destroy temporarily created socket */
 
 	if (dropsocket)
-		return (*so->so_proto->pr_userreq)(so, PRU_ABORT, 
-		                                   NULL, NULL, NULL);
-	return 0;
+		(*so->so_proto->pr_userreq)(so, PRU_ABORT, NULL, NULL, NULL);
+	return;
 }
 
 void tcp_dooptions(struct tcpcb *tp, u_char *cp, int cnt, struct tcpiphdr *ti,
