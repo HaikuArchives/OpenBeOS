@@ -32,6 +32,7 @@
 #define m_freem             core->m_freem
 #define m_adj               core->m_adj
 #define m_prepend           core->m_prepend
+#define m_pullup            core->m_pullup
 #define in_pcballoc         core->in_pcballoc
 #define in_pcbconnect       core->in_pcbconnect
 #define in_pcbdisconnect    core->in_pcbdisconnect
@@ -43,9 +44,10 @@
 #define in_pcbdetach        core->in_pcbdetach
 #define rtfree              core->rtfree
 #define rtalloc             core->rtalloc
-#define ifa_ifwithdstaddr	core->ifa_ifwithdstaddr
+#define ifa_ifwithdstaddr   core->ifa_ifwithdstaddr
 #define ifa_ifwithnet       core->ifa_ifwithnet
 #define in_broadcast        core->in_broadcast
+#define get_primary_addr    core->get_primary_addr
 
 static struct core_module_info *core = NULL;
 
@@ -54,6 +56,7 @@ static struct core_module_info *core = NULL;
 struct protosw *proto[IPPROTO_MAX];
 struct in_ifaddr *in_ifaddr;
 uint16 ip_id = 0;
+int ipforwarding = 0; /* we don't forward IP packets by default... */
 
 #if SHOW_DEBUG
 static void dump_ipv4_header(struct mbuf *buf)
@@ -112,6 +115,8 @@ void ip_stripoptions(struct mbuf *m, struct mbuf *mopt)
 	caddr_t opts;
 	int olen;
 
+printf("ip_stripoptions\n");
+
 	olen = (ip->ip_hl<<2) - sizeof (struct ip);
 	opts = (caddr_t)(ip + 1);
 	i = m->m_len - (sizeof (struct ip) + olen);
@@ -122,10 +127,23 @@ void ip_stripoptions(struct mbuf *m, struct mbuf *mopt)
 	ip->ip_hl = sizeof(struct ip) >> 2;
 }
 
+int ip_dooptions(struct mbuf *m)
+{
+	struct ip *ip = mtod(m, struct ip*);
+//	u_char *cp;
+	struct in_addr dst;
+printf("ip_dooptions\n");	
+	dst = ip->ip_dst;
+// XXX - complete me!	
+	return 1;
+}
+
 struct mbuf * ip_srcroute(void)
 {
 	struct in_addr *p, *q;
 	struct mbuf *m;
+
+printf("ip_srcroute\n");
 	
 	if (ip_nhops == 0)
 		return NULL;
@@ -152,43 +170,141 @@ struct mbuf * ip_srcroute(void)
 	return m;
 }
 
-int ipv4_input(struct mbuf *buf, int hdrlen)
+int ipv4_input(struct mbuf *m, int hdrlen)
 {
-	struct ip *ip = mtod(buf, struct ip *);
+	struct ip *ip;
+	struct in_ifaddr *ia = get_primary_addr();
+	int hlen;
+	
+//printf("ipv4_input\n");	
 
 #if SHOW_DEBUG
-        dump_ipv4_header(buf);
+	dump_ipv4_header(buf);
 #endif
+	if (!m)
+		return -1;
+	/* If we don't have a pointer to our IP addresses we can't go on */
+	if (!ia)
+		goto bad;
 
-	atomic_add(&ipstat.ips_total, 1);
+	ipstat.ips_total++;
+	/* Get the whole header in the first mbuf */
+	if (m->m_len < sizeof(struct ip) && 
+	    (m = m_pullup(m, sizeof(struct ip))) == NULL) {
+		ipstat.ips_toosmall++;
+		return -1;
+	}
+	ip = mtod(m, struct ip *);
 
+	/* Check IP version... */
 	if (ip->ip_v != IPVERSION) {
-		printf("Wrong IP version!\n");
-		atomic_add(&ipstat.ips_badvers, 1);
-		m_freem(buf);
-		return 0;
+		printf("Wrong IP version! %d\n", ip->ip_v);
+		ipstat.ips_badvers++;
+		goto bad;
+	}
+	/* Figure out of header length */
+	hlen = ip->ip_hl << 2;
+	/* Check we're at least the minimum possible length */
+	if (hlen < sizeof(struct ip)) {
+		ipstat.ips_badhlen++;
+		goto bad;
+	}
+	/* Check again we have the entire header in the first mbuf */
+	if (hlen > m->m_len) {
+		if ((m = m_pullup(m, hlen)) == NULL) {
+			ipstat.ips_badhlen++;
+			goto bad;
+		}
+		ip = mtod(m, struct ip *);
 	}
 
-	if (in_cksum(buf, ip->ip_hl * 4, 0) != 0) {
-		printf("Bogus checksum! Discarding packet.\n");
-		atomic_add(&ipstat.ips_badsum, 1);
-		m_freem(buf);
-		return 0;
+	/* Checksum (should be 0) */	
+	if ((ip->ip_sum = in_cksum(m, hlen, 0)) != 0) {
+		printf("ipv4_input: checksum failed\n");
+		ipstat.ips_badsum++;
+		goto bad;
 	}
 
 	/* we put the length into host order here... */
 	ip->ip_len = ntohs(ip->ip_len);
+	/* sanity check. Datagram MUST be longer than the header! */
+	if (ip->ip_len < hlen) {
+		ipstat.ips_badhlen++;
+		goto bad;
+	}
+	ip->ip_id = ntohs(ip->ip_id);
+	ip->ip_off = ntohs(ip->ip_off);
+	
+	/* the first mbuf should be the packet hdr, so check it's length */
+	if (m->m_pkthdr.len < ip->ip_len) {
+		ipstat.ips_tooshort++;
+		goto bad;
+	}
 
 	/* Strip excess data from mbuf */
-	if (buf->m_len > ip->ip_len)
-		 m_adj(buf, ip->ip_len - buf->m_len);
+	if (m->m_pkthdr.len > ip->ip_len) {
+		if (m->m_len == m->m_pkthdr.len) {
+			m->m_len = ip->ip_len;
+			m->m_pkthdr.len = ip->ip_len;
+		} else 
+			m_adj(m, ip->ip_len - m->m_pkthdr.len);
+	}
 
+	/* options processing */	
+	ip_nhops = 0;
+	if (hlen > sizeof(struct ip) && ip_dooptions(m))
+		return 0;
+	
+	for (;ia; ia = ia->ia_next) {
+		if (IA_SIN(ia)->sin_addr.s_addr == ip->ip_dst.s_addr)
+			goto ours;
+		
+		if (ia->ia_ifp == m->m_pkthdr.rcvif && 
+		    (ia->ia_ifp->if_flags & IFF_BROADCAST)) {
+			uint32 t;
+			
+			if (satosin(&ia->ia_broadaddr)->sin_addr.s_addr == ip->ip_dst.s_addr)
+				goto ours;
+			if (ip->ip_dst.s_addr == ia->ia_netbroadcast.s_addr)
+				goto ours;
+			t = ntohl(ip->ip_dst.s_addr);
+			if (t == ia->ia_subnet)
+				goto ours;
+			if (t == ia->ia_net)
+				goto ours;
+		}
+	}
+	
+	if (ip->ip_dst.s_addr == INADDR_BROADCAST)
+		goto ours;
+	if (ip->ip_dst.s_addr == INADDR_ANY)
+		goto ours;
+	
+	if (ipforwarding == 0) {
+		ipstat.ips_cantforward++;
+		m_freem(m);
+	}
+	/* XXX - Add ip_forward routine and call it here */
+	return -1;
+ours:
+	/* If offset or IF_MF are set, datagram must be reassembled.
+	 * Otherwise, we don't need to do anything.
+	 */
+	/* XXX - add refragment here... */
+	ip->ip_len -= hlen;
+
+	ipstat.ips_delivered++;
 	if (proto[ip->ip_p] && proto[ip->ip_p]->pr_input) {
-		return proto[ip->ip_p]->pr_input(buf, ip->ip_hl * 4);
-	} else
+		return proto[ip->ip_p]->pr_input(m, hlen);
+	} else {
 		printf("proto[%d] = %p\n", ip->ip_p, proto[ip->ip_p]);
-
+		goto bad;
+	}
+	
 	return 0; 
+bad:
+	m_freem(m);
+	return -1;
 }
 
 int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
