@@ -15,7 +15,7 @@ BitmapMenuItem::BitmapMenuItem(const char* name, BMessage* message,
 	fBmp = bmp;
 	fName.SetTo(name);
 
-	fCheckBmp = BTranslationUtils::GetBitmap("check.bmp");
+	fCheckBmp = BTranslationUtils::GetBitmap(B_RAW_TYPE, "CHECK");
 }
 
 void BitmapMenuItem::Draw(void)
