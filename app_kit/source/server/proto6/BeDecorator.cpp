@@ -22,14 +22,22 @@ printf("BeDecorator()\n");
 
 	// These hard-coded assignments will go bye-bye when the system colors 
 	// API is implemented
+
 	SetRGBColor(&tab_highcol,255,236,33);
 	SetRGBColor(&tab_lowcol,234,181,0);
+//	SetRGBColor(&tab_highcol,255,0,0);
+//	SetRGBColor(&tab_lowcol,168,0,0);
 
 	SetRGBColor(&button_highcol,255,255,0);
 	SetRGBColor(&button_lowcol,255,203,0);
+//	SetRGBColor(&button_highcol,255,50,0);
+//	SetRGBColor(&button_lowcol,168,50,0);
 
 	SetRGBColor(&frame_highercol,216,216,216);
 	SetRGBColor(&frame_lowercol,110,110,110);
+
+	SetRGBColor(&textcol,0,0,0);
+//	SetRGBColor(&textcol,255,255,255);
 	
 	frame_highcol=MakeBlendColor(frame_lowercol,frame_highercol,0.75);
 	frame_midcol=MakeBlendColor(frame_lowercol,frame_highercol,0.5);
@@ -191,8 +199,11 @@ void BeDecorator::UpdateTitle(const char *string)
 	if(string)
 	{
 		driver->SetDrawingMode(B_OP_OVER);
+		rgb_color tmpcol=driver->HighColor();
+		driver->SetHighColor(textcol.red,textcol.green,textcol.blue);
 		driver->DrawString((char *)string,strlen(string),
 			BPoint(closerect.right+7,closerect.bottom));
+		driver->SetHighColor(tmpcol.red,tmpcol.green,tmpcol.blue);
 		driver->SetDrawingMode(B_OP_COPY);
 	}
 
@@ -349,8 +360,7 @@ void BeDecorator::DrawBlendedRect(BRect r, bool down)
 
 	}
 	
-	SetRGBColor(&tmpcol, 128,128,0);
-	driver->StrokeRect(r,tmpcol);
+	driver->StrokeRect(r,frame_lowcol);
 }
 
 void BeDecorator::DrawFrame(void)
@@ -443,7 +453,10 @@ void BeDecorator::DrawFrame(void)
 		}
 		else
 		{
-			
+			driver->StrokeLine(BPoint(r.right,r.top),BPoint(r.right-3,r.top),
+				frame_lowercol);
+			driver->StrokeLine(BPoint(r.left,r.bottom),BPoint(r.left,r.bottom-3),
+				frame_lowercol);
 		}
 	}
 }

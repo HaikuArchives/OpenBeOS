@@ -37,6 +37,7 @@ public:
 	rgb_color button_highcol, button_lowcol;
 	rgb_color frame_highcol, frame_midcol, frame_lowcol, frame_highercol,
 		frame_lowercol;
+	rgb_color textcol;
 
 	BRect zoomrect,closerect,tabrect,frame,
 		resizerect,borderrect;
