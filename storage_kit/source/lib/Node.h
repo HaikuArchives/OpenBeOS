@@ -53,7 +53,6 @@ struct node_ref {
 
 
 	@author <a href='mailto:tylerdauwalder@users.sf.net'>Tyler Dauwalder</a>
-	@author Be Inc.	
 	@version 0.0.0
 
 */
