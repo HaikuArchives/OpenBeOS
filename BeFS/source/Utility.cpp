@@ -7,6 +7,7 @@
 
 #include "Utility.h"
 #include "Debug.h"
+#include "cpp.h"
 
 #include <stdlib.h>
 #include <string.h>
