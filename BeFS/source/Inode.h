@@ -54,22 +54,22 @@ class CachedBlock {
 		{
 		}
 
-		CachedBlock(Volume *volume,off_t block)
+		CachedBlock(Volume *volume,off_t block,bool empty = false)
 			:
 			fVolume(volume),
 			fBlock(NULL)
 		{
-			SetTo(block);
+			SetTo(block,empty);
 		}
-		
-		CachedBlock(Volume *volume,block_run run)
+
+		CachedBlock(Volume *volume,block_run run,bool empty = false)
 			:
 			fVolume(volume),
 			fBlock(NULL)
 		{
-			SetTo(volume->ToBlock(run));
+			SetTo(volume->ToBlock(run),empty);
 		}
-		
+
 		~CachedBlock()
 		{
 			Unset();
@@ -81,28 +81,17 @@ class CachedBlock {
 				release_block(fVolume->Device(),fBlockNumber);
 		}
 
-		uint8 *SetTo(off_t block)
+		uint8 *SetTo(off_t block,bool empty = false)
 		{
 			Unset();
 			fBlockNumber = block;
-			return fBlock = (uint8 *)get_block(fVolume->Device(),block,fVolume->BlockSize());
-		}
-		
-		uint8 *SetTo(block_run run)
-		{
-			return SetTo(fVolume->ToBlock(run));
+			return fBlock = empty ? (uint8 *)get_empty_block(fVolume->Device(),block,fVolume->BlockSize())
+								  : (uint8 *)get_block(fVolume->Device(),block,fVolume->BlockSize());
 		}
 
-		uint8 *SetToEmpty(off_t block)
+		uint8 *SetTo(block_run run,bool empty = false)
 		{
-			Unset();
-			fBlockNumber = block;
-			return fBlock = (uint8 *)get_empty_block(fVolume->Device(),block,fVolume->BlockSize());
-		}
-		
-		uint8 *SetToEmpty(block_run run)
-		{
-			return SetToEmpty(fVolume->ToBlock(run));
+			return SetTo(fVolume->ToBlock(run),empty);
 		}
 
 		status_t WriteBack(Transaction *transaction)
@@ -125,7 +114,7 @@ class CachedBlock {
 
 class Inode : public CachedBlock {
 	public:
-		Inode(Volume *volume,vnode_id id,uint8 reenter = 0);
+		Inode(Volume *volume,vnode_id id,bool empty = false,uint8 reenter = 0);
 		~Inode();
 
 		ReadWriteLock &Lock() { return fLock; }

@@ -342,7 +342,7 @@ bfs_read_vnode(void *_ns, vnode_id id, char reenter, void **node)
 		return B_ERROR;
 	}
 
-	Inode *inode = new Inode(volume,id,reenter);
+	Inode *inode = new Inode(volume,id,false,reenter);
 	if (inode->InitCheck() == B_OK) {
 		*node = (void *)inode;
 		return B_OK;

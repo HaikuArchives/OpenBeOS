@@ -14,8 +14,69 @@
 #include <string.h>
 
 
-Inode::Inode(Volume *volume,vnode_id id,uint8 reenter)
-	: CachedBlock(volume,volume->VnodeToBlock(id)),
+class InodeAllocator {
+	public:
+		InodeAllocator(Transaction *transaction);
+		~InodeAllocator();
+
+		status_t New(block_run *parentRun,mode_t mode,block_run &run,Inode **inode);
+		void Keep();
+
+	private:
+		Transaction *fTransaction;
+		block_run fRun;
+		Inode *fInode;
+};
+
+
+InodeAllocator::InodeAllocator(Transaction *transaction)
+	:
+	fTransaction(transaction),
+	fInode(NULL)
+{
+}
+
+
+InodeAllocator::~InodeAllocator()
+{
+	delete fInode;
+	
+	if (fTransaction)
+		fTransaction->fVolume->Free(fTransaction,fRun);
+}
+
+
+status_t 
+InodeAllocator::New(block_run *parentRun, mode_t mode, block_run &run, Inode **inode)
+{
+	Volume *volume = fTransaction->fVolume;
+
+	status_t status = volume->AllocateForInode(fTransaction,parentRun,mode,fRun);
+	if (status < B_OK)
+		return status;
+
+	run = fRun;
+	fInode = new Inode(volume,volume->ToVnode(run),true);
+	if (fInode == NULL)
+		return B_NO_MEMORY;
+
+	*inode = fInode;
+	return B_OK;
+}
+
+
+void InodeAllocator::Keep()
+{
+	fTransaction = NULL;
+	fInode = NULL;
+}
+
+
+//	#pragma mark -
+
+
+Inode::Inode(Volume *volume,vnode_id id,bool empty,uint8 reenter)
+	: CachedBlock(volume,volume->VnodeToBlock(id),empty),
 	fTree(NULL),
 	fLock("bfs inode")
 {
@@ -927,7 +988,7 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 				// make sure those blocks are empty
 				block = fVolume->ToBlock(data->indirect);					
 				for (int32 i = 1;i < data->indirect.length;i++) {
-					block_run *runs = (block_run *)cached.SetToEmpty(block + i);
+					block_run *runs = (block_run *)cached.SetTo(block + i,true);
 					if (runs == NULL)
 						return B_IO_ERROR;
 
@@ -935,7 +996,7 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 				}
 				data->max_indirect_range = data->max_direct_range;
 				// insert the block_run in the first block
-				runs = (block_run *)cached.SetToEmpty(block);
+				runs = (block_run *)cached.SetTo(block,true);
 			} else {
 				uint32 numberOfRuns = ((uint32)data->indirect.length << fVolume->BlockShift()) / sizeof(block_run);
 				block = fVolume->ToBlock(data->indirect);
@@ -1226,27 +1287,16 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 		return B_BAD_VALUE;
 
 	// allocate space for the new inode
+	InodeAllocator allocator(transaction);
 	block_run run;
-	status_t status = volume->AllocateForInode(transaction,&parentRun,mode,run);
+	Inode *inode;
+	status_t status = allocator.New(&parentRun,mode,run,&inode);
 	if (status < B_OK)
 		return status;
-
-	Inode *inode = new Inode(volume,volume->ToVnode(run));
-	if (inode == NULL)
-		return B_NO_MEMORY;
-
-	// add name to the parent's B+tree (if it's a directory of some kind)
-	if (tree && tree->Insert(transaction,name,volume->ToBlock(run)) < B_OK) {
-		RETURN_ERROR(B_ERROR);
-	} else if (parent && mode & S_ATTR_DIR) {
-		parent->Attributes() = run;
-		parent->WriteBack(transaction);
-	}
 
 	// initialize the on-disk bfs_inode structure 
 
 	bfs_inode *node = inode->Node();
-	memset(node,0,volume->BlockSize());
 
 	node->magic1 = INODE_MAGIC1;
 	node->inode_num = run;
@@ -1293,6 +1343,16 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 
 	if (new_vnode(volume->ID(),inode->ID(),inode) != B_OK)
 		return B_ERROR;
+
+	// add a link to the inode from the parent, depending on its type
+	if (tree && tree->Insert(transaction,name,volume->ToBlock(run)) < B_OK) {
+		RETURN_ERROR(B_ERROR);
+	} else if (parent && mode & S_ATTR_DIR) {
+		parent->Attributes() = run;
+		parent->WriteBack(transaction);
+	}
+
+	allocator.Keep();
 
 	// if there is no parent, we don't have to notify as this will only be the case
 	// for the root node, and the root index directory
