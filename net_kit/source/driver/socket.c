@@ -29,13 +29,6 @@ extern void notify_select_event(selectsync * sync, uint32 ref);
 #include "net_structures.h"
 #include "sys/select.h"
 
-struct be_sockaddr_in {
-	uint8  sin_family;
-	uint16 sin_port;
-	uint32 sin_addr;
-	char sin_zero[4];
-};
-
 /*
  * Local definitions
  * -----------------
@@ -44,7 +37,6 @@ struct be_sockaddr_in {
 /* the cookie we attach to each file descriptor opened on our driver entry */
 typedef struct {
 	void *		socket;		/* NULL before ioctl(fd, NET_SOCKET_SOCKET/ACCEPT) */
-	int         r5;         /* is it an R5 app ? */
 	uint32		open_flags;	/* the open() flags (mostly for storing O_NONBLOCK mode) */
 	struct {
 		selectsync *	sync;
@@ -288,8 +280,7 @@ static status_t net_socket_control(void *cookie,
 
 	switch (op) {
 		case NET_SOCKET_CREATE: {
-			struct socket_args * sa = (struct socket_args*)data;
-			nsc->r5 = sa->r5;
+			struct socket_args *sa = (struct socket_args*)data;
 			
 			sa->rv = core->initsocket(&nsc->socket);
 			if (sa->rv != 0)
@@ -301,27 +292,8 @@ static status_t net_socket_control(void *cookie,
 		}
 		case NET_SOCKET_CONNECT: {
 			struct connect_args * ca = (struct connect_args *) data;
-			struct be_sockaddr_in * bsa;
-			struct sockaddr_in sin;
-			
-			if (nsc->r5) {
-				dprintf("BEOS R5 App!\n");
-				bsa = (struct be_sockaddr_in*)ca->name;
-				memset(&sin, 0, sizeof(sin));
-				sin.sin_family = bsa->sin_family;
-				sin.sin_port = bsa->sin_port;
-				sin.sin_addr.s_addr = bsa->sin_addr;
-				sin.sin_len = sizeof(sin);
-dprintf("connect: sin: [%d] %08lx:%d\n", sin.sin_family, sin.sin_addr.s_addr, sin.sin_port);
-				ca->name = (caddr_t)&sin;
-				ca->namelen = sizeof(sin);
-			}
 			ca->rv = core->soconnect(nsc->socket, ca->name, ca->namelen);
 			/* restore original settings... */
-			if (nsc->r5) {
-				ca->name = (caddr_t) bsa;
-				ca->namelen = sizeof(struct be_sockaddr_in);
-			}			
 			return B_OK;
 		}
 		case NET_SOCKET_BIND: {
