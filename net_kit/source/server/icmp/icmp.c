@@ -88,6 +88,7 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 				satosin(&rt.ro_dst)->sin_len = sizeof(rt.ro_dst);
 				satosin(&rt.ro_dst)->sin_addr = ip->ip_src;
 			}
+			printf("icmp_output: replying...\n");
 			error = proto[IPPROTO_IP]->pr_output(buf, NULL, &rt, 0, NULL);
 			if (error == 0)
 				icmprt = rt;
@@ -128,6 +129,7 @@ struct protosw my_proto = {
 	NULL,//&icmp_output,
 	NULL,
 	NULL,         /* pr_sysctl */
+	NULL,         /* pr_ctloutput */
 	
 	NULL,
 	NULL
