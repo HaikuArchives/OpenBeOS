@@ -9,18 +9,22 @@
 #include "sys/socket.h"
 #include "sys/socketvar.h"
 #include "sys/sockio.h"
+#include "sys/protosw.h"
 #include "pools.h"
+#include "net/if.h"
+#include "netinet/in.h"
 #include "netinet/in_pcb.h"
 #include "net_module.h"
 #include "net_misc.h"
 #include "protocols.h"
 #include "mbuf.h"
 #include "sys/net_uio.h"
+#ifdef _KERNEL_MODE
 #include "core_module.h"
+#endif
 
 static pool_ctl *spool;
 static benaphore sockets_lock;
-
 
 /* for now - should be moved to be_error.h */
 #define EDESTADDRREQ EINVAL
@@ -172,21 +176,32 @@ bad:
 }
 
 
-int sobind(void *sp, struct mbuf *nam)
+int sobind(void *sp, caddr_t data, int len)
 {
 	int error;
+	struct mbuf *nam = m_get(MT_DATA);
 	struct socket *so = (struct socket*)sp;
-	
+
+printf("sobind: data = %p, len = %d, nam = %p\n", data, len, nam);	
+	if (!nam)
+		return ENOMEM;
+
+	nam->m_len = len;
+printf("sobind: About to memcpy data...\n");
+	memcpy(mtod(nam, char*), data, len);
+printf("calling pr_userreq\n");		
 /* xxx - locking! */
 	error = (*so->so_proto->pr_userreq) (so, PRU_BIND, NULL, nam, NULL);
-
+	
+	m_freem(nam);
+	
 	return error;
 }
 
 
-int sendit(int sock, struct msghdr *mp, int flags, size_t *retsize)
+int sendit(void *sp, struct msghdr *mp, int flags, int *retsize)
 {
-	struct sock_fd *sfd = NULL;
+	struct socket *so = (struct socket *)sp;
 	struct uio auio;
 	struct iovec *iov;
 	int i;
@@ -194,10 +209,7 @@ int sendit(int sock, struct msghdr *mp, int flags, size_t *retsize)
 	struct mbuf *control;
 	int len;
 	int error;
-/*
-	if ((error = get_sock(sock, &sfd)) != 0)
-		return error;
-*/
+
 	auio.uio_iov = mp->msg_iov;
 	auio.uio_iovcnt = mp->msg_iovlen;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -233,7 +245,7 @@ int sendit(int sock, struct msghdr *mp, int flags, size_t *retsize)
 
 	len = auio.uio_resid;
 
-	error = sosend(sfd->so, to, &auio, NULL, control, flags);
+	error = sosend(so, to, &auio, NULL, control, flags);
 	if (error) {
 		/* what went wrong! */
 		if (auio.uio_resid != len && (/*error == ERESTART || */
@@ -424,6 +436,7 @@ int recvit(void *sp, struct msghdr *mp, caddr_t namelenp, int *retsize)
 	struct mbuf *from = NULL;
 	int error = 0, i, len = 0;
 
+	printf("recvit!\n");
 	auio.uio_iov = mp->msg_iov;
 	auio.uio_iovcnt = mp->msg_iovlen;
 	auio.uio_segflg = UIO_USERSPACE;
