@@ -21,6 +21,31 @@
 /* Not really sure if this is safe... */
 #define EHOSTDOWN	(B_POSIX_ERROR_BASE + 45)
 
+/* These are GCC only, so we'll need PPC version eventually... */
+struct quehead {
+	struct quehead *qh_link;
+	struct quehead *qh_rlink;
+};
+
+static __inline void insque(void *a, void *b)
+{
+	struct quehead *element = (struct quehead *)a,
+		 *head = (struct quehead *)b;
+
+	element->qh_link = head->qh_link;
+	element->qh_rlink = head;
+	head->qh_link = element;
+	element->qh_link->qh_rlink = element;
+}
+
+static __inline void remque(void *a)
+{
+	struct quehead *element = (struct quehead *)a;
+
+	element->qh_link->qh_rlink = element->qh_rlink;
+	element->qh_rlink->qh_link = element->qh_link;
+	element->qh_rlink = 0;
+}
 
 /* DEBUG Options!
  *
