@@ -5,6 +5,10 @@
 //  File Name: SymLink.cpp
 //---------------------------------------------------------------------
 #include <SymLink.h>
+#include <Directory.h>
+#include <Entry.h>
+#include <Path.h>
+#include <storage_support.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
@@ -16,19 +20,21 @@ enum {
 
 // constructor
 //! Creates an uninitialized BSymLink object.
-/*!	\todo Implement! */
 BSymLink::BSymLink()
 		: BNode()
+	// WORKAROUND
+		, fSecretEntry(new BEntry)
 {
 }
 
 // copy constructor
 //! Creates a copy of the supplied BSymLink.
 /*!	\param link the BSymLink object to be copied
-	\todo Implement!
 */
 BSymLink::BSymLink(const BSymLink &link)
 		: BNode()
+	// WORKAROUND
+		, fSecretEntry(new BEntry)
 {
 	*this = link;
 }
@@ -37,33 +43,39 @@ BSymLink::BSymLink(const BSymLink &link)
 /*! \brief Creates a BSymLink and initializes it to the symbolic link referred
 	to by the supplied entry_ref.
 	\param ref the entry_ref referring to the symbolic link
-	\todo Implement!
 */
 BSymLink::BSymLink(const entry_ref *ref)
 		: BNode()
+	// WORKAROUND
+		, fSecretEntry(new BEntry)
 {
+	SetTo(ref);
 }
 
 // constructor
 /*! \brief Creates a BSymLink and initializes it to the symbolic link referred
 	to by the supplied BEntry.
 	\param entry the BEntry referring to the symbolic link
-	\todo Implement!
 */
 BSymLink::BSymLink(const BEntry *entry)
 		: BNode()
+	// WORKAROUND
+		, fSecretEntry(new BEntry)
 {
+	SetTo(entry);
 }
 
 // constructor
 /*! \brief Creates a BSymLink and initializes it to the symbolic link referred
 	to by the supplied path name.
 	\param path the symbolic link's path name 
-	\todo Implement!
 */
 BSymLink::BSymLink(const char *path)
 		: BNode()
+	// WORKAROUND
+		, fSecretEntry(new BEntry)
 {
+	SetTo(path);
 }
 
 // constructor
@@ -72,22 +84,78 @@ BSymLink::BSymLink(const char *path)
 	\param dir the BDirectory, relative to which the symbolic link's path name
 		   is given
 	\param path the symbolic link's path name relative to \a dir
-	\todo Implement!
 */
 BSymLink::BSymLink(const BDirectory *dir, const char *path)
 		: BNode()
+	// WORKAROUND
+		, fSecretEntry(new BEntry)
 {
+	SetTo(dir, path);
 }
 
 // destructor
 //! Frees all allocated resources.
 /*! If the BSymLink is properly initialized, the symbolic link's file
 	descriptor is closed.
-	\todo Implement!
 */
 BSymLink::~BSymLink()
 {
+	// WORKAROUND
+	delete fSecretEntry;
 }
+
+// WORKAROUND
+status_t
+BSymLink::SetTo(const entry_ref *ref)
+{
+	status_t error = BNode::SetTo(ref);
+	fSecretEntry->Unset();
+	if (error == B_OK)
+		fSecretEntry->SetTo(ref);
+	return error;
+}
+
+// WORKAROUND
+status_t
+BSymLink::SetTo(const BEntry *entry)
+{
+	status_t error = BNode::SetTo(entry);
+	fSecretEntry->Unset();
+	if (error == B_OK)
+		*fSecretEntry = *entry;
+	return error;
+}
+
+// WORKAROUND
+status_t
+BSymLink::SetTo(const char *path)
+{
+	status_t error = BNode::SetTo(path);
+	fSecretEntry->Unset();
+	if (error == B_OK)
+		fSecretEntry->SetTo(path);
+	return error;
+}
+
+// WORKAROUND
+status_t
+BSymLink::SetTo(const BDirectory *dir, const char *path)
+{
+	status_t error = BNode::SetTo(dir, path);
+	fSecretEntry->Unset();
+	if (error == B_OK)
+		fSecretEntry->SetTo(dir, path);
+	return error;
+}
+
+// WORKAROUND
+void
+BSymLink::Unset()
+{
+	BNode::Unset();
+	fSecretEntry->Unset();
+}
+
 
 // ReadLink
 //! Reads the contents of the symbolic link into a buffer.
@@ -99,12 +167,33 @@ BSymLink::~BSymLink()
 	  link.
 	- \c B_FILE_ERROR: The object is not initialized.
 	- some other error code
-	\todo Implement!
 */
 ssize_t
 BSymLink::ReadLink(char *buf, size_t size)
 {
-	return NOT_IMPLEMENTED;
+/*
+	status_t error = (buf ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && InitCheck() != B_OK)
+		error = B_FILE_ERROR;
+	if (error == B_OK)
+		error = StorageKit::read_link(get_fd(), buf, size);
+	return error;
+*/
+// WORKAROUND
+	status_t error = (buf ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && (InitCheck() != B_OK
+		|| fSecretEntry->InitCheck() != B_OK)) {
+		error = B_FILE_ERROR;
+	}
+	entry_ref ref;
+	if (error == B_OK)
+		error = fSecretEntry->GetRef(&ref);
+	char path[B_PATH_NAME_LENGTH + 1];
+	if (error == B_OK)
+		error = StorageKit::entry_ref_to_path(&ref, path, sizeof(path));
+	if (error == B_OK)
+		error = StorageKit::read_link(path, buf, size);
+	return error;
 }
 
 // MakeLinkedPath
@@ -124,7 +213,16 @@ BSymLink::ReadLink(char *buf, size_t size)
 ssize_t
 BSymLink::MakeLinkedPath(const char *dirPath, BPath *path)
 {
-	return NOT_IMPLEMENTED;
+	ssize_t result = (dirPath && path ? 0 : B_BAD_VALUE);
+	char contents[B_PATH_NAME_LENGTH + 1];
+	if (result == 0)
+		result = ReadLink(contents, sizeof(contents));
+	if (result >= 0) {
+		result = path->SetTo(dirPath, contents);
+		if (result == B_OK)
+			result = strlen(path->Path());
+	}
+	return result;
 }
 
 // MakeLinkedPath
@@ -144,7 +242,16 @@ BSymLink::MakeLinkedPath(const char *dirPath, BPath *path)
 ssize_t
 BSymLink::MakeLinkedPath(const BDirectory *dir, BPath *path)
 {
-	return NOT_IMPLEMENTED;
+	ssize_t result = (dir && path ? 0 : B_BAD_VALUE);
+	char contents[B_PATH_NAME_LENGTH + 1];
+	if (result == 0)
+		result = ReadLink(contents, sizeof(contents));
+	if (result >= 0) {
+		result = path->SetTo(dir, contents);
+		if (result == B_OK)
+			result = strlen(path->Path());
+	}
+	return result;
 }
 
 // IsAbsolute
@@ -158,35 +265,25 @@ BSymLink::MakeLinkedPath(const BDirectory *dir, BPath *path)
 bool
 BSymLink::IsAbsolute()
 {
-	return false;	// not implemented
+	char contents[B_PATH_NAME_LENGTH + 1];
+	bool result = (ReadLink(contents, sizeof(contents)) >= 0);
+	if (result)
+		result = StorageKit::is_absolute_path(contents);
+	return result;
 }
 
-// =
-//! Assigns another BSymLink to this BSymLink.
-/*!	If the other BSymLink is uninitialized, this one will be too. Otherwise
-	it will refer to the same symbolic link, unless an error occurs.
-	\param link the original BSymLink
-	\return a reference to this BSymLink
-*/
-/*BSymLink &
+// WORKAROUND
+BSymLink &
 BSymLink::operator=(const BSymLink &link)
 {
-	Unset();
-	if (link.InitCheck() == B_OK) {
-		// duplicate the file descriptor
-		StorageKit::FileDescriptor fd = -1;
-		status_t status = StorageKit::dup(dir.get_fd(), fd);
-		// set it
-		if (status == B_OK) {
-			status = set_fd(fd);
-			if (status != B_OK)
-				StorageKit::close(fd);
-		}
-		set_status(status);
+	if (&link != this) {	// no need to assign us to ourselves
+		Unset();
+		static_cast<BNode&>(*this) = link;
+		*fSecretEntry = *link.fSecretEntry;
 	}
 	return *this;
 }
-*/
+
 
 void BSymLink::_ReservedSymLink1() {}
 void BSymLink::_ReservedSymLink2() {}
@@ -194,6 +291,16 @@ void BSymLink::_ReservedSymLink3() {}
 void BSymLink::_ReservedSymLink4() {}
 void BSymLink::_ReservedSymLink5() {}
 void BSymLink::_ReservedSymLink6() {}
+
+//! Returns the BSymLink's file descriptor.
+/*! To be used instead of accessing the BNode's private \c fFd member directly.
+	\return the file descriptor, or -1, if not properly initialized.
+*/
+StorageKit::FileDescriptor
+BSymLink::get_fd() const
+{
+	return fFd;
+}
 
 
 #ifdef USE_OPENBEOS_NAMESPACE

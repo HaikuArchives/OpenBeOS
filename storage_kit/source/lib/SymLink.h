@@ -34,6 +34,15 @@ public:
 	BSymLink(const char *path);
 	BSymLink(const BDirectory *dir, const char *path);
 
+	// WORKAROUND
+	// SetTo() methods: Part of a work around until someone has an idea how to
+	// get StorageKit::read_link(FileDescriptor,...) to work.
+	status_t SetTo(const entry_ref *ref);
+	status_t SetTo(const BEntry *entry);
+	status_t SetTo(const char *path);
+	status_t SetTo(const BDirectory *dir, const char *path);
+	void Unset();
+
 	virtual ~BSymLink();
 
 	ssize_t ReadLink(char *buf, size_t size);
@@ -43,7 +52,10 @@ public:
 
 	bool IsAbsolute();
 
-//	BSymLink &operator=(const BSymLink &dir);
+	// WORKAROUND
+	// operator=(): Part of a work around until someone has an idea how to
+	// get StorageKit::read_link(FileDescriptor,...) to work.
+	BSymLink &operator=(const BSymLink &link);
 
 private:
 	virtual void _ReservedSymLink1();
@@ -53,7 +65,15 @@ private:
 	virtual void _ReservedSymLink5();
 	virtual void _ReservedSymLink6();
 
-	uint32 _reservedData[4];
+	// WORKAROUND
+	// fSecretEntry: Part of a work around until someone has an idea how to
+	// get StorageKit::read_link(FileDescriptor,...) to work.
+//	uint32 _reservedData[4];
+	uint32 _reservedData[3];
+	BEntry *fSecretEntry;
+
+private:
+	StorageKit::FileDescriptor get_fd() const;
 };
 
 #ifdef USE_OPENBEOS_NAMESPACE
