@@ -36,7 +36,7 @@
 #ifndef PDFLIB_H
 #define PDFLIB_H
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * Setup, mostly Windows calling conventions and DLL stuff
  * ----------------------------------------------------------------------
@@ -54,7 +54,7 @@
 #elif defined(PDFLIB_DLL)
 #define PDFLIB_API __declspec(dllimport) /* PDFlib clients: import PDFlib DLL */
 
-#else	/* !PDFLIB_DLL */	
+#else	/* !PDFLIB_DLL */
 #define PDFLIB_API /* */	/* default: generate or use static library */
 
 #endif	/* !PDFLIB_DLL */
@@ -75,6 +75,11 @@
 
 #endif	/* !WIN32 */
 
+/* export all symbols for a shared library on the Mac */
+#if defined(__MWERKS__) && defined(PDFLIB_EXPORTS)
+#pragma export on
+#endif
+
 /* Make our declarations C++ compatible */
 #ifdef __cplusplus
 extern "C" {
@@ -83,8 +88,11 @@ extern "C" {
 /* Define the basic PDF type. This is used opaquely at the API level. */
 typedef struct PDF_s PDF;
 
+/* The API structure with function pointers. */
+typedef struct PDFlib_api_s PDFlib_api;
 
-/* 
+
+/*
  * ----------------------------------------------------------------------
  * p_basic.c: general functions
  * ----------------------------------------------------------------------
@@ -98,8 +106,8 @@ typedef struct PDF_s PDF;
 /* do not change this (version.sh will do it for you :) */
 #define PDFLIB_MAJORVERSION	4	/* PDFlib major version number */
 #define PDFLIB_MINORVERSION	0	/* PDFlib minor version number */
-#define PDFLIB_REVISION		2	/* PDFlib revision number */
-#define PDFLIB_VERSIONSTRING	"4.0.2"	/* The whole bunch */
+#define PDFLIB_REVISION		3	/* PDFlib revision number */
+#define PDFLIB_VERSIONSTRING	"4.0.3"	/* The whole bunch */
 
 /*
  * Allow for the external and internal float type to be easily redefined.
@@ -108,6 +116,10 @@ typedef struct PDF_s PDF;
  * compatibility issues.
 */
 /* #define float double */
+
+/* Retrieve a structure with PDFlib API function pointers (mainly for DLLs) */
+PDFLIB_API PDFlib_api * PDFLIB_CALL
+PDF_get_api(void);
 
 /* Returns the PDFlib major version number. */
 PDFLIB_API int PDFLIB_CALL
@@ -190,7 +202,7 @@ PDF_end_page(PDF *p);
 #define PDF_UnknownError  12
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_params.c: parameter handling
  * ----------------------------------------------------------------------
@@ -213,7 +225,7 @@ PDFLIB_API float PDFLIB_CALL
 PDF_get_value(PDF *p, const char *key, float modifier);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_font.c: text and font handling
  * ----------------------------------------------------------------------
@@ -235,7 +247,7 @@ PDF_setfont(PDF *p, int font, float fontsize);
 PDFLIB_API const char * PDFLIB_CALL
 PDF_encoding_get_name(PDF *p, const char *encoding, int slot);
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_text.c: text output
  * ----------------------------------------------------------------------
@@ -276,7 +288,7 @@ PDF_set_text_pos(PDF *p, float x, float y);
 PDFLIB_API float PDFLIB_CALL
 PDF_stringwidth(PDF *p, const char *text, int font, float size);
 
-/* Function duplicates with explicit string length for use with 
+/* Function duplicates with explicit string length for use with
 strings containing null characters. These are for C and C++ clients only,
 but are used internally for the other language bindings. */
 
@@ -297,7 +309,7 @@ PDFLIB_API float PDFLIB_CALL
 PDF_stringwidth2(PDF *p, const char *text, int len, int font, float size);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_gstate.c: graphics state
  * ----------------------------------------------------------------------
@@ -371,7 +383,7 @@ PDFLIB_API void PDFLIB_CALL
 PDF_setmatrix(PDF *p, float a, float b, float c, float d, float e, float f);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_draw.c: path construction, painting, and clipping
  * ----------------------------------------------------------------------
@@ -429,7 +441,7 @@ PDF_fill_stroke(PDF *p);
 PDFLIB_API void PDFLIB_CALL
 PDF_closepath_fill_stroke(PDF *p);
 
-/* Deprecated, use one of the stroke, fill, or clip functions instead. */
+/* End the current path without filling or stroking it. */
 PDFLIB_API void PDFLIB_CALL
 PDF_endpath(PDF *p);
 
@@ -438,7 +450,7 @@ PDFLIB_API void PDFLIB_CALL
 PDF_clip(PDF *p);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_color.c: color handling
  * ----------------------------------------------------------------------
@@ -509,7 +521,7 @@ PDFLIB_API void PDFLIB_CALL
 PDF_end_template(PDF *p);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_image.c: image handling
  * ----------------------------------------------------------------------
@@ -544,7 +556,7 @@ PDFLIB_API void PDFLIB_CALL
 PDF_add_thumbnail(PDF *p, int image);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_ccitt.c: fax-compressed data processing
  * ----------------------------------------------------------------------
@@ -556,7 +568,7 @@ PDF_open_CCITT(PDF *p, const char *filename, int width, int height,
     int BitReverse, int K, int BlackIs1);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_hyper.c: bookmarks and document info fields
  * ----------------------------------------------------------------------
@@ -576,7 +588,7 @@ PDFLIB_API void PDFLIB_CALL
 PDF_set_info(PDF *p, const char *key, const char *value);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_annots.c: file attachments, notes, and links
  * ----------------------------------------------------------------------
@@ -629,7 +641,7 @@ PDFLIB_API void PDFLIB_CALL
 PDF_set_border_dash(PDF *p, float b, float w);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_pdi.c: PDF import (requires the PDI library)
  * ----------------------------------------------------------------------
@@ -666,7 +678,7 @@ PDFLIB_API float PDFLIB_CALL
 PDF_get_pdi_value(PDF *p, const char *key, int doc, int page, int index);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * p_stream.c: output stream handling
  * ----------------------------------------------------------------------
@@ -678,7 +690,7 @@ PDFLIB_API const char * PDFLIB_CALL
 PDF_get_buffer(PDF *p, long *size);
 
 
-/* 
+/*
  * ----------------------------------------------------------------------
  * page size formats
  * ----------------------------------------------------------------------
@@ -723,8 +735,209 @@ Acrobat 4 maximum page size: 200" = 14400 pt = 508 cm
 #define p11x17_width	 (float) 792.0
 #define p11x17_height	 (float) 1224.0
 
+/* The API structure with pointers to all PDFlib API functions */
+struct PDFlib_api_s {
+    /* general functions */
+    PDFlib_api * (PDFLIB_CALL * const PDF_get_api)(void);
+    int  (PDFLIB_CALL * const PDF_get_majorversion)(void);
+    int  (PDFLIB_CALL * const PDF_get_minorversion)(void);
+    void (PDFLIB_CALL * const PDF_boot)(void);
+    void (PDFLIB_CALL * const PDF_shutdown)(void);
+    PDF* (PDFLIB_CALL * const PDF_new2)(errorproc_t errorhandler,
+    				allocproc_t allocproc,
+				reallocproc_t reallocproc,
+				freeproc_t freeproc, void *opaque);
+    void * (PDFLIB_CALL * const PDF_get_opaque)(PDF *p);
+    PDF* (PDFLIB_CALL * const PDF_new)(void);
+    void (PDFLIB_CALL * const PDF_delete)(PDF *);
+    int  (PDFLIB_CALL * const PDF_open_file)(PDF *p, const char *filename);
+    int  (PDFLIB_CALL * const PDF_open_fp)(PDF *p, FILE *fp);
+    void (PDFLIB_CALL * const PDF_open_mem)(PDF *p, writeproc_t writeproc);
+    void (PDFLIB_CALL * const PDF_close)(PDF *p);
+    void (PDFLIB_CALL * const PDF_begin_page)(PDF *p, float width,
+    				float height);
+    void (PDFLIB_CALL * const PDF_end_page)(PDF *p);
+
+    /* parameter handling */
+    void (PDFLIB_CALL * const PDF_set_parameter)(PDF *p,
+				const char *key, const char *value);
+    void (PDFLIB_CALL * const PDF_set_value)(PDF *p, const char *key,
+    				float value);
+    const char* (PDFLIB_CALL * const PDF_get_parameter)(PDF *p,
+				const char *key, float modifier);
+    float (PDFLIB_CALL * const PDF_get_value)(PDF *p, const char *key,
+    				float modifier);
+
+    /* text and font handling */
+    int  (PDFLIB_CALL * const PDF_findfont)(PDF *p, const char *fontname,
+			    const char *encoding, int embed);
+    void (PDFLIB_CALL * const PDF_setfont)(PDF *p, int font, float fontsize);
+    const char * (PDFLIB_CALL * const PDF_encoding_get_name)(PDF *p,
+			    const char *encoding, int slot);
+
+    /* text output */
+    void (PDFLIB_CALL * const PDF_show)(PDF *p, const char *text);
+    void (PDFLIB_CALL * const PDF_show_xy)(PDF *p, const char *text, float x,
+    			float y);
+    void (PDFLIB_CALL * const PDF_continue_text)(PDF *p, const char *text);
+    int  (PDFLIB_CALL * const PDF_show_boxed)(PDF *p, const char *text,
+			float left, float top, float width, float height,
+			const char *hmode, const char *feature);
+    void (PDFLIB_CALL * const PDF_set_text_matrix)(PDF *p, float a, float b,
+					float c, float d, float e, float f);
+    void (PDFLIB_CALL * const PDF_set_text_pos)(PDF *p, float x, float y);
+    float (PDFLIB_CALL * const PDF_stringwidth)(PDF *p,
+				const char *text, int font, float size);
+    void (PDFLIB_CALL * const PDF_show2)(PDF *p, const char *text, int len);
+    void (PDFLIB_CALL * const PDF_show_xy2)(PDF *p, const char *text,
+					    int len, float x, float y);
+    void (PDFLIB_CALL * const PDF_continue_text2)(PDF *p, const char *text,
+					    int len);
+    float (PDFLIB_CALL * const PDF_stringwidth2)(PDF *p, const char *text,
+					    int len, int font, float size);
+    /* graphics state */
+    void (PDFLIB_CALL * const PDF_setdash)(PDF *p, float b, float w);
+    void (PDFLIB_CALL * const PDF_setpolydash)(PDF *p, float *dasharray,
+				    int length);
+    void (PDFLIB_CALL * const PDF_setflat)(PDF *p, float flatness);
+    void (PDFLIB_CALL * const PDF_setlinejoin)(PDF *p, int linejoin);
+    void (PDFLIB_CALL * const PDF_setlinecap)(PDF *p, int linecap);
+    void (PDFLIB_CALL * const PDF_setmiterlimit)(PDF *p, float miter);
+    void (PDFLIB_CALL * const PDF_setlinewidth)(PDF *p, float width);
+    void (PDFLIB_CALL * const PDF_initgraphics)(PDF *p);
+    void (PDFLIB_CALL * const PDF_save)(PDF *p);
+    void (PDFLIB_CALL * const PDF_restore)(PDF *p);
+    void (PDFLIB_CALL * const PDF_translate)(PDF *p, float tx, float ty);
+    void (PDFLIB_CALL * const PDF_scale)(PDF *p, float sx, float sy);
+    void (PDFLIB_CALL * const PDF_rotate)(PDF *p, float phi);
+    void (PDFLIB_CALL * const PDF_skew)(PDF *p, float alpha, float beta);
+    void (PDFLIB_CALL * const PDF_concat)(PDF *p, float a, float b,
+				    float c, float d, float e, float f);
+    void (PDFLIB_CALL * const PDF_setmatrix)(PDF *p, float a, float b,
+				    float c, float d, float e, float f);
+
+    /* path construction, painting, and clipping */
+    void (PDFLIB_CALL * const PDF_moveto)(PDF *p, float x, float y);
+    void (PDFLIB_CALL * const PDF_lineto)(PDF *p, float x, float y);
+    void (PDFLIB_CALL * const PDF_curveto)(PDF *p, float x1, float y1,
+				float x2, float y2, float x3, float y3);
+    void (PDFLIB_CALL * const PDF_circle)(PDF *p, float x, float y, float r);
+    void (PDFLIB_CALL * const PDF_arc)(PDF *p, float x, float y,
+				    float r, float alpha, float beta);
+    void (PDFLIB_CALL * const PDF_arcn)(PDF *p, float x, float y,
+				    float r, float alpha, float beta);
+    void (PDFLIB_CALL * const PDF_rect)(PDF *p, float x, float y,
+				    float width, float height);
+    void (PDFLIB_CALL * const PDF_closepath)(PDF *p);
+    void (PDFLIB_CALL * const PDF_stroke)(PDF *p);
+    void (PDFLIB_CALL * const PDF_closepath_stroke)(PDF *p);
+    void (PDFLIB_CALL * const PDF_fill)(PDF *p);
+    void (PDFLIB_CALL * const PDF_fill_stroke)(PDF *p);
+    void (PDFLIB_CALL * const PDF_closepath_fill_stroke)(PDF *p);
+    void (PDFLIB_CALL * const PDF_endpath)(PDF *p);
+    void (PDFLIB_CALL * const PDF_clip)(PDF *p);
+
+    /* color handling */
+    void (PDFLIB_CALL * const PDF_setgray_fill)(PDF *p, float gray);
+    void (PDFLIB_CALL * const PDF_setgray_stroke)(PDF *p, float gray);
+    void (PDFLIB_CALL * const PDF_setgray)(PDF *p, float gray);
+    void (PDFLIB_CALL * const PDF_setrgbcolor_fill)(PDF *p,
+			float red, float green, float blue);
+    void (PDFLIB_CALL * const PDF_setrgbcolor_stroke)(PDF *p,
+			float red, float green, float blue);
+    void (PDFLIB_CALL * const PDF_setrgbcolor)(PDF *p, float red, float green,
+    			float blue);
+    int  (PDFLIB_CALL * const PDF_makespotcolor)(PDF *p, const char *spotname,
+    			int len);
+    void (PDFLIB_CALL * const PDF_setcolor)(PDF *p,
+			const char *fstype, const char *colorspace,
+			float c1, float c2, float c3, float c4);
+
+    /* pattern definition */
+    int  (PDFLIB_CALL * const PDF_begin_pattern)(PDF *p,
+    			float width, float height,
+			float xstep, float ystep, int painttype);
+    void (PDFLIB_CALL * const PDF_end_pattern)(PDF *p);
+
+    /* template definition */
+    int  (PDFLIB_CALL * const PDF_begin_template)(PDF *p,
+    			float width, float height);
+    void (PDFLIB_CALL * const PDF_end_template)(PDF *p);
+
+    /* image handling */
+    void (PDFLIB_CALL * const PDF_place_image)(PDF *p, int image,
+					float x, float y, float scale);
+    int (PDFLIB_CALL * const PDF_open_image)(PDF *p, const char *imagetype,
+		const char *source, const char *data, long length, int width,
+		int height, int components, int bpc, const char *params);
+    int (PDFLIB_CALL * const PDF_open_image_file)(PDF *p, const char *imagetype,
+		const char *filename, const char *stringparam, int intparam);
+    void (PDFLIB_CALL * const PDF_close_image)(PDF *p, int image);
+    void (PDFLIB_CALL * const PDF_add_thumbnail)(PDF *p, int image);
+
+    /* fax-compressed data processing */
+    int (PDFLIB_CALL * const PDF_open_CCITT)(PDF *p, const char *filename,
+    			int width, int height,
+			int BitReverse, int K, int BlackIs1);
+
+    /* bookmarks and document info fields */
+    int (PDFLIB_CALL * const PDF_add_bookmark)(PDF *p,
+			const char *text, int parent, int open);
+    void (PDFLIB_CALL * const PDF_set_info)(PDF *p,
+    			const char *key, const char *value);
+
+    /* file attachments, notes, and links */
+    void (PDFLIB_CALL * const PDF_attach_file)(PDF *p, float llx, float lly,
+    		float urx, float ury, const char *filename,
+		const char *description,
+		const char *author, const char *mimetype, const char *icon);
+    void (PDFLIB_CALL * const PDF_add_note)(PDF *p, float llx, float lly,
+    		float urx, float ury, const char *contents, const char *title,
+		const char *icon, int open);
+    void (PDFLIB_CALL * const PDF_add_pdflink)(PDF *p,
+    		float llx, float lly, float urx,
+		float ury, const char *filename, int page, const char *dest);
+    void (PDFLIB_CALL * const PDF_add_launchlink)(PDF *p,
+    		float llx, float lly, float urx,
+		float ury, const char *filename);
+    void (PDFLIB_CALL * const PDF_add_locallink)(PDF *p,
+    		float llx, float lly, float urx,
+		float ury, int page, const char *dest);
+    void (PDFLIB_CALL * const PDF_add_weblink)(PDF *p,
+    		float llx, float lly, float urx, float ury, const char *url);
+    void (PDFLIB_CALL * const PDF_set_border_style)(PDF *p,
+				    const char *style, float width);
+    void (PDFLIB_CALL * const PDF_set_border_color)(PDF *p,
+				    float red, float green, float blue);
+    void (PDFLIB_CALL * const PDF_set_border_dash)(PDF *p, float b, float w);
+
+    /* PDF import (requires the PDI library) */
+    int  (PDFLIB_CALL * const PDF_open_pdi)(PDF *p, const char *filename,
+				const char *stringparam, int intparam);
+    void (PDFLIB_CALL * const PDF_close_pdi)(PDF *p, int doc);
+    int  (PDFLIB_CALL * const PDF_open_pdi_page)(PDF *p,
+				int doc, int page, const char *label);
+    void (PDFLIB_CALL * const PDF_place_pdi_page)(PDF *p, int page,
+				float x, float y, float sx, float sy);
+    void (PDFLIB_CALL * const PDF_close_pdi_page)(PDF *p, int page);
+    const char * (PDFLIB_CALL * const PDF_get_pdi_parameter)(PDF *p,
+		    const char *key, int doc, int page, int index, int *len);
+    float (PDFLIB_CALL * const PDF_get_pdi_value)(PDF *p, const char *key,
+					    int doc, int page, int index);
+
+    /* output stream handling */
+    const char * (PDFLIB_CALL * const PDF_get_buffer)(PDF *p, long *size);
+
+    /* this is considered private */
+    void *handle;
+};
+
 #ifdef __cplusplus
 }	/* extern "C" */
+#endif
+
+#if defined(__MWERKS__) && defined(PDFLIB_EXPORTS)
+#pragma export off
 #endif
 
 #endif	/* PDFLIB_H */
