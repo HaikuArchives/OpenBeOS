@@ -43,6 +43,18 @@ printf("BeDecorator()\n");
 	yellow.green=203;
 	yellow.blue=0;
 
+	ltyellow.red=255;
+	ltyellow.green=236;
+	ltyellow.blue=33;
+
+	mdyellow.red=255;
+	mdyellow.green=203;
+	mdyellow.blue=0;
+
+	dkyellow.red=234;
+	dkyellow.green=181;
+	dkyellow.blue=0;
+
 	Resize(lay->frame);
 }
 
@@ -215,30 +227,60 @@ printf("BeDecorator()::Draw():"); update.PrintToStream();
 
 void BeDecorator::DrawZoom(BRect r)
 {
+	BPoint pt1(r.left+2,r.bottom-2);
+	BPoint pt2(r.left+(r.Width()/2),r.top+2);
+	BPoint pt3(r.right-2,r.bottom-2);
 	if(zoomstate)
 	{
-		driver->FillRect(r,black);
+		driver->FillRect(r,ltyellow);
+		driver->FillRect(r,(uint8*)&B_SOLID_LOW);
+		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_HIGH);
+		driver->StrokeLine(pt1,pt2,white);
+		driver->StrokeRect(r,black);
 	}	
 	else
 	{
-		driver->FillRect(r,gray);
+		driver->FillRect(r,ltyellow);
+		driver->FillRect(r,(uint8*)&B_SOLID_HIGH);
+		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_LOW);
+		driver->StrokeLine(pt1,pt2,white);
 		driver->StrokeRect(r,black);
 	}
 }
 
 void BeDecorator::DrawClose(BRect r)
 {
+	float w=r.Width()/2,  h=r.Height()/2;
+	
 	if(closestate)
 	{
-		driver->FillRect(r,gray);
+		BPoint pt1(r.LeftTop());
+		BPoint pt2(r.left+w,r.top);
+		BPoint pt3(r.left,r.top+h);
+		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_HIGH);
+		
+		pt1.Set(r.right-w,r.bottom);
+		pt2.Set(r.right,r.bottom-h);
+		pt3.Set(r.right,r.bottom);
+		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_LOW);
+
 		driver->StrokeRect(r,black);
-		driver->FillRect(r.InsetByCopy(2,2),black);
 	}
 	else
 	{
-		driver->FillRect(r,gray);
+		driver->FillRect(r,mdyellow);
+
+		BPoint pt1(r.LeftTop());
+		BPoint pt2(r.left+w,r.top);
+		BPoint pt3(r.left,r.top+h);
+		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_LOW);
+
+		pt1.Set(r.right-w,r.bottom);
+		pt2.Set(r.right,r.bottom-h);
+		pt3.Set(r.right,r.bottom);
+		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_HIGH);
+
 		driver->StrokeRect(r,black);
-		driver->StrokeRect(r.InsetByCopy(2,2),black);
 	}
 }
 
