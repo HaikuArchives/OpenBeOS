@@ -109,7 +109,7 @@ AllocationBlock::Allocate(uint16 start,uint16 numBlocks)
 	while (numBlocks > 0) {
 		uint32 mask = 0;
 		for (int32 i = start % 32;i < 32 && numBlocks;i++,numBlocks--)
-			mask |= 1UL << i % 32;
+			mask |= 1UL << (i % 32);
 
 		((uint32 *)fBlock)[block++] |= mask;
 		start = 0;
@@ -134,7 +134,7 @@ AllocationBlock::Free(uint16 start,uint16 numBlocks)
 	while (numBlocks > 0) {
 		uint32 mask = 0;
 		for (int32 i = start % 32;i < 32 && numBlocks;i++,numBlocks--)
-			mask |= 1UL << i % 32;
+			mask |= 1UL << (i % 32);
 
 		((uint32 *)fBlock)[block++] &= ~mask;
 		start = 0;
@@ -365,7 +365,14 @@ BlockAllocator::AllocateForInode(Transaction *transaction,Inode *parent, mode_t 
 	// apply some allocation policies here (AllocateBlocks() will break them
 	// if necessary) - we will start with those described in Dominic Giampaolo's
 	// "Practical File System Design", and see how good they work
-	return AllocateBlocks(transaction,parent->BlockRun().allocation_group,0,1,1,run);
+	
+	// files are going in the same allocation group as its parent, sub-directories
+	// will be inserted 8 allocation groups after the one of the parent
+	uint16 group = parent->BlockRun().allocation_group;
+	if (type & S_DIRECTORY)
+		group += 8;
+
+	return AllocateBlocks(transaction,group,0,1,1,run);
 }
 
 
@@ -374,7 +381,34 @@ BlockAllocator::Allocate(Transaction *transaction,Inode *inode, uint16 numBlocks
 {
 	// apply some allocation policies here (AllocateBlocks() will break them
 	// if necessary)
-	return AllocateBlocks(transaction,inode->BlockRun().allocation_group,0,numBlocks,minimum,run);
+	uint16 group = inode->BlockRun().allocation_group;
+	uint16 start = 0;
+
+	// are there already allocated blocks? (then just allocate near the last)
+	if (inode->Size() > 0) {
+		data_stream *data = &inode->Node()->data;
+		// we currently don't care for when the data stream is
+		// already grown into the indirect ranges
+		if (data->max_double_indirect_range == 0
+			&& data->max_indirect_range == 0) {
+			int32 last = 0;
+			for (;last < NUM_DIRECT_BLOCKS - 1;last++)
+				if (data->direct[last + 1].IsZero())
+					break;
+			
+			group = data->direct[last].allocation_group;
+			start = data->direct[last].start;
+		}
+	} else if (inode->IsDirectory()) {
+		// directory data will go in the same allocation group as the inode is in
+		// but after the inode data
+		start = inode->BlockRun().start;
+	} else {
+		// file data will start in the next allocation group
+		group = inode->BlockRun().allocation_group + 1;
+	}
+
+	return AllocateBlocks(transaction,group,start,numBlocks,minimum,run);
 }
 
 

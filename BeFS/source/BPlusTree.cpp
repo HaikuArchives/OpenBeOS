@@ -132,6 +132,9 @@ CachedNode::Free(Transaction *transaction,off_t offset)
 		|| offset == BPLUSTREE_NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
+	// we just add the page to the free pages list, but we
+	// could also really free the space for it, if the page
+	// is the last one in the tree
 	fNode->left_link = fTree->fHeader->free_node_pointer;
 	if (WriteBack(transaction) == B_OK) {
 		fTree->fHeader->free_node_pointer = offset;
@@ -144,24 +147,38 @@ CachedNode::Free(Transaction *transaction,off_t offset)
 bplustree_node *
 CachedNode::Allocate(Transaction *transaction, off_t *_offset)
 {
-	if (transaction == NULL || fTree == NULL || fTree->fStream == NULL) {
+	if (transaction == NULL || fTree == NULL || fTree->fHeader == NULL
+		|| fTree->fStream == NULL) {
 		REPORT_ERROR(B_BAD_VALUE);
 		return NULL;
 	}
 
 	// if there are any free nodes, recycle them
-	if (fTree->fHeader && SetTo(fTree->fHeader->free_node_pointer,false) != NULL) {
+	if (SetTo(fTree->fHeader->free_node_pointer,false) != NULL) {
 		*_offset = fTree->fHeader->free_node_pointer;
 		
 		// set new free node pointer
 		fTree->fHeader->free_node_pointer = fNode->left_link;
-		if (fTree->fCachedHeader.WriteBack(transaction) == B_OK)
+		if (fTree->fCachedHeader.WriteBack(transaction) == B_OK) {
+			fNode->Initialize();
 			return fNode;
-
+		}
 		return NULL;
 	}
 	// allocate new node
-	// -> not yet implemented
+	Inode *stream = fTree->fStream;
+	if (stream->Append(transaction,fTree->fNodeSize) < B_OK)
+		return NULL;
+	
+	if (SetTo(fTree->fHeader->maximum_size,false) != NULL) {
+		*_offset = fTree->fHeader->maximum_size;
+		fTree->fHeader->maximum_size += fTree->fNodeSize;
+	
+		if (fTree->fCachedHeader.WriteBack(transaction) == B_OK) {
+			fNode->Initialize();
+			return fNode;
+		}
+	}	
 	return NULL;
 }
 
@@ -179,23 +196,23 @@ CachedNode::WriteBack(Transaction *transaction)
 //	#pragma mark -
 
 
-BPlusTree::BPlusTree(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize,bool allowDuplicates)
+BPlusTree::BPlusTree(Transaction *transaction,Inode *stream,int32 nodeSize)
 	:
 	fStream(NULL),
 	fHeader(NULL),
 	fCachedHeader(this)
 {
-	SetTo(transaction,stream,keyType,nodeSize,allowDuplicates);
+	SetTo(transaction,stream);
 }
 
 
-BPlusTree::BPlusTree(Inode *stream,bool allowDuplicates)
+BPlusTree::BPlusTree(Inode *stream)
 	:
 	fStream(NULL),
 	fHeader(NULL),
 	fCachedHeader(this)
 {
-	SetTo(stream,allowDuplicates);
+	SetTo(stream);
 }
 
 
@@ -217,28 +234,7 @@ BPlusTree::~BPlusTree()
 
 
 status_t
-BPlusTree::Initialize(int32 nodeSize)
-{
-	fStream = NULL;
-
-	fNodeSize = nodeSize;
-
-	// allocate new header if needed
-	if (fHeader == NULL) {
-		fHeader = (bplustree_header *)malloc(fNodeSize);
-		if (fHeader == NULL) {
-			FATAL(("no memory for the b+tree header! Prepare to die...\n"));
-			return B_NO_MEMORY;
-		}
-	}
- 	memset(fHeader,0,fNodeSize);
- 	
- 	return B_OK;
-}
-
-
-status_t
-BPlusTree::SetTo(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize,bool allowDuplicates)
+BPlusTree::SetTo(Transaction *transaction,Inode *stream,int32 nodeSize)
 {
 	// initializes in-memory B+Tree
 
@@ -248,28 +244,42 @@ BPlusTree::SetTo(Transaction *transaction,Inode *stream,int32 keyType,int32 node
 	fHeader = fCachedHeader.SetToHeader();
 	if (fHeader == NULL) {
 		// allocate space for new header + node!
-		// -> not yet implemented
-		RETURN_ERROR(fStatus = B_NO_INIT);
+		fStatus = stream->SetFileSize(transaction,nodeSize * 2);
+		if (fStatus < B_OK)
+			RETURN_ERROR(fStatus);
+		
+		fHeader = fCachedHeader.SetToHeader();
+		if (fHeader == NULL)
+			RETURN_ERROR(fStatus = B_ERROR);
 	}
 
-	fAllowDuplicates = allowDuplicates;
+	fAllowDuplicates = (stream->Mode() & S_INDEX_DIR) == S_INDEX_DIR;
 	fNodeSize = nodeSize;
 
 	// initialize b+tree header
  	fHeader->magic = BPLUSTREE_MAGIC;
  	fHeader->node_size = fNodeSize;
  	fHeader->max_number_of_levels = 1;
- 	fHeader->data_type = keyType;
- 	fHeader->root_node_pointer = fNodeSize;
+ 	fHeader->data_type = ModeToKeyType(stream->Mode());
+ 	fHeader->root_node_pointer = nodeSize;
  	fHeader->free_node_pointer = BPLUSTREE_NULL;
- 	fHeader->maximum_size = fNodeSize * 2;
- 	
-	return fStatus = B_OK;
+ 	fHeader->maximum_size = nodeSize * 2;
+
+	if (fCachedHeader.WriteBack(transaction) < B_OK)
+		RETURN_ERROR(fStatus = B_ERROR);
+
+	// initialize b+tree root node
+	CachedNode cached(this,fHeader->root_node_pointer,false);
+	if (cached.Node() == NULL)
+		RETURN_ERROR(B_ERROR);
+
+	cached.Node()->Initialize();
+	return fStatus = cached.WriteBack(transaction);
 }
 
 
 status_t
-BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
+BPlusTree::SetTo(Inode *stream)
 {
 	// get on-disk B+Tree header
 
@@ -289,7 +299,6 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 		|| !fHeader->IsValidLink(fHeader->free_node_pointer))
 		RETURN_ERROR(fStatus = B_BAD_DATA);
 
-	fAllowDuplicates = allowDuplicates;
 	fNodeSize = fHeader->node_size;
 
 	{
@@ -308,7 +317,7 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 		}
 
 		 // although it's in stat.h, the S_ALLOW_DUPS flag is obviously unused
-		fAllowDuplicates = (stream->Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR;
+		fAllowDuplicates = (stream->Mode() & S_INDEX_DIR) == S_INDEX_DIR;
 	}
 
 	CachedNode cached(this,fHeader->root_node_pointer);
@@ -320,6 +329,54 @@ status_t
 BPlusTree::InitCheck()
 {
 	return fStatus;
+}
+
+
+int32 
+BPlusTree::TypeCodeToKeyType(type_code code)
+{
+	switch (code) {
+		case B_STRING_TYPE:
+			return BPLUSTREE_STRING_TYPE;
+		case B_INT32_TYPE:
+			return BPLUSTREE_INT32_TYPE;
+		case B_UINT32_TYPE:
+			return BPLUSTREE_UINT32_TYPE;
+		case B_INT64_TYPE:
+			return BPLUSTREE_INT64_TYPE;
+		case B_UINT64_TYPE:
+			return BPLUSTREE_UINT64_TYPE;
+		case B_FLOAT_TYPE:
+			return BPLUSTREE_FLOAT_TYPE;
+		case B_DOUBLE_TYPE:
+			return BPLUSTREE_DOUBLE_TYPE;
+	}
+	return -1;
+}
+
+
+int32 
+BPlusTree::ModeToKeyType(mode_t mode)
+{
+	switch (mode & (S_STR_INDEX | S_INT_INDEX | S_UINT_INDEX | S_LONG_LONG_INDEX
+				   | S_ULONG_LONG_INDEX | S_FLOAT_INDEX | S_DOUBLE_INDEX)) {
+		case S_INT_INDEX:
+			return BPLUSTREE_INT32_TYPE;
+		case S_UINT_INDEX:
+			return BPLUSTREE_UINT32_TYPE;
+		case S_LONG_LONG_INDEX:
+			return BPLUSTREE_INT64_TYPE;
+		case S_ULONG_LONG_INDEX:
+			return BPLUSTREE_UINT64_TYPE;
+		case S_FLOAT_INDEX:
+			return BPLUSTREE_FLOAT_TYPE;
+		case S_DOUBLE_INDEX:
+			return BPLUSTREE_DOUBLE_TYPE;
+		case S_STR_INDEX:
+		default:
+			// default is for standard directories
+			return BPLUSTREE_STRING_TYPE;
+	}
 }
 
 
@@ -1212,6 +1269,15 @@ TreeIterator::SkipDuplicates()
 
 
 //	#pragma mark -
+
+
+void 
+bplustree_node::Initialize()
+{
+	left_link = right_link = overflow_link = BPLUSTREE_NULL;
+	all_key_count = 0;
+	all_key_length = 0;
+}
 
 
 uint8 *

@@ -61,7 +61,7 @@ Inode::InitCheck()
 }
 
 
-bool 
+status_t 
 Inode::CheckPermissions(int accessMode) const
 {
 	uid_t user = geteuid();
@@ -69,11 +69,11 @@ Inode::CheckPermissions(int accessMode) const
 
 	// you never have write access to a read-only volume
 	if (accessMode & W_OK && fVolume->IsReadOnly())
-		return false;
+		return B_READ_ONLY_DEVICE;
 
 	// root users always have full access (but they can't execute anything)
 	if (user == 0 && !((accessMode & X_OK) && (Mode() & S_IXUSR) == 0))
-		return true;
+		return B_OK;
 
 	// shift mode bits, to check directly against accessMode
 	mode_t mode = Mode();
@@ -83,9 +83,9 @@ Inode::CheckPermissions(int accessMode) const
 		mode >>= 3;
 
 	if (accessMode & ~(mode & S_IRWXO))
-		return false;
+		return B_NOT_ALLOWED;
 
-	return true;
+	return B_OK;
 }
 
 
@@ -442,6 +442,218 @@ Inode::WriteAt(Transaction *transaction,off_t pos,void *buffer,size_t *length)
 	// already reserved in the inode's data_stream
 
 	RETURN_ERROR(B_ERROR);
+}
+
+
+status_t 
+Inode::GrowStream(Transaction *transaction, off_t size)
+{
+	data_stream *data = &Node()->data;
+
+	// is the data stream already large enough to hold the new size?
+	// (can be the case with preallocated blocks)
+	if (size < data->max_direct_range
+		|| size < data->max_indirect_range
+		|| size < data->max_double_indirect_range) {
+		data->size = size;
+		PRINT(("enough space in inode preallocated!\n"));
+		
+		return B_OK;
+	}
+
+	// how many bytes are still needed? (unused ranges are always zero)
+	off_t bytes;		
+	if (data->size < data->max_double_indirect_range)
+		bytes = size - data->max_double_indirect_range;
+	else if (data->size < data->max_indirect_range)
+		bytes = size - data->max_indirect_range;
+	else if (data->size < data->max_direct_range)
+		bytes = size - data->max_direct_range;
+	else
+		bytes = size - data->size;
+
+	// do we have enough free blocks on the disk?
+	off_t blocks = (bytes + fVolume->BlockSize() - 1) / fVolume->BlockSize();
+	if (blocks > fVolume->FreeBlocks())
+		return B_DEVICE_FULL;
+
+	while (blocks > 0) {
+		// the requested blocks do not need to be returned with a
+		// single allocation, so we need to iterate until we have
+		// enough blocks allocated
+		block_run run;
+		if (fVolume->Allocate(transaction,this,blocks,run) < B_OK)
+			return B_DEVICE_FULL;
+
+		// okay, we have the needed blocks, so just distribute them to the
+		// different ranges of the stream (direct, indirect & double indirect)
+		
+		blocks -= run.length;
+		
+		if (data->size <= data->max_direct_range) {
+			// let's try to put them into the direct block range
+			int32 free = 0;
+			for (;free < NUM_DIRECT_BLOCKS;free++)
+				if (data->direct[free].IsZero())
+					break;
+
+			if (free < NUM_DIRECT_BLOCKS) {
+				// can we merge the last allocated run with the new one?
+				int32 last = free - 1;
+				if (free > 0
+					&& data->direct[last].allocation_group == run.allocation_group
+					&& data->direct[last].start + data->direct[last].length == run.start) {
+					data->direct[last].length += run.length;
+				} else {
+					data->direct[free] = run;
+				}
+				data->max_direct_range += run.length * fVolume->BlockSize();
+				continue;
+			}
+		}
+		
+		// when we are here, we need to grow into the indirect or double
+		// indirect range - but that's not yet implemented, so bail out!
+
+		RETURN_ERROR(B_ERROR);
+	}
+	// update the size of the data stream
+	data->size = size;
+
+	return B_OK;
+}
+
+
+status_t 
+Inode::ShrinkStream(Transaction *transaction, off_t size)
+{
+	return B_ERROR;
+}
+
+
+status_t 
+Inode::SetFileSize(Transaction *transaction, off_t size)
+{
+	if (size < 0)
+		return B_BAD_VALUE;
+
+	if (size == Node()->data.size)
+		return B_OK;
+
+	// should the data stream grow or shrink?
+	status_t status;
+	if (size > Node()->data.size)
+		status = GrowStream(transaction,size);
+	else
+		status = ShrinkStream(transaction,size);
+
+	if (status < B_OK)
+		return status;
+
+	return WriteBack(transaction);
+}
+
+
+status_t 
+Inode::Append(Transaction *transaction,off_t bytes)
+{
+	return SetFileSize(transaction,Size() + bytes);
+}
+
+
+status_t 
+Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *id)
+{
+	Volume *volume = directory->fVolume;
+
+	BPlusTree *tree;
+	if (directory->GetTree(&tree) != B_OK)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	// does the file already exist?
+	off_t offset;
+	if (tree->Find((uint8 *)name,(uint16)strlen(name),&offset) == B_OK) {
+		// return if the file should be a directory or opened in exclusive mode
+		if (mode & S_DIRECTORY || omode & O_EXCL)
+			return B_FILE_EXISTS;
+
+		// if it's a directory, bail out!
+		// if omode & O_TRUNC, truncate the existing file
+		if (omode & O_TRUNC) {
+			//Transaction transaction(volume,directory->BlockNumber());
+
+			//status_t status = inode->SetFileSize(&transaction,0);
+			//if (status < B_OK)
+			//	return status;
+
+			//transaction.Done();
+		}
+
+		return B_OK;
+	}
+
+	// allocate space for the new inode
+	Transaction transaction(volume,directory->BlockNumber());
+	block_run run;
+
+	status_t status = volume->AllocateForInode(&transaction,directory,mode,run);
+	if (status < B_OK)
+		return status;
+
+	Inode *inode = new Inode(volume,volume->ToVnode(run));
+	if (inode == NULL)
+		return B_NO_MEMORY;
+
+	// add name to the parent's B+tree
+	if (tree->Insert(&transaction,name,volume->ToBlock(run)) < B_OK)
+		RETURN_ERROR(B_ERROR);
+
+	// update indices - only if it's a regular file!
+
+	/** fill the bfs_inode structure **/
+
+	bfs_inode *node = inode->Node();
+	memset(node,0,volume->BlockSize());
+
+	node->magic1 = INODE_MAGIC1;
+	node->inode_num = run;
+	node->parent = directory->BlockRun();
+
+	node->uid = geteuid();
+	node->gid = getegid();
+	node->mode = mode;
+	node->flags = 0;
+
+	node->create_time = time(NULL) << INODE_TIME_SHIFT;
+	node->last_modified_time = node->create_time;
+
+	node->inode_size = volume->InodeSize();
+
+	// initialize b+tree if it's a directory (and add "." & ".." if it's
+	// a standard directory for files - not attributes or indices)
+	if (mode & S_DIRECTORY) {
+		BPlusTree *tree = inode->fTree = new BPlusTree(&transaction,inode);
+		if (tree == NULL || tree->InitCheck() < B_OK)
+			return B_ERROR;
+
+		if ((mode & S_INDEX_DIR) == 0) {
+			if (tree->Insert(&transaction,".",inode->BlockNumber()) < B_OK
+				|| tree->Insert(&transaction,"..",volume->ToBlock(inode->Parent())) < B_OK)
+				return B_ERROR;
+		}
+	}
+
+	if ((status = inode->WriteBack(&transaction)) == B_OK)
+		transaction.Done();
+
+	if (new_vnode(volume->ID(),inode->ID(),inode) != B_OK)
+		return B_ERROR;
+
+	notify_listener(B_ENTRY_CREATED,volume->ID(),directory->ID(),0,inode->ID(),name);
+	if (id != NULL)
+		*id = inode->ID();
+
+	return B_OK;
 }
 
 

@@ -34,7 +34,7 @@ class TreeIterator;
 
 
 enum inode_type {
-	S_DIR		= S_IFDIR,
+	S_DIRECTORY	= S_IFDIR,
 	S_FILE		= S_IFREG,
 	S_SYMLINK	= S_IFLNK
 };
@@ -134,7 +134,7 @@ class Inode : public CachedBlock {
 
 		status_t InitCheck();
 
-		bool CheckPermissions(int accessMode) const;
+		status_t CheckPermissions(int accessMode) const;
 
 		status_t GetNextSmallData(small_data **smallData) const;
 		small_data *FindSmallData(const char *name) const;
@@ -150,8 +150,16 @@ class Inode : public CachedBlock {
 
 		status_t ReadAt(off_t pos,void *buffer,size_t *length);
 		status_t WriteAt(Transaction *transaction,off_t pos,void *buffer,size_t *length);
-	
+
+		status_t SetFileSize(Transaction *transaction,off_t size);
+		status_t Append(Transaction *transaction,off_t bytes);
+
+		static status_t Create(Inode *directory,const char *name,int32 mode,int omode,off_t *id);
+
 	private:
+		status_t GrowStream(Transaction *transaction,off_t size);
+		status_t ShrinkStream(Transaction *transaction,off_t size);
+
 		BPlusTree		*fTree;
 		Inode			*fAttributes;
 		ReadWriteLock	fLock;

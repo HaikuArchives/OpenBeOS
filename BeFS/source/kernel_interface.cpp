@@ -321,10 +321,11 @@ bfs_sync(void *ns)
 //	#pragma mark -
 
 
-// bfs_read_vnode - Using vnode id, read in vnode information into fs-specific struct,
-//				and return it in node. the reenter flag tells you if this function
-//				is being called via some other fs routine, so that things like 
-//				double-locking can be avoided.
+/**	Using vnode id, read in vnode information into fs-specific struct,
+ *	and return it in node. the reenter flag tells you if this function
+ *	is being called via some other fs routine, so that things like 
+ *	double-locking can be avoided.
+ */
 
 static int
 bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
@@ -382,16 +383,16 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vn
 	Volume *volume = (Volume *)_ns;
 	Inode *directory = (Inode *)_directory;
 
-	if (!directory->CheckPermissions(X_OK))
-		RETURN_ERROR(B_NOT_ALLOWED);
+	// check access permissions
+	status_t status = directory->CheckPermissions(X_OK);
+	if (status < B_OK)
+		RETURN_ERROR(status);
 
 	BPlusTree *tree;
 	if (directory->GetTree(&tree) != B_OK)
 		RETURN_ERROR(B_BAD_VALUE);
 
-	//off_t offset;
-	status_t status = tree->Find((uint8 *)file,(uint16)strlen(file),vnid);
-	if (status != B_OK)
+	if ((status = tree->Find((uint8 *)file,(uint16)strlen(file),vnid)) < B_OK)
 		RETURN_ERROR(status);
 
 	Inode *inode;
@@ -555,8 +556,10 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 	// that may be incorrect here - I don't think we need write access to
 	// change most of the stat...
 	// we should definitely check a bit more if the new stats are correct and valid...
-	if (!inode->CheckPermissions(W_OK))
-		RETURN_ERROR(B_NOT_ALLOWED);
+	
+	status_t status = inode->CheckPermissions(W_OK);
+	if (status < B_OK)
+		RETURN_ERROR(status);
 
 	WriteLocked locked(inode->Lock());
 	if (!locked.IsLocked())
@@ -592,8 +595,7 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 		node->create_time = (bigtime_t)stat->st_crtime << INODE_TIME_SHIFT;
 	}
 
-	status_t status = inode->WriteBack(&transaction);
-	if (status == B_OK)
+	if ((status = inode->WriteBack(&transaction)) == B_OK)
 		transaction.Done();
 
 	notify_listener(B_STAT_CHANGED,volume->ID(),0,0,inode->ID(),NULL);
@@ -603,10 +605,23 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 
 
 int 
-bfs_create(void *ns, void *dir, const char *name, int perms, int omode, vnode_id *vnid, void **cookie)
+bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, vnode_id *vnid, void **_cookie)
 {
-	FUNCTION_START(("name = \"%s\", perms = %ld, omode = %ld\n",name,perms,omode));
-	return B_ERROR;
+	FUNCTION_START(("name = \"%s\", perms = %ld, omode = %ld\n",name,mode,omode));
+
+	if (_ns == NULL || _directory == NULL || _cookie == NULL
+		|| name == NULL || *name == '\0')
+		RETURN_ERROR(B_BAD_VALUE);
+
+	Inode *directory = (Inode *)_directory;
+	if (!directory->IsDirectory())
+		RETURN_ERROR(B_BAD_TYPE);
+
+	status_t status = directory->CheckPermissions(W_OK);
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	return Inode::Create(directory,name,S_FILE | (mode & S_IUMSK),omode,vnid);
 }
 
 
@@ -653,9 +668,24 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	if (_ns == NULL || _node == NULL || _cookie == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
+	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
-	if (!inode->CheckPermissions(oModeToAccess(omode)))
-		RETURN_ERROR(B_NOT_ALLOWED);
+
+	status_t status = inode->CheckPermissions(oModeToAccess(omode));
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	// if omode & O_TRUNC, truncate the file
+	if (omode & O_TRUNC) {
+		Transaction transaction(volume,inode->BlockNumber());
+		WriteLocked locked(inode->Lock());
+
+		status_t status = inode->SetFileSize(&transaction,0);
+		if (status < B_OK)
+			return status;
+		
+		transaction.Done();
+	}
 
 	// we could actually use a cookie to keep track of:
 	//	- the last block_run
@@ -684,7 +714,7 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 		*_length = 0;
 		RETURN_ERROR(B_BAD_VALUE);
 	}
-	
+
 	ReadLocked locked(inode->Lock());
 	return inode->ReadAt(pos,buffer,_length);
 }
@@ -730,8 +760,9 @@ bfs_access(void *_ns, void *_node, int accessMode)
 		return B_BAD_VALUE;
 
 	Inode *inode = (Inode *)_node;
-	if (!inode->CheckPermissions(accessMode))
-		RETURN_ERROR(B_NOT_ALLOWED);
+	status_t status = inode->CheckPermissions(accessMode);
+	if (status < B_OK)
+		RETURN_ERROR(status);
 
 	return B_OK;
 }
@@ -773,10 +804,23 @@ bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize)
 
 
 int 
-bfs_mkdir(void *ns, void *dir, const char *name, int perms)
+bfs_mkdir(void *_ns, void *_directory, const char *name, int mode)
 {
-	FUNCTION_START(("name = \"%s\", perms = %ld\n",name,perms));
-	return B_ERROR;
+	FUNCTION_START(("name = \"%s\", perms = %ld\n",name,mode));
+
+	if (_ns == NULL || _directory == NULL
+		|| name == NULL || *name == '\0')
+		RETURN_ERROR(B_BAD_VALUE);
+
+	Inode *directory = (Inode *)_directory;
+	if (!directory->IsDirectory())
+		RETURN_ERROR(B_BAD_TYPE);
+
+	status_t status = directory->CheckPermissions(W_OK);
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	return Inode::Create(directory,name,S_DIRECTORY | (mode & S_IUMSK),0,NULL);
 }
 
 

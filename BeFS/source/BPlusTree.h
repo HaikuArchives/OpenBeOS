@@ -61,6 +61,7 @@ struct bplustree_node {
 	
 	inline bool IsLeaf() const;
 
+	void Initialize();
 	uint8 CountDuplicates(off_t offset,bool isFragment) const;
 	off_t DuplicateAt(off_t offset,bool isFragment,int8 index) const;
 
@@ -111,15 +112,15 @@ class CachedNode {
 		{
 		}
 
-		CachedNode(BPlusTree *tree,off_t offset)
+		CachedNode(BPlusTree *tree,off_t offset,bool check = true)
 			:
 			fTree(tree),
 			fNode(NULL),
 			fBlock(NULL)
 		{
-			SetTo(offset);
+			SetTo(offset,check);
 		}
-		
+
 		~CachedNode()
 		{
 			Unset();
@@ -149,13 +150,13 @@ class CachedNode {
 
 class BPlusTree {
 	public:
-		BPlusTree(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize = BPLUSTREE_NODE_SIZE,bool allowDuplicates = true);
-		BPlusTree(Inode *stream,bool allowDuplicates = true);
+		BPlusTree(Transaction *transaction,Inode *stream,int32 nodeSize = BPLUSTREE_NODE_SIZE);
+		BPlusTree(Inode *stream);
 		BPlusTree();
 		~BPlusTree();
 
-		status_t	SetTo(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize = BPLUSTREE_NODE_SIZE,bool allowDuplicates = true);
-		status_t	SetTo(Inode *stream,bool allowDuplicates = true);
+		status_t	SetTo(Transaction *transaction,Inode *stream,int32 nodeSize = BPLUSTREE_NODE_SIZE);
+		status_t	SetTo(Inode *stream);
 		status_t	SetStream(Inode *stream);
 
 		status_t	InitCheck();
@@ -174,9 +175,10 @@ class BPlusTree {
 
 		status_t	Find(uint8 *key, uint16 keyLength, off_t *value);
 
-	private:
-		status_t	Initialize(int32 nodeSize);
+		static int32 TypeCodeToKeyType(type_code code);
+		static int32 ModeToKeyType(mode_t mode);
 
+	private:
 		int32		CompareKeys(const void *key1, int keylength1, const void *key2, int keylength2);
 		status_t	FindKey(bplustree_node *node, uint8 *key, uint16 keyLength, uint16 *index = NULL, off_t *next = NULL);
 		status_t	SeekDown(Stack<node_and_key> &stack, uint8 *key, uint16 keyLength);

@@ -1,15 +1,20 @@
-BFS - ToDo, March 5th, 2002
+BFS - ToDo, March 30th, 2002
 -----
 
 BlockAllocator
 
- - the BlockAllocator is very unoptimized and slow, and it doesn't handle
-   low on-disk memory well; it just fails instead of providing the requested
-   minimum of disk space.
- - the allocation policies are not yet done
- - when they are done, they will have to stand against some real world tests
- - the access to the block bitmap is currently unlocked
- - the updated disk's super block is not written back yet
+ - the BlockAllocator is only slightly optimized and probably slow
+ - the first free and the largest range are currently not correctly maintained (only efficiency suffers - it does work)
+ - the allocation policies will have to stand against some real world tests
+ - the access to the block bitmap is currently managed using a global lock
+ - the updated disk's super block is not written back yet (used block counter)
+
+
+DataStream
+
+ - shrinking the stream size is not implemented right now
+ - growing does only work for the direct range
+ - no pre-allocation right now
 
 
 Queries
@@ -28,7 +33,7 @@ Journal
 BPlusTree
 
  - BPlusTree::Remove() currently does not free empty pages
-
+ - CachedNode::Free() could free pages at the end of the stream data
 
 Indices
 
