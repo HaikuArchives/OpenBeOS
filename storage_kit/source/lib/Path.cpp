@@ -23,8 +23,8 @@ using namespace OpenBeOS;
 
 //! Creates an uninitialized BPath object. 
 BPath::BPath()
-	 : fCStatus(B_NO_INIT),
-	   fName(NULL)
+	 : fName(NULL),
+	   fCStatus(B_NO_INIT)
 {
 }
 	
@@ -32,8 +32,8 @@ BPath::BPath()
 /*!	\param path the object to be copied
 */
 BPath::BPath(const BPath &path)
-	 : fCStatus(B_NO_INIT),
-	   fName(NULL)
+	 : fName(NULL),
+	   fCStatus(B_NO_INIT)
 {
 	*this = path;
 }
@@ -43,8 +43,8 @@ BPath::BPath(const BPath &path)
 	\param ref the entry_ref
 */
 BPath::BPath(const entry_ref *ref)
-	 : fCStatus(B_NO_INIT),
-	   fName(NULL)
+	 : fName(NULL),
+	   fCStatus(B_NO_INIT)
 {
 	SetTo(ref);
 }
@@ -54,8 +54,8 @@ BPath::BPath(const entry_ref *ref)
 	\param entry the BEntry object
 */
 BPath::BPath(const BEntry *entry)
-	 : fCStatus(B_NO_INIT),
-	   fName(NULL)
+	 : fName(NULL),
+	   fCStatus(B_NO_INIT)
 {
 	SetTo(entry);
 }
@@ -71,8 +71,8 @@ BPath::BPath(const BEntry *entry)
 		   may occur even if false (see \ref MustNormalize).
 */
 BPath::BPath(const char *dir, const char *leaf, bool normalize)
-	 : fCStatus(B_NO_INIT),
-	   fName(NULL)
+	 : fName(NULL),
+	   fCStatus(B_NO_INIT)
 {
 	SetTo(dir, leaf, normalize);
 }
@@ -88,8 +88,8 @@ BPath::BPath(const char *dir, const char *leaf, bool normalize)
 		   may occur even if false (see \ref MustNormalize).
 */
 BPath::BPath(const BDirectory *dir, const char *leaf, bool normalize)
-	 : fCStatus(B_NO_INIT),
-	   fName(NULL)
+	 : fName(NULL),
+	   fCStatus(B_NO_INIT)
 {
 	SetTo(dir, leaf, normalize);
 }
@@ -181,7 +181,7 @@ BPath::SetTo(const char *path, const char *leaf, bool normalize)
 		normalize |= !StorageKit::is_absolute_path(path);
 		// build a new path from path and leaf
 		// copy path first
-		int32 pathLen = strlen(path);
+		uint32 pathLen = strlen(path);
 		if (pathLen >= sizeof(newPath))
 			error = B_NAME_TOO_LONG;
 		if (error == B_OK)
@@ -189,7 +189,8 @@ BPath::SetTo(const char *path, const char *leaf, bool normalize)
 		// append leaf, if supplied
 		if (error == B_OK && leaf) {
 			bool needsSeparator = (pathLen > 0 && path[pathLen - 1] != '/');
-			int32 wholeLen = pathLen + (needsSeparator ? 1 : 0) + strlen(leaf);
+			uint32 wholeLen = pathLen + (needsSeparator ? 1 : 0)
+							  + strlen(leaf);
 			if (wholeLen >= sizeof(newPath))
 				error = B_NAME_TOO_LONG;
 			if (error == B_OK) {
@@ -558,11 +559,14 @@ status_t
 BPath::Unflatten(type_code code, const void *buf, ssize_t size)
 {
 	Unset();
-	status_t error
-		= (code == B_REF_TYPE && buf && size >= flattened_entry_ref_size
-		   ? B_OK : B_BAD_VALUE);
+	status_t error = B_OK;
+	// check params
+	if (!(code == B_REF_TYPE && buf
+		  && size >= (ssize_t)flattened_entry_ref_size)) {
+		error = B_BAD_VALUE;
+	}
 	if (error == B_OK) {
-		if (size == flattened_entry_ref_size) {
+		if (size == (ssize_t)flattened_entry_ref_size) {
 			// already Unset();
 		} else {
 			// reconstruct the entry_ref from the buffer

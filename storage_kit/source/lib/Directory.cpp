@@ -251,7 +251,7 @@ BDirectory::SetTo(const char *path)
 		StorageKit::FileDescriptor fd = StorageKit::NullFd;
 		result = StorageKit::open(path, O_RDWR, fd);
 		if (result == B_OK) {
-			result == set_fd(fd);
+			result = set_fd(fd);
 			if (result != B_OK)
 				StorageKit::close(fd);
 		}
@@ -537,7 +537,7 @@ BDirectory::GetStatFor(const char *path, struct stat *st) const
 				error = B_ENTRY_NOT_FOUND;
 			else {
 				BEntry entry(this, path);
-				error == entry.InitCheck();
+				error = entry.InitCheck();
 				if (error == B_OK)
 					error = entry.GetStat(st);
 			}

@@ -764,7 +764,7 @@ BMimeType::SetSnifferRule(const char *rule)
 	  rule priority is 0.8.
 
 	Real examples:
-	- 0.20 ([0]"//" | [0]"/*" | [0:32]"#include" | [0:32]"#ifndef"
+	- 0.20 ([0]"//" | [0]"/\*" | [0:32]"#include" | [0:32]"#ifndef"
 	        | [0:32]"#ifdef")
 	  text/x-source-code
 	- 0.70 ("8BPS  \000\000\000\000" & 0xffffffff0000ffffffff )

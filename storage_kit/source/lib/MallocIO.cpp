@@ -171,5 +171,6 @@ BMallocIO &
 BMallocIO::operator=(const BMallocIO &)
 {
 	// copying not allowed...
+	return *this;
 }
 

@@ -80,8 +80,8 @@ static bool operator!=(BBitmap &bmp1, BBitmap &bmp2);
 static bool operator==(BMessage &msg1, BMessage &msg2);
 static bool operator!=(BMessage &msg1, BMessage &msg2);
 static void fill_bitmap(BBitmap &bmp, char value);
-static void dump_bitmap(BBitmap &bmp, char *name = "bmp");
-static void dump_ref(entry_ref *ref, char* name = "ref");
+//static void dump_bitmap(BBitmap &bmp, char *name = "bmp");
+//static void dump_ref(entry_ref *ref, char* name = "ref");
 static void to_lower(const char *str, std::string &result);
 static void remove_type(const char *type, const char *databaseDir = mimeDatabaseDir);
 static bool type_exists(const char *type, const char *databaseDir = mimeDatabaseDir);
@@ -252,9 +252,9 @@ fill_bitmap(BBitmap &bmp, char value) {
 	
 // Dumps the size, colorspace, and first data byte
 // of the bitmap to stdout
-void
+/*void
 dump_bitmap(BBitmap &bmp, char *name = "bmp") {
-	printf("%s == (%dx%d, ", name, bmp.Bounds().IntegerWidth()+1,
+	printf("%s == (%ldx%ld, ", name, bmp.Bounds().IntegerWidth()+1,
 		bmp.Bounds().IntegerHeight()+1);
 	switch (bmp.ColorSpace()) {
 		case B_CMAP8:
@@ -270,7 +270,7 @@ dump_bitmap(BBitmap &bmp, char *name = "bmp") {
 			break;		
 	}
 	printf(", %d)\n", *(char*)bmp.Bits());
-}
+}*/
 	
 // IconHelper and IconForTypeHelper:
 // Adapter(?) classes needed to reuse icon tests among {Get,Set}Icon() and {Get,Set}IconForType()
@@ -281,17 +281,19 @@ dump_bitmap(BBitmap &bmp, char *name = "bmp") {
 class IconHelper {
 public:
 	IconHelper(icon_size which)
-		: size(which),
-		  bmp1(BitmapBounds(which), B_CMAP8),
+		: bmp1(BitmapBounds(which), B_CMAP8),
 		  bmp2(BitmapBounds(which), B_CMAP8),
-		  bmpTemp(BitmapBounds(which), B_CMAP8)
+		  bmpTemp(BitmapBounds(which), B_CMAP8),
+		  size(which)
 	{
 		// Initialize our three bitmaps to different "colors"
 		fill_bitmap(bmp1, 1);
 		fill_bitmap(bmp2, 2);
 		fill_bitmap(bmpTemp, 3);
 	}
-	
+
+	virtual ~IconHelper() {}
+
 	// Returns the proper bitmap bounds for the given icon size
 	BRect BitmapBounds(icon_size isize) {
 		return isize == B_LARGE_ICON ? BRect(0,0,31,31) : BRect(0,0,15,15);
@@ -339,6 +341,7 @@ class IconForTypeHelper : public IconHelper {
 public:
 	IconForTypeHelper(const char *fileType, icon_size which)
 		: IconHelper(which), fileType(fileType) {}
+	virtual ~IconForTypeHelper() {}
 	virtual status_t GetIcon(BMimeType &mime, BBitmap *icon) {
 		return mime.GetIconForType(fileType.c_str(), icon, size);
 	}
@@ -358,7 +361,7 @@ MimeTypeTest::setUp()
 /*	// Better not to play with fire, so we'll make a copy of the
 	// local mime database which we'll use for certain OpenBeOS tests
 	execCommand(string("mkdir ") + testDir
-				+ " ; copyattr -d -r -- " + mimeDatabaseDir + "/* " + testDir
+				+ " ; copyattr -d -r -- " + mimeDatabaseDir + "/\* " + testDir
 				); */	
 	// Setup our application
 	fApplication = new TestApp(testSig);
@@ -395,7 +398,7 @@ MimeTypeTest::tearDown()
 		testType, testType1, testType2, testType3, testType4, testType5,
 		testTypeApp, testTypeApp1, testTypeApp2, testTypeApp3,
 	};
-	for (int32 i = 0; i < sizeof(testTypes) / sizeof(const char*); i++) {
+	for (uint32 i = 0; i < sizeof(testTypes) / sizeof(const char*); i++) {
 		BMimeType type(testTypes[i]);
 		type.Delete();
 	}
@@ -404,7 +407,7 @@ MimeTypeTest::tearDown()
 
 // entry_ref dumping function ; this may be removed at any time
 
-void
+/*void
 dump_ref(entry_ref *ref, char* name = "ref") {
 	if (ref) {
 		BPath path(ref);
@@ -413,11 +416,11 @@ dump_ref(entry_ref *ref, char* name = "ref") {
 			printf("%s == '%s'", name, path.Path());
 		} else
 			printf("%s == ERROR", name);
-		printf(" == (%d, %d, '%s')\n", ref->device, ref->directory, ref->name);
+		printf(" == (%ld, %Ld, '%s')\n", ref->device, ref->directory, ref->name);
 		
 	} else
 		printf("%s == (NULL)\n", name);
-}
+}*/
 		
 // App Hint
 
@@ -1214,7 +1217,7 @@ void
 to_lower(const char *str, std::string &result) {
 	CHK(str != NULL);
 	result = "";
-	for (int i = 0; i < strlen(str); i++)
+	for (uint i = 0; i < strlen(str); i++)
 		result += tolower(str[i]);
 }
 

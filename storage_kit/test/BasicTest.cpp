@@ -85,18 +85,18 @@ void
 BasicTest::dumpStat(struct stat &st)
 {
 	printf("stat:\n");
-	printf("  st_dev    : %x\n", st.st_dev);
+	printf("  st_dev    : %lx\n", st.st_dev);
 	printf("  st_ino    : %Lx\n", st.st_ino);
 	printf("  st_mode   : %x\n", st.st_mode);
 	printf("  st_nlink  : %x\n", st.st_nlink);
 	printf("  st_uid    : %x\n", st.st_uid);
 	printf("  st_gid    : %x\n", st.st_gid);
 	printf("  st_size   : %Ld\n", st.st_size);
-	printf("  st_blksize: %d\n", st.st_blksize);
-	printf("  st_atime  : %x\n", st.st_atime);
-	printf("  st_mtime  : %x\n", st.st_mtime);
-	printf("  st_ctime  : %x\n", st.st_ctime);
-	printf("  st_crtime : %x\n", st.st_crtime);
+	printf("  st_blksize: %ld\n", st.st_blksize);
+	printf("  st_atime  : %lx\n", st.st_atime);
+	printf("  st_mtime  : %lx\n", st.st_mtime);
+	printf("  st_ctime  : %lx\n", st.st_ctime);
+	printf("  st_crtime : %lx\n", st.st_crtime);
 }
 
 // createVolume

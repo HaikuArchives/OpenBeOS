@@ -833,7 +833,7 @@ StorageKit::read_link( const char *path, char *result, size_t size )
 			result[0] = 0;		// Null terminate
 		return errno;	
 	} else {
-		if (len < size)
+		if (len < (int)size)
 			result[len] = 0;	// Null terminate
 		return len;
 	}

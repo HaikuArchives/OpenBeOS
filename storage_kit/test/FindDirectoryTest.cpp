@@ -110,7 +110,7 @@ FindDirectoryTest::tearDown()
 }
 
 // print_directories
-static
+/*static
 void
 print_directories(dev_t device)
 {
@@ -123,11 +123,11 @@ print_directories(dev_t device)
 		BPath path;
 		error = find_directory(directories[i], &path, false, &volume);
 		if (error == B_OK)
-			printf("%4ld: `%s'\n", directories[i], path.Path());
+			printf("%4d: `%s'\n", directories[i], path.Path());
 		else
 			printf("Failed to find directory: %s\n", strerror(error));
 	}
-}
+}*/
 
 // test_find_directory
 static

@@ -65,7 +65,7 @@ TestShell::Run(int argc, char *argv[])
 			printf("Couldn't get test dir.\n");
 	} else
 		printf("Couldn't find the path to the test app.\n");
-	CppUnitShell::Run(argc, argv);
+	return CppUnitShell::Run(argc, argv);
 }
 
 void

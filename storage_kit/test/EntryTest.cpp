@@ -163,7 +163,7 @@ get_error_index(status_t error)
 			result = i;
 	}
 	if (result == -1)
-		printf("WARNING: error %x is not in the list of errors\n", error);
+		printf("WARNING: error %lx is not in the list of errors\n", error);
 	return result;
 }
 
@@ -194,7 +194,7 @@ fuzzy_equals(status_t error, status_t fuzzyError)
 		int32 index1 = (fuzzyError - 1) / kErrorCount;
 		int32 index2 = (fuzzyError - 1) % kErrorCount;
 		if (index1 >= kErrorCount)
-			printf("WARNING: bad fuzzy error: %x\n", fuzzyError);
+			printf("WARNING: bad fuzzy error: %lx\n", fuzzyError);
 		else {
 			status_t error1 = kErrors[index1];
 			status_t error2 = kErrors[index2];
@@ -337,7 +337,7 @@ EntryTest::InitTest1Paths(TestEntry &_testEntry, status_t error, bool traverse)
 		BEntry entry(testEntry->cpath, traverse);
 		status_t result = entry.InitCheck();
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 		CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 		if (result == B_OK)
 			examine_entry(entry, testEntry, traverse);
@@ -350,7 +350,7 @@ printf("error: %x (%x)\n", result, error);
 			BEntry entry(testEntry->cname, traverse);
 			status_t result = entry.InitCheck();
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 			CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			if (error == B_OK)
 				examine_entry(entry, testEntry, traverse);
@@ -371,7 +371,7 @@ EntryTest::InitTest1Refs(TestEntry &_testEntry, status_t error, bool traverse)
 		BEntry entry(&testEntry->get_ref(), traverse);
 		status_t result = entry.InitCheck();
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 		CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 		if (error == B_OK)
 			examine_entry(entry, testEntry, traverse);
@@ -395,7 +395,7 @@ EntryTest::InitTest1DirPaths(TestEntry &_testEntry, status_t error,
 			BEntry entry(&dir, testEntry->cpath, traverse);
 		status_t result = entry.InitCheck();
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 		CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			if (error == B_OK)
 				examine_entry(entry, testEntry, traverse);
@@ -412,7 +412,7 @@ printf("error: %x (%x)\n", result, error);
 			BEntry entry(&dir, testEntry->cname, traverse);
 			status_t result = entry.InitCheck();
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 			CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			if (error == B_OK)
 				examine_entry(entry, testEntry, traverse);
@@ -429,7 +429,7 @@ printf("error: %x (%x)\n", result, error);
 			BEntry entry(&dir, entryName.c_str(), traverse);
 			status_t result = entry.InitCheck();
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 			CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			if (error == B_OK)
 				examine_entry(entry, testEntry, traverse);
@@ -817,7 +817,7 @@ EntryTest::InitTest2Paths(TestEntry &_testEntry, status_t error, bool traverse)
 //printf("%s\n", testEntry->cpath);
 		status_t result = entry.SetTo(testEntry->cpath, traverse);
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 		CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 		CPPUNIT_ASSERT( fuzzy_equals(entry.InitCheck(), error) );
 		if (result == B_OK)
@@ -830,7 +830,7 @@ printf("error: %x (%x)\n", result, error);
 		if (chdir(testEntry->super->cpath) == 0) {
 			status_t result = entry.SetTo(testEntry->cname, traverse);
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 			CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			CPPUNIT_ASSERT( fuzzy_equals(entry.InitCheck(), error) );
 			if (result == B_OK)
@@ -852,7 +852,7 @@ EntryTest::InitTest2Refs(TestEntry &_testEntry, status_t error, bool traverse)
 //printf("%s\n", testEntry->cpath);
 		status_t result = entry.SetTo(&testEntry->get_ref(), traverse);
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 		CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 		CPPUNIT_ASSERT( fuzzy_equals(entry.InitCheck(), error) );
 		if (result == B_OK)
@@ -877,7 +877,7 @@ EntryTest::InitTest2DirPaths(TestEntry &_testEntry, status_t error,
 			CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 			status_t result = entry.SetTo(&dir, testEntry->cpath, traverse);
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 			CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			CPPUNIT_ASSERT( fuzzy_equals(entry.InitCheck(), error) );
 			if (result == B_OK)
@@ -894,7 +894,7 @@ printf("error: %x (%x)\n", result, error);
 			CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 			status_t result = entry.SetTo(&dir, testEntry->cname, traverse);
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 			CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			CPPUNIT_ASSERT( fuzzy_equals(entry.InitCheck(), error) );
 			if (result == B_OK)
@@ -911,7 +911,7 @@ printf("error: %x (%x)\n", result, error);
 			CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 			status_t result = entry.SetTo(&dir, entryName.c_str(), traverse);
 if (!fuzzy_equals(result, error))
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 			CPPUNIT_ASSERT( fuzzy_equals(result, error) );
 			CPPUNIT_ASSERT( fuzzy_equals(entry.InitCheck(), error) );
 			if (result == B_OK)
@@ -1439,7 +1439,7 @@ EntryTest::RenameTestEntry(TestEntry *testEntry, TestEntry *newTestEntry,
 	status_t result = entry.Rename(newName.c_str(), clobber);
 if (result != error) {
 printf("`%s'.Rename(`%s', %d): ", pathname.c_str(), newName.c_str(), clobber);
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 }
 	CPPUNIT_ASSERT( result == error );
 	// check and cleanup
@@ -1670,14 +1670,14 @@ EntryTest::MoveToTestEntry(TestEntry *testEntry, TestEntry *testDir,
 		status_t result = entry.MoveTo(&dir, NULL, clobber);
 if (result != error) {
 printf("`%s'.MoveTo(`%s', NULL, %d): ", pathname.c_str(), dirname.c_str(), clobber);
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 }
 		CPPUNIT_ASSERT( result == error );
 	} else {
 		status_t result = entry.MoveTo(&dir, newName.c_str(), clobber);
 if (result != error) {
 printf("`%s'.MoveTo(`%s', `%s', %d): ", pathname.c_str(), newName.c_str(), dirname.c_str(), clobber);
-printf("error: %x (%x)\n", result, error);
+printf("error: %lx (%lx)\n", result, error);
 }
 		CPPUNIT_ASSERT( result == error );
 	}
@@ -2485,6 +2485,8 @@ init_entry_test()
 				command = string("ln -s ") + entry->link + " " + entry->path;
 				break;
 			}
+			default:
+				break;
 		}
 		if (command.length() > 0) {
 			if (setUpCommandLine.length() == 0)

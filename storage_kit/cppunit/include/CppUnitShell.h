@@ -28,6 +28,8 @@ typedef CppUnit::Test* (*SuiteFunction)(void);
 class CppUnitShell {
 public:
 	CppUnitShell(const std::string &description = "");
+
+	virtual ~CppUnitShell();
 	
 	// This function is used to add test suites to the list of available
 	// tests. A SuiteFunction is just a function that takes no parameters

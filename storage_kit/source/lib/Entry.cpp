@@ -218,9 +218,9 @@ entry_ref::operator=(const entry_ref &ref)
 	- operator=(const BEntry&)
 */
 BEntry::BEntry()
-	  : fCStatus(B_NO_INIT),
-		fDirFd(StorageKit::NullFd),
-		fName(NULL)
+	  : fDirFd(StorageKit::NullFd),
+		fName(NULL),
+		fCStatus(B_NO_INIT)
 {
 }
 
@@ -235,9 +235,9 @@ BEntry::BEntry()
 
 */
 BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse)
-	  : fCStatus(B_NO_INIT),
-		fDirFd(StorageKit::NullFd),
-		fName(NULL)
+	  : fDirFd(StorageKit::NullFd),
+		fName(NULL),
+		fCStatus(B_NO_INIT)
 {
 	SetTo(dir, path, traverse);
 }
@@ -253,9 +253,9 @@ BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse)
 */
 
 BEntry::BEntry(const entry_ref *ref, bool traverse)
-	  : fCStatus(B_NO_INIT),
-		fDirFd(StorageKit::NullFd),
-		fName(NULL)
+	  : fDirFd(StorageKit::NullFd),
+		fName(NULL),
+		fCStatus(B_NO_INIT)
 {
 	SetTo(ref, traverse);
 }
@@ -272,9 +272,9 @@ BEntry::BEntry(const entry_ref *ref, bool traverse)
 	
 */
 BEntry::BEntry(const char *path, bool traverse)
-	  : fCStatus(B_NO_INIT),
-		fDirFd(StorageKit::NullFd),
-		fName(NULL)
+	  : fDirFd(StorageKit::NullFd),
+		fName(NULL),
+		fCStatus(B_NO_INIT)
 {
 	SetTo(path, traverse);
 }
@@ -284,9 +284,9 @@ BEntry::BEntry(const char *path, bool traverse)
 	\see operator=(const BEntry&)
 */
 BEntry::BEntry(const BEntry &entry)
-	  : fCStatus(B_NO_INIT),
-		fDirFd(StorageKit::NullFd),
-		fName(NULL)
+	  : fDirFd(StorageKit::NullFd),
+		fName(NULL),
+		fCStatus(B_NO_INIT)
 {
 	*this = entry;
 }
@@ -1074,7 +1074,7 @@ BEntry::Dump(const char *name)
 		printf("------------------------------------------------------------\n");
 	}
 	
-	printf("fCStatus == %d\n", fCStatus);
+	printf("fCStatus == %ld\n", fCStatus);
 	
 	StorageKit::LongDirEntry entry;
 	if (fDirFd != -1

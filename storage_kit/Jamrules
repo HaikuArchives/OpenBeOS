@@ -1,3 +1,8 @@
+
+# enable warnings
+CCFLAGS += -Wall -Wno-multichar -Wno-ctor-dtor-privacy  ;
+C++FLAGS += -Wall -Wno-multichar -Wno-ctor-dtor-privacy  ;
+
 rule LinkSharedOSLibs 
 { 
         # LinkSharedOSLibs <name> : <libs> ; 

@@ -597,7 +597,7 @@ printf("error: %lx vs %lx\n", error, getResult);
 }
 CPPUNIT_ASSERT( error == getResult );
 			if (getResult == B_OK) {
-				CPPUNIT_ASSERT( query.PredicateLength()
+				CPPUNIT_ASSERT( (int32)query.PredicateLength()
 								== predicateString.Length() + 1 );
 				CPPUNIT_ASSERT( predicateString == predicate );
 			}
@@ -629,7 +629,7 @@ CPPUNIT_ASSERT( error == getResult );
 	{
 		Query query;
 		CPPUNIT_ASSERT( query.SetPredicate(predicateString.String()) == B_OK );
-		CPPUNIT_ASSERT( query.PredicateLength()
+		CPPUNIT_ASSERT( (int32)query.PredicateLength()
 						== predicateString.Length() + 1 );
 		BString predicate;
 		CPPUNIT_ASSERT( query.GetPredicate(&predicate) == B_OK );
@@ -819,7 +819,7 @@ QueryTest::PredicateTest()
 		);
 		StringNode predicate2("I'm the winner. :-)");
 		CPPUNIT_ASSERT( predicate1.push(query) == B_OK );
-		CPPUNIT_ASSERT( query.PredicateLength()
+		CPPUNIT_ASSERT( (int32)query.PredicateLength()
 						== predicate1.toString().Length() + 1 );
 		CPPUNIT_ASSERT( query.SetPredicate(predicate2.toString().String())
 						== B_OK );
@@ -1334,8 +1334,8 @@ QueryTest::CheckUpdateMessages(uint32 opcode, QueryTestEntry **entries,
 				CPPUNIT_ASSERT( entryNum < entryCount );
 				QueryTestEntry *entry = entries[entryNum];
 				CPPUNIT_ASSERT( message.what == B_QUERY_UPDATE );
-				int32 msgOpcode;
-				CPPUNIT_ASSERT( message.FindInt32("opcode", &msgOpcode)
+				uint32 msgOpcode;
+				CPPUNIT_ASSERT( message.FindInt32("opcode", (int32*)&msgOpcode)
 								== B_OK );
 				CPPUNIT_ASSERT( msgOpcode == opcode );
 				dev_t device;

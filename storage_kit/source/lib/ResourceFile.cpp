@@ -668,9 +668,9 @@ ResourceFile::_ReadHeader(resource_parse_info &parseInfo)
 	if (magic == kResourcesHeaderMagic) {
 		// everything is fine
 	} else if (B_SWAP_INT32(magic) == kResourcesHeaderMagic) {
-		const char *endianessStr[2] = { "little", "big" };
-		int32 endianess
-			= (fHostEndianess == ((bool)B_HOST_IS_LENDIAN ? 0 : 1));
+//		const char *endianessStr[2] = { "little", "big" };
+//		int32 endianess
+//			= (fHostEndianess == ((bool)B_HOST_IS_LENDIAN ? 0 : 1));
 //		Warnings::AddCurrentWarning("Endianess seems to be %s, although %s "
 //									"was expected.",
 //									endianessStr[1 - endianess],
@@ -839,7 +839,6 @@ ResourceFile::_ReadInfoTable(resource_parse_info &parseInfo)
 {
 	int32 &resourceCount = parseInfo.resource_count;
 	// read the info table
-	status_t error = B_OK;
 	// alloc memory for the table
 	char *tableData = new(nothrow) char[parseInfo.info_table_size];
 	if (!tableData)
@@ -1118,7 +1117,6 @@ ResourceFile::_WriteResources(ResourcesContainer &container)
 			entry->rie_pad = 0;
 			entryOffset += entrySize;
 		}
-		uint32 indexSectionPadding = (char*)entry - buffer;
 		fill_pattern(buffer - indexSectionOffset, entry,
 					 buffer + indexSectionSize);
 		write_exactly(fFile, indexSectionOffset, buffer, indexSectionSize,

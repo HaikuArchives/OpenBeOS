@@ -92,8 +92,6 @@ SymLinkTest::InitTest1()
 	const char *dirSuperLink = dirSuperLinkname;
 	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
 	const char *existingDir = existingDirname;
 	const char *existingSuperDir = existingSuperDirname;
 	const char *existingRelDir = existingRelDirname;
@@ -325,8 +323,6 @@ SymLinkTest::InitTest2()
 	const char *dirSuperLink = dirSuperLinkname;
 	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
 	const char *existingDir = existingDirname;
 	const char *existingSuperDir = existingSuperDirname;
 	const char *existingRelDir = existingRelDirname;
@@ -499,23 +495,13 @@ void
 SymLinkTest::ReadLinkTest()
 {
 	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
 	const char *badLink = badLinkname;
 	const char *cyclicLink1 = cyclicLinkname1;
 	const char *cyclicLink2 = cyclicLinkname2;
 	const char *existingDir = existingDirname;
-	const char *existingSuperDir = existingSuperDirname;
-	const char *existingRelDir = existingRelDirname;
 	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
 	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	BSymLink link;
 	char buffer[B_PATH_NAME_LENGTH + 1];
 	// uninitialized
@@ -528,25 +514,25 @@ SymLinkTest::ReadLinkTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
 	CPPUNIT_ASSERT( link.ReadLink(buffer, sizeof(buffer))
-					== strlen(existingDir) );
+					== (ssize_t)strlen(existingDir) );
 	CPPUNIT_ASSERT( strcmp(buffer, existingDir) == 0 );
 	// existing file link
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(fileLink) == B_OK );
 	CPPUNIT_ASSERT( link.ReadLink(buffer, sizeof(buffer))
-					== strlen(existingFile) );
+					== (ssize_t)strlen(existingFile) );
 	CPPUNIT_ASSERT( strcmp(buffer, existingFile) == 0 );
 	// existing cyclic link
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(cyclicLink1) == B_OK );
 	CPPUNIT_ASSERT( link.ReadLink(buffer, sizeof(buffer))
-					== strlen(cyclicLink2) );
+					== (ssize_t)strlen(cyclicLink2) );
 	CPPUNIT_ASSERT( strcmp(buffer, cyclicLink2) == 0 );
 	// existing link to non-existing entry
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(badLink) == B_OK );
 	CPPUNIT_ASSERT( link.ReadLink(buffer, sizeof(buffer))
-					== strlen(nonExisting) );
+					== (ssize_t)strlen(nonExisting) );
 	CPPUNIT_ASSERT( strcmp(buffer, nonExisting) == 0 );
 	// non-existing link
 	// R5: returns B_BAD_ADDRESS instead of (as doc'ed) B_FILE_ERROR
@@ -569,7 +555,7 @@ SymLinkTest::ReadLinkTest()
 	char smallBuffer[2];
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
 	CPPUNIT_ASSERT( link.ReadLink(smallBuffer, sizeof(smallBuffer))
-					== strlen(dirLink) );
+					== (ssize_t)strlen(dirLink) );
 	CPPUNIT_ASSERT( strncmp(smallBuffer, existingDir, sizeof(smallBuffer)) == 0 );
 	// bad args
 	nextSubTest();
@@ -583,25 +569,16 @@ void
 SymLinkTest::MakeLinkedPathTest()
 {
 	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
 	const char *relDirLink = relDirLinkname;
 	const char *relFileLink = relFileLinkname;
-	const char *badLink = badLinkname;
 	const char *cyclicLink1 = cyclicLinkname1;
 	const char *cyclicLink2 = cyclicLinkname2;
 	const char *existingDir = existingDirname;
 	const char *existingSuperDir = existingSuperDirname;
-	const char *existingRelDir = existingRelDirname;
 	const char *existingFile = existingFilename;
 	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
 	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	BSymLink link;
 	BPath path;
 	// 1. MakeLinkedPath(const char*, BPath*)
@@ -615,7 +592,8 @@ SymLinkTest::MakeLinkedPathTest()
 	// existing absolute dir link
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
-	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", &path) == strlen(existingDir) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", &path)
+					== (ssize_t)strlen(existingDir) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(existingDir) == path.Path() );
 	link.Unset();
@@ -623,7 +601,8 @@ SymLinkTest::MakeLinkedPathTest()
 	// existing absolute file link
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(fileLink) == B_OK );
-	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", &path) == strlen(existingFile) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", &path)
+					== (ssize_t)strlen(existingFile) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(existingFile) == path.Path() );
 	link.Unset();
@@ -631,7 +610,8 @@ SymLinkTest::MakeLinkedPathTest()
 	// existing absolute cyclic link
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(cyclicLink1) == B_OK );
-	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", &path) == strlen(cyclicLink2) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", &path)
+					== (ssize_t)strlen(cyclicLink2) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(cyclicLink2) == path.Path() );
 	link.Unset();
@@ -644,7 +624,7 @@ SymLinkTest::MakeLinkedPathTest()
 	CPPUNIT_ASSERT( entry.GetPath(&entryPath) == B_OK );
 	CPPUNIT_ASSERT( link.SetTo(relDirLink) == B_OK );
 	CPPUNIT_ASSERT( link.MakeLinkedPath(existingSuperDir, &path)
-					== strlen(entryPath.Path()) );
+					== (ssize_t)strlen(entryPath.Path()) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entryPath == path );
 	link.Unset();
@@ -657,7 +637,7 @@ SymLinkTest::MakeLinkedPathTest()
 	CPPUNIT_ASSERT( entry.GetPath(&entryPath) == B_OK );
 	CPPUNIT_ASSERT( link.SetTo(relFileLink) == B_OK );
 	CPPUNIT_ASSERT( link.MakeLinkedPath(existingSuperFile, &path)
-					== strlen(entryPath.Path()) );
+					== (ssize_t)strlen(entryPath.Path()) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entryPath == path );
 	link.Unset();
@@ -697,7 +677,8 @@ SymLinkTest::MakeLinkedPathTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo("/boot") == B_OK);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == strlen(existingDir) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path)
+					== (ssize_t)strlen(existingDir) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(existingDir) == path.Path() );
 	link.Unset();
@@ -707,7 +688,8 @@ SymLinkTest::MakeLinkedPathTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(fileLink) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo("/boot") == B_OK);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == strlen(existingFile) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path)
+					== (ssize_t)strlen(existingFile) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(existingFile) == path.Path() );
 	link.Unset();
@@ -717,7 +699,8 @@ SymLinkTest::MakeLinkedPathTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(cyclicLink1) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo("/boot") == B_OK);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == strlen(cyclicLink2) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path)
+					== (ssize_t)strlen(cyclicLink2) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(cyclicLink2) == path.Path() );
 	link.Unset();
@@ -730,7 +713,7 @@ SymLinkTest::MakeLinkedPathTest()
 	CPPUNIT_ASSERT( link.SetTo(relDirLink) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo(existingSuperDir) == B_OK);
 	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path)
-					== strlen(entryPath.Path()) );
+					== (ssize_t)strlen(entryPath.Path()) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entryPath == path );
 	link.Unset();
@@ -745,7 +728,7 @@ SymLinkTest::MakeLinkedPathTest()
 	CPPUNIT_ASSERT( link.SetTo(relFileLink) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo(existingSuperFile) == B_OK);
 	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path)
-					== strlen(entryPath.Path()) );
+					== (ssize_t)strlen(entryPath.Path()) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entryPath == path );
 	link.Unset();
@@ -757,14 +740,16 @@ SymLinkTest::MakeLinkedPathTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == strlen(existingDir) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path)
+					== (ssize_t)strlen(existingDir) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(existingDir) == path.Path() );
 	// absolute link, badly initialized dir
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo(nonExisting) == B_ENTRY_NOT_FOUND);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == strlen(existingDir) );
+	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path)
+					== (ssize_t)strlen(existingDir) );
 	CPPUNIT_ASSERT( path.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( string(existingDir) == path.Path() );
 	link.Unset();
@@ -812,25 +797,10 @@ void
 SymLinkTest::IsAbsoluteTest()
 {
 	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
-	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
-	const char *relDirLink = relDirLinkname;
 	const char *relFileLink = relFileLinkname;
-	const char *badLink = badLinkname;
-	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
 	const char *existingDir = existingDirname;
-	const char *existingSuperDir = existingSuperDirname;
-	const char *existingRelDir = existingRelDirname;
 	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
 	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	BSymLink link;
 	// uninitialized
 	nextSubTest();
@@ -869,25 +839,7 @@ void
 SymLinkTest::AssignmentTest()
 {
 	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
-	const char *relDirLink = relDirLinkname;
-	const char *relFileLink = relFileLinkname;
-	const char *badLink = badLinkname;
-	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
-	const char *existingDir = existingDirname;
-	const char *existingSuperDir = existingSuperDirname;
-	const char *existingRelDir = existingRelDirname;
-	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
-	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	// 1. copy constructor
 	// uninitialized
 	nextSubTest();

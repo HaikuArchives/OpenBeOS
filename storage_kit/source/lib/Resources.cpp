@@ -433,7 +433,7 @@ BResources::AddResource(type_code type, int32 id, const void *data,
 			ssize_t written = item->WriteAt(0, data, length);
 			if (written < 0)
 				error = written;
-			else if (written != length)
+			else if (written != (ssize_t)length)
 				error = B_ERROR;
 		}
 		if (error == B_OK) {
@@ -730,7 +730,7 @@ BResources::WriteResource(type_code type, int32 id, const void *data,
 			ssize_t written = item->WriteAt(offset, data, length);
 			if (written < 0)
 				error = written;
-			else if (written != length)
+			else if (written != (ssize_t)length)
 				error = B_ERROR;
 		}
 	}
@@ -801,7 +801,7 @@ BResources::FindResource(type_code type, int32 id, size_t *lengthFound)
 	void *result = NULL;
 	size_t size = 0;
 	if (const void *data = LoadResource(type, id, &size)) {
-		if (result = malloc(size))
+		if ((result = malloc(size)))
 			memcpy(result, data, size);
 	}
 	if (lengthFound)
@@ -827,7 +827,7 @@ BResources::FindResource(type_code type, const char *name, size_t *lengthFound)
 	void *result = NULL;
 	size_t size = 0;
 	if (const void *data = LoadResource(type, name, &size)) {
-		if (result = malloc(size))
+		if ((result = malloc(size)))
 			memcpy(result, data, size);
 	}
 	if (lengthFound)

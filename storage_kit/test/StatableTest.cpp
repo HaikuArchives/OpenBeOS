@@ -47,17 +47,15 @@ StatableTest::GetStatTest()
 	nextSubTest();
 	CreateUninitializedStatables(testEntries);
 	for (testEntries.rewind(); testEntries.getNext(statable, entryName); ) {
-		struct stat st1, st2;
+		struct stat st1;
 		CPPUNIT_ASSERT( statable->GetStat(&st1) == B_NO_INIT );
 	}
 	testEntries.delete_all();
 	// bad args
 	nextSubTest();
 	CreateROStatables(testEntries);
-	for (testEntries.rewind(); testEntries.getNext(statable, entryName); ) {
-		struct stat st1, st2;
+	for (testEntries.rewind(); testEntries.getNext(statable, entryName); )
 		CPPUNIT_ASSERT( statable->GetStat(NULL) != B_OK );
-	}
 	testEntries.delete_all();
 }
 
@@ -202,9 +200,12 @@ StatableTest::SetXYZTest()
 		struct stat st;
 		uid_t owner = 0xdad;
 		gid_t group = 0xdee;
+// OBOS: no fchmod(), no FD time setters
+#if !SK_TEST_OBOS_POSIX
 		mode_t perms = 0x0ab;	// -w- r-x -wx	-- unusual enough? ;-)
 		time_t mtime = 1234567;
 		time_t ctime = 654321;
+#endif
 // R5: access time unused
 #if !SK_TEST_R5 && !SK_TEST_OBOS_POSIX
 		time_t atime = 2345678;

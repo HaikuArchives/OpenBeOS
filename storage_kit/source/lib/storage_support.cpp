@@ -33,7 +33,7 @@ parse_path(const char *fullPath, int &leafStart, int &leafEnd, int &pathEnd)
 	if (fullPath == NULL)
 		return;
 
-	enum PathParserState { PPS_START, PPS_LEAF, PPS_END } state = PPS_START;
+	enum PathParserState { PPS_START, PPS_LEAF } state = PPS_START;
 
 	int len = strlen(fullPath);
 	

@@ -946,8 +946,6 @@ ResourcesTest::ReadTest()
 		CPPUNIT_ASSERT( resources.GetResourceInfo(info.type, 0, NULL,
 												  NULL, NULL) == true );
 		// LoadResource
-		size_t length1;
-		size_t length2;
 		const void *data1
 			= resources.LoadResource(info.type, info.id, NULL);
 		const void *data2
@@ -959,8 +957,6 @@ ResourcesTest::ReadTest()
 												0, bufferSize);
 		CPPUNIT_ASSERT( error == B_BAD_VALUE );
 		// FindResource()
-		size_t lengthFound1;
-		size_t lengthFound2;
 		void *dataFound1
 			= resources.FindResource(info.type, info.id, NULL);
 		void *dataFound2
@@ -1068,7 +1064,7 @@ RemoveResource(BResources &resources, ResourceSet &resourceSet,
 }
 
 // ListResources
-static
+/*static
 void
 ListResources(BResources &resources)
 {
@@ -1084,7 +1080,7 @@ ListResources(BResources &resources)
 		printf("resource %2ld: type: `%.4s', id: %3ld, size: %5lu\n", i,
 			   (char*)&bigType, id, size);
 	}
-}
+}*/
 
 // SyncTest
 void
@@ -1466,7 +1462,7 @@ ResourcesTest::ReadWriteTest()
 		CPPUNIT_ASSERT( data != NULL && length == info.size );
 		CPPUNIT_ASSERT( !memcmp(data, info.data, info.size) );
 		// write something in the middle
-		int32 offset = (info.size - 2) / 2;
+		size_t offset = (info.size - 2) / 2;
 		CPPUNIT_ASSERT( resources.WriteResource(type, id, writeBuffer, offset,
 												2) == B_OK );
 		data = resources.LoadResource(type, id, &length);
@@ -1477,17 +1473,17 @@ ResourcesTest::ReadWriteTest()
 								info.data + offset + 2,
 								info.size - offset - 2) );
 		// write starting inside the resource, but extending it
-		int32 writeSize = info.size + 3;
+		size_t writeSize = info.size + 3;
 		CPPUNIT_ASSERT( resources.WriteResource(type, id, writeBuffer, offset,
 												writeSize) == B_OK );
 		data = resources.LoadResource(type, id, &length);
-		CPPUNIT_ASSERT( data != NULL && length == offset + writeSize );
+		CPPUNIT_ASSERT( data != NULL && length == (size_t)offset + writeSize );
 		CPPUNIT_ASSERT( !memcmp(data, info.data, offset) );
 		CPPUNIT_ASSERT( !memcmp((const char*)data + offset, writeBuffer,
 								writeSize) );
 		// write past the end of the resource
-		int32 newOffset = length + 30;
-		int32 newWriteSize = 17;
+		size_t newOffset = length + 30;
+		size_t newWriteSize = 17;
 		CPPUNIT_ASSERT( resources.WriteResource(type, id, writeBuffer,
 												newOffset, newWriteSize)
 						== B_OK );

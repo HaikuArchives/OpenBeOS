@@ -608,7 +608,6 @@ DirectoryTest::GetEntryTest()
 void
 DirectoryTest::IsRootTest()
 {
-	const char *existing = existingDirname;
 	//
 	nextSubTest();
 	BDirectory dir;
@@ -641,8 +640,6 @@ void
 DirectoryTest::FindEntryTest()
 {
 	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
 	const char *existing = existingDirname;
 	const char *existingSub = existingSubDirname;
 	const char *existingRelSub = existingRelSubDirname;
@@ -652,7 +649,6 @@ DirectoryTest::FindEntryTest()
 	const char *dirLink = dirLinkname;
 	const char *badLink = badLinkname;
 	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
 	// existing absolute path, uninitialized BDirectory
 	nextSubTest();
 	BDirectory dir;
@@ -802,17 +798,8 @@ DirectoryTest::ContainsTest()
 	const char *existingSub = existingSubDirname;
 	const char *existingRelSub = existingRelSubDirname;
 	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	const char *dirLink = dirLinkname;
 	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
-	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
-	const char *badLink = badLinkname;
-	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
 	// 1. Contains(const char *, int32)
 	// existing entry, initialized BDirectory
 	nextSubTest();
@@ -1061,26 +1048,10 @@ DirectoryTest::ContainsTest()
 void
 DirectoryTest::GetStatForTest()
 {
-	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
 	const char *existing = existingDirname;
 	const char *existingSuper = existingSuperDirname;
 	const char *existingRel = existingRelDirname;
-	const char *existingSub = existingSubDirname;
-	const char *existingRelSub = existingRelSubDirname;
 	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
-	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
-	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
-	const char *badLink = badLinkname;
-	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
 	// uninitialized dir, existing entry, absolute path
 	nextSubTest();
 	BDirectory dir;
@@ -1173,26 +1144,8 @@ void
 DirectoryTest::EntryIterationTest()
 {
 	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
-	const char *existing = existingDirname;
-	const char *existingSuper = existingSuperDirname;
-	const char *existingRel = existingRelDirname;
-	const char *existingSub = existingSubDirname;
-	const char *existingRelSub = existingRelSubDirname;
 	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	const char *testDir1 = testDirname1;
-	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
-	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
-	const char *badLink = badLinkname;
-	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
 	// create a test directory
 	execCommand(string("mkdir ") + testDir1);
 	// 1. empty directory
@@ -1392,26 +1345,8 @@ void
 DirectoryTest::EntryCreationTest()
 {
 	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
 	const char *existing = existingDirname;
-	const char *existingSuper = existingSuperDirname;
-	const char *existingRel = existingRelDirname;
-	const char *existingSub = existingSubDirname;
-	const char *existingRelSub = existingRelSubDirname;
-	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	const char *testDir1 = testDirname1;
-	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
-	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
-	const char *badLink = badLinkname;
-	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
 	// create a test directory
 	execCommand(string("mkdir ") + testDir1);
 	// 1. relative path
@@ -1809,26 +1744,9 @@ void
 DirectoryTest::CreateDirectoryTest()
 {
 	const char *existingFile = existingFilename;
-	const char *existingSuperFile = existingSuperFilename;
-	const char *existingRelFile = existingRelFilename;
-	const char *existing = existingDirname;
-	const char *existingSuper = existingSuperDirname;
-	const char *existingRel = existingRelDirname;
-	const char *existingSub = existingSubDirname;
-	const char *existingRelSub = existingRelSubDirname;
-	const char *nonExisting = nonExistingDirname;
-	const char *nonExistingSuper = nonExistingSuperDirname;
-	const char *nonExistingRel = nonExistingRelDirname;
 	const char *testDir1 = testDirname1;
 	const char *dirLink = dirLinkname;
-	const char *dirSuperLink = dirSuperLinkname;
-	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
-	const char *badLink = badLinkname;
-	const char *cyclicLink1 = cyclicLinkname1;
-	const char *cyclicLink2 = cyclicLinkname2;
 	// 1. absolute path
 	execCommand(string("mkdir ") + testDir1);
 	// two levels

@@ -267,7 +267,7 @@ find_directory(directory_which which, dev_t volume, bool createIt,
 	if (error == B_OK) {
 		BPath path;
 		error = find_directory(which, path, createIt, volume);
-		if (error == B_OK && strlen(path.Path()) >= length)
+		if (error == B_OK && (int32)strlen(path.Path()) >= length)
 			error = E2BIG;
 		if (error == B_OK)
 			strcpy(pathString, path.Path());

@@ -192,8 +192,6 @@ NodeTest::InitTest1()
 	const char *dirSuperLink = dirSuperLinkname;
 	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
 	const char *existingDir = existingDirname;
 	const char *existingSuperDir = existingSuperDirname;
 	const char *existingRelDir = existingRelDirname;
@@ -425,8 +423,6 @@ NodeTest::InitTest2()
 	const char *dirSuperLink = dirSuperLinkname;
 	const char *dirRelLink = dirRelLinkname;
 	const char *fileLink = fileLinkname;
-	const char *fileSuperLink = fileSuperLinkname;
-	const char *fileRelLink = fileRelLinkname;
 	const char *existingDir = existingDirname;
 	const char *existingSuperDir = existingSuperDirname;
 	const char *existingRelDir = existingRelDirname;
@@ -798,7 +794,6 @@ NodeTest::AttrRenameTest(BNode &node)
 	const int strLen = strlen(str) + 1;
 	const int dataLen = 1024;
 	char data[dataLen];
-	ssize_t bytes;
 		
 	node.SetTo("./");
 

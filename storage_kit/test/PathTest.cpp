@@ -149,7 +149,6 @@ PathTest::InitTest1()
 	nextSubTest();
 	{
 		const char *pathName = "doesn't/exist/but/who/cares";
-		const char *absolutePathName = "/boot/doesn't/exist/but/who/cares";
 		BPath path(pathName);
 		CPPUNIT_ASSERT( path.InitCheck() == B_ENTRY_NOT_FOUND );
 		CPPUNIT_ASSERT( path.Path() == NULL );

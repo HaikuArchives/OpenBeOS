@@ -20,6 +20,10 @@ CppUnitShell::CppUnitShell(const std::string &description) : fVerbosityLevel(v2)
 fDescription(description) {
 };
 
+CppUnitShell::~CppUnitShell()
+{
+}
+
 void
 CppUnitShell::AddSuite(const std::string &name, const SuiteFunction suite) {
 	if (suite != NULL)
