@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <malloc.h>
 
+#ifdef USE_DEBUG_MALLOC
+#define malloc dbg_malloc
+#define free dbg_free
+#endif
+
 #include "nhash.h"
 
 #define MAX_INITIAL 15;
@@ -18,7 +23,7 @@ net_hash *nhash_make(void)
 	dprintf("nhash.c: nhash_make: malloc(%ld)\n",
 		sizeof(net_hash));
 #endif	
-	 nn= malloc(sizeof(net_hash));
+	 nn = (net_hash *)malloc(sizeof(net_hash));
 
 	if (!nn)
 		return NULL;
@@ -29,7 +34,7 @@ net_hash *nhash_make(void)
 	dprintf("nhash.c: nhash_make: malloc(%ld)\n",
 		sizeof(net_hash_entry) * (nn->max + 1));
 #endif	
-	nn->array = malloc(sizeof(net_hash_entry) * (nn->max + 1));
+	nn->array = (net_hash_entry **)malloc(sizeof(net_hash_entry) * (nn->max + 1));
 	memset(nn->array, 0, sizeof(net_hash_entry) * (nn->max +1));
 	pool_init(&nn->pool, sizeof(net_hash_entry));
 	if (!nn->pool)
@@ -70,7 +75,7 @@ static void expand_array(net_hash *nh)
 		sizeof(net_hash_entry) * new_max);
 #endif
 
-	new_array = malloc(sizeof(net_hash_entry) * new_max);
+	new_array = (net_hash_entry **)malloc(sizeof(net_hash_entry) * new_max);
 	memset(new_array, 0, sizeof(net_hash_entry) * new_max);
 	for (hi = nhash_first(nh); hi; hi = nhash_next(hi)) {
 		i = hi->this->hash & new_max;
