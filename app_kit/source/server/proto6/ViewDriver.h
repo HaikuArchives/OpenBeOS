@@ -95,12 +95,15 @@ public:
 	virtual BPoint PenPosition(void);
 	virtual float PenSize(void);
 	virtual void SetCursor(ServerCursor *cursor);
+	virtual drawing_mode GetDrawingMode(void);
+	virtual void SetDrawingMode(drawing_mode mode);
 	virtual void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
 	virtual void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
 	virtual void SetPenSize(float size);
 	virtual void SetPixel(int x, int y, uint8 *pattern);
 	virtual void ShowCursor(void);
 
+	virtual float StringWidth(const char *string, int32 length);
 	virtual void StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
 	virtual void StrokeBezier(BPoint *points, uint8 *pattern);
 	virtual void StrokeEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);

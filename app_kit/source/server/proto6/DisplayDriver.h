@@ -83,7 +83,7 @@ public:
 	virtual void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
 
 //	virtual void GetBlendingMode(source_alpha *srcmode, alpha_function *funcmode);
-//	virtual drawing_mode GetDrawingMode(void);
+	virtual drawing_mode GetDrawingMode(void);
 	virtual void HideCursor(void);
 	rgb_color HighColor(void);
 	virtual bool IsCursorHidden(void);
@@ -95,13 +95,14 @@ public:
 	virtual float PenSize(void);
 //	virtual void SetBlendingMode(source_alpha srcmode, alpha_function funcmode);
 	virtual void SetCursor(ServerCursor *cursor);
-//	virtual void SetDrawingMode(drawing_mode mode);
+	virtual void SetDrawingMode(drawing_mode mode);
 	virtual void ShowCursor(void);
 	virtual void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
 	virtual void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
 	virtual void SetPenSize(float size);
 	virtual void SetPixel(int x, int y, uint8 *pattern);
 
+	virtual float StringWidth(const char *string, int32 length);
 	virtual void StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
 	virtual void StrokeBezier(BPoint *points, uint8 *pattern);
 	virtual void StrokeEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);

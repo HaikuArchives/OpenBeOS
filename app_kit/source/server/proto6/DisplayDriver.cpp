@@ -140,6 +140,11 @@ void DisplayDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRec
 {
 }
 
+drawing_mode DisplayDriver::GetDrawingMode(void)
+{
+	return B_OP_COPY;
+}
+
 void DisplayDriver::HideCursor(void)
 {
 }
@@ -191,6 +196,10 @@ void DisplayDriver::SetCursor(ServerCursor *cursor)
 {
 }
 
+void DisplayDriver::SetDrawingMode(drawing_mode mode)
+{
+}
+
 void DisplayDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 {
 }
@@ -210,6 +219,11 @@ void DisplayDriver::SetPixel(int x, int y, uint8 *pattern)
 
 void DisplayDriver::ShowCursor(void)
 {
+}
+
+float DisplayDriver::StringWidth(const char *string, int32 length)
+{
+	return -1.0;
 }
 
 void DisplayDriver::StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern)

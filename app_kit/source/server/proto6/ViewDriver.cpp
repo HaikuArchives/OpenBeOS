@@ -26,6 +26,7 @@
 #include <Message.h>
 #include <Bitmap.h>
 #include <OS.h>
+#include <GraphicsDefs.h>
 #include "PortLink.h"
 #include "ServerProtocol.h"
 #include "ServerBitmap.h"
@@ -535,8 +536,12 @@ void ViewDriver::DrawString(char *string, int length, BPoint point)
 	screenwin->Lock();
 	framebuffer->Lock();
 	drawview->DrawString(string,length,point);
+	font_height fheight;
+	drawview->GetFontHeight(&fheight);
+	BRect invalid(point,BPoint(point.x+drawview->StringWidth(string,length),
+		fheight.ascent+5));
 	drawview->Sync();
-	screenwin->view->Invalidate();
+	screenwin->view->Invalidate(invalid);
 	framebuffer->Unlock();
 	screenwin->Unlock();
 }
@@ -787,6 +792,27 @@ void ViewDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 	screenwin->Unlock();
 }
 
+drawing_mode ViewDriver::GetDrawingMode(void)
+{
+	drawing_mode dm;
+	
+	screenwin->Lock();
+	framebuffer->Lock();
+	dm=drawview->DrawingMode();
+	framebuffer->Unlock();
+	screenwin->Unlock();
+	return dm;
+}
+
+void ViewDriver::SetDrawingMode(drawing_mode dmode)
+{
+	screenwin->Lock();
+	framebuffer->Lock();
+	drawview->SetDrawingMode(dmode);
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
 void ViewDriver::SetPixel(int x, int y, uint8 *pattern)
 {
 }
@@ -800,6 +826,11 @@ void ViewDriver::ShowCursor(void)
 		screenwin->PostMessage(VDWIN_SHOWCURSOR);
 	}
 	screenwin->Unlock();
+}
+
+float ViewDriver::StringWidth(const char *string, int32 length)
+{
+	return drawview->StringWidth(string,length);
 }
 
 void ViewDriver::StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pat)
