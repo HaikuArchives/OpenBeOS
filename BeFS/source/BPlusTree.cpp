@@ -535,11 +535,68 @@ BPlusTree::SeekDown(Stack<node_and_key> &stack,const uint8 *key,uint16 keyLength
 
 
 status_t
-BPlusTree::InsertDuplicate(bplustree_node */*node*/,uint16 /*index*/,off_t /*value*/)
+BPlusTree::FindFreeDuplicateFragment(bplustree_node *node,CachedNode *cached,off_t *_offset,bplustree_duplicate_array **_array)
 {
-	PRINT(("INSERT DUPLICATE ENTRY - that's not yet implemented!!\n"));
+	off_t *values = node->Values();
+	for (int32 i = 0;i < node->all_key_count;i++) {
+		// does the value link to a duplicate fragment?
+		if (bplustree_node::LinkType(values[i]) != BPLUSTREE_DUPLICATE_FRAGMENT)
+			continue;
 
-	RETURN_ERROR(B_ERROR);
+		bplustree_node *fragment = cached->SetTo(bplustree_node::FragmentOffset(values[i]),false);
+		if (fragment == NULL) {
+			FATAL(("Could not get duplicate fragment at %Ld\n",values[i]));
+			continue;
+		}
+		
+		// see if there is some space left for us
+		for (int32 j = 0;j < fNodeSize / ((NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));j++) {
+			bplustree_duplicate_array *array = fragment->FragmentAt(0);
+
+			if (array->value_count == 0) {
+				*_offset = bplustree_node::FragmentOffset(values[i]);
+				*_array = array;
+				return B_OK;
+			}
+		}
+	}
+	return B_ENTRY_NOT_FOUND;
+}
+
+
+status_t
+BPlusTree::InsertDuplicate(Transaction *transaction,CachedNode *cached,bplustree_node *node,uint16 index,off_t value)
+{
+	off_t *values = node->Values();
+	if (bplustree_node::IsDuplicate(values[index])) {
+		PRINT(("INSERT DUPLICATE ENTRY - that's not yet implemented!!\n"));
+		RETURN_ERROR(B_ERROR);
+	}
+
+	// Search for a free duplicate fragment or create a new one
+	// to insert the duplicate value into
+	bplustree_duplicate_array *array = NULL;
+	CachedNode cachedDuplicate(this);
+	off_t offset;
+	if (FindFreeDuplicateFragment(node,&cachedDuplicate,&offset,&array) < B_OK) {
+		// allocate a new duplicate fragment node
+		bplustree_node *fragment = cachedDuplicate.Allocate(transaction,&offset);
+		if (fragment == NULL)
+			return B_NO_MEMORY;
+
+		memset(fragment,0,fNodeSize);
+		array = fragment->FragmentAt(0);
+	}
+	array->Insert(values[index]);
+	array->Insert(value);
+
+	status_t status = cachedDuplicate.WriteBack(transaction);
+	if (status < B_OK)
+		return status;
+
+	values[index] = bplustree_node::MakeType(BPLUSTREE_DUPLICATE_FRAGMENT,offset);
+
+	return cached->WriteBack(transaction);
 }
 
 
@@ -833,7 +890,7 @@ BPlusTree::Insert(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 			// is this a duplicate entry?
 			if (status == B_OK) {
 				if (fAllowDuplicates)
-					return InsertDuplicate(node,nodeAndKey.keyIndex,value);
+					return InsertDuplicate(transaction,&cached,node,nodeAndKey.keyIndex,value);
 				else
 					RETURN_ERROR(B_NAME_IN_USE);
 			}
@@ -1411,6 +1468,32 @@ bplustree_node::DuplicateAt(off_t offset,bool isFragment,int8 index) const
 		start = 2;
 
 	return ((off_t *)this)[start + 1 + index];
+}
+
+
+//	#pragma mark -
+
+
+void 
+bplustree_duplicate_array::Insert(off_t value)
+{
+	// ToDo: if the value count is greater 8, it should do a binary
+	// search to get the correct insertion point
+	int32 i = 0;
+	for (;i < value_count;i++)
+		if (values[i] > value)
+			break;
+	
+	memmove(&values[i+1],&values[i],(value_count - i) * sizeof(off_t));
+	values[i] = value;
+	value_count++;
+}
+
+
+void 
+bplustree_duplicate_array::Remove(off_t value)
+{
+	// ToDo: implement me
 }
 
 

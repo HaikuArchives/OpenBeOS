@@ -46,6 +46,8 @@ enum bplustree_types {
 	BPLUSTREE_DOUBLE_TYPE	= 6
 };
 
+struct bplustree_duplicate_array;
+
 struct bplustree_node {
 	off_t	left_link;
 	off_t	right_link;
@@ -64,8 +66,10 @@ struct bplustree_node {
 	void Initialize();
 	uint8 CountDuplicates(off_t offset,bool isFragment) const;
 	off_t DuplicateAt(off_t offset,bool isFragment,int8 index) const;
+	inline bplustree_duplicate_array *FragmentAt(int8 index);
 
 	static inline uint8 LinkType(off_t link);
+	static inline off_t MakeType(uint8 type, off_t link);
 	static inline bool IsDuplicate(off_t link);
 	static inline off_t FragmentOffset(off_t link);
 };
@@ -73,6 +77,17 @@ struct bplustree_node {
 //#define BPLUSTREE_NODE 0
 #define BPLUSTREE_DUPLICATE_NODE 2
 #define BPLUSTREE_DUPLICATE_FRAGMENT 3
+
+#define NUM_FRAGMENT_VALUES 7
+#define NUM_DUPLICATE_VALUES 125
+
+struct bplustree_duplicate_array {
+	off_t	value_count;
+	off_t	values[0];
+	
+	void Insert(off_t value);
+	void Remove(off_t value);
+};
 
 //**************************************
 
@@ -183,7 +198,8 @@ class BPlusTree {
 		status_t	FindKey(bplustree_node *node, const uint8 *key, uint16 keyLength, uint16 *index = NULL, off_t *next = NULL);
 		status_t	SeekDown(Stack<node_and_key> &stack, const uint8 *key, uint16 keyLength);
 
-		status_t	InsertDuplicate(bplustree_node *node,uint16 index,off_t value);
+		status_t	FindFreeDuplicateFragment(bplustree_node *node, CachedNode *cached, off_t *_offset, bplustree_duplicate_array **_array);
+		status_t	InsertDuplicate(Transaction *transaction,CachedNode *cached,bplustree_node *node,uint16 index,off_t value);
 		void		InsertKey(bplustree_node *node, uint16 index, uint8 *key, uint16 keyLength, off_t value);
 		status_t	SplitNode(bplustree_node *node, off_t nodeOffset, bplustree_node *other, off_t otherOffset, uint16 *_keyIndex, uint8 *key, uint16 *_keyLength, off_t *_value);
 
@@ -356,10 +372,24 @@ bplustree_node::IsLeaf() const
 	return overflow_link == BPLUSTREE_NULL;
 }
 
+
+inline bplustree_duplicate_array *
+bplustree_node::FragmentAt(int8 index)
+{
+	return (bplustree_duplicate_array *)((off_t *)this + index * (NUM_FRAGMENT_VALUES + 1));
+}
+
+
 inline uint8
 bplustree_node::LinkType(off_t link)
 {
 	return *(uint64 *)&link >> 62;
+}
+
+inline off_t
+bplustree_node::MakeType(uint8 type,off_t link)
+{
+	return ((off_t)type << 62) | link;
 }
 
 inline bool 
