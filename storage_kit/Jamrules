@@ -2,53 +2,74 @@ rule LinkSharedOSLibs
 { 
         # LinkSharedOSLibs <name> : <libs> ; 
         
-        for i in $(>) 
+        for i in $(2) 
         { 
-				LINKFLAGS on $(<) += $(i) ;
-#                LINKLIBS on $(<) += $(i) ; 
+				LINKFLAGS on $(1) += $(i) ;
+#                LINKLIBS on $(1) += $(i) ; 
         } 
 }
 
 rule AddDebugInfo {
-#	C++FLAGS on $(<) += "-g -O0" ;
+#	C++FLAGS on $(1) += "-g -O0" ;
 	C++FLAGS += "-g -O0" ;
+}
+
+rule TestDefines
+{
+	# TestDefines <objectfile> : <type> ;
+	# <type> may be R5 or POSIX
+
+	local r5value = 0 ;
+	local posixvalue = 0 ;
+	switch $(2)
+	{
+		case R5 : r5value = 1 ;
+		case POSIX : posixvalue = 1 ;
+	}
+	C++FLAGS on $(1) += -DSK_TEST_R5=$(r5value) ;
+	C++FLAGS on $(1) += -DSK_TEST_OBOS_POSIX=$(posixvalue) ;
 }
 
 rule R5Objects
 {
-	for i in $(<)
+	for i in $(1)
 	{
-		Object <$(SOURCE_GRIST)>$(i:S=.R5$(SUFOBJ)) : $(i) ;
+		local object = <$(SOURCE_GRIST)>$(i:S=.R5$(SUFOBJ)) ;
+		Object $(object) : $(i) ;
+		TestDefines $(object) : R5 ;
 	}
 }
 
 rule LibraryFromR5Sources
 {
-	R5Objects $(>) ;
-	LibraryFromObjects $(<) : $(>:S=.R5$(SUFOBJ)) ;
+	R5Objects $(2) ;
+	LibraryFromObjects $(1) : $(>:S=.R5$(SUFOBJ)) ;
 }
 
 rule POSIXObjects
 {
-	for i in $(<)
+	for i in $(1)
 	{
-		Object <$(SOURCE_GRIST)>$(i:S=.POSIX$(SUFOBJ)) : $(i) ;
+		local object = <$(SOURCE_GRIST)>$(i:S=.POSIX$(SUFOBJ)) ;
+		Object $(object) : $(i) ;
+		TestDefines $(object) : POSIX ;
 	}
 }
 
 rule LibraryFromPOSIXSources
 {
-	POSIXObjects $(>) ;
-	LibraryFromObjects $(<) : $(>:S=.POSIX$(SUFOBJ)) ;
+	POSIXObjects $(2) ;
+	LibraryFromObjects $(1) : $(>:S=.POSIX$(SUFOBJ)) ;
 }
 
 rule LinkShared
 {
-	DEPENDS lib : $(<) ;
-	DEPENDS $(<) : $(>) ;
+	DEPENDS lib : $(1) ;
+	DEPENDS $(1) : $(2) ;
 }
 
 actions LinkShared
 {
-	g++ -nostart -Xlinker -soname=$(<) $(LINKFLAGS) $(LINKLIBS) -o $(<) $(>) ;
+	g++ -nostart -Xlinker -soname=$(1) $(LINKFLAGS) $(LINKLIBS) -o $(1) $(2) ;
 }
+
