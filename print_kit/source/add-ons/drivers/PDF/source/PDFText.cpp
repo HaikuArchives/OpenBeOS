@@ -1,0 +1,400 @@
+/*
+
+PDF Writer printer driver.
+
+Copyright (c) 2001, 2002 OpenBeOS. 
+
+Authors: 
+	Philippe Houdoin
+	Simon Gauvin	
+	Michael Pfeiffer
+	
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+*/
+
+#include <stdio.h>
+#include <string.h>	
+#include <math.h>
+
+#include <Debug.h>
+#include <StorageKit.h>
+#include <TranslationKit.h>
+#include <support/UTF8.h>
+
+#include "PDFWriter.h"
+#include "pdflib.h"
+
+typedef struct {
+	uint16 from;
+	uint16 to;
+	int16  length;
+	uint16 *unicodes;
+} unicode_to_encoding;
+
+typedef struct {
+	uint16 unicode;
+	uint16 cid;
+} unicode_to_cid;
+
+typedef struct {
+	uint16         length;
+	unicode_to_cid *table;	
+} cid_table;
+
+#ifdef UNICODE5_FROM
+  #error check code!
+#endif
+
+#define ELEMS(v, e) sizeof(v) / sizeof(e)
+
+// Adobe Glyph List
+#include "enc_range.h"
+#include "unicode0.h"
+#include "unicode1.h"
+#include "unicode2.h"
+#include "unicode3.h"
+#include "unicode4.h"
+
+static unicode_to_encoding encodings[] = {
+	{UNICODE0_FROM, UNICODE0_TO, ELEMS(unicode0, uint16), unicode0},
+	{UNICODE1_FROM, UNICODE1_TO, ELEMS(unicode1, uint16), unicode1},
+	{UNICODE2_FROM, UNICODE2_TO, ELEMS(unicode2, uint16), unicode2},
+	{UNICODE3_FROM, UNICODE3_TO, ELEMS(unicode3, uint16), unicode3},
+	{UNICODE4_FROM, UNICODE4_TO, ELEMS(unicode4, uint16), unicode4}
+};
+
+// unicode to cid
+#include "japanese.h"
+#include "gb1.h"
+#include "cns1.h"
+
+static cid_table cid_tables[] = {
+	{ELEMS(japanese, unicode_to_cid), japanese},
+	{ELEMS(CNS1,     unicode_to_cid), CNS1},
+	{ELEMS(GB1,      unicode_to_cid), GB1},
+};
+
+static bool find_encoding(uint16 unicode, uint8 &encoding, uint16 &index) {
+	for (unsigned int i = 0; i < ELEMS(encodings, unicode_to_encoding); i++) {
+		if (encodings[i].from <= unicode && unicode <= encodings[i].to) {
+			int16 bottom = 0;
+			int16 top = encodings[i].length-1;
+			uint16* codes = encodings[i].unicodes;
+			while (top >= bottom) {
+			    int16 m = (top + bottom) / 2;
+				if (unicode < codes[m]) {
+					top = m-1;
+				} else if (unicode > codes[m]) {
+					bottom = m+1;
+				} else {
+					index = m;
+					encoding = i;
+					return true;
+				}
+			}
+		    return false;
+		} 
+	}
+	return false;
+}
+
+static bool find_in_cid_tables(uint16 unicode, uint8 &encoding, uint16 &index) {
+	for (unsigned int i = 0; i < ELEMS(cid_tables, cid_table); i++) {
+		int32 bottom = 0;
+		int32 top = cid_tables[i].length-1;
+		unicode_to_cid *table = cid_tables[i].table;
+		while (top >= bottom) {
+		    int32 m = (top + bottom) / 2;
+			if (unicode < table[m].unicode) {
+				top = m-1;
+			} else if (unicode > table[m].unicode) {
+				bottom = m+1;
+			} else {
+				index = table[m].cid;
+				encoding = i;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
+void 
+PDFWriter::GetFontName(BFont *font, char *fontname, bool &embed, font_encoding encoding) 
+{
+	font_family family;
+	font_style  style;
+
+	font->GetFamilyAndStyle(&family, &style);
+
+	strcat(strcat(strcpy(fontname, family), "-"), style);
+
+	embed = embed && EmbedFont(fontname);
+
+	switch (encoding) {
+		case japanese_encoding:
+			strcpy(fontname, "HeiseiMin-W3"); return;
+		case chinese_cns1_encoding:
+			strcpy(fontname, "MHei-Medium"); return;
+		case chinese_gb1_encoding:
+			strcpy(fontname, "STSong-Light"); return;
+		case korean_encoding:
+			strcpy(fontname, "HYGoThic-Medium"); return;
+			return;
+		default:;
+	}
+}
+
+static const char* encoding_names[] = {
+	"macroman",
+	// TrueType
+	"ttenc0",
+	"ttenc1",
+	"ttenc2",
+	"ttenc3",
+	"ttenc4",
+	// Type 1
+	"t1enc0",
+	"t1enc1",
+	"t1enc2",
+	"t1enc3",
+	"t1enc4",
+	// CJK
+	"UniJIS-UCS2-H",
+	"UniCNS-UCS2-H",
+	"UniGB-UCS2-H",
+	"UniKS-UCS2-H"
+};
+
+int 
+PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding) 
+{
+	fprintf(fLog, "FindFont %s\n", fontName); 
+	Font *cache = NULL;
+	const int n = fFontCache.CountItems();
+	for (int i = 0; i < n; i++) {
+		cache = (Font*)fFontCache.ItemAt(i);
+		if (cache->encoding == encoding && strcmp(cache->name.String(), fontName) == 0) return cache->font;
+	}
+	fprintf(fLog, "Create new font\n");
+	int font = PDF_findfont(fPdf, fontName, encoding_names[encoding], embed);
+	if (font != -1) {
+		fprintf(fLog, "font created\n");
+		cache = new Font(fontName, font, encoding);
+		fFontCache.AddItem(cache);
+	}
+	return font;
+}
+
+void 
+PDFWriter::ToUtf8(uint32 encoding, const char *string, BString &utf8) {
+	int32 len = strlen(string);
+	int32 srcLen = len, destLen = 255;
+	int32 state = 0;
+	char buffer[256];
+	int32 srcStart = 0;
+
+	do {
+		convert_to_utf8(encoding, &string[srcStart], &srcLen, buffer, &destLen, &state); 
+		srcStart += srcLen;
+		len -= srcLen;
+		srcLen = len;
+		
+		utf8.Append(buffer, destLen);
+		destLen = 255;
+	} while (len > 0);
+};
+
+void 
+PDFWriter::ToUnicode(const char *string, BString &unicode) {
+	int32 len = strlen(string);
+	int32 srcLen = len, destLen = 255;
+	int32 state = 0;
+	char buffer[256];
+	int32 srcStart = 0;
+	int i = 0;
+
+	do {
+		convert_from_utf8(B_UNICODE_CONVERSION, &string[srcStart], &srcLen, buffer, &destLen, &state); 
+		srcStart += srcLen;
+		len -= srcLen;
+		srcLen = len;
+
+		char *b = unicode.LockBuffer(i + destLen);
+		memcpy(&b[i], buffer, destLen);
+		unicode.UnlockBuffer(i + destLen);		
+		i += destLen;
+		destLen = 255;
+	} while (len > 0);
+}
+
+uint16 
+PDFWriter::CodePointSize(const char* s) {
+	uint16 i = 1;
+	for (s++; !BeginsChar(*s); s++) i++; 
+	return i;
+}
+
+void
+PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size) {
+	// try to convert from utf8 to MacRoman encoding schema...
+	int32 srcLen  = size;
+	int32 destLen = 1;
+	char dest[2] = "\0"; 
+	int32 state = 0; 
+	bool embed = true;
+	font_encoding encoding = macroman_encoding;	
+	
+	if (convert_from_utf8(B_MAC_ROMAN_CONVERSION, utf8, &srcLen, dest, &destLen, &state, 0) != B_OK || dest[0] == 0 ) {
+		// could not convert to MacRoman
+		uint8  enc;
+		uint16 index;
+		// is code point in the Adobe Glyph List? 
+		if (find_encoding(unicode, enc, index)) {
+			// fprintf(fLog, "encoding for %x -> %d %d\n", unicode, (int)enc, (int)index);
+			// use one of the user defined encodings
+			encoding = font_encoding(enc + tt_encoding0);
+			*dest = index;
+		} else if (find_in_cid_tables(unicode, enc, index)) {
+			// fprintf(fLog, "cid table %d index = %d\n", (int)enc, (int)index);
+			dest[0] = unicode / 256; 
+			dest[1] = unicode % 256; 
+			destLen = 2;
+			encoding = font_encoding(enc + japanese_encoding);
+			embed = false;
+		} else {
+			// fprintf(fLog, "encoding for %x not found!\n", unicode);
+			*dest = 0; // paint a box (is 0 a box in MacRoman) or
+			return; // simply skip character 
+		}
+	} 
+	// else fprintf(fLog, "macroman srcLen=%d destLen=%d dest= %d %d!\n", srcLen, destLen, (int)dest[0], (int)dest[1]);
+
+	char 	fontName[B_FONT_FAMILY_LENGTH+B_FONT_STYLE_LENGTH+1];
+	int		font;
+
+	GetFontName(&fState->beFont, fontName, embed, encoding);
+	font = FindFont(fontName, embed, encoding);	
+	if (font < 0) {
+		fprintf(fLog, "**** PDF_findfont(%s) failed, back to default font\n", fontName);
+		font = PDF_findfont(fPdf, "Helvetica", "macroman", 0);
+	}
+
+	fState->font = font;
+	fState->fontChanged = false;
+
+	uint16 face = fState->beFont.Face();
+	PDF_set_parameter(fPdf, "underline", (face & B_UNDERSCORE_FACE) != 0 ? "true" : "false");
+	PDF_set_parameter(fPdf, "strikeout", (face & B_STRIKEOUT_FACE) != 0 ? "true" : "false");
+	PDF_set_value(fPdf, "textrendering", (face & B_OUTLINED_FACE) != 0 ? 1 : 0); 
+
+	SetColor();
+	// XXX: scaling font size required?
+	PDF_setfont(fPdf, fState->font, scale(fState->beFont.Size()));
+
+	const float x = tx(fState->penX /*+ deltax*/);
+	const float y = ty(fState->penY /*+ deltay*/);
+	const float rotation = fState->beFont.Rotation();
+	const bool rotate = rotation != 0.0;
+
+	if (rotate) {
+		PDF_save(fPdf);
+		PDF_translate(fPdf, x, y);
+		PDF_rotate(fPdf, 180.0 / PI * rotation);
+	    PDF_set_text_pos(fPdf, 0, 0);
+	} else 
+	    PDF_set_text_pos(fPdf, x, y);
+
+	PDF_show2(fPdf, dest, destLen);
+
+	if (rotate) {
+		PDF_restore(fPdf);
+	}
+}
+
+// --------------------------------------------------
+void	
+PDFWriter::DrawString(char *string, float deltax, float deltay)
+{
+	fprintf(fLog, "DrawString string=\"%s\", deltax=%f, deltay=%f, at %f, %f\n",
+			string, deltax, deltay, fState->penX, fState->penY);
+
+	fprintf(fLog, "   Encoding= %d\n", fState->beFont.Encoding());
+	{
+		for (int i = 0; string[i]; i++) {
+			fprintf(fLog, "%2.2x", string[i]);
+		}
+		fprintf(fLog, "\n");
+	}
+
+	if (IsClipping()) {
+		fprintf(fLog, "DrawPixels for clipping not implemented yet!");
+		return;
+	}
+
+	// convert string to UTF8
+	BString utf8;
+	if (fState->beFont.Encoding() == B_UNICODE_UTF8) {
+		utf8 = string;
+	} else {
+		ToUtf8(fState->beFont.Encoding()-1, string, utf8);
+	}
+	// convert string in UTF8 to unicode UCS2
+	BString unicode;
+	ToUnicode(utf8.String(), unicode);	
+	// need font object to calculate width of utf8 code point
+	BFont font = fState->beFont;
+	font.SetEncoding(B_UNICODE_UTF8);
+	// constants to calculate position of next character	
+	const float rotation = fState->beFont.Rotation();
+	const bool rotate = rotation != 0.0;
+	const float cos1 = rotate ? cos(rotation) : 1;
+	const float sin1 = rotate ? -sin(rotation) : 0;
+
+	// draw each character
+	const char *c = utf8.String();
+	const unsigned char *u = (unsigned char*)unicode.String();
+	for (int i = 0; i < unicode.Length(); i += 2) {
+		int s = CodePointSize(c);
+		
+		// XXX: How should deltax/y be handled?
+		DrawChar(u[0]*256+u[1], c, s);		
+
+		// position of next character
+		float w = font.StringWidth(c, s);
+
+		fState->penX += w * cos1;
+		fState->penY += w * sin1;
+
+		// next character
+		c += s; u += 2;
+	}
+}
+
+bool
+PDFWriter::EmbedFont(const char* name) {
+	const int n = fFontFiles.CountItems();
+	for (int i = 0; i < n; i++) {
+		FontFile* f = (FontFile*)fFontFiles.ItemAt(i);
+		if (f->name.Compare(name) == 0) return f->size < 250*1024;
+	}
+	return false;
+}

@@ -26,7 +26,7 @@ TYPE= SHARED
 #	in folder names do not work well with this makefile.
 SRCS= Driver.cpp PrinterDriver.cpp PageSetupWindow.cpp JobSetupWindow.cpp \
 	  PrinterSetupWindow.cpp MarginView.cpp StatusWindow.cpp \
-	  PDFWriter.cpp 
+	  PDFText.cpp PDFWriter.cpp
 		
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

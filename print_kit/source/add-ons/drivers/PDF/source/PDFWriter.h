@@ -48,6 +48,32 @@ THE SOFTWARE.
 
 class DrawShape;
 
+enum font_encoding {
+	macroman_encoding,
+	// TrueType
+	tt_encoding0,
+	tt_encoding1,
+	tt_encoding2,
+	tt_encoding3,
+	tt_encoding4,
+	// Type 1
+	t1_encoding0,
+	t1_encoding1,
+	t1_encoding2,
+	t1_encoding3,
+	t1_encoding4,
+	// CJK
+	japanese_encoding,
+	chinese_cns1_encoding,
+	chinese_gb1_encoding,
+	korean_encoding // not implemented yet
+};
+
+enum font_type {
+	true_type_type,
+	type1_type
+};
+
 class PDFWriter : public PrinterDriver
 	{
 	
@@ -71,6 +97,15 @@ class PDFWriter : public PrinterDriver
 		// Image support
 		void		*CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		BBitmap		*ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
+
+		// String handling
+		bool   BeginsChar(char byte) { return (byte & 0xc0) != 0x80; }
+		void   ToUtf8(uint32 encoding, const char *string, BString &utf8);
+		void   ToUnicode(const char *string, BString &unicode);
+		uint16 CodePointSize(const char *s);
+		void   DrawChar(uint16 unicode, const char *utf8, int16 size);
+		bool   EmbedFont(const char* n);
+		status_t DeclareFonts();
 
 		// BPicture playback handlers
 		void		Op(int number);
@@ -177,9 +212,18 @@ class PDFWriter : public PrinterDriver
 
 		class Font {
 		public:
-			Font(char *n, int f) : name(n), font(f) { }
+			Font(char *n, int f, font_encoding e) : name(n), font(f), encoding(e) { }
 			BString name;
 			int     font;
+			font_encoding encoding;
+		};
+
+		class FontFile {
+		public:
+			FontFile(char *n, int64 s, font_type t) : name(n), size(s), type(t) { }
+			BString   name;
+			int64     size;
+			font_type type;
 		};
 	
 		FILE			*fLog;
@@ -187,6 +231,7 @@ class PDFWriter : public PrinterDriver
 		State			*fState;
 		int32           fStateDepth;
 		BList           fFontCache;
+		BList           fFontFiles;
 		enum {
 			kDrawingMode,
 			kClippingMode
@@ -201,8 +246,8 @@ class PDFWriter : public PrinterDriver
 
 		bool StoreTranslatorBitmap(BBitmap *bitmap, char *filename, uint32 type);
 
-		void GetFontName(BFont *font, char *fontname, int *embed);
-		int FindFont(char *fontname, int embed);
+		void GetFontName(BFont *font, char *fontname, bool &embed, font_encoding encoding);
+		int FindFont(char *fontname, bool embed, font_encoding encoding);
 
 		void PushInternalState();
 		bool PopInternalState();

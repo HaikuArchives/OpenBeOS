@@ -52,7 +52,6 @@ THE SOFTWARE.
 
 #define TRUETTYPE_TABLE_NAME_TAG	'name'
 
-static status_t declare_fonts(PDF * pdf, FILE * log);
 static uint16 ttf_get_uint16(FILE * ttf);
 static uint32 ttf_get_uint32(FILE *ttf);
 static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_size);
@@ -132,6 +131,11 @@ PDFWriter::~PDFWriter()
 		delete (Font*)fFontCache.ItemAt(i);
 	}
 	fFontCache.MakeEmpty();
+	
+	for (int i = 0; i < fFontFiles.CountItems(); i++) {
+		delete (FontFile*)fFontFiles.ItemAt(i);
+	}
+	fFontFiles.MakeEmpty();
 	
 	if (Transport())
 		CloseTransport();
@@ -264,13 +268,20 @@ PDFWriter::InitWriter()
 	fprintf(fLog, "Start of fonts declaration:\n");	
 /*
 	PDF_set_parameter(fPdf, "resourcefile", "/boot/home/config/settings/pdflib.upr");
-	
-	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Roman==/boot/beos/etc/fonts/ttfonts/Swiss721.ttf");
-	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Bold==/boot/beos/etc/fonts/ttfonts/Swiss721_Bold.ttf");
-	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Italic==/boot/beos/etc/fonts/ttfonts/Swiss721_Italic.ttf");
-	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Bold Italic==/boot/beos/etc/fonts/ttfonts/Swiss721_BoldItalic.ttf");
 */
-	declare_fonts(fPdf, fLog);
+	PDF_set_parameter(fPdf, "Encoding", "t1enc0==/boot/home/config/settings/PDF Writer/t1enc0.enc");
+	PDF_set_parameter(fPdf, "Encoding", "t1enc1==/boot/home/config/settings/PDF Writer/t1enc1.enc");
+	PDF_set_parameter(fPdf, "Encoding", "t1enc2==/boot/home/config/settings/PDF Writer/t1enc2.enc");
+	PDF_set_parameter(fPdf, "Encoding", "t1enc3==/boot/home/config/settings/PDF Writer/t1enc3.enc");
+	PDF_set_parameter(fPdf, "Encoding", "t1enc4==/boot/home/config/settings/PDF Writer/t1enc4.enc");
+
+	PDF_set_parameter(fPdf, "Encoding", "ttenc0==/boot/home/config/settings/PDF Writer/ttenc0.cpg");
+	PDF_set_parameter(fPdf, "Encoding", "ttenc1==/boot/home/config/settings/PDF Writer/ttenc1.cpg");
+	PDF_set_parameter(fPdf, "Encoding", "ttenc2==/boot/home/config/settings/PDF Writer/ttenc2.cpg");
+	PDF_set_parameter(fPdf, "Encoding", "ttenc3==/boot/home/config/settings/PDF Writer/ttenc3.cpg");
+	PDF_set_parameter(fPdf, "Encoding", "ttenc4==/boot/home/config/settings/PDF Writer/ttenc4.cpg");
+
+	DeclareFonts();
 
 	fprintf(fLog, "End of fonts declaration.\n");	
 
@@ -335,7 +346,8 @@ PDFWriter::EndPage()
 
 
 // --------------------------------------------------
-static status_t declare_fonts(PDF * pdf, FILE * log)
+status_t 
+PDFWriter::DeclareFonts()
 {
 	char 				fn[512];
 	char				buffer[1024];
@@ -361,22 +373,30 @@ static status_t declare_fonts(PDF * pdf, FILE * log)
 			dir = new BDirectory(path.Path());
 			if ( dir->InitCheck() == B_OK )
 				{
-				fprintf(log, "--- From %s\n", path.Path());
+				fprintf(fLog, "--- From %s\n", path.Path());
 				while ( dir->GetNextEntry(&entry) == B_OK )
 					{
 					if (! entry.IsFile())
 						continue;
-	
+
 					entry.GetPath(&path);
 	
 					fn[0] = 0;
 					if ( ttf_get_fontname(path.Path(), fn, sizeof(fn)) != B_OK )
 						continue;
-						
+										
+					BFile f(&entry, B_READ_ONLY);
+					off_t size;
+					if (f.GetSize(&size) != B_OK) size = 1024*1024*1024;
+					
+					fFontFiles.AddItem(new FontFile(fn, size, true_type_type));
+#ifndef __POWERPC__						
 					snprintf(buffer, sizeof(buffer), "%s==%s", fn, path.Path());
-
-					fprintf(log, "%s\n", buffer);
-					PDF_set_parameter(pdf, "FontOutline", buffer);
+#else
+					sprintf(buffer, "%s==%s", fn, path.Path());
+#endif
+					fprintf(fLog, "%s\n", buffer);
+					PDF_set_parameter(fPdf, "FontOutline", buffer);
 					};
 				};
 			delete dir;
@@ -545,7 +565,11 @@ static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_s
 		
 	if (names_found == 3)
 		{
+#ifndef __POWERPC__
 		snprintf(fontname, fn_size, "%s-%s", family_name, face_name);
+#else
+		sprintf(fontname, "%s-%s", family_name, face_name);
+#endif
 		status = B_OK;
 		};
 		
@@ -1262,172 +1286,6 @@ PDFWriter::ClipToPicture(BPicture *picture, BPoint point, bool clip_to_inverse_p
 		fprintf(fLog, "Nested call of ClipToPicture not implemented yet!\n");
 	}
 }
-
-#if 0
-// --- String Handling ----
-struct FontSubst {
-	char *pdfFont, 
-	     *fontFamily, 
-	     *fontStyle;
-};
-
-// index: {symbolic:12, fixed:8, serif:4, sans-serif:0} + bold*2 + italic
-static FontSubst fontSubst[16] = {
- { "Helvetica",				"Swis721 BT",			"Roman"},
- { "Helvetica-Oblique",		"Swis721 BT",			"Italic"},
- { "Helvetica-Bold",		"Swis721 BT",			"Bold"},
- { "Helvetica-BoldOblique",	"Swis721 BT",			"Bold Italic"},
- { "Times-Roman",			"Dutch801 Rm BT",		"Roman"},
- { "Times-Italic",			"Dutch801 Rm BT",		"Italic"},
- { "Times-Bold",			"Dutch801 Rm BT",		"Bold"},
- { "Times-BoldItalic",		"Dutch801 Rm BT",		"Bold Italic"},
- { "Courier",				"Courier10 BT",			"Roman"},
- { "Courier-Oblique",		"Courier10 BT",			"Italic"},
- { "Courier-Bold",			"Courier10 BT",			"Bold"},
- { "Courier-BoldOblique",	"Courier10 BT",			"Bold Italic"},
- { "Symbol",				"SymbolProp BT",		"Regular"},
- { "Symbol",				"SymbolProp BT",		"Regular"},
- { "Symbol",				"SymbolProp BT",		"Regular"},
- { "Symbol",				"SymbolProp BT",		"Regular"}
-};
-#endif
-
-void 
-PDFWriter::GetFontName(BFont *font, char *fontname, int *embed) 
-{
-	font_family family;
-	font_style  style;
-
-	font->GetFamilyAndStyle(&family, &style);
-#if 0
-	for (int i = 0; i < 16; i++) {
-		if (strcmp(fontSubst[i].fontFamily, family) == 0 &&
-		    strcmp(fontSubst[i].fontStyle, style) == 0) {
-		    strcpy(fontname, fontSubst[i].pdfFont);
-			*embed = 0;
-		    return;
-		}
-	}
-	
-	// substitute font by face description
-/*
-	uint16 face  = font->Face();
-	uint8 italic = (face & B_ITALIC_FACE) != 0 ? 1 : 0;
-	uint8 bold   = (face & B_BOLD_FACE) != 0 ? 2 : 0;
-	uint8 fixed  = font->IsFixed() ? 8 : 0;
-	strcpy(fontname, fontSubst[fixed+italic+bold].pdfFont);	 
-*/
-#endif
-
-	*embed = 1;
-	strcat(strcat(strcpy(fontname, family), "-"), style);
-}
-
-int 
-PDFWriter::FindFont(char* fontName, int embed) 
-{
-	fprintf(fLog, "FindFont %s\n", fontName); 
-	Font *cache = NULL;
-	const int n = fFontCache.CountItems();
-	int i;
-	for (i = 0; i < n; i++) {
-		cache = (Font*)fFontCache.ItemAt(i);
-		if (strcmp(cache->name.String(), fontName) == 0) return cache->font;
-	}
-	fprintf(fLog, "Create new font\n");
-	int font = PDF_findfont(fPdf, fontName, "macroman", embed);
-	if (font != -1) {
-		fprintf(fLog, "font created\n");
-		cache = new Font(fontName, font);
-		fFontCache.AddItem(cache);
-	}
-	return font;
-}
-
-// --------------------------------------------------
-void	
-PDFWriter::DrawString(char *string, float deltax, float deltay)
-{
-	int32	srcLen;
-	int32	destLen;
-	char *	dest;
-	int32	state;
-
-	fprintf(fLog, "DrawString string=\"%s\", deltax=%f, deltay=%f, at %f, %f\n",
-			string, deltax, deltay, fState->penX, fState->penY);
-
-	if (IsClipping()) {
-		fprintf(fLog, "DrawPixels for clipping not implemented yet!");
-		return;
-	}
-
-	if (fState->fontChanged) {
-		char 	fontName[B_FONT_FAMILY_LENGTH+B_FONT_STYLE_LENGTH+1];
-		int		font;
-		int     embed;
-
-		GetFontName(&fState->beFont, fontName, &embed);
-		font = FindFont(fontName, embed);	
-		if (font < 0) {
-			fprintf(fLog, "**** PDF_findfont(%s) failed, back to default font\n", fontName);
-			font = PDF_findfont(fPdf, "Helvetica", "macroman", 0);
-		}
-
-		fState->font = font;
-		fState->fontChanged = false;
-
-		uint16 face = fState->beFont.Face();
-		PDF_set_parameter(fPdf, "underline", (face & B_UNDERSCORE_FACE) != 0 ? "true" : "false");
-		PDF_set_parameter(fPdf, "strikeout", (face & B_STRIKEOUT_FACE) != 0 ? "true" : "false");
-		PDF_set_value(fPdf, "textrendering", (face & B_OUTLINED_FACE) != 0 ? 1 : 0); 
-	}
-
-	SetColor();
-	// XXX: scaling font size required?
-	PDF_setfont(fPdf, fState->font, scale(fState->beFont.Size()));
-
-	const float x = tx(fState->penX + deltax);
-	const float y = ty(fState->penY + deltay);
-	const float rotation = fState->beFont.Rotation();
-	const bool rotate = rotation != 0.0;
-
-	if (rotate) {
-		PDF_save(fPdf);
-		PDF_translate(fPdf, x, y);
-		PDF_rotate(fPdf, 180.0 / PI * rotation);
-	    PDF_set_text_pos(fPdf, 0, 0);
-	} else 
-	    PDF_set_text_pos(fPdf, x, y);
-
-	// try to convert from utf8 in the font encoding schema...
-	srcLen = strlen(string);
-	destLen = srcLen * 3;
-	dest = (char *) malloc(destLen);
-	state = 0;
-	
-	float w ; 
-	// how is string encoded?
-	// if it is fState->beFont->Encoding then string has to be converted to utf8 first and then to macroman!
-	if (convert_from_utf8(B_MAC_ROMAN_CONVERSION, string, &srcLen, dest, &destLen, &state) == B_OK) {
-		PDF_show2(fPdf, dest, destLen);
-	} else {
-		// conversion failed, send unconverted string...
-		PDF_show(fPdf, string);
-	}
-	w = fState->beFont.StringWidth(string);
-
-	if (rotate) {
-		PDF_restore(fPdf);
-		fState->penX += w*cos(rotation);
-		fState->penY += w*sin(rotation);
-	} else {
-		fState->penX += w;
-		fState->penY += 0;
-	}
-			
-	free(dest);
-}
-
 
 // --------------------------------------------------
 void	
