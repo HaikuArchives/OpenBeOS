@@ -1,0 +1,15 @@
+SubInclude OBOS_TOP sources os kits app ;
+SubInclude OBOS_TOP sources os kits device ;
+SubInclude OBOS_TOP sources os kits game ;
+SubInclude OBOS_TOP sources os kits input ;
+SubInclude OBOS_TOP sources os kits interface ;
+SubInclude OBOS_TOP sources os kits kernel ;
+SubInclude OBOS_TOP sources os kits mail ;
+SubInclude OBOS_TOP sources os kits media ;
+SubInclude OBOS_TOP sources os kits midi ;
+SubInclude OBOS_TOP sources os kits net ;
+SubInclude OBOS_TOP sources os kits opengl ;
+SubInclude OBOS_TOP sources os kits print ;
+SubInclude OBOS_TOP sources os kits screensaver ;
+SubInclude OBOS_TOP sources os kits storage ;
+SubInclude OBOS_TOP sources os kits translation ;
