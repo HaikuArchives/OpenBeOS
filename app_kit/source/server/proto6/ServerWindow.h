@@ -70,4 +70,7 @@ public:
 	uint8 hidecount;
 };
 
+void ActivateWindow(ServerWindow *win);
+
+
 #endif

@@ -36,5 +36,4 @@ public:
 };
 
 extern bool is_moving_window, is_resizing_window;
-extern WindowBorder *activeborder;
 #endif

@@ -38,6 +38,7 @@ public:
 	void RebuildRegions(bool include_children=true);
 	bool IsDirty(void) const;
 	void PrintToStream(void);
+	void PrintNode(void);
 	void PruneTree(void);
 	void SetLevel(int32 value);
 	void Invalidate(BRect rect);

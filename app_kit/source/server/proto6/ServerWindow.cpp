@@ -18,11 +18,12 @@
 #include "WindowBorder.h"
 #include "DebugTools.h"
 
-#define DEBUG_SERVERWIN
+//#define DEBUG_SERVERWIN
 
 // Used for providing identifiers for views
 int32 view_counter=0;
 bool movewin=false;
+ServerWindow *active_serverwindow=NULL;
 
 ServerWindow::ServerWindow(BRect rect, const char *string, uint32 wlook,
 	uint32 wfeel, uint32 wflags, ServerApp *winapp,  port_id winport, uint32 index)
@@ -152,7 +153,8 @@ printf("%s::Show()\n",title->String());
 	if(winborder)
 	{
 		winborder->ShowLayer();
-		winborder->Draw(frame);
+		ActivateWindow(this);
+//		winborder->Draw(frame);
 	}
 }
 
@@ -175,9 +177,12 @@ void ServerWindow::SetFocus(bool value)
 #ifdef DEBUG_SERVERWIN
 printf("%s::SetFocus(%s)\n",title->String(),(value==true)?"true":"false");
 #endif
-	active=value;
-	decorator->SetFocus(value);
-	decorator->Draw();
+	if(active!=value)
+	{
+		active=value;
+		decorator->SetFocus(value);
+		decorator->Draw();
+	}
 }
 
 bool ServerWindow::HasFocus(void)
@@ -460,8 +465,6 @@ printf("ServerWindow() %s: MouseUp(%.1f,%.1f)\n",mousewin->title->String(),x,y);
 			BPoint pt(x,y);
 
 			winborder=(WindowBorder*)root->GetChildAt(pt);
-			if(activeborder)
-				winborder=activeborder;
 			if(winborder)
 			{
 				mousewin=winborder->Window();
@@ -482,4 +485,15 @@ PrintMessageCode(code);
 			break;
 		}
 	}
+}
+
+void ActivateWindow(ServerWindow *win)
+{
+	if(active_serverwindow==win)
+		return;
+	if(active_serverwindow)
+		active_serverwindow->SetFocus(false);
+	active_serverwindow=win;
+	if(win)
+		win->SetFocus(true);
 }

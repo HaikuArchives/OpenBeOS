@@ -16,7 +16,7 @@
 
 bool is_moving_window=false;
 bool is_resizing_window=false;
-WindowBorder *activeborder=NULL;
+extern ServerWindow *active_serverwindow;
 
 WindowBorder::WindowBorder(ServerWindow *win, const char *bordertitle)
  : Layer((win==NULL)?BRect(0,0,0,0):win->frame,
@@ -68,10 +68,6 @@ void WindowBorder::MouseDown(BPoint pt, uint32 buttons)
 printf("WindowBorder(): SetCloseButton\n");
 #endif
 			decor->SetCloseButton(true);
-			swin->SetFocus(true);
-			decor->SetFocus(true);
-			decor->Draw();
-			activeborder=this;
 			break;
 		}
 		case CLICK_ZOOM:
@@ -80,10 +76,6 @@ printf("WindowBorder(): SetCloseButton\n");
 printf("WindowBorder(): SetZoomButton\n");
 #endif
 			decor->SetZoomButton(true);
-			swin->SetFocus(true);
-			decor->SetFocus(true);
-			decor->Draw();
-			activeborder=this;
 			break;
 		}
 		case CLICK_MINIMIZE:
@@ -92,10 +84,6 @@ printf("WindowBorder(): SetZoomButton\n");
 printf("WindowBorder(): SetMinimizeButton\n");
 #endif
 			decor->SetMinimizeButton(true);
-			swin->SetFocus(true);
-			decor->SetFocus(true);
-			decor->Draw();
-			activeborder=this;
 			break;
 		}
 		case CLICK_DRAG:
@@ -106,7 +94,6 @@ printf("WindowBorder(): Click Tab\n");
 			if(buttons==B_PRIMARY_MOUSE_BUTTON)
 			{
 				is_moving_window=true;
-				activeborder=this;
 			}
 			if(buttons==B_SECONDARY_MOUSE_BUTTON)
 				MoveToBack();
@@ -120,7 +107,6 @@ printf("WindowBorder(): Click Resize\n");
 			if(buttons==B_PRIMARY_MOUSE_BUTTON)
 			{
 				is_resizing_window=true;
-				activeborder=this;
 			}
 			break;
 		}
@@ -139,6 +125,8 @@ printf("WindowBorder()::MouseDown: Undefined click type\n");
 			break;
 		}
 	}
+	if(click!=CLICK_NONE)
+		ActivateWindow(swin);
 }
 
 void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
@@ -211,7 +199,6 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 {
 //	mbuttons&= ~buttons;
 	mbuttons=buttons;
-//	activeborder=NULL;
 	is_moving_window=false;
 	is_resizing_window=false;
 
@@ -302,7 +289,10 @@ void WindowBorder::MoveToBack(void)
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder(): MoveToBack\n");
 #endif
-	swin->SetFocus(false);
+
+	Layer *temp=NULL;
+	if(uppersibling)
+		temp=uppersibling;
 
 	// Move the window to the back (the top of the tree)
 	Layer *top=GetRootLayer();
@@ -314,14 +304,9 @@ printf("WindowBorder(): MoveToBack\n");
 	swin->SetFocus(false);
 	decor->SetFocus(false);
 	decor->Draw();
-printf("MoveToBack: \n");
-PrintNode();
-if(parent)
-	parent->PrintNode();
-if(uppersibling)
-	uppersibling->PrintNode();
-if(lowersibling)
-	lowersibling->PrintNode();
+
+	if(temp)
+		ActivateWindow(uppersibling->serverwin);
 	layerlock->Unlock();
 }
 
@@ -330,8 +315,6 @@ void WindowBorder::MoveToFront(void)
 #ifdef DEBUG_WINBORDER
 printf("MoveToFront: \n");
 #endif
-
-	swin->SetFocus(true);
 
 	// Move the window to the front by making it the bottom
 	// child of the root layer
@@ -358,14 +341,6 @@ printf("MoveToFront: \n");
 	uppersibling->lowersibling=this;
 	lowersibling=NULL;
 
-
-	swin->SetFocus(true);
-	decor->SetFocus(true);
-	decor->Draw();
-
 	layerlock->Unlock();
 	is_moving_window=true;
-	if(activeborder)
-		activeborder->swin->SetFocus(false);
-	activeborder=this;
 }
