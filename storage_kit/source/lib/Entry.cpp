@@ -154,8 +154,8 @@ BEntry::Exists() const {
 		return fCStatus;
 		
 	// Attempt to find the entry in our current directory
-	StorageKit::DirEntry *entry;
-	return StorageKit::find_dir(fDirFd, fName, entry) == B_OK;
+	StorageKit::LongDirEntry entry;
+	return StorageKit::find_dir(fDirFd, fName, &entry, sizeof(entry)) == B_OK;
 };
 
 /*! Gets a stat structure for the Entry */
@@ -165,7 +165,7 @@ BEntry::GetStat(struct stat *result) const{
 		return fCStatus;
 		
 	entry_ref ref;
-	status_t status = StorageKit::find_dir(fDirFd, fName, ref);
+	status_t status = StorageKit::find_dir(fDirFd, fName, &ref);
 	if (status != B_OK)
 		return status;
 		
@@ -182,7 +182,8 @@ BEntry::SetTo(const BDirectory *dir, const char *path, bool traverse = false){
 		
 	char rootPath[B_PATH_NAME_LENGTH];
 
-	fCStatus = StorageKit::dir_to_path(dir->fDir, rootPath, B_PATH_NAME_LENGTH);
+	fCStatus = StorageKit::dir_to_path(dir->get_fd(), rootPath,
+									   B_PATH_NAME_LENGTH);
 	if (fCStatus != B_OK)
 		return fCStatus;
 	
@@ -564,12 +565,10 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 	// points to.
 	if (traverse) {
 	
-		StorageKit::DirEntry *entry;
-		for (	entry = StorageKit::read_dir(dirFd);
-				entry != NULL;
-				entry = StorageKit::read_dir(dirFd)	) {
+		StorageKit::LongDirEntry entry;
+		while (	StorageKit::read_dir(dirFd, &entry, sizeof(entry), 1) == 1) {
 
-			if (strcmp(entry->d_name, leaf) == 0) {
+			if (strcmp(entry.d_name, leaf) == 0) {
 //				printf("Found Leaf '%s'\n", leaf);
 //				printf("Found PDev %d\n", entry->d_pdev);
 //				printf("Found PIno %d\n", entry->d_pino);
@@ -578,8 +577,8 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 				// it to an absolute pathname and find out if it's a symbolic
 				// link. If so, we traverse it.
 				char path[B_PATH_NAME_LENGTH+1];
-				status_t result = StorageKit::entry_ref_to_path(entry->d_pdev,
-					entry->d_pino, leaf, path, B_PATH_NAME_LENGTH+1);
+				status_t result = StorageKit::entry_ref_to_path(entry.d_pdev,
+					entry.d_pino, leaf, path, B_PATH_NAME_LENGTH+1);
 //				printf("+Found PDev %d\n", entry->d_pdev);
 //				printf("+Found PIno %d\n", entry->d_pino);
 					
@@ -613,8 +612,8 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 						} else {
 						
 							// Relative path
-							status_t result = StorageKit::entry_ref_to_path(entry->d_pdev,
-								entry->d_pino, target, path, B_PATH_NAME_LENGTH+1);
+							status_t result = StorageKit::entry_ref_to_path(entry.d_pdev,
+								entry.d_pino, target, path, B_PATH_NAME_LENGTH+1);
 //							printf("result == 0x%X\n", result);
 							if (result == B_OK) {
 //								printf("path == '%s', traversing...\n", path);
@@ -805,10 +804,11 @@ BEntry::Dump(const char *name = NULL) {
 	
 	printf("fCStatus == %d\n", fCStatus);
 	
-	StorageKit::DirEntry *entry;
-	if (fDirFd != StorageKit::NullFd && StorageKit::find_dir(fDirFd, ".", entry) == B_OK) {
-		printf("dir.device == %ld\n", entry->d_pdev);
-		printf("dir.inode  == %lld\n", entry->d_pino);
+	StorageKit::LongDirEntry entry;
+	if (fDirFd != -1
+		&& StorageKit::find_dir(fDirFd, ".", &entry, sizeof(entry)) == B_OK) {
+		printf("dir.device == %ld\n", entry.d_pdev);
+		printf("dir.inode  == %lld\n", entry.d_pino);
 	} else {
 		printf("dir == NullFd\n");
 	}

@@ -116,11 +116,12 @@ private:
 	virtual	status_t set_stat(struct stat &st, uint32 what);
 	status_t move(int fd, const char *path);
 //	status_t set(int fd, const char *path, bool traverse);
-	status_t set(StorageKit::FileDescriptor dirFd, const char *path, bool traverse);
+	status_t set(StorageKit::FileDescriptor dirFd, const char *path,
+				 bool traverse);
 	status_t clear();
 
 //	/*! File descriptor for the entry's parent directory. */
-	int	fDirFd;
+	StorageKit::FileDescriptor fDirFd;
 	
 	/*! The entry's parent directory. This may replace fDfd once we
 		get the new kernel. */
