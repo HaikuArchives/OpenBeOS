@@ -1,15 +1,23 @@
 CFLAGS=-nostart -no-fpic -D_KERNEL_MODE
 LDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 INCLUDES=-I../server/ -I../server/include -I../libnet
+DRIVER_BIN=/boot/home/config/add-ons/kernel/drivers/bin/socket
+DRIVER_LINK=/boot/home/config/add-ons/kernel/drivers/dev/net/socket
 
 all:	socket
 
 clean:
-	rm *.o socket
+	if test -e socket; then rm socket; fi
+	if test -e socket.o; then rm socket.o; fi
+	if test -e $(DRIVER_LINK); then \
+		rm $(DRIVER_LINK); \
+	fi
 
 install: socket
-	cp socket /boot/home/config/add-ons/kernel/drivers/bin
-	ln -s /boot/home/config/add-ons/kernel/drivers/bin/socket /boot/home/config/add-ons/kernel/drivers/dev/net \
+	cp socket $(DRIVER_BIN)
+	if ! test -e $(DRIVER_LINK); then \
+		ln -s $(DRIVER_LINK) $(DRIVER_BIN); \
+	fi
 
 socket: socket.o
 	$(CC) $(LDFLAGS) -o socket socket.o

@@ -17,6 +17,9 @@
 #include "net_server/core_module.h"
 #include "net_structures.h"
 
+#define SHOW_INSANE_DEBUGGING	0
+#define SERIAL_DEBUGGING	1
+
 /* static variables... */
 struct core_module_info *core = NULL;
 
@@ -54,8 +57,10 @@ status_t init_hardware (void)
                 return B_ERROR;
         }
 
-        /* XXX - remove me when debugging is no longer required! */
+#if SERIAL_DEBUGGING	
+	/* XXX - switch on/off at top of file... */
         set_dprintf_enabled(true);
+#endif
 
         return B_OK;
 }
@@ -66,16 +71,30 @@ status_t init_hardware (void)
 status_t init_driver (void)
 {
 	int rv = 0;
-        /* do we need to do anything here? */
+
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: init_driver\n");
+#endif
+
+	/* do we need to do anything here? */
+#if SERIAL_DEBUGGING
+	/* switch on/off at top of file */
+	/* XXX ??? - do we need this here? */
 	set_dprintf_enabled(true);
-        dprintf("socket: socket device driver - init called\n");
+#endif
+
 	rv = get_module(CORE_MODULE_PATH, (module_info **)&core);
 	if (rv < 0) {
 		dprintf("net_socket_open: core module not found! %d\n", rv);
 		return B_ERROR;
 	}
 
-        return B_OK;
+	/* now we've got it opened and installed in memory, ask it
+	 * to start the rest of the stack...
+	 */
+	core->start();
+
+	return B_OK;
 }
 
 /* uninit_driver()
@@ -83,9 +102,10 @@ status_t init_driver (void)
  */
 void uninit_driver (void)
 {
-        dprintf("net_srv: uninit_driver: uninit_driver\n");
-	put_module(CORE_MODULE_PATH);
-        /* shutdown core server */
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: uninit_driver\n");
+#endif
+	/* shutdown core server */
 }
 
 /* publish_devices()
@@ -110,7 +130,11 @@ static status_t net_socket_open(const char *devName,
 {
 	int rv;
 	struct sock_ptr *sp;
-	dprintf("net_socket_open\n");
+
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: net_socket_open!\n");
+#endif
+
 	if (!core) {
 		rv = get_module(CORE_MODULE_PATH, (module_info **)&core);	
 		if (rv < 0) {
@@ -129,17 +153,20 @@ static status_t net_socket_open(const char *devName,
 static status_t net_socket_close(void *cookie)
 {
 	int rv = core->soclose(cookie);
-	dprintf("net_socket_close\n");
-	
-	put_module(CORE_MODULE_PATH);
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: net_socket_close\n");
+#endif
+
 	return rv;
 }
 
 /* Resources are freed on the stack when we close... */
 static status_t net_socket_free(void *cookie)
 {
-        dprintf("net_socket_free\n");
-        return B_OK;
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: net_socket_free\n");
+#endif
+	return B_OK;
 }
 
 static status_t net_socket_control(void *cookie,
@@ -147,7 +174,9 @@ static status_t net_socket_control(void *cookie,
                                 void *data,
                                 size_t len)
 {
-	dprintf("net_socket_control: \n");
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: net_socket_control: \n");
+#endif
 
 	if (op == NET_SOCKET_CREATE) {
 		struct socket_args *sa = (struct socket_args*)data;
