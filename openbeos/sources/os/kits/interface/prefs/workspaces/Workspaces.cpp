@@ -73,6 +73,8 @@ const char WorkspacesPreferences::kWorkspacesSettingFile[] = "Workspace_data";
 
 WorkspacesPreferences::WorkspacesPreferences()
 {
+	UpdateScreenFrame();
+
 	BPath path;
 	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path) == B_OK) {
 		path.Append(kWorkspacesSettingFile);
@@ -86,12 +88,12 @@ WorkspacesPreferences::WorkspacesPreferences()
 		}
 	}
 
-	BScreen screen;
-	fWindowFrame = screen.Frame();
+	fWindowFrame = fScreenFrame;
 	fWindowFrame.OffsetBy(-10, -10);
 	fWindowFrame.left = fWindowFrame.right - 160;
 	fWindowFrame.top = fWindowFrame.bottom - 120;
 }
+
 
 WorkspacesPreferences::~WorkspacesPreferences()
 {
@@ -106,12 +108,14 @@ WorkspacesPreferences::~WorkspacesPreferences()
 		file.Write(&fWindowFrame, sizeof(BRect));
 }
 
+
 void
 WorkspacesPreferences::UpdateScreenFrame()
 {
 	BScreen screen;
 	fScreenFrame = screen.Frame();
 }
+
 
 void
 WorkspacesPreferences::SetWindowFrame(BRect f)
@@ -121,19 +125,26 @@ WorkspacesPreferences::SetWindowFrame(BRect f)
 	UpdateScreenFrame();
 }
 
+
 //	#pragma mark -
 
+
 // here is the trick :)
+#define B_WORKSPACES_WINDOW 0x00008000
+
 WorkspacesWindow::WorkspacesWindow(WorkspacesPreferences *preferences)
- : BWindow(preferences->WindowFrame(), "Workspaces", B_TITLED_WINDOW_LOOK, B_NORMAL_WINDOW_FEEL, 0x00008000|B_AVOID_FRONT, B_ALL_WORKSPACES)
+	: BWindow(preferences->WindowFrame(), "Workspaces", B_TITLED_WINDOW_LOOK,
+ 			B_NORMAL_WINDOW_FEEL, B_WORKSPACES_WINDOW | B_AVOID_FRONT, B_ALL_WORKSPACES)
 {
 	fPreferences = preferences;
 }
+
 
 WorkspacesWindow::~WorkspacesWindow()
 {
 	delete fPreferences;
 }
+
 
 void
 WorkspacesWindow::ScreenChanged(BRect frame,color_space mode)
@@ -141,12 +152,15 @@ WorkspacesWindow::ScreenChanged(BRect frame,color_space mode)
 	BRect rect = fPreferences->WindowFrame();
 	BRect old = fPreferences->ScreenFrame();
 
+	// adjust horizontal position
 	if (frame.right < rect.left || frame.right > rect.right && rect.left > old.right/2)
 		MoveTo(frame.right - (old.right - rect.left),rect.top);
 
+	// adjust vertical position
 	if (frame.bottom < rect.top || frame.bottom > rect.bottom && rect.top > old.bottom/2)
 		MoveTo(Frame().left,frame.bottom - (old.bottom - rect.top));
 }
+
 
 void
 WorkspacesWindow::FrameMoved(BPoint origin)
@@ -154,11 +168,13 @@ WorkspacesWindow::FrameMoved(BPoint origin)
 	fPreferences->SetWindowFrame(Frame());
 }
 
+
 void
 WorkspacesWindow::FrameResized(float width, float height)
 {
 	fPreferences->SetWindowFrame(Frame());
 }
+
 
 void 
 WorkspacesWindow::Zoom(BPoint origin, float width, float height)
@@ -171,6 +187,7 @@ WorkspacesWindow::Zoom(BPoint origin, float width, float height)
 	MoveTo(origin);
 }
 
+
 void
 WorkspacesWindow::MessageReceived(BMessage *msg)
 {
@@ -182,6 +199,7 @@ WorkspacesWindow::MessageReceived(BMessage *msg)
 		BWindow::MessageReceived(msg);
 }
 
+
 bool
 WorkspacesWindow::QuitRequested(void)
 {
@@ -189,15 +207,19 @@ WorkspacesWindow::QuitRequested(void)
 	return true;
 }
 
+
 //	#pragma mark -
+
 
 WorkspacesApp::WorkspacesApp() : BApplication(kWorkspacesAppSig)
 {
 }
 
+
 WorkspacesApp::~WorkspacesApp()
 {
 }
+
 
 void
 WorkspacesApp::AboutRequested(void)
@@ -206,6 +228,7 @@ WorkspacesApp::AboutRequested(void)
 	// the original does the same by the way =)
 	(new BAlert("about", "OpenBeOS Workspaces\n\tby François Revol, Axel Dörfler.\n\noriginal Be version by Robert Polic", "Big Deal"))->Go();
 }
+
 
 void
 WorkspacesApp::ArgvReceived(int32 argc, char **argv)
@@ -222,11 +245,13 @@ WorkspacesApp::ArgvReceived(int32 argc, char **argv)
 	}
 }
 
+
 void
 WorkspacesApp::ReadyToRun(void)
 {
 	(new WorkspacesWindow(new WorkspacesPreferences()))->Show();
 }
+
 
 bool
 WorkspacesApp::QuitRequested(void)
@@ -234,7 +259,9 @@ WorkspacesApp::QuitRequested(void)
 	return true;
 }
 
+
 //	#pragma mark -
+
 
 int
 main(int argc, char **argv)
