@@ -1160,7 +1160,7 @@
 	</group>
 	<group name="Interface Kit">
 		<section name="Group 1 Support">
-			<class name="BPoint" owner="">
+			<class name="BPoint" owner="Greg Gelfond">
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
 					BPoint();
 				</task>
@@ -1588,7 +1588,7 @@
 					BPrivateScreen* private_screen();
 				</task>
 			</class>
-			<class name="BShape" owner="">
+			<class name="BShape" owner="Greg Gelfond">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BShape();
 				</task>
@@ -4031,7 +4031,7 @@
 					void SetItemVisible(bool);
 				</task>
 			</class>
-			<class name="BStringItem" owner="">
+			<class name="BStringItem" owner="Greg Gelfond">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BStringItem(const char* text, uint32 outlineLevel = 0, bool expanded = true);
 				</task>
