@@ -20,6 +20,7 @@
 #include "mbuf.h"
 #include "sys/net_uio.h"
 #ifdef _KERNEL_MODE
+#include <KernelExport.h>
 #include "core_module.h"
 #endif
 
@@ -218,6 +219,29 @@ int solisten(void *sp, int backlog)
                 backlog = 0;
         so->so_qlimit = backlog;
         return 0;
+}
+
+int soconnect(void *sp, struct mbuf *nam)
+{
+	struct socket *so = (struct socket *)sp;
+	int error;
+
+	if (so->so_options & SO_ACCEPTCONN)
+		return (EOPNOTSUPP);
+	/*
+	 * If protocol is connection-based, can only connect once.
+	 * Otherwise, if connected, try to disconnect first.
+	 * This allows user to disconnect by connecting to, e.g.,
+	 * a null address.
+	 */
+	if (so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING) &&
+	    ((so->so_proto->pr_flags & PR_CONNREQUIRED) ||
+	    (error = sodisconnect(so))))
+		error = EISCONN;
+	else
+		error = so->so_proto->pr_userreq(so, PRU_CONNECT,
+		                                 NULL, nam, NULL);
+	return error;
 }
 
 
@@ -903,10 +927,11 @@ void soisdisconnected(struct socket *so)
 int nsleep(sem_id chan, char *msg, int timeo)
 {
 	status_t rv;
+/* XXX - OK, this is no longer supported, how do we do this then?
 #ifdef _KERNEL_MODE
 	struct thread_rec str;
 #endif
-
+*/
 	printf("nsleep: %s\n", msg);
 
 	if (timeo > 0)
@@ -916,11 +941,13 @@ int nsleep(sem_id chan, char *msg, int timeo)
 
 	if (rv == B_TIMED_OUT)
 		return EWOULDBLOCK;
+/* ???
 #ifdef _KERNEL_MODE
 	if (has_sigal_pending(&str) == 0)
 		return 0;
-	/* we should check the signal mask here... */
+	// we should check the signal mask here... 
 #endif
+*/
 	return EINTR;
 }
 

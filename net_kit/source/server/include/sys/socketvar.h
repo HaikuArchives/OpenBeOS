@@ -113,6 +113,7 @@ int     socreate(int dom, void *aso, int type, int proto);
 
 int     sobind(void *so, caddr_t, int);
 int     solisten(void *sp, int backlog);
+int     soconnect(void *sp, struct mbuf *nam);
 
 int     sendit(void *, struct msghdr *, int, int *);
 int     recvit(void *, struct msghdr *, caddr_t, int *);

@@ -17,10 +17,10 @@
 #include <Drivers.h>
 #include <limits.h>
 #include <string.h>
-//#include <image.h>
 #include <stdlib.h>
 #include <module.h>
 #include <driver_settings.h>
+#include <KernelExport.h>
 
 #include "sys/socket.h"
 #include "sys/socketvar.h"
@@ -730,6 +730,7 @@ static struct core_module_info core_info = {
 	soreserve,
 	sbappendaddr,
 	sowakeup,
+	soisconnected,
 	
 	in_pcballoc,
 	in_pcbdetach,
@@ -762,6 +763,7 @@ static struct core_module_info core_info = {
 	soclose,
 	sobind,
 	solisten,
+	soconnect,
 	recvit,
 	sendit,
 	soo_ioctl
