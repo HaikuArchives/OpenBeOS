@@ -1,0 +1,28 @@
+OpenBeOS Screen Preferences by Rafael Romo, rockman@tiscali.it
+
+Readme
+
+The Screen preferences app is a big one and it has a lot of hidden features that many BeOS users don't know.
+This version has all of them except command line support and keyboard support (shortcuts).
+The app is not a true copy of the original and it sets display modes in a , maybe more secure, way.
+However, be careful using this program: it has been tested with a 17" monitor only.
+
+Special thanks
+
+To John Trujillo for allowing me to work on this project.
+To Geoffrey Longo for his support.
+To François Revol for the settings file code.
+
+To do
+
+ - Command line support.
+ - Keyboard shortcuts support.
+ - Some warning alerts.
+ - More precise display modes.
+
+History
+
+ - 0.9 beta: February 7 2002:
+	First public release: added revert alert countdown, settings file support and all modes.
+ - 0.8 beta: January 31 2002:
+	Internal test: support for all 640x480 modes and cutom refresh rates.
