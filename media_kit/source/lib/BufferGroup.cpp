@@ -32,7 +32,7 @@ BBufferGroup::BBufferGroup(size_t size,
 						   uint32 placement,
 						   uint32 lock)
 {
-	void *start_addr
+	void *start_addr;
 	area_id buffer_area;
 	size_t area_size;
 	buffer_clone_info bci;
@@ -49,9 +49,11 @@ BBufferGroup::BBufferGroup(size_t size,
 	// then we delete our area. This way BBuffers are
 	// independent from the BBufferGroup
 
-	// XXX we ignore the placement parameter
-	if (placement != B_ANY_ADDRESS)
-		TRACE("placement != B_ANY_ADDRESS (0x%08lx)\n",placement);
+	// don't allow all placement parameter values
+	if (placement != B_ANY_ADDRESS && placement != B_ANY_KERNEL_ADDRESS) {
+		TRACE("placement != B_ANY_ADDRESS && placement != B_ANY_KERNEL_ADDRESS (0x%08lx)\n",placement);
+		placement = B_ANY_ADDRESS;
+	}
 	
 	// first we roundup for a better placement in memory
 	size = (size + 63) & ~63;
@@ -59,7 +61,7 @@ BBufferGroup::BBufferGroup(size_t size,
 	// now we create the area
 	area_size = ((size * count) + (B_PAGE_SIZE - 1)) & ~(B_PAGE_SIZE - 1);
 
-	buffer_area = create_area("some buffers area", &start_addr,B_ANY_ADDRESS,area_size,lock,B_READ_AREA | B_WRITE_AREA);
+	buffer_area = create_area("some buffers area", &start_addr,placement,area_size,lock,B_READ_AREA | B_WRITE_AREA);
 	if (buffer_area < B_OK) {
 		TRACE("failed to allocate %ld bytes area\n",area_size);
 		fInitError = (status_t)buffer_area;
@@ -110,6 +112,7 @@ BBufferGroup::BBufferGroup(int32 count,
 	fBufferCount = count;
 
 	buffer_clone_info bci;
+	BBuffer *buffer;
 	for (int32 i = 0; i < count; i++) {	
 		bci.buffer = buffers[i];
 		buffer = new BBuffer(bci);
