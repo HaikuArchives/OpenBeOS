@@ -17,13 +17,13 @@
 #include <Drivers.h>
 #include <limits.h>
 #include <string.h>
-#include <image.h>
+//#include <image.h>
 #include <stdlib.h>
-
+#include <module.h>
 #include <driver_settings.h>
-#include "core_module.h"
-#include "net_device.h"
 
+#include "sys/socket.h"
+#include "sys/socketvar.h"
 #include "net/if.h"	/* for ifnet definition */
 #include "net_server/net_server.h"
 #include "protocols.h"
@@ -31,11 +31,14 @@
 #include "net_timer.h"
 #include "net_misc.h"
 #include "nhash.h"
-#include "sys/socket.h"
+#include "netinet/in_var.h"
 #include "netinet/in_pcb.h"
-#include "net/route.h"
 #include "sys/domain.h"
 #include "sys/protosw.h"
+#include "net/route.h"
+
+#include "core_module.h"
+#include "net_device.h"
 
 #ifdef USE_DEBUG_MALLOC
 #define malloc dbg_malloc
@@ -165,6 +168,52 @@ ifq *start_ifq(void)
 	return nifq;
 }
 
+/* Start an RX thread and an RX queue if reqd */
+void start_rx_thread(ifnet *dev)
+{
+	int32 priority = B_NORMAL_PRIORITY;
+	char name[B_OS_NAME_LENGTH]; /* 32 */
+	sprintf(name, "%s_rx_thread", dev->if_name);
+
+	if (dev->if_type != IFT_ETHER) {
+		dev->rxq = start_ifq();
+		if (!dev->rxq)
+			return;
+		dev->rx_thread = spawn_kernel_thread(rx_thread, name, 
+		                              priority, dev);
+	} else {
+		/* don't need an rxq... */
+		dev->rx_thread = spawn_kernel_thread(if_thread, name, 
+		                              priority, dev);
+	}		
+	
+	if (dev->rx_thread < 0) {
+		printf("Failed to start the rx_thread for %s\n", dev->if_name);
+		dev->rx_thread = -1;
+		return;
+	}
+	resume_thread(dev->rx_thread);
+}
+
+/* Start a TX thread and a TX queue */
+void start_tx_thread(ifnet *dev)
+{
+	int32 priority = B_NORMAL_PRIORITY;
+	char name[B_OS_NAME_LENGTH]; /* 32 */
+	dev->txq = start_ifq();
+	if (!dev->txq)
+		return;
+
+	sprintf(name, "%s_tx_thread", dev->if_name);
+	dev->tx_thread = spawn_kernel_thread(tx_thread, "net_tx_thread", priority, dev);
+	if (dev->tx_thread < 0) {
+		printf("Failed to start the tx_thread for %s\n", dev->if_name);
+		dev->tx_thread = -1;
+		return;
+	}
+	resume_thread(dev->tx_thread);
+}
+
 void net_server_add_device(ifnet *ifn)
 {
 	char dname[16];
@@ -174,9 +223,6 @@ void net_server_add_device(ifnet *ifn)
 
 	sprintf(dname, "%s%d", ifn->name, ifn->unit);
 	ifn->if_name = strdup(dname);
-dprintf("devices = %p\n", devices);
-dprintf("pdevices = %p\n", pdevices);
-dprintf("ifn = %p\n", ifn);
 
 	if (ifn->devid < 0) {
 		/* pseudo device... */
@@ -185,13 +231,11 @@ dprintf("ifn = %p\n", ifn);
 		else
 			ifn->next = NULL;
 		pdevices = ifn;
-printf("added pdevice: pdevices = %p\n", pdevices);
 	} else {
 		if (devices)
 			ifn->next = devices;
 		else
 			ifn->next = NULL;
-dprintf("ifn->next = %p\n", ifn->next);
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
@@ -205,7 +249,7 @@ static void start_device_threads(void)
 	ifnet *d = devices;
 	char tname[32];
 	int priority = B_NORMAL_PRIORITY;
-
+printf("start_device_threads:\n");
 	acquire_sem(dev_lock);
 
 	while (d) {
@@ -632,8 +676,10 @@ int start_stack(void)
 
 	find_interface_modules();
 	start_devices();
+
 	list_devices();
-	start_device_threads();
+printf("start_device_threads\n");
+	//start_device_threads();
 
 	return 0;
 }
@@ -678,13 +724,9 @@ static struct core_module_info core_info = {
 	add_domain,
 	add_protocol,
 	add_protosw,
+	start_rx_thread,
+	start_tx_thread,
 
-	soo_ioctl,
-
-	initsocket,
-	socreate,
-	soclose,
-	sobind,
 	soreserve,
 	sbappendaddr,
 	sowakeup,
@@ -713,7 +755,15 @@ static struct core_module_info core_info = {
 	ifa_ifwithnet,
 	if_attach,
 	
-	get_primary_addr
+	get_primary_addr,
+
+	initsocket,
+	socreate,
+	soclose,
+	sobind,
+	recvit,
+	sendit,
+	soo_ioctl
 };
 
 _EXPORT module_info *modules[] = {

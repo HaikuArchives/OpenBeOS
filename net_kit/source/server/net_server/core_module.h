@@ -19,15 +19,10 @@ struct core_module_info {
 	void (*add_domain)(struct domain *, int);
 	void (*add_protocol)(struct protosw *, int);
 	void (*add_protosw)(struct protosw *prt[], int layer);
+	void (*start_rx_thread)(ifnet *dev);
+	void (*start_tx_thread)(ifnet *dev);
 	
-	/* Add the required functions here... */
-	int (*soo_ioctl)(void *, int, caddr_t);
-
-	/* socket functions... */
-	int (*initsocket)(void **);
-	int (*socreate)(int, void *, int, int);
-	int (*soclose)(void *);
-	int (*sobind)(void *, struct mbuf *);
+	/* socket functions - called "internally" */
 	int (*soreserve)(struct socket *, uint32, uint32);
 	int (*sbappendaddr)(struct sockbuf *, struct sockaddr *, 
 		 				struct mbuf *, struct mbuf *);
@@ -64,7 +59,16 @@ struct core_module_info {
 	struct ifaddr *(*ifa_ifwithnet)(struct sockaddr *addr);
 	void (*if_attach)(struct ifnet *ifp);
 	
-	struct in_ifaddr * (*get_primary_addr)(void);	
+	struct in_ifaddr *(*get_primary_addr)(void);	
+
+	/* socket functions - used by socket driver */
+	int (*initsocket)(void **);
+	int (*socreate)(int, void *, int, int);
+	int (*soclose)(void *);
+	int (*sobind)(void *, caddr_t, int);
+	int (*recvit)(void *, struct msghdr *, caddr_t, int *);
+	int (*sendit)(void *, struct msghdr *, int, int *);
+	int (*soo_ioctl)(void *, int, caddr_t);
 };
 
 #ifdef _KERNEL_MODE
