@@ -282,6 +282,7 @@ static struct protosw my_protocol = {
 	NULL,
 	&rip_userreq,
 	NULL,                    /* pr_sysctl */
+	NULL,
 	&rip_ctloutput,
 	
 	NULL,

@@ -716,6 +716,7 @@ static struct protosw my_protocol = {
 	NULL,
 	&route_userreq,
 	&sysctl_rtable,                    /* pr_sysctl */
+	NULL,
 	NULL,                              /* pr_ctloutput */
 	
 	NULL,
