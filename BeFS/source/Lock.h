@@ -288,37 +288,30 @@ class SimpleLock {
 	public:
 		SimpleLock()
 			:
-			fLock(0)
+			fLock(0),
+			fUnlock(0)
 		{
 		}
 
 		status_t Lock(bigtime_t time = 500)
 		{
 			int32 turn = atomic_add(&fLock,1);
-			if (turn != 0) {
-				while (turn != fLock)
-					snooze(time);
+			while (turn != fUnlock)
+				snooze(time);
 
-				// ToDo: the lock cannot fail currently! We may want
-				// to change this - the following code does not work
-				// correctly...
-
-				//int32 tries = 40;
-				//while (turn != fLock && tries-- > 0)
-				//	snooze(time);
-				//if (turn != fLock)
-				//	return B_TIMED_OUT;
-			}
+			// ToDo: the lock cannot fail currently! We may want
+			// to change this
 			return B_OK;
 		}
 
 		void Unlock()
 		{
-			atomic_add(&fLock,-1);
+			atomic_add(&fUnlock,1);
 		}
 
 	private:
-		vint32	fLock;		
+		vint32	fLock;
+		vint32	fUnlock;
 };
 
 // A convenience class to lock the SimpleLock, note the
