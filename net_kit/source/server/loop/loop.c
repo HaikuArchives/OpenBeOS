@@ -51,10 +51,10 @@ int loop_init(loaded_net_module *ln, int *pt)
         net_modules = ln;
         prot_table = pt;
 
-	ifn->devid = -1;
+	ifn->dev = -1;
 	ifn->name = "loop";
 	ifn->unit = 0;
-        ifn->if_type = IFT_LOOP;
+        ifn->type = IFD_LOOPBACK;
 	ifn->rxq = NULL;
         ifn->rx_thread = -1;
         ifn->tx_thread = -1;
@@ -63,7 +63,7 @@ int loop_init(loaded_net_module *ln, int *pt)
 
 	ifn->input = &loop_input;
 	ifn->output = &loop_output;
-	ifn->ioctl = NULL;
+//	ifn->ioctl = NULL;
 
 	net_server_add_device(ifn);
 
@@ -75,10 +75,10 @@ int loop_dev_init(ifnet *dev)
 	if (!dev)
 		return EINVAL;
 
-	if (dev->if_type != IFT_LOOP)
+	if (dev->type != IFD_LOOPBACK)
 		return EINVAL;
 
-	dev->if_mtu = 16384; /* can be as large as we want */
+	dev->mtu = 16384; /* can be as large as we want */
        	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_MULTICAST);
 
 	return 0;
@@ -97,7 +97,7 @@ net_module net_module_data = {
 	&loop_input,
 	&loop_output,
 	NULL,
-	NULL,
+//	NULL,
 	NULL
 };
 
