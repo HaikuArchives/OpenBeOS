@@ -212,6 +212,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 		case SIOCSIFADDR:
 			/* set an address */
 		case SIOCSIFNETMASK:
+			printf("SIOCSIFNETMASK\n");
 			/* set a net mask */
 		case SIOCSIFDSTADDR:
 			/* set the destination address of a point to point link */

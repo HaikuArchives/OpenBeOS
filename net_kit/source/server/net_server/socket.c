@@ -162,7 +162,7 @@ int socreate(int dom, void *sp, int type, int proto)
 	    so->so_rcv.sb_sleep < 0 ||
 	    so->so_snd.sb_pop < 0 ||
 	    so->so_snd.sb_sleep < 0 ||
-	    so->so_timeo< 0)
+	    so->so_timeo < 0)
 		return ENOMEM;
 	    
 #ifdef _KERNEL_MODE
@@ -174,8 +174,13 @@ int socreate(int dom, void *sp, int type, int proto)
 #endif
 
 	error = prm->pr_userreq(so, PRU_ATTACH, NULL, (struct mbuf *)proto, NULL);
-
-	return error;
+	if (error) {
+		so->so_state |= SS_NOFDREF; /* so we free the socket */
+		sofree(so);
+		return error;
+	}
+	
+	return 0;
 }
 
 
@@ -973,6 +978,7 @@ int soclose(void *sp)
 	struct socket *so = (struct socket*)sp;
 	int error = 0;
 
+
 	/* we don't want any more events... */
 	so->event_callback = NULL;
 	so->event_callback_cookie = NULL;
@@ -983,7 +989,7 @@ int soclose(void *sp)
 		while (so->so_q)
 			(*so->so_proto->pr_userreq)(so, PRU_ABORT, NULL, NULL, NULL);
 	}
-			
+
 	if (so->so_pcb == NULL)
 		goto discard;
 
@@ -1011,8 +1017,10 @@ drop:
 	}
 
 discard:
+	if (so->so_state & SS_NOFDREF)
+		printf("PANIC: soclose: NOFDREF");
+	so->so_state |= SS_NOFDREF;
 	sofree(so);
-
 	return error;
 }
 
@@ -1053,26 +1061,27 @@ bad:
 
 void sofree(struct socket *so)
 {
-	if (so->so_pcb) {
+	if (so->so_pcb || (so->so_state & SS_NOFDREF) == 0) {
+		printf("so->so_pcb = %p\n", so->so_pcb);
 		return;
 	}
 
 	if (so->so_head) {
-		if (!soqremque(so, 0) && ! soqremque(so, 1)) {
-			printf("sofree: Couldn't remove the queues!\n");
+		if (!soqremque(so, 0) && !soqremque(so, 1)) {
+			printf("PANIC: sofree: couldn't dq socket\n");
+			return;
 		}
-		/* we need to handle this! */
 		so->so_head = NULL;
 	}
 	sbrelease(&so->so_snd);
 	sorflush(so);
-	
+
 	delete_sem(so->so_rcv.sb_pop);
 	delete_sem(so->so_snd.sb_pop);
 	delete_sem(so->so_timeo);
 	delete_sem(so->so_rcv.sb_sleep);
 	delete_sem(so->so_snd.sb_sleep);
-	
+
 	pool_put(spool, so);
 
 	return;
@@ -1267,7 +1276,7 @@ int sogetopt(void *sp, int level, int optnum, void *data, size_t *datalen)
 int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie)
 {
 	struct socket *so = (struct socket *) sp;
-		
+
 	so->event_callback = cb;
 	so->event_callback_cookie = cookie;
 	
@@ -1278,19 +1287,14 @@ int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie
 
 static int checkevent(struct socket *so)
 {
-	if (! so->event_callback)
+	if (!so || !so->event_callback)
 		return B_OK;
 
-	if (soreadable(so))
-		/* notify socket readable event */
+	if (soreadable(so)) 
 		so->event_callback(so, 1, so->event_callback_cookie);
-
 	if (sowriteable(so))
-		/* notify socket writable event */
 		so->event_callback(so, 2, so->event_callback_cookie);
-		
 	if (so->so_oobmark || (so->so_state & SS_RCVATMARK))
-		/* notify socket exception event */
 		so->event_callback(so, 3, so->event_callback_cookie);
 		
 	return B_OK;
@@ -1301,6 +1305,7 @@ void sowakeup(struct socket *so, struct sockbuf *sb)
 	sb->sb_flags &= ~SB_SEL;
 	if (sb->sb_flags & SB_WAIT) {
 		sb->sb_flags &= ~SB_WAIT;
+		/* release the lock here... */
 		release_sem_etc(sb->sb_pop, 1, B_CAN_INTERRUPT);
 	}
 	checkevent(so);
