@@ -18,6 +18,7 @@
 #include "net_server/net_server.h"
 #include "protocols.h"
 #include "net_module.h"
+#include "net_misc.h"
 
 /* horrible hack to get this building... */
 #include "ethernet/ethernet.h"
@@ -66,9 +67,7 @@ static void start_rx(int device) {
 static int open_device(char *driver, char *devno)
 {
 	char path[PATH_MAX];
-	int dev, i;
-	status_t status;
-	ether_addr ea;
+	int dev, rv = 0;
 
 	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
 	dev = open(path, O_RDWR);
@@ -77,34 +76,25 @@ static int open_device(char *driver, char *devno)
 		return 0;
 	}
 
-        /* try to get the MAC address */
-        status = ioctl(dev, IF_GETADDR, &ea, 6);
-        if (status < B_OK) {
-                printf("Failed to get a MAC address, ignoring %s\n", path);
-		return 0;
-	}
-
-	devices[ndevs].dev = dev;
-	devices[ndevs].id = ndevs;
-	sprintf(path, "%s%s", driver, devno);
-	devices[ndevs].name = strdup(path);
-	devices[ndevs].type = IFD_ETHERNET;
+        devices[ndevs].dev = dev;
+        devices[ndevs].id = ndevs;
+        sprintf(path, "%s%s", driver, devno);
+        devices[ndevs].name = strdup(path);
+        devices[ndevs].type = IFD_ETHERNET;
         devices[ndevs].rx_thread = -1;
-	devices[ndevs].mac = ea;
 
-	/* not sure if this is the right place or not... */
-	/* now see which modules are interested... */
-	for (i=0;i<nmods;i++) {
-		if (global_modules[i].mod->dev_init &&
-			global_modules[i].mod->dev_init(&devices[ndevs]) == 0) {
-			atomic_add(&global_modules[i].ref_count, 1);
-		};
+	if (global_modules[prot_table[NS_ETHER]].mod->dev_init) {
+		/* try to init the device... */
+		rv = global_modules[prot_table[NS_ETHER]].mod->dev_init(&devices[ndevs]);
 	}
 
-	start_rx(ndevs);
+	if (rv) {
+		atomic_add(&global_modules[prot_table[NS_ETHER]].ref_count, 1);
+		start_rx(ndevs);
+		ndevs++;
+	}
 
-	ndevs++;
-	return 1;
+	return rv;
 }
 
 static void find_devices(void)
@@ -158,10 +148,9 @@ static void list_devices(void)
 		"====== ============ ===========\n");
 	
 	for (i=0;i<ndevs;i++) {
-		printf("%02d     %s       [%02x:%02x:%02x:%02x:%02x:%02x]\n", i, devices[i].name,
-			devices[i].mac.addr[0], devices[i].mac.addr[1],
-                        devices[i].mac.addr[2], devices[i].mac.addr[3],
-                        devices[i].mac.addr[4], devices[i].mac.addr[5]);
+		printf("%02d     %s       ", i, devices[i].name);
+		print_ether_addr(&devices[i].mac);
+		printf("\n");
 	}
 }
 
@@ -214,6 +203,7 @@ static void find_modules(void)
 			printf("unable to load %s\n", path);
 		}
 	}
+	printf("\n");
 }
 
 static void list_modules(void)
@@ -221,11 +211,12 @@ static void list_modules(void)
 	int i;
 
 	printf("\nModules List\n"
-		"No. Ref Cnt Name\n"
-		"=== ======= ====================\n");
+		"No. Ref Cnt Proto Name\n"
+		"=== ======= ===== ===================\n");
 	for (i=0;i<nmods;i++) {
-		printf("%02d     %ld    %s\n", i,
-			global_modules[i].ref_count, 
+		printf("%02d     %ld     %3d  %s\n", i,
+			global_modules[i].ref_count,
+			global_modules[i].mod->proto, 
 			global_modules[i].mod->name);
 	}
 	printf("\n");
