@@ -270,7 +270,7 @@ PDFWriter::InitWriter()
 status_t 
 PDFWriter::BeginPage(BRect paperRect, BRect printRect)
 {
-	float width = printRect.Width() < 10 ? a4_width : paperRect.Width();
+	float width = paperRect.Width() < 10 ? a4_width : paperRect.Width();
 	float height = paperRect.Height() < 10 ? a4_height : paperRect.Height();
 	
 	fMode = kDrawingMode;
@@ -609,9 +609,8 @@ DrawShape::IterateLineTo(int32 lineCount, BPoint *linePoints)
 	BPoint *p = linePoints;
 	for (int32 i = 0; i < lineCount; i++) {
 		fprintf(Log(), "(%f, %f) ", p->x, p->y);
-		PDF_lineto(Pdf(), tx(p->x), ty(p->y)); p++;
-		fprintf(Log(), "(%f, %f)\n", p->x, p->y);
-		PDF_lineto(Pdf(), tx(p->x), ty(p->y)); p++;
+		PDF_lineto(Pdf(), tx(p->x), ty(p->y));
+		p++;
 	}
 	return B_OK;
 }
