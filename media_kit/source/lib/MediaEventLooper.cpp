@@ -19,7 +19,7 @@
 BMediaEventLooper::~BMediaEventLooper()
 {
 	CALLED();
-	Quit();
+	// don't call Quit(); here
 }
 
 /* explicit */
@@ -44,7 +44,7 @@ BMediaEventLooper::BMediaEventLooper(uint32 apiVersion) :
 BMediaEventLooper::NodeRegistered()
 {
 	CALLED();
-	Run();
+	// don't call Run(); here, must be done by the derived class (yes, that's stupid)
 }
 
 
@@ -181,7 +181,7 @@ BMediaEventLooper::ControlLoop()
 	bigtime_t waituntil;
 	for (;;) {
 		// while there are no events or it is not time for the earliest event,
-		// process messaged using WaitForMessages. Whenever this funtion times out,
+		// process messages using WaitForMessages. Whenever this funtion times out,
 		// we need to handle the next event
 		for (;;) {
 			if (fRunState == B_QUITTING)
@@ -229,9 +229,9 @@ BMediaEventLooper::ControlLoop()
 		if (err == B_OK) {
 			bigtime_t lateness;
 			if (is_realtime)
-				lateness = TimeSource()->Now() - event.event_time;
-			else
 				lateness = TimeSource()->RealTime() - event.event_time;
+			else
+				lateness = TimeSource()->Now() - event.event_time;
 			DispatchEvent(&event,lateness,is_realtime);
 		}
 	}
