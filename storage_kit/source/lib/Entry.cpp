@@ -52,7 +52,7 @@ using namespace OpenBeOS;
 
 
 //! Creates an unitialized entry_ref. 
-entry_ref::entry_ref() : device(0), directory(0), name(NULL) {
+entry_ref::entry_ref() : device(-1), directory(-1), name(NULL) {
 }
 
 /*! \brief Creates an entry_ref initialized to the given file name in the given
