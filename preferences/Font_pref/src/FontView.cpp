@@ -50,3 +50,12 @@ void FontView::resetToDefaults(){
 	fixedSelectionView->resetToDefaults();
 
 }//resetToDefaults
+
+void FontView::revertToOriginal(){
+
+	plainSelectionView->revertToOriginal();
+	boldSelectionView->revertToOriginal();
+	fixedSelectionView->revertToOriginal();
+
+}//resetToDefaults
+

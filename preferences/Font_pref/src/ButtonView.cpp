@@ -49,3 +49,14 @@ ButtonView::ButtonView(BRect rect)
 	
 }
 
+bool ButtonView::RevertState(){
+
+	return revertButton->IsEnabled();
+	
+}//RevertState
+
+void ButtonView::SetRevertState(bool b){
+
+	revertButton->SetEnabled(b);
+	
+}//SetRevertState

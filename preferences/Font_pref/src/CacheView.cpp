@@ -4,7 +4,7 @@
 
 #endif
 
-CacheView::CacheView(BRect rect, int minVal, int maxVal, int printCurrVal, int screenCurrVal)
+CacheView::CacheView(BRect rect, int minVal, int maxVal, int32 printCurrVal, int32 screenCurrVal)
 	   	   : BView(rect, "CacheView", B_FOLLOW_ALL, B_WILL_DRAW)
 {
 	
@@ -15,6 +15,8 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int printCurrVal, int s
 	char sliderMaxLabel[10];
 	char msg[100];
 	
+	origPrintVal = printCurrVal;
+	origScreenVal = screenCurrVal;
 	SetViewColor(216, 216, 216, 0);
 	
 	rgb_color fillColor;
@@ -99,3 +101,32 @@ int CacheView::getScreenFCSValue(){
 	return int(screenFCS->Value());
 
 }//getPrintValue
+
+void CacheView::revertToOriginal(){
+
+	char msg[100];
+	
+	screenFCS->SetValue(origScreenVal);
+	sprintf(msg, "Screen font cache size : %d kB", getScreenFCSValue());
+	updateScreenFCS(msg);
+	
+	printFCS->SetValue(origPrintVal);
+	sprintf(msg, "Printing font cache size : %d kB", getPrintFCSValue());
+	updatePrintFCS(msg);
+
+}//revertToOriginal
+
+void CacheView::resetToDefaults(){
+
+	char msg[100];
+	
+	screenFCS->SetValue((int32) 256);
+	sprintf(msg, "Screen font cache size : %d kB", getScreenFCSValue());
+	updateScreenFCS(msg);
+	
+	printFCS->SetValue((int32) 256);
+	sprintf(msg, "Printing font cache size : %d kB", getPrintFCSValue());
+	updatePrintFCS(msg);
+
+}//revertToOriginal
+

@@ -24,9 +24,8 @@
 		public:
 			
 			ButtonView(BRect frame);
-			/*
-			RevertState(bool enabled);
-			*/
+			bool RevertState();
+			void SetRevertState(bool b);
 			
 		private:
 		

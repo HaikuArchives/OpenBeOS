@@ -39,16 +39,20 @@
 	
 		public:
 			
-			CacheView(BRect frame, int minVal, int maxVal, int printCurrVal, int screenCurrVal);
+			CacheView(BRect frame, int minVal, int maxVal, int32 printCurrVal, int32 screenCurrVal);
 			void updatePrintFCS(const char* txt);
 			void updateScreenFCS(const char* txt);
 			int getPrintFCSValue();
 			int getScreenFCSValue();
+			void revertToOriginal();
+			void resetToDefaults();
 			
 		private:
 		
 			BSlider *screenFCS;
 			BSlider *printFCS;
+			int32 origPrintVal;
+			int32 origScreenVal;
 			
 	};
 	

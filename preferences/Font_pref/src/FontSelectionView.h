@@ -75,6 +75,7 @@
 			void buildMenus();
 			void emptyMenus();
 			void resetToDefaults();
+			void revertToOriginal();
 			
 		private:
 		
@@ -87,8 +88,9 @@
 			uint32 setFontChangedMessage;
 			uint32 setStyleChangedMessage;
 			char typeLabel[30];
-			BFont defaultFont;
+			BFont origFont;
 			BFont workingFont;
+			BFont *defaultFont;
 			void emptyMenu(BPopUpMenu *m);
 			void UpdateFontSelection(BFont *fnt);
 			

@@ -28,7 +28,7 @@ MainWindow::MainWindow(BRect frame)
 	tabView->AddTab(fontPanel = new FontView(r), tab); 
 	tab->SetLabel("Fonts"); 
 	tab = new BTab(); 
-	tabView->AddTab(cachePanel = new CacheView(r, 64, 4096, 256, 256), tab); 
+	tabView->AddTab(cachePanel = new CacheView(r, 64, 4096, (int32) 256, (int32) 256), tab); 
 	tab->SetLabel("Cache");
 		
 	r = Bounds();
@@ -59,46 +59,55 @@ void MainWindow::MessageReceived(BMessage *message){
 		case PLAIN_SIZE_CHANGED_MSG:
 		
 			updateSize(fontPanel->plainSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case BOLD_SIZE_CHANGED_MSG:
 		
 			updateSize(fontPanel->boldSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case FIXED_SIZE_CHANGED_MSG:
 		
 			updateSize(fontPanel->fixedSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case PLAIN_FONT_CHANGED_MSG:
 		
 			updateFont(fontPanel->plainSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case BOLD_FONT_CHANGED_MSG:
 		
 			updateFont(fontPanel->boldSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case FIXED_FONT_CHANGED_MSG:
 		
 			updateFont(fontPanel->fixedSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 			
 		case PLAIN_STYLE_CHANGED_MSG:
 		
 			updateStyle(fontPanel->plainSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case BOLD_STYLE_CHANGED_MSG:
 		
 			updateStyle(fontPanel->boldSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case FIXED_STYLE_CHANGED_MSG:
 		
 			updateStyle(fontPanel->fixedSelectionView);
+			buttonView->SetRevertState(true);
 			break;
 		
 		case RESCAN_FONTS_MSG:
@@ -114,34 +123,42 @@ void MainWindow::MessageReceived(BMessage *message){
 		case RESET_FONTS_MSG:
 		
 			fontPanel->resetToDefaults();
+			cachePanel->resetToDefaults();
+			buttonView->SetRevertState(true);
 			break;
 			
 		case REVERT_MSG:
 		
-			printf("revert message\n");
+			fontPanel->revertToOriginal();
+			cachePanel->revertToOriginal();
+			buttonView->SetRevertState(false);
 			break;
 			
 		case PRINT_FCS_UPDATE_MSG:
 		
 			printf("print update message\n");
+			//buttonView->SetRevertState(true);
 			break;
 			
 		case PRINT_FCS_MODIFICATION_MSG:
 		
 			sprintf(msg, "Printing font cache size : %d kB", cachePanel->getPrintFCSValue());
 			cachePanel->updatePrintFCS(msg);
-			
+			buttonView->SetRevertState(true);
 			break;
 		
 		case SCREEN_FCS_UPDATE_MSG:
 		
 			printf("screen update message\n");
+			//buttonView->SetRevertState(true);
+			buttonView->SetRevertState(true);
 			break;
 				
 		case SCREEN_FCS_MODIFICATION_MSG:
 		
 			sprintf(msg, "Screen font cache size : %d kB", cachePanel->getScreenFCSValue());
 			cachePanel->updateScreenFCS(msg);
+			buttonView->SetRevertState(true);
 			break;
 		
 		default:

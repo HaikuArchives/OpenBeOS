@@ -27,33 +27,45 @@ FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
 		case PLAIN_FONT_SELECTION_VIEW:
 		
 			sprintf(typeLabel, "Plain font");
-			defaultFont = be_plain_font;
+			origFont = be_plain_font;
 			workingFont = be_plain_font;
 			setSizeChangedMessage = PLAIN_SIZE_CHANGED_MSG;
 			setFontChangedMessage = PLAIN_FONT_CHANGED_MSG;
 			setStyleChangedMessage = PLAIN_STYLE_CHANGED_MSG;
+			
+			defaultFont = new BFont();
+			defaultFont->SetFamilyAndStyle("Swis721 BT", "Roman");
+			defaultFont->SetSize(10.0);
 			
 			break;
 			
 		case BOLD_FONT_SELECTION_VIEW:
 		
 			sprintf(typeLabel, "Bold font");
-			defaultFont = be_bold_font;
+			origFont = be_bold_font;
 			workingFont = be_bold_font;
 			setSizeChangedMessage = BOLD_SIZE_CHANGED_MSG;
 			setFontChangedMessage = BOLD_FONT_CHANGED_MSG;
 			setStyleChangedMessage = BOLD_STYLE_CHANGED_MSG;
+			
+			defaultFont = new BFont();
+			defaultFont->SetFamilyAndStyle("Swis721 BT", "Bold");
+			defaultFont->SetSize(12.0);
 			
 			break;
 			
 		case FIXED_FONT_SELECTION_VIEW:
 		
 			sprintf(typeLabel, "Fixed font");
-			defaultFont = be_fixed_font;
+			origFont = be_fixed_font;
 			workingFont = be_fixed_font;
 			setSizeChangedMessage = FIXED_SIZE_CHANGED_MSG;
 			setFontChangedMessage = FIXED_FONT_CHANGED_MSG;
 			setStyleChangedMessage = FIXED_STYLE_CHANGED_MSG;
+			
+			defaultFont = new BFont();
+			defaultFont->SetFamilyAndStyle("Courier10 BT", "Roman");
+			defaultFont->SetSize(12.0);
 			
 			break;
 			
@@ -400,9 +412,22 @@ void FontSelectionView::UpdateFontSelection(BFont *fnt){
 void FontSelectionView::resetToDefaults(){
 
 	//Update menus
-	UpdateFontSelection(&defaultFont);
+	UpdateFontSelection(defaultFont);
 
 	//Update test text
-	SetTestTextFont(&defaultFont);
+	SetTestTextFont(defaultFont);
 	
 }//resetToDefaults
+
+void FontSelectionView::revertToOriginal(){
+
+	//Update menus
+	UpdateFontSelection(&origFont);
+
+	//Update test text
+	SetTestTextFont(&origFont);
+	
+}//resetToDefaults
+
+
+
