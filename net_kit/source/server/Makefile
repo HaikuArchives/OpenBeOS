@@ -1,11 +1,10 @@
-OBJS=
-SUBDIRS=util net_server ipv4 udp ethernet arp icmp test 
+SUBDIRS=util net_server ipv4 udp ethernet arp icmp loop test 
 
 # for profiling, uncomment these next 2 lines.
 #CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
 #LDFLAGS=-p
 # for a normal build use these 2 lines
-CFLAGS=-O2  -g -Wall -fPIC -DPIC
+CFLAGS=-O2 -g -Wall -fPIC -DPIC
 LDFLAGS=
 
 INCLUDES=-I. -I./include
