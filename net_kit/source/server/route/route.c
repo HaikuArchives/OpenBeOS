@@ -280,7 +280,7 @@ int route_output(struct mbuf *m, struct socket *so)
 	    ((m = m_pullup(m, sizeof(int32))) == NULL))) {
 		printf("route_output: ENOBUFS (m_pullup)\n");
 		if (m)
-			printf("m = %p, m_len = %d\n", m, m->m_len);
+			printf("m = %p, m_len = %ld\n", m, m->m_len);
 		return ENOBUFS;
 	}	
 	if ((m->m_flags & M_PKTHDR) == 0) {
@@ -771,6 +771,7 @@ static struct protosw my_protocol = {
 	NULL,
 	&route_userreq,
 	&sysctl_rtable,                    /* pr_sysctl */
+	NULL,                              /* pr_ctloutput */
 	
 	NULL,
 	NULL
