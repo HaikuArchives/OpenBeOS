@@ -23,17 +23,40 @@
 // - know how to deal with each allocation, special handling for directories,
 //   files, symlinks, etc. (type sensitive allocation policies)
 
+// What makes the code complicated is the fact that we are not just reading
+// in the whole bitmap and operate on that in memory - e.g. a 13 GB partition
+// with a block size of 2048 bytes already has a 800kB bitmap, and the size
+// of partitions will grow even more - so that's not an option.
+// Instead we are reading in every block when it's used - since an allocation
+// group can span several blocks in the block bitmap, the AllocationBlock
+// class is there to make handling those easier.
+
 // The current implementation is very basic and will be heavily optimized
 // in the future.
 // Furthermore, the allocation policies used here (when they will be in place)
 // should have some real world tests.
 
 
+class AllocationBlock : public CachedBlock {
+	public:
+		AllocationBlock(Volume *volume);
+		
+		void Allocate(uint16 start,uint16 numBlocks = 0xffff);
+		void Free(uint16 start,uint16 numBlocks = 0xffff);
+		inline bool IsUsed(uint16 block);
+
+		status_t SetTo(AllocationGroup &group,uint16 block);
+
+		int32 NumBlockBits() const { return fNumBits; }
+
+	private:
+		int32 fNumBits;
+};
+
+
 class AllocationGroup {
 	public:
 		AllocationGroup();
-
-		status_t GetFree(uint16 start,uint16 numBlocks,uint16 minimum,block_run &run);
 
 		int32 fNumBits;
 		int32 fStart;
@@ -41,17 +64,88 @@ class AllocationGroup {
 };
 
 
-AllocationGroup::AllocationGroup()
-	:
-	fIsFull(true)
+AllocationBlock::AllocationBlock(Volume *volume)
+	: CachedBlock(volume)
 {
 }
 
 
 status_t 
-AllocationGroup::GetFree(uint16 start, uint16 numBlocks, uint16 minimum, block_run &run)
+AllocationBlock::SetTo(AllocationGroup &group, uint16 block)
 {
-	return B_DEVICE_FULL;
+	// 8 bits for every block
+	fNumBits = group.fNumBits - ((fVolume->BlockSize() << 3) * block);
+
+	return CachedBlock::SetTo(group.fStart + block) != NULL ? B_OK : B_ERROR;
+}
+
+
+bool 
+AllocationBlock::IsUsed(uint16 block)
+{
+	if (block > fNumBits)
+		return true;
+	return ((uint32 *)fBlock)[block >> 5] & (1UL << (block % 32));
+}
+
+
+void
+AllocationBlock::Allocate(uint16 start,uint16 numBlocks)
+{
+	start = start % fNumBits;
+	if (numBlocks == 0xffff) {
+		// allocate all blocks after "start"
+		numBlocks = fNumBits - start;
+	} else if (start + numBlocks > fNumBits) {
+		FATAL(("should allocate more blocks than there are in a block!\n"));
+		numBlocks = fNumBits - start;
+	}
+
+	int32 block = start >> 5;
+
+	while (numBlocks > 0) {
+		uint32 mask = ((uint32 *)fBlock)[block];
+		for (int32 i = start % 32;i < 32 && numBlocks;i++,numBlocks--)
+			mask |= 1UL << i % 32;
+
+		((uint32 *)fBlock)[block++] = mask;
+		start = 0;
+	}
+}
+
+
+void
+AllocationBlock::Free(uint16 start,uint16 numBlocks)
+{
+	start = start % fNumBits;
+	if (numBlocks == 0xffff) {
+		// allocate all blocks after "start"
+		numBlocks = fNumBits - start;
+	} else if (start + numBlocks > fNumBits) {
+		FATAL(("should allocate more blocks than there are in a block!\n"));
+		numBlocks = fNumBits - start;
+	}
+
+	int32 block = start >> 5;
+
+	while (numBlocks > 0) {
+		uint32 mask = 0;
+		for (int32 i = start % 32;i < 32 && numBlocks;i++,numBlocks--)
+			mask |= 1UL << i % 32;
+
+		((uint32 *)fBlock)[block++] &= ~mask;
+		start = 0;
+	}
+}
+
+
+//	#pragma mark -
+
+
+AllocationGroup::AllocationGroup()
+	:
+	fIsFull(true)
+{
 }
 
 
@@ -157,39 +251,93 @@ BlockAllocator::initialize(BlockAllocator *allocator)
 
 
 status_t
-BlockAllocator::AllocateBlocks(int32 group,uint16 start,uint16 numBlocks,uint16 minimum, block_run &run)
+BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start,uint16 numBlocks,uint16 minimum, block_run &run)
 {
-	for (int32 i = 0;i < fNumGroups;i++) {
-		if (fGroups[group].GetFree(start,numBlocks,minimum,run) == B_OK)
-			return B_OK;
+	AllocationBlock cached(fVolume);
 
-		group = (group + 1) % fNumGroups;
+	for (int32 i = 0;i < fNumGroups;i++,group++) {
+		// there may be more than one block per allocation group - and
+		// we iterate through it to find a place for the allocation.
+		// (one allocation can't exceed one allocation group)
+
+		uint32 block = start / cached.NumBlockBits();
+		int32 range = 0, rangeStart = 0,rangeBlock = 0;
+		group = group % fNumGroups;
+
+		for (;block < fBlocksPerGroup;block++) {
+			if (cached.SetTo(fGroups[group],block) < B_OK)
+				return B_ERROR;
+
+			for (i = start % cached.NumBlockBits();i < cached.NumBlockBits();i++) {
+				if (!cached.IsUsed(i)) {
+					if (range == 0) {
+						// start new range
+						rangeStart = block * cached.NumBlockBits() + i;
+						rangeBlock = block;
+					}
+
+					// have we found a range large enough to hold numBlocks?
+					// if so, mark them as in use, and write the updated block
+					// bitmap back to disk
+					if (++range >= numBlocks) {
+						if (block != rangeBlock) {
+							// allocate the part that's in the current block
+							cached.Allocate(0,(rangeStart + numBlocks) % cached.NumBlockBits());
+							if (cached.WriteBack(transaction) < B_OK)
+								RETURN_ERROR(B_ERROR);
+
+							// set the blocks in the previous block
+							if (cached.SetTo(fGroups[group],block - 1) < B_OK)
+								cached.Allocate(rangeStart);
+							else
+								RETURN_ERROR(B_ERROR);
+						} else {
+							// just allocate the bits in the current block
+							cached.Allocate(rangeStart,numBlocks);
+						}
+						run.allocation_group = group;
+						run.start = rangeStart;
+						run.length = numBlocks;
+						
+						// ToDo: the super block has to be written back to disk!
+						fVolume->SuperBlock().used_blocks += numBlocks;
+
+						return cached.WriteBack(transaction);
+					}
+				} else {
+					// end of a range
+					range = 0;
+				}
+			}
+			// start from the beginning of the next block
+			start = 0;
+		}
 	}
 	return B_DEVICE_FULL;
 }
 
 
 status_t 
-BlockAllocator::AllocateForInode(Inode *parent, mode_t type, block_run &run)
+BlockAllocator::AllocateForInode(Transaction *transaction,Inode *parent, mode_t type, block_run &run)
 {
 	// apply some allocation policies here (AllocateBlocks() will break them
 	// if necessary) - we will start with those described in Dominic Giampaolo's
 	// "Practical File System Design", and see how good they work
-	return AllocateBlocks(parent->BlockRun().allocation_group,0,1,1,run);
+	return AllocateBlocks(transaction,parent->BlockRun().allocation_group,0,1,1,run);
 }
 
 
 status_t 
-BlockAllocator::Allocate(Inode *inode, uint16 numBlocks, block_run &run, uint16 minimum)
+BlockAllocator::Allocate(Transaction *transaction,Inode *inode, uint16 numBlocks, block_run &run, uint16 minimum)
 {
 	// apply some allocation policies here (AllocateBlocks() will break them
 	// if necessary)
-	return AllocateBlocks(inode->BlockRun().allocation_group,0,numBlocks,minimum,run);
+	return AllocateBlocks(transaction,inode->BlockRun().allocation_group,0,numBlocks,minimum,run);
 }
 
 
 status_t 
-BlockAllocator::Free(block_run &run)
+BlockAllocator::Free(Transaction *transaction,block_run &run)
 {
 	return B_OK;
 }

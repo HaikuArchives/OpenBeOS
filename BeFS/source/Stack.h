@@ -10,8 +10,7 @@
 #include <SupportDefs.h>
 
 
-template<class T> class Stack
-{
+template<class T> class Stack {
 	public:
 		Stack()
 			:
@@ -29,8 +28,7 @@ template<class T> class Stack
 		
 		status_t Push(T value)
 		{
-			if (fUsed >= fMax)
-			{
+			if (fUsed >= fMax) {
 				fMax += 16;
 				T *newArray = (T *)realloc(fArray,fMax * sizeof(T));
 				if (newArray == NULL)

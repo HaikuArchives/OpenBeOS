@@ -38,7 +38,9 @@ class Transaction {
 		{
 		}
 
-		~Transaction();
+		~Transaction()
+		{
+		}
 
 		void Done()
 		{

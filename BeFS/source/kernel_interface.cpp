@@ -432,9 +432,38 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vn
 
 
 int 
-bfs_ioctl(void *ns, void *node, void *cookie, int cmd, void *buf, size_t len)
+bfs_ioctl(void *_ns, void *_node, void *_cookie, int cmd, void *buffer, size_t bufferLength)
 {
-	FUNCTION_START(("node = %p, cmd = %d, buf = %p, len = %ld\n",node,cmd,buf,len));
+	FUNCTION_START(("node = %p, cmd = %d, buf = %p, len = %ld\n",_node,cmd,buffer,bufferLength));
+	
+	Volume *volume = (Volume *)_ns;
+
+	switch (cmd) {
+#ifdef DEBUG
+		case 56742:
+		{
+			// allocate all free blocks and zero them out (a test for the BlockAllocator)!
+			BlockAllocator &allocator = volume->Allocator();
+			Transaction transaction(volume,0);
+			CachedBlock cached(volume);
+			block_run run;
+			while (allocator.AllocateBlocks(&transaction,8,0,64,64,run) == B_OK) {
+				PRINT(("write block_run(%ld, %d, %d)\n",run.allocation_group,run.start,run.length));
+				for (int32 i = 0;i < run.length;i++) {
+					uint8 *block = cached.SetTo(run);
+					if (block != NULL) {
+						memset(block,0,volume->BlockSize());
+						cached.WriteBack(&transaction);
+					}
+				}
+			}
+			return B_OK;
+		}
+#endif
+		case 56743:
+			dump_super_block(&volume->SuperBlock());
+			return B_OK;
+	}
 	return B_BAD_VALUE;
 }
 

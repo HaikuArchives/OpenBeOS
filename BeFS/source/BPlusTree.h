@@ -19,8 +19,7 @@
 #define BPLUSTREE_NULL			-1LL
 #define BPLUSTREE_FREE			-2LL
 
-struct bplustree_header 
-{
+struct bplustree_header {
 	uint32		magic;
 	uint32		node_size;
 	uint32		max_number_of_levels;
@@ -37,8 +36,7 @@ struct bplustree_header
 #define BPLUSTREE_MAX_KEY_LENGTH	256
 #define BPLUSTREE_MIN_KEY_LENGTH	1
 
-enum bplustree_types
-{
+enum bplustree_types {
 	BPLUSTREE_STRING_TYPE	= 0,
 	BPLUSTREE_INT32_TYPE	= 1,
 	BPLUSTREE_UINT32_TYPE	= 2,
@@ -48,8 +46,7 @@ enum bplustree_types
 	BPLUSTREE_DOUBLE_TYPE	= 6
 };
 
-struct bplustree_node
-{
+struct bplustree_node {
 	off_t	left_link;
 	off_t	right_link;
 	off_t	overflow_link;
@@ -78,8 +75,7 @@ struct bplustree_node
 
 //**************************************
 
-enum bplustree_traversing
-{
+enum bplustree_traversing {
 	BPLUSTREE_FORWARD = 1,
 	BPLUSTREE_BACKWARD = -1,
 	
@@ -97,8 +93,7 @@ class CachedNode;
 class Inode;
 
 // needed for searching (utilizing a stack)
-struct node_and_key
-{
+struct node_and_key {
 	off_t	nodeOffset;
 	uint16	keyIndex;
 };
@@ -106,8 +101,7 @@ struct node_and_key
 
 //***** Cache handling *****
 
-class CachedNode
-{
+class CachedNode {
 	public:
 		CachedNode(BPlusTree *tree)
 			:
@@ -153,8 +147,7 @@ class CachedNode
 
 //******** B+tree class *********
 
-class BPlusTree
-{
+class BPlusTree {
 	public:
 		BPlusTree(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize = BPLUSTREE_NODE_SIZE,bool allowDuplicates = true);
 		BPlusTree(Inode *stream,bool allowDuplicates = true);
@@ -212,8 +205,7 @@ class BPlusTree
 
 extern int32 compareKeys(type_code type,const void *key1, int keyLength1, const void *key2, int keyLength2);
 
-class TreeIterator
-{
+class TreeIterator {
 	public:
 		TreeIterator(BPlusTree *tree);
 		~TreeIterator();

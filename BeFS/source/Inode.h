@@ -45,8 +45,7 @@ enum inode_type {
 // will be properly released after use (and it's also very
 // convenient to use them).
 
-class CachedBlock
-{
+class CachedBlock {
 	public:
 		CachedBlock(Volume *volume)
 			:
@@ -112,8 +111,7 @@ class CachedBlock
 };
 
 
-class Inode : public CachedBlock
-{
+class Inode : public CachedBlock {
 	public:
 		Inode(Volume *volume,vnode_id id,uint8 reenter = 0);
 		~Inode();
@@ -160,8 +158,7 @@ class Inode : public CachedBlock
 };
 
 
-class AttributeIterator
-{
+class AttributeIterator {
 	public:
 		AttributeIterator(Inode *inode);
 		~AttributeIterator();
