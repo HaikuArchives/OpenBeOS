@@ -104,6 +104,7 @@ int sys_atomic_set(int *val, int set_to);
 int sys_test_and_set(int *val, int set_to, int test_val);
 
 int sys_sysctl(int *, uint, void *, size_t *, void *, size_t);
+int sys_socket(int, int, int);
 
 #ifdef __cplusplus
 }
