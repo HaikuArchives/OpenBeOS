@@ -186,6 +186,7 @@ static status_t net_socket_control(void *cookie,
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: net_socket_control: \n");
 #endif
+dprintf("net_socket_control: op = %ld (%d)\n", op, NET_SOCKET_CREATE);
 	switch (op) {
 		case NET_SOCKET_CREATE: {
 			struct socket_args *sa = (struct socket_args*)data;
@@ -270,8 +271,20 @@ static status_t net_socket_read(void *cookie,
                                 void *buffer,
                                 size_t *readlen)
 {
-        dprintf("net_socket_read\n");
-        return B_OK;
+	struct iovec iov;
+	int error;
+	int flags;
+	dprintf("net_socket_read\n");
+	
+	iov.iov_base = buffer;
+	iov.iov_len = *readlen;
+	
+	error = core->readit(cookie, &iov, &flags);
+	if (error < 0)
+		return error;
+	*readlen = error;
+
+    return B_OK;
 }
 
 static status_t net_socket_write(void *cookie,
@@ -279,8 +292,18 @@ static status_t net_socket_write(void *cookie,
                                  const void *buffer,
                                  size_t *writelen)
 {
-        dprintf("net_socket_write\n");
-        return B_OK;
+	struct iovec iov;
+	int error;
+	dprintf("net_socket_write\n");
+	
+	iov.iov_base = buffer;
+	iov.iov_len = *writelen;
+	
+	error = core->writeit(cookie, &iov, 0);
+	if (error < 0)
+		return error;
+	*writelen = error;
+	return B_OK;	
 }
 
 static status_t net_socket_select(void *cookie, 

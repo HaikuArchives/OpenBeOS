@@ -1,3 +1,4 @@
 CVS
 *.o
 socket
+*.xMAP
