@@ -19,7 +19,7 @@
 //	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //	DEALINGS IN THE SOFTWARE.
 //
-//	File Name:		Button.h
+//	File Name:		Button.cpp
 //	Author:			Frans van Nispen (xlr8@tref.nl)
 //	Description:	BButton displays and controls a button in a window.
 //------------------------------------------------------------------------------

@@ -51,7 +51,7 @@ enum filter_result {
 };
 
 typedef filter_result (*filter_hook)
-	(BMessage *message, BHandler **target, BMessageFilter *filter);
+	(BMessage* message, BHandler** target, BMessageFilter* filter);
 
 
 // BMessageFilter invocation criteria ------------------------------------------
@@ -80,14 +80,14 @@ public:
 												message_source source,
 												uint32 what,
 												filter_hook func = NULL);
-								BMessageFilter(const BMessageFilter &filter);
-								BMessageFilter(const BMessageFilter *filter);
+								BMessageFilter(const BMessageFilter& filter);
+								BMessageFilter(const BMessageFilter* filter);
 	virtual						~BMessageFilter();
 
-			BMessageFilter		&operator=(const BMessageFilter &from);
+			BMessageFilter		&operator=(const BMessageFilter& from);
 
 	// Hook function; ignored if filter_hook is non-NULL
-	virtual	filter_result		Filter(BMessage *message, BHandler **target);
+	virtual	filter_result		Filter(BMessage* message, BHandler** target);
 
 			message_delivery	MessageDelivery() const;
 			message_source		MessageSource() const;
@@ -103,7 +103,7 @@ private:
 	virtual	void				_ReservedMessageFilter1();
 	virtual	void				_ReservedMessageFilter2();
 
-			void				SetLooper(BLooper *owner);
+			void				SetLooper(BLooper* owner);
 			filter_hook			FilterFunction() const;
 			bool				fFiltersAny;
 			uint32				what;

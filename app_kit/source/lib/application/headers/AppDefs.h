@@ -1,24 +1,47 @@
-/******************************************************************************
-/
-/	File:			AppDefs.h
-/
-/	Description:	Message codes and the global cursors.
-/
-/	Copyright 1993-98, Be Incorporated
-/
-*******************************************************************************/
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		AppDefs.h
+//	Author:			Erik Jaesler (erik@cgsoftware.com)
+//	Description:	Message codes and the global cursors.
+//------------------------------------------------------------------------------
 
 #ifndef _APP_DEFS_H
 #define _APP_DEFS_H
 
+// Standard Includes -----------------------------------------------------------
+
+// System Includes -------------------------------------------------------------
 #include <BeBuild.h>
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// Project Includes ------------------------------------------------------------
 
-/*---------------------------------------------------------*/
-/*----- Global Cursors ------------------------------------*/
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
+
+
+// Global Cursors --------------------------------------------------------------
 
 // Old-style cursors
 extern const unsigned char B_HAND_CURSOR[];
@@ -31,16 +54,15 @@ extern const BCursor *B_CURSOR_SYSTEM_DEFAULT;
 extern const BCursor *B_CURSOR_I_BEAM;
 #endif
 
-/*---------------------------------------------------------------*/
-/*----- System Message Codes ------------------------------------*/
+// System Message Codes --------------------------------------------------------
 
 enum {
 	B_ABOUT_REQUESTED			= '_ABR',
 	B_WINDOW_ACTIVATED			= '_ACT',
-	B_APP_ACTIVATED				= '_ACT',	/* Same as B_WINDOW_ACTIVATED */
+	B_APP_ACTIVATED				= '_ACT',	// Same as B_WINDOW_ACTIVATED
 	B_ARGV_RECEIVED 			= '_ARG',
 	B_QUIT_REQUESTED 			= '_QRQ',
-	B_CLOSE_REQUESTED 			= '_QRQ',	/* Obsolete; use B_QUIT_REQUESTED */
+	B_CLOSE_REQUESTED 			= '_QRQ',	// Obsolete; use B_QUIT_REQUESTED
 	B_CANCEL					= '_CNC',
 	B_KEY_DOWN 					= '_KYD',
 	B_KEY_UP 					= '_KYU',
@@ -86,12 +108,11 @@ enum {
 	_PRINTER_INFO_				= '_PIN',
 	_SETUP_PRINTER_				= '_SUP',
 	_SELECT_PRINTER_			= '_PSL'
-	/* Media Kit reserves all reserved codes starting in '_TR' */
+	// Media Kit reserves all reserved codes starting in '_TR'
 };
 
 
-/*---------------------------------------------------------*/
-/*----- Other Commands ------------------------------------*/
+// Other Commands --------------------------------------------------------------
 
 enum {
 	B_SET_PROPERTY				= 'PSET',
@@ -131,15 +152,16 @@ enum {
 	B_CONTROL_INVOKED			= 'CIVK',
 	B_CONTROL_MODIFIED			= 'CMOD'
 
-	/* Media Kit reserves all reserved codes starting in 'TRI' */
+	// Media Kit reserves all reserved codes starting in 'TRI'
 };
+//------------------------------------------------------------------------------
 
-/*-------------------------------------------------------------*/
-/*-------------------------------------------------------------*/
+#endif	// _APP_DEFS_H
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
 
-#endif /* _APP_DEFS_H */

@@ -1,5 +1,31 @@
-#include "Archivable.h"
-#include "SupportDefs.h"
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		Archivable.cpp
+//	Author:			Erik Jaesler (erik@cgsoftware.com)
+//	Description:	BArchivable mix-in class defines the archiving
+//					protocol.  Also some global archiving functions.
+//------------------------------------------------------------------------------
+
+// Standard Includes -----------------------------------------------------------
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -7,18 +33,27 @@
 #include <string>
 #include <typeinfo>
 #include <vector>
-#include <be/app/Roster.h>
-#include <be/kernel/OS.h>
-#include <be/storage/AppFileInfo.h>
-#include <be/storage/Entry.h>
-#include <be/storage/Path.h>
-#include <be/support/List.h>
-#include <be/support/String.h>
-#include <be/support/syslog.h>
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// System Includes -------------------------------------------------------------
+#include <AppFileInfo.h>
+#include <Archivable.h>
+#include <Entry.h>
+#include <List.h>
+#include <OS.h>
+#include <Path.h>
+#include <Roster.h>
+#include <String.h>
+#include <SupportDefs.h>
+#include <syslog.h>
+
+// Project Includes ------------------------------------------------------------
+
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
+
 
 using std::string;
 using std::vector;
@@ -75,7 +110,10 @@ BArchivable::~BArchivable()
 status_t BArchivable::Archive(BMessage* into, bool deep) const
 {
 	if (!into)
-		return B_BAD_VALUE;	// TODO: logging/other error reporting?
+	{
+		// TODO: logging/other error reporting?
+		return B_BAD_VALUE;
+	}
 
 	BString name;
 	Demangle(typeid(*this).name(), name);
@@ -127,12 +165,16 @@ BArchivable* instantiate_object(BMessage* archive, image_id* id)
 
 	// Check our params
 	if (id)
+	{
 		*id = B_BAD_VALUE;
+	}
+
 	if (!archive)
 	{
+		// TODO: extended error handling
 		errno = B_BAD_VALUE;
 		syslog(LOG_ERR, "instantiate_object failed: NULL BMessage argument");
-		return NULL;	// TODO: extended error handling
+		return NULL;
 	}
 
 	// Get class name from archive
@@ -140,9 +182,10 @@ BArchivable* instantiate_object(BMessage* archive, image_id* id)
 	status_t err = archive->FindString(B_CLASS_FIELD, &name);
 	if (err)
 	{
+		// TODO: extended error handling
 		syslog(LOG_ERR, "instantiate_object failed: Failed to find an entry "
 			   "defining the class name (%s).", strerror(err));
-		return NULL;	// TODO: extended error handling
+		return NULL;
 	}
 
 	// Get sig from archive
@@ -150,8 +193,9 @@ BArchivable* instantiate_object(BMessage* archive, image_id* id)
 	bool hasSig = (archive->FindString(B_ADD_ON_FIELD, &sig) == B_OK);
 
 	instantiation_func iFunc = find_instantiation_func(name, sig);
-//	if find_instantiation_func() can't locate Class::Instantiate()
-//		and a signature was specified
+
+	//	if find_instantiation_func() can't locate Class::Instantiate()
+	//		and a signature was specified
 	if (!iFunc && hasSig)
 	{
 		//	use BRoster::FindApp() to locate an app or add-on with the symbol
@@ -163,7 +207,9 @@ BArchivable* instantiate_object(BMessage* archive, image_id* id)
 
 		//	if an entry_ref is obtained
 		if (!err)
+		{
 			err = entry.SetTo(&ref);
+		}
 
 		if (err)
 		{
@@ -180,11 +226,16 @@ BArchivable* instantiate_object(BMessage* archive, image_id* id)
 				//	load the app/add-on
 				image_id theImage = load_add_on(path.Path());
 				if (theImage < 0)
-					return NULL;	// TODO: extended error handling
+				{
+					// TODO: extended error handling
+					return NULL;
+				}
 		
 				// Save the image_id
 				if (id)
+				{
 					*id = theImage;
+				}
 		
 				BString funcName;
 				BuildFuncName(name, funcName);
@@ -206,10 +257,11 @@ BArchivable* instantiate_object(BMessage* archive, image_id* id)
 
 	if (err)
 	{
+		// TODO: extended error handling
 		syslog(LOG_ERR, "instantiate_object failed: %s (%x)",
 			   strerror(err), err);
 		errno = err;
-		return NULL;	// TODO: extended error handling
+		return NULL;
 	}
 
 	//	if Class::Instantiate(BMessage*) was found
@@ -234,8 +286,10 @@ bool validate_instantiation(BMessage* from, const char* class_name)
 	// Make sure our params are kosher -- original skimped here =P
 	if (!from)
 	{
-		errno = B_BAD_VALUE;	// Not standard; Be implementation has a segment
-								// violation on this error mode
+		// Not standard; Be implementation has a segment
+		// violation on this error mode
+		errno = B_BAD_VALUE;
+
 		return false;
 	}
 
@@ -245,7 +299,9 @@ bool validate_instantiation(BMessage* from, const char* class_name)
 	{
 		err = from->FindString(B_CLASS_FIELD, index, &data);
 		if (!err && strcmp(data, class_name) == 0)
+		{
 			return true;
+		}
 	}
 
 	errno = B_MISMATCHED_VALUES;
@@ -277,7 +333,10 @@ instantiation_func find_instantiation_func(const char* class_name,
 		}
 	
 		if (theFunc && !CheckSig(sig, info))
-			theFunc = NULL;	//	TODO: extended error handling
+		{
+			// TODO: extended error handling
+			theFunc = NULL;
+		}
 	}
 
 	return theFunc;
@@ -313,7 +372,9 @@ int GetNumber(const char*& name)
 {
 	int val = atoi(name);
 	while (isdigit(*name))
+	{
 		++name;
+	}
 
 	return val;
 }
@@ -441,7 +502,10 @@ instantiation_func FindFuncInImage(BString& funcName, image_id id,
 						   (void**)&theFunc);
 
 	if (err)
-		theFunc = NULL;	// TODO: error handling
+	{
+		// TODO: error handling
+		theFunc = NULL;
+	}
 
 	return theFunc;
 }
@@ -449,7 +513,10 @@ instantiation_func FindFuncInImage(BString& funcName, image_id id,
 bool CheckSig(const char* sig, image_info& info)
 {
 	if (!sig)
-		return true;	// If it wasn't specified, anything "matches"
+	{
+		// If it wasn't specified, anything "matches"
+		return true;
+	}
 
 	status_t err = B_OK;
 
@@ -457,16 +524,20 @@ bool CheckSig(const char* sig, image_info& info)
 	BFile ImageFile(info.name, B_READ_ONLY);
 	err = ImageFile.InitCheck();
 	if (err)
-		return false;	//	TODO: extended error handling
+	{
+		// TODO: extended error handling
+		return false;
+	}
 
 	char imageSig[B_MIME_TYPE_LENGTH];
 	BAppFileInfo AFI(&ImageFile);
 	err = AFI.GetSignature(imageSig);
 	if (err)
 	{
+		// TODO: extended error handling
 		syslog(LOG_ERR, "instantiate_object - couldn't get mime sig for %s",
 			   info.name);
-		return false;	//	TODO: extended error handling
+		return false;
 	}
 
 	return strcmp(sig, imageSig) == 0;
@@ -474,6 +545,10 @@ bool CheckSig(const char* sig, image_info& info)
 //------------------------------------------------------------------------------
 
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-#endif
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
+

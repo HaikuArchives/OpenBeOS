@@ -21,8 +21,8 @@
 //
 //	File Name:		Invoker.h
 //	Author:			Frans van Nispen (xlr8@tref.nl)
-//	Description:	BMessageFilter class creates objects that filter
-//					in-coming BMessages.  
+//	Description:	BInvoker class defines a protocol for objects that
+//					post messages to a "target".
 //------------------------------------------------------------------------------
 
 #ifndef _INVOKER_H

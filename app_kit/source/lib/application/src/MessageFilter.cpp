@@ -19,7 +19,7 @@
 //	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //	DEALINGS IN THE SOFTWARE.
 //
-//	File Name:		MessageFilter.h
+//	File Name:		MessageFilter.cpp
 //	Author:			Erik Jaesler (erik@cgsoftware.com)
 //	Description:	BMessageFilter class creates objects that filter
 //					in-coming BMessages.  

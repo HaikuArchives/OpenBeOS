@@ -19,7 +19,7 @@
 //	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //	DEALINGS IN THE SOFTWARE.
 //
-//	File Name:		RadioButton.h
+//	File Name:		RadioButton.cpp
 //	Author:			Frans van Nispen (xlr8@tref.nl)
 //	Description:	BRadioButton represents a single on/off button.  All
 //					sibling BRadioButton objects comprise a single
@@ -200,10 +200,6 @@ void BRadioButton::KeyDown(const char* bytes, int32 numBytes)
 //------------------------------------------------------------------------------
 void BRadioButton::SetValue(int32 value)
 {
-// TODO: Fix
-//		I suspect there's some kind of attempt at automatic group behaviour
-//		here; this should be left to the programmer and in any case is *not*
-//		consistent with the existing API.
 	if (BControl::Value() == value)
 	{
 		return;

@@ -19,7 +19,7 @@
 //	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //	DEALINGS IN THE SOFTWARE.
 //
-//	File Name:		Cursor.h
+//	File Name:		Cursor.cpp
 //	Author:			Frans van Nispen (xlr8@tref.nl)
 //	Description:	BCursor describes a view-wide or application-wide cursor.
 //------------------------------------------------------------------------------

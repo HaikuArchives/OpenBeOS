@@ -1,23 +1,47 @@
-/*******************************************************************************
-/
-/	File:			UnicodeBlockObjects.h
-/
-/   Description:    Predefined unicode_block objects
-/
-/	Copyright 1998, Be Incorporated, All Rights Reserved
-/
-*******************************************************************************/
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		UnicodeBlockObjects.h
+//	Author:			Erik Jaesler (erik@cgsoftware.com)
+//	Description:	Predefined unicode_block objects
+//------------------------------------------------------------------------------
 
 #ifndef _UNICODEBLOCKOBJECTS_H
 #define _UNICODEBLOCKOBJECTS_H
 
+// Standard Includes -----------------------------------------------------------
+
+// System Includes -------------------------------------------------------------
 #include <Font.h>
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// Project Includes ------------------------------------------------------------
 
-/* Unicode block list with their unicode encoding range	*/       
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
+
+
+// Unicode block list with their unicode encoding range
 const unicode_block B_BASIC_LATIN_BLOCK(					/* 0000 - 007F			*/				0x0000000000000000LL, 0x0000000000000001LL);			
 const unicode_block B_LATIN1_SUPPLEMENT_BLOCK(				/* 0080 - 00FF			*/				0x0000000000000000LL, 0x0000000000000002LL);			
 const unicode_block B_LATIN_EXTENDED_A_BLOCK(				/* 0100 - 017F			*/				0x0000000000000000LL, 0x0000000000000004LL);			
@@ -90,9 +114,12 @@ const unicode_block B_HALFWIDTH_AND_FULLWIDTH_FORMS_BLOCK(	/* FF00 - FFEF			*/		
 const unicode_block B_SPECIALS_BLOCK(						/* FEFF and FFF0 - FFFF	*/				0x0000000000000020LL, 0x0000000000000000LL);			
 const unicode_block B_TIBETAN_BLOCK(						/* 0F00 - 0FBF			*/				0x0000000000000040LL, 0x0000000000000000LL);			
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
+#endif	// _UNICODEBLOCKOBJECTS_H
 
-#endif /* _UNICODEBLOCKOBJECTS_H */
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
+
