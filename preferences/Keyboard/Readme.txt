@@ -3,7 +3,7 @@ OpenBeOS Keyboard Preferences
 23/02/2002 - Beta 3 Released
 
 Re-written the program!
-The code now fits OpenTraker guidelines.
+The code now fits OpenTracker guidelines.
 Most of the work is done in Window and Application as it should be, and I have made much better use of BeOS's messaging features.
 The KeyboardSettings class is tidier, with it only doing settings work, rather than window positioning too (Can you believe I put that code in there?? :) ) 
 KeyboardView is derived from a BBox rather than a BView thanks to Philippe Houdoin for that one :)
