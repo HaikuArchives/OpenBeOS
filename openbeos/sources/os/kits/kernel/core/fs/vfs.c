@@ -33,21 +33,21 @@
 #define MAKE_NOIZE 0
 
 struct vnode {
-	struct vnode *next;
-	struct vnode *mount_prev;
-	struct vnode *mount_next;
+	struct vnode    *next;
+	struct vnode    *mount_prev;
+	struct vnode    *mount_next;
 	struct vm_cache *cache;
-	fs_id fsid;
-	vnode_id vnid;
-	fs_vnode priv_vnode;
+	fs_id            fsid;
+	vnode_id         vnid;
+	fs_vnode         priv_vnode;
 	struct fs_mount *mount;
-	struct vnode *covered_by;
-	int ref_count;
-	bool delete_me;
-	bool busy;
+	struct vnode    *covered_by;
+	int              ref_count;
+	bool             delete_me;
+	bool             busy;
 };
 struct vnode_hash_key {
-	fs_id fsid;
+	fs_id    fsid;
 	vnode_id vnid;
 };
 
@@ -535,7 +535,7 @@ static int new_fd(struct ioctx *ioctx, struct file_descriptor *f)
 		}
 	}
 	if(fd < 0) {
-		fd = ERR_NOMORE_HANDLES;
+		fd = ERR_NO_MORE_HANDLES;
 		goto err;
 	}
 
