@@ -29,6 +29,42 @@ GCC_PATH = /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 ;
 # Linux (on mccall's box anyway)
 #GCC_PATH = /usr/lib/gcc-lib/i486-suse-linux/2.95.3 ;
 
+# This is a proposal for autodetecting the GCC path.
+#
+#if $(GCC_PATH)
+#{
+#	# The user set the path manually. No need for automatic detection.
+#}
+#else if $(OS) = BEOS
+#{
+#	local gccversion = [ Command "gcc --version" ] ;
+#	local gccdir = [ Command 
+#		"ls -d1 /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/$(gccversion) 2> /dev/null"
+#	] ;
+#	if ! $(gccdir[1])
+#	{
+#		EXIT "GCC path not found." ;
+#	}
+#	GCC_PATH = $(gccdir) ;
+#}
+#else if $(UNIX)
+#{
+#	local gccversion = [ Command "gcc --version" ] ;
+#	local gccdir = [ Command 
+#		"ls -d1 /usr/lib/gcc-lib/*/$(gccversion) 2> /dev/null"
+#		"ls -d1 /usr/local/lib/gcc-lib/*/$(gccversion) 2> /dev/null"
+#	] ;
+#	if ! $(gccdir[1])
+#	{
+#		EXIT "GCC path not found." ;
+#	}
+#	GCC_PATH = $(gccdir) ;
+#}
+#else
+#{
+#	EXIT Good joke! Building OBOS under $(OS), eh? ;
+#}
+
 
 AR = ar r ;
 OPTIM = -O2 ;
