@@ -678,20 +678,16 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 			return B_IS_A_DIRECTORY;
 
 		if (inode->Size() != stat->st_size) {
-			if (inode->Lock().LockWrite() == B_OK) {
-				status = inode->SetFileSize(&transaction,stat->st_size);
-	
-				// fill the new blocks (if any) with zeros
-				inode->FillGapWithZeros(inode->OldSize(),inode->Size());
-				inode->Lock().UnlockWrite();
+			status = inode->SetFileSize(&transaction,stat->st_size);
 
-				Index index(volume);
-				index.UpdateSize(&transaction,inode);
-	
-				if ((mask & WSTAT_MTIME) == 0)
-					index.UpdateLastModified(&transaction,inode);
-			} else
-				status = B_ERROR;
+			// fill the new blocks (if any) with zeros
+			inode->FillGapWithZeros(inode->OldSize(),inode->Size());
+
+			Index index(volume);
+			index.UpdateSize(&transaction,inode);
+
+			if ((mask & WSTAT_MTIME) == 0)
+				index.UpdateLastModified(&transaction,inode);
 		}
 	}
 
