@@ -19,6 +19,15 @@ if $(METROWERKS) {
 KERNEL_CCFLAGS ?= "-Wall -Wno-multichar -Wmissing-prototypes -finline -nostdinc" ;
 KERNEL_CCFLAGS += "-fno-builtin -D$(OBOS_TARGET_DEFINE) " ;
 
+# temporary solution to the GCC path issue. Find the one that applies and
+# remove the comments.
+# Basic R5 beos
+GCC_PATH = /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026
+
+# Linux (on mccall's box anyway)
+#GCC_PATH = /usr/lib/gcc-lib/i486-suse-linux/2.95.3 ;
+
+
 AR = ar r ;
 OPTIM = -O2 ;
 
@@ -324,10 +333,10 @@ actions Link bind NEEDLIBS
 {
 	$(LINK) $(LINKFLAGS) -o "$(1)" $(UNDEFS) $(2) $(NEEDLIBS) $(LINKLIBS) ;
 #	xres -o "$(1)" $(RESFILES) ;
-	setversion "$(1)" -system $(OBOS_BUILD_VERSION) -short "$(OBOS_BUILD_DESCRIPTION)" ;
+#	setversion "$(1)" -system $(OBOS_BUILD_VERSION) -short "$(OBOS_BUILD_DESCRIPTION)" ;
 	chmod +x "$(1)" ;
-	settype -t $(OBOS_TARGET_TYPE) "$(1)" ;
-	mimeset -f "$(1)" ;
+#	settype -t $(OBOS_TARGET_TYPE) "$(1)" ;
+#	mimeset -f "$(1)" ;
 }
 
 rule assemble
@@ -395,7 +404,7 @@ rule KernelLd
 
 	# Add libgcc.a - NB this should be detected not hard coded!
 	if ! $(5) {
-		LINKLIBS on $(1) += "-L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc" ;
+		LINKLIBS on $(1) += "-L $(GCC_PATH) -lgcc" ;
 	}
 }
 
