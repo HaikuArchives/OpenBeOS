@@ -15,10 +15,11 @@
 		err = -1; \
 	}
 
+
 int sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
-           void *newp, size_t newlen)
+		void *newp, size_t newlen)
 {
-	/* we should handle CTL_USER here, but as we don't even define it yet :) */
+	/* ToDo: we should handle CTL_USER here, but as we don't even define it yet :) */
 	int err = sys_sysctl(name, namelen, oldp, oldlenp, newp, newlen);
 	
 	SET_ERRNO(err)
@@ -45,7 +46,7 @@ int ioctl(int fd, ulong cmd, ...)
 	int err;
 	
 	va_start(args, cmd);
-	err = sys_ioctl(fd, cmd, args);
+	err = sys_ioctl(fd, cmd, args, 0);
 	va_end(args);
 
 	SET_ERRNO(err)
