@@ -20,10 +20,10 @@ struct route {
  * retransmission behavior and are included in the routing structure.
  */
 struct rt_metrics {
-        u_long  rmx_locks;      /* Kernel must leave these values alone */
-        u_long  rmx_mtu;        /* MTU for this path */
-        u_long  rmx_hopcount;   /* max hops expected */
-        u_long  rmx_expire;     /* lifetime for route, e.g. redirect */
+        uint32  rmx_locks;      /* Kernel must leave these values alone */
+        uint32  rmx_mtu;        /* MTU for this path */
+        uint32  rmx_hopcount;   /* max hops expected */
+        uint32  rmx_expire;     /* lifetime for route, e.g. redirect */
         u_long  rmx_recvpipe;   /* inbound delay-bandwith product */
         u_long  rmx_sendpipe;   /* outbound delay-bandwith product */
         u_long  rmx_ssthresh;   /* outbound gateway buffer limit */
@@ -56,7 +56,7 @@ struct rtentry {
 	/* XXX - add this! */
         // rt_timer;  * queue of timeouts for misc funcs *
 };
-#define rt_use  rt_rmx.rmx_pksent
+#define rt_use          rt_rmx.rmx_pksent
 #define rt_key(r)       ((struct sockaddr *)((r)->rt_nodes->rn_key))
 #define rt_mask(r)      ((struct sockaddr *)((r)->rt_nodes->rn_mask))
 
