@@ -3,11 +3,13 @@
 SubDir TOP source lib ;
 
 Library $(TOP)/source/lib/libstorage :
-Path.cpp
-Error.cpp
-Statable.cpp
-Node.cpp
+Directory.cpp
 Entry.cpp
+EntryList.cpp
+Error.cpp
+Node.cpp
 #NodeInfo.cpp
+Path.cpp
+Statable.cpp
 kernel_interface.POSIX.cpp ;
 
