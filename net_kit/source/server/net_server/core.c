@@ -723,7 +723,10 @@ static struct core_module_info core_info = {
 	readit,
 	sosetopt,
 	sogetopt,
-	set_socket_event_callback
+	set_socket_event_callback,
+	sogetpeername,
+	sogetsockname,
+	soaccept
 };
 
 _EXPORT module_info *modules[] = {

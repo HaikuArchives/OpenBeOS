@@ -75,6 +75,7 @@ void m_freem(struct mbuf *m)
 		return;
 	do {
 		MFREE(m, n);
+//printf("m_freem(%p, %p)\n", m, n);
 	} while ((m = n) != NULL);
 }
 

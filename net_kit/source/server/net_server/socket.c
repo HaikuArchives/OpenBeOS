@@ -1370,3 +1370,77 @@ void wakeup(sem_id chan)
 	release_sem_etc(chan, 100, B_CAN_INTERRUPT | B_DO_NOT_RESCHEDULE);
 }
 
+/* This file is too big - split it up!! */
+int sogetsockname(void *sp, struct sockaddr *sa, uint32 *alen)
+{
+	struct socket *so = (struct socket*)sp;
+	struct mbuf *m = m_getclr(MT_SONAME);
+	uint32 len;
+	int error;
+
+	if (!m)
+		return ENOBUFS;
+	memcpy(&len, alen, sizeof(len));
+	error = (*so->so_proto->pr_userreq)(so, PRU_SOCKADDR, NULL, m, NULL);
+	if (error == 0) {
+		if (len > m->m_len)
+			len = m->m_len;
+		memcpy(sa, mtod(m, caddr_t), len);
+		memcpy(alen, &len, sizeof(len));
+	}
+	m_freem(m);
+	return error;
+}
+
+int sogetpeername(void *sp, struct sockaddr *sa, uint32 *alen)
+{
+        struct socket *so = (struct socket*)sp;
+        struct mbuf *m = m_getclr(MT_SONAME);
+        uint32 len;
+        int error;
+
+        if (!m)
+                return ENOBUFS;
+	if ((so->so_state & (SS_ISCONNECTED|SS_ISCONFIRMING)) == 0)
+		return ENOTCONN;
+        memcpy(&len, alen, sizeof(len));
+        error = (*so->so_proto->pr_userreq)(so, PRU_PEERADDR, NULL, m, NULL);
+        if (error == 0) {
+                if (len > m->m_len)
+                        len = m->m_len;
+                memcpy(sa, mtod(m, caddr_t), len);
+                memcpy(alen, &len, sizeof(len));
+        }
+        m_freem(m);
+        return error;
+}
+
+int soaccept(void *sp, struct sockaddr *sa, uint32 *alen)
+{
+	struct socket *so = (struct socket *)sp;
+	uint32 len;
+	int error;
+	
+	if (sa)
+		memcpy(&len, alen, sizeof(len));
+	if ((so->so_options & SO_ACCEPTCONN) == 0)
+		return EINVAL;
+	if ((so->so_state & SS_NBIO) && so->so_qlen == 0)
+		return EWOULDBLOCK;
+	while (so->so_qlen == 0 && so->so_error == 0) {
+		if (so->so_state & SS_CANTRCVMORE) {
+			so->so_error = ECONNABORTED;
+			break;
+		}
+		if ((error = nsleep(so->so_timeo, "soaccept", 0)))
+			return error;
+	}
+	if (so->so_error) {
+		error = so->so_error;
+		so->so_error = 0;
+		return error;
+	}
+	/* how do we create the new socket and return it??? */
+	
+	return 0;
+}
