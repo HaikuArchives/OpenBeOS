@@ -57,6 +57,18 @@ enum {
 
 /* ------------------------------------------------------------- */
 
+//!		File typing functionality.
+/*! 	The BMimeType class provides access to the file typing system, which
+		provides the following functionality:		
+			- Basic MIME string manipulation 
+			- Access to file type information in the MIME database
+			- Ways to receive notifications when parts of the MIME database are updated
+			- Methods to determine/help determine the types of untyped files
+		
+		\author <a href='mailto:tylerdauwalder@users.sf.net'>Tyler Dauwalder</a>
+		\author <a href='bonefish@users.sf.net'>Ingo Weinhold</a>
+		\version 0.0.0
+*/
 class BMimeType	{
 public:
 	BMimeType();
@@ -132,6 +144,11 @@ public:
 	status_t SetType(const char *MIME_type);
 
 private:
+	BMimeType(const char *MIME_type, const char *mimePath);
+		// if mimePath is NULL, defaults to "/boot/home/config/settings/beos_mime/"
+
+	friend class MimeTypeTest;
+
 // Uncomment, when needed...
 
 //	friend class BAppFileInfo;
@@ -164,7 +181,7 @@ private:
 
 	char		*fType;
 	BFile		*fMeta;
-	void		*_unused;
+	char		*fMimePath;			// Was: "void *_unused;"
 	entry_ref	fRef;
 	int			fWhere;
 	status_t	fCStatus;

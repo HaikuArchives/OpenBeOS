@@ -155,14 +155,36 @@ BMimeType::GetFileExtensions(BMessage *extensions) const
 	return NOT_IMPLEMENTED;
 }
 
-// GetShortDescription
+//! Fetches the MIME type's short description from the MIME database
+/*! The string pointed to by \c description must be long enough to
+	hold the short description; a length of \c B_MIME_TYPE_LENGTH+1 is
+	recommended.
+	
+	\param description Pointer to a pre-allocated string into which the long description is copied. If
+	                   the function fails, the contents of the string are undefined.
+	\return
+	- B_OK: Success
+	- B_ENTRY_NOT_FOUND: No short description exists for the given type
+	- "error code": Failure
+*/
 status_t
 BMimeType::GetShortDescription(char *description) const
 {
 	return NOT_IMPLEMENTED;
 }
 
-// GetLongDescription
+//! Fetches the MIME type's long description from the MIME database
+/*! The string pointed to by \c description must be long enough to
+	hold the long description; a length of \c B_MIME_TYPE_LENGTH+1 is
+	recommended.
+
+	\param description Pointer to a pre-allocated string into which the long description is copied. If
+	                   the function fails, the contents of the string are undefined.
+	\return
+	- B_OK: Success
+	- B_ENTRY_NOT_FOUND: No long description exists for the given type
+	- "error code": Failure
+*/
 status_t
 BMimeType::GetLongDescription(char *description) const
 {
@@ -204,14 +226,36 @@ BMimeType::SetFileExtensions(const BMessage *extensions)
 	return NOT_IMPLEMENTED;
 }
 
-// SetShortDescription
+//! Sets the short description field for the MIME type
+/*! The string pointed to by \c description must be of
+	length less than or equal to \c B_MIME_TYPE_LENGTH characters.
+	
+	\note If the MIME type is not installed, it will first be installed, and then
+	the short description will be set.
+
+	\param description Pointer to a pre-allocated string containing the new short description
+	\return
+	- B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::SetShortDescription(const char *description)
 {
 	return NOT_IMPLEMENTED;
 }
 
-// SetLongDescription
+//! Sets the long description field for the MIME type
+/*! The string pointed to by \c description must be of
+	length less than or equal to \c B_MIME_TYPE_LENGTH characters.
+	
+	\note If the MIME type is not installed, it will first be installed, and then
+	the long description will be set.
+
+	\param description Pointer to a pre-allocated string containing the new long description
+	\return
+	- B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::SetLongDescription(const char *description)
 {
