@@ -1,7 +1,7 @@
 SubDir OBOS_TOP sources os kits kernel boot arch ;
 
 SubInclude OBOS_TOP sources os kits kernel boot arch alpha ;
-SubInclude OBOS_TOP sources os kits kernel boot arch i386 ;
+SubInclude OBOS_TOP sources os kits kernel boot arch x86 ;
 SubInclude OBOS_TOP sources os kits kernel boot arch m68k ;
 SubInclude OBOS_TOP sources os kits kernel boot arch mips ;
 SubInclude OBOS_TOP sources os kits kernel boot arch ppc ;
