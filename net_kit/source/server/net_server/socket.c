@@ -263,6 +263,36 @@ int soconnect(void *sp, caddr_t data, int len)
 	return error;
 }
 
+struct socket *sonewconn(struct socket *head, int connstatus)
+{
+	struct socket *so;
+	int soqueue = connstatus ? 1 : 0;
+	
+	if (head->so_qlen + head->so_q0len > 3 * head->so_qlimit / 2)
+		return NULL;
+	if (initsocket((void**)&so) < 0)
+		return NULL;
+	so->so_type = head->so_type;
+	so->so_options = head->so_options & ~SO_ACCEPTCONN;
+	so->so_linger = head->so_linger;
+	so->so_state = head->so_state | SS_NOFDREF;
+	so->so_proto = head->so_proto;
+	so->so_timeo = head->so_timeo;
+	soreserve(so, head->so_snd.sb_hiwat, head->so_rcv.sb_hiwat);
+	soqinsque(head, so, soqueue);
+	if ((*so->so_proto->pr_userreq)(so, PRU_ATTACH, NULL, NULL, NULL)) {
+		soqremque(so, soqueue);
+		pool_put(spool, so);
+		return NULL;
+	}
+	if(connstatus) {
+		sorwakeup(head);
+		wakeup(head->so_timeo);
+		so->so_state |= connstatus;
+	}
+	return so;
+}
+
 int soshutdown(void *sp, int how)
 {
 	struct socket *so = (struct socket*)sp;
@@ -342,7 +372,8 @@ int writeit(void *sp, struct iovec *iov, int flags)
 {
 	struct socket *so = (struct socket *)sp;
 	struct uio auio;
-
+	int rv;
+	
 	auio.uio_iov = iov;
 	auio.uio_iovcnt = 1;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -350,7 +381,9 @@ int writeit(void *sp, struct iovec *iov, int flags)
 	auio.uio_offset = 0;
 	auio.uio_resid = iov->iov_len;
 
-	return sosend(so, NULL, &auio, NULL, NULL, flags);
+	rv = sosend(so, NULL, &auio, NULL, NULL, flags);
+	printf("writeit: sosend = %d\n", rv);
+	return rv;
 }
 
 int sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
@@ -492,6 +525,7 @@ nopages:
 				so->so_options |= SO_DONTROUTE;
 
 			/* XXX - locking */
+			printf("sosend: calling PRU_SEND\n");
 			error = (*so->so_proto->pr_userreq)(so, (flags & MSG_OOB) ? PRU_SENDOOB: PRU_SEND,
 						        top, addr, control);
 
@@ -521,8 +555,6 @@ int readit(void *sp, struct iovec *iov, int *flags)
 {
 	struct socket *so = (struct socket *)sp;
 	struct uio auio;
-
-printf("readit\n");
 
 	auio.uio_iov = iov;
 	auio.uio_iovcnt = 1;
@@ -1105,19 +1137,19 @@ int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie
 
 static int checkevent(struct socket *so)
 {
-	if (! so->event_callback)	// no event callback registered for this socket
+	if (! so->event_callback)
 		return B_OK;
 
 	if (soreadable(so))
-		// notify socket readable event
+		/* notify socket readable event */
 		so->event_callback(so, 1, so->event_callback_cookie);
 
 	if (sowriteable(so))
-		// notify socket writable event
+		/* notify socket writable event */
 		so->event_callback(so, 2, so->event_callback_cookie);
 		
 	if (so->so_oobmark || (so->so_state & SS_RCVATMARK))
-		// notify socket exception event
+		/* notify socket exception event */
 		so->event_callback(so, 3, so->event_callback_cookie);
 		
 	return B_OK;
@@ -1125,12 +1157,12 @@ static int checkevent(struct socket *so)
 
 void sowakeup(struct socket *so, struct sockbuf *sb)
 {
-	checkevent(so);
 	sb->sb_flags &= ~SB_SEL;
 	if (sb->sb_flags & SB_WAIT) {
 		sb->sb_flags &= ~SB_WAIT;
 		release_sem(sb->sb_pop);
 	}
+	checkevent(so);
 }	
 
 void soqinsque(struct socket *head, struct socket *so, int q)
@@ -1175,6 +1207,12 @@ int soqremque(struct socket *so, int q)
 	next->so_q0 = next->so_q = 0;
 	next->so_head = 0;
 	return 1;
+}
+
+void sohasoutofband(struct socket *so)
+{
+	/* Should we signal the process with SIGURG??? */
+	checkevent(so);
 }
 
 void socantsendmore(struct socket *so)
