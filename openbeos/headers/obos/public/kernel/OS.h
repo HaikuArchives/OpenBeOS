@@ -18,6 +18,9 @@
  * </pre>
  * The resulting files will be produced in dox/html.
  *
+ * @section Updating
+ * I will attempt to keep these up to date, but if they're not, just
+ * give me a nudge!
  */
 
 /**

@@ -4,19 +4,27 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef __newos__nulibc_unistd__hh__
-#define __newos__nulibc_unistd__hh__
+/**
+ * @file unistd.h
+ * @brief Miscellaneous macro's and functions
+ */
 
+#ifndef _UNISTD_H
+#define _UNISTD_H
+
+/**
+ * @defgroup Unistd unistd.h
+ * @brief Miscellaneous macro's and functions
+ * @ingroup OpenBeOS_POSIX
+ * @{
+ */
 
 #include <ktypes.h>
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-int     open(char const *, int, ...);
 int     close(int);
 int     dup(int);
 int     dup2(int, int);
@@ -47,6 +55,7 @@ int getdtablesize(void);
 #define STDOUT_FILENO    1
 #define STDERR_FILENO    2
 
+/** @} */
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
