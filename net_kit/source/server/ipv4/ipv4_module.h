@@ -17,6 +17,10 @@ struct ipv4_module_info {
 	                 struct route *,
 	                 int, void *);
 	uint16 (*ip_id)(void);
+	int (*ctloutput)(int,
+	                 struct socket *,
+                     int, int,
+                     struct mbuf **);
 };
 
 #define IPV4_MODULE_PATH	"network/protocol/ipv4"

@@ -384,7 +384,8 @@ static struct ipv4_module_info my_module = {
 		ipv4_ops
 		},
 		ipv4_output,
-		ip_id
+		ip_id,
+		ipv4_ctloutput
 };
 
 _EXPORT module_info *modules[] = {
