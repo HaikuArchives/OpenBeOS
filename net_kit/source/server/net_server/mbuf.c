@@ -301,14 +301,14 @@ void m_copydata(struct mbuf *m, int off, int len, caddr_t cp)
 
 struct mbuf *m_copym(struct mbuf *m, int off0, int len)
 {
-        struct mbuf *n, **np;
-        int off = off0;
-        struct mbuf *top;
-        int copyhdr = 0;
+	struct mbuf *n, **np;
+	int off = off0;
+	struct mbuf *top;
+	int copyhdr = 0;
 
-        if (off < 0 || len < 0) {
-                printf("m_copym0: off %d, len %d\n", off, len);
-		exit(-1);
+	if (off < 0 || len < 0) {
+		printf("m_copym0: off %d, len %d\n", off, len);
+		return NULL;
 	}
         if (!off && m->m_flags & M_PKTHDR)
                 copyhdr = 1;
