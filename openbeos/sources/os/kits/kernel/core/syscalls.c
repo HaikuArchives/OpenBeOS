@@ -11,6 +11,7 @@
 #include <debug.h>
 #include <vfs.h>
 #include <thread.h>
+#include <OS.h>
 #include <sem.h>
 #include <port.h>
 #include <cpu.h>
@@ -203,37 +204,38 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_get_next_port_info((port_id)arg0, (uint32 *)arg1, (struct port_info *)arg2);
 			break;
 		case SYSCALL_PORT_BUFFER_SIZE:
-			*call_ret = user_port_buffer_size_etc((port_id)arg0, PORT_FLAG_INTERRUPTABLE, 0);
+			*call_ret = user_port_buffer_size_etc((port_id)arg0, B_CAN_INTERRUPT, 0);
 			break;
 		case SYSCALL_PORT_BUFFER_SIZE_ETC:
-			*call_ret = user_port_buffer_size_etc((port_id)arg0, (uint32)arg1 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg2, arg3));
+			*call_ret = user_port_buffer_size_etc((port_id)arg0, (uint32)arg1 | B_CAN_INTERRUPT, (bigtime_t)INT32TOINT64(arg2, arg3));
 			break;
 		case SYSCALL_PORT_COUNT:
 			*call_ret = user_port_count((port_id)arg0);
 			break;
 		case SYSCALL_PORT_READ:
-			*call_ret = user_read_port_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
+			*call_ret = user_read_port_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, B_CAN_INTERRUPT, 0);
 			break;
 		case SYSCALL_PORT_READ_ETC:
-			*call_ret = user_read_port_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg5, arg6));
+			*call_ret = user_read_port_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, (uint32)arg4 | B_CAN_INTERRUPT, (bigtime_t)INT32TOINT64(arg5, arg6));
 			break;
 		case SYSCALL_PORT_SET_OWNER:
 			*call_ret = user_set_port_owner((port_id)arg0, (proc_id)arg1);
 			break;
 		case SYSCALL_PORT_WRITE:
-			*call_ret = user_write_port_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
+			*call_ret = user_write_port_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, B_CAN_INTERRUPT, 0);
 			break;
 		case SYSCALL_PORT_WRITE_ETC:
-			*call_ret = user_write_port_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg5, arg6));
+			*call_ret = user_write_port_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | B_CAN_INTERRUPT, (bigtime_t)INT32TOINT64(arg5, arg6));
 			break;
 		case SYSCALL_SEM_GET_COUNT:
 			*call_ret = user_get_sem_count((sem_id)arg0, (int32*)arg1);
 			break;
 		case SYSCALL_SEM_GET_SEM_INFO:
-			*call_ret = user_get_sem_info((sem_id)arg0, (struct sem_info *)arg1);
+			*call_ret = user_get_sem_info((sem_id)arg0, (struct sem_info *)arg1, (size_t)arg2);
 			break;
 		case SYSCALL_SEM_GET_NEXT_SEM_INFO:
-			*call_ret = user_get_next_sem_info((proc_id)arg0, (uint32 *)arg1, (struct sem_info *)arg2);
+			*call_ret = user_get_next_sem_info((proc_id)arg0, (uint32 *)arg1, (struct sem_info *)arg2,
+			                                   (size_t)arg3);
 			break;
 		case SYSCALL_SEM_SET_SEM_OWNER:
 			*call_ret = user_set_sem_owner((sem_id)arg0, (proc_id)arg1);

@@ -9,7 +9,7 @@
 #include <arch/debug.h>
 #include <arch/int.h>
 #include <smp.h>
-#include <sem.h>
+#include <OS.h>
 #include <vfs.h>
 #include <debug.h>
 

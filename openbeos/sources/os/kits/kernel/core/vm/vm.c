@@ -17,7 +17,7 @@
 #include <console.h>
 #include <int.h>
 #include <smp.h>
-#include <sem.h>
+#include <OS.h>
 #include <lock.h>
 #include <khash.h>
 #include <errors.h>

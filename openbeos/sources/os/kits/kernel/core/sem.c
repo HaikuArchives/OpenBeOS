@@ -5,6 +5,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel.h>
+#include <OS.h>
 #include <sem.h>
 #include <smp.h>
 #include <int.h>
@@ -556,7 +557,7 @@ int get_sem_count(sem_id id, int32* thread_count)
 	return NO_ERROR;
 }
 
-int get_sem_info(sem_id id, struct sem_info *info)
+int _get_sem_info(sem_id id, struct sem_info *info, size_t sz)
 {
 	int state;
 	int slot;
@@ -592,7 +593,7 @@ int get_sem_info(sem_id id, struct sem_info *info)
 	return NO_ERROR;
 }
 
-int get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info)
+int _get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info, size_t sz)
 {
 	int state;
 	int slot;
@@ -849,7 +850,7 @@ int user_get_sem_count(sem_id uid, int32* uthread_count)
 	return rc;
 }
 
-int user_get_sem_info(sem_id uid, struct sem_info *uinfo)
+int user_get_sem_info(sem_id uid, struct sem_info *uinfo, size_t sz)
 {
 	struct sem_info info;
 	int rc, rc2;
@@ -857,14 +858,14 @@ int user_get_sem_info(sem_id uid, struct sem_info *uinfo)
 	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	rc = get_sem_info(uid, &info);
-	rc2 = user_memcpy(uinfo, &info, sizeof(struct sem_info));
+	rc = _get_sem_info(uid, &info, sz);
+	rc2 = user_memcpy(uinfo, &info, sz);
 	if(rc2 < 0)
 		return rc2;
 	return rc;
 }
 
-int user_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *uinfo)
+int user_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *uinfo, size_t sz)
 {
 	struct sem_info info;
 	uint32 cookie;
@@ -876,8 +877,8 @@ int user_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *uinf
 	rc2 = user_memcpy(&cookie, ucookie, sizeof(uint32));
 	if(rc2 < 0)
 		return rc2;
-	rc = get_next_sem_info(uproc, &cookie, &info);
-	rc2 = user_memcpy(uinfo, &info, sizeof(struct sem_info));
+	rc = _get_next_sem_info(uproc, &cookie, &info, sz);
+	rc2 = user_memcpy(uinfo, &info, sz);
 	if(rc2 < 0)
 		return rc2;
 	rc2 = user_memcpy(ucookie, &cookie, sizeof(uint32));

@@ -6,7 +6,7 @@
 #include <thread.h>
 #include <debug.h>
 #include <khash.h>
-#include <sem.h>
+#include <OS.h>
 #include <arch/cpu.h>
 #include <vm.h>
 #include <vm_priv.h>

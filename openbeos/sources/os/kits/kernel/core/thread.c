@@ -17,6 +17,7 @@
 #include <arch/int.h>
 #include <arch/cpu.h>
 #include <arch/vm.h>
+#include <OS.h>
 #include <sem.h>
 #include <port.h>
 #include <vfs.h>

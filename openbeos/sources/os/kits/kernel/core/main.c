@@ -14,6 +14,7 @@
 #include <vm.h>
 #include <timer.h>
 #include <smp.h>
+#include <OS.h>
 #include <sem.h>
 #include <port.h>
 #include <vfs.h>

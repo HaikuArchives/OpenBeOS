@@ -6,6 +6,7 @@
  */
 
 #include <ktypes.h>
+#include <OS.h>
 #include <fd.h>
 #include <vfs.h>
 #include <errors.h>

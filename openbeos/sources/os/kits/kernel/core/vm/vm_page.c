@@ -13,7 +13,7 @@
 #include <int.h>
 #include <thread.h>
 #include <smp.h>
-#include <sem.h>
+#include <OS.h>
 #include <errors.h>
 #include <stage2.h>
 

@@ -11,7 +11,7 @@
 #include <vm_priv.h>
 #include <debug.h>
 #include <lock.h>
-#include <sem.h>
+#include <OS.h>
 #include <queue.h>
 #include <string.h>
 #include <stage2.h>

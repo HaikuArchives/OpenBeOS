@@ -22,6 +22,7 @@
 #include <devfs.h>
 #include <errors.h>
 #include <atomic.h>
+#include <OS.h>
 #include <fd.h>
 
 #include <rootfs.h>

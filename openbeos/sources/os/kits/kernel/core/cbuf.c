@@ -2,8 +2,8 @@
 
 
 #include <kernel.h>
-//#include <heap.h>
-#include <sem.h>
+#include <memheap.h>
+#include <OS.h>
 #include <smp.h>
 #include <arch/int.h>
 #include <arch/debug.h>
@@ -12,6 +12,7 @@
 #include <errors.h>
 #include <debug.h>
 #include <int.h>
+#include <vm.h>
 
 #include <string.h>
 

@@ -4,9 +4,9 @@
 ** Distributed under the terms of the NewOS License.
 */
 
+#include <OS.h>
 #include <port.h>
 #include <kernel.h>
-#include <sem.h>
 #include <arch/int.h>
 #include <debug.h>
 #include <memheap.h>
@@ -390,7 +390,7 @@ find_port(const char *port_name)
 }
 
 int
-_get_port_info(port_id id, struct port_info *info, size_t size)
+_get_port_info(port_id id, port_info *info, size_t size)
 {
 	int slot;
 	int state;
@@ -415,8 +415,8 @@ _get_port_info(port_id id, struct port_info *info, size_t size)
 	}
 
 	// fill a port_info struct with info
-	info->id			= ports[slot].id;
-	info->owner 		= ports[slot].owner;
+	info->port			= ports[slot].id;
+//	info->owner 		= ports[slot].owner;
 	strncpy(info->name, ports[slot].name, min(strlen(ports[slot].name),SYS_MAX_OS_NAME_LEN-1));
 	info->capacity		= ports[slot].capacity;
 	get_sem_count(ports[slot].read_sem, &info->queue_count);
@@ -430,7 +430,7 @@ _get_port_info(port_id id, struct port_info *info, size_t size)
 }
 
 int
-_get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info,
+_get_next_port_info(team_id proc, int32 *cookie, struct port_info *info,
                    size_t size)
 {
 	int state;
@@ -455,15 +455,15 @@ _get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info,
 	state = int_disable_interrupts();
 	GRAB_PORT_LIST_LOCK();
 	
-	info->id = -1; // used as found flag
+	info->port = -1; // used as found flag
 	while (slot < MAX_PORTS) {
 		GRAB_PORT_LOCK(ports[slot]);
 		if (ports[slot].id != -1)
 			if (ports[slot].owner == proc) {
 				// found one!
 				// copy the info
-				info->id			= ports[slot].id;
-				info->owner 		= ports[slot].owner;
+				info->port			= ports[slot].id;
+//				info->owner 		= ports[slot].owner;
 				strncpy(info->name, ports[slot].name, min(strlen(ports[slot].name),SYS_MAX_OS_NAME_LEN-1));
 				info->capacity		= ports[slot].capacity;
 				get_sem_count(ports[slot].read_sem, &info->queue_count);
@@ -478,7 +478,7 @@ _get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info,
 	RELEASE_PORT_LIST_LOCK();
 	int_restore_interrupts(state);
 
-	if (info->id == -1)
+	if (info->port == -1)
 		return ERR_PORT_NOT_FOUND;
 	*cookie = slot;
 	return NO_ERROR;
@@ -559,7 +559,7 @@ port_buffer_size_etc(port_id id,
 	return len;
 }
 
-int32
+ssize_t
 port_count(port_id id)
 {
 	int slot;
@@ -595,7 +595,7 @@ port_count(port_id id)
 	return count;
 }
 
-ssize_t
+int
 read_port(port_id port,
 			int32 *msg_code,
 			void *msg_buffer,
@@ -604,7 +604,7 @@ read_port(port_id port,
 	return read_port_etc(port, msg_code, msg_buffer, buffer_size, 0, 0);
 }
 
-ssize_t
+int
 read_port_etc(port_id id,
 				int32	*msg_code,
 				void	*msg_buffer,
@@ -633,7 +633,7 @@ read_port_etc(port_id id,
 	if (timeout < 0)
 		return ERR_INVALID_ARGS;
 
-	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | PORT_FLAG_INTERRUPTABLE | PORT_FLAG_TIMEOUT);
+	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | B_CAN_INTERRUPT | B_TIMEOUT);
 
 	slot = id % MAX_PORTS;
 
@@ -766,7 +766,7 @@ set_port_owner(port_id id, proc_id proc)
 int
 write_port(port_id id,
 	int32 msg_code,
-	void *msg_buffer,
+	const void *msg_buffer,
 	size_t buffer_size)
 {
 	return write_port_etc(id, msg_code, msg_buffer, buffer_size, 0, 0);
@@ -775,7 +775,7 @@ write_port(port_id id,
 int
 write_port_etc(port_id id,
 	int32 msg_code,
-	void *msg_buffer,
+	const void *msg_buffer,
 	size_t buffer_size,
 	uint32 flags,
 	bigtime_t timeout)
@@ -795,7 +795,7 @@ write_port_etc(port_id id,
 		return ERR_INVALID_HANDLE;
 
 	// mask irrelevant flags
-	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | PORT_FLAG_INTERRUPTABLE | PORT_FLAG_TIMEOUT);
+	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | B_CAN_INTERRUPT | B_TIMEOUT);
 
 	slot = id % MAX_PORTS;
 	
@@ -969,16 +969,16 @@ void port_test()
 	write_port(test_p1, 1, &testdata, sizeof(testdata));
 	write_port(test_p2, 666, &testdata, sizeof(testdata));
 	write_port(test_p3, 999, &testdata, sizeof(testdata));
-	dprintf("porttest: port_count(test_p1) = %d\n", port_count(test_p1));
+	dprintf("porttest: port_count(test_p1) = %ld\n", port_count(test_p1));
 
 	dprintf("porttest: write_port() on 1 with timeout of 1 sec (blocks 1 sec)\n");
-	write_port_etc(test_p1, 1, &testdata, sizeof(testdata), PORT_FLAG_TIMEOUT, 1000000);
+	write_port_etc(test_p1, 1, &testdata, sizeof(testdata), B_TIMEOUT, 1000000);
 	dprintf("porttest: write_port() on 2 with timeout of 1 sec (wont block)\n");
-	res = write_port_etc(test_p2, 777, &testdata, sizeof(testdata), PORT_FLAG_TIMEOUT, 1000000);
+	res = write_port_etc(test_p2, 777, &testdata, sizeof(testdata), B_TIMEOUT, 1000000);
 	dprintf("porttest: res=%d, %s\n", res, res == 0 ? "ok" : "BAD");
 
 	dprintf("porttest: read_port() on empty port 4 with timeout of 1 sec (blocks 1 sec)\n");
-	res = read_port_etc(test_p4, &dummy, &dummy2, sizeof(dummy2), PORT_FLAG_TIMEOUT, 1000000);
+	res = read_port_etc(test_p4, &dummy, &dummy2, sizeof(dummy2), B_TIMEOUT, 1000000);
 	dprintf("porttest: res=%d, %s\n", res, res == ERR_PORT_TIMED_OUT ? "ok" : "BAD");
 
 	dprintf("porttest: spawning thread for port 1\n");

@@ -4,12 +4,13 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel.h>
-#include <sem.h>
+#include <OS.h>
 #include <lock.h>
 #include <debug.h>
 #include <arch/cpu.h>
 #include <errors.h>
 #include <atomic.h>
+#include <thread.h>
 
 int recursive_lock_get_recursion(recursive_lock *lock)
 {

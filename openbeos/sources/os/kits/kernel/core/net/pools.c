@@ -2,7 +2,7 @@
 
 /* XXX - add documentation to this file! */
 #include <kernel.h>
-#include <sem.h>
+#include <OS.h>
 #include <pools.h>
 #include <vm.h>
 #include <memheap.h>
