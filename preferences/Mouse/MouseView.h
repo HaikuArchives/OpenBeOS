@@ -2,6 +2,7 @@
 #define MOUSE_VIEW_H
 
 #include <View.h>
+#include <Menu.h>
 #include <Slider.h>
 #include <SupportDefs.h>
 #include <Application.h>
@@ -16,12 +17,22 @@ private:
 		BButton		*fRevertButton;
 		bigtime_t	fDoubleClickSpeed;
 		int32		fMouseSpeed;
+		
 		BSlider		*fClickSlider;
 		BSlider		*fSpeedSlider;
+		BSlider		*fAccelerationSlider;
+		
 		BBitmap 	*fDoubleClickBitmap;
 		BBitmap 	*fSpeedBitmap;
 		BBitmap 	*fAccelerationBitmap;
+		BBitmap		*fMouseBodyBitmap;
+		BBitmap		*fOneButtonNormal;
+		
 		BBox		*fBox;
+		BMenu		*fMouseTypeMenu;
+		BMenuField	*fMouseTypeSelector;
+		BMenu		*fFocusMenu;
+		BMenuField	*fFocusTypeSelector;	
 };
 
 #endif

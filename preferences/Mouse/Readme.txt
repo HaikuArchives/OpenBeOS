@@ -1,5 +1,12 @@
 OpenBeOS Mouse Preferences
 
+10/02/2002
+
+Added the rest of the controls to the GUI.
+Started implementing the Mouse Image.
+- I may have to change the way the code is arranged. I probably don't need a MouseView class, and it will be easier if I build the BView inside the BWindow as it will mean I have easy access to information about the mouse without duplicating variables.
+- I have decided to implement the Mouse image with bitmaps, yes I know this probably sucks, but it works.
+
 09/02/2002
 
 Changed the code to conform with the OpenTracker Style Guidelines

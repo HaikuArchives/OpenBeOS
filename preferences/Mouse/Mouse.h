@@ -15,6 +15,7 @@ public:
 	virtual void MessageReceived(BMessage *message);
 	
 private:
+
 	MouseSettings	*fSettings;
 	MouseWindow		*fWindow;
 };
