@@ -234,14 +234,20 @@ class Vnode {
 
 		~Vnode()
 		{
-			if (fVolume)
-				put_vnode(fVolume->ID(),fID);
+			Put();
 		}
 
 		status_t Get(Inode **inode)
 		{
 			// should we check inode against NULL here? it should not be necessary
 			return get_vnode(fVolume->ID(),fID,(void **)inode);
+		}
+
+		void Put()
+		{
+			if (fVolume)
+				put_vnode(fVolume->ID(),fID);
+			fVolume = NULL;
 		}
 
 		void Keep()

@@ -32,6 +32,7 @@ class BlockArray {
 		void MakeEmpty();
 
 		int32 CountItems() const { return fArray != NULL ? fArray->count : 0; }
+		int32 BlocksUsed() const { return fArray != NULL ? ((fArray->count + 1) * sizeof(off_t) + fBlockSize - 1) / fBlockSize : 0; }
 		sorted_array *Array() const { return fArray; }
 		int32 Size() const { return fSize; }
 

@@ -68,8 +68,8 @@ struct disk_super_block
 #define SUPER_BLOCK_MAGIC2			0xdd121031
 #define SUPER_BLOCK_MAGIC3			0x15b6830e
 
-#define SUPER_BLOCK_FLAGS_BFS_CLEAN 'CLEN'		/* CLEN */
-#define SUPER_BLOCK_FLAGS_BFS_DIRTY	'DIRT'		/* DIRT */
+#define SUPER_BLOCK_DISK_CLEAN		'CLEN'		/* CLEN */
+#define SUPER_BLOCK_DISK_DIRTY		'DIRT'		/* DIRT */
 
 //**************************************
 

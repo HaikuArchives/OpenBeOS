@@ -301,9 +301,8 @@ bfs_write_fs_stat(void *_ns, struct fs_info *info, long mask)
 	if (mask & WFSSTAT_NAME) {
 		strncpy(superBlock.name,info->volume_name,sizeof(superBlock.name) - 1);
 		superBlock.name[sizeof(superBlock.name) - 1] = '\0';
-		// ToDo: write the super block back!
 
-		status = B_OK;
+		status = volume->WriteSuperBlock();
 	}
 	return status;
 }
@@ -329,8 +328,7 @@ bfs_sync(void *_ns)
 
 	Volume *volume = (Volume *)_ns;
 
-	// ToDo: flush the log here (once we have one)
-
+	volume->FlushLogs();
 	return flush_device(volume->Device(),0);
 }
 
@@ -392,16 +390,13 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
-	// ToDo: if we have more than one log file, the following code
-	// may return another transaction as the one we want to have;
-	// bfs_unlink() starts the transaction using the directory's
-	// address
-	// Furthermore, we need to make sure that we got the right
-	// transaction, because otherwise it's not guaranteed that
-	// this transaction survives the whole action
+	// If the inode isn't in use anymore, we were called before
+	// bfs_unlink() returns - in this case, we can just use the
+	// transaction which has already deleted the inode.
 	Transaction localTransaction,*transaction = &localTransaction;
-	Journal *journal = volume->GetJournal(inode->BlockNumber());
-	if (journal != NULL && journal->CurrentTransaction() != NULL)
+	Journal *journal = volume->GetJournal(volume->ToBlock(inode->Parent()));
+
+	if (journal != NULL && journal->CurrentThread() == find_thread(NULL))
 		transaction = journal->CurrentTransaction();
 	else
 		localTransaction.Start(volume,inode->BlockNumber());

@@ -31,7 +31,7 @@ extern "C" {
 struct log_entry : node<log_entry> {
 	uint16		start;
 	uint16		length;
-	uint32		num_blocks;
+	uint32		cached_blocks;
 	Journal		*journal;
 };
 
@@ -46,22 +46,32 @@ class Journal {
 
 		status_t WriteLogEntry();
 		status_t LogBlocks(off_t blockNumber,const uint8 *buffer, size_t numBlocks);
-		
+
+		thread_id CurrentThread() const { return fOwningThread; }
 		Transaction *CurrentTransaction() const { return fOwner; }
+		uint32 TransactionSize() const { return fArray.CountItems() + fArray.BlocksUsed(); }
+
+		status_t FlushLog();
+		Volume *GetVolume() const { return fVolume; }
 
 	private:
 		friend log_entry;
 
 		static void blockNotify(off_t blockNumber, size_t numBlocks, void *arg);
 		status_t TransactionDone(bool success);
+		status_t FlushLogEntry(uint32 start);
 
 		Volume		*fVolume;
 		Benaphore	fLock;
 		Transaction *fOwner;
+		thread_id	fOwningThread;
 		BlockArray	fArray;
-		uint32		fLogSize;
+		uint32		fLogSize,fMaxTransactionSize,fUsed;
+		int32		fTransactionsInEntry;
+		SimpleLock		fEntriesLock;
 		list<log_entry>	fEntries;
 		log_entry	*fCurrent;
+		bool		fHasChangedBlocks;
 };
 
 
@@ -71,20 +81,54 @@ class Journal {
 
 class Transaction {
 	public:
-		Transaction(Volume *volume,off_t refBlock);
-		Transaction(Volume *volume,block_run refRun);
-		Transaction();
-		~Transaction();
+		Transaction(Volume *volume,off_t refBlock)
+			:
+			fJournal(NULL)
+		{
+			Start(volume,refBlock);
+		}
 
-		void Start(Volume *volume,off_t refBlock);
-		void Done();
+		Transaction(Volume *volume,block_run refRun)
+			:
+			fJournal(NULL)
+		{
+			Start(volume,volume->ToBlock(refRun));
+		}
 
-		status_t WriteBlocks(off_t blockNumber,const uint8 *buffer,size_t numBlocks = 1);
+		Transaction()
+			:
+			fJournal(NULL)
+		{
+		}
 
-		Volume	*GetVolume() { return fVolume; }
+		~Transaction()
+		{
+			if (fJournal)
+				fJournal->Unlock(this,false);
+		}
+
+		status_t Start(Volume *volume,off_t refBlock);
+
+		void Done()
+		{
+			if (fJournal != NULL)
+				fJournal->Unlock(this,true);
+			fJournal = NULL;
+		}
+
+		status_t WriteBlocks(off_t blockNumber,const uint8 *buffer,size_t numBlocks = 1)
+		{
+			if (fJournal == NULL)
+				return B_NO_INIT;
+
+			return fJournal->LogBlocks(blockNumber,buffer,numBlocks);
+			//status_t status = cached_write/*_locked*/(fVolume->Device(),blockNumber,buffer,numBlocks,fVolume->BlockSize());
+			//return status;
+		}
+
+		Volume	*GetVolume() { return fJournal != NULL ? fJournal->GetVolume() : NULL; }
 
 	protected:
-		Volume	*fVolume;
 		Journal	*fJournal;
 };
 

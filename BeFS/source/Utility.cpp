@@ -60,7 +60,7 @@ sorted_array::Insert(off_t value)
 	for (;j < count;j++)
 		if (values[j] > value)
 			break;
-if (j != i)
+if (j != i-1 && i != j)
 	PRINT(("insert: bin says: %ld, correct is %ld\n",i,j));
 	i = j;
 
@@ -126,8 +126,10 @@ BlockArray::Insert(off_t value)
 
 		fArray = array;
 		fSize += fBlockSize;
-		fMaxBlocks = fSize * fBlockSize / sizeof(off_t) - 1;
+		fMaxBlocks = fSize / sizeof(off_t) - 1;
 	}
+//PRINT(("blockSize = %ld, size = %ld, max blocks = %ld\n",fBlockSize,fSize,fMaxBlocks));
+//PRINT(("array->count == %Ld (before insertion)\n",fArray->count));
 
 	fArray->Insert(value);
 	return B_OK;

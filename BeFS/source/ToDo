@@ -33,6 +33,7 @@ Journal
  - add delayed index updating (+ delete actions to solve the issue above)
  - multiple log files, parallel transactions?
  - variable sized log file
+ - as long as we have a fixed-sized log file, it should be possible to reserve space for a transaction to be able to decide if batching it is possible
 
 
 BPlusTree

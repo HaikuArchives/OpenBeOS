@@ -266,8 +266,8 @@ BlockAllocator::initialize(BlockAllocator *allocator)
 
 	off_t usedBlocks = volume->NumBlocks() - freeBlocks;
 	if (volume->UsedBlocks() != usedBlocks) {
-		// ToDo: right now, since the super block is not written back anywhere,
-		// it's normal that the values don't match
+		// If the disk in a dirty state at mount time, it's
+		// normal that the values don't match
 		INFORM(("volume reports %Ld used blocks, correct is %Ld\n",volume->UsedBlocks(),usedBlocks));
 		volume->SuperBlock().used_blocks = usedBlocks;
 	}
@@ -375,8 +375,12 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 				run.start = rangeStart;
 				run.length = numBlocks;
 				
-				// ToDo: the super block has to be written back to disk!
 				fVolume->SuperBlock().used_blocks += numBlocks;
+					// We are not writing back the disk's super block - it's
+					// either done by the journaling code, or when the disk
+					// is unmounted.
+					// If the value is not correct at mount time, it will be
+					// fixed anyway.
 
 				return cached.WriteBack(transaction);
 			}
@@ -496,9 +500,7 @@ BlockAllocator::Free(Transaction *transaction,block_run &run)
 		start = 0;
 	}
 
-	// ToDo: the super block has to be written back to disk!
 	fVolume->SuperBlock().used_blocks -= run.length;
-
 	return B_OK;
 }
 

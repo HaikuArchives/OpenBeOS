@@ -172,6 +172,8 @@ Volume::Mount(const char *deviceName,uint32 flags)
 status_t
 Volume::Unmount()
 {
+	FlushLogs();
+
 	delete fIndicesNode;
 
 	remove_cached_device_blocks(fDevice,ALLOW_WRITES);
@@ -182,6 +184,13 @@ Volume::Unmount()
 	close(fDevice);
 
 	return B_OK;
+}
+
+
+void 
+Volume::FlushLogs()
+{
+	fJournal->FlushLog();
 }
 
 
@@ -221,7 +230,7 @@ Volume::CreateIndicesRoot(Transaction *transaction)
 		RETURN_ERROR(status);
 
 	fSuperBlock.indices = ToBlockRun(id);
-	// ToDo: write back super block!
+	WriteSuperBlock();
 
 	// The Vnode destructor will unlock the inode, but it has already been
 	// locked by the Inode::Create() call.
@@ -234,5 +243,15 @@ status_t
 Volume::AllocateForInode(Transaction *transaction, const Inode *parent, mode_t type, block_run &run)
 {
 	return fBlockAllocator.AllocateForInode(transaction,&parent->BlockRun(),type,run);
+}
+
+
+status_t 
+Volume::WriteSuperBlock()
+{
+	if (write_pos(fDevice,512,&fSuperBlock,sizeof(disk_super_block)) != sizeof(disk_super_block))
+		return B_IO_ERROR;
+
+	return B_OK;
 }
 

@@ -45,6 +45,8 @@ class Volume {
 		block_run			Indices() const { return fSuperBlock.indices; }
 		Inode				*IndicesNode() const { return fIndicesNode; }
 		block_run			Log() const { return fSuperBlock.log_blocks; }
+		off_t				LogStart() const { return fSuperBlock.log_start; }
+		off_t				LogEnd() const { return fSuperBlock.log_end; }
 		int					Device() const { return fDevice; }
 
 		nspace_id			ID() const { return fID; }
@@ -80,7 +82,11 @@ class Volume {
 #ifdef DEBUG
 		BlockAllocator		&Allocator() { return fBlockAllocator; }
 #endif
+
+		void				FlushLogs();
 		Journal				*GetJournal(off_t /*refBlock*/) const { return fJournal; }
+
+		status_t			WriteSuperBlock();
 
 		uint32				GetUniqueID() { return atomic_add(&fUniqueID,1); }
 

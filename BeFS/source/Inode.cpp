@@ -1623,8 +1623,6 @@ Inode::Remove(Transaction *transaction,const char *name,off_t *_id,bool isDirect
 
 	// update the inode, so that no one will ever doubt it's deleted :-)
 	inode->Node()->flags |= INODE_DELETED;
-	if (inode->WriteBack(transaction) < B_OK)
-		return B_ERROR;
 
 	// In balance to the Inode::Create() method, the main indices
 	// are updated here (name, size, & last_modified)
@@ -1641,6 +1639,9 @@ Inode::Remove(Transaction *transaction,const char *name,off_t *_id,bool isDirect
 		index.RemoveSize(transaction,inode);
 		index.RemoveLastModified(transaction,inode);
 	}
+
+	if (inode->WriteBack(transaction) < B_OK)
+		return B_ERROR;
 
 	return B_OK;
 }
