@@ -214,7 +214,7 @@ status_t PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
 			}
 		} else {
 // Temp
-(new BAlert("", "Problem Loading Settings", "PrinterDriver"))->Go();
+//(new BAlert("", "Problem Loading Settings", "PrinterDriver"))->Go();
 		}			
 	}
 
