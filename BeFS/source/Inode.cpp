@@ -1432,9 +1432,12 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 		// when we are here, we need to grow into the double indirect
 		// range - but that's not yet implemented, so bail out!
 
-		// ToDo: implement growing into the double indirect range, please!
-		FATAL(("growing in the double indirect range is not yet implemented!\n"));
-		RETURN_ERROR(B_ERROR);
+		if (data->size <= data->max_double_indirect_range || !data->max_double_indirect_range) {
+			FATAL(("growing in the double indirect range is not yet implemented!\n"));
+			// ToDo: implement growing into the double indirect range, please!
+		}
+
+		RETURN_ERROR(EFBIG);
 	}
 	// update the size of the data stream
 	data->size = size;

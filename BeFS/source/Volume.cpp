@@ -10,6 +10,7 @@
 #include "Volume.h"
 #include "Journal.h"
 #include "Inode.h"
+#include "Query.h"
 
 #include <KernelExport.h>
 
@@ -254,5 +255,43 @@ Volume::WriteSuperBlock()
 		return B_IO_ERROR;
 
 	return B_OK;
+}
+
+
+void
+Volume::UpdateLiveQueries(Inode *inode,int32 op,char *attribute)
+{
+	if (fQueryLock.Lock() < B_OK)
+		return;
+
+	Query *query = NULL;
+	while ((query = fQueries.Next(query)) != NULL)
+		query->LiveUpdate(inode,op,attribute);
+
+	fQueryLock.Unlock();
+}
+
+
+void 
+Volume::AddQuery(Query *query)
+{
+	if (fQueryLock.Lock() < B_OK)
+		return;
+
+	fQueries.Add(query);
+
+	fQueryLock.Unlock();
+}
+
+
+void 
+Volume::RemoveQuery(Query *query)
+{
+	if (fQueryLock.Lock() < B_OK)
+		return;
+
+	fQueries.Remove(query);
+
+	fQueryLock.Unlock();
 }
 

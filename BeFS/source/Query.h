@@ -11,6 +11,7 @@
 
 #include "Index.h"
 #include "Stack.h"
+#include "Chain.h"
 
 class Volume;
 class Term;
@@ -47,6 +48,9 @@ class Query {
 
 		status_t GetNextEntry(struct dirent *,size_t size);
 
+		void SetLiveMode(port_id port,int32 token);
+		void LiveUpdate(Inode *inode,int32 op,char *attribute);
+
 		Expression *GetExpression() const { return fExpression; }
 
 	private:
@@ -56,6 +60,13 @@ class Query {
 		TreeIterator	*fIterator;
 		Index			fIndex;
 		Stack<Equation *> fStack;
+
+		port_id			fPort;
+		int32			fToken;
+
+	private:
+		friend Chain<Query>;
+		Query			*fNext;
 };
 
 #endif	/* QUERY_H */

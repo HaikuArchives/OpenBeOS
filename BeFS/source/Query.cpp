@@ -21,6 +21,7 @@
 
 #include <SupportDefs.h>
 #include <TypeConstants.h>
+#include <AppDefs.h>
 
 #include <malloc.h>
 #include <stdio.h>
@@ -1368,13 +1369,14 @@ Expression::InitCheck()
 //	#pragma mark -
 
 
-Query::Query(Volume *volume, Expression *expression)
+Query::Query(Volume *volume,Expression *expression)
 	:
 	fVolume(volume),
 	fExpression(expression),
 	fCurrent(NULL),
 	fIterator(NULL),
-	fIndex(volume)
+	fIndex(volume),
+	fPort(-1)
 {
 	// if the expression has a valid root pointer, the whole tree has
 	// already passed the sanity check, so that we don't have to check
@@ -1407,11 +1409,14 @@ Query::Query(Volume *volume, Expression *expression)
 		} else if (term->Op() == OP_EQUATION || fStack.Push((Equation *)term) < B_OK)
 			FATAL(("Unknown term on stack or stack error"));
 	}
+	
+	volume->AddQuery(this);
 }
 
 
 Query::~Query()
 {
+	fVolume->RemoveQuery(this);
 }
 
 
@@ -1440,5 +1445,29 @@ Query::GetNextEntry(struct dirent *dirent, size_t size)
 			return B_OK;
 		}
 	}
+}
+
+
+void 
+Query::SetLiveMode(port_id port,int32 token)
+{
+	fPort = port;
+	fToken = token;
+}
+
+
+void 
+Query::LiveUpdate(Inode *inode,int32 op,char *attribute)
+{
+	if (fPort < 0)
+		return;
+
+	// ToDo: check if the attribute is part of the query at all...
+
+	//if (op == B_ENTRY_REMOVED) {
+
+	// if "name" is NULL, send_notification() crashes...
+	send_notification(fPort,fToken,B_QUERY_UPDATE,op /* op */,fVolume->ID(),fVolume->ID(), /*nsidb */
+			inode->ID(),inode->ID() /* vnidb */,inode->ID() /* vnidc */,"whatever" /*name*/);
 }
 

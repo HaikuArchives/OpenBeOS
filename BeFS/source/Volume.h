@@ -18,9 +18,11 @@ extern "C" {
 
 #include "bfs.h"
 #include "BlockAllocator.h"
+#include "Chain.h"
 
 class Journal;
 class Inode;
+class Query;
 
 enum volume_flags {
 	VOLUME_READ_ONLY	= 0x0001
@@ -88,6 +90,10 @@ class Volume {
 
 		status_t			WriteSuperBlock();
 
+		void				UpdateLiveQueries(Inode *inode,int32 op,char *attribute);
+		void				AddQuery(Query *query);
+		void				RemoveQuery(Query *query);
+
 		uint32				GetUniqueID() { return atomic_add(&fUniqueID,1); }
 
 	protected:
@@ -100,6 +106,9 @@ class Volume {
 
 		Inode				*fRootNode;
 		Inode				*fIndicesNode;
+
+		SimpleLock			fQueryLock;
+		Chain<Query>		fQueries;
 
 		int32				fUniqueID;
 		uint32				fFlags;

@@ -42,10 +42,12 @@ BPlusTree
 
 Inode
 
+ - sometimes the inode's last modified time seems to be wrong, and is therefore not found in the b+tree (assuming that the b+tree is working correctly, what I do)
+
 
 Indices
 
- - Support for Live-Queries is missing
+ - Support for Live-Queries is on the way...
 
 
 Attributes

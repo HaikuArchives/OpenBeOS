@@ -28,6 +28,8 @@ extern "C" {
 	#include <cache.h>
 }
 #include <fs_index.h>
+#include <fs_query.h>
+
 
 #ifdef USER
 #	define dprintf printf
@@ -1813,6 +1815,10 @@ bfs_open_query(void *_ns,const char *queryString,ulong flags,port_id port,long t
 		delete expression;
 		RETURN_ERROR(B_NO_MEMORY);
 	}
+	
+	if (flags & B_LIVE_QUERY)
+		query->SetLiveMode(port,token);
+
 	*cookie = (void *)query;
 	
 	return B_OK;
