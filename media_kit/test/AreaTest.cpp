@@ -1,49 +1,99 @@
 #include <OS.h>
 #include <stdio.h>
 
+void panic(char*);
+
+void panic(char*p)
+{
+	printf("%s\n",p);
+	fflush(0);
+//	exit(-1);
+}
+
+void *dbg_malloc(size_t size)
+{
+	static char *startaddr = 0;
+	char *adr;
+	size_t realsize;
+	area_id id;
+	
+	//aquire lock sem here
+	
+	if (startaddr == 0) {
+		//find a start address that is unused
+		area_id id1;
+		area_id id2;
+		void *adr1;
+		size_t size1 = 4000 * B_PAGE_SIZE; // about 16 MB
+		size_t size2 = 30000 * B_PAGE_SIZE; // about 120 MB
+		id1 = create_area("",(void **)&adr1,B_ANY_KERNEL_ADDRESS,size1,B_NO_LOCK,B_READ_AREA | B_WRITE_AREA);
+		id2 = create_area("",(void **)&startaddr,B_ANY_KERNEL_ADDRESS,size2,B_NO_LOCK,B_READ_AREA | B_WRITE_AREA);
+		if (id1 < 0 || id2 < 0)
+			panic("out of memory in init code");
+		delete_area(id1);		
+		delete_area(id2);
+	}
+	
+	size += 4;
+	
+	realsize = (size + B_PAGE_SIZE - 1) & ~(B_PAGE_SIZE - 1);
+	adr = startaddr;
+	
+	// next start address is one unmapped page away
+	startaddr += realsize + B_PAGE_SIZE;
+	
+	id = create_area("memory",(void **)&adr,B_EXACT_ADDRESS,realsize,B_NO_LOCK,B_READ_AREA | B_WRITE_AREA);
+	if (id < 0)
+		panic("out of memory or address space");
+	
+	// align it to make the first byte after (adr + size) to be in an unallocated page
+	adr += realsize - size;
+	
+	*(uint32*)adr = 0xDEADC0DE;
+	adr += 4;
+	
+	// release lock sem
+	
+	return adr;
+}
+
+void dbg_free(void *ptr)
+{
+	char *p = (char *)ptr;
+	area_id id;
+	
+	p -= 4;
+	if (*(uint32*)p != 0xDEADC0DE) 
+		panic("buffer underrun");
+
+	id = area_for(p);
+	if (id < 0)
+		panic("no area for buffer");
+
+	delete_area(id);
+}
+
 int main()
 {
-	int * ptr = new int[1];
-	char *adr;
-	area_id id;
-	int offset;
-	
+	char *p;
 
-	area_info info;
-	id = area_for(ptr);
-	get_area_info(id, &info);
-	adr = (char *)info.address;
-	offset = (uint32)ptr - (uint32)adr;
+	printf("!1\n");
+	p = (char *)dbg_malloc(1);
+	dbg_free(p);
 
-	
-	char * adrclone1;
-	char * adrclone2;
-	int * ptrclone1;
-	int * ptrclone2;
-	area_id idclone1;
-	area_id idclone2;
-	
-	idclone1 = clone_area("clone 1", (void **)&adrclone1, B_ANY_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
-	idclone2 = clone_area("clone 2", (void **)&adrclone2, B_ANY_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
-	
-	ptrclone1 = (int *)(adrclone1 + offset);
-	ptrclone2 = (int *)(adrclone2 + offset);
-	
-	printf("offset      = 0x%08x\n",(int)offset);
-	printf("id          = 0x%08x\n",(int)id);
-	printf("id  clone 1 = 0x%08x\n",(int)idclone1);
-	printf("id  clone 2 = 0x%08x\n",(int)idclone2);
-	printf("adr         = 0x%08x\n",(int)adr);
-	printf("adr clone 1 = 0x%08x\n",(int)adrclone1);
-	printf("adr clone 2 = 0x%08x\n",(int)adrclone2);
-	printf("ptr         = 0x%08x\n",(int)ptr);
-	printf("ptr clone 1 = 0x%08x\n",(int)ptrclone1);
-	printf("ptr clone 2 = 0x%08x\n",(int)ptrclone2);
+	printf("!2\n");
+	p = (char *)dbg_malloc(1);
+	p[0] = 0;
+	dbg_free(p);
 
-	ptr[0] = 0x12345678;	
+	printf("!3\n");
+	p = (char *)dbg_malloc(1);
+	p[-1] = 0;
+	dbg_free(p);
 
-	printf("ptr[0]         = 0x%08x\n",(int)ptr[0]);
-	printf("ptr clone 1[0] = 0x%08x\n",(int)ptrclone1[0]);
-	printf("ptr clone 2[0] = 0x%08x\n",(int)ptrclone2[0]);
+	printf("!4\n");
+	p = (char *)dbg_malloc(1);
+	p[1] = 0;
+	dbg_free(p);
 
 }

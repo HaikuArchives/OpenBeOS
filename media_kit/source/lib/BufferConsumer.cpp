@@ -322,14 +322,14 @@ BBufferConsumer::SendLatencyChange(const media_source &source,
 
 /* virtual */ status_t
 BBufferConsumer::HandleMessage(int32 message,
-							   const void *data,
+							   const void *rawdata,
 							   size_t size)
 {
 	CALLED();
 	switch (message) {
 		case CONSUMER_ACCEPT_FORMAT:
 		{
-			const xfer_consumer_accept_format *data = (const xfer_consumer_accept_format *)data;
+			const xfer_consumer_accept_format *data = (const xfer_consumer_accept_format *)rawdata;
 			xfer_consumer_accept_format_reply reply;
 			reply.format = data->format;
 			reply.result = AcceptFormat(data->dest, &reply.format);
@@ -339,7 +339,7 @@ BBufferConsumer::HandleMessage(int32 message,
 
 		case CONSUMER_GET_NEXT_INPUT:
 		{
-			const xfer_consumer_get_next_input *data = (const xfer_consumer_get_next_input *)data;
+			const xfer_consumer_get_next_input *data = (const xfer_consumer_get_next_input *)rawdata;
 			xfer_consumer_get_next_input_reply reply;
 			reply.cookie = data->cookie;
 			reply.result = GetNextInput(&reply.cookie, &reply.input);
@@ -349,14 +349,14 @@ BBufferConsumer::HandleMessage(int32 message,
 
 		case CONSUMER_DISPOSE_INPUT_COOKIE:
 		{
-			const xfer_consumer_dispose_input_cookie *data = (const xfer_consumer_dispose_input_cookie *)data;
+			const xfer_consumer_dispose_input_cookie *data = (const xfer_consumer_dispose_input_cookie *)rawdata;
 			DisposeInputCookie(data->cookie);
 			return B_OK;
 		}
 
 		case CONSUMER_BUFFER_RECEIVED:
 		{
-			const xfer_consumer_buffer_received *data = (const xfer_consumer_buffer_received *)data;
+			const xfer_consumer_buffer_received *data = (const xfer_consumer_buffer_received *)rawdata;
 			BBuffer *buffer;
 			buffer = fBufferCache->GetBuffer(data->buffer);
 			buffer->SetHeader(&data->header);
@@ -366,14 +366,14 @@ BBufferConsumer::HandleMessage(int32 message,
 
 		case CONSUMER_PRODUCER_DATA_STATUS:
 		{
-			const xfer_consumer_producer_data_status *data = (const xfer_consumer_producer_data_status *)data;
+			const xfer_consumer_producer_data_status *data = (const xfer_consumer_producer_data_status *)rawdata;
 			ProducerDataStatus(data->for_whom, data->status, data->at_performance_time);
 			return B_OK;
 		}
 
 		case CONSUMER_GET_LATENCY_FOR:
 		{
-			const xfer_consumer_get_latency_for *data = (const xfer_consumer_get_latency_for *)data;
+			const xfer_consumer_get_latency_for *data = (const xfer_consumer_get_latency_for *)rawdata;
 			xfer_consumer_get_latency_for_reply reply;
 			reply.result = GetLatencyFor(data->for_whom, &reply.latency, &reply.timesource);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
@@ -382,7 +382,7 @@ BBufferConsumer::HandleMessage(int32 message,
 
 		case CONSUMER_CONNECTED:
 		{
-			const xfer_consumer_connected *data = (const xfer_consumer_connected *)data;
+			const xfer_consumer_connected *data = (const xfer_consumer_connected *)rawdata;
 			xfer_consumer_connected_reply reply;
 			reply.result = Connected(data->producer, data->where, data->with_format, &reply.input);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
@@ -391,14 +391,14 @@ BBufferConsumer::HandleMessage(int32 message,
 				
 		case CONSUMER_DISCONNECTED:
 		{
-			const xfer_consumer_disconnected *data = (const xfer_consumer_disconnected *)data;
+			const xfer_consumer_disconnected *data = (const xfer_consumer_disconnected *)rawdata;
 			Disconnected(data->producer, data->where);
 			return B_OK;
 		}
 
 		case CONSUMER_FORMAT_CHANGED:
 		{
-			const xfer_consumer_format_changed *data = (const xfer_consumer_format_changed *)data;
+			const xfer_consumer_format_changed *data = (const xfer_consumer_format_changed *)rawdata;
 			xfer_consumer_format_changed_reply reply;
 			reply.result = FormatChanged(data->producer, data->consumer, data->change_tag, data->format);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
@@ -419,7 +419,7 @@ BBufferConsumer::HandleMessage(int32 message,
 
 		case CONSUMER_SEEK_TAG_REQUESTED:
 		{
-			const xfer_consumer_seek_tag_requested *data = (const xfer_consumer_seek_tag_requested *)data;
+			const xfer_consumer_seek_tag_requested *data = (const xfer_consumer_seek_tag_requested *)rawdata;
 			xfer_consumer_seek_tag_requested_reply reply;
 			reply.result = SeekTagRequested(data->destination, data->target_time, data->flags, &reply.seek_tag, &reply.tagged_time, &reply.flags);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));

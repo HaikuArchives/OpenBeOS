@@ -74,7 +74,7 @@ void
 ConsumerNode::BufferReceived(
 				BBuffer * buffer)
 {
-	out("ConsumerNode::BufferReceived\n");
+	out("ConsumerNode::BufferReceived, sheduled time = %5.4f\n",buffer->Header()->start_time / 1E6);
 	media_timed_event event(buffer->Header()->start_time,BTimedEventQueue::B_HANDLE_BUFFER,
 							buffer, BTimedEventQueue::B_RECYCLE_BUFFER);
 	EventQueue()->AddEvent(event);
@@ -212,6 +212,9 @@ ConsumerNode::HandleEvent(const media_timed_event *event,
 		{
 			out("ConsumerNode::HandleEvent B_HANDLE_BUFFER\n");
 			BBuffer* buffer = const_cast<BBuffer*>((BBuffer*) event->pointer);
+
+			out("### sheduled time = %5.4f, current time = %5.4f, lateness = %5.4f\n",buffer->Header()->start_time / 1E6,TimeSource()->Now() / 1E6,lateness / 1E6);
+	
 			if (buffer)
 				buffer->Recycle();
 		}

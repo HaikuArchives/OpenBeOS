@@ -242,20 +242,133 @@ BMediaRoster::Connect(const media_source & from,
 					  media_output * out_output,
 					  media_input * out_input)
 {
-	UNIMPLEMENTED();
-/*
+	CALLED();
+	if (io_format == NULL || out_output == NULL || out_input == NULL)
+		return B_BAD_VALUE;
+	if (from == media_source::null)
+		return B_MEDIA_BAD_SOURCE;
+	if (to == media_destination::null)
+		return B_MEDIA_BAD_DESTINATION;
 
-ProducerNode::FormatProposal
-ConsumerNode::AcceptFormat
-ProducerNode::PrepareToConnect
-ConsumerNode::Connected
-ProducerNode::Connect
-*/
-	return B_ERROR;
+	xfer_producer_format_proposal msg1;
+	xfer_producer_format_proposal_reply reply1;
+	xfer_consumer_accept_format msg2;
+	xfer_consumer_accept_format_reply reply2;
+	xfer_producer_prepare_to_connect msg3;
+	xfer_producer_prepare_to_connect_reply reply3;
+	xfer_consumer_connected msg4;
+	xfer_consumer_connected_reply reply4;
+	xfer_producer_connect msg5;
+	xfer_producer_connect_reply reply5;
+	status_t rv;	
+	port_id port;
+	int32 code;
+
+	port = _PortPool->GetPort();
+
+	// BBufferProducer::FormatProposal
+	msg1.output = from;
+	msg1.format = *io_format;
+	msg1.reply_port = port;
+	rv = write_port(from.port, PRODUCER_FORMAT_PROPOSAL, &msg1, sizeof(msg1));
+	if (rv != B_OK) 
+		goto failed;
+	rv = read_port(port, &code, &reply1, sizeof(reply1));
+	if (rv < B_OK)
+		goto failed;
+	if (reply1.result != B_OK) {
+		rv = reply1.result;
+		goto failed;
+	}
+
+	// BBufferConsumer::AcceptFormat
+	msg2.dest = to;
+	msg2.format = *io_format;
+	msg2.reply_port = port;
+	rv = write_port(to.port, CONSUMER_ACCEPT_FORMAT, &msg2, sizeof(msg2));
+	if (rv != B_OK) 
+		goto failed;
+	rv = read_port(port, &code, &reply2, sizeof(reply2));
+	if (rv < B_OK)
+		goto failed;
+	if (reply2.result != B_OK) {
+		rv = reply2.result;
+		goto failed;
+	}
+	*io_format = reply2.format;
+	
+	// BBufferProducer::PrepareToConnect
+	msg3.source = from;
+	msg3.destination = to;
+	msg3.format = *io_format;
+	msg3.reply_port = port;
+	rv = write_port(from.port, PRODUCER_PREPARE_TO_CONNECT, &msg3, sizeof(msg3));
+	if (rv != B_OK) 
+		goto failed;
+	rv = read_port(port, &code, &reply3, sizeof(reply3));
+	if (rv < B_OK)
+		goto failed;
+	if (reply3.result != B_OK) {
+		rv = reply3.result;
+		goto failed;
+	}
+	*io_format = reply3.format;
+	//reply3.out_source;
+	//reply3.name;
+
+	// BBufferConsumer::Connected
+	msg4.producer = reply3.out_source;
+	msg4.where = to;
+	msg4.with_format = *io_format;
+	msg4.reply_port = port;
+	rv = write_port(to.port, CONSUMER_CONNECTED, &msg4, sizeof(msg4));
+	if (rv != B_OK) 
+		goto failed;
+	rv = read_port(port, &code, &reply4, sizeof(reply4));
+	if (rv < B_OK)
+		goto failed;
+	if (reply4.result != B_OK) {
+		rv = reply4.result;
+		goto failed;
+	}
+	// reply4.input;
+
+	// BBufferProducer::Connect
+	msg5.error = B_OK;
+	msg5.source = reply3.out_source;
+	msg5.destination = to;
+	msg5.format = *io_format;
+	msg5.name[0] = 0;
+	msg5.reply_port = port;
+
+	rv = write_port(from.port, PRODUCER_CONNECT, &msg5, sizeof(msg5));
+	if (rv != B_OK) 
+		goto failed;
+	rv = read_port(port, &code, &reply5, sizeof(reply5));
+	if (rv < B_OK)
+		goto failed;
+	
+//	out_output->node =
+	out_output->source = reply3.out_source;
+	out_output->destination = to;//reply4.input;
+	out_output->format = *io_format;
+	strcpy(out_output->name,reply5.name);
+
+//	out_input->node
+	out_input->source = reply3.out_source;
+	out_input->destination = to;//reply4.input;
+	out_input->format = *io_format;
+	strcpy(out_input->name,reply3.name);
+
+	_PortPool->PutPort(port);
+	return B_OK;
+
+failed:
+	_PortPool->PutPort(port);
+	return rv;
 }
 
-					  
-					  
+
 status_t 
 BMediaRoster::Connect(const media_source & from,
 					  const media_destination & to,
@@ -506,7 +619,7 @@ BMediaRoster::GetAllInputsFor(const media_node & node,
 		if (rv != B_OK)
 			break;
 		rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
-		if (rv != B_OK || reply.result != B_OK)
+		if (rv < B_OK || reply.result != B_OK)
 			break;
 		*out_total_count += 1;
 		out_inputs[i] = reply.input;
@@ -552,11 +665,12 @@ BMediaRoster::GetAllOutputsFor(const media_node & node,
 							   int32 * out_total_count)
 {
 	CALLED();
+TRACE("0\n");		
 	if (node.node == 0 || (node.kind & B_BUFFER_PRODUCER) == 0)
 		return B_MEDIA_BAD_NODE;
 	if (out_outputs == NULL || out_total_count == NULL)
 		return B_BAD_VALUE;
-		
+
 	status_t rv;
 	status_t rv2;
 	port_id port;
@@ -575,7 +689,7 @@ BMediaRoster::GetAllOutputsFor(const media_node & node,
 		if (rv != B_OK)
 			break;
 		rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
-		if (rv != B_OK || reply.result != B_OK)
+		if (rv < B_OK || reply.result != B_OK)
 			break;
 		*out_total_count += 1;
 		out_outputs[i] = reply.output;
@@ -648,8 +762,14 @@ BMediaRoster::StopWatching(const BMessenger & where,
 status_t 
 BMediaRoster::RegisterNode(BMediaNode * node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node == NULL)
+		return B_BAD_VALUE;
+
+	xfer_node_registered msg;
+	msg.node_id = 1;
+
+	return node->HandleMessage(NODE_REGISTERED,&msg,sizeof(msg));
 }
 
 

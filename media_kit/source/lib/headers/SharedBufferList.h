@@ -32,7 +32,7 @@ struct _shared_buffer_list
 	status_t	AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer);
 	status_t	RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_group, size_t size, media_buffer_id wantID, BBuffer **buffer, bigtime_t timeout);
 	status_t	GetBufferList(sem_id group_reclaim_sem, int32 buf_count, BBuffer **out_buffers);
-	status_t	ReclaimBuffer(BBuffer *buffer);
+	status_t	RecycleBuffer(BBuffer *buffer);
 	
 		
 	status_t 	Init();

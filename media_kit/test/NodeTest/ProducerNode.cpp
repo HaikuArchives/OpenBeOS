@@ -314,7 +314,7 @@ ProducerNode::HandleEvent(const media_timed_event *event,
 				out("already running\n");
 				break;
 			}
-			mBufferProducerSem = create_sem(0,"producer block sem");
+			mBufferProducerSem = create_sem(0,"producer blocking sem");
 			mBufferProducer = spawn_thread(_bufferproducer,"Buffer Producer",B_NORMAL_PRIORITY,this);
 			resume_thread(mBufferProducer);
 		}
@@ -446,12 +446,12 @@ ProducerNode::BufferProducer()
 			continue;
 			
 		BBuffer *buffer;
-		out("ProducerNode: RequestBuffer\n");
+//		out("ProducerNode: RequestBuffer\n");
 		buffer = mBufferGroup->RequestBuffer(2048);
 		if (!buffer) {
 		}
 		buffer->Header()->start_time = TimeSource()->Now() + 1000000;
-		out("ProducerNode: SendBuffer\n");
+		out("ProducerNode: SendBuffer, sheduled time = %5.4f\n",buffer->Header()->start_time / 1E6);
 		rv = SendBuffer(buffer, mOutput.destination);
 		if (rv != B_OK) {
 		}

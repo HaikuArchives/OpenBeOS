@@ -10,6 +10,11 @@
 #include <OS.h>
 #include "SystemTimeSource.h"
 
+_SysTimeSource::_SysTimeSource() :
+	BMediaNode("time source")
+{
+}
+
 /* virtual */ status_t
 _SysTimeSource::SnoozeUntil(
 				bigtime_t performance_time,
@@ -30,4 +35,10 @@ _SysTimeSource::TimeSourceOp(
 				void * _reserved)
 {
 	return B_OK;
+}
+
+/* virtual */ BMediaAddOn* 
+_SysTimeSource::AddOn(int32 * internal_id) const
+{
+	return NULL;
 }

@@ -126,7 +126,7 @@ _event_queue_imp::RemoveFirstEvent(media_timed_event * outEvent)
 	BAutolock lock(fLock);
 	
 	if (fFirstEntry == 0)
-		return B_OK;
+		return B_ERROR;
 	
 	if (outEvent != 0)
 		*outEvent = fFirstEntry->event;

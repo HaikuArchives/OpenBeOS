@@ -55,7 +55,7 @@ BBufferProducer::BBufferProducer(media_type producer_type) :
 	fInitialLatency(0),
 	fInitialFlags(0)
 {
-	UNIMPLEMENTED();
+	CALLED();
 
 	AddNodeKind(B_BUFFER_PRODUCER);
 }
@@ -99,7 +99,7 @@ BBufferProducer::SetPlayRate(int32 numer,
 		
 status_t
 BBufferProducer::HandleMessage(int32 message,
-							   const void *data,
+							   const void *rawdata,
 							   size_t size)
 {
 	CALLED();
@@ -107,7 +107,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_FORMAT_SUGGESTION_REQUESTED:
 		{
-			const xfer_producer_format_suggestion_requested *data = (const xfer_producer_format_suggestion_requested *)data;
+			const xfer_producer_format_suggestion_requested *data = (const xfer_producer_format_suggestion_requested *)rawdata;
 			xfer_producer_format_suggestion_requested_reply reply;
 			reply.result = FormatSuggestionRequested(data->type, data->quality, &reply.format);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
@@ -116,7 +116,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_FORMAT_PROPOSAL:
 		{
-			const xfer_producer_format_proposal *data = (const xfer_producer_format_proposal *)data;
+			const xfer_producer_format_proposal *data = (const xfer_producer_format_proposal *)rawdata;
 			xfer_producer_format_proposal_reply reply;
 			reply.result = FormatProposal(data->output, (media_format *)&data->format);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
@@ -125,7 +125,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_PREPARE_TO_CONNECT:
 		{
-			const xfer_producer_prepare_to_connect *data = (const xfer_producer_prepare_to_connect *)data;
+			const xfer_producer_prepare_to_connect *data = (const xfer_producer_prepare_to_connect *)rawdata;
 			xfer_producer_prepare_to_connect_reply reply;
 			reply.format = data->format;
 			reply.name[0] = 0;
@@ -136,7 +136,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_CONNECT:
 		{
-			const xfer_producer_connect *data = (const xfer_producer_connect *)data;
+			const xfer_producer_connect *data = (const xfer_producer_connect *)rawdata;
 			xfer_producer_connect_reply reply;
 			memcpy(reply.name, data->name, B_MEDIA_NAME_LENGTH);
 			Connect(data->error, data->source, data->destination, data->format, reply.name);
@@ -146,14 +146,14 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_DISCONNECT:
 		{
-			const xfer_producer_disconnect *data = (const xfer_producer_disconnect *)data;
+			const xfer_producer_disconnect *data = (const xfer_producer_disconnect *)rawdata;
 			Disconnect(data->source, data->destination);
 			return B_OK;
 		}
 
 		case PRODUCER_GET_INITIAL_LATENCY:
 		{
-			const xfer_producer_get_initial_latency *data = (const xfer_producer_get_initial_latency *)data;
+			const xfer_producer_get_initial_latency *data = (const xfer_producer_get_initial_latency *)rawdata;
 			xfer_producer_get_initial_latency_reply reply;
 			reply.initial_latency = fInitialLatency;
 			reply.flags = fInitialFlags;
@@ -163,7 +163,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_SET_PLAY_RATE:
 		{
-			const xfer_producer_set_play_rate *data = (const xfer_producer_set_play_rate *)data;
+			const xfer_producer_set_play_rate *data = (const xfer_producer_set_play_rate *)rawdata;
 			xfer_producer_set_play_rate_reply reply;
 			reply.result = SetPlayRate(data->numer, data->denom);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
@@ -172,7 +172,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_GET_LATENCY:
 		{
-			const xfer_producer_get_latency *data = (const xfer_producer_get_latency *)data;
+			const xfer_producer_get_latency *data = (const xfer_producer_get_latency *)rawdata;
 			xfer_producer_get_latency_reply reply;
 			reply.result = GetLatency(&reply.latency);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
@@ -181,7 +181,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_GET_NEXT_OUTPUT:
 		{
-			const xfer_producer_get_next_output *data = (const xfer_producer_get_next_output *)data;
+			const xfer_producer_get_next_output *data = (const xfer_producer_get_next_output *)rawdata;
 			xfer_producer_get_next_output_reply reply;
 			reply.cookie = data->cookie;
 			reply.result = GetNextOutput(&reply.cookie, &reply.output);
@@ -191,14 +191,14 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_DISPOSE_OUTPUT_COOKIE:
 		{
-			const xfer_producer_dispose_output_cookie *data = (const xfer_producer_dispose_output_cookie *)data;
+			const xfer_producer_dispose_output_cookie *data = (const xfer_producer_dispose_output_cookie *)rawdata;
 			DisposeOutputCookie(data->cookie);
 			return B_OK;
 		}
 
 		case PRODUCER_SET_BUFFER_GROUP:
 		{
-			const xfer_producer_set_buffer_group *data = (const xfer_producer_set_buffer_group *)data;
+			const xfer_producer_set_buffer_group *data = (const xfer_producer_set_buffer_group *)rawdata;
 			xfer_node_request_completed reply;
 			BBufferGroup *group;
 			status_t rv;
@@ -219,7 +219,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_FORMAT_CHANGE_REQUESTED:
 		{
-			const xfer_producer_format_change_requested *data = (const xfer_producer_format_change_requested *)data;
+			const xfer_producer_format_change_requested *data = (const xfer_producer_format_change_requested *)rawdata;
 			xfer_node_request_completed reply;
 			status_t rv;
 			reply.info.format = data->format;
@@ -240,7 +240,7 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_VIDEO_CLIPPING_CHANGED:
 		{
-			const xfer_producer_video_clipping_changed *data = (const xfer_producer_video_clipping_changed *)data;
+			const xfer_producer_video_clipping_changed *data = (const xfer_producer_video_clipping_changed *)rawdata;
 			xfer_node_request_completed reply;
 			status_t rv;
 			rv = VideoClippingChanged(data->source, data->short_count, (int16 *)data->shorts, data->display, NULL);
@@ -261,28 +261,28 @@ BBufferProducer::HandleMessage(int32 message,
 
 		case PRODUCER_ADDITIONAL_BUFFER_REQUESTED:
 		{
-			const xfer_producer_additional_buffer_requested *data = (const xfer_producer_additional_buffer_requested *)data;
+			const xfer_producer_additional_buffer_requested *data = (const xfer_producer_additional_buffer_requested *)rawdata;
 			AdditionalBufferRequested(data->source, data->prev_buffer, data->prev_time, data->has_seek_tag ? &data->prev_tag : NULL);
 			return B_OK;
 		}
 	
 		case PRODUCER_LATENCY_CHANGED:
 		{
-			const xfer_producer_latency_changed *data = (const xfer_producer_latency_changed *)data;
+			const xfer_producer_latency_changed *data = (const xfer_producer_latency_changed *)rawdata;
 			LatencyChanged(data->source, data->destination, data->latency, data->flags);
 			return B_OK;
 		}
 
 		case PRODUCER_LATE_NOTICE_RECEIVED:
 		{
-			const xfer_producer_late_notice_received *data = (const xfer_producer_late_notice_received *)data;
+			const xfer_producer_late_notice_received *data = (const xfer_producer_late_notice_received *)rawdata;
 			LateNoticeReceived(data->source, data->how_much, data->performance_time);
 			return B_OK;
 		}
 
 		case PRODUCER_ENABLE_OUTPUT:
 		{
-			const xfer_producer_enable_output *data = (const xfer_producer_enable_output *)data;
+			const xfer_producer_enable_output *data = (const xfer_producer_enable_output *)rawdata;
 			xfer_node_request_completed reply;
 			EnableOutput(data->source, data->enabled, NULL);
 			if (data->destination == media_destination::null)
@@ -389,7 +389,7 @@ BBufferProducer::ProposeFormatChange(media_format *format,
 
 	rv = read_port(data.reply_port, &code, &reply, sizeof(reply));
 	_PortPool->PutPort(data.reply_port);
-	if (rv != B_OK)
+	if (rv < B_OK)
 		return rv;
 	
 	*format = reply.format;
@@ -427,7 +427,7 @@ BBufferProducer::ChangeFormat(const media_source &for_source,
 
 	rv = read_port(data.reply_port, &code, &reply, sizeof(reply));
 	_PortPool->PutPort(data.reply_port);
-	if (rv != B_OK)
+	if (rv < B_OK)
 		return rv;
 	
 	return reply.result;
@@ -459,7 +459,7 @@ BBufferProducer::FindLatencyFor(const media_destination &for_destination,
 
 	rv = read_port(data.reply_port, &code, &reply, sizeof(reply));
 	_PortPool->PutPort(data.reply_port);
-	if (rv != B_OK)
+	if (rv < B_OK)
 		return rv;
 	
 	*out_latency = reply.latency;
@@ -499,7 +499,7 @@ BBufferProducer::FindSeekTag(const media_destination &for_destination,
 
 	rv = read_port(data.reply_port, &code, &reply, sizeof(reply));
 	_PortPool->PutPort(data.reply_port);
-	if (rv != B_OK)
+	if (rv < B_OK)
 		return rv;
 
 	*out_tag = reply.seek_tag;

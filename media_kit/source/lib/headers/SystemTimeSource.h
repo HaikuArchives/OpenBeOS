@@ -12,6 +12,8 @@
 class _SysTimeSource : public BTimeSource
 {
 public:
+	_SysTimeSource();
+	
 	virtual	status_t SnoozeUntil(
 				bigtime_t performance_time,
 				bigtime_t with_latency = 0,
@@ -20,6 +22,10 @@ protected:
 	virtual	status_t TimeSourceOp(
 				const time_source_op_info & op,
 				void * _reserved);
+
+virtual	BMediaAddOn* AddOn(
+				int32 * internal_id) const;
+
 };
 
 #endif

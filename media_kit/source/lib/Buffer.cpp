@@ -88,7 +88,7 @@ BBuffer::Recycle()
 	CALLED();
 	if (fBufferList == NULL)
 		return;
-	fBufferList->ReclaimBuffer(this);
+	fBufferList->RecycleBuffer(this);
 }
 
 

@@ -250,7 +250,7 @@ _shared_buffer_list::RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_
 }
 
 status_t
-_shared_buffer_list::ReclaimBuffer(BBuffer *buffer)
+_shared_buffer_list::RecycleBuffer(BBuffer *buffer)
 {
 	CALLED();
 	

@@ -184,7 +184,7 @@ BMediaEventLooper::ControlLoop()
 		// process messages using WaitForMessages. Whenever this funtion times out,
 		// we need to handle the next event
 		for (;;) {
-			if (fRunState == B_QUITTING)
+			if (RunState() == B_QUITTING)
 				return;
 			// BMediaEventLooper compensates your performance time by adding the event latency
 			// (see SetEventLatency()) and the scheduling latency (or, for real-time events, 
@@ -193,11 +193,11 @@ BMediaEventLooper::ControlLoop()
 			// XXX well, fix this later
 			latency = fEventLatency + fSchedulingLatency; 
 			
-			if (fEventQueue.HasEvents() && (TimeSource()->Now() - latency) <= fEventQueue.FirstEventTime()) {
+			if (fEventQueue.HasEvents() && (TimeSource()->Now() - latency) >= fEventQueue.FirstEventTime()) {
 				is_realtime = false;
 				break;
 			}
-			if (fRealTimeQueue.HasEvents() && (TimeSource()->RealTimeFor(TimeSource()->Now(),fSchedulingLatency)) <= fRealTimeQueue.FirstEventTime()) {
+			if (fRealTimeQueue.HasEvents() && (TimeSource()->RealTimeFor(TimeSource()->Now(),fSchedulingLatency)) >= fRealTimeQueue.FirstEventTime()) {
 				is_realtime = true;
 				break;
 			}
@@ -335,6 +335,12 @@ void
 BMediaEventLooper::SetRunState(run_state state)
 {
 	CALLED();
+	
+	// don't allow run state changes while quitting,
+	// also needed for correct terminating of the ControlLoop()
+	if (fRunState == B_QUITTING && state != B_TERMINATED)
+		return;
+	
 	fRunState = state;
 }
 
@@ -390,18 +396,18 @@ BMediaEventLooper::Quit()
 {
 	CALLED();
 	status_t err;
-	
+
 	if (fRunState == B_TERMINATED)
 		return;
 	
-	fRunState = B_QUITTING;
-
+	SetRunState(B_QUITTING);
+	
 	close_port(ControlPort());
 	if (fControlThread != -1)
 		wait_for_thread(fControlThread, &err);
 	fControlThread = -1;
 
-	fRunState = B_TERMINATED;
+	SetRunState(B_TERMINATED);
 }
 
 
@@ -416,11 +422,11 @@ BMediaEventLooper::DispatchEvent(const media_timed_event *event,
 
 	switch (event->type) {
 		case BTimedEventQueue::B_START:
-			fRunState = B_STARTED;
+			SetRunState(B_STARTED);
 			break;
 		
 		case BTimedEventQueue::B_STOP: 
-			fRunState = B_STOPPED;
+			SetRunState(B_STOPPED);
 			break;
 
 		case BTimedEventQueue::B_SEEK:
@@ -446,9 +452,9 @@ BMediaEventLooper::DispatchEvent(const media_timed_event *event,
 BMediaEventLooper::_ControlThreadStart(void *arg)
 {
 	CALLED();
-	((BMediaEventLooper *)arg)->fRunState = B_STOPPED;
+	((BMediaEventLooper *)arg)->SetRunState(B_STOPPED);
 	((BMediaEventLooper *)arg)->ControlLoop();
-	((BMediaEventLooper *)arg)->fRunState = B_QUITTING;
+	((BMediaEventLooper *)arg)->SetRunState(B_QUITTING);
 	return 0;
 }
 
