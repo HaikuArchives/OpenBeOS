@@ -29,18 +29,25 @@
 	@note	Although I'm implementing "by the book" for now, I would like to
 			refactor sLooperList and all of the functions that operate on it
 			into their own class in the BPrivate namespace.
+
+			Also considering adding the thread priority when archiving.
+
+			
  */
 
 // Standard Includes -----------------------------------------------------------
 
 // System Includes -------------------------------------------------------------
 #include <Looper.h>
+#include <Message.h>
 
 // Project Includes ------------------------------------------------------------
 
 // Local Includes --------------------------------------------------------------
+#include "TokenSpace.h"
 
 // Local Defines ---------------------------------------------------------------
+#define FILTER_LIST_BLOCK_SIZE	5
 
 // Globals ---------------------------------------------------------------------
 typedef bool (*find_loop_pred)(_loop_data_* data, void* data);
@@ -53,12 +60,12 @@ bool looper_pred(_loop_data_* looper, void* data);
 bool empty_slot_pred(_loop_data_* looper, void* data);
 bool copy_list_pred(_loop_data_* looper, void* data);
 
-uint32			BLooper::sLooperID = -1;
+uint32			BLooper::sLooperID = B_ERROR;
 uint32			BLooper::sLooperListSize = 0;
 uint32			BLooper::sLooperCount = 0;
 _loop_data_*	BLooper::sLooperList = NULL;
 BLocker			BLooper::sLooperListLock;
-team_id			BLooper::sTeamID = -1;
+team_id			BLooper::sTeamID = B_ERROR;
 
 //------------------------------------------------------------------------------
 BLooper::BLooper(const char* name, int32 priority, int32 port_capacity)
@@ -71,18 +78,29 @@ BLooper::~BLooper()
 {
 	kill_thread(fTaskID);
 	delete fQueue;
-	delete fLock;
+	delete_sem(fLockSem);
 	delete_port(fMsgPort);
 
 	UnlockFully();
 
 	BAutolock ListLock(sLooperListLock);
+	RemoveHandler(this);
 	RemoveLooper(this);
+
+	// Clean up our filters
+	SetCommonFilterList(NULL);
 }
 //------------------------------------------------------------------------------
 BLooper::BLooper(BMessage* data)
 	:	BHandler(data)
 {
+	int32 portCap;
+	if (data->FindInt32("_port_cap", &portCap) != B_OK)
+	{
+		portCap = B_LOOPER_PORT_DEFAULT_CAPACITY;
+	}
+
+	InitData(Name(), B_NORMAL_PRIORITY, portCap);
 }
 //------------------------------------------------------------------------------
 BArchivable* BLooper::Instantiate(BMessage* data)
@@ -113,74 +131,81 @@ status_t BLooper::Archive(BMessage* data, bool deep) const
 //------------------------------------------------------------------------------
 status_t BLooper::PostMessage(uint32 command)
 {
-	fQueue->Lock()
-	fQueue->AddMessage(new BMessage(command));
-	fQueue->Unlock();
-
-	return B_OK;
+	BMessage Message(command);
+	return _PostMessage(&Message, this, NULL);
 }
 //------------------------------------------------------------------------------
 status_t BLooper::PostMessage(BMessage* message)
 {
-	fQueue->Lock();
-	BMessage* msg = new BMessage();
-	*msg = *message;
-	
-	fQueue->AddMessage(msg);
-	fQueue->Unlock();
-	return B_OK;
+	return _PostMessage(message, this, NULL);
 }
 //------------------------------------------------------------------------------
 status_t BLooper::PostMessage(uint32 command, BHandler* handler,
 							  BHandler* reply_to)
 {
-	// TODO: implement
+	BMessage Message(command);
+	return _PostMessage(&Message, handler, reply_to);
 }
 //------------------------------------------------------------------------------
 status_t BLooper::PostMessage(BMessage* message, BHandler* handler,
 							  BHandler* reply_to)
 {
-	// TODO: implement
+	return _PostMessage(message, handler, reply_to);
 }
 //------------------------------------------------------------------------------
 void BLooper::DispatchMessage(BMessage* message, BHandler* handler)
 {
-	if (handler == this && message->what == B_QUIT_REQUESTED)
+/**
+	@note	Initially, DispatchMessage() was locking the looper, calling the
+			filtering API, determining whether to use fPreferred or not, and
+			deleting the message.  A look at the BeBook, however, reveals that
+			all this function does is handle its own B_QUIT_REQUESTED messages
+			and pass everything else to handler->MessageReceived().  Clearly the
+			rest must be happening in task_looper().  This makes a lot of sense
+			because otherwise every derived class would have to figure out when
+			to use fPreferred, handle the locking and filtering and delete the
+			message.  Even if the BeBook didn't say as much, it would make total
+			sense to hoist that functionality out of here and into task_looper().
+ */
+	switch (message->what)
 	{
-		Quit();
-	}
-
-	Lock();	
-	
-	if (FilterCurrentMessage())
-	{
-		if (handler == NULL)
+		case _QUIT_:
 		{
-			fPreferred->MessageReceived(message);
-			Unlock();
-			return;
+			// Can't call Quit() to do this, because of the slight chance
+			// another thread with have us locked between now and then.
+			fTerminating = true;
+			delete this;
+			break;
 		}
-	
-		int32 handle_index = fHandlers.IndexOf(handler);
-	
-		// We only tell the handler to process it if it belongs
-		// to our looper
-		if (handle_index >= 0)
+
+		case B_QUIT_REQUESTED:
+		{
+			if (handler == this)
+			{
+				do_quit_requested(message);
+				break;
+			}
+			else
+			{
+				// fall through
+			}
+		}
+
+		default:
 		{
 			handler->MessageReceived(message);
+			break;
 		}
-		else
-		{
-			fPreferred->MessageReceived(message);
-		}
-		delete message;
 	}
-	Unlock();
 }
 //------------------------------------------------------------------------------
 void BLooper::MessageReceived(BMessage* msg)
 {
-	// TODO: implement
+	// TODO: verify
+	// The BeBook says this "simply calls the inherited function. ...the BLooper
+	// implementation does nothing of importance."  Which is not the same as
+	// saying it does nothing.  Investigate.
+	BHandler::MessageReceived(msg);
 }
 //------------------------------------------------------------------------------
 BMessage* BLooper::CurrentMessage() const
@@ -191,8 +216,9 @@ BMessage* BLooper::CurrentMessage() const
 BMessage* BLooper::DetachCurrentMessage()
 {
 	Lock();
-	BMessage *msg=fLastMessage;
+	BMessage* msg = fLastMessage;
 	fLastMessage = NULL;
+	fQueue.RemoveMessage(msg);
 	Unlock();
 	return msg;
 }
@@ -204,61 +230,62 @@ BMessageQueue* BLooper::MessageQueue() const
 //------------------------------------------------------------------------------
 bool BLooper::IsMessageWaiting() const
 {
-	return fQueue->IsEmpty() ? false : true;
+	if (!fQueue->IsEmpty())
+	{
+		return true;
+	}
+
+	int32 count = port_count(fMsgPort);
+
+	return count != 0; // count > 0;
 }
 //------------------------------------------------------------------------------
 void BLooper::AddHandler(BHandler* handler)
 {
-	if(fLock->IsLocked()==false)
+	AssertLocked();
+
+	if (handler->Looper() == NULL)
 	{
-		// TODO: implement
-		//(new BAlert("OpenBeOS","Looper must be locked before calling AddHandler","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT))->Go();
-		return;
+		fHandlers.AddItem(handler);
+		handler->SetNextHandler(this);
 	}
-	fHandlers.AddItem(handler);
 }
 //------------------------------------------------------------------------------
 bool BLooper::RemoveHandler(BHandler* handler)
 {
-	if(fLock->IsLocked()==false)
+	AssertLocked();
+
+	// TODO: test
+	// Need to ensure this algo reflects what actually happens
+	if (handler->Looper() == this && fHandlers.RemoveItem(handler))
 	{
-		// TODO: implement
-		//(new BAlert("OpenBeOS","Looper must be locked before calling RemoveHandler","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT))->Go();
-		return false;
+		handler->SetNextHandler(NULL);
+		return true;
 	}
-	return(fHandlers.RemoveItem(handler));
+
+	return false;
 }
 //------------------------------------------------------------------------------
 int32 BLooper::CountHandlers() const
 {
-	if(fLock->IsLocked()==false)
-	{
-		// TODO: implement
-		//(new BAlert("OpenBeOS","Looper must be locked before calling CountHandlers","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT))->Go();
-		return -1;
-	}
-	return(fHandlers.CountItems());
+	AssertLocked();
+
+	return fHandlers.CountItems();
 }
 //------------------------------------------------------------------------------
 BHandler* BLooper::HandlerAt(int32 index) const
 {
-	if(fLock->IsLocked()==false)
-	{
-		//TODO: implement
-		//(new BAlert("OpenBeOS","Looper must be locked before calling HandlerAt","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT))->Go();
-		return NULL;
-	}
-	return((OBHandler*)fHandlers.ItemAt(index));
+	AssertLocked();
+
+	return (BHandler*)fHandlers.ItemAt(index);
 }
 //------------------------------------------------------------------------------
 int32 BLooper::IndexOf(BHandler* handler) const
 {
-	if(fLock->IsLocked() == false)
-	{
-		//TODO: implement
-		//(new BAlert("OpenBeOS","Looper must be locked before calling IndexOf","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT))->Go();
-		return -1;
-	}
+	AssertLocked();
+
+	// TODO: test
+	// ensure the B_ERROR gets returned if the handler isn't in the list
 	return fHandlers.IndexOf(handler);
 }
 //------------------------------------------------------------------------------
@@ -269,11 +296,23 @@ BHandler* BLooper::PreferredHandler() const
 //------------------------------------------------------------------------------
 void BLooper::SetPreferredHandler(BHandler* handler)
 {
-	fPreferred = (handler != NULL) ? handler : (BHandler*)this;
+	fPreferred = (handler && handler->Looper() == this) ? handler : NULL;
 }
 //------------------------------------------------------------------------------
 thread_id BLooper::Run()
 {
+	AssertLocked();
+
+	if (fRunCalled)
+	{
+		// Not allowed to call Run() more than once
+		// TODO: test
+		// find out what message is actually here
+		debugger("");
+	}
+
+	fTaskID = spawn_thread(_task0_, name, priority, this);
+
 	if (fTaskID == B_NO_MORE_THREADS || fTaskID == B_NO_MEMORY)
 	{
 		return fTaskID;
@@ -285,27 +324,69 @@ thread_id BLooper::Run()
 	}
 
 	fRunCalled = true;
-	fLock->Unlock();
-	resume_thread(fTaskID);
+	Unlock();
+	status_t err = resume_thread(fTaskID);
+	if (err)
+	{
+		return err;
+	}
 
 	return fTaskID;
 }
 //------------------------------------------------------------------------------
 void BLooper::Quit()
 {
-	if (QuitRequested() == false)
+	if (!IsLocked())
 	{
-		return;
+		const char* name = Name();
+		if (!name)
+		{
+			name = "no-name";
+		}
+		printf("ERROR - you must Lock a looper before calling Quit(), "
+			   "team=%d, looper=%s", Team(), name);
 	}
 
-	if (fLock->IsLocked() == false)
+	if (!fRunCalled || find_thread(NULL) == fTaskID)
 	{
-		// TODO: fix
-		(new BAlert("OpenBeOS","Looper must be locked before quitting","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT))->Go();
-		return;
+		fTerminating = true;
+		delete this;
 	}
+	else
+	{
+		// As with sem in _Lock(), we need to cache this here in case the looper
+		// disappears before we get to the wait_for_thread() below
+		thread_id tid = Thread();
 
-	delete this;
+		// As per the BeBook, if we've been called by a thread other than
+		// our own, the rest of the message queue has to get processed.  So
+		// we put this in the queue, and when it shows up, we'll call Quit()
+		// from our own thread.
+		// A little testing with BMessageFilter shows _QUIT_ is being used here.
+		// I got suspicious when my test QuitRequested() wasn't getting called
+		// when Quit() was invoked from another thread.  Makes a nice proof that
+		// this is how it's handled, too.
+		status_t err;
+		err = PostMessage(_QUIT_);
+
+		// There's a possibility that PostMessage() will return B_WILL_BLOCK
+		// because the port is full, so we'll wait a bit and re-post until
+		// we won't block.
+		while (err == B_WILL_BLOCK)
+		{
+			// TODO: test this value; it may be too short
+			snooze(10000);
+			PostMessage(_QUIT_);
+		}
+
+		// Also as per the BeBook, we have to wait until the looper is done
+		// processing any remaining messages.
+		int32 temp;
+		do
+		{
+			err = wait_for_thread(tid, &temp);
+		} while (err == B_INTERRUPTED);
+	}
 }
 //------------------------------------------------------------------------------
 bool BLooper::QuitRequested()
@@ -352,7 +433,7 @@ bool BLooper::IsLocked() const
 
 	if (!ListLock.IsLocked())
 	{
-		// If we can't lock, our semaphore is probably toast
+		// If we can't lock the list, our semaphore is probably toast
 		return false;
 	}
 
@@ -432,22 +513,39 @@ status_t BLooper::GetSupportedSuites(BMessage* data)
 //------------------------------------------------------------------------------
 void BLooper::AddCommonFilter(BMessageFilter* filter)
 {
-	// TODO: implement
+	AssertLocked();
+	if (!fCommonFilters)
+	{
+		fCommonFilters = new BList(FILTER_LIST_BLOCK_SIZE);
+	}
+	fCommonFilters->AddItem(filter);
 }
 //------------------------------------------------------------------------------
 bool BLooper::RemoveCommonFilter(BMessageFilter* filter)
 {
-	// TODO: implement
+	AssertLocked();
+	return fCommonFilters->RemoveItem(filter);
 }
 //------------------------------------------------------------------------------
 void BLooper::SetCommonFilterList(BList* filters)
 {
-	// TODO: implement
+	AssertLocked();
+	if (fCommonFilters)
+	{
+		for (int32 i = 0; i < fCommonFilters->CountItems(); ++i)
+		{
+			delete fCommonFilters->ItemAt(i);
+		}
+		fCommonFilters->MakeEmpty();
+	}
+
+	// Per the BeBook, we take ownership of the list
+	fCommonFilters = filters;
 }
 //------------------------------------------------------------------------------
 BList* BLooper::CommonFilterList() const
 {
-	// TODO: implement
+	return fCommonFilters;
 }
 //------------------------------------------------------------------------------
 status_t BLooper::Perform(perform_code d, void* arg)
@@ -458,7 +556,7 @@ status_t BLooper::Perform(perform_code d, void* arg)
 //------------------------------------------------------------------------------
 BMessage* BLooper::MessageFromPort(bigtime_t timeout)
 {
-	// TODO: implement
+	return ReadMessageFromPort(timeout);
 }
 //------------------------------------------------------------------------------
 void BLooper::_ReservedLooper1()
@@ -505,7 +603,33 @@ BLooper::BLooper(int32 priority, port_id port, const char* name)
 status_t BLooper::_PostMessage(BMessage* msg, BHandler* handler,
 							   BHandler* reply_to)
 {
-	// TODO: implement
+	BAutolock ListLock(sLooperListLock)
+	if (!ListLock.IsLocked())
+	{
+		return B_BAD_VALUE;
+	}
+
+	if (!IsLooperValid(this))
+	{
+		return B_BAD_VALUE;
+	}
+
+	// Does handler belong to this looper?
+	if (handler && handler->Looper() != this)
+	{
+		return B_MISMATCHED_VALUES;
+	}
+
+	status_t err = B_OK;
+
+	BMessenger Messenger(handler, this, &err);
+
+	if (!err)
+	{
+		err = Messenger.SendMessage(msg, reply_to);
+	}
+
+	return err;
 }
 //------------------------------------------------------------------------------
 status_t BLooper::_Lock(BLooper* loop, port_id port, bigtime_t timeout)
@@ -542,10 +666,13 @@ status_t BLooper::_Lock(BLooper* loop, port_id port, bigtime_t timeout)
 	thread_id curThread;
 	sem_id sem;
 
-	//	Lock the looper list.  We don't want the looper getting removed from
-	//	the list while we're doing list operations.  Also ensures that the
-	//	looper doesn't get deleted here (since ~BLooper() has to lock the list
-	//	as well to remove itself).
+/**
+	@note	We lock the looper list at the start of the lock operation to
+			prevent the looper getting removed from the list while we're
+			doing list operations.  Also ensures that the looper doesn't
+			get deleted here (since ~BLooper() has to lock the list as
+			well to remove itself).
+ */
 	{
 		BAutolock ListLock(sLooperListLock);
 		if (!ListLock.IsLocked())
@@ -602,7 +729,9 @@ status_t BLooper::_Lock(BLooper* loop, port_id port, bigtime_t timeout)
 			acquisition so that the rest of the application doesn't have to
 			wait for this lock to happen.  This is why we cached fLockSem
 			earlier -- with the list unlocked, the looper might get deleted
-			right out from under us.
+			right out from under us.  This is also why we use a raw semaphore
+			instead of the easier-to-deal-with BLocker; you can't cache a
+			BLocker.
  */
 	//	acquire the lock
 	status_t err;
@@ -630,9 +759,13 @@ status_t BLooper::_LockComplete(BLooper* loop, int32 old, thread_id this_tid,
 //------------------------------------------------------------------------------
 void BLooper::InitData()
 {
+	fOwner = B_ERROR;
 	fRunCalled = false;
 	fQueue = new BMessageQueue();
-	fCommonFilters = new BList(0);
+	fCommonFilters = NULL;
+	fPreferred = NULL;
+	fTaskID = B_ERROR;
+	fTerminating = false;
 
 	if (sTeamID == -1)
 	{
@@ -643,15 +776,13 @@ void BLooper::InitData()
 
 	BAutoLock ListLock(sLooperListLock);
 	AddLooper(this);
+	AddHandler(this);
+	Lock();
 }
 //------------------------------------------------------------------------------
 void BLooper::InitData(const char* name, int32 priority, int32 port_capacity)
 {
 	fLockSem = create_sem(1, name);
-
-	// Seems kinda strange to me to spawn the thread here and run it elsewhere,
-	// but who am I to complain
-	fTaskID = spawn_thread(_task0_, name, priority, this);
 
 	if (fMsgPort >= 0)
 	{
@@ -664,41 +795,256 @@ void BLooper::InitData(const char* name, int32 priority, int32 port_capacity)
 void BLooper::AddMessage(BMessage* msg)
 {
 	// TODO: implement
+	// Why is this here?
 }
 //------------------------------------------------------------------------------
 void BLooper::_AddMessagePriv(BMessage* msg)
 {
 	// TODO: implement
+	// No, really; why the hell is this here??
 }
 //------------------------------------------------------------------------------
 status_t BLooper::_task0_(void* arg)
 {
-	// TODO: implement
+	BLooper* obj = (BLooper*)arg;
+
+	if (obj->Lock())
+	{
+		obj->task_looper();
+		obj->fTerminating = true;
+		delete obj;
+	}
+
+	return B_OK;
 }
 //------------------------------------------------------------------------------
-void* BLooper::ReadRawFromPort(int32* code, bigtime_t tout)
+void* BLooper::ReadRawFromPort(int32* msgcode, bigtime_t tout)
 {
-	// TODO: implement
+	int8* msgbuffer = NULL;
+	ssize_t buffersize;
+	ssize_t bytesread;
+
+	if (time == B_INFINITE_TIMEOUT)
+	{
+		buffersize = port_buffer_size(fMsgPort);
+	}
+	else
+	{
+		buffersize = port_buffer_size_etc(fMsgPort, 0, time);
+		if (buffersize == B_TIMED_OUT || buffersize == B_BAD_PORT_ID ||
+			buffersize == B_WOULD_BLOCK)
+		{
+			return NULL;
+		}
+	}
+
+	if (buffersize > fMsgBufferSize)
+	{
+		fMsgBufferSize = buffersize;
+		fMsgBuffer = new int8[fMsgBufferSize];
+	}
+
+	if (time == B_INFINITE_TIMEOUT)
+	{
+		bytesread = read_port(fMsgPort, msgcode, msgbuffer, buffersize);
+	}
+	else
+	{
+		bytesread = read_port_etc(fMsgPort, msgcode, fMsgBuffer, fMsgBufferSize,
+								  B_TIMEOUT, tout);
+	}
+
+	return msgbuffer;
 }
 //------------------------------------------------------------------------------
 BMessage* BLooper::ReadMessageFromPort(bigtime_t tout)
 {
-	// TODO: implement
+	int32 msgcode;
+	BMessage* bmsg;
+
+	void* msgbuffer = ReadRawFromPort(&msgcode, tout);
+
+	bmsg = ConvertToMessage(msgbuffer, msgcode);
+	if (buffersize > 0)
+	{
+		delete msgbuffer;
+	}
+
+	return bmsg;
 }
 //------------------------------------------------------------------------------
 BMessage* BLooper::ConvertToMessage(void* raw, int32 code)
 {
-	// TODO: implement
+	BMessage* bmsg = new BMessage(msgcode);
+
+	if (raw != NULL)
+	{
+		bmsg->Unflatten((const char*)raw);
+	}
+
+	return bmsg;
 }
 //------------------------------------------------------------------------------
 void BLooper::task_looper()
 {
-	// TODO: implement
+	//	Check that looper is locked (should be)
+	AssertLocked();
+	//	Unlock the looper
+	Unlock();
+
+	//	loop:
+	while (true)
+	{
+		//	Are we terminating?
+		if (fTerminating)
+		{
+			//	Bail out
+			return;
+		}
+
+		//	Read from message port (how do we determine what the timeout is?)
+		BMessage* msg = MessageFromPort();
+
+		//	Did we get a message?
+		if (msg)
+		{
+			//	Add to queue
+			fQueue->AddMessage(msg);
+		}
+
+		//	Get message count from port
+		int32 msgCount = port_count(fMsgPort);
+		for (int32 i = 0; i < msgCount; ++i)
+		{
+			//	Read 'count' messages from port (so we will not block)
+			//	We use zero as our timeout since we know there is stuff there
+			msg = MessageFromPort(0);
+			//	Add messages to queue
+			fQueue->AddMessage(msg);
+		}
+
+		//	loop:
+		while (true)
+		{
+			//	Lock the looper
+			Lock();
+
+			//	Get next message from queue (assign to fLastMessage)
+			fLastMessage = fQueue->NextMessage();
+			if (fLastMessage)
+			{
+				//	Get the target handler
+				//	Use BMessage friend functions to determine if we are using the
+				//	preferred handler, or if a target has been specified
+				BHandler* handler;
+				if (_use_preferred_target_(fLastMessage))
+				{
+					handler = fPreferred;
+				}
+				else
+				{
+					/**
+						@note	Here is where all the token stuff starts to
+								make sense.  How, exactly, do we determine
+								what the target BHandler is?  If we look at
+								BMessage, we see an int32 field, fTarget.
+								Amazingly, we happen to have a global mapping
+								of BHandler pointers to int32s!
+					 */
+					 gDefaultTokens->GetToken(_get_message_target_(fLastMessage),
+					 						  B_HANDLER_TOKEN,
+					 						  (void**)&handler);
+				}
+
+				if (!handler)
+				{
+					handler = this;
+				}
+
+				//	Is this a scripting message? (BMessage::HasSpecifiers())
+				if (fLastMessage->HasSpecifiers())
+				{
+					int32 index = 0;
+					// Make sure the current specifier is kosher
+					if (GetCurrentSpecifier(&index) == B_OK)
+					{
+						handler = resolve_specifier(handler, fLastMessage);
+					}
+				}
+				
+				if (handler)
+				{
+					//	Do filtering
+					handler = top_level_filter(fLastMessage, handler);
+					if (handler && handler->Looper() == this)
+					{
+						DispatchMessage(fLastMessage, handler);
+					}
+				}
+
+				//	Unlock the looper
+				Unlock();
+
+				//	Delete the current message (fLastMessage)
+				delete fLastMessage;
+				fLastMessage = NULL;
+
+				//	Unlock the queue if necessary; can't add anything if
+				//	another thread has it locked
+				while (fQueue->IsLocked())
+				{
+					fQueue->Unlock();
+				}
+
+				//	Are we terminating?
+				if (fTerminating)
+				{
+					//	Bail out
+					return;
+				}
+
+				//	Are any messages on the port?
+				if (port_count(fMsgPort) > 0)
+				{
+					//	Do outer loop
+					break;
+				}
+			}
+		}
+	}
 }
 //------------------------------------------------------------------------------
 void BLooper::do_quit_requested(BMessage* msg)
 {
-	// TODO: implement
+/**
+	@note	I couldn't figure out why do_quit_requested() was necessary; why not
+			just call Quit()?  Then, while writing the PostMessage() code, I
+			realized that the sender of the B_QUIT_REQUESTED message just might
+			be waiting for a reply.  A quick test, and yes, we get a reply
+			which consists of:
+				what: B_REPLY
+				"result" (bool) return of QuitRequested()
+				"thread" (int32) the looper's thread id
+
+			While Quit() could use fLastMessage, it makes more sense that
+			do_quit_requested() would handle it since it gets passed the
+			message.
+ */
+
+	bool isQuitting = QuitRequested();
+
+	if (msg->IsSourceWaiting())
+	{
+		BMessage ReplyMsg(B_REPLY);
+		ReplyMsg.AddBool("result", isQuitting);
+		ReplyMsg.AddInt32("thread", fTaskID);
+		msg->SendReply(&ReplyMsg);
+	}
+
+	if (isQuitting)
+	{
+		Quit();
+	}
 }
 //------------------------------------------------------------------------------
 bool BLooper::AssertLocked() const
