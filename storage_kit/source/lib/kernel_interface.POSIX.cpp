@@ -30,6 +30,9 @@
 
 #include <Entry.h>
 	// entry_ref
+	
+#include <utime.h>
+	// for utime() and struct utimbuf
 
 #include <OS.h>
 
@@ -37,57 +40,8 @@
 // when all is said and done.
 #include <iostream>
 
-// for convenience:
+// For convenience:
 struct LongDIR : DIR { char _buffer[B_FILE_NAME_LENGTH]; };
-
-
-class DirCache {
-public:
-	DirCache() {
-//		fSemID = create_sem(1, "StorageKit_DirCache_Semaphore");
-//		cout << "HEY!!!!!!!! fSemID == " << fSemID << endl;
-		time(&fTime);		
-	}
-	
-	void DoOutput() {
-//		cout << "DirCache(" << fTime << ")" << endl;
-	}
-	
-private:
-	sem_id fSemID;
-	time_t fTime;	// This is just a test. Won't actually be used.
-	
-};
-
-DirCache dirCache;
-
-
-// This function takes a file descriptor (assumed to be file descriptor
-// for a directory), mallocs a new DIR struct, and sets the DIR's fd
-// member to the given file descriptor. Returns a pointer to the new
-// DIR or NULL if the function fails.
-DIR*
-fd_to_dir( StorageKit::FileDescriptor fd ) {
-	DIR *result = (DIR*)malloc(sizeof(DIR) + NAME_MAX);
-	result->fd = fd;
-	return result;
-}
-
-/*	This function takes a DIR* (assumed to be acquired through a call to
-	opendir() or fs_open_attr_dir), steals the file descriptor from it, and
-	frees the DIR*, returning the file descriptor (or -1 if the function
-	fails).
-*/
-StorageKit::FileDescriptor
-dir_to_fd( DIR *dir ) {
-	if (dir == NULL) {
-		return -1;
-	} else {
-		StorageKit::FileDescriptor fd = dir->fd;
-//		free(dir);
-		return fd;
-	}
-}
 
 //------------------------------------------------------------------------------
 // File Functions
@@ -106,7 +60,6 @@ StorageKit::open( const char *path, OpenFlags flags, FileDescriptor &result ) {
 
 	// Open file and return the proper error code
 	result = ::open(path, flags);
-//	return (result == -1) ? errno : B_OK ;
 	return (result == -1) ? errno : B_OK ;
 }
 
@@ -125,7 +78,6 @@ StorageKit::open( const char *path, OpenFlags flags, CreationFlags creationFlags
 
 	// Open/Create the file and return the proper error code
 	result = ::open(path, flags | O_CREAT, creationFlags);
-//	return (result == -1) ? errno : B_OK ;
 	return (result == -1) ? errno : B_OK ;
 }
 
@@ -433,6 +385,63 @@ StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
 	return (result == -1) ? errno : B_OK ;
 }
 
+status_t
+StorageKit::set_stat(const char *file, Stat &s, StatMember what) {
+	int result;
+	
+	//! /todo Test/verify set_stat() functionality
+	switch (what) {
+		case WSTAT_MODE:
+			result = ::chmod(file, s.st_mode);
+			break;
+			
+		case WSTAT_UID:
+			result = ::chown(file, s.st_uid, 0xFFFFFFFF);
+			break;
+			
+		case WSTAT_GID:
+			result = ::chown(file, 0xFFFFFFFF, s.st_gid);
+			break;
+
+		case WSTAT_SIZE:
+			// For enlarging files the truncate() behavior seems to be not
+			// precisely defined, but with a bit of luck it might come pretty
+			// close to what we need.
+			result = ::truncate(file, s.st_size);
+			break;
+			
+		// These would all require a call to utime(char *filename, ...), but
+		// we have no filename, only a file descriptor, so they'll have to
+		// wait until our new kernel shows up (or we decide to try calling
+		// into the R5 kernel ;-)
+		case WSTAT_ATIME:
+		case WSTAT_MTIME:
+		{
+			// Grab the previous mod and access times so we only overwrite
+			// the specified time and not both
+			Stat *oldStat;
+			result = ::stat(file, oldStat);
+			if (result < 0)
+				break;
+				
+			utimbuf buffer;
+			buffer.actime = (what == WSTAT_ATIME) ? s.st_atime : oldStat->st_atime;
+			buffer.modtime = (what == WSTAT_MTIME) ? s.st_mtime : oldStat->st_mtime;				
+			result = ::utime(file, &buffer);
+		}
+		
+		//! /todo Implement set_stat(..., WSTAT_CRTIME)
+		case WSTAT_CRTIME:
+			return B_BAD_VALUE;
+			
+		default:
+			return B_BAD_VALUE;	
+	}
+	
+	return (result == -1) ? errno : B_OK ;
+}
+
+
 
 //------------------------------------------------------------------------------
 // Attribute Functions
@@ -485,45 +494,48 @@ StorageKit::stat_attr( FileDescriptor file, const char *name, AttrInfo *ai )
 // Attribute Directory Functions
 //------------------------------------------------------------------------------
 
-StorageKit::FileDescriptor
-StorageKit::open_attr_dir( FileDescriptor file ) {
-	// Open the dir and convert it to a plain file descriptor.
-	return dir_to_fd( fs_fopen_attr_dir( file ) );
+status_t
+StorageKit::open_attr_dir( FileDescriptor file, FileDescriptor &result ) {
+	result = NullFd;
+	if (DIR *dir = ::fs_fopen_attr_dir(file)) {
+		result = dir->fd;
+		free(dir);
+	}
+	return (result < 0) ? errno : B_OK ;
 }
 
 
-void
-StorageKit::rewind_attr_dir( FileDescriptor dirFd ) {
-	DIR *dir = fd_to_dir( dirFd );
-	if (dir != NULL)
-		fs_rewind_attr_dir( dir );
-//	free(dir);
+status_t
+StorageKit::rewind_attr_dir( FileDescriptor dir ) {
+	if (dir < 0)
+		return B_BAD_VALUE;
+	else {
+		// init a DIR structure
+		LongDIR dirDir;
+		dirDir.fd = dir;
+		::fs_rewind_attr_dir(&dirDir);
+		return B_OK;
+	}
 }
 
 StorageKit::DirEntry*
-StorageKit::read_attr_dir( FileDescriptor dirFd ) {
-	DIR* dir = fd_to_dir(dirFd);
-	if (dir == NULL)
-		return NULL;
+StorageKit::read_attr_dir( FileDescriptor dir ) {
+	// init a DIR structure
+	LongDIR dirDir;
+	dirDir.fd = dir;
 
-	DirEntry *result = fs_read_attr_dir( dir );
-//	free(dir);
-	return result;
+	return ::fs_read_attr_dir(&dirDir);
 }
 
 status_t
-StorageKit::close_attr_dir ( FileDescriptor dirFd )
+StorageKit::close_attr_dir ( FileDescriptor dir )
 {
-	if (dirFd == StorageKit::NullFd)
+	if (dir == StorageKit::NullFd)
 		return B_BAD_VALUE;
 		
-	// Allocate a new DIR*, set it up with the proper file descriptor,
-	// and then close it.
-	DIR *dir = fd_to_dir(dirFd);
-	if (dir == NULL)
-		return B_NO_MEMORY;
-		
-	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
+	// init a DIR structure
+	LongDIR* dirDir = (LongDIR*)malloc(sizeof(LongDIR));
+	return (fs_close_attr_dir(dirDir) == -1) ? errno : B_OK ;
 }
 
 
