@@ -1931,7 +1931,7 @@
 			</functions>
 		</section>
 		<section name="Control Widgets">
-			<class name="BControl" owner="">
+			<class name="BControl" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
 					BControl(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizeMask, uint32 flags);
 				</task>
@@ -2026,7 +2026,7 @@
 					void SetValueNoUpdate(int32 value);
 				</task>
 			</class>
-			<class name="BButton" owner="">
+			<class name="BButton" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
 					BButton(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
 				</task>
@@ -2112,7 +2112,7 @@
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
 			</class>
-			<class name="BCheckBox" owner="">
+			<class name="BCheckBox" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
 					BCheckBox(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
 				</task>
@@ -2394,7 +2394,7 @@
 					virtual void AllDetached();
 				</task>
 			</class>
-			<class name="BRadioButton" owner="">
+			<class name="BRadioButton" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
 					BRadioButton(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
 				</task>
@@ -2683,7 +2683,7 @@
 					virtual void SetFont(const BFont* font, uint32 properties = B_FONT_ALL);
 				</task>
 			</class>
-			<class name="BTab" owner="">
+			<class name="BTab" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BTab(BView* contents=NULL);
 				</task>
@@ -2745,7 +2745,7 @@
 					virtual void DrawTab(BView* owner, BRect tabFrame, tab_position, bool full=true);
 				</task>
 			</class>
-			<class name="BTabView" owner="">
+			<class name="BTabView" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BTabView(BRect frame, const char* name, button_width width = B_WIDTH_AS_USUAL, uint32 resizingMode = B_FOLLOW_ALL, uint32 flags = B_FULL_UPDATE_ON_RESIZE | B_WILL_DRAW | B_NAVIGABLE_JUMP | B_FRAME_EVENTS | B_NAVIGABLE);
 				</task>
@@ -2881,7 +2881,7 @@
 			</class>
 		</section>
 		<section name="Non-Control Widgets">
-			<class name="BBox" owner="">
+			<class name="BBox" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
 					BBox(BRect bounds, const char* name = NULL, uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP, border_style border = B_FANCY_BORDER);
 				</task>
@@ -3044,7 +3044,7 @@
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
 			</class>
-			<class name="BStatusBar" owner="">
+			<class name="BStatusBar" owner="Marc Flerackers">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BStatusBar(BRect frame, const char* name, const char* label = NULL, const char* trailing_label = NULL);
 				</task>
