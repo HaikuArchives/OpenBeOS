@@ -49,6 +49,7 @@ Indices
 Attributes
 
  - bfs_write_attr() doesn't check if the attribute data may fit into the small_data region if there already is that attribute as an attribute file
+ - The attribute traversal in the small_data section is not safe against changes to that section - that needs to be changed, probably using a similar mechanism as for the TreeIterator.
 
 
 Volume

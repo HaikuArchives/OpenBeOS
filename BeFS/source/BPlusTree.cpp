@@ -1036,8 +1036,6 @@ BPlusTree::Insert(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 	memcpy(keyBuffer,key,keyLength);
 	keyBuffer[keyLength] = 0;
 
-	// ToDo: update all tree iterators after the tree has changed!
-
 	node_and_key nodeAndKey;
 	bplustree_node *node;
 
@@ -1305,8 +1303,6 @@ BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 	Stack<node_and_key> stack;
 	if (SeekDown(stack,key,keyLength) != B_OK)
 		RETURN_ERROR(B_ERROR);
-
-	// ToDo: update all tree iterators after the tree has changed!
 
 	node_and_key nodeAndKey;
 	bplustree_node *node;

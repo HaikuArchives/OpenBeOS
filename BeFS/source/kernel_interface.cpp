@@ -380,14 +380,27 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 
 	Transaction transaction(volume,inode->BlockNumber());
 
+	// Perhaps there should be an implementation of Inode::ShrinkStream() that
+	// just frees the data_stream, but doesn't change the inode (since it is
+	// freed anyway) - that would make an undelete command possible
 	status_t status = inode->SetFileSize(&transaction,0);
 	if (status < B_OK)
 		return status;
 
-	// ToDo: free attributes, etc.
-	// perhaps there should be an implementation of Inode::ShrinkStream() that
-	// just frees the data_stream, but doesn't change the inode (since it is
-	// freed anyway) - that would make an undelete command possible
+	// Free attributes, and remove their indices
+	AttributeIterator iterator(inode);
+			
+	char name[B_FILE_NAME_LENGTH];
+	uint32 type;
+	size_t length;
+	vnode_id id;
+	while ((status = iterator.GetNext(name,&length,&type,&id)) == B_OK) {
+		if (bfs_remove_attr(volume,inode,name) == B_OK) {
+			// ToDo: Changes in the small_data section should update the
+			// AttributeIterator, so that this wouldn't be necessary
+			iterator.Rewind();
+		}
+	}
 
 	if ((status = volume->Free(&transaction,inode->BlockRun())) == B_OK) {
 		transaction.Done();
