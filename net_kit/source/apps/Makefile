@@ -42,6 +42,9 @@ select_test:	libnet $(OBJS) select_test.o
 select_test2:    libnet $(OBJS) select_test2.o
 	@$(CC) $(LDFLAGS) -o select_test2 $(OBJS) select_test2.o 
 
+select_test_big:    libnet $(OBJS) select_test_big.o
+	@$(CC) $(LDFLAGS) -o select_test_big $(OBJS) select_test_big.o  
+
 tcp_test: libnet $(OBJS) tcp_test.o
 	@$(CC) $(LDFLAGS) -o tcp_test $(OBJS) tcp_test.o
 
