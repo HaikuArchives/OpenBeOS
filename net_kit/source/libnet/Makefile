@@ -6,7 +6,8 @@ INCLUDES=-I../server/include -I.
 ETC_FILES=	protocols \
 		networks
 
-OBJS=	libnet.o \
+OBJS=	socket.o \
+	select.o \
 	arc4random.o \
 	base64.o \
 	inet_addr.o \
@@ -41,7 +42,7 @@ all:	$(TARGET)
 
 clean:	
 	@if test -e $(TARGET); then rm $(TARGET); fi
-	@if test -e libnet.o; then rm $(OBJS); fi
+	@if test -e socket.o; then rm $(OBJS); fi
 
 install: installetc
 	@echo "Files installed into /etc"
