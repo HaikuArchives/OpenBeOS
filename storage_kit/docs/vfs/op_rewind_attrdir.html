@@ -2,22 +2,22 @@
 <html>
 	<head>
 		<title>
-			<!--cmd-->
+			op_rewind_attrdir
 		</title>
 	</head>
 	<body>
 		<h1>
-			<!--cmd--> - <!--breif-->
+			op_rewind_attrdir - Rewinds the attribute set.
 		</h1>
 		<p>
-			<!-- long desc -->
+			Resets the attribute set to the first attribute in the set.
 		</p>
 		<h2>
 			Declaration
 		</h2>
 		<p>
 			<code>
-				<!--declaration-->
+				int op_rewind_attrdir(void *ns, void *node, void *cookie);
 			</code>
 		</p>
 		<h2>
@@ -30,14 +30,8 @@
 			<code>ns</code> - pointer to a volume structure<br>
 			<code>node</code> - pointer to a valid node structure
 				representing a file on the volume<br>
+			<code>cookie</code> - The attribute set which you wish to rewind.<br>
 		</p>
-		<!--
-		<h3>
-			Outputs
-		</h3>
-		<p>
-		</p>
-		-->
 		<h2>
 			Return
 		</h2>
@@ -45,9 +39,7 @@
 			<code>B_OK</code> - Operation completed <br>
 			<code>ENOMEM</code> - Not enough memory<br>
 			<code>EINVAL</code> - Invaild parameters<br>
-			<code>ENOENT</code> - The file to which the attribute is
-							part of does not exist.<br>
-			<code>ENOSPC</code> - No space on device.<br>
+			<code>B_BAD_VALUE</code> - Invaild parameters<br>
 		</p>
 		<h2>
 			Notes

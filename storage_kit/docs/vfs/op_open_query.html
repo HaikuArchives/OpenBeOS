@@ -2,22 +2,24 @@
 <html>
 	<head>
 		<title>
-			<!--cmd-->
+			op_open_query
 		</title>
 	</head>
 	<body>
 		<h1>
-			<!--cmd--> - <!--breif-->
+			op_open_query - Opens a query.
 		</h1>
 		<p>
-			<!-- long desc -->
+			Creates a query based on the query string <code>query</code>, returning
+			a query <code>cookie</code>.
 		</p>
 		<h2>
 			Declaration
 		</h2>
 		<p>
 			<code>
-				<!--declaration-->
+				int op_open_query(void *ns, const char *query, ulong flags,
+port_id port, long token, void **cookie);
 			</code>
 		</p>
 		<h2>
@@ -28,16 +30,17 @@
 		</h3>
 		<p>
 			<code>ns</code> - pointer to a volume structure<br>
-			<code>node</code> - pointer to a valid node structure
-				representing a file on the volume<br>
+			<code>query</code> - The query string to execute<br>
+			<code>flags</code> - ?<br>
+			<code>port</code> - ?<br>
+			<code>token</code> - ?<br>
 		</p>
-		<!--
 		<h3>
 			Outputs
 		</h3>
 		<p>
+			<code>cookie</code> - The query cookie for use 
 		</p>
-		-->
 		<h2>
 			Return
 		</h2>
@@ -45,8 +48,6 @@
 			<code>B_OK</code> - Operation completed <br>
 			<code>ENOMEM</code> - Not enough memory<br>
 			<code>EINVAL</code> - Invaild parameters<br>
-			<code>ENOENT</code> - The file to which the attribute is
-							part of does not exist.<br>
 			<code>ENOSPC</code> - No space on device.<br>
 		</p>
 		<h2>
@@ -54,8 +55,7 @@
 		</h2>
 		<p>
 			This definition was devised using the source for the AtheOS file 
-			system driver (downloadable from bebits.com) and OpenBeFS from 
-			the OpenBeOS CVS.
+			system driver (downloadable from bebits.com)
 		</p>
 	</body>
 </html>

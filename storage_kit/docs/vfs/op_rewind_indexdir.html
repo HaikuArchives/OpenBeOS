@@ -2,22 +2,22 @@
 <html>
 	<head>
 		<title>
-			<!--cmd-->
+			op_rewind_indexdir
 		</title>
 	</head>
 	<body>
 		<h1>
-			<!--cmd--> - <!--breif-->
+			op_rewind_indexdir - Returns the indexdir to the first entry in the directory tree.
 		</h1>
 		<p>
-			<!-- long desc -->
+			Returns the indexdir to the first entry in the directory tree
 		</p>
 		<h2>
 			Declaration
 		</h2>
 		<p>
 			<code>
-				<!--declaration-->
+				int op_rewind_indexdir(void *ns, void *cookie);
 			</code>
 		</p>
 		<h2>
@@ -31,13 +31,6 @@
 			<code>node</code> - pointer to a valid node structure
 				representing a file on the volume<br>
 		</p>
-		<!--
-		<h3>
-			Outputs
-		</h3>
-		<p>
-		</p>
-		-->
 		<h2>
 			Return
 		</h2>
@@ -45,17 +38,14 @@
 			<code>B_OK</code> - Operation completed <br>
 			<code>ENOMEM</code> - Not enough memory<br>
 			<code>EINVAL</code> - Invaild parameters<br>
-			<code>ENOENT</code> - The file to which the attribute is
-							part of does not exist.<br>
-			<code>ENOSPC</code> - No space on device.<br>
+			<code>B_BAD_VALUE</code> - The index dir does not exist.<br>
 		</p>
 		<h2>
 			Notes
 		</h2>
 		<p>
 			This definition was devised using the source for the AtheOS file 
-			system driver (downloadable from bebits.com) and OpenBeFS from 
-			the OpenBeOS CVS.
+			system driver (downloadable from bebits.com)
 		</p>
 	</body>
 </html>

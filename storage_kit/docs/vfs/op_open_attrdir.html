@@ -2,22 +2,23 @@
 <html>
 	<head>
 		<title>
-			<!--cmd-->
+			op_open_attrdir
 		</title>
 	</head>
 	<body>
 		<h1>
-			<!--cmd--> - <!--breif-->
+			op_open_attrdir - Opens an attribute set.
 		</h1>
 		<p>
-			<!-- long desc -->
+			Opens an attribute set for a given file, returning a <code>cookie</code>
+			for future access.
 		</p>
 		<h2>
 			Declaration
 		</h2>
 		<p>
 			<code>
-				<!--declaration-->
+				int op_open_attrdir(void *ns, void *node, void **cookie);
 			</code>
 		</p>
 		<h2>
@@ -31,23 +32,21 @@
 			<code>node</code> - pointer to a valid node structure
 				representing a file on the volume<br>
 		</p>
-		<!--
 		<h3>
 			Outputs
 		</h3>
 		<p>
+			<code>cookie</code> - The cookie for the attribute set.<br>
 		</p>
-		-->
 		<h2>
 			Return
 		</h2>
 		<p>
 			<code>B_OK</code> - Operation completed <br>
+			<code>B_NO_MEMORY</code> - Not enough memory<br>
 			<code>ENOMEM</code> - Not enough memory<br>
 			<code>EINVAL</code> - Invaild parameters<br>
-			<code>ENOENT</code> - The file to which the attribute is
-							part of does not exist.<br>
-			<code>ENOSPC</code> - No space on device.<br>
+			<code>ENOENT</code> - The file does not exist.<br>
 		</p>
 		<h2>
 			Notes

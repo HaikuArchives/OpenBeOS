@@ -2,22 +2,25 @@
 <html>
 	<head>
 		<title>
-			<!--cmd-->
+			op_read_attrdir
 		</title>
 	</head>
 	<body>
 		<h1>
-			<!--cmd--> - <!--breif-->
+			op_read_attrdir - Reads the next entry(s) in the attribute set.
 		</h1>
 		<p>
-			<!-- long desc -->
+			Reads the next entry(s) in the attribute set, and returns them as a
+			<code>dirent</code>. The number of dirent's is specified by 
+			<code>num</code>.
 		</p>
 		<h2>
 			Declaration
 		</h2>
 		<p>
 			<code>
-				<!--declaration-->
+				int op_read_attrdir(void *ns, void *node, void *cookie, long
+*num, struct dirent *buf, size_t bufsize);
 			</code>
 		</p>
 		<h2>
@@ -30,14 +33,17 @@
 			<code>ns</code> - pointer to a volume structure<br>
 			<code>node</code> - pointer to a valid node structure
 				representing a file on the volume<br>
+			<code>cookie</code> - The attribute set's cookie<br>
+			<code>busize</code> - Ignored by implementations seen so far<br>
 		</p>
-		<!--
 		<h3>
 			Outputs
 		</h3>
 		<p>
+			<code>num</code> - The number of attributes returned in buf,
+						can be zero.<br>
+			<code>buf</code> - The <code>dirent</code>s.<br>
 		</p>
-		-->
 		<h2>
 			Return
 		</h2>
@@ -45,9 +51,7 @@
 			<code>B_OK</code> - Operation completed <br>
 			<code>ENOMEM</code> - Not enough memory<br>
 			<code>EINVAL</code> - Invaild parameters<br>
-			<code>ENOENT</code> - The file to which the attribute is
-							part of does not exist.<br>
-			<code>ENOSPC</code> - No space on device.<br>
+			<code>B_BAD_VALUE</code> - Invaild parameters<br>
 		</p>
 		<h2>
 			Notes
