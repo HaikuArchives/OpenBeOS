@@ -678,16 +678,20 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 			return B_IS_A_DIRECTORY;
 
 		if (inode->Size() != stat->st_size) {
-			status = inode->SetFileSize(&transaction,stat->st_size);
+			if (inode->Lock().LockWrite() == B_OK) {
+				status = inode->SetFileSize(&transaction,stat->st_size);
+	
+				// fill the new blocks (if any) with zeros
+				inode->FillGapWithZeros(inode->OldSize(),inode->Size());
+				inode->Lock().UnlockWrite();
 
-			// fill the new blocks (if any) with zeros
-			inode->FillGapWithZeros(inode->OldSize(),inode->Size());
-
-			Index index(volume);
-			index.UpdateSize(&transaction,inode);
-
-			if ((mask & WSTAT_MTIME) == 0)
-				index.UpdateLastModified(&transaction,inode);
+				Index index(volume);
+				index.UpdateSize(&transaction,inode);
+	
+				if ((mask & WSTAT_MTIME) == 0)
+					index.UpdateLastModified(&transaction,inode);
+			} else
+				status = B_ERROR;
 		}
 	}
 
@@ -1127,6 +1131,12 @@ bfs_write(void *_ns, void *_node, void *_cookie, off_t pos, const void *buffer, 
 		cookie->last_size = inode->Size();
 		cookie->last_notification = system_time();
 	}
+
+	// This will flush the dirty blocks to disk from time to time.
+	// It's done here and not in Inode::WriteAt() so that it won't
+	// add to the duration of a transaction - it might even be a
+	// good idea to offload those calls to another thread
+	volume->WriteCachedBlocksIfNecessary();
 
 	return status;
 }

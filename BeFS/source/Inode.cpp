@@ -572,9 +572,11 @@ Inode::ReadAttribute(const char *name,int32 type,off_t pos,uint8 *buffer,size_t 
 	Inode *attribute;
 	status_t status = GetAttribute(name,&attribute);
 	if (status == B_OK) {
-		attribute->Lock().Lock();
-		status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
-		attribute->Lock().Unlock();
+		if (attribute->Lock().Lock() == B_OK) {
+			status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
+			attribute->Lock().Unlock();
+		} else
+			status = B_ERROR;
 
 		ReleaseAttribute(attribute);
 	}
@@ -628,17 +630,20 @@ Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t
 	}
 
 	if (attribute != NULL) {
-		attribute->Lock().LockWrite();
+		if (attribute->Lock().LockWrite() == B_OK) {
+	
+			// save the old attribute data (if this fails, oldLength will reflect it)
+			if (hasIndex) {
+				oldLength = BPLUSTREE_MAX_KEY_LENGTH;
+				if (attribute->ReadAt(0,oldBuffer,&oldLength) == B_OK)
+					oldData = oldBuffer;
+			}
+			status = attribute->WriteAt(transaction,pos,buffer,_length);
+	
+			attribute->Lock().UnlockWrite();
+		} else
+			status = B_ERROR;
 
-		// save the old attribute data (if this fails, oldLength will reflect it)
-		if (hasIndex) {
-			oldLength = BPLUSTREE_MAX_KEY_LENGTH;
-			if (attribute->ReadAt(0,oldBuffer,&oldLength) == B_OK)
-				oldData = oldBuffer;
-		}
-		status = attribute->WriteAt(transaction,pos,buffer,_length);
-
-		attribute->Lock().UnlockWrite();
 		ReleaseAttribute(attribute);
 	}
 
@@ -1215,9 +1220,6 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 	}
 
 	*_length = bytesWritten;
-
-	// this will flush the dirty blocks to disk from time to time
-	fVolume->WriteCachedBlocksIfNecessary();
 
 	return B_NO_ERROR;
 }
