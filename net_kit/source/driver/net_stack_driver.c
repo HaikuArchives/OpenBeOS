@@ -614,12 +614,25 @@ static void r5_notify_select_event(selectsync * sync, uint32 ref)
 		return;
 	};
 	
-	rss->nfd++;
-	
 	switch (ref & 0x0F) {
-	case 1: FD_SET((ref >> 8), rss->rbits); break;
-	case 2: FD_SET((ref >> 8), rss->wbits); break;
-	case 3: FD_SET((ref >> 8), rss->ebits); break;
+		case 1:
+			if (rss->rbits) { 
+				FD_SET((ref >> 8), rss->rbits);
+				rss->nfd++;
+			} 
+			break;
+		case 2: 
+			if (rss->wbits) {
+				FD_SET((ref >> 8), rss->wbits);
+				rss->nfd++;
+			} 
+			break;
+		case 3:
+			if (rss->ebits) {
+				FD_SET((ref >> 8), rss->ebits);
+				rss->nfd++;
+			}
+			break;
 	};
 
 	release_sem(rss->wait); /* wakeup r5_select() */
