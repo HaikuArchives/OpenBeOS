@@ -1,27 +1,57 @@
-/*******************************************************************************
-/	
-/	This file is basicly an extended version of the one provided with BeOS
-/
-*******************************************************************************/
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		InterfaceDefs.h
+//	Author:			Erik Jaesler (erik@cgsoftware.com)
+//	Description:	General Interface Kit definitions and global functions.
+//------------------------------------------------------------------------------
 
 #ifndef	_INTERFACE_DEFS_H
 #define	_INTERFACE_DEFS_H
 
+// Standard Includes -----------------------------------------------------------
+
+// System Includes -------------------------------------------------------------
 #include <BeBuild.h>
-#include "../headers/GraphicsDefs.h"
+#include <GraphicsDefs.h>
 #include <OS.h>
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// Project Includes ------------------------------------------------------------
+
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
 
 class BRect;
 
-// ---------------------------------- All the key stuff
+/*----------------------------------------------------------------*/
+
 struct key_info {
 	uint32	modifiers;
 	uint8	key_states[16];
 };
+
+/*----------------------------------------------------------------*/
 
 #define B_UTF8_ELLIPSIS		"\xE2\x80\xA6"
 #define B_UTF8_OPEN_QUOTE	"\xE2\x80\x9C"
@@ -31,6 +61,8 @@ struct key_info {
 #define B_UTF8_TRADEMARK	"\xE2\x84\xA2"
 #define B_UTF8_SMILING_FACE	"\xE2\x98\xBB"
 #define B_UTF8_HIROSHI		"\xE5\xBC\x98"
+
+/*----------------------------------------------------------------*/
 
 enum {	B_BACKSPACE			= 0x08,
 		B_RETURN			= 0x0a,
@@ -106,37 +138,36 @@ struct key_map {
 		uint32	tilde_tables;
 };
 
-// ---------------------------------- The mouse stuff
 struct mouse_map {
 	uint32	left;
 	uint32	right;
 	uint32	middle;
 };
 
-// ---------------------------------- border if the BBox
+/*----------------------------------------------------------------*/
+
 enum border_style {
-	B_PLAIN_BORDER,				// raised
-	B_FANCY_BORDER,				// engraved
-	B_LOWERED_BORDER,			// BOS only
-	B_BEVELED_BORDER,			// BOS only
+	B_PLAIN_BORDER,
+	B_FANCY_BORDER,
 	B_NO_BORDER
 };
 
-#define B_RAISED_BORDER		B_PLAIN_BORDER		// this one is added for convinience
-#define B_ENGRAVED_BORDER	B_FANCY_BORDER		// for BOS convenience
-
+/*----------------------------------------------------------------*/
 
 enum orientation {
 	B_HORIZONTAL,
-	B_VERTICAL,
-	B_DIAGONAL					// BOS only
+	B_VERTICAL
 };
+
+/*----------------------------------------------------------------*/
 
 enum button_width {
 	B_WIDTH_AS_USUAL,
 	B_WIDTH_FROM_WIDEST,
 	B_WIDTH_FROM_LABEL
 };
+
+/*----------------------------------------------------------------*/
 
 enum join_mode {
 	B_ROUND_JOIN=0,
@@ -154,12 +185,16 @@ enum cap_mode {
 
 const float B_DEFAULT_MITER_LIMIT = 10.0F;
 
+/*----------------------------------------------------------------*/
+
 struct scroll_bar_info {
 	bool	proportional;
 	bool	double_arrows;
 	int32	knob;
 	int32	min_knob_size;
 };
+
+/*----------------------------------------------------------------*/
 
 enum alignment {
 	B_ALIGN_LEFT,
@@ -286,40 +321,18 @@ _IMPEXP_BE void			set_mouse_mode(mode_mouse mode);
 _IMPEXP_BE mode_mouse	mouse_mode();	
 
 enum color_which {
-	B_PANEL_BACKGROUND_COLOR = 1,				// This is the global view background color
+	B_PANEL_BACKGROUND_COLOR = 1,
 	B_MENU_BACKGROUND_COLOR = 2,
 	B_MENU_SELECTION_BACKGROUND_COLOR = 6,
 	B_MENU_ITEM_TEXT_COLOR = 7,
 	B_MENU_SELECTED_ITEM_TEXT_COLOR = 8,
 	B_WINDOW_TAB_COLOR = 3,
 	B_KEYBOARD_NAVIGATION_COLOR = 4,
-	B_DESKTOP_COLOR = 5,
-	B_TEXT_SELECTION_COLOR = 9,					// BOS: same as B_KEYBOARD_NAVIGATION_COLOR by default
-	B_TEXT_FOCUS_COLOR = 10						// BOS: the background of a focussed textView/Control
-	
+	B_DESKTOP_COLOR = 5
 };
-
-#define B_VIEW_COLOR		B_PANEL_BACKGROUND_COLOR	// BOS
-
 
 _IMPEXP_BE rgb_color	ui_color(color_which which);
 _IMPEXP_BE rgb_color	tint_color(rgb_color color, float tint);
-
-// BlueOS stuff
-#if 0
-// a new BOS routine that returns true if a border needs to be drawn if a TextControl has focus
-// border: true puts a B_KEYBOARD_NAVIGATION_COLOR frame around the box if focussed
-// enter_select: if true the ENTER key selects all thext (like BeOS) otherwise TABs
-void text_control(bool *border, bool *enter_select);
-void set_text_control(bool border, bool enter_select);
-
-// returns true if the current GUI is set to look like BeOS
-bool beos_gui_type();
-#endif
-
-// Draws a shadowed frame based upon the current viewcolor settings
-void draw_shadow_frame(BRect rect, bool enabled, BView *view);
-
 
 extern "C" status_t	_init_interface_kit_();
 											/* effects on standard gray level */
@@ -335,12 +348,6 @@ const float B_DARKEN_3_TINT		= 1.407F;	/* 216 --> 128.1 (128) */
 const float B_DARKEN_4_TINT		= 1.555F;	/* 216 -->  96.1  (96) */
 const float B_DARKEN_MAX_TINT	= 2.0F;		/* 216 -->   0.0   (0) */
 
-// these are needed to perform the NaBox BOS colorscheme
-const float B_SHADOW_1_TINT		= 1.080F;	/* 216 --> 200 */
-const float B_SHADOW_2_TINT		= 1.22F;	/* 216 --> 166 */
-const float B_SHADOW_3_TINT		= 1.352F;	/* 216 --> 140 */
-const float B_SHADOW_4_TINT		= 1.537F;	/* 216 --> 100 */
-
 const float B_DISABLED_LABEL_TINT		= B_DARKEN_3_TINT;
 const float B_HIGHLIGHT_BACKGROUND_TINT	= B_DARKEN_2_TINT;
 const float B_DISABLED_MARK_TINT		= B_LIGHTEN_2_TINT;
@@ -348,9 +355,12 @@ const float B_DISABLED_MARK_TINT		= B_LIGHTEN_2_TINT;
 /*-------------------------------------------------------------*/
 /*-------------------------------------------------------------*/
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
+#endif	// _INTERFACE_DEFS_H
 
-#endif /* _INTERFACE_DEFS_H */
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
+

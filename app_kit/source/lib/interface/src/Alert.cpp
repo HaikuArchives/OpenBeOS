@@ -1,35 +1,55 @@
 //------------------------------------------------------------------------------
-//	Alert.cpp
+//	Copyright (c) 2001-2002, OpenBeOS
 //
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		Alert.cpp
+//	Author:			Erik Jaesler (erik@cgsoftware.com)
+//	Description:	BAlert displays a modal alert window.
 //------------------------------------------------------------------------------
 
 // Standard Includes -----------------------------------------------------------
 #include <string.h>
 
 // System Includes -------------------------------------------------------------
-#include <be/app/Invoker.h>
-#include <be/app/Looper.h>
-#include <be/app/Message.h>
-#include <be/app/MessageFilter.h>
+#include <Invoker.h>
+#include <Looper.h>
+#include <Message.h>
+#include <MessageFilter.h>
 
-//#include <be/interface/Alert.h>
-#include <be/interface/Bitmap.h>
-#include <be/interface/Button.h>
-#include <be/interface/Screen.h>
-#include <be/interface/TextView.h>
-#include <be/interface/View.h>
+#include <Alert.h>
+#include <Bitmap.h>
+#include <Button.h>
+#include <Screen.h>
+#include <TextView.h>
+#include <View.h>
 
-#include <be/storage/File.h>
-#include <be/storage/FindDirectory.h>
-#include <be/storage/Path.h>
-#include <be/storage/Resources.h>
+#include <File.h>
+#include <FindDirectory.h>
+#include <Path.h>
+#include <Resources.h>
 
-#include <be/support/Autolock.h>
+#include <Autolock.h>
 
 // Project Includes ------------------------------------------------------------
 
 // Local Includes --------------------------------------------------------------
-#include "./Alert.h"
 
 // Local Defines ---------------------------------------------------------------
 #define DEFAULT_RECT	BRect(100, 100, 100, 100)
@@ -60,10 +80,7 @@ const int kTextTopOffset			=   6;
 const int kTextRightOffset			=  10;
 const int kTextBottomOffset			=  45;
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
-
+//------------------------------------------------------------------------------
 class TAlertView : public BView
 {
 	public:
@@ -86,7 +103,7 @@ class TAlertView : public BView
 	private:
 		BBitmap*	fIconBitmap;
 };
-
+//------------------------------------------------------------------------------
 // I'm making a guess based on the name and TextEntryAlert's implementation that
 // this is a BMessageFilter.  I'm not sure, but I think I actually prefer how
 // TextEntryAlert does it, but there are clearly no message filtering functions
@@ -102,6 +119,8 @@ class _BAlertFilter_ : public BMessageFilter
 	private:
 		BAlert*	fAlert;
 };
+//------------------------------------------------------------------------------
+
 
 //------------------------------------------------------------------------------
 BAlert::BAlert(const char *title, const char *text, const char *button1,
@@ -322,11 +341,11 @@ void BAlert::MessageReceived(BMessage* msg)
 				// Created semaphore means were running synchronously
 				fAlertVal = which;
 
-				// Original does release_sem() below, and then sets the member
-				// var.  That doesn't make much sense to me, since we want to
-				// be able to clean up at some point.  Better to just nuke the
-				// semaphore now; we don't need it any more and this lets
-				// synchronous Go() continue just as well.
+				// TextAlertVar does release_sem() below, and then sets the
+				// member var.  That doesn't make much sense to me, since we
+				// want to be able to clean up at some point.  Better to just
+				// nuke the semaphore now; we don't need it any more and this
+				// lets synchronous Go() continue just as well.
 				delete_sem(fAlertSem);
 				fAlertSem = -1;
 			}
@@ -792,10 +811,6 @@ filter_result _BAlertFilter_::Filter(BMessage* msg, BHandler** target)
 	return B_DISPATCH_MESSAGE;
 }
 //------------------------------------------------------------------------------
-
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-#endif
 
 /*
  * $Log $

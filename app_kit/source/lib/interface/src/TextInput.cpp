@@ -183,7 +183,7 @@ void _BTextInput_::Draw(BRect rect)
 	if (!fEnabled){
 		rect.InsetBy(1,1);
 		SetDrawingMode(B_OP_ALPHA);
-		rgb_color color = tint_color(ui_color(B_VIEW_COLOR), B_LIGHTEN_1_TINT);
+		rgb_color color = tint_color(ui_color(B_PANEL_BACKGROUND_COLOR), B_LIGHTEN_1_TINT);
 		color.alpha = 140;
 		SetHighColor(color);
 		FillRect(rect);

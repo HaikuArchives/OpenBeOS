@@ -1,21 +1,56 @@
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		Button.h
+//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Description:	BButton displays and controls a button in a window.
+//------------------------------------------------------------------------------
+
 #ifndef	_BUTTON_H
 #define	_BUTTON_H
 
+// Standard Includes -----------------------------------------------------------
+
+// System Includes -------------------------------------------------------------
 #include <BeBuild.h>
-#include "interface/Control.h"
+#include <Control.h>
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// Project Includes ------------------------------------------------------------
 
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
+
+
+// BButton class ---------------------------------------------------------------
 class BButton : public BControl {
-  public:
+public:
 						BButton(BRect frame,
-							const char *name,
-							const char *label, 
-							BMessage *message,
-							uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, 
-							uint32 flags = B_WILL_DRAW | B_NAVIGABLE); 
+								const char *name,
+								const char *label, 
+								BMessage *message,
+								uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, 
+								uint32 flags = B_WILL_DRAW | B_NAVIGABLE); 
 	virtual				~BButton();
 
 						BButton(BMessage *data);
@@ -28,7 +63,7 @@ class BButton : public BControl {
 	virtual	void		KeyDown(const char *bytes, int32 numBytes);
 	virtual void		MakeDefault(bool state);
 	virtual	void		SetLabel(const char *text);
-	bool				IsDefault() const;
+			bool		IsDefault() const;
 
 	virtual void		MessageReceived(BMessage *msg);
 	virtual void		WindowActivated(bool state);
@@ -60,17 +95,21 @@ private:
 	virtual	void		_ReservedButton2();
 	virtual	void		_ReservedButton3();
 
-	BButton				&operator=(const BButton &);
+			BButton		&operator=(const BButton &);
 
-	float				fCachedWidth;
-	bool				fDefault;
-	bool				fPressed;
-	uint32				_reserved[2];
+			float		fCachedWidth;
+			bool		fDefault;
+			bool		fPressed;
+			uint32		_reserved[2];
 };
+//------------------------------------------------------------------------------
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
+#endif	// _BUTTON_H
 
-#endif /* _BUTTON_H */
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
+

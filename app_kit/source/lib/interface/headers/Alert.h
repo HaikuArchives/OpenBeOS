@@ -1,27 +1,52 @@
-/*******************************************************************************
-/
-/	File:			Alert.h
-/
-/	Description:	BAlert displays a modal alert window.
-/
-/	Copyright 1993-98, Be Incorporated, All Rights Reserved
-/
-*******************************************************************************/
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		Alert.h
+//	Author:			Erik Jaesler (erik@cgsoftware.com)
+//	Description:	BAlert displays a modal alert window.
+//------------------------------------------------------------------------------
  
 #ifndef	_ALERT_H
 #define	_ALERT_H
 
+// Standard Includes -----------------------------------------------------------
+
+// System Includes -------------------------------------------------------------
 #include <BeBuild.h>
 #include <Window.h>
+
+// Project Includes ------------------------------------------------------------
+
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
 
 class BBitmap;
 class BButton;
 class BInvoker;
 class BTextView;
 
-/*----------------------------------------------------------------*/
-/*----- enum for flavors of alert --------------------------------*/
-
+// enum for flavors of alert ---------------------------------------------------
 enum alert_type {
 	B_EMPTY_ALERT = 0,
 	B_INFO_ALERT,
@@ -36,12 +61,7 @@ enum button_spacing {
 	B_OFFSET_SPACING
 };
 
-/*----------------------------------------------------------------*/
-/*----- BAlert class ---------------------------------------------*/
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
-
+// BAlert class ----------------------------------------------------------------
 class BAlert : public BWindow
 {
 public:
@@ -63,12 +83,12 @@ public:
 							alert_type type = B_INFO_ALERT);
 virtual				~BAlert();
 	
-/* Archiving */
+// Archiving
 					BAlert(BMessage *data);
 static	BArchivable	*Instantiate(BMessage *data);
 virtual	status_t	Archive(BMessage *data, bool deep = true) const;
 	
-/* BAlert guts */
+// BAlert guts
 		void		SetShortcut(int32 button_index, char key);
 		char		Shortcut(int32 button_index) const;
 
@@ -93,7 +113,7 @@ virtual	bool		QuitRequested();
 
 static	BPoint		AlertPosition(float width, float height);
 
-/*----- Private or reserved -----------------------------------------*/
+// Private or reserved ---------------------------------------------------------
 virtual status_t	Perform(perform_code d, void *arg);
 
 private:
@@ -122,11 +142,14 @@ virtual	void		_ReservedAlert3();
 		BInvoker		*fInvoker;
 		uint32			_reserved[4];
 };
+//------------------------------------------------------------------------------
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-#endif
-/*-------------------------------------------------------------*/
-/*-------------------------------------------------------------*/
+#endif	// _ALERT_H
 
-#endif /* _ALERT_H */
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
+

@@ -1,35 +1,69 @@
-// BControl
-// by Frans van Nispen (xlr8@tref.nl)
-// status: done.
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		Control.h
+//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Description:	BMessageFilter class creates objects that filter
+//					in-coming BMessages.  
+//------------------------------------------------------------------------------
+
 #ifndef	_CONTROL_H
 #define	_CONTROL_H
 
+// Standard Includes -----------------------------------------------------------
+
+// System Includes -------------------------------------------------------------
 #include <BeBuild.h>
-#include "app/Invoker.h"
-#include "interface/Rect.h"
+#include <Invoker.h>
 #include <Message.h>	/* For convenience */
+#include <Rect.h>
 #include <View.h>
 
-class BWindow;
+// Project Includes ------------------------------------------------------------
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
+
+
+class BWindow;
 
 enum {
 	B_CONTROL_OFF = 0,
 	B_CONTROL_ON = 1
 };
 
+// BControl class --------------------------------------------------------------
 class BControl : public BView, public BInvoker {
-  public:
-						BControl(	BRect frame, const char *name, const char *label,
-									BMessage *message, uint32 resizeMask, uint32 flags); 
+public:
+						BControl(BRect frame, const char *name,
+								 const char *label, BMessage *message,
+								 uint32 resizeMask, uint32 flags); 
 	virtual				~BControl();
 						BControl(BMessage *data);
 
-//from BView
-	static BArchivable	*Instantiate(BMessage *data);
+	// from BView
+	static BArchivable*	Instantiate(BMessage *data);
 	virtual	status_t	Archive(BMessage *data, bool deep = true) const;
 
 	virtual	void		WindowActivated(bool state);
@@ -42,7 +76,7 @@ class BControl : public BView, public BInvoker {
 	virtual	void		MouseMoved(BPoint pt, uint32 code, const BMessage *msg);
 	virtual	void		DetachedFromWindow();
 
-// just BControl
+	// just BControl
 	virtual	void		SetLabel(const char *text);
 	const char			*Label() const;
 
@@ -55,7 +89,7 @@ class BControl : public BView, public BInvoker {
 	virtual	void		GetPreferredSize(float *width, float *height);
 	virtual void		ResizeToPreferred();
 
-// from BInvoker
+	// from BInvoker
 	virtual	status_t	Invoke(BMessage *msg = NULL);
 
 	virtual BHandler	*ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier,
@@ -67,7 +101,7 @@ class BControl : public BView, public BInvoker {
 
 	virtual status_t	Perform(perform_code d, void *arg);
 
-  protected:
+protected:
 	bool				IsFocusChanging() const;
 	bool				IsTracking() const;
 	void				SetTracking(bool state);
@@ -91,10 +125,14 @@ class BControl : public BView, public BInvoker {
 	bool				fWantsNav;
 	uint32				_reserved[4];		// for future extension
 };
+//------------------------------------------------------------------------------
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
+#endif	// _CONTROL_H
 
-#endif
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
+

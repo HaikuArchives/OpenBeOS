@@ -1,6 +1,29 @@
 //------------------------------------------------------------------------------
-//	Handler.cpp
+//	Copyright (c) 2001-2002, OpenBeOS
 //
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		Handler.cpp
+//	Author:			Erik Jaesler (erik@cgsoftware.com)
+//	Description:	BHandler defines the message-handling protocol.
+//					MessageReceived() is its lynchpin.
+//------------------------------------------------------------------------------
 /**
 	@note	Some musings on the member variable 'fToken'.  In searching a dump
 			of libbe.so, I found a struct/class called 'TokenSpace', which has
@@ -87,31 +110,31 @@
 			Obviously, I can't be entirely sure this is how R5 does it, but it
 			seems like a reasonable design to follow for our purposes.
  */
-//------------------------------------------------------------------------------
 
 // Standard Includes -----------------------------------------------------------
+#include <algorithm>
 #include <stdlib.h>
 #include <string.h>
 #include <map>
 #include <vector>
 
 // System Includes -------------------------------------------------------------
-#include <be/app/AppDefs.h>
-#include <be/app/Handler.h>
-#include <be/app/Looper.h>
-#include <be/app/Message.h>
-#include <be/app/MessageFilter.h>
-#include <be/app/Messenger.h>
-#include <be/app/PropertyInfo.h>
+#include <AppDefs.h>
+#include <Handler.h>
+#include <Looper.h>
+#include <Message.h>
+#include <MessageFilter.h>
+#include <Messenger.h>
+#include <PropertyInfo.h>
 
 // Project Includes ------------------------------------------------------------
 
 // Local Includes --------------------------------------------------------------
 
 // Local Defines ---------------------------------------------------------------
-#define USE_BOBJECTLIST	1
 
 // Globals ---------------------------------------------------------------------
+
 using std::map;
 using std::vector;
 
@@ -183,7 +206,6 @@ static property_info gHandlerPropInfo[] =
 };
 
 bool FilterDeleter(void* filter);
-bool FilterLooperSetter(void* filter, void* looper);
 
 typedef map<unsigned long, vector<BHandler*> >	THandlerObserverMap;
 typedef map<unsigned long, vector<BMessenger> >	TMessengerObserverMap;
@@ -206,15 +228,7 @@ class _ObserverList
 		TMessengerObserverMap	fMessengerMap;
 };
 //------------------------------------------------------------------------------
-class MatchWhat
-{
-public:
-	int Compare(_ObserverWhatList const *, _ObserverWhatList const *);
 
-	// not sure what this one returns
-	void operator()(_ObserverWhatList const *) const;
-};
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 BHandler::BHandler(const char* name)
@@ -441,7 +455,15 @@ void BHandler::SetFilterList(BList* filters)
 	fFilters = filters;
 	if (fFilters)
 	{
-		fFilters->DoForEach(FilterLooperSetter, (void*)fLooper);
+		for (int32 i = 0; i < fFilters->CountItems(); ++i)
+		{
+			BMessageFilter* Filter =
+				static_cast<BMessageFilter*>(fFilters->ItemAt(i));
+			if (Filter)
+			{
+				Filter->SetLooper(fLooper);
+			}
+		}
 	}
 }
 //------------------------------------------------------------------------------
@@ -568,22 +590,22 @@ BMessage: what =  (0x0, or 0)
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatching(BMessenger Messenger, uint32 what)
 {
-	return fObserverList->StartObserving(&Messenger, what);
+	return fObserverList->StartObserving(Messenger, what);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatchingAll(BMessenger Messenger)
 {
-	return fObserverList->StartObserving(&Messenger, B_OBSERVER_OBSERVE_ALL);
+	return fObserverList->StartObserving(Messenger, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatching(BMessenger Messenger, uint32 what)
 {
-	return fObserverList->StopObserving(&Messenger, what);
+	return fObserverList->StopObserving(Messenger, what);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatchingAll(BMessenger Messenger)
 {
-	return fObserverList->StopObserving(&Messenger, B_OBSERVER_OBSERVE_ALL;
+	return fObserverList->StopObserving(Messenger, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatching(BHandler* Handler, uint32 what)
@@ -593,7 +615,7 @@ status_t BHandler::StartWatching(BHandler* Handler, uint32 what)
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatchingAll(BHandler* Handler)
 {
-	return fObserverList->StartObserving(Handler, B_OBSERVER_OBSERVE_ALL;
+	return fObserverList->StartObserving(Handler, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatching(BHandler* Handler, uint32 what)
@@ -603,7 +625,7 @@ status_t BHandler::StopWatching(BHandler* Handler, uint32 what)
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatchingAll(BHandler* Handler)
 {
-	return fObserverList->StopObserving(Handler, B_OBSERVER_OBSERVE_ALL;
+	return fObserverList->StopObserving(Handler, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::Perform(perform_code d, void* arg)
@@ -681,7 +703,7 @@ _ObserverList::~_ObserverList(void)
 {
 }
 //------------------------------------------------------------------------------
-void _ObserverList::SendNotices(unsigned long what, BMessage const* Message)
+status_t _ObserverList::SendNotices(unsigned long what, BMessage const* Message)
 {
 	// Having to new a temporary is really irritating ...
 	BMessage* CopyMsg = NULL;
@@ -705,7 +727,7 @@ void _ObserverList::SendNotices(unsigned long what, BMessage const* Message)
 		msgr.SendMessage(CopyMsg);
 	}
 
-	vector<BMessenger>& Messengers = fHandlerMap[what];
+	vector<BMessenger>& Messengers = fMessengerMap[what];
 	for (uint32 i = 0; i < Messengers.size(); ++i)
 	{
 		Messengers[i].SendMessage(CopyMsg);
@@ -713,6 +735,8 @@ void _ObserverList::SendNotices(unsigned long what, BMessage const* Message)
 
 	// Gotta make sure to clean up the annoying temporary ...
 	delete CopyMsg;
+
+	return B_OK;
 }
 //------------------------------------------------------------------------------
 status_t _ObserverList::StartObserving(BHandler* Handler, unsigned long what)
@@ -724,7 +748,7 @@ status_t _ObserverList::StartObserving(BHandler* Handler, unsigned long what)
 
 	vector<BHandler*>& Handlers = fHandlerMap[what];
 	vector<BHandler*>::iterator iter;
-	iter = find(Handler.begin(), Handlers.end(), Handler);
+	iter = find(Handlers.begin(), Handlers.end(), Handler);
 	if (iter != Handlers.end())
 	{
 		// TODO: verify
@@ -790,7 +814,7 @@ status_t _ObserverList::StopObserving(const BMessenger& Messenger,
 //------------------------------------------------------------------------------
 bool _ObserverList::IsEmpty()
 {
-	return return fHandlerMap.empty() && fMessengerMap.empty();
+	return fHandlerMap.empty() && fMessengerMap.empty();
 }
 //------------------------------------------------------------------------------
 
@@ -806,17 +830,6 @@ bool FilterDeleter(void* filter)
 	}
 
 	return false;
-}
-//------------------------------------------------------------------------------
-bool FilterLooperSetter(void* filter, void* looper)
-{
-	BMessageFilter* Filter = static_cast<BMessageFilter*>(filter);
-	BLooper* Looper = static_cast<BLooper*>(looper);
-
-	if (Filter && Looper)
-	{
-		Filter->SetLooper(Looper);
-	}
 }
 //------------------------------------------------------------------------------
 

@@ -35,8 +35,24 @@ TYPE= SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= support/src/Locker.cpp \
-	  application/src/MessageQueue.cpp
+SRCS=	application/src/Cursor.cpp				\
+		application/src/Handler.cpp				\
+		application/src/Looper.cpp				\
+		application/src/MessageFilter.cpp		\
+		application/src/MessageQueue.cpp		\
+		interface/src/Box.cpp					\
+		interface/src/Button.cpp				\
+		interface/src/CheckBox.cpp				\
+		interface/src/Control.cpp				\
+		interface/src/Point.cpp					\
+		interface/src/RadioButton.cpp			\
+		interface/src/Rect.cpp					\
+		interface/src/StringView.cpp			\
+		interface/src/TextControl.cpp			\
+		interface/src/TextInput.cpp				\
+		support/src/Archivable.cpp				\
+		support/src/Locker.cpp					\
+		support/src/StopWatch.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -57,7 +73,7 @@ RSRCS=
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be
+LIBS= be stdc++.r4
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -75,19 +91,20 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = support/headers \
-					  application/headers
+LOCAL_INCLUDE_PATHS = support/headers		\
+					  application/headers	\
+					  private
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
-OPTIMIZE= FULL
+OPTIMIZE= NONE
 
 #	specify any preprocessor symbols to be defined.  The symbols will not
 #	have their values set automatically; you must supply the value (if any)
 #	to use.  For example, setting DEFINES to "DEBUG=1" will cause the
 #	compiler option "-DDEBUG=1" to be used.  Setting DEFINES to "DEBUG"
 #	would pass "-DDEBUG" on the compiler's command line.
-DEFINES= USE_OPENBEOS_NAMESPACE
+DEFINES= #USE_OPENBEOS_NAMESPACE
 
 #	specify special warning levels
 #	if unspecified default warnings will be used
@@ -103,7 +120,7 @@ SYMBOLS = TRUE
 #	specify debug settings
 #	if TRUE will allow application to be run from a source-level
 #	debugger.  Note that this will disable all optimzation.
-DEBUGGER = FALSE
+DEBUGGER = TRUE
 
 #	specify additional compiler flags for all files
 COMPILER_FLAGS =
@@ -133,10 +150,10 @@ DRIVER_PATH =
 
 all:	depend default
 
-application/src/MessageQueue.cpp:	application/headers/Message.h
+#application/src/MessageQueue.cpp:	application/headers/Message.h
 
-application/headers/Message.h:
-	awk '/^friend class	BMessageQueue;/{print "friend class	OpenBeOS::BMessageQueue;"} {print}' /boot/develop/headers/be/app/Message.h > application/headers/Message.h
+#application/headers/Message.h:
+#	awk '/^friend class	BMessageQueue;/{print "friend class	OpenBeOS::BMessageQueue;"} {print}' /boot/develop/headers/be/app/Message.h > application/headers/Message.h
 
 ## include the makefile-engine
 include $(BUILDHOME)/etc/makefile-engine

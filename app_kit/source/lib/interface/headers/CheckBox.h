@@ -1,15 +1,50 @@
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		CheckBox.h
+//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Description:	BCheckBox displays an on/off control.
+//------------------------------------------------------------------------------
+
 #ifndef	_CHECK_BOX_H
 #define	_CHECK_BOX_H
 
+// Standard Includes -----------------------------------------------------------
+
+// System Includes -------------------------------------------------------------
 #include <BeBuild.h>
-#include "interface/Control.h"
+#include <Control.h>
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// Project Includes ------------------------------------------------------------
 
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
+
+
+// BCheckBox class -------------------------------------------------------------
 class BCheckBox : public BControl {
-  public:
+public:
 						BCheckBox(	BRect frame,
 									const char *name,
 									const char *label,
@@ -50,24 +85,28 @@ class BCheckBox : public BControl {
 	virtual void		AllAttached();
 	virtual void		AllDetached();
 
-/*----- Private or reserved -----------------------------------------*/
+// Private or reserved ---------------------------------------------------------
 	virtual status_t	Perform(perform_code d, void *arg);
 
-  private:
+private:
 	virtual	void		_ReservedCheckBox1();
 	virtual	void		_ReservedCheckBox2();
 	virtual	void		_ReservedCheckBox3();
 
 			BCheckBox	&operator=(const BCheckBox &);
 
-	bool				fOutlined;
-	bool				fPressed;
-	uint32				_reserved[1];
+			bool		fOutlined;
+			bool		fPressed;
+			uint32		_reserved[1];
 };
+//------------------------------------------------------------------------------
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
+#endif	// _CHECK_BOX_H
 
-#endif /* _CHECK_BOX_H */
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
+

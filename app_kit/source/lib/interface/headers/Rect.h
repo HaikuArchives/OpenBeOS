@@ -1,19 +1,51 @@
+//------------------------------------------------------------------------------
+//	Copyright (c) 2001-2002, OpenBeOS
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a
+//	copy of this software and associated documentation files (the "Software"),
+//	to deal in the Software without restriction, including without limitation
+//	the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//	and/or sell copies of the Software, and to permit persons to whom the
+//	Software is furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//	DEALINGS IN THE SOFTWARE.
+//
+//	File Name:		Rect.h
+//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Description:	BRect represents a rectangular area.
+//------------------------------------------------------------------------------
+
 #ifndef	_RECT_H
 #define	_RECT_H
 
+// Standard Includes -----------------------------------------------------------
 #include <math.h>
-#include "support/SupportDefs.h"
-#include "interface/Point.h"
 
-#ifdef USE_OPENBEOS_NAMESPACE
-namespace OpenBeOS {
-#endif
+// System Includes -------------------------------------------------------------
+#include <SupportDefs.h>
+#include <Point.h>
 
-#define min(a,b) ((a)>(b)?(b):(a))
-#define max(a,b) ((a)>(b)?(a):(b))
+// Project Includes ------------------------------------------------------------
 
+// Local Includes --------------------------------------------------------------
+
+// Local Defines ---------------------------------------------------------------
+
+// Globals ---------------------------------------------------------------------
+
+
+// BRect class -----------------------------------------------------------------
 class BRect {
-  public:
+public:
 	float	left;
 	float	top;
 	float	right;
@@ -39,15 +71,15 @@ class BRect {
 	void	SetLeftBottom(const BPoint p);
 	void	SetRightTop(const BPoint p);
 
-/* transformation */
-	void	InsetBy(BPoint p)				{ left+=p.x; right-=p.x; top+=p.y; bottom-=p.y; }
-	void	InsetBy(float dx, float dy)		{ left+=dx; right-=dx; top+=dy; bottom-=dy; }
-	void	OffsetBy(BPoint p)				{ left+=p.x; right+=p.x; top+=p.y; bottom+=p.y; }
-	void	OffsetBy(float dx, float dy)	{ left+=dx; right+=dx; top+=dy; bottom+=dy; }
-	void	OffsetTo(BPoint p)				{ right=(right-left)+p.x; left=p.x; bottom=(bottom-top)+p.y; top=p.y; }
-	void	OffsetTo(float x, float y)		{ right=(right-left)+x; left=x; bottom=(bottom-top)+y; top=y; }
+	// transformation
+	void	InsetBy(BPoint p);
+	void	InsetBy(float dx, float dy);
+	void	OffsetBy(BPoint p);
+	void	OffsetBy(float dx, float dy);
+	void	OffsetTo(BPoint p);
+	void	OffsetTo(float x, float y);
 
-/* expression transformations */
+	// expression transformations
 	BRect &	InsetBySelf(BPoint);
 	BRect &	InsetBySelf(float dx, float dy);
 	BRect	InsetByCopy(BPoint);
@@ -61,11 +93,11 @@ class BRect {
 	BRect	OffsetToCopy(BPoint);
 	BRect	OffsetToCopy(float dx, float dy);
 
-/* comparison */
+	// comparison
 	bool	operator==(BRect r) const		{ return( left==r.left && right==r.right && top==r.top && bottom==r.bottom ); }
 	bool	operator!=(BRect r) const		{ return( left!=r.left || right!=r.right || top!=r.top || bottom!=r.bottom ); }
 
-/* intersection and union */
+	// intersection and union
 	BRect	operator&(BRect r) const		{ return( BRect( max(left, r.left), max(top, r.top), min(right, r.right), min(bottom, r.bottom) )); }
 	BRect	operator|(BRect r) const		{ return( BRect( min(left, r.left), min(top, r.top), max(right, r.right), max(bottom, r.bottom) )); }
 
@@ -79,9 +111,9 @@ class BRect {
 	bool	Contains(BRect r) const;
 
 };
+//------------------------------------------------------------------------------
 
-/*----------------------------------------------------------------*/
-/*----- inline definitions ---------------------------------------*/
+// inline definitions ----------------------------------------------------------
 
 inline BPoint BRect::LeftTop() const
 {
@@ -178,13 +210,14 @@ inline float BRect::Height() const
 	return(bottom - top);
 }
 
-/*-------------------------------------------------------------*/
-/*-------------------------------------------------------------*/
+//------------------------------------------------------------------------------
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
+#endif	// _RECT_H
 
-#endif /* _RECT_H */
+/*
+ * $Log $
+ *
+ * $Id  $
+ *
+ */
 
