@@ -33,22 +33,8 @@ status_t delete_port(port_id port);
 status_t _get_port_info(port_id port, port_info *info, size_t size);
 status_t _get_next_port_info(team_id team, int32 *cookie, port_info *info, size_t size);
 
-sem_id		create_sem(int32 count, const char *name);
-status_t	delete_sem(sem_id sem);
-status_t	acquire_sem(sem_id sem);
-status_t	acquire_sem_etc(sem_id sem, int32 count, uint32 flags, bigtime_t microsecond_timeout);
-status_t	release_sem(sem_id sem);
-status_t	release_sem_etc(sem_id sem, int32 count, uint32 flags);
-status_t	get_sem_count(sem_id sem, int32 *count);  /* be careful! */
-status_t	set_sem_owner(sem_id sem, team_id team);
-status_t	_get_sem_info(sem_id sem, sem_info *info, size_t size);
-status_t	_get_next_sem_info(team_id team, int32 *cookie, sem_info *info, size_t size);
-
 bigtime_t	set_alarm(bigtime_t when, uint32 flags);
 
-status_t	kill_thread(thread_id thread);
-status_t	resume_thread(thread_id thread);
-status_t	suspend_thread(thread_id thread);
 status_t	rename_thread(thread_id thread, const char *new_name);
 status_t	set_thread_priority (thread_id thread, int32 new_priority);
 void		exit_thread(status_t status);

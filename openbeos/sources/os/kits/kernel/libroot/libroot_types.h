@@ -25,64 +25,12 @@
 
 typedef int32   uid_t; // This should go in POSIX sys/types
 typedef int32   gid_t; // Ditto above
-typedef int32   area_id;
-typedef int32   team_id; 
-
-typedef struct area_info {
-	area_id		area;
-	char		name[B_OS_NAME_LENGTH];
-	int foo;
-	size_t		size;
-	uint32		lock;
-	uint32		protection;
-	team_id		team;
-	uint32		ram_size;
-	uint32		copy_count;
-	uint32		in_count;
-	uint32		out_count;
-	void		*address;
-} area_info;
-
-typedef struct port_info {
-	port_id		port;
-	team_id		team;
-	char		name[B_OS_NAME_LENGTH];
-	int32		capacity; /* queue depth */
-	int32		queue_count; /* # msgs waiting to be read */
-	int32		total_count; /* total # msgs read so far */
-} port_info;
-
-typedef struct sem_info {
-	sem_id 		sem;
-	team_id 	team;
-	char		name[B_OS_NAME_LENGTH];
-	int32		count;
-	thread_id 	latest_holder;
-} sem_info;
-
-enum {
-	B_CAN_INTERRUPT     = 1, 	/* semaphore can be interrupted by a signal */
-	B_DO_NOT_RESCHEDULE = 2,	/* release() without rescheduling */
-	B_CHECK_PERMISSION  = 4,	/* disallow users changing kernel semaphores */
-	B_TIMEOUT           = 8,    /* honor the (relative) timeout parameter */
-	B_RELATIVE_TIMEOUT	= 8,
-	B_ABSOLUTE_TIMEOUT	= 16	/* honor the (absolute) timeout parameter */
-};
 
 enum {
 	B_ONE_SHOT_ABSOLUTE_ALARM = 1,	/* alarm is one-shot and time is specified absolutely */
 	B_ONE_SHOT_RELATIVE_ALARM = 2,	/* alarm is one-shot and time is specified relatively */
 	B_PERIODIC_ALARM = 3			/* alarm is periodic and time is the period */
 };
-
-typedef enum {
-	B_THREAD_RUNNING=1,
-	B_THREAD_READY,
-	B_THREAD_RECEIVING,
-	B_THREAD_ASLEEP,
-	B_THREAD_SUSPENDED,
-	B_THREAD_WAITING
-} thread_state;
 
 #define B_LOW_PRIORITY						5
 #define B_NORMAL_PRIORITY					10
@@ -91,26 +39,6 @@ typedef enum {
 #define	B_REAL_TIME_DISPLAY_PRIORITY		100
 #define	B_URGENT_PRIORITY					110
 #define B_REAL_TIME_PRIORITY				120
-
-typedef struct  {
-	thread_id		thread;
-	team_id			team;
-	char			name[B_OS_NAME_LENGTH];
-	thread_state	state;
-	int32			priority;
-	sem_id			sem;
-	bigtime_t		user_time;
-	bigtime_t		kernel_time;
-	void			*stack_base;
-	void			*stack_end;
-} thread_info;
-
-typedef struct {
-	bigtime_t		user_time;
-	bigtime_t		kernel_time;
-} team_usage_info;
-
-typedef int32 (*thread_func) (void *);
 
   thread_id spawn_thread (
 	thread_func		function_name, 

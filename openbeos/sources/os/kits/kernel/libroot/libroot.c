@@ -1,6 +1,8 @@
+#include <OS.h>
 #include <libroot.h>
-#include <Errors.h>
+#include <errors.h>
 #include <vm_types.h>
+#include <syscalls.h>
 
 // Names don't match, but basic function does. Little work needed on addr_spec.
 area_id create_area(const char *name, void **start_addr, uint32 addr_spec, size_t size, uint32 lock, uint32 protection)
@@ -11,7 +13,7 @@ area_id clone_area(const char *name, void **dest_addr, uint32 addr_spec, uint32 
 	{ return sys_vm_clone_region(name,dest_addr, addr_spec,source, REGION_PRIVATE_MAP,protection); }
 
 // TO DO - add a syscall interface
-area_id	find_area(const char *name);
+area_id	find_area(const char *name)
 	{ return sys_find_region_by_name(name);}
 
 // TO DO
@@ -27,17 +29,15 @@ status_t resize_area(area_id id, size_t new_size);
 status_t set_area_protection(area_id id, uint32 new_protection);
 
 // TO DO - convert region_info in VM land to area_info...
-#define get_area_info(id, ainfo)  _get_area_info((id), (ainfo),sizeof(*(ainfo)))
 status_t _get_area_info(area_id id, area_info *ainfo, size_t size)
 	{ 
 	if (size < sizeof(ainfo)) 
 		return B_ERROR; 
 	else 
-		return sys_vm_get_region_info(id,ainfo);
+		return sys_vm_get_region_info(id, ainfo);
 	}
 
 // TO DO
-#define get_next_area_info(team, cookie, ainfo) _get_next_area_info((team), (cookie), (ainfo), sizeof(*(ainfo)))
 status_t _get_next_area_info(team_id team, int32 *cookie, area_info *ainfo, size_t size);
 
 
@@ -51,7 +51,7 @@ port_id	find_port(const char *name)
 
 // OK
 status_t write_port(port_id port, int32 code, const void *buf, size_t buf_size)
-	{ return sys_port_write(port,code,buf,buf_size); }
+	{ return sys_port_write(port, code, buf, buf_size); }
 
 // OK
 status_t read_port(port_id port, int32 *code, void *buf, size_t buf_size)
@@ -72,10 +72,12 @@ ssize_t	port_buffer_size(port_id port) { return sys_port_buffer_size(port); }
 ssize_t	port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout) { return sys_port_buffer_size_etc(port,flags,timeout); }
 
 // OK
-ssize_t	port_count(port_id port) { return sys_port_count(port); }
+ssize_t	port_count(port_id port) 
+{ return sys_port_count(port); }
 
 // OK
-status_t set_port_owner(port_id port, team_id team) { return sys_port_count(port,team); }
+int set_port_owner(port_id port, team_id team) 
+{ return sys_port_set_owner(port, team); }
 
 // OK
 status_t close_port(port_id port) { return sys_port_close(port); }
@@ -84,61 +86,59 @@ status_t close_port(port_id port) { return sys_port_close(port); }
 status_t delete_port(port_id port) { return sys_port_delete(port); }
 
 // OK - this works and is necessary for bin compatability.
-status_t _get_next_port_info(team_id team, int32 *cookie, port_info *info, size_t size) { return sys_port_get_next_port_info(team,cookie,info); }
+status_t _get_next_port_info(team_id team, int32 *cookie, port_info *info, size_t size) 
+{ return sys_port_get_next_port_info(team,cookie,info); }
 
 // OK
-status_t get_next_port_info (team_id team, int32 *cookie, port_info *info ) { return sys_port_get_next_port_info(team,cookie,info); }
+//status_t get_next_port_info (team_id team, int32 *cookie, port_info *info ) 
+//{ return sys_port_get_next_port_info(team, cookie, info); }
 
 // OK
-status_t get_port_info(port_id port, port_info *info ) { return sys_port_get_info(port,info); }
+//status_t get_port_info(port_id port, port_info *info ) 
+//{ return sys_port_get_info(port,info); }
 
 // OK - this works and is necessary for bin compatability.
 status_t _get_port_info(port_id port, port_info *info, size_t size) { return sys_port_get_info(port,info); }
 
 // OK
-sem_id		create_sem(int32 count, const char *name) { return sys_sem_create(count,name); }
+sem_id		create_sem(int32 count, const char *name) 
+{ return kern_create_sem(count,name); }
 
 // OK
-status_t	delete_sem(sem_id sem) { return sys_sem_delete(sem); }
+status_t	delete_sem(sem_id sem) 
+{ return kern_delete_sem(sem); }
 
 // OK
-status_t	acquire_sem(sem_id sem) { return sys_sem_acquire(sem,1,0,0,NULL); }
+status_t	acquire_sem(sem_id sem) 
+{ return kern_acquire_sem(sem); }
 
 // Have to modify flags ???
-status_t	acquire_sem_etc(sem_id sem, int32 count, uint32 flags, bigtime_t microsecond_timeout)
-	{ return sys_sem_acquire_etc(sem,count,flags,NULL); }
+int acquire_sem_etc(sem_id sem, int32 count, int32 flags, bigtime_t timeout)
+{ return kern_acquire_sem_etc(sem, count, flags, timeout); }
 
 // OK
 status_t	release_sem(sem_id sem)
-	{ return sys_sem_release(sem,1); }
+{ return kern_release_sem(sem); }
 
 // Have to modify flags ???
-status_t	release_sem_etc(sem_id sem, int32 count, uint32 flags)
-	{ return sys_sem_release_etc(sem,count,flags); }
+status_t	release_sem_etc(sem_id sem, int32 count, int32 flags)
+{ return kern_release_sem_etc(sem, count, flags); }
 
 // OK
 status_t	get_sem_count(sem_id sem, int32 *count)
-	{ return sys_sem_release(sem,count); }
+{ return sys_sem_get_count(sem,count); }
 
 // OK
 status_t	set_sem_owner(sem_id sem, team_id team)
-	{ return sys_sem_set_sem_owner(sem,team); }
+{ return sys_set_sem_owner(sem, team); }
 
 // OK
 status_t	_get_sem_info(sem_id sem, sem_info *info, size_t size)
-	{ return sys_sem_get_sem_info(sem,info); }
+{ return kern_get_sem_info(sem,info, size); }
 
 // OK
-status_t	get_sem_info(sem_id sem, sem_info *info)
-	{ return sys_sem_get_sem_info(sem,info); }
-	
-// OK
-status_t	get_next_sem_info(team_id team, int32 *cookie, sem_info *info )
-	{ return sys_sem_get_next_sem_info(team,cookie,info); }
-
-// OK
-status_t	_get_next_sem_info(team_id team, int32 *cookie, sem_info *info, size_t size)
-	{ return sys_sem_get_next_sem_info(team,cookie,info); }
+int _get_next_sem_info(proc_id team, uint32 *cookie, sem_info *info, size_t size)
+{ return kern_get_next_sem_info(team,cookie,info, size); }
 
 // TO DO
 bigtime_t	set_alarm(bigtime_t when, uint32 flags);
@@ -151,15 +151,15 @@ bigtime_t	set_alarm(bigtime_t when, uint32 flags);
 
 // OK
 status_t	kill_thread(thread_id thread)
-	{ return sys_thread_kill_thread(thread); }
+	{ return kern_kill_thread(thread); }
 
 // OK
 status_t	resume_thread(thread_id thread)
-	{ return sys_thread_resume_thread(thread); }
+	{ return kern_resume_thread(thread); }
 
 // OK
 status_t	suspend_thread(thread_id thread)
-	{ return sys_thread_suspend_thread(thread); }
+	{ return kern_suspend_thread(thread); }
 
 // TO DO
 status_t	rename_thread(thread_id thread, const char *new_name);
