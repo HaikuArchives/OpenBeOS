@@ -43,8 +43,6 @@ int main(int argc, char **argv)
 	}
 	printf("Connected!\n");
 
-	snooze(100000);
-	
 	rv = write(sock, RQST, strlen(RQST));
 	if (rv < 0) {
 		close(sock);
@@ -53,13 +51,13 @@ int main(int argc, char **argv)
 	printf("Written request %d\n", rv);
 	
 	memset(&buffer,0, BUFFER);	
-
 	rv = read(sock, buffer, BUFFER);
 	if (rv < 0) {
 		close(sock);
 		err(errno, "read");
 	}
 	printf("%s", buffer);
+	memset(&buffer, 0, BUFFER);
 	while ((rv = read(sock, buffer, BUFFER)) >= 0) {
 		printf("%s", buffer);
 		if (rv <= 0)
