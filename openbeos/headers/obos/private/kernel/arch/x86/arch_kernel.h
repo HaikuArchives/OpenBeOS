@@ -2,8 +2,8 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_I386_KERNEL_H
-#define _NEWOS_KERNEL_ARCH_I386_KERNEL_H
+#ifndef _KERNEL_ARCH_x86_KERNEL_H
+#define _KERNEL_ARCH_x86_KERNEL_H
 
 #include <arch/cpu.h>
 
@@ -27,4 +27,4 @@
 #define USER_STACK_REGION 0x70000000
 #define USER_STACK_REGION_SIZE (USER_BASE + (USER_SIZE - USER_STACK_REGION))
 
-#endif
+#endif /* _KERNEL_ARCH_x86_KERNEL_H */

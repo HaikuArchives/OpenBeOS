@@ -2,8 +2,8 @@
 ** Copyright 2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_I386_THREAD_H
-#define _NEWOS_KERNEL_ARCH_I386_THREAD_H
+#ifndef _KERNEL_ARCH_x86_THREAD_H
+#define _KERNEL_ARCH_x86_THREAD_H
 
 #include <arch/cpu.h>
 
@@ -17,5 +17,5 @@ extern inline void arch_thread_set_current_thread(struct thread *t) {
 	write_dr3(t);
 }
 
-#endif
+#endif /* _KERNEL_ARCH_x86_THREAD_H */
 

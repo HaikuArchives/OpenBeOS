@@ -2,9 +2,10 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_I386_CPU_H
-#define _NEWOS_KERNEL_ARCH_I386_CPU_H
+#ifndef _KERNEL_ARCH_x86_CPU_H
+#define _KERNEL_ARCH_x86_CPU_H
 
+/* ??? why include this as we're normally included from that file! */
 #include <arch/cpu.h>
 
 #define KERNEL_CODE_SEG 0x8
