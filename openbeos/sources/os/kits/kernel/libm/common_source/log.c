@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)log.c	8.2 (Berkeley) 11/30/93";
-#endif /* not lint */
-
 #include <math.h>
 #include <errno.h>
 

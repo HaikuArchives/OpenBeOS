@@ -31,9 +31,7 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)asincos.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
+#include <math.h>
 
 /* ASIN(X)
  * RETURNS ARC SINE OF X

@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)tanh.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
-
 /* TANH(X)
  * RETURN THE HYPERBOLIC TANGENT OF X
  * DOUBLE PRECISION (VAX D FORMAT 56 BITS, IEEE DOUBLE 53 BITS)

@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)jn.c	8.2 (Berkeley) 11/30/93";
-#endif /* not lint */
-
 /*
  * 16 December 1992
  * Minor modifications by Peter McIlroy to adapt non-IEEE architecture.

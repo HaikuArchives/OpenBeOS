@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)pow.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
-
 /* POW(X,Y)
  * RETURN X**Y
  * DOUBLE PRECISION (VAX D format 56 bits, IEEE DOUBLE 53 BITS)

@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)lgamma.c	8.2 (Berkeley) 11/30/93";
-#endif /* not lint */
-
 /*
  * Coded by Peter McIlroy, Nov 1992;
  *
@@ -83,7 +79,7 @@ static int endian;
 static double small_lgam(double);
 static double large_lgam(double);
 static double neg_lgam(double);
-static double zero = 0.0, one = 1.0;
+static /*double zero = 0.0,*/ one = 1.0;
 int signgam;
 
 #define UNDERFL (1e-1020 * 1e-1020)
@@ -171,7 +167,6 @@ static double
 large_lgam(double x)
 {
 	double z, p, x1;
-	int i;
 	struct Double t, u, v;
 	u = __log__D(x);
 	u.a -= 1.0;
