@@ -1,4 +1,4 @@
 *.o
 *.so
-test_mbuf
 net_srv
+profile_log*
