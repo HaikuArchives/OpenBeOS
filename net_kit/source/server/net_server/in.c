@@ -265,7 +265,6 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 	switch(cmd) {
 		case SIOCGIFADDR:
 			/* get interface address */
-			printf("SIOCGIFADDR\n");
 			*((struct sockaddr_in*) &ifr->ifr_addr) = ia->ia_addr;
 			break;
 		case SIOCGIFDSTADDR:
@@ -284,14 +283,11 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			break;
 		case SIOCGIFNETMASK:
 			/* get interface netmask */
-			printf("SIOCGIFNETMASK\n");
 			*((struct sockaddr_in*) &ifr->ifr_addr) = ia->ia_sockmask;
 			break;
 		case SIOCSIFADDR:
-			printf("SIOCSIFADDR\n");
 			return in_ifinit(ifp, ia, (struct sockaddr_in*)&ifr->ifr_addr, 1);
 		case SIOCSIFNETMASK:
-			printf("SIOCSIFNETMASK\n");
 			/* set the netmask for the interface... */
 			/* set i to the network netmask (network host order) */
 			i = ifra->ifra_addr.sin_addr.s_addr;
@@ -301,7 +297,6 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			ia->ia_subnetmask = ntohl(i);
 			break;
 		case SIOCSIFDSTADDR:
-			printf("SIOCSIFDSTADDR\n");
 			if ((ifp->if_flags & IFF_POINTOPOINT) == 0)
 				return EINVAL;
 			oldaddr = ia->ia_dstaddr;
@@ -324,7 +319,6 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			break;
 
 		case SIOCSIFBRDADDR:
-			printf("SIOCSIFBRDADDR\n");
 			/* set the broadcast address if interface supports it */
 			if ((ifp->if_flags & IFF_BROADCAST) == 0)
 				/* we don't support broadcast on that interface */
@@ -332,7 +326,6 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			ia->ia_broadaddr = *(struct sockaddr_in*) &ifr->ifr_broadaddr;
 			break;
 		case SIOCAIFADDR:
-			printf("SIOCAIFADDR\n");
 			maskIsNew = 0;
 			hostIsNew = 1;
 			error = 0;
