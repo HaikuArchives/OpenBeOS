@@ -34,26 +34,15 @@
  * SUCH DAMAGE.
  */
 
+#if defined(LIBC_SCCS) && !defined(lint)
+static char rcsid[] = "$OpenBSD: fgetc.c,v 1.2 1996/08/19 08:32:27 tholo Exp $";
+#endif /* LIBC_SCCS and not lint */
+
 #include <stdio.h>
 
-//__warn_references(gets,
-//    "warning: gets() is very unsafe; consider using fgets()");
-
-char *
-gets(buf)
-	char *buf;
+int
+fgetc(fp)
+	FILE *fp;
 {
-	register int c;
-	register char *s;
-
-	for (s = buf; (c = getchar()) != '\n';)
-		if (c == EOF)
-			if (s == buf)
-				return (NULL);
-			else
-				break;
-		else
-			*s++ = c;
-	*s = 0;
-	return (buf);
+	return (__sgetc(fp));
 }

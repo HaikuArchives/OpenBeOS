@@ -34,26 +34,24 @@
  * SUCH DAMAGE.
  */
 
+#if defined(LIBC_SCCS) && !defined(lint)
+static char rcsid[] = "$OpenBSD: putw.c,v 1.3 2001/07/09 06:57:44 deraadt Exp $";
+#endif /* LIBC_SCCS and not lint */
+
 #include <stdio.h>
+#include "fvwrite.h"
 
-//__warn_references(gets,
-//    "warning: gets() is very unsafe; consider using fgets()");
-
-char *
-gets(buf)
-	char *buf;
+int
+putw(w, fp)
+	int w;
+	FILE *fp;
 {
-	register int c;
-	register char *s;
+	struct __suio uio;
+	struct __siov iov;
 
-	for (s = buf; (c = getchar()) != '\n';)
-		if (c == EOF)
-			if (s == buf)
-				return (NULL);
-			else
-				break;
-		else
-			*s++ = c;
-	*s = 0;
-	return (buf);
+	iov.iov_base = &w;
+	iov.iov_len = uio.uio_resid = sizeof(w);
+	uio.uio_iov = &iov;
+	uio.uio_iovcnt = 1;
+	return (__sfvwrite(fp, &uio));
 }

@@ -34,26 +34,28 @@
  * SUCH DAMAGE.
  */
 
+#if defined(LIBC_SCCS) && !defined(lint)
+static char rcsid[] = "$OpenBSD: fputs.c,v 1.3 1999/08/07 17:35:58 millert Exp $";
+#endif /* LIBC_SCCS and not lint */
+
 #include <stdio.h>
+#include <string.h>
+#include "fvwrite.h"
 
-//__warn_references(gets,
-//    "warning: gets() is very unsafe; consider using fgets()");
-
-char *
-gets(buf)
-	char *buf;
+/*
+ * Write the given string to the given file.
+ */
+int
+fputs(s, fp)
+	const char *s;
+	FILE *fp;
 {
-	register int c;
-	register char *s;
+	struct __suio uio;
+	struct __siov iov;
 
-	for (s = buf; (c = getchar()) != '\n';)
-		if (c == EOF)
-			if (s == buf)
-				return (NULL);
-			else
-				break;
-		else
-			*s++ = c;
-	*s = 0;
-	return (buf);
+	iov.iov_base = (void *)s;
+	iov.iov_len = uio.uio_resid = strlen(s);
+	uio.uio_iov = &iov;
+	uio.uio_iovcnt = 1;
+	return (__sfvwrite(fp, &uio));
 }

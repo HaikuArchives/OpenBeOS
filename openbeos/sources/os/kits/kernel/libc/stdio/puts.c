@@ -35,25 +35,26 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include "fvwrite.h"
 
-//__warn_references(gets,
-//    "warning: gets() is very unsafe; consider using fgets()");
-
-char *
-gets(buf)
-	char *buf;
+/*
+ * Write the given string to stdout, appending a newline.
+ */
+int
+puts(s)
+	char const *s;
 {
-	register int c;
-	register char *s;
+	size_t c = strlen(s);
+	struct __suio uio;
+	struct __siov iov[2];
 
-	for (s = buf; (c = getchar()) != '\n';)
-		if (c == EOF)
-			if (s == buf)
-				return (NULL);
-			else
-				break;
-		else
-			*s++ = c;
-	*s = 0;
-	return (buf);
+	iov[0].iov_base = (void *)s;
+	iov[0].iov_len = c;
+	iov[1].iov_base = "\n";
+	iov[1].iov_len = 1;
+	uio.uio_resid = c + 1;
+	uio.uio_iov = &iov[0];
+	uio.uio_iovcnt = 2;
+	return (__sfvwrite(stdout, &uio) ? EOF : '\n');
 }

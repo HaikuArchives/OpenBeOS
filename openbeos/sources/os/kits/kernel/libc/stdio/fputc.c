@@ -34,26 +34,22 @@
  * SUCH DAMAGE.
  */
 
+#if defined(LIBC_SCCS) && !defined(lint)
+static char rcsid[] = "$OpenBSD: fputc.c,v 1.4 2001/07/09 06:57:44 deraadt Exp $";
+#endif /* LIBC_SCCS and not lint */
+
 #include <stdio.h>
+#include <errno.h>
+#include "local.h"
 
-//__warn_references(gets,
-//    "warning: gets() is very unsafe; consider using fgets()");
-
-char *
-gets(buf)
-	char *buf;
+int
+fputc(c, fp)
+	int c;
+	register FILE *fp;
 {
-	register int c;
-	register char *s;
-
-	for (s = buf; (c = getchar()) != '\n';)
-		if (c == EOF)
-			if (s == buf)
-				return (NULL);
-			else
-				break;
-		else
-			*s++ = c;
-	*s = 0;
-	return (buf);
+	if (cantwrite(fp)) {
+		errno = EBADF;
+		return (EOF);
+	}
+	return (putc(c, fp));
 }

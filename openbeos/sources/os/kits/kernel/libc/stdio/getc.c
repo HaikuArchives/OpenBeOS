@@ -34,14 +34,16 @@
  * SUCH DAMAGE.
  */
 
+#if defined(LIBC_SCCS) && !defined(lint)
+static char rcsid[] = "$OpenBSD: getc.c,v 1.3 1998/11/20 11:18:48 d Exp $";
+#endif /* LIBC_SCCS and not lint */
+
 #include <stdio.h>
 
 /*
  * A subroutine version of the macro getc_unlocked.
  */
 #undef getc_unlocked
-
-int getc_unlocked(FILE *fp);
 
 int
 getc_unlocked(fp)

@@ -34,26 +34,18 @@
  * SUCH DAMAGE.
  */
 
+#if defined(LIBC_SCCS) && !defined(lint)
+static char rcsid[] = "$OpenBSD: rewind.c,v 1.2 1996/08/19 08:33:02 tholo Exp $";
+#endif /* LIBC_SCCS and not lint */
+
+#include <errno.h>
 #include <stdio.h>
 
-//__warn_references(gets,
-//    "warning: gets() is very unsafe; consider using fgets()");
-
-char *
-gets(buf)
-	char *buf;
+void
+rewind(fp)
+	register FILE *fp;
 {
-	register int c;
-	register char *s;
-
-	for (s = buf; (c = getchar()) != '\n';)
-		if (c == EOF)
-			if (s == buf)
-				return (NULL);
-			else
-				break;
-		else
-			*s++ = c;
-	*s = 0;
-	return (buf);
+	(void) fseek(fp, 0L, SEEK_SET);
+	clearerr(fp);
+	errno = 0;      /* not required, but seems reasonable */
 }

@@ -34,10 +34,6 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char rcsid[] = "$OpenBSD: getw.c,v 1.2 1996/08/19 08:32:53 tholo Exp $";
-#endif /* LIBC_SCCS and not lint */
-
 #include <stdio.h>
 
 int

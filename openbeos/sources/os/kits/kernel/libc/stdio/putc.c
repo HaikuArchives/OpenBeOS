@@ -35,25 +35,42 @@
  */
 
 #include <stdio.h>
+#include <errno.h>
+#include "local.h"
 
-//__warn_references(gets,
-//    "warning: gets() is very unsafe; consider using fgets()");
+/*
+ * A subroutine version of the macro putc_unlocked.
+ */
+#undef putc_unlocked
 
-char *
-gets(buf)
-	char *buf;
+int putc_unlocked(int, FILE *);
+
+int
+putc_unlocked(c, fp)
+	int c;
+	register FILE *fp;
 {
-	register int c;
-	register char *s;
+	if (cantwrite(fp)) {
+		errno = EBADF;
+		return (EOF);
+	}
+	return (__sputc(c, fp));
+}
 
-	for (s = buf; (c = getchar()) != '\n';)
-		if (c == EOF)
-			if (s == buf)
-				return (NULL);
-			else
-				break;
-		else
-			*s++ = c;
-	*s = 0;
-	return (buf);
+/*
+ * A subroutine version of the macro putc.
+ */
+#undef putc
+
+int
+putc(c, fp)
+	int c;
+	FILE *fp;
+{
+	int ret;
+
+	flockfile(fp);
+	ret = putc_unlocked(c, fp);
+	funlockfile(fp);
+	return (ret);
 }
