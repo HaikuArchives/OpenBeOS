@@ -44,9 +44,16 @@ public:
 	// command-line arguments passed in.
 	int Run(int argc, char *argv[]);
 	
+	// Verbosity Level enumeration and accessor function
+	enum VerbosityLevel { v0, v1, v2 };
+	VerbosityLevel Verbosity() const;
+
+	// Returns true if verbosity is high enough that individual tests are
+	// allowed to make noise.
+	bool BeVerbose() const { return Verbosity() >= v2; };
+	
 
 protected:
-	enum VerbosityLevel { v0, v1, v2 };
 	
 	VerbosityLevel fVerbosityLevel;
 	std::set<std::string> fTestsToRun;

@@ -20,12 +20,14 @@ CppUnitShell::CppUnitShell(const std::string &description) : fVerbosityLevel(v2)
 fDescription(description) {
 };
 
-void CppUnitShell::AddSuite(const std::string &name, const SuiteFunction suite) {
+void
+CppUnitShell::AddSuite(const std::string &name, const SuiteFunction suite) {
 	if (suite != NULL)
 		fTests[name] = suite;
 }
 
-int CppUnitShell::Run(int argc, char *argv[]) {
+int
+CppUnitShell::Run(int argc, char *argv[]) {
 	// Parse the command line args
 	if (!ProcessArguments(argc, argv))
 		return 0;		
@@ -63,11 +65,18 @@ int CppUnitShell::Run(int argc, char *argv[]) {
 	return 0;
 }
 
-void CppUnitShell::PrintDescription(int argc, char *argv[]) {
+CppUnitShell::VerbosityLevel
+CppUnitShell::Verbosity() const {
+	return fVerbosityLevel;
+} 
+
+void
+CppUnitShell::PrintDescription(int argc, char *argv[]) {
 	cout << endl << fDescription;
 }
 
-void CppUnitShell::PrintHelp() {
+void
+CppUnitShell::PrintHelp() {
 	const char indent[] = "  ";
 	cout << endl;
 	cout << "VALID ARGUMENTS:     " << endl;
@@ -83,7 +92,8 @@ void CppUnitShell::PrintHelp() {
 	
 }
 
-bool CppUnitShell::ProcessArguments(int argc, char *argv[]) {
+bool
+CppUnitShell::ProcessArguments(int argc, char *argv[]) {
 	// If we're given no parameters, the default settings
 	// will do just fine
 	if (argc < 2)
@@ -133,7 +143,8 @@ bool CppUnitShell::ProcessArguments(int argc, char *argv[]) {
 	return true;
 }
 
-void CppUnitShell::InitOutput() {
+void
+CppUnitShell::InitOutput() {
 	// For vebosity level 2, we output info about each test
 	// as we go. This involves a custom CppUnit::TestListener
 	// class.
@@ -145,7 +156,8 @@ void CppUnitShell::InitOutput() {
 	}
 }
 
-void CppUnitShell::PrintResults() {
+void
+CppUnitShell::PrintResults() {
 
 	if (fVerbosityLevel > v0) {
 		// Print out detailed results for verbosity levels > 0
