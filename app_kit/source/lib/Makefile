@@ -123,11 +123,25 @@ APP_VERSION =
 #	/dev/video/usb when loaded. Default is "misc".
 DRIVER_PATH = 
 
+#
+# This Message.h hack is required so that the BMessage class is a friend of the 
+# OpenBeOS::BMessageQueue class.  The method used here is to use the existing
+# Message.h file from the host BeOS installation and modify it slightly to produce
+# one which MessageQueue.cpp can use to make it believe it is a friend (almost
+# Springer-esque).
+#
+
 all:	depend default
+
+application/src/MessageQueue.cpp:	application/headers/Message.h
+
+application/headers/Message.h:
+	awk '/^friend class	BMessageQueue;/{print "friend class	OpenBeOS::BMessageQueue;"} {print}' /boot/develop/headers/be/app/Message.h > application/headers/Message.h
 
 ## include the makefile-engine
 include $(BUILDHOME)/etc/makefile-engine
 
 clean ::	FORCE cleandepend
 	rm -rf $(OBJ_DIR)
+	rm -f application/headers/Message.h
 
