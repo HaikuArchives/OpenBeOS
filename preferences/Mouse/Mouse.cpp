@@ -1,6 +1,6 @@
 /*
 	
-	Keyboard.cpp
+	Mouse.cpp
 	
 */
 
@@ -12,6 +12,12 @@
 #endif
 #ifndef MOUSE_MESSAGES_H
 #include "MouseMessages.h"
+#endif
+#ifndef MOUSE_SETTINGS_H
+#include "MouseSettings.h"
+#endif
+#ifndef MOUSE_WINDOW_H
+#include "MouseWindow.h"
 #endif
 
 int main(int, char**)
@@ -25,7 +31,15 @@ int main(int, char**)
 
 MouseApplication::MouseApplication():BApplication("application/x-vnd.OpenBeOS-MOUS")
 {//MouseApplication::MouseApplication()
-	;
+	//Create the settings object
+	theseSettings = new MouseSettings();
+	
+	// Instantiate a new window using the settings file.
+	aWindow = new MouseWindow(theseSettings);
+			
+	// make window visible
+	aWindow->Show();
+	
 }//MouseApplication::MouseApplication()
 
 void MouseApplication::MessageReceived(BMessage *message)
@@ -47,5 +61,5 @@ void MouseApplication::MessageReceived(BMessage *message)
 
 MouseApplication::~MouseApplication()
 {//MouseApplication::~MouseApplication
-	;
+	delete theseSettings;
 }//MouseApplication::~MouseApplication
