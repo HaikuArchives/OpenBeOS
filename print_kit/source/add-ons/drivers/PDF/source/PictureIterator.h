@@ -35,7 +35,8 @@ THE SOFTWARE.
 #include <AppKit.h>
 #include <InterfaceKit.h>
 
-class PictureIterator {
+class PictureIterator 
+{
 public:
 		virtual ~PictureIterator() { }
 		
