@@ -377,7 +377,11 @@ DocInfoWindow::BuildTable(BMessage *docInfo)
 	float y;
 	float w;
 	float rowHeight;
+#ifndef B_BEOS_VERSION_DANO	
 	char *name;
+#else
+	const char *name;
+#endif		
 	uint32 type;
 	int32 count;
 

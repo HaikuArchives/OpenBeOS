@@ -269,7 +269,11 @@ PDFWriter::InitWriter()
 	bool setTitle = true;
 	bool setCreator = true;
 	if (JobMsg()->FindMessage("doc_info", &doc) == B_OK) {
+#ifndef B_BEOS_VERSION_DANO	
 		char *name;
+#else
+		const char *name;
+#endif		
 		uint32 type;
 		int32 count;
 		for (int32 i = 0; doc.GetInfo(B_STRING_TYPE, i, &name, &type, &count) != B_BAD_INDEX; i++) {

@@ -6,6 +6,14 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+#	determine wheather running on x86 or ppc
+MACHINE=$(shell uname -m)
+ifeq ($(MACHINE), BePC)
+	CPU = x86
+else
+	CPU = ppc
+endif
+
 # specify the name of the binary
 NAME= PDF\ Writer
 
@@ -78,7 +86,7 @@ LIBS= be textencoding translation pdf _APP_
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS=pdflib
+LIBPATHS=lib/$(CPU)
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
