@@ -8,10 +8,11 @@ KERNELDIRS=net_server ethernet icmp ipv4 loop udp route raw tcp
 
 # decides wether to build a kernel or a userland stack
 ifeq ($(USERLAND), true)
+	## CFLAGS = -O0 -fcheck-memory-usage -D_KERNEL_MODE -g -Wall -DUSER -fPIC -DPIC
 	CFLAGS = -O0 -g -Wall -DUSER -fPIC -DPIC
 	LDFLAGS = -nostart
 else
-	CFLAGS = -nostart -no-fpic -D_KERNEL_MODE
+	CFLAGS = -nostart -no-fpic -D_KERNEL_
 	LDFLAGS = -nostdlib /boot/develop/lib/x86/_KERNEL_
 endif
 
@@ -31,7 +32,7 @@ net_srv: net_srv.o
 	$(CC) $(LDFLAGS) -o net_srv /boot/develop/lib/x86/start_dyn.o net_srv.o
 
 subdirs: $(OBJS)
-	@for i in $(SUBDIRS); do \
+	for i in $(SUBDIRS); do \
 		echo "Making $$i module"; \
 		(cd $$i && CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(MAKE)) || exit 1; \
 	done;
