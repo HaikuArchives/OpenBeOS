@@ -99,6 +99,7 @@ struct small_data
 	
 	inline char		*Name();
 	inline uint8	*Data();
+	inline uint32	Size();
 	inline small_data *Next();
 	inline bool		IsLast(bfs_inode *inode);
 };
@@ -235,25 +236,38 @@ inline block_run block_run::Run(int32 group, uint16 start, uint16 length)
 //	#pragma mark -
 
 
-inline char *small_data::Name()
+inline char *
+small_data::Name()
 {
 	return name;
 }
 
-inline uint8 *small_data::Data()
+
+inline uint8 *
+small_data::Data()
 {
 	return (uint8 *)name + name_size + 3;
 }
 
-inline small_data *small_data::Next()
+
+inline uint32 
+small_data::Size()
 {
-	return (small_data *)((uint8 *)(this + 1) + name_size + 3 + data_size + 1);
+	return sizeof(small_data) + name_size + 3 + data_size + 1;
 }
 
-inline bool small_data::IsLast(bfs_inode *inode)
+
+inline small_data *
+small_data::Next()
 {
-	return (uint32)this > (uint32)inode + inode->inode_size - sizeof(small_data)
-		   || type == 0;
+	return (small_data *)((uint8 *)this + Size());
+}
+
+
+inline bool
+small_data::IsLast(bfs_inode *inode)
+{
+	return type == 0 || (uint32)this > (uint32)inode + inode->inode_size - sizeof(small_data);
 }
 
 #endif	/* BFS_H */

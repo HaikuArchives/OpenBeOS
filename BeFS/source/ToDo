@@ -1,4 +1,4 @@
-BFS - ToDo, March 30th, 2002
+BFS - ToDo, March 31th, 2002
 -----
 
 BlockAllocator
@@ -48,6 +48,7 @@ Volume
 
 ... much more stuff for full write capabilities ...
 
+There are also some comments with a leading "ToDo:" directly in the code which may not be mentioned here.
 
 -----
 Axel Dörfler

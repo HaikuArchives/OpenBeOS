@@ -89,6 +89,158 @@ Inode::CheckPermissions(int accessMode) const
 }
 
 
+//	#pragma mark -
+
+
+status_t
+Inode::MakeSpaceForSmallData(const char *name,uint32 length)
+{
+	// ToDo: implement me!
+	return B_ERROR;
+}
+
+
+/**	Removes the given attribute from the small_data section.
+ *	Note that you need to write back the inode yourself after having called
+ *	that method.
+ */
+
+status_t
+Inode::RemoveSmallData(const char *name)
+{
+	small_data *item = Node()->small_data_start;
+	while (!item->IsLast(Node()) || !strcmp(item->Name(),name))
+		item = item->Next();
+
+	if (strcmp(item->Name(),name))
+		return B_ENTRY_NOT_FOUND;
+
+	if (!item->IsLast(Node())) {
+		// find the last attribute
+		small_data *last = item;
+		while (!last->IsLast(Node()))
+			last = last->Next();
+
+		small_data *next = item->Next();
+		memmove(item,next,(uint8 *)last - (uint8 *)next + last->Size());
+		// move the "last" one to its new location
+		last = (small_data *)((uint8 *)last - ((uint8 *)next - (uint8 *)item));
+
+		// correctly terminate the small_data section if needed
+		if (!last->IsLast(Node())) {
+			last = last->Next();
+			memset(last,0,sizeof(small_data));
+		}
+	} else
+		memset(item,0,item->Size());
+
+	return B_OK;
+}
+
+
+/**	Try to place the given attribute in the small_data section - if the
+ *	new attribute is too big to fit in that section, it returns B_DEVICE_FULL.
+ *	In that case, the attribute should be written to a real attribute file;
+ *	if the attribute was already part of the small_data section, but the new
+ *	one wouldn't fit, the old one is automatically removed from the small_data
+ *	section.
+ *	Note that you need to write back the inode yourself after having called that
+ *	method - it's a bad API decision that it doesn't enforce you to have a
+ *	transaction and write back the inode automatically, but it's more efficient
+ *	in most cases...
+ */
+
+status_t
+Inode::AddSmallData(const char *name,uint32 type,const uint8 *data,uint32 length,bool force)
+{
+	if (name == NULL || data == NULL || type == 0)
+		return B_BAD_VALUE;
+
+	// reject any requests that can't fit into the small_data section
+	uint32 nameLength = strlen(name);
+	uint32 spaceNeeded = sizeof(small_data) + nameLength + 3 + length + 1;
+	if (spaceNeeded > fVolume->InodeSize() - sizeof(bfs_inode))
+		return B_DEVICE_FULL;
+
+	small_data *item = Node()->small_data_start;
+	while (!item->IsLast(Node()) || !strcmp(item->Name(),name))
+		item = item->Next();
+
+	// is the attribute already in the small_data section?
+	// then just replace the data part of that one
+	if (!strcmp(item->Name(),name)) {
+		// find last attribute
+		small_data *last = item;
+		while (!last->IsLast(Node()))
+			last = last->Next();
+
+		// try to change the attributes value
+		if (item->data_size > length
+			|| force
+			|| ((uint8 *)last + length - item->data_size) < ((uint8 *)Node() + fVolume->InodeSize())) {
+			// make room for the new attribute if needed (and we are forced to do so)
+			if (force
+				&& ((uint8 *)last + length - item->data_size) < ((uint8 *)Node() + fVolume->InodeSize())) {
+				// ToDo: we're lazy here and requesting the full difference between
+				// the old size and the new size - we could also take the free bytes
+				// at the end of the section into account...
+				if (MakeSpaceForSmallData(name,length - item->data_size) < B_OK)
+					return B_ERROR;
+			}
+
+			// move the attributes after the current one
+			if (!item->IsLast(Node())) {
+				small_data *next = item->Next();
+				memmove((uint8 *)item + spaceNeeded,next,(uint8 *)last - (uint8 *)next + last->Size());
+			}
+			memcpy(item->Data(),data,length);
+			item->Data()[length] = '\0';
+			item->type = type;
+
+			return B_OK;
+		}
+
+		// could not replace the old attribute, so remove it!
+		if (RemoveSmallData(name) < B_OK)
+			return B_ERROR;
+
+		return B_DEVICE_FULL;
+	}
+
+	// try to add the new attribute!
+
+	if (item->type != 0 || (uint8 *)item + spaceNeeded > (uint8 *)Node() + fVolume->InodeSize()) {
+		// there is not enough space for it!
+		if (!force)
+			return B_DEVICE_FULL;
+
+		// make room for the new attribute
+		if (MakeSpaceForSmallData(name,spaceNeeded) < B_OK)
+			return B_ERROR;
+
+		// get new last item!
+		item = Node()->small_data_start;
+		while (!item->IsLast(Node()))
+			item = item->Next();
+	}
+
+	memset(item,0,spaceNeeded);
+	item->type = type;
+	item->name_size = nameLength;
+	item->data_size = length;
+	strcpy(item->Name(),name);
+	memcpy(item->Data(),data,length);
+
+	// correctly terminate the small_data section
+	if (!item->IsLast(Node())) {
+		item = item->Next();
+		memset(item,0,sizeof(small_data));
+	}
+
+	return B_OK;
+}
+
+
 /**	Iterates through the small_data section of an inode.
  *	To start at the beginning of this section, you let smallData
  *	point to NULL, like:
@@ -96,7 +248,8 @@ Inode::CheckPermissions(int accessMode) const
  *		while (inode->GetNextSmallData(&data) { ... }
  *
  *	This function is reentrant and don't allocate any memory;
- *	you can safely stop calling it at any point.
+ *	you can safely stop calling it at any point (you don't need
+ *	to iterate through the whole list).
  */
 
 status_t
@@ -145,6 +298,27 @@ Inode::Name() const
 	}
 	return NULL;
 }
+
+
+/**	Changes or set the name of a file: in the inode small_data section only, it
+ *	doesn't change it in the parent directory's b+tree.
+ *	Note that you need to write back the inode yourself after having called
+ *	that method.
+ */
+
+status_t 
+Inode::SetName(const char *name)
+{
+	if (name == NULL || *name == '\0')
+		return B_BAD_VALUE;
+
+	const char nameTag[2] = {FILE_NAME_NAME, 0};
+
+	return AddSmallData(nameTag,FILE_NAME_TYPE,(uint8 *)name,strlen(name),true);
+}
+
+
+//	#pragma mark -
 
 
 Inode *
