@@ -3,7 +3,7 @@
  
 #include <stdio.h>
 
-#include "mbuf.h"
+#include "net_misc.h"
 #include "netinet/in_systm.h"
 #include "netinet/ip.h"
 #include "netinet/ip_icmp.h"
@@ -12,14 +12,15 @@
 #include "sys/socket.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
+#include "netinet/icmp_var.h"
 
 #include "raw/raw_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
 
-#define m_freem             core->m_freem
 static struct core_module_info *core = NULL;
 static struct raw_module_info *raw = NULL;
 #define ICMP_MODULE_PATH	"network/protocol/icmp"
@@ -52,14 +53,25 @@ static void dump_icmp(struct mbuf *buf)
 }
 #endif
 
-int icmp_input(struct mbuf *buf, int hdrlen)
+void icmp_input(struct mbuf *buf, int hdrlen)
 {
 	struct ip *ip = mtod(buf, struct ip *);	
 	struct icmp *ic;
 	int icl = ip->ip_len;
+	int i;
 	struct route rt;
 	struct in_addr tmp;
 
+	if (icl < ICMP_MINLEN) {
+		icmpstat.icps_tooshort++;
+		goto freeit;
+	}
+	i = hdrlen + min(icl, ICMP_ADVLENMIN);
+	if (buf->m_len < i && (buf = m_pullup(buf, i)) == NULL) {
+		icmpstat.icps_tooshort++;
+		return;
+	}
+	ip = mtod(buf, struct ip*);		
 	ic = (struct icmp*)((caddr_t)ip + hdrlen);
 	rt.ro_rt = NULL;
 
@@ -70,7 +82,7 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 	if (in_cksum(buf, icl, hdrlen) != 0) {
 		printf("icmp_input: checksum failed!\n");
 		m_freem(buf);
-		return 0;
+		return;
 	}	
 
 	switch (ic->icmp_type) {
@@ -84,7 +96,8 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 			ip->ip_dst = tmp;
 			ip->ip_len += hdrlen;
 			
-			return proto[IPPROTO_IP]->pr_output(buf, NULL, NULL, 0, NULL);
+			proto[IPPROTO_IP]->pr_output(buf, NULL, NULL, 0, NULL);
+			return;
 			break;
 		}
 		case ICMP_ECHOREPLY:
@@ -93,12 +106,13 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 			break;
 	}
 
+raw:
 	if (raw)
-		raw->input(buf, 0);
+		return raw->input(buf, 0);
 
-	return 0;
+freeit:
 	m_freem(buf);
-	return 0;
+	return;
 }
 
 static void icmp_init(void)
@@ -106,10 +120,8 @@ static void icmp_init(void)
 	memset(&icmprt, 0, sizeof(icmprt));
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
-#ifndef _KERNEL_MODE
 	add_protosw(proto, NET_LAYER2);
-#else
-	core->add_protosw(proto, NET_LAYER2);
+#ifdef _KERNEL_MODE
 	if (!raw)
 		get_module(RAW_MODULE_PATH, (module_info**)&raw);
 
