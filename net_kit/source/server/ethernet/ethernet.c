@@ -150,7 +150,8 @@ static void attach_device(int devid, char *driver, char *devno)
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_hdrlen = 14;
 	ifp->if_addrlen = 6;
-
+	ifp->if_flags |= IFF_BROADCAST;
+	
 	ifp->rx_thread = -1;
 	ifp->tx_thread = -1;
 
@@ -323,7 +324,6 @@ int ether_input(struct mbuf *m)
 	}
 
 	m_freem(m);
-
 	return 0;	
 }
 
@@ -454,7 +454,7 @@ int arpresolve(struct arpcom *ac, struct rtentry *rt, struct mbuf *m,
 {
 	struct llinfo_arp *la;	
 	struct sockaddr_dl *sdl;
-	
+
 	if (m->m_flags & M_BCAST) {
 		memcpy(desten, &ether_bcast, sizeof(ether_bcast));
 		return 1;
@@ -481,8 +481,11 @@ int arpresolve(struct arpcom *ac, struct rtentry *rt, struct mbuf *m,
 		memcpy(desten, LLADDR(sdl), sdl->sdl_alen);
 		return 1;
 	}
-	if (la->la_hold)
+	if (la->la_hold) {
+		printf("arpresolve - freeing la->la_hold\n");
 		m_freem(la->la_hold);
+	}
+
 	la->la_hold = m;
 	
 	if (rt->rt_expire) {
@@ -665,7 +668,7 @@ static void arpinput(struct mbuf *m)
 	int op;
 	struct sockaddr_dl *sdl;
 	struct sockaddr sa;
-	
+
 #if ARP_DEBUG
 	dump_arp(arp);
 #endif
@@ -688,7 +691,7 @@ static void arpinput(struct mbuf *m)
 		}
 	if (!maybe_ia)
 		goto out;
-	
+
 	myaddr = ia ? ia->ia_addr.sin_addr : maybe_ia->ia_addr.sin_addr;
 
 	if (!memcmp(ac->ac_enaddr, ea->arp_sha, sizeof(ea->arp_sha)))
@@ -723,10 +726,9 @@ static void arpinput(struct mbuf *m)
 reply:
 	if (op != ARPOP_REQUEST) {
 out:
-		m_freem(m);
 		return;
 	}
-	
+
 	if (itaddr.s_addr == myaddr.s_addr) {
 		memcpy(ea->arp_tha, ea->arp_sha, sizeof(ea->arp_sha));
 		memcpy(ea->arp_sha, ac->ac_enaddr, sizeof(ea->arp_sha));
@@ -749,6 +751,7 @@ out:
 	eh->ether_type = ETHERTYPE_ARP;
 	sa.sa_family = AF_UNSPEC;
 	sa.sa_len = sizeof(sa);
+	
 	(*ac->ac_if.output)(&ac->ac_if, m, &sa, NULL);
 	return;
 }
