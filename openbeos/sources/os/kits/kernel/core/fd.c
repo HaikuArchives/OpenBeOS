@@ -106,7 +106,7 @@ ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
 
-	dprintf("user_read: fd %d\n", fd);
+//	dprintf("user_read: fd %d\n", fd);
 	
 	if(!f)
 		return EBADF;
@@ -124,7 +124,7 @@ ssize_t user_write(int fd, const void *buf, off_t pos, ssize_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
 
-	dprintf("user_write: fd %d\n", fd);
+//	dprintf("user_write: fd %d\n", fd);
 	
 	if(!f)
 		return EBADF;
@@ -175,7 +175,7 @@ ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
 
-	dprintf("user_read: fd %d\n", fd);
+//	dprintf("sys_read: fd %d\n", fd);
 	
 	if(!f)
 		return EBADF;
@@ -193,7 +193,7 @@ ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
 
-	dprintf("sys_write: fd %d\n", fd);
+//	dprintf("sys_write: fd %d\n", fd);
 	
 	if(!f)
 		return EBADF;
