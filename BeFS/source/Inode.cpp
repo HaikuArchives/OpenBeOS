@@ -81,6 +81,10 @@ Inode::Inode(Volume *volume,vnode_id id,bool empty,uint8 reenter)
 	fLock("bfs inode")
 {
 	Node()->flags &= INODE_PERMANENT_FLAGS;
+
+	// these two will help to maintain the indices
+	fOldSize = Size();
+	fOldLastModified = Node()->last_modified_time;
 }
 
 
@@ -115,7 +119,7 @@ Inode::InitCheck()
 		RETURN_ERROR(B_BAD_DATA);
 	}
 	
-	// Add some tests to check the integrity of the other stuff here,
+	// ToDo: Add some tests to check the integrity of the other stuff here,
 	// especially for the data_stream!
 
 	// it's more important to know that the inode is corrupt
@@ -633,7 +637,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 				return B_OK;
 			}
 		}
-		PRINT(("FindBlockRun() failed in direct range: size = %Ld, pos = %Ld\n",data->size,pos));
+		//PRINT(("FindBlockRun() failed in direct range: size = %Ld, pos = %Ld\n",data->size,pos));
 		return B_ENTRY_NOT_FOUND;
 	}
 	return B_OK;
@@ -1232,9 +1236,11 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 		// If removing from the index fails, it is not regarded as a
 		// fatal error and will not be reported back!
 		// Deleted inodes won't be visible in queries anyway.
-
-	// ToDo: update other indices (the attributes will
-	// be removed in the bfs_remove_vnode() function)
+	
+	if ((inode->Mode() & (S_FILE | S_SYMLINK)) != 0) {
+		index.RemoveSize(transaction,inode);
+		index.RemoveLastModified(transaction,inode);
+	}
 
 	return B_OK;
 }
@@ -1336,13 +1342,20 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 		}
 	}
 
-	// update the indices (name, size & last_modified)
+	// update the main indices (name, size & last_modified)
 	Index index(volume);
 	status = index.InsertName(transaction,name,inode->ID());
 	if (status < B_OK && status != B_BAD_INDEX)
 		return status;
 
-	// ToDo: update other indices - only if it's a regular file or symlink!
+	inode->UpdateOldLastModified();
+
+	// The "size" & "last_modified" indices don't contain directories
+	if ((mode & (S_FILE | S_SYMLINK)) != 0) {
+		// if adding to these indices fails, the inode creation will not be harmed
+		index.InsertSize(transaction,inode);
+		index.InsertLastModified(transaction,inode);
+	}
 
 	if ((status = inode->WriteBack(transaction)) < B_OK)
 		return status;

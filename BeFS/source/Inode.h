@@ -169,6 +169,12 @@ class Inode : public CachedBlock {
 		status_t Remove(Transaction *transaction,const char *name, bool isDirectory = false);
 		static status_t Create(Transaction *transaction,Inode *parent,const char *name,int32 mode,int omode,uint32 type,off_t *id = NULL);
 
+		// index maintaining helper
+		void UpdateOldSize() { fOldSize = Size(); }
+		void UpdateOldLastModified() { fOldLastModified = Node()->last_modified_time; }
+		off_t OldSize() { return fOldSize; }
+		off_t OldLastModified() { return fOldLastModified; }
+
 	private:
 		status_t FreeStreamArray(Transaction *transaction, block_run *array, uint32 arrayLength, off_t size, off_t &offset, off_t &max);
 		status_t GrowStream(Transaction *transaction,off_t size);
@@ -177,6 +183,8 @@ class Inode : public CachedBlock {
 		BPlusTree		*fTree;
 		Inode			*fAttributes;
 		ReadWriteLock	fLock;
+		off_t			fOldSize;			// we need those values to ensure we will remove
+		off_t			fOldLastModified;	// the correct keys from the indices
 };
 
 

@@ -66,6 +66,7 @@ struct bplustree_node {
 	void Initialize();
 	uint8 CountDuplicates(off_t offset,bool isFragment) const;
 	off_t DuplicateAt(off_t offset,bool isFragment,int8 index) const;
+	int32 FragmentsUsed(uint32 nodeSize);
 	inline duplicate_array *FragmentAt(int8 index);
 	inline duplicate_array *DuplicateArray();
 
@@ -87,8 +88,9 @@ struct duplicate_array {
 	off_t	value_count;
 	off_t	values[0];
 	
+	int32 Find(off_t value);
 	void Insert(off_t value);
-	void Remove(off_t value);
+	bool Remove(off_t value);
 };
 
 //**************************************
@@ -205,7 +207,7 @@ class BPlusTree {
 		void		InsertKey(bplustree_node *node, uint16 index, uint8 *key, uint16 keyLength, off_t value);
 		status_t	SplitNode(bplustree_node *node, off_t nodeOffset, bplustree_node *other, off_t otherOffset, uint16 *_keyIndex, uint8 *key, uint16 *_keyLength, off_t *_value);
 
-		status_t	RemoveDuplicate(bplustree_node *node, uint16 keyIndex, off_t value);
+		status_t	RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedNode *cached,uint16 keyIndex, off_t value);
 		void		RemoveKey(bplustree_node *node, uint16 index);
 
 	private:

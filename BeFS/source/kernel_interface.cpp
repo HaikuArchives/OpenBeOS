@@ -744,6 +744,8 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
+	// ToDo: do we have to check here if someone tries to open a directory?
+
 	status_t status = inode->CheckPermissions(oModeToAccess(omode));
 	if (status < B_OK)
 		RETURN_ERROR(status);
@@ -849,7 +851,9 @@ bfs_close(void *_ns, void *_node, void * /*cookie*/)
 	if (status < B_OK)
 		FATAL(("Could not trim preallocated blocks!"));
 
-	// ToDo: update indices (size & co.)
+	Index index(volume);
+	index.UpdateSize(&transaction,inode);
+	index.UpdateLastModified(&transaction,inode);
 
 	if (status == B_OK)
 		transaction.Done();

@@ -26,9 +26,19 @@ class Index {
 		uint32 Type();
 		size_t KeySize();
 
+		status_t Update(Transaction *transaction, const char *name, int32 type, const uint8 *oldKey, uint16 oldLength, const uint8 *newKey, uint16 newLength, off_t id);
+
 		status_t InsertName(Transaction *transaction,const char *name,off_t id);
 		status_t RemoveName(Transaction *transaction,const char *name,off_t id);
 		status_t UpdateName(Transaction *transaction,const char *oldName,const char *newName,off_t id);
+
+		status_t InsertSize(Transaction *transaction, Inode *inode);
+		status_t RemoveSize(Transaction *transaction, Inode *inode);
+		status_t UpdateSize(Transaction *transaction, Inode *inode);
+
+		status_t InsertLastModified(Transaction *transaction, Inode *inode);
+		status_t RemoveLastModified(Transaction *transaction, Inode *inode);
+		status_t UpdateLastModified(Transaction *transaction, Inode *inode,off_t modified = -1);
 
 	private:
 		Volume		*fVolume;
