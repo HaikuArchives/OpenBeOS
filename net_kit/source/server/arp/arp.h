@@ -64,7 +64,7 @@ typedef struct arp_q_entry	arp_q_entry;
 struct arp_q_entry {
 	arp_q_entry *next;
 	struct mbuf *buf;
-	struct sockaddr *tgt;
+	struct sockaddr tgt;
 	int attempts;
 	bigtime_t lasttx;
 	int status;

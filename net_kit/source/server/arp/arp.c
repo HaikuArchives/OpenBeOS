@@ -39,6 +39,8 @@ static int arp_maxtries = 5;    /* max tries before a pause */
 static int32 arp_inuse = 0;	/* how many entries do we have? */
 static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 
+static net_timer_id arpq_timer;
+
 #if SHOW_DEBUG
 void walk_arp_cache(void)
 {
@@ -110,7 +112,7 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 		/* ??? should we update the timer here ?? */
 		return 0;
 	}
-	ace = (arp_cache_entry *)pool_get(arpp);
+	ace = (arp_cache_entry *)malloc(sizeof(arp_cache_entry));//pool_get(arpp);
 	ace->ip_addr.sa_family = af;
  	ace->ip_addr.sa_len = alen;
 	memcpy(&ace->ip_addr.sa_data, addr, alen);
@@ -189,7 +191,7 @@ int arp_input(struct mbuf *buf)
 					acquire_sem(arpq_lock);
 					aqe = arp_lookup_q;
 					while (aqe && aqe->status == ARP_WAITING) {
-						if (memcmp(aqe->tgt->sa_data, &arp->sender_ip, 4) == 0) {
+						if (memcmp(&aqe->tgt.sa_data, &arp->sender_ip, 4) == 0) {
 							/* woohoo - it's a match! */
 							res.sa_family = AF_LINK;
 							res.sa_len = 6;
@@ -221,10 +223,10 @@ static void arp_send_request(arp_q_entry *aqe)
 	ether_arp *arp;
 	struct sockaddr ether;
 
-	if (!aqe->tgt || !aqe->buf->m_pkthdr.rcvif)
+	if (!aqe->buf->m_pkthdr.rcvif)
 		return;
 
-	if (aqe->tgt->sa_family != AF_INET) {
+	if (aqe->tgt.sa_family != AF_INET) {
 		m_freem(buf);
 		return;
 	}
@@ -238,7 +240,7 @@ static void arp_send_request(arp_q_entry *aqe)
 	arp->arp_psz = 4;
 	arp->arp_op = htons(ARP_RQST);
 	arp->sender_ip = *paddr(aqe->buf->m_pkthdr.rcvif, AF_INET, ipv4_addr*);
-	arp->target_ip = *(ipv4_addr*)&aqe->tgt->sa_data;
+	arp->target_ip = *(ipv4_addr*)&aqe->tgt.sa_data;
 
 	/* we send to the broadcast address, ff:ff:ff:ff:ff:ff */
 	memset(&ether.sa_data, 0xff, 6);
@@ -289,7 +291,7 @@ static void arp_cleanse(void *data)
 			/* remove from hash table */
 			nhash_set(arphash, &temp->ip_addr.sa_data, 
 				temp->ip_addr.sa_len, NULL);
-			pool_put(arpp, ace);
+			free(ace);//pool_put(arpp, ace);
 			atomic_add(&arp_inuse, -1);
 			continue;
 		}
@@ -328,7 +330,7 @@ static void arpq_run(void *data)
 		if (aqe->lasttx < real_time_clock_usecs() - arp_noflood * USECS_PER_SEC) {
 			if (aqe->attempts++ > arp_maxtries) {
 				/* No! we've run out of tries. */
-				aqe->callback(ARP_LOOKUP_FAILED, aqe->buf, aqe->tgt);
+				aqe->callback(ARP_LOOKUP_FAILED, aqe->buf, &aqe->tgt);
 				temp = aqe;
 				aqe = aqe->next;
 				if (temp == arp_lookup_q)
@@ -339,15 +341,18 @@ static void arpq_run(void *data)
 			/* yes, send another request */
 			arp_send_request(aqe);
 		}
-
 		aqe = aqe->next;
 
 	}
+
+	if (!arp_lookup_q)
+		net_remove_timer(arpq_timer);
+
 	release_sem(arpq_lock);
 
-//#if SHOW_DEBUG
-	printf("ARP: lookup queue was run.\n");
-//#endif
+#if SHOW_DEBUG
+	printf("ARP: lookup queue was run (%d).\n", arpq_timer);
+#endif
 }
 
 int arp_init(loaded_net_module *ln, int *pt)
@@ -373,13 +378,6 @@ int arp_init(loaded_net_module *ln, int *pt)
 	/* now, start the cleanser... */
 	net_add_timer(&arp_cleanse, NULL, arp_prune * USECS_PER_SEC);
 
-/* XXX - would we be better to onyl add this when we have a q and remove it when
- *       the q was completed? It'd impose less overhead for sure...
- */
-
-	/* now add the arp_q run function... */
-	net_add_timer(&arpq_run, NULL, arp_noflood * USECS_PER_SEC);
-
 	return 0;
 }
 
@@ -396,28 +394,32 @@ int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 		memcpy(tgt, &ace->ll_addr, sizeof(struct sockaddr));
 		return ARP_LOOKUP_OK;
 	}
-
 	/* ok, we didn't get one! */
 	acquire_sem(arpq_lock);
 	aqe = arp_lookup_q;
 	while (aqe) {
-		if (compare_sockaddr(aqe->tgt, tgt))
+		if (compare_sockaddr(&aqe->tgt, tgt))
 			break;
 		aqe = aqe->next;
 	}
+
 	if (!aqe) {
 		aqe = malloc(sizeof(struct arp_q_entry));
 		aqe->buf = buf;
-		aqe->tgt = tgt;
+		memcpy(&aqe->tgt, tgt, sizeof(struct sockaddr));
 		aqe->callback = callback;
 
-		aqe->attempts = 1;
 		if (arp_lookup_q)
 			aqe->next = arp_lookup_q;
+		else
+			aqe->next = NULL;
+
 		arp_lookup_q = aqe;
 		arp_send_request(aqe);
 	}
 	release_sem(arpq_lock);
+
+	arpq_timer = net_add_timer(&arpq_run, NULL, arp_noflood * USECS_PER_SEC);
 
 	return ARP_LOOKUP_QUEUED;
 }
