@@ -12,4 +12,7 @@ KernelObjects
 	<$(SOURCE_GRIST)>read.c 
 	<$(SOURCE_GRIST)>sleep.c 
 	<$(SOURCE_GRIST)>usleep.c 
-	<$(SOURCE_GRIST)>write.c ;
+	<$(SOURCE_GRIST)>write.c
+	:
+	-fPIC -DPIC
+	;
