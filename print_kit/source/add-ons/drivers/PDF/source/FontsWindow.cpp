@@ -114,8 +114,8 @@ FontsWindow::FontsWindow(Fonts *fonts)
  			B_NOT_ZOOMABLE)
 {
 	// ---- Ok, build a default page setup user interface
-	BRect		r;
-	BBox		*panel;
+	BRect		r, r1;
+	BView		*panel;
 	BButton		*button;
 	float		x, y, w, h;
 	BString 	setting_value;
@@ -131,19 +131,20 @@ FontsWindow::FontsWindow(Fonts *fonts)
 	tab = new BTab();
 	
 	// add a *dialog* background
-	r.InsetBy(5, 5); r.bottom -= tabView->TabHeight();
-	
-	panel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
-					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
-					B_PLAIN_BORDER);
 
+	r.bottom -= tabView->TabHeight();
+	panel = new BView(r, "embedding_panel", B_FOLLOW_ALL, 
+					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP);
+	panel->	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+
+	r1 = r; r1.OffsetTo(0, 0);
 	// add font list
 #if USE_CLV
 	fList = new BColumnListView(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
 		"fonts_list", B_FOLLOW_ALL, B_WILL_DRAW | B_NAVIGABLE_JUMP);
 	panel->AddChild(fList);
 #else
-	fList = new BListView(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
+	fList = new BListView(BRect(r1.left+5, r1.top+5, r1.right-5-B_V_SCROLL_BAR_WIDTH, r1.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
 		"fonts_list", B_MULTIPLE_SELECTION_LIST);
 	panel->AddChild(new BScrollView("scroll_list", fList, 
 		B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true));
@@ -152,12 +153,12 @@ FontsWindow::FontsWindow(Fonts *fonts)
 	FillFontList();
 
 	// add a "Embed" button, and make it default
-	button 	= new BButton(r, NULL, "Embed", new BMessage(EMBED_MSG), 
+	button 	= new BButton(r1, NULL, "Embed", new BMessage(EMBED_MSG), 
 		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
 	button->ResizeToPreferred();
 	button->GetPreferredSize(&w, &h);
-	x = r.right - w - 8;
-	y = r.bottom - h - 8;
+	x = r1.right - w - 8;
+	y = r1.bottom - h - 8;
 	button->MoveTo(x, y);
 	button->SetEnabled(false);
 	panel->AddChild(button);
@@ -175,7 +176,7 @@ FontsWindow::FontsWindow(Fonts *fonts)
 	fSubstButton = button;
 
 	// add a separator line...
-	BBox * line = new BBox(BRect(r.left, y - 9, r.right, y - 8), NULL,
+	BBox * line = new BBox(BRect(r1.left, y - 9, r1.right, y - 8), NULL,
 		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM );
 	panel->AddChild(line);
 
@@ -186,12 +187,12 @@ FontsWindow::FontsWindow(Fonts *fonts)
 	tab = new BTab();
 
 	// add a *dialog* background
-	panel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
-					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
-					B_PLAIN_BORDER);
+	panel = new BView(r, "cjk_panel", B_FOLLOW_ALL, 
+					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP);
+	panel->	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 
 	BListView* list = 
-		new DragListView(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
+		new DragListView(BRect(r1.left+5, r1.top+5, r1.right-5-B_V_SCROLL_BAR_WIDTH, r1.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
 		"cjk", B_MULTIPLE_SELECTION_LIST);
 	panel->AddChild(new BScrollView("cjk_scroll_list", list, 
 		B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true));
@@ -208,8 +209,8 @@ FontsWindow::FontsWindow(Fonts *fonts)
 		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
 	button->ResizeToPreferred();
 	button->GetPreferredSize(&w, &h);
-	x = r.right - w - 8;
-	y = r.bottom - h - 8;
+	x = r1.right - w - 8;
+	y = r1.bottom - h - 8;
 	button->MoveTo(x, y);
 	button->SetEnabled(false);
 	panel->AddChild(button);
@@ -249,7 +250,7 @@ FontsWindow::FontsWindow(Fonts *fonts)
 	fUpButton = button;
 
 	// add a separator line...
-	line = new BBox(BRect(r.left, y - 9, r.right, y - 8), NULL,
+	line = new BBox(BRect(r1.left, y - 9, r1.right, y - 8), NULL,
 		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM );
 	panel->AddChild(line);
 
