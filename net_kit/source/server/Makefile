@@ -7,7 +7,7 @@ SUBDIRS=util net_server ipv4 udp ethernet arp
 CFLAGS=-O0 -g -Wall -fPIC -DPIC
 INCLUDES=-I. -I./include
 
-all: test_nhash subdirs
+all: subdirs
 
 test: 
 	@test_mbuf
@@ -15,9 +15,6 @@ test:
 
 test_mbuf: $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o test_mbuf $(OBJS) test_mbuf.c
-
-test_nhash: $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o test_nhash $(OBJS) test_nhash.c
 
 subdirs: $(OBJS)
 	@if test -e _APP_; then rm _APP_; fi
