@@ -3,10 +3,12 @@
 SubDir TOP source lib ;
 
 Library $(TOP)/source/lib/libstorage :
+DataIO.cpp
 Directory.cpp
 Entry.cpp
 EntryList.cpp
 Error.cpp
+File.cpp
 Node.cpp
 #NodeInfo.cpp
 Path.cpp
