@@ -82,9 +82,10 @@ private:
 	virtual void _ReservedDirectory5();
 	virtual void _ReservedDirectory6();
 
-// fDirFd is unused
-//	uint32 _reservedData[7];
-	uint32 _reservedData[8];
+	uint32 _reservedData[7];
+
+private:
+	StorageKit::FileDescriptor fDirFd;
 
 private:
 	virtual void close_fd();

@@ -4,6 +4,8 @@
 //
 //  File Name: Directory.cpp
 //---------------------------------------------------------------------
+#include <string.h>
+
 #include <Directory.h>
 #include <Entry.h>
 #include <File.h>
@@ -20,7 +22,8 @@ namespace OpenBeOS {
 //! Creates an uninitialized BDirectory object.
 BDirectory::BDirectory()
 		  : BNode(),
-			BEntryList()
+			BEntryList(),
+			fDirFd(StorageKit::NullFd)
 {
 }
 
@@ -30,7 +33,8 @@ BDirectory::BDirectory()
 */
 BDirectory::BDirectory(const BDirectory &dir)
 		  : BNode(),
-			BEntryList()
+			BEntryList(),
+			fDirFd(StorageKit::NullFd)
 {
 	*this = dir;
 }
@@ -42,7 +46,8 @@ BDirectory::BDirectory(const BDirectory &dir)
 */
 BDirectory::BDirectory(const entry_ref *ref)
 		  : BNode(),
-			BEntryList()
+			BEntryList(),
+			fDirFd(StorageKit::NullFd)
 {
 	SetTo(ref);
 }
@@ -54,7 +59,8 @@ BDirectory::BDirectory(const entry_ref *ref)
 */
 BDirectory::BDirectory(const node_ref *nref)
 		  : BNode(),
-			BEntryList()
+			BEntryList(),
+			fDirFd(StorageKit::NullFd)
 {
 	SetTo(nref);
 }
@@ -66,7 +72,8 @@ BDirectory::BDirectory(const node_ref *nref)
 */
 BDirectory::BDirectory(const BEntry *entry)
 		  : BNode(),
-			BEntryList()
+			BEntryList(),
+			fDirFd(StorageKit::NullFd)
 {
 	SetTo(entry);
 }
@@ -78,7 +85,8 @@ BDirectory::BDirectory(const BEntry *entry)
 */
 BDirectory::BDirectory(const char *path)
 		  : BNode(),
-			BEntryList()
+			BEntryList(),
+			fDirFd(StorageKit::NullFd)
 {
 	SetTo(path);
 }
@@ -92,7 +100,8 @@ BDirectory::BDirectory(const char *path)
 */
 BDirectory::BDirectory(const BDirectory *dir, const char *path)
 		  : BNode(),
-			BEntryList()
+			BEntryList(),
+			fDirFd(StorageKit::NullFd)
 {
 	SetTo(dir, path);
 }
@@ -226,14 +235,29 @@ BDirectory::SetTo(const char *path)
 {
 	Unset();	
 	status_t result = (path ? B_OK : B_BAD_VALUE);
-	StorageKit::FileDescriptor newFd = -1;
 	if (result == B_OK)
-		result = StorageKit::open_dir(path, newFd);
-	// set the new file descriptor
+		result = StorageKit::open_dir(path, fDirFd);
 	if (result == B_OK) {
-		result = set_fd(newFd);
-		if (result != B_OK)
-			StorageKit::close_dir(newFd);
+/*
+		// NOTE: We have to take care that BNode doesn't stick to a
+		// symbolic link. open_dir() does always traverse those.
+		char traversedPath[B_PATH_NAME_LENGTH + 1];
+		result = StorageKit::dir_to_path(fDirFd, traversedPath,
+										 sizeof(traversedPath));
+		if (result == B_OK)
+			result = BNode::SetTo(traversedPath);
+*/
+		StorageKit::FileDescriptor fd = StorageKit::NullFd;
+		result = StorageKit::open(path, O_RDWR, fd);
+		if (result == B_OK) {
+			result == set_fd(fd);
+			if (result != B_OK)
+				StorageKit::close(fd);
+		}
+		if (result != B_OK) {
+			StorageKit::close_dir(fDirFd);
+			fDirFd = StorageKit::NullFd;
+		}
 	}
 	// finally set the BNode status
 	set_status(result);
@@ -304,7 +328,7 @@ BDirectory::GetEntry(BEntry *entry) const
 	}
 	entry_ref ref;
 	if (error == B_OK)
-		error = StorageKit::dir_to_self_entry_ref(get_fd(), &ref);
+		error = StorageKit::dir_to_self_entry_ref(fDirFd, &ref);
 	if (error == B_OK)
 		error = entry->SetTo(&ref);
 	return error;
@@ -478,7 +502,7 @@ BDirectory::Contains(const BEntry *entry, int32 nodeFlags) const
 	if (result && InitCheck() == B_OK) {
 		char dirPath[B_PATH_NAME_LENGTH];
 		char entryPath[B_PATH_NAME_LENGTH];
-		result = (StorageKit::dir_to_path(get_fd(), dirPath,
+		result = (StorageKit::dir_to_path(fDirFd, dirPath,
 										  B_PATH_NAME_LENGTH) == B_OK);
 		entry_ref ref;
 		if (result)
@@ -597,7 +621,7 @@ BDirectory::GetNextRef(entry_ref *ref)
 		StorageKit::LongDirEntry entry;
 		bool next = true;
 		while (error == B_OK && next) {
-			if (StorageKit::read_dir(get_fd(), &entry, sizeof(entry), 1) != 1)
+			if (StorageKit::read_dir(fDirFd, &entry, sizeof(entry), 1) != 1)
 				error = B_ENTRY_NOT_FOUND;
 			if (error == B_OK) {
 				next = (!strcmp(entry.d_name, ".")
@@ -639,7 +663,7 @@ BDirectory::GetNextDirents(dirent *buf, size_t bufSize, int32 count)
 	if (result == B_OK && InitCheck() != B_OK)
 		result = B_FILE_ERROR;
 	if (result == B_OK)
-		result = StorageKit::read_dir(get_fd(), buf, bufSize, count);
+		result = StorageKit::read_dir(fDirFd, buf, bufSize, count);
 	return result;
 }
 
@@ -662,7 +686,7 @@ BDirectory::Rewind()
 	if (error == B_OK && InitCheck() != B_OK)
 		error = B_FILE_ERROR;
 	if (error == B_OK)
-		error = StorageKit::rewind_dir(get_fd());
+		error = StorageKit::rewind_dir(fDirFd);
 	return error;
 }
 
@@ -689,7 +713,7 @@ BDirectory::CountEntries()
 	if (error == B_OK) {
 		StorageKit::LongDirEntry entry;
 		while (error == B_OK) {
-			if (StorageKit::read_dir(get_fd(), &entry, sizeof(entry), 1) != 1)
+			if (StorageKit::read_dir(fDirFd, &entry, sizeof(entry), 1) != 1)
 				error = B_ENTRY_NOT_FOUND;
 			if (error == B_OK
 				&& strcmp(entry.d_name, ".") && strcmp(entry.d_name, ".."))
@@ -848,16 +872,14 @@ BDirectory::operator=(const BDirectory &dir)
 	if (&dir != this) {	// no need to assign us to ourselves
 		Unset();
 		if (dir.InitCheck() == B_OK) {
-			// duplicate the file descriptor
-			StorageKit::FileDescriptor fd = -1;
-			status_t status = StorageKit::dup_dir(dir.get_fd(), fd);
-			// set it
-			if (status == B_OK) {
-				status = set_fd(fd);
+			*((BNode*)this) = dir;
+			if (InitCheck() == B_OK) {
+				// duplicate the file descriptor
+				status_t status = StorageKit::dup_dir(dir.fDirFd, fDirFd);
 				if (status != B_OK)
-					StorageKit::close(fd);
+					Unset();
+				set_status(status);
 			}
-			set_status(status);
 		}
 	}
 	return *this;
@@ -876,12 +898,9 @@ void BDirectory::_ReservedDirectory6() {}
 void
 BDirectory::close_fd()
 {
-	StorageKit::FileDescriptor fd = get_fd();
-	if (fd != StorageKit::NullFd) {
-		StorageKit::close_dir(fd);
-		// Set the BNode's fFd directly -- otherwise BNode::close_fd()
-		// would try to close() it.
-		fFd = StorageKit::NullFd;
+	if (fDirFd != StorageKit::NullFd) {
+		StorageKit::close_dir(fDirFd);
+		fDirFd = StorageKit::NullFd;
 	}
 	BNode::close_fd();
 }
@@ -897,13 +916,14 @@ BDirectory::set_fd(StorageKit::FileDescriptor fd)
 }
 
 //! Returns the BDirectory's file descriptor.
-/*! To be used instead of accessing the BNode's private \c fFd member directly.
+/*!	To be used instead of accessing the BDirectory's private \c fDirFd member
+	directly.
 	\return the file descriptor, or -1, if not properly initialized.
 */
 StorageKit::FileDescriptor
 BDirectory::get_fd() const
 {
-	return fFd;
+	return fDirFd;
 }
 
 //! Sets the BNode's status.
