@@ -98,7 +98,11 @@ INSTALL_DIR=/boot/home/config/add-ons/kernel/file_systems
 include /boot/develop/etc/makefile-engine
 
 install::
-	cp obj.x86/$(NAME) $(INSTALL_DIR)
+	sync
+
+## Add this to the install target of your local copy if you don't use the
+## latest makefile-engine:
+#	cp obj.x86/$(NAME) $(INSTALL_DIR)
 
 tar zip backup:
 	zip -y $(NAME)-`date +%Y-%m-%d`.zip *.[ch]* makefile *.rsrc test/*.[ch]* test/makefile
