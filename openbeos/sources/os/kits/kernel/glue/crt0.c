@@ -5,6 +5,7 @@
 
 #include <user_runtime.h>
 #include <syscalls.h>
+#include <string.h>
 
 extern int __stdio_init(void);
 extern int __stdio_deinit(void);
@@ -19,15 +20,24 @@ extern int main(int argc,char **argv);
 int _start(struct uspace_prog_args_t *);
 void _call_ctors(void);
 
+static char empty[1];
+char *__progname = empty;
+
 int _start(struct uspace_prog_args_t *uspa)
 {
-//	int i;
 	int retcode;
+	register char *ap;
 	_call_ctors();
 
 	__stdio_init();
 
-
+	if ((ap = uspa->argv[0])) {
+		if ((__progname = strrchr(ap, '/')) == NULL)
+			__progname = ap;
+		else
+			++__progname;
+	}
+	
 	retcode = main(uspa->argc, uspa->argv);
 
 	__stdio_deinit();
