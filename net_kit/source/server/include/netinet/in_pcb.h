@@ -19,7 +19,7 @@ enum {
 	INP_RECVRETOPTS = 0x04,
 	INP_RECVDSTADDR	= 0x08	/* receive IP destination as control inf. */
 };
-#define INP_CONTROLOPT (INP_RECVOPTS | INP_RECVRETOPTS | INP_RECVSTADDR)
+#define INP_CONTROLOPT (INP_RECVOPTS | INP_RECVRETOPTS | INP_RECVDSTADDR)
 
 /* Constants for in_pcblookup */
 enum {
