@@ -1,14 +1,19 @@
 //------------------------------------------------------------------------------
-//	BHandlerTester.h
+//	LockLooperWithTimeoutTest.h
 //
 //------------------------------------------------------------------------------
 
-#ifndef BHANDLERTESTER_H
-#define BHANDLERTESTER_H
+#ifndef LOCKLOOPERWITHTIMEOUTTEST_H
+#define LOCKLOOPERWITHTIMEOUTTEST_H
 
 // Standard Includes -----------------------------------------------------------
 
 // System Includes -------------------------------------------------------------
+#if defined(SYSTEM_TEST)
+#include <be/app/Handler.h>
+#else
+#include "../../../../lib/application/headers/Handler.h"
+#endif
 
 // Project Includes ------------------------------------------------------------
 
@@ -19,41 +24,20 @@
 
 // Globals ---------------------------------------------------------------------
 
-class TBHandlerTester : public TestCase
+class TLockLooperWithTimeoutTest : public TestCase
 {
 	public:
-		TBHandlerTester(std::string name) : TestCase(name) {;}
+		TLockLooperWithTimeoutTest(std::string name) : TestCase(name) {;}
 
-		void BHandler1();
-		void BHandler2();
-		void BHandler3();
-		void BHandler4();
-		void BHandler5();
-
-		void Archive1();
-		void Archive2();
-		void Archive3();
-		void Archive4();
-
-		void Instantiate1();
-		void Instantiate2();
-		void Instantiate3();
-
-		void SetName1();
-		void SetName2();
-
-		void Perform1();
-
-		void FilterList1();
-
-		void UnlockLooper1();
-		void UnlockLooper2();
-		void UnlockLooper3();
+		void LockLooperWithTimeout1();
+		void LockLooperWithTimeout2();
+		void LockLooperWithTimeout3();
+		void LockLooperWithTimeout4();
 
 		static Test* Suite();
 };
 
-#endif	//BHANDLERTESTER_H
+#endif	//LOCKLOOPERWITHTIMEOUTTEST_H
 
 /*
  * $Log $

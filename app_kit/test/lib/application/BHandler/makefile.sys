@@ -30,7 +30,19 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= main.cpp BHandlerTester.cpp
+SRCS=	main.cpp						\
+		BHandlerTester.cpp				\
+		IsWatchedTest.cpp				\
+		LooperTest.cpp					\
+		SetNextHandlerTest.cpp			\
+		NextHandlerTest.cpp				\
+		AddFilterTest.cpp				\
+		RemoveFilterTest.cpp			\
+		SetFilterListTest.cpp			\
+		LockLooperTest.cpp				\
+		LockLooperTestCommon.cpp		\
+		LockLooperWithTimeoutTest.cpp	\
+		UnlockLooperTest.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

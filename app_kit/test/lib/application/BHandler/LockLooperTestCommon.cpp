@@ -1,59 +1,39 @@
 //------------------------------------------------------------------------------
-//	BHandlerTester.h
+//	LockLooperTestCommon.cpp
 //
 //------------------------------------------------------------------------------
-
-#ifndef BHANDLERTESTER_H
-#define BHANDLERTESTER_H
 
 // Standard Includes -----------------------------------------------------------
 
 // System Includes -------------------------------------------------------------
+#include <be/app/Looper.h>
 
 // Project Includes ------------------------------------------------------------
 
 // Local Includes --------------------------------------------------------------
-#include "common.h"
+#include "LockLooperTestCommon.h"
 
 // Local Defines ---------------------------------------------------------------
 
 // Globals ---------------------------------------------------------------------
 
-class TBHandlerTester : public TestCase
+//------------------------------------------------------------------------------
+int32 LockLooperThreadFunc(void* data)
 {
-	public:
-		TBHandlerTester(std::string name) : TestCase(name) {;}
+	TLockLooperInfo* info = (TLockLooperInfo*)data;
 
-		void BHandler1();
-		void BHandler2();
-		void BHandler3();
-		void BHandler4();
-		void BHandler5();
+	// Forces the test to encounter a pre-locked looper
+	info->LockLooper();
 
-		void Archive1();
-		void Archive2();
-		void Archive3();
-		void Archive4();
+	// Let the test proceed (finding the locked looper)
+	info->UnlockTest();
 
-		void Instantiate1();
-		void Instantiate2();
-		void Instantiate3();
+	// Wait until the thread is dead
+	info->LockThread();
 
-		void SetName1();
-		void SetName2();
-
-		void Perform1();
-
-		void FilterList1();
-
-		void UnlockLooper1();
-		void UnlockLooper2();
-		void UnlockLooper3();
-
-		static Test* Suite();
-};
-
-#endif	//BHANDLERTESTER_H
+	return 0;
+}
+//------------------------------------------------------------------------------
 
 /*
  * $Log $

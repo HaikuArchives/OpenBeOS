@@ -1,14 +1,19 @@
 //------------------------------------------------------------------------------
-//	BHandlerTester.h
+//	SetNextHandlerTest.h
 //
 //------------------------------------------------------------------------------
 
-#ifndef BHANDLERTESTER_H
-#define BHANDLERTESTER_H
+#ifndef SETNEXTHANDLERTEST_H
+#define SETNEXTHANDLERTEST_H
 
 // Standard Includes -----------------------------------------------------------
 
 // System Includes -------------------------------------------------------------
+#if defined(SYSTEM_TEST)
+#include <be/app/Handler.h>
+#else
+#include "../../../../lib/application/headers/Handler.h"
+#endif
 
 // Project Includes ------------------------------------------------------------
 
@@ -19,41 +24,30 @@
 
 // Globals ---------------------------------------------------------------------
 
-class TBHandlerTester : public TestCase
+class TSetNextHandlerTest : public TestCase
 {
 	public:
-		TBHandlerTester(std::string name) : TestCase(name) {;}
+		TSetNextHandlerTest(std::string name) : TestCase(name) {;}
 
-		void BHandler1();
-		void BHandler2();
-		void BHandler3();
-		void BHandler4();
-		void BHandler5();
-
-		void Archive1();
-		void Archive2();
-		void Archive3();
-		void Archive4();
-
-		void Instantiate1();
-		void Instantiate2();
-		void Instantiate3();
-
-		void SetName1();
-		void SetName2();
-
-		void Perform1();
-
-		void FilterList1();
-
-		void UnlockLooper1();
-		void UnlockLooper2();
-		void UnlockLooper3();
+		void SetNextHandler0();
+		void SetNextHandler1();
+		void SetNextHandler2();
+		void SetNextHandler3();
+		void SetNextHandler4();
+		void SetNextHandler5();
+		void SetNextHandler6();
+		void SetNextHandler7();
+		void SetNextHandler8();
+		void SetNextHandler9();
+		void SetNextHandler10();
+		void SetNextHandler11();
 
 		static Test* Suite();
+
+	private:
 };
 
-#endif	//BHANDLERTESTER_H
+#endif	//SETNEXTHANDLERTEST_H
 
 /*
  * $Log $

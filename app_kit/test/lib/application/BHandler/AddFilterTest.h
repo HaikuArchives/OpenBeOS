@@ -1,14 +1,19 @@
 //------------------------------------------------------------------------------
-//	BHandlerTester.h
+//	AddFilterTest.h
 //
 //------------------------------------------------------------------------------
 
-#ifndef BHANDLERTESTER_H
-#define BHANDLERTESTER_H
+#ifndef ADDFILTERTEST_H
+#define ADDFILTERTEST_H
 
 // Standard Includes -----------------------------------------------------------
 
 // System Includes -------------------------------------------------------------
+#if defined(SYSTEM_TEST)
+#include <be/app/Handler.h>
+#else
+#include "../../../../lib/application/headers/Handler.h"
+#endif
 
 // Project Includes ------------------------------------------------------------
 
@@ -19,41 +24,20 @@
 
 // Globals ---------------------------------------------------------------------
 
-class TBHandlerTester : public TestCase
+class TAddFilterTest : public TestCase
 {
 	public:
-		TBHandlerTester(std::string name) : TestCase(name) {;}
+		TAddFilterTest(std::string name) : TestCase(name) {;}
 
-		void BHandler1();
-		void BHandler2();
-		void BHandler3();
-		void BHandler4();
-		void BHandler5();
-
-		void Archive1();
-		void Archive2();
-		void Archive3();
-		void Archive4();
-
-		void Instantiate1();
-		void Instantiate2();
-		void Instantiate3();
-
-		void SetName1();
-		void SetName2();
-
-		void Perform1();
-
-		void FilterList1();
-
-		void UnlockLooper1();
-		void UnlockLooper2();
-		void UnlockLooper3();
+		void AddFilter1();
+		void AddFilter2();
+		void AddFilter3();
+		void AddFilter4();
 
 		static Test* Suite();
 };
 
-#endif	//BHANDLERTESTER_H
+#endif	//ADDFILTERTEST_H
 
 /*
  * $Log $
