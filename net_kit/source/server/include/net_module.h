@@ -15,6 +15,10 @@
 #ifndef OBOS_NET_MODULE_H
 #define OBOS_NET_MODULE_H
 
+#ifdef _KERNEL_MODE
+#include <module.h>
+#endif
+
 typedef struct loaded_net_module 	loaded_net_module;
 
 /* each net_module MUST define eaxctaly ONE of these, completely 
@@ -38,12 +42,24 @@ typedef struct net_module {
 			    struct mbuf*);
 } net_module;
 
+#ifndef _KERNEL_MODE
 struct loaded_net_module {
 	struct loaded_net_module *next;
         struct net_module *mod;
         image_id iid;
         int32 ref_count;
 };
+
+#else
+
+struct loaded_net_module {
+	struct loaded_net_module *next;
+	struct net_module *mod;
+	module_info *ptr;
+	char *path;
+};
+
+#endif /* _KERNEL_MODE */
 
 enum {
 	NET_LAYER1	= 1, /* link layer */
