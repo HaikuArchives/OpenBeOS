@@ -9,6 +9,8 @@
 #include <OS.h>
 
 class ServerWindow;
+class UpdateNode;
+class DisplayDriver;
 
 class Layer
 {
@@ -48,8 +50,10 @@ public:
 	BRect ConvertFromParent(BRect rect);
 	BPoint ConvertFromParent(BPoint point);
 	BRegion ConvertFromParent(BRegion *reg);
+	BRegion ConvertToTop(BRegion *reg);
 	BRect ConvertToTop(BRect rect);
 	BPoint ConvertToTop(BPoint point);
+	BRegion ConvertFromTop(BRegion *reg);
 	BRect ConvertFromTop(BRect rect);
 	BPoint ConvertFromTop(BPoint point);
 
@@ -94,10 +98,11 @@ private:
 	rgb_color bgcolor;
 	thread_id updater_id;
 	bool visible;
+	DisplayDriver *driver;
 };
 
 extern BLocker *layerlock;
-extern BLocker *dirtylock;
 extern BList *layerlist;
 extern Layer *rootlayer;
+extern UpdateNode *updatenode;
 #endif

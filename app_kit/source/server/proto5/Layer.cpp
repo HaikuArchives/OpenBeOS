@@ -6,15 +6,17 @@
 #include "Layer.h"
 #include "ServerWindow.h"
 #include "Desktop.h"
+#include "PortLink.h"
 #include "DisplayDriver.h"
+#include "UpdateNode.h"
 #include <iostream.h>
+#include <Debug.h>
 #include <string.h>
 #include <stdio.h>
+#include <OS.h>
 
-//#define DEBUG_LAYERS
-
-// Global used for thread control
-BLocker *dirtylock;
+#define DEBUG_LAYERS
+UpdateNode *updatenode;
 
 Layer::Layer(BRect rect, const char *layername, ServerWindow *srvwin,
 	int32 viewflags, int32 token)
@@ -318,51 +320,74 @@ Layer *Layer::FindLayer(int32 token)
 	return NULL;
 }
 
+// Tested
 void Layer::Invalidate(BRegion region)
 {
+	int32 i;
+	BRect r;
+
 	// See if the region intersects with our current area
-	if(region.Intersects(frame))
+	if(region.Intersects(Bounds()) && hidecount==0)
 	{
-		is_dirty=true;
-
-		if(!invalid)
-			invalid=new BRegion();
-
-		// We need to clip all the rectangles in the region to the frame.
-		int32 i;
-		BRect r;
-		
-		for(i=0;i<region.CountRects();i++)
+		BRegion clippedreg(region);
+		clippedreg.IntersectWith(visible);
+		if(clippedreg.CountRects()>0)
 		{
-			r=region.RectAt(i);
-			if(frame.Intersects(r))
-				invalid->Include(r & frame);
-		}
-#ifdef DEBUG_REDRAW
-printf("Invalidate: "); invalid->PrintToStream();
-#endif
+			is_dirty=true;
+			if(invalid)
+				invalid->Include(&clippedreg);
+			else
+				invalid=new BRegion(clippedreg);
+			updatenode->PostInvalidLayer(this);
+		}		
 	}
 	
+	BRegion *reg;
 	for(Layer *lay=topchild;lay!=NULL; lay=lay->lowersibling)
-		lay->Invalidate(region);
+	{
+		if(lay->hidecount==0)
+		{	
+			reg=new BRegion(lay->ConvertFromParent(&region));
+	
+			for(i=0;i<reg->CountRects();i++)
+			{
+				r=reg->RectAt(i);
+				if(frame.Intersects(r))
+					lay->Invalidate(r);
+			}
+	
+			delete reg;
+		}
+	}
 }
 
+// Tested
 void Layer::Invalidate(BRect rect)
 {
 	// Make our own section dirty and pass it on to any children, if necessary....
 	// YES, WE ARE SHARING DIRT! Mudpies anyone? :D
 
-	if(Bounds().Contains(rect))
+	if(Bounds().Intersects(rect))
 	{
-		is_dirty=true;
-		if(invalid)
-			invalid->Include(rect);
-		else
-			invalid=new BRegion(rect);
-	
+		
+		// Clip the rectangle to the visible region of the layer
+		if(visible->Intersects(rect))
+		{
+			BRegion reg(rect);
+			reg.IntersectWith(visible);
+			if(reg.CountRects()>0)
+			{
+				is_dirty=true;
+				if(invalid)
+					invalid->Include(&reg);
+				else
+					invalid=new BRegion(reg);
+				updatenode->PostInvalidLayer(this);
+			}
+		}
 	}	
 	for(Layer *lay=topchild;lay!=NULL; lay=lay->lowersibling)
-		lay->Invalidate(ConvertFromParent(rect));
+		lay->Invalidate(lay->ConvertFromParent(rect));
 }
 
 void Layer::RequestDraw(void)
@@ -429,11 +454,12 @@ void Layer::HideLayer(void)
 		child->HideLayer();
 }
 
+// Tested
 uint32 Layer::CountChildren(void)
 {
 	uint32 i=0;
 	Layer *lay=topchild;
-	while(topchild!=NULL)
+	while(lay!=NULL)
 	{
 		lay=lay->lowersibling;
 		i++;
@@ -448,19 +474,15 @@ void Layer::MoveBy(float x, float y)
 
 	if(parent)
 	{
-		if(!invalid)
+		if(parent->invalid==NULL)
 			parent->invalid=new BRegion(oldframe);
 		else
 			parent->invalid->Include(oldframe);
 	}
 
-	// Don't do this -- visible region is now relative to its layer
-//	if(visible)
-//		visible->OffsetBy(x,y);
-
-	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
-		lay->MoveBy(x,y);
-	Invalidate(frame);
+//	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+//		lay->MoveBy(x,y);
+	Invalidate(Bounds());
 }
 
 void Layer::PrintToStream(void)
@@ -504,11 +526,13 @@ void Layer::PrintToStream(void)
 	printf("Is updating = %s\n",(is_updating)?"yes":"no");
 }
 
+// Tested
 BRect Layer::ConvertToParent(BRect rect)
 {
 	return (rect.OffsetByCopy(frame.LeftTop()));
 }
 
+// Tested
 BPoint Layer::ConvertToParent(BPoint point)
 {
 	float x=point.x + frame.left,
@@ -516,6 +540,7 @@ BPoint Layer::ConvertToParent(BPoint point)
 	return (BPoint(x,y));
 }
 
+// Tested
 BRegion Layer::ConvertToParent(BRegion *reg)
 {
 	BRegion newreg;
@@ -524,16 +549,19 @@ BRegion Layer::ConvertToParent(BRegion *reg)
 	return BRegion(newreg);
 }
 
+// Tested
 BRect Layer::ConvertFromParent(BRect rect)
 {
 	return (rect.OffsetByCopy(frame.left*-1,frame.top*-1));
 }
 
+// Tested
 BPoint Layer::ConvertFromParent(BPoint point)
 {
 	return ( point-frame.LeftTop());
 }
 
+// Tested
 BRegion Layer::ConvertFromParent(BRegion *reg)
 {
 	BRegion newreg;
@@ -542,6 +570,16 @@ BRegion Layer::ConvertFromParent(BRegion *reg)
 	return BRegion(newreg);
 }
 
+// Tested
+BRegion Layer::ConvertToTop(BRegion *reg)
+{
+	BRegion newreg;
+	for(int32 i=0; i<reg->CountRects();i++)
+		newreg.Include(ConvertToTop(reg->RectAt(i)));
+	return BRegion(newreg);
+}
+
+// Tested
 BRect Layer::ConvertToTop(BRect rect)
 {
 	if (parent!=NULL)
@@ -550,6 +588,7 @@ BRect Layer::ConvertToTop(BRect rect)
 		return(rect);
 }
 
+// Tested
 BPoint Layer::ConvertToTop(BPoint point)
 {
 	if (parent!=NULL)
@@ -558,19 +597,30 @@ BPoint Layer::ConvertToTop(BPoint point)
 		return(point);
 }
 
+// Tested
+BRegion Layer::ConvertFromTop(BRegion *reg)
+{
+	BRegion newreg;
+	for(int32 i=0; i<reg->CountRects();i++)
+		newreg.Include(ConvertFromTop(reg->RectAt(i)));
+	return BRegion(newreg);
+}
+
+// Tested
 BRect Layer::ConvertFromTop(BRect rect)
 {
 	if (parent!=NULL)
-		return(parent->ConvertToTop(rect.OffsetByCopy(frame.LeftTop().x*-1,
+		return(parent->ConvertFromTop(rect.OffsetByCopy(frame.LeftTop().x*-1,
 			frame.LeftTop().y*-1)) );
 	else
 		return(rect);
 }
 
+// Tested
 BPoint Layer::ConvertFromTop(BPoint point)
 {
 	if (parent!=NULL)
-		return(parent->ConvertToTop(point - frame.LeftTop()) );
+		return(parent->ConvertFromTop(point - frame.LeftTop()) );
 	else
 		return(point);
 }
@@ -586,7 +636,7 @@ RootLayer::RootLayer(BRect rect, const char *layername)
 	: Layer(rect,layername)
 {
 	updater_id=-1;
-	
+	driver=get_gfxdriver();
 }
 
 RootLayer::~RootLayer(void)
@@ -639,19 +689,32 @@ int32 RootLayer::UpdaterThread(void *data)
 
 void RootLayer::RequestDraw(void)
 {
-/*	if(!invalid)
+	if(!invalid)
 		return;
 	
-	DisplayDriver *driver=get_gfxdriver();
+	ASSERT(driver!=NULL);
+
+#ifdef DEBUG_LAYERS
+printf("Root::RequestDraw: invalid rects: %ld\n",invalid->CountRects());
+#endif
+
+#ifdef DEBUG_LAYERS
+printf("Root::RequestDraw:FillRect, color %u,%u,%u,%u\n",bgcolor.red,bgcolor.green,
+	bgcolor.blue,bgcolor.alpha);
+#endif
 	for(int32 i=0; invalid->CountRects();i++)
 	{
-		driver->FillRect(invalid->RectAt(i),bgcolor);
+		if(invalid->RectAt(i).IsValid())
+			driver->FillRect(invalid->RectAt(i),bgcolor);
+		else
+			break;
 	}
+
 	delete invalid;
 	invalid=NULL;
 	is_dirty=false;
 	
-	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+/*	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
 	{
 		if(lay->IsDirty())
 			lay->RequestDraw();

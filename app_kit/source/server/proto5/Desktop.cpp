@@ -18,6 +18,7 @@
 #include "SecondDriver.h"
 #include "Desktop.h"
 #include "WindowBorder.h"
+#include "UpdateNode.h"
 
 class ServerWindow;
 class ServerBitmap;
@@ -42,6 +43,7 @@ DisplayDriver *gfxdriver;
 int32 token_count=-1;
 BLocker *workspacelock;
 BLocker *layerlock;
+UpdateNode *upnode;
 //----------------------------------------------------
 
 
@@ -52,6 +54,8 @@ public:
 	Workspace(void);
 	Workspace(BPath imagepath);
 	~Workspace();
+	void SetBGColor(rgb_color col);
+	rgb_color SetBGColor(void);
 	thread_id tid;
 	
 	RootLayer *toplayer;
@@ -98,6 +102,17 @@ Workspace::~Workspace(void)
 	workspace_count--;
 	toplayer->PruneTree();
 }
+
+void Workspace::SetBGColor(rgb_color col)
+{
+	bgcolor=col;
+	toplayer->SetColor(col);
+}
+
+rgb_color Workspace::SetBGColor(void)
+{
+	return bgcolor;
+}
 //---------------------------------------------------
 
 
@@ -125,7 +140,7 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 #endif
 	
 	desktop=new BList(0);
-	
+
 	// Create the workspaces we're supposed to have
 	for(int8 i=0; i<workspaces; i++)
 	{
@@ -140,7 +155,11 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	Workspace *wksp=(Workspace*)desktop->ItemAt(1);
 	if(wksp!=NULL)	// in case I forgot something
 	{
-		set_rgb_color(&(wksp->bgcolor),0,200,236);
+		rgb_color bcol;
+		set_rgb_color(&bcol,0,200,236);
+		
+//		set_rgb_color(&(wksp->bgcolor),0,200,236);
+		wksp->SetBGColor(bcol);
 		screen_info *tempsd=&(wksp->screendata);
 		tempsd->mode=B_CMAP8;
 		tempsd->spaces=B_8_BIT_800x600;
@@ -160,7 +179,10 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	gfxdriver->SetCursor(startup_cursor);
 
 	pactive_workspace->toplayer->SetVisible(true);
-
+	upnode=new UpdateNode();
+	updatenode=upnode;
+//	if(upnode->InitCheck()==B_OK)
+//		upnode->Monitor(pactive_workspace->toplayer);
 #ifdef DEBUG_WORKSPACES
 printf("Desktop initialized\n");
 #endif
@@ -182,6 +204,7 @@ void shutdown_desktop(void)
 	delete gfxdriver;
 	delete workspacelock;
 	delete layerlock;
+	delete upnode;
 	delete startup_cursor;
 }
 

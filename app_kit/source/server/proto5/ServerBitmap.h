@@ -20,6 +20,7 @@ public:
 	uint8 *Buffer(void);
 	void SetArea(area_id ID);
 	area_id Area(void);
+	uint32 BitsLength(void);
 
 	int32 width,height;
 	int32 bytesperline;

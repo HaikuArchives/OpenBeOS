@@ -124,6 +124,11 @@ uint8 *ServerBitmap::Buffer(void)
 	return buffer;
 }
 
+uint32 ServerBitmap::BitsLength(void)
+{
+	return (uint32)(bytesperline*height);
+}
+
 void ServerBitmap::HandleSpace(color_space space, int32 BytesPerLine)
 {
 	// Function written to handle color space setup which is required

@@ -213,6 +213,10 @@ void DisplayDriver::StrokeLine(BPoint point, uint8 *pattern)
 {
 }
 
+void DisplayDriver::StrokeLine(BPoint pt1, BPoint pt2, rgb_color col)
+{
+}
+
 void DisplayDriver::StrokePolygon(int *x, int *y, int numpoints, bool is_closed)
 {
 }

@@ -221,8 +221,6 @@ printf("%s::Loop()\n",title->String());
 		
 		if(buffersize>0)
 		{
-			// buffers are PortLink messages. Allocate necessary buffer and
-			// we'll cast it as a BMessage.
 			msgbuffer=new int8[buffersize];
 			bytesread=read_port(receiver,&msgcode,msgbuffer,buffersize);
 		}

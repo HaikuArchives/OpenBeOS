@@ -3,7 +3,7 @@
 #include <View.h>
 #include "BeDecorator.h"
 
-#define DEBUG_DECOR
+//#define DEBUG_DECOR
 
 #ifdef DEBUG_DECOR
 #include <stdio.h>
@@ -207,6 +207,9 @@ printf("BeDecorator()::Draw():"); update.PrintToStream();
 	DrawTab();
 
 	// Draw the top view's client area - just a hack :)
+#ifdef DEBUG_DECOR
+printf("BeDecor::Draw:FillRect\n");
+#endif
 	driver->FillRect(borderrect,blue);
 	
 	DrawFrame();
@@ -217,10 +220,16 @@ void BeDecorator::DrawZoom(BRect r)
 {
 	if(zoomstate)
 	{
+#ifdef DEBUG_DECOR
+printf("BeDecor::DrawZoom:FillRect\n");
+#endif
 		driver->FillRect(r,black);
 	}	
 	else
 	{
+#ifdef DEBUG_DECOR
+printf("BeDecor::DrawZoom:FillRect\n");
+#endif
 		driver->FillRect(r,gray);
 		driver->StrokeRect(r,black);
 	}
@@ -230,12 +239,18 @@ void BeDecorator::DrawClose(BRect r)
 {
 	if(closestate)
 	{
+#ifdef DEBUG_DECOR
+printf("BeDecor::DrawClose:FillRect\n");
+#endif
 		driver->FillRect(r,gray);
 		driver->StrokeRect(r,black);
 		driver->FillRect(r.InsetByCopy(2,2),black);
 	}
 	else
 	{
+#ifdef DEBUG_DECOR
+printf("BeDecor::DrawClose:FillRect\n");
+#endif
 		driver->FillRect(r,gray);
 		driver->StrokeRect(r,black);
 		driver->StrokeRect(r.InsetByCopy(2,2),black);
@@ -250,6 +265,9 @@ void BeDecorator::Draw(void)
 	DrawTab();
 
 	// Draw the top view's client area - just a hack :)
+#ifdef DEBUG_DECOR
+printf("BeDecor::Draw:FillRect\n");
+#endif
 	driver->FillRect(borderrect,blue);
 	
 	DrawFrame();
@@ -257,6 +275,9 @@ void BeDecorator::Draw(void)
 
 void BeDecorator::DrawTab(void)
 {
+#ifdef DEBUG_DECOR
+printf("BeDecor::DrawTab:FillRect\n");
+#endif
 	if(focused)
 		driver->FillRect(tabrect,yellow);
 	else
@@ -271,6 +292,9 @@ void BeDecorator::DrawFrame(void)
 	// Draw the resize thumb if we're supposed to
 	if(!(flags & B_NOT_RESIZABLE))
 	{
+#ifdef DEBUG_DECOR
+printf("BeDecor::DrawFrame:FillRect\n");
+#endif
 		driver->FillRect(resizerect,gray);
 		driver->StrokeRect(resizerect,black);
 	}

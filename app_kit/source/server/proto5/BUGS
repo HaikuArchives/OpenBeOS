@@ -1,6 +1,4 @@
-Redraw code needs work.
-
-Server needs to set a cursor at startup
+It seems that when any attempt to update the screen is made, the screen quickly freezes and BeOS hangs. Stack overflow?
 
 Get a General OS Error followed by a segfault only when an application is started and the server is running under the debugger.
 

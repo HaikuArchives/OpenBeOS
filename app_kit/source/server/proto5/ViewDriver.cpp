@@ -16,10 +16,10 @@
 		VDView - doesn't do all that much except display the rendered bitmap
 */
 
-//#define DEBUG_DRIVER_MODULE
+#define DEBUG_DRIVER_MODULE
 //#define DEBUG_SERVER_EMU
 
-#define DISABLE_SERVER_EMU
+//#define DISABLE_SERVER_EMU
 
 #include <stdio.h>
 #include <iostream.h>
@@ -308,7 +308,12 @@ void VDWindow::MessageReceived(BMessage *msg)
 			view->drawview->SetDrawingMode(B_OP_COPY);
 			view->viewbmp->RemoveChild(view->drawview);
 			view->viewbmp->Unlock();
-
+#ifdef DEBUG_DRIVER_MODULE
+printf("ViewDriver::DrawString: ");
+printf("String: %s\n",string);
+printf("Length: %d\n",length);
+printf("Point: "); point.PrintToStream();
+#endif
 			// Until I can figure out a better way, if I even bother...
 			view->Invalidate();
 		}
@@ -324,7 +329,7 @@ void VDWindow::MessageReceived(BMessage *msg)
 			msg->FindFloat("angle",&angle);
 			msg->FindFloat("span",&span);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -353,7 +358,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("angle",&angle);
 			msg->FindFloat("span",&span);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -379,7 +384,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("p3",&(points[2]));
 			msg->FindPoint("p4",&(points[3]));
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -409,7 +414,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("p3",&(points[2]));
 			msg->FindPoint("p4",&(points[3]));
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -440,7 +445,7 @@ printf("pattern: {%llx}\n",temp64);
 			{
 				// Pattern will not exist if we are using the internal
 				// API which specifies a color and a rectangle
-				rgb_color highcolor=view->HighColor();
+				rgb_color highcolor=view->drawview->HighColor();
 				rgb_color rectcolor;
 				msg->FindInt8("red",(int8*)&(rectcolor.red));
 				msg->FindInt8("green",(int8*)&(rectcolor.green));
@@ -485,7 +490,7 @@ printf("pattern: {%llxd}\n",temp64);
 			{
 				// Pattern will not exist if we are using the internal
 				// API which specifies a color and a rectangle
-				rgb_color highcolor=view->HighColor();
+				rgb_color highcolor=view->drawview->HighColor();
 				rgb_color rectcolor;
 				msg->FindInt8("red",(int8*)&(rectcolor.red));
 				msg->FindInt8("green",(int8*)&(rectcolor.green));
@@ -529,7 +534,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("rx",&rx);
 			msg->FindFloat("ry",&ry);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -555,7 +560,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("rx",&rx);
 			msg->FindFloat("ry",&ry);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -581,7 +586,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("x",&x);
 			msg->FindFloat("y",&y);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -606,7 +611,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("x",&x);
 			msg->FindFloat("y",&y);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -631,7 +636,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("third",&pt3);
 			msg->FindRect("rect",&invalid);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -660,7 +665,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("third",&pt3);
 			msg->FindRect("rect",&invalid);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -688,7 +693,7 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("from",&pt);
 			msg->FindPoint("to",&pt2);
 			if(msg->FindInt64("pattern",&temp64)!=B_OK)
-				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
+				temp64=*((int64*)&B_SOLID_HIGH);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -1300,7 +1305,8 @@ void ViewDriver::SetCursor(int32 value)
 
 void ViewDriver::SetCursor(ServerCursor *cursor)
 {
-	// We are given a ServerCursor. Fire it off to the view driver's window for translation
+	// We are given a ServerCursor, but the data is really a ServerBitmap.
+	// Copy it and fire it off to the view driver's window for translation
 	locker->Lock();
 	BMessage *msg=new BMessage(VDWIN_SETCURSOR);
 	msg->AddPointer("SCursor",cursor);

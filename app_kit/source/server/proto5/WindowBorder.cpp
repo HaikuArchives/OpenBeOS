@@ -40,9 +40,6 @@ printf("~WindowBorder()\n");
 
 void WindowBorder::MouseDown(BPoint pt, uint32 buttons)
 {
-#ifdef DEBUG_WINBORDER
-printf("WindowBorder()::MouseDown\n");
-#endif
 	mbuttons=buttons;
 	click_type click=decor->Clicked(pt, mbuttons);
 
@@ -153,15 +150,16 @@ void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 		float dx=pt.x-mousepos.x,
 			dy=pt.y-mousepos.y;
 		
-		decor->MoveBy(BPoint(dx, dy));
-		MoveBy(dx,dy);
 		clientframe.OffsetBy(pt);
 
 		swin->Lock();
 		swin->frame.OffsetBy(dx,dy);
 		swin->Unlock();
 
-		parent->Invalidate(frame);
+		layerlock->Lock();
+		MoveBy(dx,dy);
+		layerlock->Unlock();
+		decor->MoveBy(BPoint(dx, dy));
 		decor->Draw();
 	}
 	mousepos=pt;
@@ -169,9 +167,6 @@ void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 
 void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 {
-#ifdef DEBUG_WINBORDER
-printf("WindowBorder()::MouseUp\n");
-#endif
 //	mbuttons&= ~buttons;
 	mbuttons=buttons;
 	activeborder=NULL;
