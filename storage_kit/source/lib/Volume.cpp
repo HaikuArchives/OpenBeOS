@@ -2,21 +2,24 @@
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
 //
-//  File Name: Directory.cpp
+//  File Name:		Directory.cpp
+//
+//	Description:	BVolume class
 // ----------------------------------------------------------------------
 
 #include <Volume.h>
+//#include "Volume.h"
 
 #include <Directory.h>
 #include <Bitmap.h>
 #include <Node.h>
-#include <fs_info.h>
 #include <errno.h>
-/*
+
+
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
-*/
+
 // ----------------------------------------------------------------------
 //	BVolume (public)
 // ----------------------------------------------------------------------
@@ -272,12 +275,19 @@ BVolume::GetName(
 //	SetName (public)
 // ----------------------------------------------------------------------
 //	Sets the name of the volume to the supplied string.
+//	Setting the name is typically (and most politely) the user's
+//	responsibility (a task that's performed, most easily, through the
+//	Tracker). If you really want to set the name of the volume
+//	programmatically, you do so by renaming the volume's root directory.
 
 status_t
 BVolume::SetName(
 	const char*		name) 
 {
 	status_t		currentStatus = B_ERROR;
+	
+	// *** Call a kernel or, more indirectly, a POSIX function
+	//	that sets a volume name ***
 	
 	return currentStatus;
 }
@@ -286,7 +296,7 @@ BVolume::SetName(
 // ----------------------------------------------------------------------
 //	GetIcon (public)
 // ----------------------------------------------------------------------
-//	Returns the volume's icon in icon, which specifies the icon to
+//	Returns the volume's icon in icon. which specifies the icon to
 //	retrieve, either B_MINI_ICON (16x16) or B_LARGE_ICON (32x32).
 
 status_t
@@ -294,7 +304,19 @@ BVolume::GetIcon(
 	BBitmap*		icon,
 	icon_size		which) const
 {
-	status_t		currentStatus = B_ERROR;
+	status_t		currentStatus = fCStatus;
+	
+	if ((icon != NULL) && (currentStatus == B_OK)
+		&& ((which == B_MINI_ICON) || (which == B_LARGE_ICON))) {
+		char		deviceName[B_DEV_NAME_LENGTH];
+		
+		currentStatus = GetName(deviceName);
+		
+		if (currentStatus == B_OK)
+		{
+			currentStatus = get_device_icon(deviceName, icon, which);
+		}
+	}
 	
 	return (currentStatus);
 }
@@ -308,7 +330,17 @@ BVolume::GetIcon(
 bool
 BVolume::IsRemovable(void) const
 {
-	bool		volumeIsRemovable = false;
+	bool			volumeIsRemovable = false;
+
+	// Obtain the device information for the current device
+	//	and determines whether or not the device is removable.
+	
+	fs_info			fsInfo;
+	int				err = fs_stat_dev(fDev, &fsInfo);
+	
+	if (err == 0) {
+		volumeIsRemovable = (fsInfo.flags & B_FS_IS_REMOVABLE);
+	}
 	
 	return (volumeIsRemovable);
 }
@@ -324,6 +356,16 @@ BVolume::IsReadOnly(void) const
 {
 	bool		volumeIsReadOnly = false;
 	
+	// Obtain the device information for the current device
+	//	and determines whether or not the device is read-only.
+	
+	fs_info			fsInfo;
+	int				err = fs_stat_dev(fDev, &fsInfo);
+	
+	if (err == 0) {
+		volumeIsReadOnly = (fsInfo.flags & B_FS_IS_READONLY);
+	}
+	
 	return (volumeIsReadOnly);
 }
 
@@ -337,6 +379,17 @@ bool
 BVolume::IsPersistent(void) const
 {
 	bool		volumeIsPersistent = false;
+	
+	// Obtain the device information for the current device
+	//	and determines whether or not the storage medium
+	//	is persistent.
+	
+	fs_info			fsInfo;
+	int				err = fs_stat_dev(fDev, &fsInfo);
+	
+	if (err == 0) {
+		volumeIsPersistent = (fsInfo.flags & B_FS_IS_PERSISTENT);
+	}
 	
 	return (volumeIsPersistent);
 }
@@ -352,6 +405,17 @@ BVolume::IsShared(void) const
 {
 	bool		volumeIsShared = false;
 	
+	// Obtain the device information for the current device
+	//	and determines whether or not the volume is shared
+	//	over a network.
+	
+	fs_info			fsInfo;
+	int				err = fs_stat_dev(fDev, &fsInfo);
+	
+	if (err == 0) {
+		volumeIsShared = (fsInfo.flags & B_FS_IS_SHARED);
+	}
+	
 	return (volumeIsShared);
 }
 
@@ -365,6 +429,17 @@ bool
 BVolume::KnowsMime(void) const
 {
 	bool		volumeKnowsMime = false;
+	
+	// Obtain the device information for the current device
+	//	and determines whether or not the volume supports
+	//	MIME types.
+	
+	fs_info			fsInfo;
+	int				err = fs_stat_dev(fDev, &fsInfo);
+	
+	if (err == 0) {
+		volumeKnowsMime = (fsInfo.flags & B_FS_HAS_MIME);
+	}
 	
 	return (volumeKnowsMime);
 }
@@ -381,6 +456,17 @@ BVolume::KnowsAttr(void) const
 {
 	bool		volumeKnowsAttr = false;
 	
+	// Obtain the device information for the current device
+	//	and determines whether or not the files on the
+	//	volume accept attributes.
+	
+	fs_info			fsInfo;
+	int				err = fs_stat_dev(fDev, &fsInfo);
+	
+	if (err == 0) {
+		volumeKnowsAttr = (fsInfo.flags & B_FS_HAS_ATTR);
+	}
+	
 	return (volumeKnowsAttr);
 }
 
@@ -395,6 +481,17 @@ bool
 BVolume::KnowsQuery(void) const
 {
 	bool		volumeKnowsQuery = false;
+	
+	// Obtain the device information for the current device
+	//	and determines whether or not the volume can
+	//	respond to queries.
+	
+	fs_info			fsInfo;
+	int				err = fs_stat_dev(fDev, &fsInfo);
+	
+	if (err == 0) {
+		volumeKnowsQuery = (fsInfo.flags & B_FS_HAS_QUERY);
+	}
 	
 	return (volumeKnowsQuery);
 }
@@ -411,7 +508,18 @@ bool
 BVolume::operator==(
 	const BVolume&		vol) const
 {
-	bool		areEqual = false;
+	// First determine whether both objects are uninitialized,
+	//	since comparing the fDev members of uninitialized BVolume
+	//	instances will return an invalid result.
+	
+	bool		areEqual = ((this->fCStatus == B_NO_INIT)
+								&& (vol.InitCheck() == B_NO_INIT));
+
+	if (!areEqual) {
+		// The BVolume instance are initialized, test the
+		//	fDev member values:
+		areEqual = (this->fDev == vol.Device());
+	}
 	
 	return (areEqual);
 }
@@ -428,7 +536,7 @@ bool
 BVolume::operator!=(
 	const BVolume&		vol) const
 {
-	bool		areNotEqual = false;
+	bool		areNotEqual = !(*this == vol);
 	
 	return (areNotEqual);
 }
@@ -453,21 +561,25 @@ BVolume&
 BVolume::operator=(
 	const BVolume&		vol)
 {
+	this->fDev = vol.Device();
+	this->fCStatus = vol.InitCheck();
+
 	return (*this);
 }
 
-// FBC
-void BVolume::_TurnUpTheVolume1() {}
-void BVolume::_TurnUpTheVolume2() {}
-void BVolume::_TurnUpTheVolume3() {}
-void BVolume::_TurnUpTheVolume4() {}
-void BVolume::_TurnUpTheVolume5() {}
-void BVolume::_TurnUpTheVolume6() {}
-void BVolume::_TurnUpTheVolume7() {}
+
+// FBC 
+void BVolume::_TurnUpTheVolume1() {} 
+void BVolume::_TurnUpTheVolume2() {} 
+void BVolume::_TurnUpTheVolume3() {} 
+void BVolume::_TurnUpTheVolume4() {} 
+void BVolume::_TurnUpTheVolume5() {} 
+void BVolume::_TurnUpTheVolume6() {} 
+void BVolume::_TurnUpTheVolume7() {} 
 void BVolume::_TurnUpTheVolume8() {}
 
-/*
+
 #ifdef USE_OPENBEOS_NAMESPACE
 }
 #endif
-*/
+
