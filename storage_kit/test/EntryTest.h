@@ -26,6 +26,8 @@ public:
 		CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 		
 		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Init Test", &EntryTest::InitTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Equality Test", &EntryTest::EqualityTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Assignment Test", &EntryTest::AssignmentTest) );
 		
 		return suite;
 	}		
@@ -56,6 +58,7 @@ public:
 		
 		// Create a new one
 		sprintf(str, "ln -s %s %s", target, link);
+//		printf("link str == '%s'\n", str);
 		system(str);
 	
 		return true;	
@@ -85,22 +88,102 @@ public:
 		BEntry entry;
 		CPPUNIT_ASSERT( entry.InitCheck() == B_NO_INIT );
 		
-//		BEntry entry2("/cvsroot/open-beos/storage_kit/Jamfile", true);
-		BEntry entry2("/cvsroot/open-beos/storage_kit/EntryTest.Link", true);
-		CPPUNIT_ASSERT( entry2.InitCheck() == B_OK );
+		const char mainFile[] = "/boot/beos/apps/Clock";
+		const char link[] = "EntryTest.Link";
+		const char relLink[] = "EntryTest.RelLink";
+		const char fourLink[] = "EntryTest.4Link";
+//		const char tripleLink[] = "EntryTest.TripleLink";
 
-		CreateLink("EntryTest.Link", "/cvsroot/open-beos/storage_kit/Jamfile");
-		BEntry entry3("/cvsroot/open-beos/storage_kit/EntryTest.Link", true);
-		CPPUNIT_ASSERT( entry3.InitCheck() == B_OK );
+		// Construct an absolute pathname for the third link
+		const char tripleLinkLeaf[] = "EntryTest.TripleLink";
+		char tripleLink[B_PATH_NAME_LENGTH+1];
+		CPPUNIT_ASSERT( getcwd(tripleLink, B_PATH_NAME_LENGTH) == tripleLink );
+		sprintf(tripleLink, "%s%s%s", tripleLink,
+			((tripleLink[strlen(tripleLink)-1] == '/') ? "" : "/"),
+			tripleLinkLeaf);
+		
+		BEntry mainEntry(mainFile);
 
-		CreateLink("EntryTest.RelLink", "./EntryTest.Link");
-		BEntry eRelLink( "/cvsroot/open-beos/storage_kit/EntryTest.RelLink", true );
-		CPPUNIT_ASSERT( eRelLink.InitCheck() == B_OK );
+		CreateLink(link, mainFile);
+		BEntry linkEntry( link, true );
+		CPPUNIT_ASSERT( linkEntry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( linkEntry == mainEntry );
+		
+		CreateLink(relLink, link);
+		BEntry relLinkEntry( relLink, true );
+		CPPUNIT_ASSERT( relLinkEntry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( relLinkEntry == mainEntry );
+		
+		CreateLink( tripleLink, relLink );
+		BEntry tripleLinkEntry( tripleLink, true );
+		CPPUNIT_ASSERT( tripleLinkEntry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( tripleLinkEntry == mainEntry );
+		
+		CreateLink( fourLink, tripleLink );
+		BEntry fourLinkEntry( fourLink, true );
+		CPPUNIT_ASSERT( fourLinkEntry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( fourLinkEntry == mainEntry );
+				
+		
+		RemoveLink(link);
+		RemoveLink(relLink);
+		RemoveLink(tripleLink);
+		RemoveLink(fourLink);
+	}
+	
+	// n1 and n2 should both be uninitialized. y1a and y1b should be initialized
+	// to the same entry, y2 should be initialized to a different entry
+	void EqualityTest(BEntry &n1, BEntry &n2, BEntry &y1a, BEntry &y1b, BEntry &y2) {
+		CPPUNIT_ASSERT( n1 == n2 );
+		CPPUNIT_ASSERT( !(n1 != n2) );
+		CPPUNIT_ASSERT( n1 != y2 );
+		CPPUNIT_ASSERT( !(n1 == y2) );
 
-		RemoveLink("EntryTest.RelLink");
-		RemoveLink("EntryTest.Link");
+		CPPUNIT_ASSERT( y1a != n2 );
+		CPPUNIT_ASSERT( !(y1a == n2) );
+		CPPUNIT_ASSERT( y1a == y1b );
+		CPPUNIT_ASSERT( !(y1a != y1b) );
+		CPPUNIT_ASSERT( y1a != y2 );
+		CPPUNIT_ASSERT( !(y1a == y2) );
+
+		CPPUNIT_ASSERT( n1 == n1 );
+		CPPUNIT_ASSERT( !(n1 != n1) );
+		CPPUNIT_ASSERT( y2 == y2 );
+		CPPUNIT_ASSERT( !(y2 != y2) );			
+	}
+	
+	void EqualityTest() {
+		BEntry n1, n2, y1a("/boot"), y1b("/boot"), y2("/");
+		
+		EqualityTest(n1, n2, y1a, y1b, y2);		
 	}
 
+	void AssignmentTest() {	
+		BEntry n1, n2, y1a("/boot"), y1b("/boot"), y2("/");
+
+//		n1.Dump("n1");
+//		n2.Dump("n2");
+//		y1a.Dump("y1a");
+//		y1b.Dump("y1b");
+//		y2.Dump("y2");
+
+		n1 = n1;		// self n
+		y1a = y1b;		// psuedo self y
+		y1a = y1a;		// self y
+		n2 = y2;		// n = y
+		y1b = n1;		// y = n
+		y2 = y1a;		// y1 = y2
+		
+//		n1.Dump("n1");
+//		y1b.Dump("n2");
+//		y1a.Dump("y1a");
+//		y2.Dump("y1b");
+//		n2.Dump("y2");
+		
+		
+		EqualityTest(n1, y1b, y1a, y2, n2);
+	}
+	
 	// This is a non-CPPUNIT test called by EntryTest.Private.cpp to test
 	// our BEntry implmentation's private SplitPathInTwain() functions
 	void SplitPathTest() {
