@@ -1666,88 +1666,88 @@
 		</section>
 		<section name="Group 3 Support">
 			<class name="BBitmap">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BBitmap(BRect bounds, uint32 flags, color_space depth, int32 bytesPerRow=B_ANY_BYTES_PER_ROW, screen_id screenID=B_MAIN_SCREEN_ID);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BBitmap(BRect bounds, color_space depth, bool accepts_views = false, bool need_contiguous = false);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BBitmap(const BBitmap* source, bool accepts_views = false, bool need_contiguous = false);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BBitmap(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					virtual ~BBitmap();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					status_t InitCheck() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					bool IsValid() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					status_t LockBits(uint32* state=NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					void UnlockBits();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					area_id Area() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					void* Bits() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					int32 BitsLength() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					int32 BytesPerRow() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					color_space ColorSpace() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BRect Bounds() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					void SetBits(const void* data, int32 length, int32 offset, color_space cs);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					status_t GetOverlayRestrictions(overlay_restrictions* restrict) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					virtual void AddChild(BView* view);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					virtual bool RemoveChild(BView* view);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					int32 CountChildren() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BView* ChildAt(int32 index) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BView* FindView(const char* view_name) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					BView* FindView(BPoint point) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					bool Lock();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					void Unlock();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Xavier Castellan" tests="false" tspec="false">
 					bool IsLocked() const;
 				</task>
 			</class>
@@ -7540,4 +7540,4 @@
 			</class>
 		</section>
 	</group>
-</TaskXML
+</TaskXML>
