@@ -40,6 +40,7 @@ int32 gTreeCount = 0;
 bool gVerbose,gExcessive;
 int32 gIterations = DEFAULT_ITERATIONS;
 Volume *gVolume;
+int32 gSeed = 42;
 
 // from cache.cpp (yes, we are that mean)
 extern BList gBlocks;
@@ -259,9 +260,6 @@ createKeys()
 	if (gKeys == NULL)
 		return B_NO_MEMORY;
 
-	// we do want to have reproducible random keys
-	srand(42);
-
 	if (gType == S_STR_INDEX) {
 		for (int32 i = 0;i < gNum;i++) {
 			char name[B_FILE_NAME_LENGTH];
@@ -450,40 +448,48 @@ duplicateTest(Transaction *transaction,BPlusTree *tree)
 
 	status_t status;
 
-	int32 insertCount = int32(1000.0 * rand() / RAND_MAX);		
-	if (gVerbose)
-		printf("* insert %ld to %ld old entries...\n",insertCount,gKeys[index].in);
+	int32 insertTotal = 0;
+	for (int32 i = 0;i < 8;i++) {
+		int32 insertCount = int32(1000.0 * rand() / RAND_MAX);
+		if (gVerbose)
+			printf("* insert %ld to %ld old entries...\n",insertCount,insertTotal + gKeys[index].in);
 
-	for (int32 j = 0;j < insertCount;j++) {
-		status = tree->Insert(transaction,(uint8 *)gKeys[index].data,gKeys[index].length,gKeys[index].value);
-		if (status < B_OK) {
-			printf("BPlusTree::Insert() returned: %s\n",strerror(status));
-			bailOutWithKey(gKeys[index].data,gKeys[index].length);
+		for (int32 j = 0;j < insertCount;j++) {
+			status = tree->Insert(transaction,(uint8 *)gKeys[index].data,gKeys[index].length,insertTotal);
+			if (status < B_OK) {
+				printf("BPlusTree::Insert() returned: %s\n",strerror(status));
+				bailOutWithKey(gKeys[index].data,gKeys[index].length);
+			}
+			insertTotal++;
+			gTreeCount++;
+	
+			if (gExcessive)
+				checkTree(tree);
 		}
-		gKeys[index].in++;
-		gTreeCount++;
 
-		if (gExcessive)
-			checkTree(tree);
-	}
+		int32 count;
+		if (i < 7) {
+			count = int32(1000.0 * rand() / RAND_MAX);
+			if (count > insertTotal)
+				count = insertTotal;
+		} else
+			count = insertTotal;
 
-	int32 count = int32(1000.0 * rand() / RAND_MAX);
-	if (count > insertCount)
-		count = insertCount;
-	if (gVerbose)
-		printf("* remove %ld from %ld entries...\n",count,gKeys[index].in);
+		if (gVerbose)
+			printf("* remove %ld from %ld entries...\n",count,insertTotal + gKeys[index].in);
 
-	for (int32 j = 0;j < count;j++) {
-		status_t status = tree->Remove(transaction,(uint8 *)gKeys[index].data,gKeys[index].length,gKeys[index].value);
-		if (status < B_OK) {
-			printf("BPlusTree::Remove() returned: %s\n",strerror(status));
-			bailOutWithKey(gKeys[index].data,gKeys[index].length);
+		for (int32 j = 0;j < count;j++) {
+			status_t status = tree->Remove(transaction,(uint8 *)gKeys[index].data,gKeys[index].length,insertTotal - 1);
+			if (status < B_OK) {
+				printf("BPlusTree::Remove() returned: %s\n",strerror(status));
+				bailOutWithKey(gKeys[index].data,gKeys[index].length);
+			}
+			insertTotal--;
+			gTreeCount--;
+
+			if (gExcessive)
+				checkTree(tree);
 		}
-		gKeys[index].in--;
-		gTreeCount--;
-
-		if (gExcessive)
-			checkTree(tree);
 	}
 
 	if (!gExcessive)
@@ -569,16 +575,17 @@ usage(char *program)
 {
 	if (strrchr(program,'/'))
 		program = strrchr(program,'/') + 1;
-	fprintf(stderr,"usage: %s [-ve] [-t type] [-n keys] [-i iterations]\n"
+	fprintf(stderr,"usage: %s [-ve] [-t type] [-n keys] [-i iterations] [-r seed]\n"
 		"BFS B+Tree torture test\n"
 		"\t-t\ttype is one of string, int32, uint32, int64, uint64, float,\n"
 		"\t\tor double; defaults to string.\n"
 		"\t-n\tkeys is the number of keys to be used,\n"
 		"\t\tminimum is 1, defaults to %ld.\n"
 		"\t-i\titerations is the number of the test cycles, defaults to %ld.\n"
+		"\t-r\tthe seed for the random function, defaults to %ld.\n"
 		"\t-e\texcessive validity tests: tree contents will be tested after every operation\n"
 		"\t-v\tfor verbose output.\n",
-		program,DEFAULT_NUM_KEYS,DEFAULT_ITERATIONS);
+		program,DEFAULT_NUM_KEYS,DEFAULT_ITERATIONS,gSeed);
 	exit(0);
 }
 
@@ -647,12 +654,23 @@ main(int argc,char **argv)
 						if (gIterations < 1)
 							gIterations = 1;
 						break;
+					case 'r':
+						if (*++argv == NULL || !isdigit(**argv))
+							usage(program);
+						
+						gSeed = atoi(*argv);
+						break;
 				}
 			}
 		}
 		else
 			break;
 	}
+
+	// we do want to have reproducible random keys
+	if (gVerbose)
+		printf("Set seed to %ld\n",gSeed);
+	srand(gSeed);
 	
 	Inode inode("tree.data",gType | S_ALLOW_DUPS);
 	gVolume = inode.GetVolume();

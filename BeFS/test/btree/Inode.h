@@ -35,6 +35,7 @@ class Inode {
 		char *Name() const { return "whatever"; }
 		block_run BlockRun() const { return block_run::Run(0,0,0); }
 		block_run Parent() const { return block_run::Run(0,0,0); }
+		off_t BlockNumber() const { return 0; }
 		bfs_inode *Node() { return (bfs_inode *)1; }
 
 		off_t Size() const { return fSize; }
