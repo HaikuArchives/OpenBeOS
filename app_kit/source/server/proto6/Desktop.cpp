@@ -391,6 +391,22 @@ Layer *GetRootLayer(void)
 	return lay;
 }
 
+ServerWindow *GetActiveWindow(int32 workspace)
+{
+	Layer *root=GetRootLayer();
+	if(!root)
+		return NULL;
+	Layer *lay=root->topchild, *nextlay;
+	while(lay!=NULL)
+	{
+		if(lay->serverwin && lay->serverwin->HasFocus())
+			return lay->serverwin;
+		nextlay=lay->lowersibling;
+		lay=nextlay;
+	}
+	return NULL;
+}
+
 // Another "just in case DW screws up again" section
 #ifdef DEBUG_WORKSPACES
 #undef DEBUG_WORKSPACES

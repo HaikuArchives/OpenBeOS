@@ -26,6 +26,7 @@ status_t SetScreenSpace(uint32 index, uint32 res, bool stick=true);
 
 void AddWindowToDesktop(ServerWindow *win,uint32 workspace);
 void RemoveWindowFromDesktop(ServerWindow *win);
+ServerWindow *GetActiveWindow(int32 workspace);
 Layer *GetRootLayer(void);
 int32 GetViewToken(void);
 
