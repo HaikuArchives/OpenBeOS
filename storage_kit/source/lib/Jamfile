@@ -1,0 +1,9 @@
+# This is $(TOP)/source/lib/Jamfile
+
+SubDir TOP source lib ;
+
+Main Test.Path : Test.Path.cpp ;
+LinkLibraries Test.Path : libstorage.so ;
+Main Test.Error : Test.Error.cpp Error.cpp ;
+Library libstorage : Path.cpp Error.cpp Statable.cpp kernel_interface.POSIX.cpp ;
+

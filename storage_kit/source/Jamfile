@@ -1,0 +1,8 @@
+# This is $(TOP)/source/Jamfile
+
+SubDir TOP source ;
+
+SubInclude TOP source lib ;
+
+
+
