@@ -11,7 +11,7 @@
 #include <debug.h>
 #include <memheap.h>
 #include <cbuf.h>
-#include <errors.h>
+#include <Errors.h>
 #include <int.h>
 
 #include <string.h>
@@ -165,7 +165,7 @@ create_port(int32 queue_length, const char *name)
 	proc_id	owner;
 	
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 
 	// check & dup name
 	if(name) {
@@ -173,25 +173,25 @@ create_port(int32 queue_length, const char *name)
 
 		temp_name = (char *)kmalloc(min(name_len + 1, SYS_MAX_OS_NAME_LEN));
 		if(temp_name == NULL)
-			return ERR_NO_MEMORY;
+			return ENOMEM;
 		strncpy(temp_name, name, SYS_MAX_OS_NAME_LEN-1);
 		temp_name[SYS_MAX_OS_NAME_LEN-1] = 0;
 	} else {
 		temp_name = (char *)kmalloc(sizeof("default_port_name")+1);
 		if(temp_name == NULL)
-			return ERR_NO_MEMORY;
+			return ENOMEM;
 		strcpy(temp_name, "default_port_name");
 	}
 	
 	// check queue length & alloc
 	if (queue_length < 1)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if (queue_length > MAX_QUEUE_LENGTH)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	q = (void *)kmalloc( queue_length * sizeof(struct port_msg) );
 	if (q == NULL) {
 		kfree(temp_name); // dealloc name, too
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 	}
 
 	// create sem_r with owner set to -1
@@ -251,8 +251,8 @@ create_port(int32 queue_length, const char *name)
 	RELEASE_PORT_LIST_LOCK();
 	kfree(q);
 	kfree(temp_name);
-	retval = ERR_PORT_OUT_OF_SLOTS;
-	dprintf("create_port(): ERR_PORT_OUT_OF_SLOTS\n");
+	retval = B_NO_MORE_PORTS;
+	dprintf("create_port(): B_NO_MORE_PORTS\n");
 
 	// cleanup
 	delete_sem(sem_w);
@@ -273,9 +273,9 @@ close_port(port_id id)
 	int		slot;
 
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	slot = id % MAX_PORTS;
 
 	// walk through the sem list, trying to match name
@@ -285,7 +285,7 @@ close_port(port_id id)
 	if (ports[slot].id != id) {
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 
 	// mark port to disable writing
@@ -294,7 +294,7 @@ close_port(port_id id)
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int
@@ -310,9 +310,9 @@ delete_port(port_id id)
 	struct port_msg *q;
 
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 
 	slot = id % MAX_PORTS;
 
@@ -323,7 +323,7 @@ delete_port(port_id id)
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("delete_port: invalid port_id %d\n", id);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 
 	/* mark port as invalid */
@@ -352,7 +352,7 @@ delete_port(port_id id)
 	delete_sem(r_sem);
 	delete_sem(w_sem);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 port_id
@@ -360,12 +360,12 @@ find_port(const char *port_name)
 {
 	int i;
 	int state;
-	int ret_val = ERR_INVALID_HANDLE;
+	int ret_val = B_BAD_PORT_ID;
 
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(port_name == NULL)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 
 	// lock list of ports
 	state = int_disable_interrupts();
@@ -396,11 +396,11 @@ _get_port_info(port_id id, port_info *info, size_t size)
 	int state;
 
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if (info == NULL)
 		return EINVAL;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 
 	slot = id % MAX_PORTS;
 
@@ -411,7 +411,7 @@ _get_port_info(port_id id, port_info *info, size_t size)
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("get_port_info: invalid port_id %d\n", id);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 
 	// fill a port_info struct with info
@@ -426,7 +426,7 @@ _get_port_info(port_id id, port_info *info, size_t size)
 	int_restore_interrupts(state);
 	
 	// from our port_entry
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int
@@ -437,7 +437,7 @@ _get_next_port_info(team_id proc, int32 *cookie, struct port_info *info,
 	int slot;
 	
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if (cookie == NULL)
 		return EINVAL;
 
@@ -448,7 +448,7 @@ _get_next_port_info(team_id proc, int32 *cookie, struct port_info *info,
 		// start at index cookie, but check cookie against MAX_PORTS
 		slot = *cookie;
 		if (slot >= MAX_PORTS)
-			return ERR_INVALID_HANDLE;
+			return B_BAD_PORT_ID;
 	}
 
 	// spinlock
@@ -479,9 +479,9 @@ _get_next_port_info(team_id proc, int32 *cookie, struct port_info *info,
 	int_restore_interrupts(state);
 
 	if (info->port == -1)
-		return ERR_PORT_NOT_FOUND;
+		return B_BAD_PORT_ID;
 	*cookie = slot;
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 ssize_t
@@ -502,9 +502,9 @@ port_buffer_size_etc(port_id id,
 	int state;
 		
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 
 	slot = id % MAX_PORTS;
 
@@ -515,7 +515,7 @@ port_buffer_size_etc(port_id id,
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("get_port_info: invalid port_id %d\n", id);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
@@ -532,11 +532,11 @@ port_buffer_size_etc(port_id id,
 	if (res == ERR_SEM_DELETED) {
 		// somebody deleted the port
 		RELEASE_PORT_LOCK(ports[slot]);
-		return ERR_PORT_DELETED;
+		return B_BAD_PORT_ID;
 	}
 	if (res == ERR_SEM_TIMED_OUT) {
 		RELEASE_PORT_LOCK(ports[slot]);
-		return ERR_PORT_TIMED_OUT;
+		return B_TIMED_OUT;
 	}
 
 	// once message arrived, read data's length
@@ -567,9 +567,9 @@ port_count(port_id id)
 	int count;
 	
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 
 	slot = id % MAX_PORTS;
 
@@ -580,7 +580,7 @@ port_count(port_id id)
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("port_count: invalid port_id %d\n", id);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 	
 	get_sem_count(ports[slot].read_sem, &count);
@@ -623,15 +623,15 @@ read_port_etc(port_id id,
 	int		err;
 	
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	if(msg_code == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if((msg_buffer == NULL) && (buffer_size > 0))
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if (timeout < 0)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | B_CAN_INTERRUPT | B_TIMEOUT);
 
@@ -644,7 +644,7 @@ read_port_etc(port_id id,
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("read_port_etc: invalid port_id %d\n", id);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 	// store sem_id in local variable
 	cached_semid = ports[slot].read_sem;
@@ -663,22 +663,17 @@ read_port_etc(port_id id,
 	//      both threads will read in 2 different slots allocated above, simultaneously
 	// 		slot is a thread-local variable
 
-	if (res == ERR_SEM_DELETED) {
-		// somebody deleted the port
-		return ERR_PORT_DELETED;
-	}
-
-	if (res == ERR_SEM_INTERRUPTED) {
-		// XXX: somebody signaled the process the port belonged to, deleting the sem ?
-		return ERR_PORT_INTERRUPTED;
+	if (res == ERR_SEM_DELETED || res == EINTR) {
+		/* somebody deleted the port or the sem went away */
+		return B_BAD_PORT_ID;
 	}
 
 	if (res == ERR_SEM_TIMED_OUT) {
 		// timed out, or, if timeout=0, 'would block'
-		return ERR_PORT_TIMED_OUT;
+		return B_BAD_PORT_ID;
 	}
 
-	if (res != NO_ERROR) {
+	if (res != B_NO_ERROR) {
 		dprintf("write_port_etc: res unknown error %d\n", res);
 		return res;
 	}
@@ -737,9 +732,9 @@ set_port_owner(port_id id, proc_id proc)
 	int state;
 	
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 
 	slot = id % MAX_PORTS;
 
@@ -750,7 +745,7 @@ set_port_owner(port_id id, proc_id proc)
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("set_port_owner: invalid port_id %d\n", id);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 
 	// transfer ownership to other process
@@ -760,7 +755,7 @@ set_port_owner(port_id id, proc_id proc)
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int
@@ -790,9 +785,9 @@ write_port_etc(port_id id,
 	int err;
 	
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 	if(id < 0)
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 
 	// mask irrelevant flags
 	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | B_CAN_INTERRUPT | B_TIMEOUT);
@@ -801,7 +796,7 @@ write_port_etc(port_id id,
 	
 	// check buffer_size
 	if (buffer_size > PORT_MAX_MESSAGE_SIZE)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	state = int_disable_interrupts();
 	GRAB_PORT_LOCK(ports[slot]);
@@ -810,14 +805,14 @@ write_port_etc(port_id id,
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("write_port_etc: invalid port_id %d\n", id);
-		return ERR_INVALID_HANDLE;
+		return B_BAD_PORT_ID;
 	}
 
 	if (ports[slot].closed) {
 		RELEASE_PORT_LOCK(ports[slot]);
 		int_restore_interrupts(state);
 		dprintf("write_port_etc: port %d closed\n", id);
-		return ERR_PORT_CLOSED;
+		return B_BAD_PORT_ID;
 	}
 	
 	// store sem_id in local variable 
@@ -838,22 +833,17 @@ write_port_etc(port_id id,
 	//      both threads will write in 2 different slots allocated above, simultaneously
 	// 		slot is a thread-local variable
 
-	if (res == ERR_SEM_DELETED) {
-		// somebody deleted the port
-		return ERR_PORT_DELETED;
-	}
-
-	if (res == ERR_SEM_INTERRUPTED) {
-		// XXX: somebody signaled the process the port belonged to, deleting the sem ?
-		return ERR_PORT_INTERRUPTED;
+	if (res == ERR_SEM_DELETED || res == EINTR) {
+		/* somebody deleted the port or the sem while we were waiting */
+		return B_BAD_PORT_ID;
 	}
 
 	if (res == ERR_SEM_TIMED_OUT) {
 		// timed out, or, if timeout=0, 'would block'
-		return ERR_PORT_TIMED_OUT;
+		return B_TIMED_OUT;
 	}
 
-	if (res != NO_ERROR) {
+	if (res != B_NO_ERROR) {
 		dprintf("write_port_etc: res unknown error %d\n", res);
 		return res;
 	}
@@ -861,7 +851,7 @@ write_port_etc(port_id id,
 	if (buffer_size > 0) {
 		msg_store = cbuf_get_chain(buffer_size);
 		if (msg_store == NULL)
-			return ERR_NO_MEMORY;
+			return ENOMEM;
 		if (flags & PORT_FLAG_USE_USER_MEMCPY) {
 			// copy from user memory
 			if ((err = cbuf_user_memcpy_to_chain(msg_store, 0, msg_buffer, buffer_size)) < 0)
@@ -901,7 +891,7 @@ write_port_etc(port_id id,
 	// release sem, allowing read (might reschedule)
 	release_sem(cached_semid);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 /* this function cycles through the ports table, deleting all the ports that are owned by
@@ -913,7 +903,7 @@ int delete_owned_ports(proc_id owner)
 	int count = 0;
 	
 	if(ports_active == false)
-		return ERR_PORT_NOT_ACTIVE;
+		return B_BAD_PORT_ID;
 
 	state = int_disable_interrupts();
 	GRAB_PORT_LIST_LOCK();
@@ -979,7 +969,7 @@ void port_test()
 
 	dprintf("porttest: read_port() on empty port 4 with timeout of 1 sec (blocks 1 sec)\n");
 	res = read_port_etc(test_p4, &dummy, &dummy2, sizeof(dummy2), B_TIMEOUT, 1000000);
-	dprintf("porttest: res=%d, %s\n", res, res == ERR_PORT_TIMED_OUT ? "ok" : "BAD");
+	dprintf("porttest: res=%d, %s\n", res, res == B_TIMED_OUT ? "ok" : "BAD");
 
 	dprintf("porttest: spawning thread for port 1\n");
 	t = thread_create_kernel_thread("port_test", port_test_thread_func, NULL);
@@ -1096,7 +1086,7 @@ int	user_get_port_info(port_id id, struct port_info *uinfo)
 	int					rc;
 
 	if (uinfo == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
@@ -1118,9 +1108,9 @@ int	user_get_next_port_info(proc_id uproc,
 	int					rc;
 
 	if (ucookie == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if (uinfo == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if((addr)ucookie >= KERNEL_BASE && (addr)ucookie <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
@@ -1160,9 +1150,9 @@ ssize_t	user_read_port_etc(port_id uport, int32 *umsg_code, void *umsg_buffer,
 	int		rc;
 	
 	if (umsg_code == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if (umsg_buffer == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	if((addr)umsg_code >= KERNEL_BASE && (addr)umsg_code <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
@@ -1188,7 +1178,7 @@ int	user_write_port_etc(port_id uport, int32 umsg_code, void *umsg_buffer,
 				size_t ubuffer_size, uint32 uflags, bigtime_t utimeout)
 {
 	if (umsg_buffer == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	if((addr)umsg_buffer >= KERNEL_BASE && (addr)umsg_buffer <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 	return write_port_etc(uport, umsg_code, umsg_buffer, ubuffer_size, 

@@ -8,7 +8,7 @@
 #include <vm.h>
 #include <debug.h>
 #include <smp.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <stage2.h>
 

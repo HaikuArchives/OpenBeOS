@@ -46,7 +46,7 @@
  */
 
 #include <kernel.h>
-#include <errors.h>
+#include <Errors.h>
 #include <memheap.h>
 #include <int.h>
 #include <debug.h>

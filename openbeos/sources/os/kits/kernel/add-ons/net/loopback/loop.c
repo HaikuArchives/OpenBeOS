@@ -5,7 +5,7 @@
 #include <memheap.h>
 #include <ktypes.h>
 #include <module.h>
-#include <errors.h>
+#include <Errors.h>
 #include <debug.h>
 
 /*#include "sys/socket.h"

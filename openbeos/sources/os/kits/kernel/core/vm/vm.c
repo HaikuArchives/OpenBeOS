@@ -2,7 +2,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <errors.h>
+#include <Errors.h>
 #include <kernel.h>
 #include <vm.h>
 #include <vm_priv.h>
@@ -20,7 +20,6 @@
 #include <OS.h>
 #include <lock.h>
 #include <khash.h>
-#include <errors.h>
 #include <thread.h>
 #include <atomic.h>
 
@@ -141,7 +140,7 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 {
 	vm_region *region = NULL;
 	vm_address_space *aspace;
-	region_id id = ERR_NOT_FOUND;
+	region_id id = B_NAME_NOT_FOUND;
 
 	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
@@ -282,7 +281,7 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr siz
 			}
 			break;
 		default:
-			return ERR_INVALID_ARGS;
+			return EINVAL;
 	}
 
 	if(foundspot) {
@@ -295,7 +294,7 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr siz
 			map->region_list = region;
 		}
 		map->change_count++;
-		return NO_ERROR;
+		return B_NO_ERROR;
 	} else {
 		return ERR_VM_NO_REGION_SLOT;
 	}
@@ -321,7 +320,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store,
 
 	region = _vm_create_region_struct(aspace, region_name, wiring, lock);
 	if(!region)
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 
 	cache = store->cache;
 	cache_ref = cache->ref;
@@ -377,7 +376,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store,
 				int_restore_interrupts(state);
 			} else {
 				mutex_unlock(&cache_ref->lock);
-				err = ERR_NO_MEMORY;
+				err = ENOMEM;
 				goto err1a;
 			}
 		}
@@ -407,11 +406,14 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store,
 			search_addr = aspace->virtual_map.base;
 			search_end = aspace->virtual_map.base + (aspace->virtual_map.size - 1);
 		} else {
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 			goto err1b;
 		}
 
-		err = find_and_insert_region_slot(&aspace->virtual_map, search_addr, size, search_end, addr_type, region);
+		err = find_and_insert_region_slot(&aspace->virtual_map, 
+		                                  search_addr, size, 
+		                                  search_end, addr_type, 
+		                                  region);
 		if(err < 0)
 			goto err1b;
 		*vaddr = (addr *)region->base;
@@ -435,7 +437,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store,
 
 	*_region = region;
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 
 err1b:
 	release_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0);
@@ -455,7 +457,7 @@ err:
 }
 
 region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr_type,
-	addr size, int wiring, int lock)
+                                          addr size, int wiring, int lock)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	void *address;
@@ -484,8 +486,9 @@ region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr
 	return rc;
 }
 
-region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int wiring, int lock)
+region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
+                                     int addr_type, addr size, int wiring, 
+                                     int lock)
 {
 	int err;
 	vm_region *region;
@@ -494,7 +497,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	vm_address_space *aspace;
 	vm_cache_ref *cache_ref;
 
-	dprintf("create_anonymous_region: size 0x%lx\n", size);
+	dprintf("create_anonymous_region: %s: size 0x%lx\n", name, size);
 
 	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
@@ -619,7 +622,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	if(region)
 		return region->id;
 	else
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 }
 
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
@@ -903,7 +906,7 @@ static int __vm_delete_region(vm_address_space *aspace, vm_region *region)
 {
 	if(region->aspace == aspace)
 		vm_put_region(region);
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static int _vm_delete_region(vm_address_space *aspace, region_id rid)
@@ -1027,7 +1030,7 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	vm_region *region;
 
 	if(info == NULL)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	region = vm_get_region_by_id(id);
 	if(region == NULL)
@@ -1472,14 +1475,17 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 	vm_address_space *aspace;
 	int err;
 
+
 	aspace = (vm_address_space *)kmalloc(sizeof(vm_address_space));
 	if(aspace == NULL)
-		return ERR_NO_MEMORY;
+		return ENOMEM;
+
+	dprintf("vm_create_aspace: %s: %lx bytes starting at 0x%lx => %p\n", name, size, base, aspace);
 
 	aspace->name = (char *)kmalloc(strlen(name) + 1);
 	if(aspace->name == NULL ) {
 		kfree(aspace);
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 	}
 	strcpy(aspace->name, name);
 
@@ -1537,7 +1543,7 @@ int vm_delete_aspace(aspace_id aid)
 		// abort, someone else is already deleting this aspace
 		release_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0);
 		vm_put_aspace(aspace);
-		return NO_ERROR;
+		return B_NO_ERROR;
 	}
 	aspace->state = VM_ASPACE_STATE_DELETION;
 
@@ -1557,7 +1563,7 @@ int vm_delete_aspace(aspace_id aid)
 	vm_put_aspace(aspace);
 	vm_put_aspace(aspace);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int vm_resize_region (aspace_id aid, region_id rid, size_t newSize)
@@ -2022,7 +2028,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 		for(;;) {
 			(*aspace->translation_map.ops->get_physical_page)(src_page->ppn * PAGE_SIZE, (addr *)&src, PHYSICAL_PAGE_CAN_WAIT);
 			err = (*aspace->translation_map.ops->get_physical_page)(page->ppn * PAGE_SIZE, (addr *)&dest, PHYSICAL_PAGE_NO_WAIT);
-			if(err == NO_ERROR)
+			if(err == B_NO_ERROR)
 				break;
 
 			// it couldn't map the second one, so sleep and retry

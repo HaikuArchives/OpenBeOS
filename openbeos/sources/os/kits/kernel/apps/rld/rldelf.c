@@ -6,7 +6,7 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <errors.h>
+#include <Errors.h>
 #include <elf32.h>
 #include <user_runtime.h>
 #include <syscalls.h>
@@ -712,10 +712,10 @@ resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr *sym_addr)
 			}
 
 			*sym_addr = sym2->st_value + shimg->regions[0].delta;
-			return NO_ERROR;
+			return B_NO_ERROR;
 		case SHN_ABS:
 			*sym_addr = sym->st_value + image->regions[0].delta;
-			return NO_ERROR;
+			return B_NO_ERROR;
 		case SHN_COMMON:
 			// XXX finish this
 			printf("elf_resolve_symbol: COMMON symbol, finish me!\n");
@@ -723,7 +723,7 @@ resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr *sym_addr)
 		default:
 			// standard symbol
 			*sym_addr = sym->st_value + image->regions[0].delta;
-			return NO_ERROR;
+			return B_NO_ERROR;
 	}
 }
 

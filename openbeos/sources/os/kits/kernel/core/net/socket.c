@@ -11,7 +11,7 @@
 #include <ktypes.h>
 #include <stdio.h>
 #include <string.h>
-#include <errors.h>
+#include <Errors.h>
 #include <module.h>
 #include <pools.h>
 #include <debug.h>

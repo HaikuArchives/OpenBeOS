@@ -11,7 +11,7 @@
 #include <console.h>
 #include <memheap.h>
 #include <gdb.h>
-#include <errors.h>
+#include <Errors.h>
 #include <int.h>
 
 #include <arch/dbg_console.h>
@@ -315,7 +315,7 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 
 	cmd = (struct debugger_command *)kmalloc(sizeof(struct debugger_command));
 	if(cmd == NULL)
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 
 	cmd->func = func;
 	cmd->cmd = name;
@@ -330,7 +330,7 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 	release_spinlock(&dbg_spinlock);
 	int_restore_interrupts(flags);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static void cmd_reboot(int argc, char **argv)
@@ -363,7 +363,7 @@ int dbg_init2(kernel_args *ka)
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
 	dbg_add_command(&cmd_gdb, "gdb", "Connect to remote gdb");
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 bool dbg_set_serial_debug(bool new_val)

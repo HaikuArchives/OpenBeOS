@@ -10,10 +10,6 @@ KernelStaticLibrary libdrivers :
 	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/ps2mouse/ps2mouse.c
 
 	<$(SOURCE_GRIST)>fb_console/fb_console.c
-
-	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/ide/ide.c
-	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/ide/ide_raw.c
-
 	:
 	-fno-pic -Wno-unused
 	;

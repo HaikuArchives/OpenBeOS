@@ -24,7 +24,7 @@
 #include <elf.h>
 #include <memheap.h>
 #include <user_runtime.h>
-#include <errors.h>
+#include <Errors.h>
 #include <stage2.h>
 #include <string.h>
 #include <stdio.h>
@@ -279,7 +279,7 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 	largs[argc] = NULL;
 
 	*kargs = largs;
-	return NO_ERROR;
+	return B_NO_ERROR;
 
 error:
 	free_arg_list(largs,cnt);
@@ -537,11 +537,11 @@ int thread_suspend_thread(thread_id id)
 			retval = ERR_NOT_ALLOWED;
 		} else if (t->in_kernel == true) {
 			t->pending_signals |= SIG_SUSPEND;
-			retval = NO_ERROR;
+			retval = B_NO_ERROR;
 		} else {
 			t->next_state = THREAD_STATE_SUSPENDED;
 			global_resched = true;
-			retval = NO_ERROR;
+			retval = B_NO_ERROR;
 		}
 	} else {
 		retval = ERR_INVALID_HANDLE;
@@ -572,7 +572,7 @@ int thread_resume_thread(thread_id id)
 		t->next_state = THREAD_STATE_READY;
 
 		thread_enqueue_run_q(t);
-		retval = NO_ERROR;
+		retval = B_NO_ERROR;
 	} else {
 		retval = ERR_INVALID_HANDLE;
 	}
@@ -599,7 +599,7 @@ int thread_set_priority(thread_id id, int priority)
 		// it's ourself, so we know we aren't in a run queue, and we can manipulate
 		// our structure directly
 		t->priority = priority;
-		retval = NO_ERROR;
+		retval = B_NO_ERROR;
 	} else {
 		int state = int_disable_interrupts();
 		GRAB_THREAD_LOCK();
@@ -614,7 +614,7 @@ int thread_set_priority(thread_id id, int priority)
 			} else {
 				t->priority = priority;
 			}
-			retval = NO_ERROR;
+			retval = B_NO_ERROR;
 		} else {
 			retval = ERR_INVALID_HANDLE;
 		}
@@ -1058,7 +1058,7 @@ void thread_start_threading(void)
 int user_thread_snooze(bigtime_t time)
 {
 	thread_snooze(time);
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 void thread_snooze(bigtime_t time)
@@ -1248,7 +1248,7 @@ static int _thread_kill_thread(thread_id id, bool wait_on)
 			rc = ERR_NOT_ALLOWED;
 		} else {
 			deliver_signal(t, SIG_KILL);
-			rc = NO_ERROR;
+			rc = B_NO_ERROR;
 			if(t->id == thread_get_current_thread()->id)
 				wait_on = false; // can't wait on ourself
 		}
@@ -1323,7 +1323,7 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 
 	/* This thread died the way it should, dont ripple a non-error up */
 	if (rc == ERR_SEM_DELETED)
-		rc = NO_ERROR;
+		rc = B_NO_ERROR;
 
 	return rc;
 }

@@ -5,7 +5,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <stage2.h>
-#include <errors.h>
+#include <Errors.h>
 #include <kernel.h>
 #include <console.h>
 #include <debug.h>
@@ -50,7 +50,7 @@ int _start(kernel_args *oldka, int cpu_num)
 	cpu_preboot_init(&ka);
 
 	// if we're not a boot cpu, spin here until someone wakes us up
-	if(smp_trap_non_boot_cpus(&ka, cpu_num) == NO_ERROR) {
+	if(smp_trap_non_boot_cpus(&ka, cpu_num) == B_NO_ERROR) {
 		// we're the boot processor, so wait for all of the APs to enter the kernel
 		smp_wait_for_ap_cpus(&ka);
 

@@ -11,7 +11,7 @@
 #include <memheap.h>	// for kmalloc / kfree
 #include <lock.h>	// for mutex handling
 #include <vm.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <string.h>
 
@@ -424,7 +424,7 @@ static int isofs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_id
 
 	*id = v->id;
 
-	err = NO_ERROR;
+	err = B_NO_ERROR;
 
 err:
 	mutex_unlock(&fs->lock);

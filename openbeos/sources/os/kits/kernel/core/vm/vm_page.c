@@ -14,7 +14,7 @@
 #include <thread.h>
 #include <smp.h>
 #include <OS.h>
-#include <errors.h>
+#include <Errors.h>
 #include <stage2.h>
 
 #include <string.h>

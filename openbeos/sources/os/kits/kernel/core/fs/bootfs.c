@@ -9,7 +9,7 @@
 #include <memheap.h>
 #include <lock.h>
 #include <vm.h>
-#include <errors.h>
+#include <Errors.h>
 #include <arch/cpu.h>
 
 #include <bootfs.h>
@@ -469,7 +469,7 @@ static int bootfs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_i
 
 	*id = v->id;
 
-	err = NO_ERROR;
+	err = B_NO_ERROR;
 
 err:
 	mutex_unlock(&fs->lock);

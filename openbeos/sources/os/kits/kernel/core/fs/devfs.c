@@ -12,7 +12,7 @@
 #include <memheap.h>
 #include <lock.h>
 #include <vm.h>
-#include <errors.h>
+#include <Errors.h>
 #include <drivers.h>
 
 #include <arch/cpu.h>
@@ -271,7 +271,7 @@ static int devfs_get_partition_info( struct devfs *fs, struct devfs_vnode *v,
 	//             we need vfs support for that (see vfs_get_cwd)
 	strcpy( info->raw_device, "something_raw" );
 	
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static int devfs_set_partition( struct devfs *fs, struct devfs_vnode *v, 
@@ -345,7 +345,7 @@ static int devfs_set_partition( struct devfs *fs, struct devfs_vnode *v,
 	
 	dprintf( "SET_PARTITION: Added partition\n" );
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 	
 err1:
 	mutex_unlock(&thedevfs->lock);
@@ -490,7 +490,7 @@ static int devfs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_id
 
 	*id = v->id;
 
-	err = NO_ERROR;
+	err = B_NO_ERROR;
 
 err:
 	mutex_unlock(&fs->lock);
@@ -883,7 +883,7 @@ static int devfs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 	struct devfs *fs = _fs;
 	struct devfs_vnode *dir = _dir;
 	struct devfs_vnode *v;
-	int res = NO_ERROR;
+	int res = B_NO_ERROR;
 
 	mutex_lock(&fs->lock);
 

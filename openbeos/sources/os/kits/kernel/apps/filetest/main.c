@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <resource.h>
-#include <errors.h>
+#include <Errors.h>
 //#include <ioctl.h>
 
 #define FORTUNES "/boot/etc/fortunes"

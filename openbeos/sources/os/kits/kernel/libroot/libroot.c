@@ -1,6 +1,6 @@
 #include <OS.h>
 #include <libroot.h>
-#include <errors.h>
+#include <Errors.h>
 #include <vm_types.h>
 #include <syscalls.h>
 

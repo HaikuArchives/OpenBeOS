@@ -11,7 +11,7 @@
 #include <smp.h>
 #include <arch/int.h>
 #include <int.h>
-#include <errors.h>
+#include <Errors.h>
 #include <stage2.h>
 #include <string.h>
 #include <stdio.h>
@@ -70,7 +70,7 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 
 	arch_int_enable_io_interrupt(vector);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
@@ -117,7 +117,7 @@ int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 		kfree(io);
 	}
 
-	return (io != NULL) ? NO_ERROR : ERR_INVALID_ARGS;
+	return (io != NULL) ? B_NO_ERROR : EINVAL;
 }
 
 int int_io_interrupt_handler(int vector)

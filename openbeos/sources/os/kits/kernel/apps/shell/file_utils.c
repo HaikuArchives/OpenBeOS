@@ -4,7 +4,7 @@
 #include <syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include "file_utils.h"
 #include "statements.h"

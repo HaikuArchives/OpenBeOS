@@ -9,7 +9,7 @@
 #include <vfs.h>
 #include <bus.h>
 #include <string.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <pci_bus.h>
 

@@ -15,7 +15,7 @@
 #include <queue.h>
 #include <string.h>
 #include <stage2.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <arch/cpu.h>
 #include <arch/vm_translation_map.h>
@@ -322,7 +322,7 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	index = VADDR_TO_PDENT(va);
 	if(pd[index].present == 0) {
 		// no pagetable here
-		return NO_ERROR;
+		return B_NO_ERROR;
 	}
 
 	do {
@@ -370,7 +370,7 @@ static int clear_flags_tmap(vm_translation_map *map, addr va, unsigned int flags
 	index = VADDR_TO_PDENT(va);
 	if(pd[index].present == 0) {
 		// no pagetable here
-		return NO_ERROR;
+		return B_NO_ERROR;
 	}
 
 	do {
@@ -575,6 +575,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 	if(new_map == NULL)
 		return ERR_INVALID_ARGS;
 
+dprintf("vm_translation_map_create\n");
 	// initialize the new object
 	new_map->ops = &tmap_ops;
 	new_map->map_count = 0;

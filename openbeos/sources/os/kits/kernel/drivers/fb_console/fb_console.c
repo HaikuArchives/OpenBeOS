@@ -11,7 +11,7 @@
 #include <lock.h>
 #include <devfs.h>
 #include <drivers.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <arch/cpu.h>
 #include <arch/int.h>

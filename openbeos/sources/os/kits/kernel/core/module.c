@@ -11,7 +11,7 @@
 
 #include <module.h>
 #include <lock.h>
-#include <errors.h>
+#include <Errors.h>
 #include <arch/cpu.h>
 #include <debug.h>
 #include <khash.h>
@@ -357,7 +357,7 @@ static int recurse_directory(const char *path, const char *match)
 		newpath = (char*)kmalloc(strlen(path) + strlen(name) + 2);
 		/* XXX - we may want to remove sprintf as it's a libc thing */
 		sprintf(newpath, "%s/%s", path, name);
-		if ((res = sys_rstat(newpath, &stat)) != NO_ERROR) {
+		if ((res = sys_rstat(newpath, &stat)) != B_NO_ERROR) {
 			kfree(newpath);
 			kfree(name);
 			sys_close(file);
@@ -423,7 +423,7 @@ static inline int init_module(module *module)
 			break;
 
 		case MOD_RDY:	
-			res = NO_ERROR;
+			res = B_NO_ERROR;
 			break;
 		
 		case MOD_INIT:
@@ -453,7 +453,7 @@ static inline int uninit_module(module *module)
 	switch( module->state ) {
 		case MOD_QUERIED:
 		case MOD_LOADED:
-			return NO_ERROR;
+			return B_NO_ERROR;
 
 		case MOD_INIT:
 			panic( "Trying to unload module %s which is initializing\n", 
@@ -474,7 +474,7 @@ static inline int uninit_module(module *module)
 				res = module->ptr->std_ops(B_MODULE_UNINIT);
 				SHOW_FLOW( 2, "...done (%s)\n", strerror( res ));
 
-				if (res == NO_ERROR ) {
+				if (res == B_NO_ERROR ) {
 					module->state = MOD_LOADED;
 					return 0;
 				}
@@ -495,7 +495,7 @@ static int process_module_info(module_iterator *iter, char *buf, size_t *bufsize
 {
 	module *m;
 	module_info **mod;
-	int res = NO_ERROR;
+	int res = B_NO_ERROR;
 		
 	mod = iter->cur_header;
 	if (!mod || !(*mod)) {
@@ -555,7 +555,7 @@ static inline int module_create_dir_iterator( module_iterator *iter, int file, c
 	iter->cur_dir = dir;
 
 	SHOW_FLOW( 3, "created dir iterator for %s\n", name );		
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static inline int module_enter_dir(module_iterator *iter, const char *path)
@@ -569,17 +569,17 @@ static inline int module_enter_dir(module_iterator *iter, const char *path)
 		
 		// there are so many errors for "not found" that we don't bother
 		// and always assume that the directory suddenly disappeared
-		return NO_ERROR;
+		return B_NO_ERROR;
 	}
 						
 	res = module_create_dir_iterator(iter, file, path);
-	if (res != NO_ERROR) {
+	if (res != B_NO_ERROR) {
 		sys_close(file);
 		return ENOMEM;
 	}
 	
 	SHOW_FLOW( 3, "entered directory %s\n", path );				
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 
@@ -664,21 +664,21 @@ static inline int module_traverse_dir(module_iterator *iter)
 		if (*iter->cur_header == NULL)
 			unload_module_file(iter->cur_path);
 		else
-			return NO_ERROR;
+			return B_NO_ERROR;
 	}
 	
 	SHOW_FLOW( 3, "scanning %s\n", iter->cur_dir->name );
 	if ((res = sys_read(iter->cur_dir->file, name, 0, sizeof(name))) <= 0) {
 		SHOW_FLOW(3, "got error: %s\n", strerror(res));
 		module_leave_dir(iter);
-		return NO_ERROR;
+		return B_NO_ERROR;
 	}
 
 	SHOW_FLOW( 3, "got %s\n", name );
 
 	if (strcmp( name, "." ) == 0 ||
 		strcmp( name, ".." ) == 0 )
-		return NO_ERROR;
+		return B_NO_ERROR;
 	
 	/* currently, sys_read returns an error if buffer is too small
 	 * I don't know the official specification, so it's always safe
@@ -693,7 +693,7 @@ static inline int module_traverse_dir(module_iterator *iter)
 	iter->cur_header = NULL;
 	iter->module_pos = 0;
 		
-	if ((res = sys_rstat(path, &stat)) != NO_ERROR )
+	if ((res = sys_rstat(path, &stat)) != B_NO_ERROR )
 		return res;
 		
 	switch(stat.type) {
@@ -702,14 +702,14 @@ static inline int module_traverse_dir(module_iterator *iter)
 			iter->cur_path = (char*)kstrdup(path);			
 			if (!iter->cur_header)
 				return EINVAL;
-			return NO_ERROR;
+			return B_NO_ERROR;
 
 		case STREAM_TYPE_DIR:
 			return module_enter_dir(iter, path);
 
 		default:
 			SHOW_FLOW( 3, "entry %s not a file nor a directory - ignored\n", name );
-			return NO_ERROR;
+			return B_NO_ERROR;
 	}
 }
 
@@ -732,7 +732,7 @@ static inline int module_enter_base_path(module_iterator *iter)
 	
 	if (iter->base_path_id == 0 && modules_disable_user_addons) {
 		SHOW_FLOW0( 3, "ignoring user add-ons (they are disabled)\n" );
-		return NO_ERROR;
+		return B_NO_ERROR;
 	}
 		
 	strcpy( path, module_paths[iter->base_path_id] );
@@ -771,7 +771,7 @@ void *open_module_list(const char *prefix)
 	
 	iter->base_path_id = -1;
 	iter->base_dir = iter->cur_dir = NULL;
-	iter->err = NO_ERROR;
+	iter->err = B_NO_ERROR;
 	iter->module_pos = 0;
 		
 	return (void *)iter;
@@ -795,16 +795,16 @@ int read_next_module_name(void *cookie, char *buf, size_t *bufsize )
 	res = iter->err;
 
 	SHOW_FLOW0(3, "looking for next module\n");
-	while (res == NO_ERROR) {	
+	while (res == B_NO_ERROR) {	
 		SHOW_FLOW0(3, "searching for module\n");
 		if (iter->cur_dir == NULL) {
 			res = module_enter_base_path(iter);
 		} else {
-			if ((res = module_traverse_dir(iter)) == NO_ERROR) {
+			if ((res = module_traverse_dir(iter)) == B_NO_ERROR) {
 				/* By this point we should have a valid pointer to a module_info structure
 				 * in iter->cur_header
 				 */
-				if (process_module_info(iter, buf, bufsize) == NO_ERROR)
+				if (process_module_info(iter, buf, bufsize) == B_NO_ERROR)
 					break;			
 			}
 		}
@@ -903,7 +903,7 @@ int module_init( kernel_args *ka, module_info **sys_module_headers )
 	}
 	#endif
 	
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 
@@ -912,7 +912,7 @@ int	get_module(const char *path, module_info **vec)
 {
 	module *m = (module *)hash_lookup(modules_list, path);
 	loaded_module *lm;
-	int res = NO_ERROR;
+	int res = B_NO_ERROR;
 	*vec = NULL;
 
 dprintf("*** get_module: %s\n", path);
@@ -944,7 +944,7 @@ dprintf("*** get_module: %s\n", path);
 
 	recursive_lock_unlock(&modules_lock);
 	
-	if (res != NO_ERROR) {
+	if (res != B_NO_ERROR) {
 		vec = NULL;
 		return res;
 	}

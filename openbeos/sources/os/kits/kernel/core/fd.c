@@ -9,7 +9,7 @@
 #include <OS.h>
 #include <fd.h>
 #include <vfs.h>
-#include <errors.h>
+#include <Errors.h>
 #include <debug.h>
 #include <memheap.h>
 

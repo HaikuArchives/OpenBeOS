@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <types.h>
-#include <errors.h>
+#include <Errors.h>
 #include <string.h>
 
 char const *
@@ -11,14 +11,17 @@ strerror(int errnum)
 {
 	switch(errnum) {
 		/* General Errors */
-		case NO_ERROR:
+		case B_NO_ERROR:
 			return "No Error";
 		;
 		
 		case ERR_GENERAL:
 			return "General Error";
 		;
-
+		// B_INTERRUPTED
+		case EINTR:
+			return "Interrupted";
+			
 //		case ERR_NO_MEMORY:
 		case ENOMEM:
 			return "Cannot allocate memory";
@@ -258,36 +261,12 @@ strerror(int errnum)
 		;
 
 		/* Ports errors */
-		case ERR_PORT_GENERAL:
-			return "General port error";
+		case B_BAD_PORT_ID:
+			return "Port does not exist";
 		;
 
-		case ERR_PORT_DELETED:
-			return "Port deleted";
-		;
-
-		case ERR_PORT_OUT_OF_SLOTS:
-			return "Port out of slots";
-		;
-
-		case ERR_PORT_NOT_ACTIVE:
-			return "Port not active";
-		;
-
-		case ERR_PORT_CLOSED:
-			return "Port closed";
-		;
-
-		case ERR_PORT_TIMED_OUT:
-			return "Port timed out";
-		;
-
-		case ERR_PORT_INTERRUPTED:
-			return "Port interrupted";
-		;
-
-		case ERR_PORT_NOT_FOUND:
-			return "Port not found";
+		case B_NO_MORE_PORTS:
+			return "No more ports available";
 		;
 
 		default:

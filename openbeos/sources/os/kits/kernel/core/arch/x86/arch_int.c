@@ -10,7 +10,7 @@
 #include <thread.h>
 #include <smp.h>
 #include <syscalls.h>
-#include <errors.h>
+#include <Errors.h>
 #include <vm_priv.h>
 #include <ksyscalls.h>
 

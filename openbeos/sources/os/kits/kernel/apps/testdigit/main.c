@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <resource.h>
-#include <errors.h>
+#include <Errors.h>
 
 #define DIGIT "/dev/misc/digit"
 

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <errors.h>
+#include <Errors.h>
 #include <stdlib.h>
 
 #include "statements.h"
@@ -91,7 +91,7 @@ int  read_text_file(const char *filename,text_file *data)
 		scan++;
 		size--;
 	}
-	return NO_ERROR;
+	return B_NO_ERROR;
 err:
 	printf("error\n");
 	free_text_file(data);

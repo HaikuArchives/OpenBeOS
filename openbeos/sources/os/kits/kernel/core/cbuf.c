@@ -9,7 +9,7 @@
 #include <arch/debug.h>
 #include <cbuf.h>
 #include <arch/cpu.h>
-#include <errors.h>
+#include <Errors.h>
 #include <debug.h>
 #include <int.h>
 #include <vm.h>
@@ -330,7 +330,7 @@ int cbuf_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t le
 		buf = buf->next;
 	}
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int cbuf_user_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t len)
@@ -367,7 +367,7 @@ int cbuf_user_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size
 		buf = buf->next;
 	}
 
-	err = NO_ERROR;
+	err = B_NO_ERROR;
 	while(len > 0) {
 		int to_copy;
 
@@ -439,7 +439,7 @@ int cbuf_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t len)
 		buf = buf->next;
 	}
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int cbuf_user_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t len)
@@ -476,7 +476,7 @@ int cbuf_user_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t 
 		buf = buf->next;
 	}
 
-	err = NO_ERROR;
+	err = B_NO_ERROR;
 	while(len > 0) {
 		int to_copy;
 
@@ -763,7 +763,7 @@ int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes)
 		buf = buf->next;
 	}
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static void dbg_dump_cbuf_freelists(int argc, char **argv)
@@ -840,14 +840,14 @@ int cbuf_init()
 	free_list_sem = create_sem(1, "cbuf_free_list_sem");
 	if(free_list_sem < 0) {
 		panic("cbuf_init: error creating cbuf_free_list_sem\n");
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 	}
 
 	cbuf_region_id = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "cbuf region",
 		(void **)&cbuf_region, REGION_ADDR_ANY_ADDRESS, CBUF_REGION_SIZE, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
 	if(cbuf_region_id < 0) {
 		panic("cbuf_init: error creating cbuf region\n");
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 	}
 
 	cbuf_bitmap_region_id = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "cbuf bitmap region",
@@ -855,7 +855,7 @@ int cbuf_init()
 		CBUF_BITMAP_SIZE / 8, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
 	if(cbuf_region_id < 0) {
 		panic("cbuf_init: error creating cbuf bitmap region\n");
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 	}
 
 	// initialize the bitmap
@@ -864,13 +864,13 @@ int cbuf_init()
 
 	buf = allocate_cbuf_mem(ALLOCATE_CHUNK);
 	if(buf == NULL)
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 	cbuf_free_chain_noblock(buf);
 
 	buf = allocate_cbuf_mem(ALLOCATE_CHUNK);
 	if(buf == NULL)
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 	cbuf_free_chain(buf);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }

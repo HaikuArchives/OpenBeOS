@@ -11,7 +11,7 @@
 #include <vm.h>
 #include <devfs.h>
 #include <khash.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <arch/cpu.h>
 #include <arch/int.h>

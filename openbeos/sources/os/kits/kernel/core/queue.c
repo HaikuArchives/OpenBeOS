@@ -7,7 +7,7 @@
 #include <kernel.h>
 #include <queue.h>
 #include <memheap.h>
-#include <errors.h>
+#include <Errors.h>
 
 typedef struct queue_element {
 	void *next;
@@ -106,7 +106,7 @@ int fixed_queue_init(fixed_queue *q, int size)
 	q->count = 0;
 	q->size = size;
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 void fixed_queue_destroy(fixed_queue *q)
@@ -124,7 +124,7 @@ int fixed_queue_enqueue(fixed_queue *q, void *e)
 	if(q->head >= q->size) q->head = 0;
 	q->count++;
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 void *fixed_queue_dequeue(fixed_queue *q)

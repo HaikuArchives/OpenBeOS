@@ -11,7 +11,7 @@
 #include <lock.h>
 #include <devfs.h>
 #include <arch/cpu.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <arch/x86/keyboard.h>
 

@@ -13,7 +13,6 @@
 
 #include <ktypes.h>
 #include <drivers.h>
-//#include <drivers/KernelExport.h>
 #include <debug.h>
 #include <memheap.h>
 #include <string.h>

@@ -6,7 +6,7 @@
 
 #include <memheap.h>
 #include <debug.h>
-#include <errors.h>
+#include <Errors.h>
 #include <string.h>
 #include <khash.h>
 
@@ -102,7 +102,7 @@ int hash_remove(void *_hash_table, void *e)
 			else
 				t->table[hash] = (struct hash_elem *)NEXT(t, i);
 			t->num_elems--;
-			return NO_ERROR;
+			return B_NO_ERROR;
 		}
 	}
 

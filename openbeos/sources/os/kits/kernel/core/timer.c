@@ -12,7 +12,7 @@
 #include <vm.h>
 #include <int.h>
 #include <timer.h>
-#include <errors.h>
+#include <Errors.h>
 #include <stage2.h>
 
 #include <arch/cpu.h>

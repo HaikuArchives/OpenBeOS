@@ -8,7 +8,7 @@
 #include <syscalls.h>
 #include <ktypes.h>
 #include <resource.h>
-#include <errors.h>
+#include <Errors.h>
 #include <OS.h>
 
 static void port_test(void);
@@ -449,7 +449,7 @@ static void port_test(void)
 
 	printf("porttest: port_read() on empty port 4 with timeout of 1 sec (blocks 1 sec)\n");
 	res = sys_port_read_etc(test_p4, &dummy, &dummy2, sizeof(dummy2), B_TIMEOUT, 1000000);
-	printf("porttest: res=%d, %s\n", res, res == ERR_PORT_TIMED_OUT ? "ok" : "BAD");
+	printf("porttest: res=%d, %s\n", res, res == ETIMEDOUT ? "ok" : "BAD");
 
 	printf("porttest: spawning thread for port 1\n");
 	t = spawn_thread(port_test_thread_func, "port_test", THREAD_MEDIUM_PRIORITY, NULL);
@@ -472,7 +472,7 @@ static void port_test(void)
 	sys_port_close(test_p2);
 	printf("porttest: attempt write p1 after close\n");
 	res = sys_port_write(test_p2, 4, &testdata, sizeof(testdata));
-	printf("porttest: port_write ret %d\n", res);
+	printf("porttest: port_write ret %s (should give Bad port id)\n", strerror(res));
 
 	printf("porttest: testing delete p2\n");
 	sys_port_delete(test_p2);

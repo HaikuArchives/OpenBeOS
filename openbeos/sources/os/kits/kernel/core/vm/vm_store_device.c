@@ -8,7 +8,7 @@
 #include <debug.h>
 #include <lock.h>
 #include <vm_store_device.h>
-#include <errors.h>
+#include <Errors.h>
 
 struct device_store_data {
 	addr base_addr;

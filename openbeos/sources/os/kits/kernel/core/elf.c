@@ -6,7 +6,7 @@
 */
 
 #include <kernel.h>
-#include <errors.h>
+#include <Errors.h>
 #include <elf.h>
 #include <vfs.h>
 #include <vm.h>
@@ -304,7 +304,7 @@ static int elf_parse_dynamic_section(struct elf_image_info *image)
 	if(needed_offset >= 0)
 		image->needed = STRING(image, needed_offset);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 // this function first tries to see if the first image and it's already resolved symbol is okay, otherwise
@@ -340,10 +340,10 @@ static int  elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *s
 			}
 
 			*sym_addr = sym2->st_value + shared_image->regions[0].delta;
-                        return NO_ERROR;
+                        return B_NO_ERROR;
 		case SHN_ABS:
 			*sym_addr = sym->st_value;
-                        return NO_ERROR;
+                        return B_NO_ERROR;
 		case SHN_COMMON:
 			// XXX finish this
 			dprintf("elf_resolve_symbol: COMMON symbol, finish me!\n");
@@ -351,7 +351,7 @@ static int  elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *s
 		default:
 			// standard symbol
 			*sym_addr = sym->st_value + image->regions[0].delta;
-                        return NO_ERROR;
+                        return B_NO_ERROR;
 	}
 }
 
@@ -432,13 +432,13 @@ static int elf_relocate_rel(struct elf_image_info *image, const char *sym_prepen
 		*(addr *)(image->regions[0].delta + rel[i].r_offset) = final_val;
 	}
 	
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 // XXX for now just link against the kernel
 static int elf_relocate(struct elf_image_info *image, const char *sym_prepend)
 {
-	int res = NO_ERROR;
+	int res = B_NO_ERROR;
 	int i;
 //	dprintf("top of elf_relocate\n");
 
@@ -868,7 +868,7 @@ static int elf_unlink_relocs( struct elf_image_info *image )
 		kfree( link );
 	}
 	
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static void elf_unload_image_final( struct elf_image_info *image )
@@ -890,12 +890,12 @@ static void elf_unload_image_final( struct elf_image_info *image )
 static int elf_unload_image( struct elf_image_info *image )
 {
 	if( atomic_add( &image->ref_count, -1 ) > 0 )
-		return NO_ERROR;
+		return B_NO_ERROR;
 
 	elf_unlink_relocs( image );
 	elf_unload_image_final( image );
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int elf_unload_kspace( const char *path )

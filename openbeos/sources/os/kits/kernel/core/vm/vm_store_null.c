@@ -9,7 +9,7 @@
 #include <lock.h>
 #include <vm_store_null.h>
 #include <vfs.h>
-#include <errors.h>
+#include <Errors.h>
 
 static void null_destroy(struct vm_store *store)
 {

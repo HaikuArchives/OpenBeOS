@@ -4,7 +4,7 @@
 */
 
 #include <module.h>
-#include <errors.h>
+#include <Errors.h>
 #include <isa.h>
 #include <arch/cpu.h>
 #include <debug.h>
@@ -12,7 +12,7 @@
 static int isa_init( void )
 {
 	dprintf( "ISA: init\n" );
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static status_t isa_rescan(void)
@@ -24,7 +24,7 @@ static status_t isa_rescan(void)
 static int isa_uninit( void )
 {
 	dprintf( "ISA: uninit\n" );
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 static uint8 isa_read_io_8(int mapped_io_addr)

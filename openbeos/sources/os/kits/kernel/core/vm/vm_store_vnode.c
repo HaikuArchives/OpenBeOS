@@ -9,7 +9,7 @@
 #include <lock.h>
 #include <vm_store_vnode.h>
 #include <vfs.h>
-#include <errors.h>
+#include <Errors.h>
 
 #define STORE_DATA(x) ((struct vnode_store_data *)(x->data))
 
@@ -24,6 +24,10 @@ static void vnode_destroy(struct vm_store *store)
 	}
 }
 
+/* vnode_commit
+ * We're being asked to commit some memory, so record the
+ * fact here.
+ */
 static off_t vnode_commit(struct vm_store *store, off_t size)
 {
 	store->committed_size = size;
@@ -77,7 +81,6 @@ vm_store *vm_store_create_vnode(void *vnode)
 {
 	vm_store *store;
 	struct vnode_store_data *d;
-//	int err;
 
 	store = kmalloc(sizeof(vm_store) + sizeof(struct vnode_store_data));
 	if(store == NULL) {

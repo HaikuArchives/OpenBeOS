@@ -8,7 +8,7 @@
 #include <vm_page.h>
 #include <vm_priv.h>
 #include <debug.h>
-#include <errors.h>
+#include <Errors.h>
 
 #include <arch/vm.h>
 #include <arch/int.h>

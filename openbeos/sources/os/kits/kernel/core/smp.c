@@ -13,7 +13,7 @@
 #include <smp_priv.h>
 #include <smp.h>
 #include <memheap.h>
-#include <errors.h>
+#include <Errors.h>
 #include <atomic.h>
 
 #include <cpu.h>
@@ -491,11 +491,11 @@ int smp_enable_ici()
 {
 	if(smp_num_cpus > 1) // dont actually do it if we only have one cpu
 		ici_enabled = true;
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int smp_disable_ici()
 {
 	ici_enabled = false;
-	return NO_ERROR;
+	return B_NO_ERROR;
 }

@@ -10,7 +10,7 @@
 #include <vfs.h>
 #include <debug.h>
 #include <elf.h>
-#include <errors.h>
+#include <Errors.h>
 #include <devfs.h>
 #include <drivers.h>
 #include <memheap.h>

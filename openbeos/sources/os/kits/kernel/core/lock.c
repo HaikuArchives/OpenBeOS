@@ -8,7 +8,7 @@
 #include <lock.h>
 #include <debug.h>
 #include <arch/cpu.h>
-#include <errors.h>
+#include <Errors.h>
 #include <atomic.h>
 #include <thread.h>
 
@@ -32,7 +32,7 @@ int recursive_lock_create(recursive_lock *lock)
 	lock->sem = create_sem(1, "recursive_lock_sem");
 //	if(lock->sem < 0)
 //		return -1;
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 void recursive_lock_destroy(recursive_lock *lock)

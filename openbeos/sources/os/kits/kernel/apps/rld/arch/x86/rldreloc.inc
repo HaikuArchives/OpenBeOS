@@ -85,7 +85,7 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 # undef B
 
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 /*
@@ -95,7 +95,7 @@ static
 bool
 relocate_image(image_t *image)
 {
-	int res = NO_ERROR;
+	int res = B_NO_ERROR;
 	int i;
 
 	if(image->flags & RFLAG_RELOCATED) {

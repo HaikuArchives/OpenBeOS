@@ -20,7 +20,7 @@
 #include <rootfs.h>
 #include <bootfs.h>
 #include <devfs.h>
-#include <errors.h>
+#include <Errors.h>
 #include <atomic.h>
 #include <OS.h>
 #include <fd.h>
@@ -368,7 +368,7 @@ static int get_vnode(fs_id fsid, vnode_id vnid, struct vnode **outv, int r)
 	dprintf("get_vnode: returning 0x%x\n", v);
 #endif
 	*outv = v;
-	return NO_ERROR;
+	return B_NO_ERROR;
 
 err1:
 	hash_remove(vnode_table, v);
@@ -395,7 +395,7 @@ int vfs_get_vnode(fs_id fsid, vnode_id vnid, fs_vnode *fsv)
 		return err;
 
 	*fsv = v->priv_vnode;
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int vfs_put_vnode(fs_id fsid, vnode_id vnid)
@@ -410,7 +410,7 @@ int vfs_put_vnode(fs_id fsid, vnode_id vnid)
 	if(v)
 		dec_vnode_ref_count(v, true, true);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 void vfs_vnode_acquire_ref(void *v)
@@ -796,12 +796,12 @@ int vfs_test(void)
 
 	// do some unlink tests
 	err = sys_unlink("/foo/bar");
-	if(err == NO_ERROR)
+	if(err == B_NO_ERROR)
 		panic("unlink of full directory should not have passed\n");
 	sys_unlink("/foo/bar/gar");
 	sys_unlink("/foo/bar/tar");
 	err = sys_unlink("/foo/bar");
-	if(err != NO_ERROR)
+	if(err != B_NO_ERROR)
 		panic("unlink of empty directory should have worked\n");
 
 	sys_create("/test", STREAM_TYPE_DIR);
@@ -1395,7 +1395,7 @@ int vfs_get_vnode_from_fd(int fd, bool kernel, void **vnode)
 	if(*vnode == NULL)
 		return ERR_INVALID_HANDLE;
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int vfs_get_vnode_from_path(const char *path, bool kernel, void **vnode)
@@ -1532,7 +1532,7 @@ static int vfs_set_cwd(char* path, bool kernel)
 	if (old_cwd)
 		dec_vnode_ref_count(old_cwd, true, false);
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 
 err1:
 	dec_vnode_ref_count(v, true, false);
@@ -2098,7 +2098,7 @@ int vfs_bootstrap_all_filesystems(void)
 		sys_close(fd);
 	}
 
-	return NO_ERROR;
+	return B_NO_ERROR;
 }
 
 int vfs_getrlimit(int resource, struct rlimit * rlp)

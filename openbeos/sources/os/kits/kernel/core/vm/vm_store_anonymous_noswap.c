@@ -7,7 +7,7 @@
 #include <memheap.h>
 #include <debug.h>
 #include <vm_store_anonymous_noswap.h>
-#include <errors.h>
+#include <Errors.h>
 
 static void anonymous_destroy(struct vm_store *store)
 {
@@ -16,9 +16,14 @@ static void anonymous_destroy(struct vm_store *store)
 	}
 }
 
+/* anonymous_commit
+ * As this store provides anonymous memory that is simply discarded
+ * when finished with, we don't bother recording the changes
+ * here, so we just return 0.
+ */
 static off_t anonymous_commit(struct vm_store *store, off_t size)
 {
-	return 0; // no swap, so we commit no memory
+	return 0;
 }
 
 static int anonymous_has_page(struct vm_store *store, off_t offset)
@@ -56,6 +61,9 @@ static vm_store_ops anonymous_ops = {
 	NULL
 };
 
+/* vm_store_create_anonymous
+ * Create a new vm_store that uses anonymous noswap memory
+ */
 vm_store *vm_store_create_anonymous_noswap()
 {
 	vm_store *store;
@@ -63,6 +71,8 @@ vm_store *vm_store_create_anonymous_noswap()
 	store = kmalloc(sizeof(vm_store));
 	if(store == NULL)
 		return NULL;
+
+dprintf("vm_store_create_anonymous (%p)\n", store);
 
 	store->ops = &anonymous_ops;
 	store->cache = NULL;

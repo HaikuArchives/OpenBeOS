@@ -15,7 +15,7 @@
 #include <lock.h>
 #include <smp.h>
 #include <arch/cpu.h>
-#include <errors.h>
+#include <Errors.h>
 #include <atomic.h>
 
 /* hash table of pages keyed by cache they're in and offset */

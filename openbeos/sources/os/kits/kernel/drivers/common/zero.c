@@ -9,7 +9,7 @@
 #include <vm.h>
 #include <zero.h>
 #include <string.h>
-#include <errors.h>
+#include <Errors.h>
 
 static int zero_open(const char *name, uint32 flags, void **cookie)
 {
@@ -29,12 +29,12 @@ static int zero_freecookie(void * cookie)
 
 static int zero_seek(void * cookie, off_t pos, seek_type st)
 {
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static int zero_ioctl(void * cookie, uint32 op, void *buf, size_t len)
 {
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static ssize_t zero_read(void * cookie, off_t pos, void *buf, size_t *len)

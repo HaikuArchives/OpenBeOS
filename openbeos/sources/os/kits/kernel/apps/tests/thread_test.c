@@ -4,7 +4,7 @@
 #include <syscalls.h>
 #include <ktypes.h>
 #include <resource.h>
-#include <errors.h>
+#include <Errors.h>
 #include <OS.h>
 #include <stdlib.h>
 
