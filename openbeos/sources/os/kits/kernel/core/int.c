@@ -7,7 +7,7 @@
 #include <kernel.h>
 #include <arch/int.h>
 #include <debug.h>
-// #include <heap.h>
+#include <memheap.h>
 #include <smp.h>
 #include <arch/int.h>
 #include <int.h>

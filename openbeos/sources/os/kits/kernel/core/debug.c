@@ -9,9 +9,10 @@
 #include <arch/int.h>
 #include <smp.h>
 #include <console.h>
-//#include <heap.h>
+#include <memheap.h>
 #include <gdb.h>
 #include <errors.h>
+#include <int.h>
 
 #include <arch/dbg_console.h>
 #include <arch/debug.h>

@@ -2,7 +2,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <kernel.h>
+#include <arch/x86/kernel.h>
 #include <arch/vm_translation_map.h>
 #include <memheap.h>
 #include <int.h>
@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stage2.h>
 #include <errors.h>
+
 
 // 256 MB of iospace
 #define IOSPACE_SIZE (256*1024*1024)

@@ -2,7 +2,7 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <kernel.h>
+#include <arch/kernel.h>
 #include <console.h>
 #include <vm.h>
 #include <vm_page.h>

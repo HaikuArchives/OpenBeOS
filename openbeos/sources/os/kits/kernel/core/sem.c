@@ -11,7 +11,7 @@
 #include <arch/int.h>
 #include <timer.h>
 #include <debug.h>
-// #include <heap.h>
+#include <memheap.h>
 #include <thread.h>
 #include <errors.h>
 
@@ -195,7 +195,7 @@ sem_id sem_create_etc(int count, const char *name, proc_id owner)
 		}
 	}
 
-err:
+//err:
 	RELEASE_SEM_LIST_LOCK();
 	kfree(temp_name);
 
@@ -521,7 +521,7 @@ int sem_get_count(sem_id id, int32* thread_count)
 {
 	int slot;
 	int state;
-	int count;
+//	int count;
 
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
@@ -679,9 +679,9 @@ int set_sem_owner(sem_id id, proc_id proc)
 // this function must be entered with interrupts disabled and THREADLOCK held
 int sem_interrupt_thread(struct thread *t)
 {
-	struct thread *t1;
+//	struct thread *t1;
 	int slot;
-	int state;
+//	int state;
 	struct thread_queue wakeup_queue;
 
 //	dprintf("sem_interrupt_thread: called on thread %p (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);

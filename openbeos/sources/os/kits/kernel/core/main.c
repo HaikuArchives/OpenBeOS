@@ -26,10 +26,12 @@
 #include <devs.h>
 #include <bus.h>
 #include <module.h>
+#include <int.h>
 
 #include <string.h>
 
 #include <arch/cpu.h>
+#include <arch/faults.h>
 
 static kernel_args ka;
 
@@ -109,7 +111,7 @@ int _start(kernel_args *oldka, int cpu_num)
 
 static int main2(void *unused)
 {
-	int err;
+//	int err;
 
 	(void)(unused);
 

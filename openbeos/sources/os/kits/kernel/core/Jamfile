@@ -1,6 +1,6 @@
 SubDir OBOS_TOP sources os kits kernel core ;
 
-KernelObjects cbuf.c console.c cpu.c debug.c elf.c faults.c gdb.c heap.c int.c khash.C lock.c main.c misc.c module.c port.c queue.c sem.c smp.c syscalls.c thread.c timer.c : -fno-pic  ;
+KernelObjects cbuf.c console.c cpu.c debug.c elf.c faults.c gdb.c heap.c int.c khash.c linkhack.c lock.c main.c misc.c module.c port.c queue.c sem.c smp.c syscalls.c thread.c timer.c : -fno-pic  ;
 
 #KernelSharedLibrary linkhack : linkhack.c ;
 

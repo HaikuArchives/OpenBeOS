@@ -9,9 +9,10 @@
 #include <sem.h>
 #include <arch/int.h>
 #include <debug.h>
-//#include <heap.h>
+#include <memheap.h>
 #include <cbuf.h>
 #include <errors.h>
+#include <int.h>
 
 #include <string.h>
 #include <stdlib.h>

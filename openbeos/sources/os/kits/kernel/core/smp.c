@@ -12,7 +12,7 @@
 #include <arch/int.h>
 #include <smp_priv.h>
 #include <smp.h>
-// #include <heap.h>
+#include <memheap.h>
 #include <errors.h>
 
 #include <cpu.h>

@@ -12,6 +12,7 @@
 #include <syscalls.h>
 #include <errors.h>
 #include <vm_priv.h>
+#include <ksyscalls.h>
 
 #include <arch/cpu.h>
 #include <arch/int.h>
@@ -101,10 +102,12 @@ static void set_intr_gate(int n, void *addr)
 	_set_gate(&idt[n], (unsigned int)addr, 14, 0);
 }
 
+/* XXX - currently unused and static...
 static void set_trap_gate(int n, void *addr)
 {
 	_set_gate(&idt[n], (unsigned int)addr, 15, 0);
 }
+*/
 
 static void set_system_gate(int n, void *addr)
 {

@@ -196,7 +196,7 @@ static
 int
 gdb_parse_command(void)
 {
-	int retval;
+//	int retval;
 
 	if(!gdb_verify_checksum()) {
 		gdb_nak();
@@ -220,7 +220,7 @@ gdb_parse_command(void)
 
 		case 'q':
 			{
-				extern unsigned _start;
+//				extern unsigned _start;
 				extern unsigned __data_start;
 				extern unsigned __bss_start;
 

@@ -1,3 +1,17 @@
 SubDir OBOS_TOP sources os kits kernel core arch x86 ;
 
-KernelStaticLibrary libx86 : arch_cpu.c arch_dbg_console.c arch_debug.c arch_faults.c arch_int.c arch_smp.c arch_thread.c arch_timer.c arch_vm.c arch_vm_translation_map.c ;
+KernelStaticLibrary libx86 : 
+	<$(SOURCE_GRIST)>arch_cpu.c 
+	<$(SOURCE_GRIST)>arch_dbg_console.c 
+	<$(SOURCE_GRIST)>arch_debug.c 
+	<$(SOURCE_GRIST)>arch_faults.c 
+	<$(SOURCE_GRIST)>arch_int.c 
+	<$(SOURCE_GRIST)>arch_smp.c 
+	<$(SOURCE_GRIST)>arch_thread.c 
+	<$(SOURCE_GRIST)>arch_timer.c 
+	<$(SOURCE_GRIST)>arch_vm.c 
+	<$(SOURCE_GRIST)>arch_vm_translation_map.c 
+	<$(SOURCE_GRIST)>arch_x86.S
+	:
+	-fno-pic
+	;

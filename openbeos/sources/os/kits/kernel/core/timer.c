@@ -5,7 +5,7 @@
 */
 #include <kernel.h>
 #include <console.h>
-#include <arch/debug.h>
+#include <debug.h>
 #include <thread.h>
 #include <arch/int.h>
 #include <smp.h>

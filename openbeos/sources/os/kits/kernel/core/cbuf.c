@@ -30,6 +30,9 @@ static cbuf *cbuf_region;
 static region_id cbuf_bitmap_region_id;
 static uint8 *cbuf_bitmap;
 
+/* Declarations we need that aren't in header files */
+uint16 ones_sum16(uint32, const void *, int);
+
 static void initialize_cbuf(cbuf *buf)
 {
 	buf->len = sizeof(buf->dat);

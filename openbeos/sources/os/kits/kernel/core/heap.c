@@ -7,7 +7,7 @@
 #include <kernel.h>
 #include <vm.h>
 #include <lock.h>
-// #include <heap.h>
+#include <memheap.h>
 #include <debug.h>
 
 #include <arch/cpu.h>
@@ -274,7 +274,7 @@ void kfree(void *address)
 	bin->alloc_count--;
 	bin->free_count++;
 
-out:
+//out:
 	mutex_unlock(&heap_lock);
 }
 
