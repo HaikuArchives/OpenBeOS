@@ -8,6 +8,7 @@
 #define OBOS_MBUF_H
 
 #include "pools.h"
+#include "if.h"
 
 /* MBuf's are all of a single size, MSIZE bytes. If we have more data
  * than can be fitted we can add a single "MBuf cluster" which is of
@@ -49,7 +50,9 @@ struct m_hdr {
  * a list of the packets associated with this message here.
  */
 struct pkt_hdr {
+	struct ifnet 	*rcvif;		/* interface we came it on */
 	int	len;		/* total length */
+	int csum;		/* hardware cksum info... */
 };
 
 /* m_ext
@@ -229,20 +232,37 @@ enum {
 	} \
 	} while (0)
 
+#define M_LEADINGSPACE(m) \
+        ((m)->m_flags & M_EXT ? (m)->m_data - (m)->m_ext.ext_buf : \
+         (m)->m_flags & M_PKTHDR ? (m)->m_data - (m)->m_pktdat : \
+         (m)->m_data - (m)->m_dat)
+
+#define M_PREPEND(m, plen) { \
+        if (M_LEADINGSPACE(m) >= (plen)) { \
+                (m)->m_data -= (plen); \
+                (m)->m_len += (plen); \
+        } else \
+                (m) = m_prepend((m), (plen)); \
+        if ((m) && (m)->m_flags & M_PKTHDR) \
+                (m)->m_pkthdr.len += (plen); \
+}
+
 /* Functions! */
 void mbinit(void);
 struct mbuf *m_get(int type);
+
 struct mbuf *m_gethdr(int type);
 struct mbuf *m_getclr(int type);
 
 struct mbuf *m_prepend(struct mbuf *m, size_t len);
 struct mbuf *m_devget(char *buf, int totlen, int off0,
-                        /*struct ifnet *ifp,*/
+                        struct ifnet *ifp,
                         void (*copy)(const void *, void *, size_t));
 
 struct mbuf *m_free(struct mbuf *mfree);
 void m_freem(struct mbuf *m);
 
+void m_reserve(struct mbuf *mp, int len);
 void m_adj(struct mbuf *mp, int req_len);
 void m_copydata(struct mbuf *m, int off, int len, caddr_t cp);
 
@@ -252,18 +272,10 @@ void dump_freelist(void);
 /* Stats structure */
 /* XXX - add me! */
 
-#ifdef _NET_STACK_
 
 struct pool_ctl *mbpool;
 struct pool_ctl *clpool;
 
 int max_linkhdr;		/* largest link level header */
-
-#else
-
-extern struct pool_ctl *mbpool;
-extern struct pool_ctl *clpool;
-
-#endif /* _NET_STACK_ */
 
 #endif /* OBOS_MBUF_H */

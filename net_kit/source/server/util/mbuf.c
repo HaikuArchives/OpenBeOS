@@ -7,8 +7,6 @@
 #include <kernel/OS.h>
 #include <string.h>
 
-#define _NET_STACK_
-
 #include "mbuf.h"
 #include "pools.h"
 
@@ -82,7 +80,6 @@ void m_freem(struct mbuf *m)
 struct mbuf *m_prepend(struct mbuf *m, size_t len)
 {
 	struct mbuf *mnew;
-
 	MGET(mnew, m->m_type);
 	if (!mnew) {
 		/* free chain */
@@ -101,7 +98,7 @@ struct mbuf *m_prepend(struct mbuf *m, size_t len)
 
 
 struct mbuf *m_devget(char *buf, int totlen, int off0,
-			/*struct ifnet *ifp,*/
+			struct ifnet *ifp,
 			void (*copy)(const void *, void *, size_t))
 {
         struct mbuf *m;
@@ -123,7 +120,7 @@ struct mbuf *m_devget(char *buf, int totlen, int off0,
         MGETHDR(m, MT_DATA);
         if (m == NULL)
                 return (NULL);
-        //m->m_pkthdr.rcvif = ifp;
+        m->m_pkthdr.rcvif = ifp;
         m->m_pkthdr.len = totlen;
         m->m_len = MHLEN;
 
@@ -167,6 +164,37 @@ struct mbuf *m_devget(char *buf, int totlen, int off0,
                         cp = buf;
         }
         return (top);
+}
+
+void m_reserve(struct mbuf *mp, int len)
+{
+	if (mp->m_len == 0) {
+		/* empty buffer! */
+		if (mp->m_flags & M_PKTHDR) {
+			if (len < MHLEN) {
+				mp->m_data += len;
+				mp->m_len -= len;
+				mp->m_pkthdr.len -= len;
+				return;
+			}
+			/* ?? */
+		} else {
+			if (len <= MLEN) {
+				mp->m_data += len;
+				mp->m_len -= len;
+				return;
+			}
+		}
+	}
+
+	if (len > 0) {
+		if (len <= mp->m_len) {
+			mp->m_data += len;
+			mp->m_len -= len;
+		}
+	}
+	if (mp->m_flags & M_PKTHDR)
+		mp->m_pkthdr.len -= len;
 }
 
 void m_adj(struct mbuf *mp, int req_len)
