@@ -8,7 +8,6 @@
 
 #include "pools.h"
 #include "net_misc.h"
-#include "net_module.h"
 #include "protocols.h"
 #include "netinet/in_systm.h"
 #include "netinet/in_var.h"
@@ -26,12 +25,13 @@
 
 #include "ipv4/ipv4_module.h"
 
+#include "core_module.h"
+#include "net_module.h"
+#include "core_funcs.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
 
-struct core_module_info *core = NULL;
 
 #define TCP_MODULE_PATH		"network/protocol/tcp"
 
@@ -44,6 +44,7 @@ static timer fasttim;
 static image_id ipid = -1;
 #endif
 
+struct core_module_info *core = NULL;
 struct ipv4_module_info *ipm = NULL;
 
 /* Declaration as we don't have it natively... */
@@ -187,6 +188,7 @@ printf("tcp_close\n");
 	/* free our reassembly queue */
 	t = tp->seg_next;
 	while (t != (struct tcpiphdr*)tp) {
+printf("freeing reassembly q\n");
 		t = (struct tcpiphdr*)t->ti_next;
 		m = REASS_MBUF((struct tcpiphdr*)t->ti_prev);
 		remque(t->ti_prev);
@@ -194,6 +196,7 @@ printf("tcp_close\n");
 	}
 	if (tp->t_template)
 		(void)m_free(dtom(tp->t_template));
+printf("tcp_close:cleaning up\n");
 	pool_put(tcppool, tp);
 	inp->inp_ppcb = NULL;
 	soisdisconnected(so);
@@ -201,6 +204,7 @@ printf("tcp_close\n");
 		tcp_last_inpcb = &tcb;
 	in_pcbdetach(inp);
 	tcpstat.tcps_closed++;
+printf("tcp_close: done\n");
 	return NULL;
 }
 
@@ -431,8 +435,10 @@ int tcp_userreq(struct socket *so, int req, struct mbuf *m,
 			}
 										
 			error = in_pcbconnect(inp, nam);
-			if (error)
+			if (error) {
+				printf("in_pcbconnect gave error %d\n", error);
 				break;
+			}
 			tp->t_template = tcp_template(tp);
 			if (tp->t_template == NULL) {
 				in_pcbdisconnect(inp);
@@ -512,8 +518,9 @@ static struct protosw my_proto = {
 };
 
 #ifndef _KERNEL_MODE
-static void tcp_protocol_init(void)
+static void tcp_protocol_init(struct core_module_info *cp)
 {
+	core = cp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 
@@ -534,6 +541,7 @@ static void tcp_protocol_init(void)
 			printf("Failed to load the IPv4 module...\n");
 			return;
 		}
+		ipm->set_core(cp);
 	}
 }
 
@@ -551,8 +559,8 @@ static status_t k_init(void)
 	if (!ipm)
 		get_module(IPV4_MODULE_PATH, (module_info**)&ipm);
 	
-	core->add_domain(NULL, AF_INET);
-	core->add_protocol(&my_proto, AF_INET);
+	add_domain(NULL, AF_INET);
+	add_protocol(&my_proto, AF_INET);
 	
 	return 0;
 }

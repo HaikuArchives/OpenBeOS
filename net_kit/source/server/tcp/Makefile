@@ -1,7 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=tcp
 TGT=../modules/protocol/$(TARGET)
-LOBJS=../_APP_
+LOBJS=../net_server/cksum.o ../net_server/net_timer.o
 OBJS=arc4random.o tcp_output.o tcp_input.o tcp_timer.o tcp_debug.o $(TARGET).o
 
 CFLAGS+=-D_NETWORK_STACK
@@ -32,7 +32,7 @@ installkernel:	kernel
 	@cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)
 
 $(TARGET): $(OBJS)
-	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

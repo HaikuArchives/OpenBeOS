@@ -12,15 +12,14 @@
 #include "netinet/tcp_seq.h"
 #include "netinet/tcp_fsm.h"
 
+#include "core_module.h"
+#include "core_funcs.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
+#endif
 
 extern struct core_module_info *core;
-
-#define in_losing           core->in_losing
-
-#endif
 
 int	tcp_backoff[TCP_MAXRXTSHIFT + 1] =
     { 1, 2, 4, 8, 16, 32, 64, 64, 64, 64, 64, 64, 64 };

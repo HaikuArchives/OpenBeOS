@@ -72,6 +72,7 @@
 #ifndef _KERNEL_MODE
 #include <stdio.h>
 #endif
+
 #include <sys/param.h>
 #include <kernel/OS.h>
 
@@ -99,14 +100,14 @@
 #include "ipv4/ipv4_module.h"
 
 extern struct ipv4_module_info *ipm;
+#include "core_module.h"
+#include "core_funcs.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
+#endif
 
 extern struct core_module_info *core;
-#endif
 
 int	    tcprexmtthresh = 3;
 struct	tcpiphdr tcp_saveti;
@@ -371,6 +372,7 @@ void tcp_input(struct mbuf *m, int iphlen)
 	off = ti->ti_off << 2;
 	if (off < sizeof(struct tcphdr) || off > tlen) {
 		tcpstat.tcps_rcvbadoff++;
+		printf("tcp_input: bad len\n");
 		goto drop;
 	}
 	
@@ -444,8 +446,10 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 
-	if (tp->t_state == TCPS_CLOSED)
+	if (tp->t_state == TCPS_CLOSED) {
+		printf("tcp_input: state is closed\n");
 		goto drop;
+	}
 
 	/* Unscale the window into a 32-bit value. */
 	if ((tiflags & TH_SYN) == 0)
@@ -455,14 +459,18 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 
 	so = inp->inp_socket;
 	if (so->so_options & (SO_DEBUG|SO_ACCEPTCONN)) {
+		printf("SO_ACCEPTCONN\n");
 		if (so->so_options & SO_DEBUG) {
 			ostate = tp->t_state;
 			tcp_saveti = *ti;
 		}
 		if (so->so_options & SO_ACCEPTCONN) {
+			printf("calling sonewconn...\n");
 			so = sonewconn(so, 0);
-			if (so == NULL)
+			if (so == NULL) {
+				printf("tcp_input: sonewconn = NULL\n");
 				goto drop;
+			}
 			/*
 			 * This is ugly, but ....
 			 *
@@ -636,29 +644,34 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 			struct mbuf *am;
 			struct sockaddr_in *sin;
 
-			if (tiflags & TH_RST)
+			if (tiflags & TH_RST) {
+				printf("tcp_input: TH_RST\n");
 				goto drop;
+			}
 			if (tiflags & TH_ACK) {
 printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto dropwithreset;
 			}
-			if ((tiflags & TH_SYN) == 0)
+			if ((tiflags & TH_SYN) == 0) {
+				printf("tcp_input: TH_SYN\n");
 				goto drop;
+			}
 			/*
 			 * RFC1122 4.2.3.10, p. 104: discard bcast/mcast SYN
 			 * in_broadcast() should never return true on a received
 			 * packet with M_BCAST not set.
 			 */
 			if (m->m_flags & (M_BCAST | M_MCAST) ||
-			    IN_MULTICAST(ti->ti_dst.s_addr))
+			    IN_MULTICAST(ti->ti_dst.s_addr)) {
+				printf("tcp_input: multicast! %d\n", __LINE__);
 				goto drop;
+			}
 			
 			am = m_get(MT_SONAME);
-			if (!am)
+			if (!am) {
+				printf("failed to get MT_SONAME\n");
 				goto drop;
-			
-			if (m->m_flags & (M_BCAST|M_MCAST))
-				goto drop;
+			}
 			am->m_len = sizeof(struct sockaddr_in);
 			sin = mtod(am, struct sockaddr_in *);
 			sin->sin_family = AF_INET;
@@ -673,11 +686,13 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 			if (in_pcbconnect(inp, am)) {
 				inp->laddr = laddr;
 				(void) m_free(am);
+				printf("tcp_input: in_pcbconnect failed\n");
 				goto drop;
 			}
 			(void) m_free(am);
 			tp->t_template = tcp_template(tp);
 			if (tp->t_template == NULL) {
+				printf("template = NULL\n");
 				tp = tcp_drop(tp, ENOBUFS);
 				dropsocket = 0;		/* socket is already gone */
 				goto drop;
@@ -748,10 +763,13 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 			if (tiflags & TH_RST) {
 				if (tiflags & TH_ACK)
 					tp = tcp_drop(tp, ECONNREFUSED);
+				printf("tcp_input: %d\n", __LINE__);
 				goto drop;
 			}
-			if ((tiflags & TH_SYN) == 0)
+			if ((tiflags & TH_SYN) == 0) {
+				printf("tcp_input: %d\n", __LINE__);
 				goto drop;
+			}
 			if (tiflags & TH_ACK) {
 				tp->snd_una = ti->ti_ack;
 				if (SEQ_LT(tp->snd_nxt, tp->snd_una))
@@ -782,6 +800,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				tp->t_state = TCPS_SYN_RECEIVED;
 
 trimthenstep6:
+printf("tcp_input: trimthenstep6\n");
 			/*
 			 * Advance ti->ti_seq to correspond to first data byte.
 			 * If data, trim to stay within window,
@@ -955,6 +974,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 	 *	Close the tcb.
 	 */
 	if (tiflags & TH_RST) {
+		printf("tcp_input: TH_RST %d\n", __LINE__);
 		switch (tp->t_state) {
 			case TCPS_SYN_RECEIVED:
 				so->so_error = ECONNREFUSED;
@@ -992,8 +1012,10 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 	/*
 	 * If the ACK bit is off we drop the segment and return.
 	 */
-	if ((tiflags & TH_ACK) == 0)
+	if ((tiflags & TH_ACK) == 0) {
+		printf("tcp_input: no ack flag...\n");
 		goto drop;
+	}
 
 	/*
 	 * Ack processing.
@@ -1229,6 +1251,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 	}
 
 step6:
+printf("step6\n");
 	/*
 	 * Update window information.
 	 * Don't look at window if no ACK: TAC's send garbage on first SYN.
@@ -1391,7 +1414,7 @@ dodata:							/* XXX */
 	return;
 
 dropafterack:
-//	printf("tcp_input: dropafterack\n");
+	printf("tcp_input: dropafterack\n");
 
 	/*
 	 * Generate an ACK dropping incoming segment if it occupies
@@ -1405,7 +1428,7 @@ dropafterack:
 	return;
 
 dropwithreset:
-//	printf("tcp_input: dropwithreset\n");
+	printf("tcp_input: dropwithreset\n");
 	/*
 	 * Generate a RST, dropping incoming segment.
 	 * Make ACK acceptable to originator of segment.
@@ -1427,6 +1450,7 @@ dropwithreset:
 	return;
 
 drop:
+printf("tcp_input: drop %d\n", __LINE__);
 	/*
 	 * Drop space held by incoming segment and return.
 	 */

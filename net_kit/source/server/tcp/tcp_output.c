@@ -16,18 +16,20 @@
 #include "netinet/tcp_seq.h"
 #define TCPOUTFLAGS
 #include "netinet/tcp_fsm.h"
+#include "netinet/tcp_debug.h"
 
 #include "ipv4/ipv4_module.h"
-extern struct ipv4_module_info *ipm;
-extern struct pool_ctl *tcppool;
+#include "core_module.h"
+#include "core_funcs.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
+
+#endif
 
 extern struct core_module_info *core;
-#endif
+extern struct ipv4_module_info *ipm;
+extern struct pool_ctl *tcppool;
 
 #define  roundup(x, y)   ((((x)+((y)-1))/(y))*(y))
 extern uint32 sb_max; /* defined in socketvar.h */
@@ -411,13 +413,14 @@ send:
 	} else if (SEQ_GT(tp->snd_nxt + len, tp->snd_max))
 		tp->snd_max = tp->snd_nxt + len;
 	
-	/* XXX - add tracing */
+	if (so->so_options & SO_DEBUG)
+		tcp_trace(TA_OUTPUT, tp->t_state, tp, ti, 0, len);
 	
 	m->m_pkthdr.len = hdrlen + len;
 	((struct ip*)ti)->ip_len = m->m_pkthdr.len;
 	((struct ip*)ti)->ip_ttl = tp->t_inpcb->inp_ip.ip_ttl;
 	((struct ip*)ti)->ip_tos = tp->t_inpcb->inp_ip.ip_tos;
-//printf("tcp_output: calling ip_output\n");
+printf("tcp_output: calling ip_output to %08lx\n", tp->t_inpcb->inp_ip.ip_dst.s_addr);
 	error = ipm->output(m, tp->t_inpcb->inp_options, &tp->t_inpcb->inp_route,
 	                    so->so_options & SO_DONTROUTE, NULL);
 	
