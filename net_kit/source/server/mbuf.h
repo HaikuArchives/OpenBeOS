@@ -115,7 +115,7 @@ enum {
 };
 /* the M_COPYFLAGS lists the flags that can be copied when we copy
  * an mbuf with the M_PKTHDR flag set */
-#define M_COPYFLAGS	M_PKTHDR | M_EOR | M_BCAST | M_MCAST
+#define M_COPYFLAGS	(M_PKTHDR | M_EOR | M_BCAST | M_MCAST)
 
 /* checksum flags */
 enum {
