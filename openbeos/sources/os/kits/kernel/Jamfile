@@ -1,1 +1,10 @@
+SubDir OBOS_TOP sources os kits kernel ;
+
+SubInclude OBOS_TOP sources os kits kernel boot ;
+SubInclude OBOS_TOP sources os kits kernel core ;
+SubInclude OBOS_TOP sources os kits kernel drivers ;
+SubInclude OBOS_TOP sources os kits kernel global ;
+SubInclude OBOS_TOP sources os kits kernel glue ;
+SubInclude OBOS_TOP sources os kits kernel libc ;
+SubInclude OBOS_TOP sources os kits kernel libm ;
 SubInclude OBOS_TOP sources os kits kernel prefs ;
