@@ -25,8 +25,7 @@ public:
 	//------------------------------------------------------------
 	// Test functions
 	//------------------------------------------------------------
-	void InitTest1();
-	void InitTest2();
+	void InitTest();
 	void ReadTest();
 	void SyncTest();
 	void MergeTest();

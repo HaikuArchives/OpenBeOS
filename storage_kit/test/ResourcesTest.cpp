@@ -172,10 +172,8 @@ ResourcesTest::Suite() {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 	typedef CppUnit::TestCaller<ResourcesTest> TC;
 		
-	suite->addTest( new TC("BResources::Init Test1",
-						   &ResourcesTest::InitTest1) );
-	suite->addTest( new TC("BResources::Init Test2",
-						   &ResourcesTest::InitTest2) );
+	suite->addTest( new TC("BResources::Init Test",
+						   &ResourcesTest::InitTest) );
 	suite->addTest( new TC("BResources::Read Test",
 						   &ResourcesTest::ReadTest) );
 	suite->addTest( new TC("BResources::Sync Test",
@@ -220,314 +218,9 @@ ResourcesTest::tearDown()
 	BasicTest::tearDown();
 }
 
-// InitTest1
+// InitTest
 void
-ResourcesTest::InitTest1()
-{
-// The R5 BResources class does not have an InitCheck(), so it is a bit
-// difficult to test the initialization via constructor.
-#if !SK_TEST_R5
-	// 1. existing files, read only
-	// x86 resource file
-	nextSubTest();
-	{
-		BFile file(x86ResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ppc resource file
-	nextSubTest();
-	{
-		BFile file(ppcResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ELF binary containing resources
-	nextSubTest();
-	{
-		BFile file(elfFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ELF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(elfNoResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// PEF binary containing resources
-	nextSubTest();
-	{
-		BFile file(pefFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// PEF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(pefNoResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// empty file
-	nextSubTest();
-	{
-		BFile file(emptyFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// non-resource file
-	nextSubTest();
-	{
-		BFile file(noResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_ERROR );
-	}
-
-	// 2. existing files, read only, clobber
-	// x86 resource file
-	nextSubTest();
-	{
-		BFile file(x86ResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ppc resource file
-	nextSubTest();
-	{
-		BFile file(ppcResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ELF binary containing resources
-	nextSubTest();
-	{
-		BFile file(elfFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ELF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(elfNoResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// PEF binary containing resources
-	nextSubTest();
-	{
-		BFile file(pefFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// PEF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(pefNoResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// empty file
-	nextSubTest();
-	{
-		BFile file(emptyFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// non-resource file
-	nextSubTest();
-	{
-		BFile file(noResFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-
-	// 3. existing files, read/write
-	// x86 resource file
-	nextSubTest();
-	{
-		BFile file(x86ResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ppc resource file
-	nextSubTest();
-	{
-		BFile file(ppcResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ELF binary containing resources
-	nextSubTest();
-	{
-		BFile file(elfFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// ELF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(elfNoResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// PEF binary containing resources
-	nextSubTest();
-	{
-		BFile file(pefFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// PEF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(pefNoResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// empty file
-	nextSubTest();
-	{
-		BFile file(emptyFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-	// non-resource file
-	nextSubTest();
-	{
-		BFile file(noResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_ERROR );
-	}
-
-	// 4. existing files, read/write, clobber
-	// x86 resource file
-	nextSubTest();
-	{
-		BFile file(x86ResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.Sync() == B_OK );
-	}
-	// ppc resource file
-	nextSubTest();
-	{
-		BFile file(ppcResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.Sync() == B_OK );
-	}
-	// ELF binary containing resources
-	nextSubTest();
-	{
-		BFile file(elfFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.Sync() == B_OK );
-	}
-	// ELF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(elfNoResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.Sync() == B_OK );
-	}
-	// PEF binary containing resources
-	nextSubTest();
-	{
-		BFile file(pefFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.Sync() == B_OK );
-	}
-	// PEF binary not containing resources
-	nextSubTest();
-	{
-		BFile file(pefNoResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.Sync() == B_OK );
-	}
-	// empty file
-	nextSubTest();
-	{
-		BFile file(emptyFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.Sync() == B_OK );
-	}
-	// non-resource file
-	nextSubTest();
-	{
-		BFile file(noResFile, B_READ_WRITE);
-		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		BResources resources(&file, true);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-
-	// 5. bad args
-	// uninitialized file
-	nextSubTest();
-	{
-		BFile file;
-		CPPUNIT_ASSERT( file.InitCheck() == B_NO_INIT );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_NO_INIT );
-	}
-	// badly initialized file
-	nextSubTest();
-	{
-		BFile file(noSuchFile, B_READ_ONLY);
-		CPPUNIT_ASSERT( file.InitCheck() == B_ENTRY_NOT_FOUND );
-		BResources resources(&file, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_ENTRY_NOT_FOUND );
-	}
-	// NULL file
-	nextSubTest();
-	{
-		// R5: A NULL file is B_OK!
-		BResources resources(NULL, false);
-		CPPUNIT_ASSERT( resources.InitCheck() == B_OK );
-	}
-#endif	// !SK_TEST_R5
-}
-
-// InitTest2
-void
-ResourcesTest::InitTest2()
+ResourcesTest::InitTest()
 {
 	// 1. existing files, read only
 	// x86 resource file
@@ -592,7 +285,8 @@ ResourcesTest::InitTest2()
 		BResources resources;
 		BFile file(noResFile, B_READ_ONLY);
 		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.SetTo(&file, false) == B_ERROR );
+		CPPUNIT_ASSERT( equals(resources.SetTo(&file, false), B_ERROR,
+							   B_IO_ERROR) );
 	}
 
 	// 2. existing files, read only, clobber
@@ -724,7 +418,8 @@ ResourcesTest::InitTest2()
 		BResources resources;
 		BFile file(noResFile, B_READ_WRITE);
 		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.SetTo(&file, false) == B_ERROR );
+		CPPUNIT_ASSERT( equals(resources.SetTo(&file, false), B_ERROR,
+							   B_IO_ERROR) );
 	}
 
 	// 4. existing files, read/write, clobber
@@ -832,7 +527,6 @@ static
 void
 ReadResTest(BResources& resources, const ResourceInfo& info, bool exists)
 {
-//printf("resource: `%s'\n", info.name);
 	if (exists) {
 		// test an existing resource
 		// HasResource()
@@ -1110,6 +804,15 @@ ResourcesTest::ReadTest()
 		ReadResTest(resources, testResource4, false);
 		ReadResTest(resources, testResource5, false);
 	}
+	// uninitialized BResources
+	nextSubTest();
+	{
+		BResources resources;
+		// int32 type
+		CPPUNIT_ASSERT( resources.PreloadResourceType(B_INT32_TYPE) == B_OK );
+		// all types
+		CPPUNIT_ASSERT( resources.PreloadResourceType() == B_OK );
+	}
 
 	// 3. the index versions of GetResourceInfo()
 	// index only
@@ -1191,7 +894,8 @@ ResourcesTest::ReadTest()
 		BResources resources;
 		BFile file(noResFile, B_READ_ONLY);
 		CPPUNIT_ASSERT( file.InitCheck() == B_OK );
-		CPPUNIT_ASSERT( resources.SetTo(&file, false) == B_ERROR );
+		CPPUNIT_ASSERT( equals(resources.SetTo(&file, false), B_ERROR,
+							   B_IO_ERROR) );
 		ReadBadResTest(resources, testResource1);
 	}
 	// uninitialized file
@@ -1336,7 +1040,6 @@ void
 AddResource(BResources &resources, ResourceSet &resourceSet,
 			const ResourceInfo &info)
 {
-//printf("AddResource(%s)\n", info.name);
 	resourceSet.add(&info);
 	CPPUNIT_ASSERT( resources.AddResource(info.type, info.id, info.data,
 										  info.size, info.name) == B_OK );
@@ -1349,7 +1052,6 @@ void
 RemoveResource(BResources &resources, ResourceSet &resourceSet,
 			   const ResourceInfo &info, bool firstVersion)
 {
-//printf("RemoveResource(%s)\n", info.name);
 	resourceSet.remove(&info);
 	if (firstVersion) {
 		CPPUNIT_ASSERT( resources.RemoveResource(info.type, info.id) == B_OK );
@@ -1591,7 +1293,7 @@ ResourcesTest::WriteToTest()
 		BResources resources;
 		CPPUNIT_ASSERT( resources.SetTo(&file, false) == B_OK );
 #if !SK_TEST_R5
-		CPPUNIT_ASSERT( resources.WriteTo(NULL) == B_OK);
+		CPPUNIT_ASSERT( resources.WriteTo(NULL) == B_BAD_VALUE);
 #endif
 	}	
 }
