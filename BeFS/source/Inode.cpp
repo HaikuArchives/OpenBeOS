@@ -1463,7 +1463,7 @@ Inode::FreeStreamArray(Transaction *transaction,block_run *array,uint32 arrayLen
 			break;
 
 		newOffset += (off_t)array[i].length << fVolume->BlockShift();
-		if (newOffset < size)
+		if (newOffset <= size)
 			continue;
 
 		block_run run = array[i];
