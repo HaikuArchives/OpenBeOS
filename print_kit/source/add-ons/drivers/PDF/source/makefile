@@ -27,6 +27,7 @@ TYPE= SHARED
 #
 SRCS= Driver.cpp \
 	  PrinterDriver.cpp \
+	  Utils.cpp \
 	  PageSetupWindow.cpp \
 	  JobSetupWindow.cpp \
 	  PrinterSetupWindow.cpp \
