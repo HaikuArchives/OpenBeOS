@@ -76,6 +76,7 @@ BBufferGroup::BBufferGroup(size_t size,
 		if (0 == buffer->Data()) {
 			// BBuffer::Data() will return 0 if an error occured
 			TRACE("error while creating buffer\n");
+			delete buffer;
 			fInitError = B_ERROR;
 			break;
 		}
@@ -115,6 +116,7 @@ BBufferGroup::BBufferGroup(int32 count,
 		if (0 == buffer->Data()) {
 			// BBuffer::Data() will return 0 if an error occured
 			TRACE("error while creating buffer\n");
+			delete buffer;
 			fInitError = B_ERROR;
 			break;
 		}
@@ -147,6 +149,7 @@ BBufferGroup::AddBuffer(const buffer_clone_info &info,
 	if (0 == buffer->Data()) {
 		// BBuffer::Data() will return 0 if an error occured
 		TRACE("error while creating buffer\n");
+		delete buffer;
 		return B_ERROR;
 	}
 	fBufferList->AddBuffer(buffer);
