@@ -43,11 +43,11 @@
  * Overlay for ip header used by other protocols (tcp, udp).
  */
 struct ipovly {
-	uint8     ih_x1[9];/* (unused) */
-	uint8     ih_pr;/* protocol */
-	uint16    ih_len;/* protocol length */
-	struct    in_addr ih_src;/* source internet address */
-	struct    in_addr ih_dst;/* destination internet address */
+	uint8     ih_x1[9];        /* (unused) */
+	uint8     ih_pr;           /* protocol */
+	uint16    ih_len;          /* protocol length */
+	struct    in_addr ih_src;  /* source internet address */
+	struct    in_addr ih_dst;  /* destination internet address */
 }; 
 
 /*

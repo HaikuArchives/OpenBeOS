@@ -35,6 +35,18 @@ struct in_aliasreq {
 	struct sockaddr_in ifra_mask;
 };
 
+
+struct in_multi {
+	struct in_addr inm_addr;
+	struct ifnet *inm_ifp;
+	struct in_ifaddr *inm_ia;
+	uint inm_refcount;
+	uint inm_timer;
+	struct in_multi *next;
+	struct in_multi **prev;	
+	uint inm_state;
+};
+
 /*
  * Given a pointer to an in_ifaddr (ifaddr),
  * return a pointer to the addr as a sockaddr_in.

@@ -6,7 +6,7 @@
 #include "sys/socket.h"
 #include "net_misc.h"
 #include "pools.h"
-#include "ipv4/ipv4.h"
+#include "netinet/ip.h"
 #include "netinet/in.h"
 #include "net/route.h"
 
@@ -40,7 +40,7 @@ struct inpcb {
 
 	struct socket *inp_socket;
 
-	ipv4_header inp_ip;	/* header prototype */	
+	struct ip inp_ip;	/* header prototype */	
 	int inp_flags;		/* flags */
 	struct mbuf *inp_options; /* IP options */
 	/* more will be required */

@@ -9,6 +9,7 @@
 
 #include "mbuf.h"
 #include "net_misc.h"
+#include "netinet/in_systm.h"
 #include "netinet/in.h"
 
 /* Based on RFC 791 */
