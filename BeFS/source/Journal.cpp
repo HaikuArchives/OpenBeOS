@@ -19,7 +19,7 @@ Journal::Journal(Volume *volume)
 	fOwningThread(-1),
 	fArray(volume->BlockSize()),
 	fLogSize(volume->Log().length),
-	fMaxTransactionSize(4 * 125), //fLogSize / 4 - 5),
+	fMaxTransactionSize(fLogSize / 4 - 5),
 	fUsed(0),
 	fTransactionsInEntry(0)
 {
@@ -105,7 +105,7 @@ Journal::ReplayLogEntry(int32 *_start)
 			if (copy == NULL)
 				RETURN_ERROR(B_IO_ERROR);
 
-			ssize_t written = write_pos(fVolume->Device(),array[index] * blockSize,copy,blockSize);
+			ssize_t written = write_pos(fVolume->Device(),array[index] << fVolume->BlockShift(),copy,blockSize);
 			if (written != blockSize)
 				RETURN_ERROR(B_IO_ERROR);
 
@@ -237,16 +237,17 @@ Journal::WriteLogEntry()
 		return B_BAD_DATA;
 	}
 
-	off_t logOffset = fVolume->ToBlock(fVolume->Log());
+	int32 blockShift = fVolume->BlockShift();
+	off_t logOffset = fVolume->ToBlock(fVolume->Log()) << blockShift;
 	off_t logStart = fVolume->LogEnd();
-	int32 logPosition = logStart % fLogSize;
+	off_t logPosition = logStart % fLogSize;
 
 	// Write disk block array
 
 	uint8 *arrayBlock = (uint8 *)array;
 
 	for (int32 size = fArray.BlocksUsed();size-- > 0;) {
-		write_pos(fVolume->Device(),logOffset + logPosition,arrayBlock,fVolume->BlockSize());
+		write_pos(fVolume->Device(),logOffset + (logPosition << blockShift),arrayBlock,fVolume->BlockSize());
 
 		logPosition = (logPosition + 1) % fLogSize;
 		arrayBlock += fVolume->BlockSize();
@@ -260,8 +261,7 @@ Journal::WriteLogEntry()
 		if (block == NULL)
 			return B_IO_ERROR;
 
-		// ToDo: try if using an iovec an a sequential read speeds up the operation
-		write_pos(fVolume->Device(),logOffset + logPosition,block,fVolume->BlockSize());
+		write_pos(fVolume->Device(),logOffset + (logPosition << blockShift),block,fVolume->BlockSize());
 		logPosition = (logPosition + 1) % fLogSize;
 	}
 
@@ -337,7 +337,7 @@ Journal::Lock(Transaction *owner)
 		fOwner = owner;
 		fOwningThread = find_thread(NULL);
 	}
-	
+
 	// if the last transaction is older than 2 secs, start a new one
 	if (fTransactionsInEntry != 0 && system_time() - fTimestamp > 2000000L)
 		WriteLogEntry();
