@@ -44,6 +44,7 @@ BNodeInfo::InitCheck() const
 status_t 
 BNodeInfo::GetType(char *type) const
 {
+    if(type == NULL) return;
 	if(fCStatus == B_OK) {
 		attr_info attrInfo;
 		status_t error;
@@ -52,9 +53,33 @@ BNodeInfo::GetType(char *type) const
 		if(error == B_OK) {
 			error = fNode->ReadAttr(NI_TYPE, attrInfo.type, 0, type, 
 									attrInfo.size);
-		} else {
-		  // need to be extended to include working out based on extention etc
-		  strcpy(type, "application/octstream");
+		}
+		if(error < B_OK ) {
+		  // No attribute (or a problem with the attr), lets see what the MIME
+		  // database has to say...
+		  BMessage fileTypes();
+		  bool found = false;
+		  uint32 counter = 0;
+		  char *fileType;
+		  BMineType mime;
+		  if( BMimeType.GetInstalledTypes(&fileTypes) == B_OK ) {
+			while(true) {
+			  if (fileTypes.FindString("types", counter++, &fileType) != B_OK)
+				break;
+			  if( mime.SetTo(fileType) == B_OK ){
+				
+				while(true) {
+				  if (msg.FindString("extensions", i++, &ptr) != B_OK)
+					break;
+				  
+				}
+			  }
+			}
+		  }
+
+
+		  if(!found)
+			strcpy(type, "application/octstream");
 		  error = B_OK;
 		}
 		
