@@ -2,43 +2,50 @@
 
 SubDir TOP source lib ;
 
-Library $(TOP)/source/lib/libstorage :
-ByteOrder.cpp
-DataIO.cpp
-Directory.cpp
-Entry.cpp
-EntryList.cpp
-File.cpp
-FindDirectory.cpp
-Flattenable.cpp
-List.cpp
-Locker.cpp
-MallocIO.cpp
-Mime.cpp
-MimeType.cpp
-Node.cpp
-#NodeInfo.cpp
-OffsetFile.cpp
-Path.cpp
-ResourcesContainer.cpp
-ResourceFile.cpp
-ResourceItem.cpp
-Resources.cpp
-ResourceStrings.cpp
-Statable.cpp
-String.cpp
-SymLink.cpp
-Volume.cpp
-kernel_interface.POSIX.cpp
-storage_support.cpp ;
+SharedFromSources $(TOP)/source/lib/libstorage.so :
+	ByteOrder.cpp
+	DataIO.cpp
+	Directory.cpp
+	Entry.cpp
+	EntryList.cpp
+	File.cpp
+	FindDirectory.cpp
+	Flattenable.cpp
+	List.cpp
+	Locker.cpp
+	MallocIO.cpp
+	Mime.cpp
+	MimeType.cpp
+	Node.cpp
+	#NodeInfo.cpp
+	OffsetFile.cpp
+	Path.cpp
+	ResourcesContainer.cpp
+	ResourceFile.cpp
+	ResourceItem.cpp
+	Resources.cpp
+	ResourceStrings.cpp
+	Statable.cpp
+	String.cpp
+	SymLink.cpp
+	Volume.cpp
+	kernel_interface.POSIX.cpp
+	storage_support.cpp ;
+LinkSharedLibs $(TOP)/source/lib/libstorage.so :
+	$(TOP)/source/lib/libbeadapter.so
+;
+LinkSharedOSLibs $(TOP)/source/lib/libstorage.so :
+	/boot/develop/lib/x86/libbe.so
+;
 
 
 # Here come the rules for our adapter library.
 
 HDRS = ;
 
-Objects LibBeAdapter.cpp ;
-LinkShared $(TOP)/source/lib/libbeadapter.so : <$(SOURCE_GRIST)>LibBeAdapter.o ;
+SharedFromSources $(TOP)/source/lib/libbeadapter.so :
+	LibBeAdapter.cpp
+;
 LinkSharedOSLibs $(TOP)/source/lib/libbeadapter.so :
 	/boot/develop/lib/x86/libbe.so
 ;
