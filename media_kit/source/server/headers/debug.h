@@ -10,7 +10,8 @@
 		printf("BROKEN %s\n",__PRETTY_FUNCTION__)
 
 	#define CALLED() \
-		printf("CALLED %s\n",__PRETTY_FUNCTION__)
+		((void)0)
+//		printf("CALLED %s\n",__PRETTY_FUNCTION__)
 
 	#undef TRACE		
 	#define TRACE \

@@ -631,7 +631,7 @@ BMediaRoster::GetAllInputsFor(const media_node & node,
 	msg2.cookie = cookie;
 	rv2 = write_port(node.port, CONSUMER_DISPOSE_INPUT_COOKIE, &msg2, sizeof(msg2));
 
-	return (rv != B_OK) ? rv : rv2;
+	return (rv < B_OK) ? rv : rv2;
 }
 
 							  
@@ -665,7 +665,6 @@ BMediaRoster::GetAllOutputsFor(const media_node & node,
 							   int32 * out_total_count)
 {
 	CALLED();
-TRACE("0\n");		
 	if (node.node == 0 || (node.kind & B_BUFFER_PRODUCER) == 0)
 		return B_MEDIA_BAD_NODE;
 	if (out_outputs == NULL || out_total_count == NULL)
@@ -701,7 +700,7 @@ TRACE("0\n");
 	msg2.cookie = cookie;
 	rv2 = write_port(node.port, PRODUCER_DISPOSE_OUTPUT_COOKIE, &msg2, sizeof(msg2));
 
-	return (rv != B_OK) ? rv : rv2;
+	return (rv < B_OK) ? rv : rv2;
 }
 
 
@@ -857,7 +856,43 @@ BMediaRoster::InstantiateDormantNode(const dormant_node_info & in_info,
 									 media_node * out_node,
 									 uint32 flags /* currently B_FLAVOR_IS_GLOBAL or B_FLAVOR_IS_LOCAL */ )
 {
-	UNIMPLEMENTED();
+	CALLED();
+	if ((flags & (B_FLAVOR_IS_GLOBAL | B_FLAVOR_IS_LOCAL)) == 0)
+		return B_BAD_VALUE;
+	if (out_node == 0)
+		return B_BAD_VALUE;
+		
+	if (flags & B_FLAVOR_IS_LOCAL) {
+		return InstantiateDormantNode(in_info,out_node);
+	}
+
+	if (flags & B_FLAVOR_IS_GLOBAL) {
+		// forward this request into the media_addon_server,
+		// which in turn will call InstantiateDormantNode()
+		// to create it there localy
+		xfer_addonserver_instantiate_dormant_node msg;
+		xfer_addonserver_instantiate_dormant_node_reply reply;
+		port_id port;
+		status_t rv;
+		int32 code;
+		port = find_port("media_addon_server port");
+		if (port <= B_OK)
+			return B_ERROR;
+		msg.info = in_info;
+		msg.reply_port = _PortPool->GetPort();
+		rv = write_port(port, ADDONSERVER_INSTANTIATE_DORMANT_NODE, &msg, sizeof(msg));
+		if (rv != B_OK) {
+			_PortPool->PutPort(msg.reply_port);
+			return rv;
+		}
+		rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
+		_PortPool->PutPort(msg.reply_port);
+		if (rv < B_OK)
+			return rv;
+		*out_node = reply.node;
+		return reply.result;
+	}
+
 	return B_ERROR;
 }
 
@@ -866,7 +901,7 @@ status_t
 BMediaRoster::InstantiateDormantNode(const dormant_node_info & in_info,
 									 media_node * out_node)
 {
-	UNIMPLEMENTED();
+	CALLED();
 	return B_ERROR;
 }
 
@@ -876,6 +911,7 @@ BMediaRoster::GetDormantNodeFor(const media_node & node,
 								dormant_node_info * out_info)
 {
 	UNIMPLEMENTED();
+	
 	return B_ERROR;
 }
 
@@ -1215,12 +1251,6 @@ BMediaRoster::SetRunningDefault(media_node_id for_default,
 	return B_ERROR;
 }
 
-		
-void 
-BMediaRoster::RegisterNode(media_node_id, BMediaNode*)
-{
-	UNIMPLEMENTED();
-}
 
 /*************************************************************
  * static BMediaRoster variables

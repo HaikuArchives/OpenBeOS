@@ -416,8 +416,6 @@ static	status_t ParseCommand(
 				media_node_id for_default,
 				const media_node & node);
 		
-		void RegisterNode(media_node_id, BMediaNode*);
-
 static	port_id checkout_reply_port(
 				const char * name = NULL);
 static	void checkin_reply_port(

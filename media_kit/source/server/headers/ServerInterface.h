@@ -3,6 +3,7 @@
 
 #include <MediaDefs.h>
 #include <MediaNode.h>
+#include <MediaAddOn.h>
 
 #define NEW_MEDIA_SERVER_SIGNATURE 	"application/x-vnd.OpenBeOS-media-server"
 
@@ -89,9 +90,32 @@ enum {
 	PRODUCER_CONNECT,
 	PRODUCER_DISCONNECT,
 	PRODUCER_SET_PLAY_RATE,
+	ADDONSERVER_INSTANTIATE_DORMANT_NODE,
+	SERVER_REGISTER_MEDIAADDON,
+	SERVER_UNREGISTER_MEDIAADDON,
+	SERVER_RESCAN_MEDIAADDON_FLAVORS,
 	END
 };
 
+struct xfer_server_rescan_mediaaddon_flavors
+{
+	media_addon_id addonid;
+};
+
+struct xfer_server_register_mediaaddon
+{
+	port_id reply_port;
+};
+
+struct xfer_server_register_mediaaddon_reply
+{
+	media_addon_id addonid;
+};
+
+struct xfer_server_unregister_mediaaddon
+{
+	media_addon_id addonid;
+};
 
 struct xfer_producer_format_suggestion_requested
 {
@@ -420,6 +444,17 @@ struct xfer_consumer_seek_tag_requested_reply
 	status_t result;
 };
 
+struct xfer_addonserver_instantiate_dormant_node
+{
+	dormant_node_info info;
+	port_id reply_port;
+};
+
+struct xfer_addonserver_instantiate_dormant_node_reply
+{
+	media_node node;
+	status_t result;
+};
 
 // implementation contained in libmedia.so (MediaRoster.cpp)
 namespace MediaKitPrivate 

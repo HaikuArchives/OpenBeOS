@@ -321,13 +321,7 @@ virtual		status_t _Reserved_MediaNode_15(void *);
 
 mutable	port_id fControlPort;
 
-		BBufferProducer	*fProducerThis;
-		BBufferConsumer	*fConsumerThis;
-		BFileInterface	*fFileInterfaceThis;
-		BControllable	*fControllableThis;
-		BTimeSource		*fTimeSourceThis;
-
-		uint32 _reserved_media_node_[8];
+	uint32 _reserved_media_node_[13];
 
 
 

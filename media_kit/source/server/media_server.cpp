@@ -36,6 +36,9 @@ public:
 	ServerApp();
 	~ServerApp();
 
+	void HandleMessage(int32 code, void *data, size_t size);
+	static int32 controlthread(void *arg);
+
 	void GetSharedBufferArea(BMessage *msg);
 	void RegisterBuffer(BMessage *msg);
 	void UnregisterBuffer(BMessage *msg);
@@ -99,6 +102,9 @@ public:
 */
 
 private:
+	port_id		control_port;
+	thread_id	control_thread;
+
 	BufferManager *fBufferManager;
 	AppManager *fAppManager;
 	NodeManager *fNodeManager;
@@ -123,6 +129,9 @@ ServerApp::ServerApp()
 	//load volume settings from config file
 	//mVolumeLeft = ???;
 	//mVolumeRight = ???;
+	control_port = create_port(64,"media_server port");
+	control_thread = spawn_thread(controlthread,"media_server control",12,this);
+	resume_thread(control_thread);
 }
 
 ServerApp::~ServerApp()
@@ -131,6 +140,37 @@ ServerApp::~ServerApp()
 	delete fAppManager;
 	delete fNodeManager;
 	delete fLocker;
+	delete_port(control_port);
+	status_t err;
+	wait_for_thread(control_thread,&err);
+}
+
+void 
+ServerApp::HandleMessage(int32 code, void *data, size_t size)
+{
+	switch (code) {
+		case ADDONSERVER_INSTANTIATE_DORMANT_NODE:
+		{
+			break;
+		}
+	}
+}
+
+int32
+ServerApp::controlthread(void *arg)
+{
+	char data[B_MEDIA_MESSAGE_SIZE];
+	int32 code;
+	ssize_t size;
+	ServerApp *app = (ServerApp *)arg;
+	
+	for (;;) {
+		size = read_port_etc(app->control_port, &code, data, sizeof(data), 0, 0);
+		if (size <= 0)
+			break;
+		app->HandleMessage(code, data, size);
+	}
+	return 0;
 }
 
 void

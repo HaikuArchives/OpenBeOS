@@ -278,9 +278,9 @@ BMediaNode::WaitForMessage(bigtime_t waitUntil,
 
 	if (B_OK == HandleMessage(message, data, size))
 		return B_OK;
-	
-	HandleBadMessage(message, data, size);
 
+	HandleBadMessage(message, data, size);
+	
 	return B_ERROR;
 }
 
@@ -485,17 +485,6 @@ BMediaNode::AddNodeKind(uint64 kind)
 	CALLED();
 
 	fKinds |= kind;
-
-	if (kind & B_BUFFER_CONSUMER)
-		fConsumerThis = dynamic_cast<BBufferConsumer *>(this);
-	if (kind & B_BUFFER_PRODUCER)
-		fProducerThis = dynamic_cast<BBufferProducer *>(this);
-	if (kind & B_CONTROLLABLE)
-		fControllableThis = dynamic_cast<BControllable *>(this);
-	if (kind & B_FILE_INTERFACE)
-		fFileInterfaceThis = dynamic_cast<BFileInterface *>(this);
-	if (kind & B_TIME_SOURCE)
-		fTimeSourceThis = dynamic_cast<BTimeSource *>(this);
 }
 
 
@@ -680,12 +669,7 @@ BMediaNode::BMediaNode(const char *name,
 	fRunMode(B_INCREASE_LATENCY),
 	fKinds(kinds),
 	fTimeSourceID(0),
-	fControlPort(-1),
-	fProducerThis(0),
-	fConsumerThis(0),
-	fFileInterfaceThis(0),
-	fControllableThis(0),
-	fTimeSourceThis(0)
+	fControlPort(-1)
 {
 	CALLED();
 	
