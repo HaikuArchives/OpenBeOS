@@ -16,9 +16,11 @@
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
+#include "raw/raw_module.h"
 
 #define m_freem             core->m_freem
 static struct core_module_info *core = NULL;
+static struct raw_module_info *raw = NULL;
 #define ICMP_MODULE_PATH	"network/protocol/icmp"
 #else
 #define ICMP_MODULE_PATH	"modules/protocol/icmp"
@@ -98,7 +100,14 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 		case ICMP_ECHOREPLY:
 			break;
 		default:
+			break;
 	}
+//raw:
+#ifdef _KERNEL_MODE
+	raw->input(buf, 0);
+#endif
+	return 0;
+//bad:
 	m_freem(buf);
 	return 0;
 }
@@ -158,9 +167,12 @@ static status_t icmp_ops(int32 op, ...)
 				get_module(CORE_MODULE_PATH, (module_info**)&core);
 			if (!core)
 				return B_ERROR;
-				
+			
 			core->add_domain(NULL, AF_INET);
 			core->add_protocol(&my_proto, AF_INET);			
+			if (!raw)
+				get_module(RAW_MODULE_PATH, (module_info**)&raw);
+			
 			return B_OK;
 		case B_MODULE_UNINIT:
 			break;
