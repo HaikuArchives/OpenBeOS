@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <kernel/OS.h>
+#include <string.h>
 
-#include "socket.h"
+#include "sys/socket.h"
 
-#define THREADS	2
+#define THREADS	1
 #define TIME	10
 
 int32 test_thread(void *data)
@@ -18,7 +19,14 @@ int32 test_thread(void *data)
 	tn = real_time_clock();
 
 	while (real_time_clock() - tn <= TIME) {
-		sock = socket(AF_INET, SOCK_STREAM , 0);
+		sock = socket(AF_INET, SOCK_DGRAM , 0);
+		if (sock < 0) {
+			printf("Failed! Socket could not be created.\n");
+			printf("Error was %d [%s]\n", sock, strerror(sock));
+			printf("This was after I had created %ld socket%s\n",
+				num, num == 1 ? "" : "s");
+			return -1;
+		}
 		closesocket(sock);
 		num++;
 	}
