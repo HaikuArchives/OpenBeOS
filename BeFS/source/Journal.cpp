@@ -333,7 +333,8 @@ Journal::FlushLogEntry(uint32 start)
 			// batch following near blocks together
 			off_t first = array[index];
 			int32 numBlocks = 1;
-			while (count > 0 && array[index + 1] - array[index] < 16) {
+			while (count > 0 && index < valuesInBlock - 1
+				&& array[index + 1] - array[index] < 16) {
 				numBlocks += array[index + 1] - array[index];
 				index++;
 				count--;
