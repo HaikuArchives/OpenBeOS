@@ -467,6 +467,7 @@ status_t
 PDFWriter::EndPage()
 {	
 	fTextLine.Flush();
+	if (fCreateBookmarks) fBookmark->CreateBookmarks();
 
 	while (fState->prev != NULL) PopState();
 

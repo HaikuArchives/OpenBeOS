@@ -95,7 +95,7 @@ StatusWindow::StatusWindow(int32 passes, int32 pages, PrinterDriver *pd)
 	fCancel->ResizeToPreferred();
 	fPanel->AddChild(fCancel);
 
-	BRect b(0, 90/*y + fCancel->Bounds().Height()+5*/, Bounds().right-B_V_SCROLL_BAR_WIDTH, Bounds().bottom);
+	BRect b(0, 90, Bounds().right-B_V_SCROLL_BAR_WIDTH, Bounds().bottom);
 	BRect t(b);
 	t.OffsetTo(0, 0);
 	fReport = new BTextView(b, "", t, B_FOLLOW_TOP_BOTTOM | B_FOLLOW_LEFT_RIGHT);

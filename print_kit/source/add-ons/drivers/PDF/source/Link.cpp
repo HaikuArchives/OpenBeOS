@@ -389,7 +389,8 @@ void TextLine::Flush() {
 		if (fWriter->fCreateXRefs) fWriter->RecordDests(c);
 	} else {
 		// XXX
-		BFont* f = fSegments.ItemAt(0)->Font();
+		TextSegment* s = fSegments.ItemAt(0);
+		BFont* f = s->Font();
 
 		// simple link handling for now
 		WebLink webLink(fWriter, &line, f);
@@ -399,8 +400,11 @@ void TextLine::Flush() {
 		LocalLink localLink(fWriter->fXRefs, fWriter->fXRefDests, fWriter, &line, f, fWriter->fPage);
 		if (fWriter->fCreateXRefs) localLink.Init();
 	
-		// simple bookmark adding
-		if (fWriter->fCreateBookmarks) fWriter->fBookmark->AddBookmark(c, f);
+		// simple bookmark adding (XXX: s->Start()
+		if (fWriter->fCreateBookmarks) {
+			BPoint start(s->System()->tx(s->Start().x), s->System()->ty(s->Start().y));
+			fWriter->fBookmark->AddBookmark(start, c, f);
+		}
 	
 
 		for (int32 i = 0; i < n; i ++) {

@@ -64,26 +64,42 @@ void Bookmark::AddDefinition(int level, BFont* font)
 }
 
 
-void Bookmark::AddBookmark(const char* text, BFont* font)
+void Bookmark::AddBookmark(BPoint start, const char* text, BFont* font)
 {
 	int level;
 	if (Find(font, level)) {
-		REPORT(kInfo, fWriter->fPage, "Bookmark '%s' at level %d", text, level);
-		int bookmark;
-		BString ucs2;
-		
-		fWriter->ToPDFUnicode(text, ucs2);
-
-		bookmark = PDF_add_bookmark(fWriter->fPdf, ucs2.String(), fLevels[level-1], 1);
-		
-		if (bookmark < 0) bookmark = 0;
-		
-		for (int i = level; i < kMaxBookmarkLevels; i ++) {
-			fLevels[i] = bookmark;
-		} 
+		fOutlines.AddItem(new Outline(start, text, level));
 	}
 }
 
+
+int Bookmark::AscendingByStart(const Outline** a, const Outline** b) {
+	return (int)((*b)->Start().y - (*a)->Start().y);
+}
+
+
+void Bookmark::CreateBookmarks() {
+	fOutlines.SortItems(AscendingByStart);
+
+	for (int i = 0; i < fOutlines.CountItems(); i++) {
+		BString ucs2;
+
+		Outline* o = fOutlines.ItemAt(i);		
+		REPORT(kInfo, fWriter->fPage, "Bookmark '%s' at level %d", o->Text(), o->Level());
+		
+		fWriter->ToPDFUnicode(o->Text(), ucs2);
+
+		int bookmark = PDF_add_bookmark(fWriter->fPdf, ucs2.String(), fLevels[o->Level()-1], 1);
+		
+		if (bookmark < 0) bookmark = 0;
+		
+		for (int i = o->Level(); i < kMaxBookmarkLevels; i ++) {
+			fLevels[i] = bookmark;
+		} 
+	}
+
+	fOutlines.MakeEmpty();
+}
 
 // Reads bookmark definitions from file
 
