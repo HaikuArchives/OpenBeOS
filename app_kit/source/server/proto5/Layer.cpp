@@ -8,7 +8,6 @@
 #include "Desktop.h"
 #include "PortLink.h"
 #include "DisplayDriver.h"
-#include "UpdateNode.h"
 #include <iostream.h>
 #include <Debug.h>
 #include <string.h>
@@ -338,7 +337,6 @@ void Layer::Invalidate(BRegion region)
 				invalid->Include(&clippedreg);
 			else
 				invalid=new BRegion(clippedreg);
-			updatenode->PostInvalidLayer(this);
 		}		
 	}
 	
@@ -382,7 +380,6 @@ void Layer::Invalidate(BRect rect)
 					invalid->Include(&reg);
 				else
 					invalid=new BRegion(reg);
-				updatenode->PostInvalidLayer(this);
 			}
 		}
 	}	
