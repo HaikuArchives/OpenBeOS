@@ -9,6 +9,7 @@ Entry.cpp
 EntryList.cpp
 Error.cpp
 File.cpp
+FindDirectory.cpp
 Node.cpp
 #NodeInfo.cpp
 Path.cpp
