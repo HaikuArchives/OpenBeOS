@@ -434,11 +434,14 @@ status_t Initialize(int fatbits, const char *device, const char *label, bool nop
 		scanf("%s",answer); //XXX who wants to fix this buffer overflow?
 		if (0 != strcasecmp(answer,"yes")) {
 			printf("drive NOT initialized\n");
+			close(fd);
 			return B_OK;
 		}
 	}
-	if (testmode)
+	if (testmode) {
+		close(fd);
 		return B_OK;
+	}
 	
 	// Disk layout:
 	// 0) reserved sectors, this includes the bootsector, fsinfosector and bootsector backup
@@ -446,7 +449,7 @@ status_t Initialize(int fatbits, const char *device, const char *label, bool nop
 	// 2) root directory (not on fat32)
 	// 3) file & directory data
 
-	int written;
+	ssize_t written;
 
 	//zero everything first
 	//XXX this does on a 32GB harddisk about 10000 writes 
