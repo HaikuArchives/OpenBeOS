@@ -43,6 +43,8 @@ static struct icmp_module_info *icmp = NULL;
 static image_id icmpid = -1;
 #endif
 
+static struct in_addr zeroin_addr = {0};
+
 /* Private but used globally, need to make thread safe... tls??? */
 static struct inpcb *udp_last_inpcb = NULL;
 static struct sockaddr_in udp_in;
@@ -313,6 +315,28 @@ bad:
 	return;
 }
 
+static void udp_notify(struct inpcb *inp, int err)
+{
+	inp->inp_socket->so_error = err;
+	sorwakeup(inp->inp_socket);
+	sowwakeup(inp->inp_socket);
+}
+
+static void udp_ctlinput(int cmd, struct sockaddr *sa, void *ipp)
+{
+	struct ip *ip = (struct ip*)ipp;
+	struct udphdr *uh;
+
+	if (!PRC_IS_REDIRECT(cmd) && 
+	    ((uint)cmd >= PRC_NCMDS || inetctlerrmap(cmd) == 0))
+		return;
+	if (ip) {
+		uh = (struct udphdr *)((char *) ip + (ip->ip_hl << 2));
+		in_pcbnotify(&udb, sa, uh->uh_dport, ip->ip_src, uh->uh_sport, cmd, udp_notify);
+	} else
+		in_pcbnotify(&udb, sa, 0, zeroin_addr, 0, cmd, udp_notify);
+}
+
 void udp_init(void)
 {
 	udb.inp_prev = udb.inp_next = &udb;
@@ -339,6 +363,7 @@ static struct protosw my_proto = {
 	NULL,                  /* pr_output */
 	&udp_userreq,
 	NULL,                  /* pr_sysctl */
+	&udp_ctlinput,
 	NULL,                  /* pr_ctloutput */
 		
 	NULL,
