@@ -36,7 +36,7 @@
 #include <kernel/OS.h>
 
 #include "sys/socket.h"
-#include "mbuf.h"
+#include "sys/mbuf.h"
 
 #include "net/if.h"
 #include "net/route.h"
