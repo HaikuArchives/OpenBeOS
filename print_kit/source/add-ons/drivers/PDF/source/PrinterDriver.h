@@ -63,7 +63,9 @@ public:
 	void StopPrinting();
 
 	virtual status_t 		PrintJob(BFile *jobFile, BNode *printerNode, BMessage *jobMsg);
+	virtual status_t        BeginJob();
 	virtual status_t		PrintPage(int32 pageNumber, int32 pageCount);
+	virtual status_t        EndJob();
 
 	// configuration default methods
 	virtual status_t 		PrinterSetup(char *printerName);

@@ -94,7 +94,9 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		~PDFWriter();
 		
 		// public methods
+		status_t	BeginJob();
 		status_t 	PrintPage(int32 pageNumber, int32 pageCount);
+		status_t	EndJob();
 		status_t	InitWriter();
 		status_t	BeginPage(BRect paperRect, BRect printRect);
 		status_t	EndPage();

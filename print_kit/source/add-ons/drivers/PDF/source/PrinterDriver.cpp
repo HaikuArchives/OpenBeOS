@@ -123,25 +123,23 @@ PrinterDriver::PrintJob
 	// show status window
 	fStatusWindow = new StatusWindow(pfh.page_count, this);
 
-	status = B_OK;
+	status = BeginJob();
+
 	printing = true;
-	for (copy = 0; copy < copies; copy++) 
+	for (copy = 0; copy < copies && status == B_OK && printing; copy++) 
 	{
-		for (page = 1; page <= pfh.page_count && status == B_OK; page++) {
+		for (page = 1; page <= pfh.page_count && status == B_OK && printing; page++) {
 			fStatusWindow->PostMessage(new BMessage('page'));
 			status = PrintPage(page, pfh.page_count);
-			if (!printing) {
-				break;
-			}
 		}
 
-		if (status != B_OK) {
-			break;
-		}
 		// re-read job message for next page
 		fJobFile->Seek(sizeof(pfh), SEEK_SET);
 		msg->Unflatten(fJobFile);
 	}
+
+	status_t s = EndJob();
+	if (status == B_OK) status = s;
 		
 	CloseTransport();
 
@@ -165,6 +163,13 @@ void PrinterDriver::StopPrinting() {
 	printing = false;
 }
 
+
+status_t
+PrinterDriver::BeginJob() {
+	return B_OK;
+}
+
+
 status_t 
 PrinterDriver::PrintPage(int32 pageNumber, int32 pageCount) 
 {
@@ -173,6 +178,12 @@ PrinterDriver::PrintPage(int32 pageNumber, int32 pageCount)
 	sprintf(text, "Faking print of page %ld/%ld...", pageNumber, pageCount);
 	BAlert *alert = new BAlert("PrinterDriver::PrintPage()", text, "Hmm?");
 	alert->Go();
+	return B_OK;
+}
+
+
+status_t
+PrinterDriver::EndJob() {
 	return B_OK;
 }
 

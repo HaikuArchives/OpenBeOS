@@ -136,18 +136,6 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 	r  = picRegion->Frame();
 	delete picRegion;
 
-	if (pageNumber == 1) {
-		fLog = fopen("/tmp/pdf_writer.log", "w");
-
-		PDF_boot();
-
-		fPdf = PDF_new2(_ErrorHandler, NULL, NULL, NULL, this);	// set *this* as pdf cookie
-		if ( fPdf == NULL )
-			return B_ERROR;
-		
-		InitWriter();
-	}
-	
 	BeginPage(paperRect, printRect);
 	for (i = 0; i < pictureCount; i++) {
 		Iterate(pictures[i]);
@@ -159,17 +147,36 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 	free(picRects);
 	free(picPoints);
 	
-	if (pageNumber == pageCount) {
-		PDF_close(fPdf);
-		fprintf(fLog, ">>>> PDF_close\n");
-
-    	PDF_delete(fPdf);
-	    PDF_shutdown();
-
-		fclose(fLog);
-	}
-
 	return status;
+}
+
+
+// --------------------------------------------------
+status_t 
+PDFWriter::BeginJob() {
+	fLog = fopen("/tmp/pdf_writer.log", "w");
+
+	PDF_boot();
+
+	fPdf = PDF_new2(_ErrorHandler, NULL, NULL, NULL, this);	// set *this* as pdf cookie
+	if ( fPdf == NULL )
+		return B_ERROR;
+		
+	return InitWriter();
+}
+
+
+// --------------------------------------------------
+status_t 
+PDFWriter::EndJob() {
+	PDF_close(fPdf);
+	fprintf(fLog, ">>>> PDF_close\n");
+
+   	PDF_delete(fPdf);
+    PDF_shutdown();
+
+	fclose(fLog);
+	return B_OK;
 }
 
 
