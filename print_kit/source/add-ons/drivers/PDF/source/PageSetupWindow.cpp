@@ -407,12 +407,12 @@ PageSetupWindow::MessageReceived(BMessage *msg)
 				int32 orientation;
 				msg->FindInt32("orientation", &orientation);
 				if (orientation == PrinterDriver::LANDSCAPE_ORIENTATION
-					&& p.x > p.y) { 
+					&& p.y > p.x) { 
 					marginView->SetPageSize(p.y, p.x);
 					marginView->UpdateView();
 				}
 				if (orientation == PrinterDriver::PORTRAIT_ORIENTATION
-					&& p.y > p.x) {
+					&& p.x > p.y) {
 					marginView->SetPageSize(p.y, p.x);
 					marginView->UpdateView();
 				}
