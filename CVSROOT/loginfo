@@ -24,3 +24,6 @@
 #DEFAULT (echo ""; id; echo %s; date; cat) >> $CVSROOT/CVSROOT/commitlog
 # or
 #DEFAULT (echo ""; id; echo %{sVv}; date; cat) >> $CVSROOT/CVSROOT/commitlog
+# remove # from the below lines to enable syncmail
+#net_kit/ $CVSROOT/CVSROOT/syncmail %{sVv} openbeosnetteam@freelists.org
+#print_kit/ $CVSROOT/CVSROOT/syncmail %{sVv} open-beos-printing@freelists.org
