@@ -43,11 +43,13 @@ EntryTest::EntryTest() {
 // This function called before *each* test added in Suite()
 void
 EntryTest::setUp() {
+	SaveCWD();
 }
 	
 // This function called after *each* test added in Suite()
 void
 EntryTest::tearDown()	{
+	RestoreCWD();
 }
 
 // Creates a symbolic link named link that points to target

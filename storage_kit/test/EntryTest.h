@@ -4,6 +4,7 @@
 #include <cppunit/TestCase.h>
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
+#include "Test.StorageKit.h"
 
 #include <Entry.h>
 
@@ -22,7 +23,7 @@
 
 #include "TestUtils.h"
 
-class EntryTest : public CppUnit::TestCase
+class EntryTest : public StorageKit::TestCase
 {
 public:
 	static CppUnit::Test* Suite();
