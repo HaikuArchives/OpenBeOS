@@ -115,7 +115,7 @@ PrinterSetupWindow::PrinterSetupWindow(char *printerName)
 
 	x -= kInterSpace;
 
-	// add a "Cancel button	
+	// add a "Cancel" button	
 	button 	= new BButton(BRect(x, y, x + 400, y), NULL, "Cancel", new BMessage(CANCEL_MSG), B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
 	button->ResizeToPreferred();
 	button->GetPreferredSize(&w, &h);

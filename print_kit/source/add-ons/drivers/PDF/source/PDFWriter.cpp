@@ -36,6 +36,7 @@ THE SOFTWARE.
 #include <stdio.h>
 #include <string.h>			// for memset()
 #include <math.h>
+#include <ctype.h>
 
 #include <Debug.h>
 #include <StorageKit.h>
@@ -48,6 +49,7 @@ THE SOFTWARE.
 #include "DrawShape.h"
 #include "Log.h"
 #include "pdflib.h"
+#include "Bookmark.h"
 
 // Constructor & destructor
 // ------------------------
@@ -58,6 +60,7 @@ PDFWriter::PDFWriter()
 	fEmbedMaxFontSize = 250 * 1024;
 	fScreen = new BScreen();
 	fFonts = NULL;
+	fBookmark = new Bookmark(this);
 }
 
 
@@ -80,6 +83,7 @@ PDFWriter::~PDFWriter()
 
 	delete fScreen;
 	delete fFonts;
+	delete fBookmark;
 }
 
 
@@ -272,6 +276,28 @@ PDFWriter::InitWriter()
 
 	LOG((fLog, "End of fonts declaration.\n"));	
 
+	float width;
+	if (JobMsg()->FindFloat("link_border_width", &width) != B_OK) {
+		width = 1;
+	}
+	PDF_set_border_style(fPdf, "solid", width);
+	
+	if (JobMsg()->FindBool("create_web_links", &fCreateWebLinks) != B_OK) {
+		fCreateWebLinks = false;
+	}
+	
+	if (JobMsg()->FindBool("create_bookmarks", &fCreateBookmarks) != B_OK) {
+		fCreateBookmarks = false;
+	}
+
+	if (fCreateBookmarks) {
+		BString name;
+		if (JobMsg()->FindString("bookmark_definition_file", &name) == B_OK && LoadBookmarkDefinitions(name.String())) {
+		} else {
+			fCreateBookmarks = false;
+		}
+	}	
+
 	fState = NULL;
 	fStateDepth = 0;
 
@@ -309,6 +335,133 @@ PDFWriter::DeclareFonts()
 		PDF_set_parameter(fPdf, parameter_name, buffer);
 	}
 	return B_OK;
+}
+
+static void SkipSpaces(FILE* f) 
+{
+	int c = fgetc(f);
+	for(;;) {
+		while (!feof(f) && isspace(c)) c = fgetc(f);
+		if (!feof(f) && c == '#') { // line comment; skip to end of line
+			while (!feof(f) && c != '\n') c = fgetc(f);
+		} else {
+			ungetc(c, f); return;
+		}
+	}
+}
+
+static bool ReadName(FILE* f, BString *s) 
+{
+	SkipSpaces(f);
+	*s = "";
+
+	int c = fgetc(f);
+	if (isalpha(c)) {
+		do {
+			s->Append((char)c, 1);
+			c = fgetc(f);
+		} while (!feof(f) && isalpha(c));
+		ungetc(c, f);
+		return true;
+	}
+	return false;		
+}
+
+static bool ReadString(FILE* f, BString *s) 
+{
+	SkipSpaces(f);
+	*s = "";
+
+	int c = fgetc(f);
+	if (c == '"') {
+		c = fgetc(f);
+		while (!feof(f) && c != '"') {
+			s->Append((char)c, 1);
+			c = fgetc(f);
+		}
+		if (c == '"') return true;
+	}	
+	return false;
+}
+
+static bool ReadFloat(FILE* f, float *value) 
+{
+	SkipSpaces(f);
+	BString s = "";
+	*value = 0.0;
+	
+	int c = fgetc(f);
+	if (isdigit(c) || c == '.') {
+		do {
+			s.Append((char)c, 1);
+			c = fgetc(f);
+		} while(isdigit(c) || c == '.');	
+		if (EOF != sscanf(s.String(), "%f", value)) {
+			ungetc(c, f);
+			return true;
+		}
+	}
+	return false;
+}
+
+// Reads bookmark definitions from file
+
+// File Format
+// -----------
+// Line comment starts with '#'.
+//
+// First line in file (mandatory):
+// Bookmarks 1.0
+// Remaining file contents: Fields may repeat.
+// Fields: level "family" "style" size
+// Types:  int   string   string  float
+
+
+bool
+PDFWriter::LoadBookmarkDefinitions(const char* name)
+{
+	// TODO: use B_USER_SETTINGS_DIRECTORY instead of hard coded constant
+	BString path("/boot/home/config/settings/PDF Writer/bookmarks/");
+	path.Append(name);
+	
+	FILE* file = fopen(path.String(), "r");
+
+#define BAILOUT goto Error
+	
+	LOG((fLog, "Reading bookmark definition file '%s'\n", name));
+	
+	if (file) {
+		BString s; float f; bool ok;
+		ok = ReadName(file, &s) && ReadFloat(file, &f);
+		if (!ok || strcmp(s.String(), "Bookmarks") != 0 || f != 1.0) BAILOUT;
+		
+		while (!feof(file)) {
+			float   level, size;
+			BString family, style;
+			ok = ReadFloat(file, &level) && ReadString(file, &family) &&
+				ReadString(file, &style) && ReadFloat(file, &size) &&
+				level >= 1.0 && level <= 10.0;
+			
+			if (!ok) BAILOUT;
+			
+			BFont font;
+			font.SetFamilyAndStyle(family.String(), style.String());
+			font.SetSize(size);
+			
+			LOG((fLog, "level %d family %s style %s size %f\n",
+				(int)level, family.String(), style.String(), size));
+			
+			fBookmark->AddDefinition((int)level, &font);
+		}
+		
+		fclose(file);
+		return true;
+	}
+
+#undef BAILOUT	
+Error:	
+	fclose(file);
+	return false;
 }
 
 

@@ -45,6 +45,9 @@ SRCS= Driver.cpp \
 	  PDFLinePathBuilder.cpp \
 	  SubPath.cpp \
 	  Bezier.cpp \
+	  Link.cpp \
+	  Bookmark.cpp \
+	  AdvancedSettingsWindow.cpp \
 	  PDFWriter.cpp
 		
 #	specify the resource files to use

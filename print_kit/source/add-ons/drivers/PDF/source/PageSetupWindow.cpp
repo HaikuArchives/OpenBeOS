@@ -40,6 +40,7 @@ THE SOFTWARE.
 #include "MarginView.h"
 #include "PrinterSettings.h"
 #include "FontsWindow.h"
+#include "AdvancedSettingsWindow.h"
 
 // static global variables
 static struct 
@@ -92,6 +93,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	fSetupMsg	= msg;
 	fExitSem 	= create_sem(0, "PageSetup");
 	fResult		= B_ERROR;
+	fAdvancedSettings = *msg;
 	
 	if ( printerName ) {
 		BString	title;
@@ -323,6 +325,15 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	button->MoveTo(r.left + 8, y);
 	panel->AddChild(button);
 
+	// add a "Fonts" button	
+	BButton* font = button;
+	button 	= new BButton(r, NULL, "Advanced", new BMessage(ADVANCED_MSG), 
+		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
+	button->GetPreferredSize(&w, &h);
+	button->ResizeToPreferred();
+	button->MoveTo(font->Frame().right + 8, y);
+	panel->AddChild(button);
+
 	// add a separator line...
 	BBox * line = new BBox(BRect(r.left, y - 9, r.right, y - 8), NULL,
 		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM );
@@ -420,6 +431,43 @@ PageSetupWindow::UpdateSetupMessage()
 		}
 	}
 
+	// advanced settings
+	bool    b;
+	float   f;
+	BString s;
+	
+	if (fAdvancedSettings.FindBool("create_web_links", &b) == B_OK) {
+		if (fSetupMsg->HasBool("create_web_links")) {
+			fSetupMsg->ReplaceBool("create_web_links", b);
+		} else {
+			fSetupMsg->AddBool("create_web_links", b);
+		}
+	}
+
+	if (fAdvancedSettings.FindFloat("link_border_width", &f) == B_OK) {
+		if (fSetupMsg->HasFloat("link_border_width")) {
+			fSetupMsg->ReplaceFloat("link_border_width", f);
+		} else {
+			fSetupMsg->AddFloat("link_border_width", f);
+		}
+	}
+
+	if (fAdvancedSettings.FindBool("create_bookmarks", &b) == B_OK) {
+		if (fSetupMsg->HasBool("create_bookmarks")) {
+			fSetupMsg->ReplaceBool("create_bookmarks", b);
+		} else {
+			fSetupMsg->AddBool("create_bookmarks", b);
+		}
+	}
+
+	if (fAdvancedSettings.FindString("bookmark_definition_file", &s) == B_OK) {
+		if (fSetupMsg->HasString("bookmark_definition_file")) {
+			fSetupMsg->ReplaceString("bookmark_definition_file", s.String());
+		} else {
+			fSetupMsg->AddString("bookmark_definition_file", s.String());
+		}
+	}
+
 	// save the settings to be new defaults
 	PrinterSettings *ps = new PrinterSettings(fPrinterDirName.String());
 	if (ps->InitCheck() == B_OK) {
@@ -487,6 +535,10 @@ PageSetupWindow::MessageReceived(BMessage *msg)
 
 		case FONTS_MSG:
 			(new FontsWindow(fFonts))->Show();
+			break;
+	
+		case ADVANCED_MSG:
+			(new AdvancedSettingsWindow(&fAdvancedSettings))->Show();
 			break;
 	
 		default:

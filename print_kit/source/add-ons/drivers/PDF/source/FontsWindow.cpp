@@ -70,10 +70,11 @@ FontsWindow::FontsWindow(Fonts *fonts)
 		"fonts_list", B_MULTIPLE_SELECTION_LIST);
 	panel->AddChild(new BScrollView("scroll_list", fList, 
 		B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true));
+	fList->SetSelectionMessage(new BMessage(SELECTION_MSG));
 #endif
 	FillFontList();
 
-	// add a "OK" button, and make it default
+	// add a "Embed" button, and make it default
 	button 	= new BButton(r, NULL, "Embed", new BMessage(EMBED_MSG), 
 		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
 	button->ResizeToPreferred();
@@ -81,16 +82,20 @@ FontsWindow::FontsWindow(Fonts *fonts)
 	x = r.right - w - 8;
 	y = r.bottom - h - 8;
 	button->MoveTo(x, y);
+	button->SetEnabled(false);
 	panel->AddChild(button);
 	button->MakeDefault(true);
+	fEmbedButton = button;
 
-	// add a "Cancel button	
+	// add a "Substitute" button	
 	button 	= new BButton(r, NULL, "Substitute", new BMessage(SUBST_MSG), 
 		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
 	button->GetPreferredSize(&w, &h);
 	button->ResizeToPreferred();
 	button->MoveTo(x - w - 8, y);
+	button->SetEnabled(false);
 	panel->AddChild(button);
+	fSubstButton = button;
 
 	// add a separator line...
 	BBox * line = new BBox(BRect(r.left, y - 9, r.right, y - 8), NULL,
@@ -126,7 +131,60 @@ FontsWindow::Quit()
 }
 
 
-class EmbedFont 
+class ListIterator 
+{
+	virtual bool DoItem(BListItem* item) = 0;
+public:
+	static bool DoIt(BListItem* item, void* data);
+};
+
+
+bool
+ListIterator::DoIt(BListItem* item, void* data)
+{
+	if (item->IsSelected()) {
+		ListIterator* e = (ListIterator*)data;
+		return e->DoItem(item);
+	}
+	return false;
+}
+
+class CountItems : public ListIterator
+{	
+	BListView* fList;
+	Fonts*     fFonts;
+	int        fNumEmbed;
+	int        fNumSubst;
+	
+	bool DoItem(BListItem* item);	
+
+public:
+	CountItems(BListView* list, Fonts* fonts);
+	int GetNumEmbed() { return fNumEmbed; }
+	int GetNumSubst() { return fNumSubst; }
+};
+
+CountItems::CountItems(BListView* list, Fonts* fonts) 
+	: fList(list)
+	, fFonts(fonts)
+	, fNumEmbed(0)
+	, fNumSubst(0) 
+{ }
+
+bool CountItems::DoItem(BListItem* item) 
+{
+	int32 i = fList->IndexOf(item);
+	if (0 <= i && i < fFonts->Length()) {
+		if (fFonts->At(i)->Embed()) {
+			fNumEmbed ++;
+		} else {
+			fNumSubst ++;
+		}
+	}
+	return false;
+}
+
+class EmbedFont : public ListIterator
 {
 	FontsWindow* fWindow;
 	BListView*   fList;
@@ -136,7 +194,6 @@ class EmbedFont
 	bool DoItem(BListItem* item);
 public:
 	EmbedFont(FontsWindow* window, BListView* list, Fonts* fonts, bool embed);
-	static bool DoIt(BListItem* item, void* data);
 };
 
 EmbedFont::EmbedFont(FontsWindow* window, BListView* list, Fonts* fonts, bool embed)
@@ -145,16 +202,6 @@ EmbedFont::EmbedFont(FontsWindow* window, BListView* list, Fonts* fonts, bool em
 	, fFonts(fonts)
 	, fEmbed(embed)
 {
-}
-
-bool
-EmbedFont::DoIt(BListItem* item, void* data)
-{
-	if (item->IsSelected()) {
-		EmbedFont* e = (EmbedFont*)data;
-		return e->DoItem(item);
-	}
-	return false;
 }
 
 bool
@@ -186,6 +233,7 @@ FontsWindow::MessageReceived(BMessage *msg)
 			EmbedFont e(this, fList, fFonts, true);
 			fList->DoForEach(EmbedFont::DoIt, (void*)&e);
 			}
+			PostMessage(SELECTION_MSG);
 			fList->Invalidate();
 			#endif
 			break;
@@ -197,8 +245,18 @@ FontsWindow::MessageReceived(BMessage *msg)
 			EmbedFont e(this, fList, fFonts, false);
 			fList->DoForEach(EmbedFont::DoIt, (void*)&e);
 			}
+			PostMessage(SELECTION_MSG);
 			fList->Invalidate();
 			#endif
+			break;
+
+		case SELECTION_MSG:
+			{
+				CountItems count(fList, fFonts);
+				fList->DoForEach(CountItems::DoIt, (void*)&count);
+				fEmbedButton->SetEnabled(count.GetNumSubst() > 0);
+				fSubstButton->SetEnabled(count.GetNumEmbed() > 0);
+			}
 			break;
 	
 		default:

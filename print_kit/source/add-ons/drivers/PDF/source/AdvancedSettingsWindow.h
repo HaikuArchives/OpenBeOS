@@ -2,7 +2,7 @@
 
 PDF Writer printer driver.
 
-Copyright (c) 2001 OpenBeOS. 
+Copyright (c) 2002 OpenBeOS. 
 
 Authors: 
 	Philippe Houdoin
@@ -29,8 +29,8 @@ THE SOFTWARE.
 
 */
 
-#ifndef PAGESETUPWINDOW_H
-#define PAGESETUPWINDOW_H
+#ifndef ADVANCED_SETTINGS_WINDOW_H
+#define ADVANCED_SETTINGS_WINDOW_H
 
 #include <InterfaceKit.h>
 #include <Message.h>
@@ -40,56 +40,39 @@ THE SOFTWARE.
 #include <Path.h>
 #include <String.h>
 #include "Utils.h"
-#include "Fonts.h"
 
-class MarginView;
-
-class PageSetupWindow : public HWindow 
+class AdvancedSettingsWindow : public HWindow 
 {
 public:
 	// Constructors, destructors, operators...
 
-							PageSetupWindow(BMessage *msg, const char *printerName = NULL);
-							~PageSetupWindow();
+							AdvancedSettingsWindow(BMessage *doc_info);
 
 	typedef HWindow 		inherited;
 
 	// public constantes
 	enum {
-		OK_MSG				= 'ok__',
-		CANCEL_MSG			= 'cncl',
-		FONTS_MSG			= 'font',
-		ADVANCED_MSG        = 'advc'
+		OK_MSG				 = 'ok__',
+		CANCEL_MSG			 = 'cncl',
+		CREATE_LINKS_MSG     = 'clnk',
+		LINK_BORDER_MSG      = 'lnkb',
+		CREATE_BOOKMARKS_MSG = 'cbmk',
+		DEFINITION_MSG       = 'defi',
 	};
 			
 	// Virtual function overrides
 public:	
 	virtual void 			MessageReceived(BMessage *msg);
-	virtual bool 			QuitRequested();
-	status_t 				Go();
 
-	// From here, it's none of your business! ;-)
 private:
-	long 					fExitSem;
-	status_t 				fResult;
-	BMessage *				fSetupMsg;
-	BMenuField *			fPageSizeMenu;
-	BMenuField *			fOrientationMenu;
-	BMenuField *			fPDFCompatibilityMenu;
-	BSlider *				fPDFCompressionSlider;
-	Fonts *                 fFonts;
-	BMessage                fAdvancedSettings;
-		
-	void					UpdateSetupMessage();
+	BMessage*               fSettings;
 
-	MarginView * 			fMarginView;
+	bool                    fCreateLinks;
+	float                   fLinkBorderWidth;
+	bool                    fCreateBookmarks;
+	BString                 fBookmarkDefinition;
 	
-	// used for saving settings 
-	BString					fPrinterDirName;
-
-	//private class constants
-	static const int kMargin = 10;
-	static const int kOffset = 200;
+	void                    UpdateSettings();
 };
 
 #endif

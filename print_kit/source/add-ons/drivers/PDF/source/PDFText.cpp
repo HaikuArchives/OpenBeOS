@@ -39,6 +39,8 @@ THE SOFTWARE.
 #include <support/UTF8.h>
 
 #include "PDFWriter.h"
+#include "Link.h"
+#include "Bookmark.h"
 #include "DrawShape.h"
 #include "Log.h"
 #include "pdflib.h"
@@ -441,7 +443,6 @@ PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 si
 	PopInternalState();
 }
 
-
 // --------------------------------------------------
 void	
 PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_space)
@@ -461,6 +462,13 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 	} else {
 		ToUtf8(fState->beFont.Encoding()-1, string, utf8);
 	}
+
+	// simple link handling for now
+	Link link(this, &utf8, &fState->beFont);
+
+	// simple bookmark adding
+	if (fCreateBookmarks) fBookmark->AddBookmark(&utf8, &fState->beFont);
+	
 	// convert string in UTF8 to unicode UCS2
 	BString unicode;
 	ToUnicode(utf8.String(), unicode);	
@@ -486,6 +494,8 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 		} else {
 			DrawChar(u[0]*256+u[1], c, s);		
 		}
+		
+		if (fCreateWebLinks) link.NextChar(s, fState->penX, fState->penY, w);
 		
 		// position of next character
 		if (*(unsigned char*)c <= 0x20) { // should test if c is a white-space!

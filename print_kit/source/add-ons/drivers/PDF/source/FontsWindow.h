@@ -62,7 +62,8 @@ public:
 		OK_MSG				= 'ok__',
 		CANCEL_MSG			= 'cncl',
 		EMBED_MSG           = 'mbed',
-		SUBST_MSG           = 'subs'
+		SUBST_MSG           = 'subs',
+		SELECTION_MSG       = 'sele'
 	};
 			
 	// Virtual function overrides
@@ -78,6 +79,8 @@ private:
 #else
 	BListView*              fList;
 #endif
+	BButton*                fEmbedButton;
+	BButton*                fSubstButton;
 
 	void                    FillFontList();
 	void                    EmptyFontList();

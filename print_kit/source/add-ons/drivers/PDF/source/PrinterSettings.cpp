@@ -174,6 +174,10 @@ PrinterSettings::GetDefaults(BMessage *msg)
 		msg->AddString("pdf_compatibility", PDF_COMPATIBILITY);
 		msg->AddInt32("pdf_compression", PDF_COMPRESSION);
 		msg->AddInt32("units", UNITS);
+		msg->AddBool("create_web_links", CREATE_WEB_LINKS);
+		msg->AddFloat("link_border_width", LINK_BORDER_WIDTH);
+		msg->AddBool("create_bookmarks", CREATE_BOOKMARKS);
+		msg->AddString("bookmark_definition_file", BOOKMARK_DEFINITION_FILE);
 		
 		// create pdf_printer_settings file
 		prefs->SaveSettings(msg);
@@ -201,6 +205,7 @@ PrinterSettings::Validate(const BMessage *msg)
 	float f;
 	BRect r;
 	BString s;
+	bool b;
 
 	// Test for data field existance
 	if (msg->FindInt64("xres", 0, &i64) != B_OK) {
@@ -228,6 +233,18 @@ PrinterSettings::Validate(const BMessage *msg)
 		return B_ERROR;
 	}
 	if (msg->FindInt32("units", &i32) != B_OK) {
+		return B_ERROR;
+	}
+	if (msg->FindBool("create_web_links", &b) != B_OK) {
+		return B_ERROR;
+	}
+	if (msg->FindFloat("link_border_width", &f) != B_OK) {
+		return B_ERROR;
+	}
+	if (msg->FindBool("create_bookmarks", &b) != B_OK) {
+		return B_ERROR;
+	}
+	if (msg->FindString("bookmark_definition_file", &s) != B_OK) {
 		return B_ERROR;
 	}
 	// message ok

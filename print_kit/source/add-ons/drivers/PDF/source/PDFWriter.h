@@ -55,6 +55,8 @@ THE SOFTWARE.
 #define DEGREE2RAD(d) (PI * d / 180.0)
 
 class DrawShape;
+class Link;
+class Bookmark;
 
 enum font_encoding 
 {
@@ -83,6 +85,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 	
 	friend class DrawShape;
 	friend class PDFLinePathBuilder;
+	friend class Link;
+	friend class Bookmark;
 	
 	public:
 		// constructors / destructor
@@ -96,6 +100,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		status_t	InitWriter();
 		status_t	BeginPage(BRect paperRect, BRect printRect);
 		status_t	EndPage();
+
+		bool        LoadBookmarkDefinitions(const char* name);
 		
 		// PDFLib callbacks
 		size_t		WriteData(void *data, size_t size);
@@ -298,6 +304,9 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		int64           fEmbedMaxFontSize;
 		BScreen         *fScreen;
 		Fonts           *fFonts;
+		bool            fCreateWebLinks;
+		bool            fCreateBookmarks;
+		Bookmark        *fBookmark;
 		
 		enum 
 		{

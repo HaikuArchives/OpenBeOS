@@ -50,6 +50,10 @@ const float LETTER_W = 8.5f * RES;
 const float LETTER_H = 11.0f * RES;
 const BRect PAPER_RECT(0, 0, LETTER_W, LETTER_H);
 const BRect PRINT_RECT(0, 0, LETTER_W, LETTER_H);
+const bool  CREATE_WEB_LINKS  = false;
+const float LINK_BORDER_WIDTH = 1.0;
+const bool CREATE_BOOKMARKS = false;
+const char BOOKMARK_DEFINITION_FILE[] = "";
 
 /**
  * Class
