@@ -29,12 +29,10 @@
 
 extern void notify_select_event(selectsync * sync, uint32 ref); 
 
-
-
-#define SHOW_INSANE_DEBUGGING   (1)
-#define SERIAL_DEBUGGING        (0)
+#define SHOW_INSANE_DEBUGGING   (0)
+#define SERIAL_DEBUGGING        (1)
 /* Force the driver to stay loaded in memory */
-#define STAY_LOADED             (1)	
+#define STAY_LOADED             (0)	
 
 /*
  * Local definitions
@@ -120,10 +118,8 @@ device_hooks g_net_stack_driver_hooks =
 	net_stack_write,	/* -> write entry point */
 	net_stack_select,	/* -> select entry point */
 	net_stack_deselect,	/* -> deselect entry point */
-	NULL,
-	NULL
-	// net_stack_readv,	/* -> readv */
-	// net_stack_writev	/* -> writev */
+	NULL,               /* -> readv entry pint */
+	NULL                /* writev entry point */
 };
 
 struct core_module_info * core = NULL;
@@ -171,7 +167,9 @@ _EXPORT status_t init_hardware (void)
 		return B_ERROR;
 	}
 
+#if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "init_hardware done.\n");
+#endif
 
 	return B_OK;
 }
@@ -200,7 +198,7 @@ _EXPORT status_t init_driver (void)
 	dprintf(LOGID "init_driver: core = %p\n", core);
 #endif
 
-	// start the network stack
+	/* start the party! */
 	core->start();
 
 	return B_OK;
@@ -275,17 +273,18 @@ static status_t net_stack_open(const char * name,
 static status_t net_stack_close(void *cookie)
 {
 	net_stack_cookie * nsc = (net_stack_cookie *) cookie;
-
+	int rv;
+	
 #if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "net_stack_close(%p)\n", nsc);
 #endif
 
 	if (nsc->socket) {
-		core->soclose(nsc->socket);
+		rv = core->soclose(nsc->socket);
 		nsc->socket = NULL;
-	};
-
-	return B_OK;
+	}
+	
+	return rv;
 }
 
 
@@ -393,9 +392,8 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 		}
 		case NET_STACK_GETSOCKOPT: {
 			struct sockopt_args * args = (struct sockopt_args *) data;
-			
 			return core->sogetopt(nsc->socket, args->level, args->option,
-			                        args->optval, (size_t *) &args->optlen);
+			                      args->optval, (size_t *) &args->optlen);
 		}
 		case NET_STACK_SETSOCKOPT: {
 			struct sockopt_args * args = (struct sockopt_args *)data;
@@ -403,7 +401,6 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 			return core->sosetopt(nsc->socket, args->level, args->option,
 			                        (const void *) args->optval, args->optlen);
 		}		
-
 		case NET_STACK_GETSOCKNAME: {
 			struct sockaddr_args * args = (struct sockaddr_args *) data;
 			/* args->addr == sockaddr to accept the sockname */
@@ -523,32 +520,33 @@ static status_t net_stack_select(void * cookie, uint8 event, uint32 ref, selects
 	nsc->selectinfo[event - 1].ref = ref;
 
 	/* start (or continue) to monitor for socket event */
-	return core->set_socket_event_callback(nsc->socket, on_socket_event, nsc);
+	return core->set_socket_event_callback(nsc->socket, on_socket_event, nsc, event);
 }
 
 
-static status_t net_stack_deselect(void * cookie, uint8 event, selectsync * sync)
+static status_t net_stack_deselect(void* cookie, uint8 event, selectsync* sync)
 {
-	net_stack_cookie *	nsc = (net_stack_cookie *) cookie;
+	net_stack_cookie *nsc = (net_stack_cookie *) cookie;
 	int i;
 
 #if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "net_stack_deselect(%p, %d, %p)\n", cookie, event, sync);
 #endif
 	
-	if (! nsc->socket)
+	if (!nsc || !nsc->socket)
 		return B_BAD_VALUE;
 
 	nsc->selectinfo[event - 1].sync = NULL;
 	nsc->selectinfo[event - 1].ref = 0;
+	core->set_socket_event_callback(nsc->socket, NULL, NULL, event);
 	
 	for (i = 0; i < 3; i++) {
-		if (nsc->selectinfo[i].sync)
+		if (nsc->selectinfo[i].sync) 
 			return B_OK;	/* still one (or more) socket's event to monitor */
 	};
 
 	/* no need to monitor socket events anymore */
-	return core->set_socket_event_callback(nsc->socket, NULL, NULL);
+	return B_OK;//core->set_socket_event_callback(nsc->socket, NULL, NULL, event);
 }
 
 /* 
@@ -559,7 +557,7 @@ static status_t net_stack_deselect(void * cookie, uint8 event, selectsync * sync
 static void on_socket_event(void *socket, uint32 event, void *cookie)
 {
 	net_stack_cookie * nsc = (net_stack_cookie *) cookie;
-	if (! nsc)
+	if (!nsc)
 		return;
 
 #if SHOW_INSANE_DEBUGGING
