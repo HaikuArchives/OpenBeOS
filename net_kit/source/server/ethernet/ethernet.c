@@ -313,7 +313,7 @@ int32 ether_input(void *data)
 		IFQ_DEQUEUE(etherq, m);
 		if (!m)
 			continue;
-			
+
 		eth = mtod(m, struct ether_header *);
 		eth->ether_type = ntohs(eth->ether_type);
 
@@ -338,8 +338,14 @@ int32 ether_input(void *data)
 					printf("proto[%d] = %p, not called...\n", IPPROTO_IP,
 					       proto[IPPROTO_IP]);
 				break;
+			case ETHERTYPE_PPPOEDISC:
+			case ETHERTYPE_PPPOE:
+				printf("PPPoE packet detected...not yet implemented :)\n");
+				m_freem(m);
+				break;
 			default:
 				printf("Couldn't process unknown protocol %04x\n", eth->ether_type);
+				m_freem(m);
 		}
 	}
 	
