@@ -7,7 +7,7 @@ TODO
   - clip to stroke graphic primitives has no equivalent in PDF
     (clip to StrokeShape, StrokeRect, ...)
   - embed font with different encodings only once
-
+- fix crashing bug: when file dialog is canceled
 - security settings (printing, copying, changing, ...)
 - password protection
 - links
