@@ -25,9 +25,21 @@ private:
    BButton *btnModemWindowCancel;
    BButton *btnModemWindowDone;
    
-   BTextView *tvYourModemIs;
-   BTextView *tvConnectVia;
-   BTextView *tvSpeed;
+   BMenu *YourModemIsMenu;
+   BMenuField *YourModemIsMenuField;
+   BMenu *ConnectViaMenu;
+   BMenuField *ConnectViaMenuField;
+   BMenu *SpeedMenu;
+   BMenuField *SpeedMenuField;
+   
+   BTextView *tvRedial;
+   BTextView *tvTimesBusySignal;
+   BTextView *tvReadLogPath;
+   BTextView *tvWriteLogPath;
+   
+   BCheckBox *chkMakeConnection;
+   BCheckBox *chkShowTerminal;
+   BCheckBox *chkLogAll;
 };
 
 #endif
