@@ -366,6 +366,78 @@ StorageKit::read_dir( Dir dir ) {
 }
 
 status_t
+StorageKit::rewind_dir( Dir dir ) {
+	if (dir == NullDir)
+		return B_BAD_VALUE;
+	else {
+		::rewinddir(dir);
+		return B_OK;
+	}
+}
+
+status_t
+StorageKit::find_dir( Dir dir, const char *name, DirEntry *&result ) {
+	if (dir == NullDir || name == NULL)
+		return B_BAD_VALUE;
+	
+	status_t status;
+	
+	status = StorageKit::rewind_dir(dir);
+	if (status == B_OK) {
+		for (	result = StorageKit::read_dir(dir);
+				result != NULL;
+				result = StorageKit::read_dir(dir)	)
+		{
+			if (strcmp(result->d_name, name) == 0)
+				return B_OK;
+		}
+		status = B_ENTRY_NOT_FOUND;
+	}
+	
+	result = NULL;
+	return status;
+}
+
+status_t
+StorageKit::dup_dir( Dir dir, Dir &result ) {
+	status_t status = B_ERROR;
+
+	if (dir == NullDir) {
+		status = B_BAD_VALUE;
+	} else {
+
+		// We need to find the entry for "." in the
+		// given directory, get its full path, and
+		// open it as a directory.
+
+		// Find "."
+		DirEntry *entry;
+		status = StorageKit::find_dir(dir, ".", entry);
+
+		if (status == B_OK) {
+		
+			// Convert it to an absolute pathname
+			char path[B_PATH_NAME_LENGTH+1];
+			status = StorageKit::entry_ref_to_path(entry->d_pdev,
+				entry->d_pino, ".", path, B_PATH_NAME_LENGTH+1);
+				
+			if (status == B_OK) {			
+				// Open it
+				status = StorageKit::open_dir( path, result );				
+			}			
+		}		
+	}
+	
+	
+	if (status != B_OK) {
+		result = NullDir;
+	}
+
+	return status;		 	
+}
+
+
+status_t
 StorageKit::close_dir( Dir dir ) {
 //	cout << endl << "close_dir()" << endl;
 	return (::closedir(dir) == -1) ? errno : B_OK;	
@@ -390,7 +462,7 @@ StorageKit::read_link( const char *path, char *result, int size ) {
 
 
 status_t
-StorageKit::entry_ref_to_path( struct entry_ref *ref, char *result, int size ) {
+StorageKit::entry_ref_to_path( const struct entry_ref *ref, char *result, int size ) {
 	if (ref == NULL) {
 		return B_BAD_VALUE;
 	} else {
@@ -400,6 +472,11 @@ StorageKit::entry_ref_to_path( struct entry_ref *ref, char *result, int size ) {
 
 status_t
 StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size ) {
+//	printf("device = %ld \n", device);
+//	printf("dir    = %lld \n", directory);
+//	printf("name   = '%s' \n", name);
+
+
 	if (result == NULL || size < 1)
 		return B_BAD_VALUE;
 
@@ -457,6 +534,8 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 			bytesLeft -= bytes;
 		}
 		pos[0] = 0;	// Null terminate the string we just read
+		
+//		printf("bytes == %d\n", pos-result);
 
 		pclose(file);
 			
@@ -472,8 +551,9 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 			// is absolute). If there's no error, we're done.
 			if (result[0] != '/') {
 				status_t status;
-				if (sscanf(result, "%ld\n%s", &status, NULL) >= 1) {
-					status = B_ERROR;
+//				printf("result = '%s'\n", result);
+				if (sscanf(result, "%ld\n%s", &status, NULL) < 1) {
+					status = -12;
 				}
 				result[0] = 0;
 				return status;
@@ -484,6 +564,8 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 	}
 	
 	result[0] = 0;
-	return B_ERROR;
+	return -13;
 	
 }
+
+

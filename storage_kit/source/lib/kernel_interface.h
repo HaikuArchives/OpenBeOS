@@ -156,6 +156,22 @@ status_t open_dir( const char *path, Dir &result );
 	if at the end of the list. */
 DirEntry* read_dir( Dir dir );
 
+/*! Rewindes the directory to the first entry in the list. */
+status_t rewind_dir( Dir dir );
+
+/*! Iterates through the given directory searching for an entry whose name
+	matches that given by entry. On success, places the DirEntry in result
+	and returns B_OK. On failures, returns an error code and sets result to
+	StorageKit::NullDir.
+	
+	<b>Note:</b> This call modifies the internal position marker of dir. */
+status_t find_dir( Dir dir, const char *entry, DirEntry *&result );
+
+/*! Creates a duplicated of the given directory and places it in result if successful,
+	returning B_OK. Returns an error code and sets result to StorageKit::NullDir if
+	unsuccessful. */
+status_t dup_dir( Dir dir, Dir &result );
+
 /*! Closes the given directory. */
 status_t close_dir( Dir dir );
 
@@ -181,7 +197,7 @@ ssize_t read_link( const char *path, char *result, int size );
 	If ref or result is NULL or size is -1, B_BAD_VALUE is returned and result
 	is unmodified. Otherwise, an error code is returned and result is
 	set to be an empty string. */
-status_t entry_ref_to_path( struct entry_ref *ref, char *result, int size );
+status_t entry_ref_to_path( const struct entry_ref *ref, char *result, int size );
 
 /*! See the other definition of entry_ref_to_path() */
 status_t entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size );
