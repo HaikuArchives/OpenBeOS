@@ -1,9 +1,3 @@
-/*
-	
-	MouseMessages.h
-	
-*/
-
 #ifndef MOUSE_MESSAGES_H
 #define MOUSE_MESSAGES_H
 
@@ -14,4 +8,4 @@ const uint32 SLIDER_MOUSE_SPEED					= 'SLms';
 
 const uint32 ERROR_DETECTED						= 'ERor';
 
-#endif //MOUSE_MESSAGES_H
+#endif

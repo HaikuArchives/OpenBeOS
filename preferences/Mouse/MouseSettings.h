@@ -33,6 +33,7 @@ class MouseSettings{
 public :
 	MouseSettings();
 	virtual ~MouseSettings();
+	
 	BRect WindowPosition() const { return fWindowFrame; }
 	void SetWindowPosition(BRect);
 	
