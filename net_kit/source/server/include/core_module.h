@@ -5,28 +5,13 @@
 #ifndef OBOS_CORE_MODULE_H
 #define OBOS_CORE_MODULE_H
 
-#ifdef _KERNEL_MODE
-#include <module.h>
-#else
-
-typedef struct module_info {
-	const char *name;
-	uint32 flags;
-	status_t (*std_ops)(int32, ...);
-} module_info;
-
-#define	B_MODULE_INIT	    1
-#define	B_MODULE_UNINIT	    2
-#define	B_KEEP_LOADED		0x00000001
-
-#endif
-
 #include "sys/mbuf.h"
 #include "sys/protosw.h"
 #include "sys/socketvar.h"
 #include "netinet/in_pcb.h"
 #include "net/if.h"
 #include "net_timer.h"
+#include "net_module.h"
 
 struct core_module_info {
 	module_info	module;
