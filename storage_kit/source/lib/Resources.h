@@ -33,6 +33,7 @@ public:
 	virtual ~BResources();
 
 	status_t SetTo(BFile *file, bool clobber = false);
+	void Unset();
 	status_t InitCheck() const;
 
 	const BFile &File() const;

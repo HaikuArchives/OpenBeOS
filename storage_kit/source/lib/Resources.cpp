@@ -48,10 +48,13 @@ BResources::~BResources()
 // SetTo
 /*!	\brief Re-initialized the BResources object to represent the resources of
 	the supplied file.
-	If the \a clobber argument is \c true, the data of the file are erased
-	and it is turned into an empty resource file. Otherwise \a file
-	must refer either to a resource file or to an executable (ELF or PEF
-	binary). If the file has been opened \c B_READ_ONLY, only read access
+	What happens, if \a clobber is \c true, depends on the type of the file.
+	If the file is capable of containing resources, that is, is a resource
+	file or an executable (ELF or PEF), its resources are removed. Otherwise
+	the file's data are erased and it is turned into an empty resource file.
+	If \a clobber is \c false, \a file must refer to a file that is capable
+	of containing resources.
+	If the file has been opened \c B_READ_ONLY, only read access
 	to its resources is possible.
 	The BResources object makes a copy of \a file, that is the caller remains
 	owner of the BFile object.
@@ -66,6 +69,17 @@ status_t
 BResources::SetTo(BFile *file, bool clobber)
 {
 	return NOT_IMPLEMENTED;
+}
+
+// Unset
+/*!	\brief Returns the BResources object to an uninitialized state.
+	If the object represented resources that had been modified, the data are
+	written back to the file.
+	\note This method extends the BeOS R5 API.
+*/
+void
+BResources::Unset()
+{
 }
 
 // InitCheck
@@ -161,6 +175,11 @@ BResources::PreloadResourceType(type_code type)
 	- \c B_NOT_ALLOWED: The file is opened read only.
 	- \c B_FILE_ERROR: A file error occured.
 	- \c B_IO_ERROR: An error occured while writing the resources.
+	\note When a resource is written to the file, its data are converted
+		  to the endianess of the file, and when reading a resource, the
+		  data are converted to the host's endianess. This does of course
+		  only work for known types, i.e. those that swap_data() is able to
+		  cope with.
 */
 status_t
 BResources::Sync()
@@ -187,11 +206,13 @@ BResources::MergeFrom(BFile *fromFile)
 // WriteTo
 /*!	\brief Writes the resources to a new file.
 	The resources formerly contained in the target file (if any) are erased.
-	After the method returns, the BResources object refers to the new file.
+	When the method returns, the BResources object refers to the new file.
 	\param file the file the resources shall be written to.
 	\return
 	- \c B_OK: Everything went fine.
 	- a specific error code.
+	\note If the resources have been modified, but not Sync()ed, the old file
+		  remains unmodified.
 */
 status_t
 BResources::WriteTo(BFile *file)
@@ -389,8 +410,8 @@ BResources::RemoveResource(type_code type, int32 id)
 // WriteResource
 /*!	\brief Writes data into an existing resource.
 	If writing the data would exceed the bounds of the resource, it is
-	enlarged respectively. If \a offset is beyond the end of the resource,
-	0 bytes padding is inserted.
+	enlarged respectively. If \a offset is past the end of the resource,
+	padding with unspecified data is inserted.
 	\param type the type of the resource
 	\param id the ID of the resource
 	\param data the data to be written
@@ -415,7 +436,7 @@ BResources::WriteResource(type_code type, int32 id, const void *data,
 // ReadResource
 /*!	\brief Reads data from an existing resource.
 	If more data than existing are requested, this method does not fail. It
-	will then read only the existing data. As a consequence an offset beyond
+	will then read only the existing data. As a consequence an offset past
 	the end of the resource will not cause the method to fail, but no data
 	will be read at all.
 	\param type the type of the resource
