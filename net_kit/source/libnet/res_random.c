@@ -1,5 +1,3 @@
-/* $OpenBSD: res_random.c,v 1.9 2001/01/04 21:45:31 todd Exp $ */
-
 /*
  * Copyright 1997 Niels Provos <provos@physnet.uni-hamburg.de>
  * All rights reserved.
@@ -67,6 +65,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* arc4random is defined in stdlib.h on OpenBSD, so we'll just forward
+ * declare the prototype here to stop the compiler moaning.
+ */
+uint32 arc4random(void);
 
 #define RU_OUT  180             /* Time after wich will be reseeded */
 #define RU_MAX	30000		/* Uniq cycle, avoid blackjack prediction */

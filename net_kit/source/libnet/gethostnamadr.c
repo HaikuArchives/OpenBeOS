@@ -51,10 +51,6 @@
  * --Copyright--
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char rcsid[] = "$OpenBSD: gethostnamadr.c,v 1.43 2001/06/27 00:58:55 lebel Exp $";
-#endif /* LIBC_SCCS and not lint */
-
 #include <sys/param.h>
 #include "sys/socket.h"
 #include "netinet/in.h"
@@ -817,8 +813,8 @@ _gethtent()
 {
 	char *p;
 	register char *cp, **q;
-	int af;
-	size_t len;
+	int af = 0;
+	size_t len = 0;
 
 	if (!hostf && !(hostf = fopen(_PATH_HOSTS, "r" ))) {
 		h_errno = NETDB_INTERNAL;
@@ -891,9 +887,9 @@ _gethtent()
 	}
 	*q = NULL;
 	if (_res.options & RES_USE_INET6) {
+#ifdef INET6
 		char *bp = hostbuf;
 		int buflen = sizeof hostbuf;
-#ifdef INET6
 		map_v4v6_hostent(&host, &bp, &buflen);
 #endif
 	}

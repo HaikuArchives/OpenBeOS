@@ -1,5 +1,3 @@
-/*	$OpenBSD: inet_pton.c,v 1.3 1999/12/08 09:31:15 itojun Exp $	*/
-
 /* Copyright (c) 1996 by Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,14 +13,6 @@
  * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
  * SOFTWARE.
  */
-
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char rcsid[] = "$From: inet_pton.c,v 8.7 1996/08/05 08:31:35 vixie Exp $";
-#else
-static char rcsid[] = "$OpenBSD: inet_pton.c,v 1.3 1999/12/08 09:31:15 itojun Exp $";
-#endif
-#endif /* LIBC_SCCS and not lint */
 
 #include <sys/param.h>
 #include <sys/types.h>

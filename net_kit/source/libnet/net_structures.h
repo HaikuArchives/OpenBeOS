@@ -56,8 +56,24 @@ struct sysctl_args {
 	void *newp;
 	size_t newlen;
 };
-	
-/* To simplyify the addition of ones! */
+
+struct getopt_args {
+	int rv;
+	int level;
+	int optnum;
+	caddr_t val;
+	size_t *valsize;
+};
+
+struct setopt_args {
+	int rv;
+	int level;
+	int optnum;
+	const void *val;
+	size_t valsize;
+};
+
+/* To simplify the addition of ones it's an enum! */
 enum {
 	NET_SOCKET_CREATE = B_DEVICE_OP_CODES_END + 0x100,
 	NET_SOCKET_BIND,
@@ -67,7 +83,9 @@ enum {
 	NET_SOCKET_CONNECT,
 	NET_SOCKET_SELECT,
 	NET_SOCKET_SHUTDOWN,
-	NET_SOCKET_SYSCTL
+	NET_SOCKET_SYSCTL,
+	NET_SOCKET_GETSOCKOPT,
+	NET_SOCKET_SETSOCKOPT
 };
 
 

@@ -31,24 +31,19 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char rcsid[] = "$OpenBSD: gethostname.c,v 1.3 1998/05/13 08:50:58 deraadt Exp $";
-#endif /* LIBC_SCCS and not lint */
-
 #include <sys/param.h>
-//#include <sys/sysctl.h>
 
 int gethostname(char *name, size_t namelen)
 {
+/* XXX - how do we do this???
 	int mib[2];
 	size_t size;
 
-/* XXX - how do we do this???
 	mib[0] = CTL_KERN;
 	mib[1] = KERN_HOSTNAME;
 	size = namelen;
 	if (sysctl(mib, 2, name, &size, NULL, 0) == -1)
 		return (-1);
  */
-	return (0);
+	return (-1);
 }

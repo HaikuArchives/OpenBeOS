@@ -1,5 +1,3 @@
-/*	$OpenBSD: res_debug.c,v 1.11 2001/06/11 10:05:59 itojun Exp $	*/
-
 /*
  * ++Copyright++ 1985, 1990, 1993
  * -
@@ -76,15 +74,6 @@
  * IF IBM IS APPRISED OF THE POSSIBILITY OF SUCH DAMAGES.
  * --Copyright--
  */
-
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)res_debug.c	8.1 (Berkeley) 6/4/93";
-static char rcsid[] = "$From: res_debug.c,v 8.19 1996/11/26 10:11:23 vixie Exp $";
-#else
-static char rcsid[] = "$OpenBSD: res_debug.c,v 1.11 2001/06/11 10:05:59 itojun Exp $";
-#endif
-#endif /* LIBC_SCCS and not lint */
 
 #include <sys/param.h>
 #include <sys/types.h>

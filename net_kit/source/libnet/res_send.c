@@ -1,5 +1,3 @@
-/*	$OpenBSD: res_send.c,v 1.10 2001/09/14 23:49:29 itojun Exp $	*/
-
 /*
  * ++Copyright++ 1985, 1989, 1993
  * -
@@ -54,15 +52,6 @@
  * -
  * --Copyright--
  */
-
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static char rcsid[] = "$From: res_send.c,v 8.12 1996/10/08 04:51:06 vixie Exp $";
-#else
-static char rcsid[] = "$OpenBSD: res_send.c,v 1.10 2001/09/14 23:49:29 itojun Exp $";
-#endif
-#endif /* LIBC_SCCS and not lint */
 
 	/* change this to "0"
 	 * if you talk to a lot
@@ -576,7 +565,7 @@ read_len:
 			struct timeval timeout;
 			fd_set *dsmaskp;
 			struct sockaddr_storage from;
-			int fromlen;
+			size_t fromlen;
 
 			if ((s < 0) || vc || (af != nsap->sa_family)) {
 				if (vc)

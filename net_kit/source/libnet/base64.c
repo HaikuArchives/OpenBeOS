@@ -1,5 +1,3 @@
-/*	$OpenBSD: base64.c,v 1.3 1997/11/08 20:46:55 deraadt Exp $	*/
-
 /*
  * Copyright (c) 1996 by Internet Software Consortium.
  *

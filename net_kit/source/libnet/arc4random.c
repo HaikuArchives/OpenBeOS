@@ -1,5 +1,3 @@
-/*	$OpenBSD: arc4random.c,v 1.6 2001/06/05 05:05:38 pvalchev Exp $	*/
-
 /*
  * Arc4 random number generator for OpenBSD.
  * Copyright 1996 David Mazieres <dm@lcs.mit.edu>.
@@ -31,7 +29,6 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/time.h>
-//#include <sys/sysctl.h>
 
 #ifdef __GNUC__
 #define inline __inline
@@ -45,12 +42,11 @@ struct arc4_stream {
 	uint8 s[256];
 };
 
-int     rs_initialized;
-static struct arc4_stream rs;
+int                        rs_initialized;
+static struct arc4_stream  rs;
 
-static inline void
-arc4_init(as)
-	struct arc4_stream *as;
+
+static inline void arc4_init(struct arc4_stream *as)
 {
 	int     n;
 
@@ -60,11 +56,9 @@ arc4_init(as)
 	as->j = 0;
 }
 
-static inline void
-arc4_addrandom(as, dat, datlen)
-	struct arc4_stream *as;
-	u_char *dat;
-	int     datlen;
+
+static inline void arc4_addrandom(struct arc4_stream *as, 
+                                  u_char *dat, int datlen)
 {
 	int     n;
 	uint8 si;
@@ -80,49 +74,29 @@ arc4_addrandom(as, dat, datlen)
 	as->j = as->i;
 }
 
-static void
-arc4_stir(as)
-	struct arc4_stream *as;
+
+static void arc4_stir(struct arc4_stream *as)
 {
-//	int     fd;
+	int     fd;
 	struct {
 		struct timeval tv;
 		u_int rnd[(128 - sizeof(struct timeval)) / sizeof(u_int)];
 	}       rdat;
 
-/* beos never had /dev/arandom...
 	gettimeofday(&rdat.tv, NULL);
 	fd = open("/dev/arandom", O_RDONLY);
 	if (fd != -1) {
 		read(fd, rdat.rnd, sizeof(rdat.rnd));
 		close(fd);
- * but we didn't have sysctl either!!!
-	} else {
-		int i, mib[2];
-		size_t len;
-*/
-		/* Device could not be opened, we might be chrooted, take
-		 * randomness from sysctl. */
-/*
-		mib[0] = CTL_KERN;
-		mib[1] = KERN_ARND;
-
-		for (i = 0; i < sizeof(rdat.rnd) / sizeof(u_int); i ++) {
-			len = sizeof(u_int);
-			if (sysctl(mib, 2, &rdat.rnd[i], &len, NULL, 0) == -1)
-				break;
-		}
 	}
-*/
 	/* fd < 0 or failed sysctl ?  Ah, what the heck. We'll just take
 	 * whatever was on the stack... */
 
 	arc4_addrandom(as, (void *) &rdat, sizeof(rdat));
 }
 
-static inline uint8
-arc4_getbyte(as)
-	struct arc4_stream *as;
+
+static inline uint8 arc4_getbyte(struct arc4_stream *as)
 {
 	uint8 si, sj;
 
@@ -135,9 +109,8 @@ arc4_getbyte(as)
 	return (as->s[(si + sj) & 0xff]);
 }
 
-static inline uint32
-arc4_getword(as)
-	struct arc4_stream *as;
+
+static inline uint32 arc4_getword(struct arc4_stream *as)
 {
 	uint32 val;
 	val = arc4_getbyte(as) << 24;
@@ -147,8 +120,8 @@ arc4_getword(as)
 	return val;
 }
 
-void
-arc4random_stir()
+
+void arc4random_stir(void)
 {
 	if (!rs_initialized) {
 		arc4_init(&rs);
@@ -157,41 +130,17 @@ arc4random_stir()
 	arc4_stir(&rs);
 }
 
-void
-arc4random_addrandom(dat, datlen)
-	u_char *dat;
-	int     datlen;
+void arc4random_addrandom(u_char *dat, int datlen)
 {
 	if (!rs_initialized)
 		arc4random_stir();
 	arc4_addrandom(&rs, dat, datlen);
 }
 
-uint32
-arc4random()
+
+uint32 arc4random()
 {
 	if (!rs_initialized)
 		arc4random_stir();
 	return arc4_getword(&rs);
 }
-
-#if 0
-/*-------- Test code for i386 --------*/
-#include <stdio.h>
-#include <machine/pctr.h>
-int
-main(int argc, char **argv)
-{
-	const int iter = 1000000;
-	int     i;
-	pctrval v;
-
-	v = rdtsc();
-	for (i = 0; i < iter; i++)
-		arc4random();
-	v = rdtsc() - v;
-	v /= iter;
-
-	printf("%qd cycles\n", v);
-}
-#endif

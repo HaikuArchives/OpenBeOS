@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char rcsid[] = "$OpenBSD: getnetbyaddr.c,v 1.5 1997/07/09 01:08:28 millert Exp $";
-#endif /* LIBC_SCCS and not lint */
-
 #include <kernel/OS.h>
 #include "netinet/in.h"
 #include "netdb.h"

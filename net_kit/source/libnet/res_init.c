@@ -1,5 +1,3 @@
-/*	$OpenBSD: res_init.c,v 1.24 2001/09/14 23:49:29 itojun Exp $	*/
-
 /*
  * ++Copyright++ 1985, 1989, 1993
  * -
@@ -55,15 +53,6 @@
  * --Copyright--
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static char rcsid[] = "$From: res_init.c,v 8.7 1996/09/28 06:51:07 vixie Exp $";
-#else
-static char rcsid[] = "$OpenBSD: res_init.c,v 1.24 2001/09/14 23:49:29 itojun Exp $";
-#endif
-#endif /* LIBC_SCCS and not lint */
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include "sys/socket.h"
@@ -78,9 +67,7 @@ static char rcsid[] = "$OpenBSD: res_init.c,v 1.24 2001/09/14 23:49:29 itojun Ex
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-//#ifdef INET6
 #include "netdb.h"
-//#endif /* INET6 */
 
 /*-------------------------------------- info about "sortlist" --------------
  * Marc Majka		1994/04/16

@@ -67,7 +67,7 @@ int recvfrom(int sock, caddr_t buffer, size_t buflen, int flags,
 
 	/* XXX - would this be better done as scatter gather? */	
 	mh.msg_name = (caddr_t)addr;
-	mh.msg_namelen = addrlen;
+	mh.msg_namelen = *addrlen;
 	mh.msg_flags = flags;
 	mh.msg_control = NULL;
 	mh.msg_controllen = 0;
@@ -181,12 +181,41 @@ int sysctl (int *name, uint namelen, void *oldp, size_t *oldlenp,
 	
 int connect(int sock, const struct sockaddr *name, int namelen)
 {
+	printf("connect!\n");
 	return -1;
 }
 
 int send(int sock, const caddr_t data, int buflen, int flags)
 {
+	printf("send!\n");
 	return -1;
 }
 
+int getsockopt(int sock, int level, int optnum, void * val, size_t *valsize)
+{
+	struct getopt_args ga;
+
+	ga.rv = 0;	
+	ga.level = level;
+	ga.optnum = optnum;
+	ga.val = val;
+	ga.valsize = valsize;
+	
+	ioctl(sock, NET_SOCKET_GETSOCKOPT, &ga, sizeof(ga));
+	return ga.rv;
+}
+
+int setsockopt(int sock, int level, int optnum, const void *val, size_t valsize)
+{
+	struct setopt_args sa;
+
+	sa.rv = 0;	
+	sa.level = level;
+	sa.optnum = optnum;
+	sa.val = val;
+	sa.valsize = valsize;
+	
+	ioctl(sock, NET_SOCKET_SETSOCKOPT, &sa, sizeof(sa));
+	return sa.rv;
+}
 

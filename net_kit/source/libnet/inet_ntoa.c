@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char rcsid[] = "$OpenBSD: inet_ntoa.c,v 1.2 1996/08/19 08:29:16 tholo Exp $";
-#endif /* LIBC_SCCS and not lint */
-
 /*
  * Convert network-format internet address
  * to base 256 d.d.d.d representation.

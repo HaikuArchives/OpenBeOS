@@ -1,5 +1,3 @@
-/*	$OpenBSD: res_mkquery.c,v 1.10 2001/07/31 22:02:18 jakob Exp $	*/
-
 /*
  * ++Copyright++ 1985, 1993
  * -
@@ -55,15 +53,6 @@
  * --Copyright--
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)res_mkquery.c	8.1 (Berkeley) 6/4/93";
-static char rcsid[] = "$From: res_mkquery.c,v 8.5 1996/08/27 08:33:28 vixie Exp $";
-#else
-static char rcsid[] = "$OpenBSD: res_mkquery.c,v 1.10 2001/07/31 22:02:18 jakob Exp $";
-#endif
-#endif /* LIBC_SCCS and not lint */
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <netinet/in.h>
@@ -114,7 +103,7 @@ res_mkquery(op, dname, class, type, data, datalen, newrr_in, buf, buflen)
 
 	if ((buf == NULL) || (buflen < HFIXEDSZ))
 		return (-1);
-	bzero(buf, HFIXEDSZ);
+	memset(buf, 0, HFIXEDSZ);
 	hp = (HEADER *) buf;
 	_res.id = res_randomid();
 	hp->id = htons(_res.id);
@@ -182,7 +171,7 @@ res_mkquery(op, dname, class, type, data, datalen, newrr_in, buf, buflen)
 		__putshort(datalen, cp);
 		cp += INT16SZ;
 		if (datalen) {
-			bcopy(data, cp, datalen);
+			memcpy(cp, data, datalen);
 			cp += datalen;
 		}
 		hp->ancount = htons(1);
