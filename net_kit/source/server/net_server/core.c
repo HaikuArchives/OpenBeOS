@@ -264,61 +264,6 @@ static void merge_devices(void)
 	release_sem(dev_lock);
 }
 */
-/*
-static void list_devices(void)
-{
-	ifnet *d = devices;
-	int i = 1;
-	dprintf( "Dev Name         MTU  MAC Address       Flags\n"
-		"=== ============ ==== ================= ===========================\n");
-	
-	while (d) {
-		dprintf("%2d  %s%d       %4ld ", i++, d->name, d->if_unit, d->if_mtu);
-		dprintf("                 ");
-		if (d->if_flags & IFF_UP)
-			dprintf(" UP");
-		if (d->if_flags & IFF_RUNNING)
-			dprintf(" RUNNING");
-		if (d->if_flags & IFF_PROMISC)
-			dprintf(" PROMISCUOUS");
-		if (d->if_flags & IFF_BROADCAST)
-			dprintf(" BROADCAST");
-		if (d->if_flags & IFF_MULTICAST)
-			dprintf(" MULTICAST");
-		printf("\n");
-		if (d->if_addrlist) {
-			struct ifaddr *ifa = d->if_addrlist;
-			dprintf("\t\t Addresses:\n");
-			while (ifa) {
-				dump_sockaddr(ifa->ifa_addr);
-				dprintf("\n");
-				ifa = ifa->ifa_next;
-			}
-		}
-
-		d = d->if_next; 
-	}
-}
-*/
-
-/*
-static void attach_devices(void) 
-{
-	ifnet *d = NULL;
-
-	merge_devices();
-
-	if (devices == NULL)
-		return;
-
-	d = devices;
-	while (d) {
-		if (d->attach)
-			d->attach(d);
-		d = d->if_next;
-	}
-}
-*/
 
 static void close_devices(void)
 {
@@ -543,7 +488,6 @@ struct protosw *pffindtype(int domain, int type)
 {
 	struct domain *d;
 	struct protosw *p;
-printf("pffindtype: %d, %d\n", domain, type);
 
 	for (d = domains; d; d = d->dom_next) {
 		if (d->dom_family == domain)
@@ -551,10 +495,8 @@ printf("pffindtype: %d, %d\n", domain, type);
 	}
 	return NULL;
 found:
-printf("Found domain: %s\n", d->dom_name);
 	for (p=d->dom_protosw; p; p = p->dom_next) {
 		if (p->pr_type && p->pr_type == type) {
-			printf("Found protocol: %s\n", p->name);
 			return p;
 		}
 	}
@@ -594,7 +536,6 @@ int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 	struct protosw *pr;
 	int family, protocol;
 
-	dprintf("net_sysctl\n");	
 	if (namelen < 3) {
 		dprintf("net_sysctl: EINVAL (namelen < 3, %d)\n", namelen);
 		return EINVAL; // EISDIR??
@@ -622,9 +563,6 @@ found:
 
 int start_stack(void)
 {
-dprintf("start_stack\n");
-
-
 	/* have we already been started??? */
 	if (domains != NULL)
 		return -1;
@@ -633,13 +571,13 @@ dprintf("start_stack\n");
 	protocols = NULL;
 	devices = NULL;
 	pdevices = NULL;
-dprintf("find_protocol_domains...\n");	
+
 	find_protocol_modules();
 	
 	walk_domains();
 	
 	domain_init();
-printf("domain_init complete...\n");	
+
 	mbinit();
 	sockets_init();
 	inpcb_init();
@@ -650,8 +588,7 @@ printf("domain_init complete...\n");
 	set_sem_owner(dev_lock, B_SYSTEM_TEAM);
 
 	find_interface_modules();
-	//start_devices();
-dprintf("stack has been started!\n");
+
 	return 0;
 }
 
