@@ -90,6 +90,15 @@ class Term {
 		Term	*fParent;
 };
 
+// Although an Equation object is quite independent from the volume on which
+// the query is run, there are some dependencies that are produced while
+// querying:
+// The type/size of the value, the score, and if it has an index or not.
+// So you could run more than one query on the same volume, but it might return
+// wrong values when it runs concurrently on another volume.
+// That's not an issue right now, because we run single-threaded and don't use
+// queries more than once.
+
 class Equation : public Term {
 	public:
 		Equation(char **expr);
@@ -448,10 +457,10 @@ status_t
 Equation::Match(Inode *inode)
 {
 	// get a pointer to the attribute in question
+	union value value;
 	uint8 *buffer;
 	int32 type;
 	size_t size;
-	bool ownBuffer = false;
 	
 	// first, check for "fake" attributes, "name", "size", "last_modified",
 	if (!strcmp(fAttribute,"name")) {
@@ -478,31 +487,40 @@ Equation::Match(Inode *inode)
 			type = smallData->type;
 			size = smallData->data_size;
 		} else if ((attribute = inode->GetAttribute(fAttribute)) != NULL) {
+			buffer = (uint8 *)&value;
+			type = attribute->Node()->type;
 			size = attribute->Size();
+
 			if (size > INODE_FILE_NAME_LENGTH)
 				size = INODE_FILE_NAME_LENGTH;
-			buffer = (uint8 *)malloc(size);
-			if (buffer == NULL) {
-				inode->ReleaseAttribute(attribute);
-				return B_NO_MEMORY;
-			}
 
 			if (attribute->ReadAt(0,buffer,&size) < B_OK) {
 				inode->ReleaseAttribute(attribute);
-				free(buffer);
 				return B_IO_ERROR;
 			}
 			inode->ReleaseAttribute(attribute);
-			ownBuffer = true;
+		} else {
+			// there is no matching attribute, we will just bail out if we
+			// already know that our value is not of a string type.
+			// If not, it will be converted to a string - and then be compared with "".
+			// That's why we have to call ConvertValue() here - but it will be
+			// a cheap call for the next time
+			if (fType != 0 && fType != B_STRING_TYPE)
+				return NO_MATCH;
+
+			if (ConvertValue(B_STRING_TYPE) < B_OK)
+				RETURN_ERROR(B_BAD_VALUE);
+
+			value.String[0] = '\0';	// create an empty string
+			buffer = (uint8 *)&value;
+			type = fType;
+			size = fSize;
 		}
 	}
 	// prepare own value for use, if it is possible to convert it
 	status_t status = ConvertValue(type);
 	if (status == B_OK)
 		status = CompareTo(buffer,size) ? MATCH_OK : NO_MATCH;
-
-	if (ownBuffer)
-		free(buffer);
 
 	RETURN_ERROR(status);
 }
@@ -512,7 +530,15 @@ status_t
 Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 {
 	if (index->SetTo(fAttribute) < B_OK) {
-		// try to get an index that holds all files (name)
+		// Try to get an index that holds all files (name)
+		// Also sets the default type for all attributes without index
+		// to string.
+		// It would make sense to switch to e.g. last_modified, since
+		// that tend to be the smallest index, but OTOH name may be
+		// the least frequently used one for write accesses...
+		// Perhaps some real world benchmarks would hint to the right
+		// thing - if this will be changed, be sure that ConvertValue()
+		// is not called with the type of the index
 		if (index->SetTo("name") < B_OK)
 			return B_ENTRY_NOT_FOUND;
 		
@@ -568,7 +594,7 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 		if (status < B_OK)
 			return status;
 
-		if (!CompareTo((uint8 *)&indexValue,keyLength)) {
+		if (fHasIndex && !CompareTo((uint8 *)&indexValue,keyLength)) {
 			// they aren't equal? let the operation decide what to do
 			if (fOp == OP_LESS_THAN || OP_LESS_THAN_OR_EQUAL)
 				return B_ENTRY_NOT_FOUND;
@@ -588,8 +614,11 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 		// check ||-operators for that
 		Term *term = this;
 		status = MATCH_OK;
-	
-		while (term != NULL) {
+
+		if (!fHasIndex)
+			status = Match(inode);
+
+		while (term != NULL && status == MATCH_OK) {
 			Operator *parent = (Operator *)term->Parent();
 			if (parent == NULL)
 				break;
@@ -608,10 +637,7 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 				if (status < 0) {
 					REPORT_ERROR(status);
 					status = NO_MATCH;
-					break;
 				}
-				else if (status != MATCH_OK)
-					break;
 			}
 			term = (Term *)parent;
 		}

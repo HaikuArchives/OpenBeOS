@@ -69,8 +69,6 @@ OPTIMIZE=
 #	will be set to a value of 1.  For example specify DEBUG if you want
 #	DEBUG=1 to be set when compiling.
 DEFINES= DEBUG
-# DEBUG
-# EXCESSIVE_DEBUG
 
 #	specify special warning levels
 #	if unspecified default warnings will be used
