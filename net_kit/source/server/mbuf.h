@@ -90,6 +90,9 @@ struct mbuf {
 #define m_ext		m_dat.MH.MH_dat.MH_ext
 #define m_pktdat	m_dat.MH.MH_dat.MH_databuf
 
+/* define a little macro that gives us the data pointer for an mbuf */
+#define mtod(m, t)		((t)((m)->m_data))
+
 /* mbuf flags */
 enum {
 	M_EXT 		= 0x0001,	/* has extenal storage attached */
@@ -128,16 +131,16 @@ enum {
 
 /* MBuf types */
 enum {
-	MB_FREE		= 0,
-	MB_DATA		= 1,
-	MB_HEADER	= 2,
+	MT_FREE		= 0,	/* should be on free list */
+	MT_DATA		= 1,	/* dynamic data allocation */
+	MT_HEADER	= 2,	/* packet header */
 /*
 	MB_SONAME	= 3,
 	MB_SOOPTS	= 4,
 */
-	MB_FTABLE	= 5,
-	MB_CONTROL	= 6,
-	MB_OOBDATA	= 7
+	MT_FTABLE	= 5,	/* fragment reassembly header */
+	MT_CONTROL	= 6,	/* extra-data protocol message */
+	MT_OOBDATA	= 7 	/* out-of-band data */
 };
 
 /* now some macro's to make life easier... */
@@ -176,7 +179,7 @@ enum {
 
 
 /* Functions! */
-void mbuf_init();
+void mbinit(void);
 struct mbuf *get_free_mbuf(void);
 void free_mbuf(struct mbuf *b);
 

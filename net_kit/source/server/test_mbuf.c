@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 	printf("Network Buffer Test\n");
 	printf("===================\n\n");
 	
-	mbuf_init();
+	mbinit();
 	
 	//dump_freelist();
 

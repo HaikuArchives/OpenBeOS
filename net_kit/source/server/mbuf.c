@@ -31,9 +31,10 @@ static void _add_free_mbufs(void)
 	bufs = (struct mbuf*)base_addr;
 
 	for (i = 0;i < qty;i++) {
-		_MFILL(bufs, MB_FREE);
-		bufs->m_next = freelist->m_next;
-		freelist->m_next = bufs;
+		_MFILL(bufs, MT_FREE);
+		if (freelist)
+			bufs->m_next = freelist;
+		freelist = bufs;
 		bufs++;
 	}
 	//printf("added %d bufs to free list.\n", qty);
@@ -41,14 +42,12 @@ static void _add_free_mbufs(void)
 
 struct mbuf *get_free_mbuf(void)
 {
-	struct mbuf *ret;
+	struct mbuf *ret = freelist;
 	
-	if (freelist->m_next) {
-		ret = freelist->m_next;
-		freelist->m_next = ret->m_next;
-	} else {
-		printf("no free mbuf's!\n");
-	}
+	if (!ret)
+		return NULL;
+		
+	freelist = ret->m_next;
 	ret->m_next = NULL;
 	
 	return ret;
@@ -56,8 +55,6 @@ struct mbuf *get_free_mbuf(void)
 
 void free_mbuf(struct mbuf *b)
 {
-	struct mbuf *first = freelist->m_next;
-
 	if (b) {
 /* XXX this needs to be finished! */
 		if (b->m_flags & M_EXT) {
@@ -68,10 +65,10 @@ void free_mbuf(struct mbuf *b)
 			/* other forms of cluster need to be removed/freed here */
 		}
 		
-		_MFILL(b, MB_FREE);
-		if (first)
-			b->m_next = first;
-		freelist->m_next = b;
+		_MFILL(b, MT_FREE);
+		if (freelist)
+			b->m_next = freelist;
+		freelist = b;
 	}
 }
 
@@ -79,14 +76,15 @@ void dump_freelist(void)
 {
 	struct mbuf *b = freelist;
 	
-	while ((b = b->m_next)) {
+	do {
 		printf("	%p next @ %p\n", b, b->m_next);
-	}
+	} while ((b = b->m_next) != NULL);
 }
 		
-void mbuf_init(void)
+/* init the mbuf data structures */		
+void mbinit(void)
 {
-	freelist = malloc(sizeof(struct mbuf));
+	freelist = NULL;
 
 	_add_free_mbufs();	
 
