@@ -16,6 +16,7 @@ Path.cpp
 Statable.cpp
 String.cpp
 SymLink.cpp
+Volume.cpp
 kernel_interface.POSIX.cpp
 storage_support.cpp ;
 
