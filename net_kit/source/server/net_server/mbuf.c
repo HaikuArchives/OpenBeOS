@@ -10,6 +10,11 @@
 #include "mbuf.h"
 #include "pools.h"
 
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#define printf dprintf
+#endif
+
 #define MBUF_ALLOCSIZE		4096
 
 void dump_freelist(void)
