@@ -116,7 +116,7 @@ extern "C" {
 	functions in your driver.
 */
 
-vnode_ops bfs_entry =  {
+vnode_ops fs_entry =  {
 	&bfs_read_vnode,			// read_vnode
 	&bfs_release_vnode,			// write_vnode
 	NULL, 						// remove_vnode
@@ -590,9 +590,24 @@ bfs_write_attr(void *ns, void *node, const char *name, int type,const void *buf,
 
 
 int
-bfs_read_attr(void *ns, void *node, const char *name, int type,void *buf, size_t *len, off_t pos)
+bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buf, size_t *_length, off_t pos)
 {
-	dprintf("bfs_read_attr(name = \"%s\")\n",name);
+	Inode *inode = (Inode *)_node;
+	dprintf("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->VnodeID(),name,*_length);
+	
+	small_data *smallData = NULL;
+	while (inode->GetNextSmallData(&smallData) == B_OK) {
+		if (strcmp(smallData->Name(),name))
+			continue;
+		
+		size_t length = *_length;
+		if (length > smallData->data_size)
+			length = smallData->data_size;
+
+		memcpy(buf,smallData->Data(),length);
+		*_length = length;
+		return B_OK;
+	}
 	return B_ENTRY_NOT_FOUND;
 }
 
