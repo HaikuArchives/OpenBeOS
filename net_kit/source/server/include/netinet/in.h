@@ -54,7 +54,11 @@ struct sockaddr_in {
 };
 /* the address is therefore at sin_addr.s_addr */
 
+#ifdef _NETWORK_STACK
 #define __IPADDR(x)     ((uint32) htonl((uint32)(x)))
+#else
+#define __IPADDR(x)     ((uint32)(x))
+#endif
 
 #define INADDR_ANY              __IPADDR(0x00000000)
 #define INADDR_LOOPBACK         __IPADDR(0x7f000001)
