@@ -14,6 +14,7 @@ Node.cpp
 #NodeInfo.cpp
 Path.cpp
 Statable.cpp
+String.cpp
 SymLink.cpp
 kernel_interface.POSIX.cpp
 storage_support.cpp ;
