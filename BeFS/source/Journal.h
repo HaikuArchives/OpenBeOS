@@ -51,7 +51,7 @@ class Transaction {
 			return cached_write(fVolume->Device(),blockNumber,buffer,numBlocks,fVolume->BlockSize());
 		}
 
-	protected:
+	//protected:
 		Volume	*fVolume;
 };
 

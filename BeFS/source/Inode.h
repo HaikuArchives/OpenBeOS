@@ -122,9 +122,9 @@ class Inode : public CachedBlock {
 
 		mode_t Mode() const { return Node()->mode; }
 		int32 Flags() const { return Node()->flags; }
-		bool IsDirectory() const { return S_ISDIR(Node()->mode); }
+		bool IsDirectory() const { return Node()->mode & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR); }
 		bool IsSymLink() const { return S_ISLNK(Node()->mode); }
-		
+
 		off_t Size() const { return Node()->data.size; }
 
 		block_run &BlockRun() const { return Node()->inode_num; }
@@ -146,9 +146,9 @@ class Inode : public CachedBlock {
 		status_t SetName(Transaction *transaction,const char *name);
 
 		// attribute methods
-		Inode *GetAttribute(const char *name);
+		status_t GetAttribute(const char *name,Inode **attribute);
 		void ReleaseAttribute(Inode *attribute);
-		status_t CreateAttribute(Transaction *transaction, char *name, uint32 type);
+		status_t CreateAttribute(Transaction *transaction,const char *name,uint32 type,Inode **attribute);
 
 		// for directories only:
 		status_t GetTree(BPlusTree **);
@@ -166,7 +166,7 @@ class Inode : public CachedBlock {
 
 		// create/remove inodes
 		status_t Remove(const char *name, bool isDirectory = false);
-		static status_t Create(Volume *volume,Inode *parent,const char *name,int32 mode,int omode,off_t *id);
+		static status_t Create(Transaction *transaction,Inode *parent,const char *name,int32 mode,int omode,uint32 type,off_t *id = NULL);
 
 	private:
 		status_t GrowStream(Transaction *transaction,off_t size);
@@ -188,6 +188,13 @@ class Vnode {
 			:
 			fVolume(volume),
 			fID(id)
+		{
+		}
+
+		Vnode(Volume *volume,block_run run)
+			:
+			fVolume(volume),
+			fID(volume->ToVnode(run))
 		{
 		}
 

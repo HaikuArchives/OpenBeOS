@@ -64,6 +64,7 @@
 	extern void dump_inode(bfs_inode *inode);
 	extern void dump_bplustree_header(bplustree_header *header);
 	extern void dump_bplustree_node(bplustree_node *node);
+	extern void dump_block(const char *buffer, int size);
 #endif
 
 #endif	/* DEBUG_H */

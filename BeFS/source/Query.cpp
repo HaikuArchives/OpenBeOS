@@ -769,7 +769,7 @@ Equation::Match(Inode *inode)
 			buffer = smallData->Data();
 			type = smallData->type;
 			size = smallData->data_size;
-		} else if ((attribute = inode->GetAttribute(fAttribute)) != NULL) {
+		} else if (inode->GetAttribute(fAttribute,&attribute) == B_OK) {
 			buffer = (uint8 *)&value;
 			type = attribute->Node()->type;
 			size = attribute->Size();

@@ -503,6 +503,10 @@ bfs_ioctl(void *_ns, void *_node, void *_cookie, int cmd, void *buffer, size_t b
 			if (inode != NULL)
 				dump_inode(inode->Node());
 			return B_OK;
+		case 56745:
+			if (inode != NULL)
+				dump_block((const char *)inode->Node(),volume->BlockSize());
+			return B_OK;
 #endif
 	}
 	return B_BAD_VALUE;
@@ -658,7 +662,13 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 	// we need to safe the open mode for O_APPEND in bfs_write()
 	*(int *)_cookie = omode;
 
-	return Inode::Create(volume,directory,name,S_FILE | (mode & S_IUMSK),omode,vnid);
+	Transaction transaction(volume,volume->ToBlock(directory->BlockRun()));
+
+	status = Inode::Create(&transaction,directory,name,S_FILE | (mode & S_IUMSK),omode,0,vnid);
+	if (status == B_OK)
+		transaction.Done();
+
+	return status;
 }
 
 
@@ -905,7 +915,13 @@ bfs_mkdir(void *_ns, void *_directory, const char *name, int mode)
 	if (status < B_OK)
 		RETURN_ERROR(status);
 
-	return Inode::Create(volume,directory,name,S_DIRECTORY | (mode & S_IUMSK),0,NULL);
+	Transaction transaction(volume,volume->ToBlock(directory->BlockRun()));
+
+	status = Inode::Create(&transaction,directory,name,S_DIRECTORY | (mode & S_IUMSK),0,0);
+	if (status == B_OK)
+		transaction.Done();
+
+	return status;
 }
 
 
@@ -1119,6 +1135,7 @@ bfs_remove_attr(void *_ns, void *_node, const char *name)
 	} else if (status == B_ENTRY_NOT_FOUND) {
 		// remove attribute file if it exists
 		// ToDo: implement me!
+		FATAL(("real file attribute removal not yet implemented...\n"));
 		RETURN_ERROR(B_ENTRY_NOT_FOUND);
 	}
 	if (status == B_OK)
@@ -1153,8 +1170,9 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 		return B_OK;
 	}
 	// search in the attribute directory
-	Inode *attribute = inode->GetAttribute(name);
-	if (attribute != NULL) {
+	Inode *attribute;
+	status_t status = inode->GetAttribute(name,&attribute);
+	if (status == B_OK) {
 		attrInfo->type = attribute->Node()->type;
 		attrInfo->size = attribute->Node()->data.size;
 
@@ -1162,7 +1180,7 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 		return B_OK;
 	}
 
-	RETURN_ERROR(B_ENTRY_NOT_FOUND);
+	RETURN_ERROR(status);
 }
 
 
@@ -1181,13 +1199,27 @@ bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *bu
 
 	Transaction transaction(volume,inode->BlockNumber());
 
-	status_t status = inode->AddSmallData(&transaction,name,type,(const uint8 *)buffer,*length);
-	if (status == B_DEVICE_FULL) {
-		// try to put it into a real attribute file
-		FATAL(("writing to attribute files not yet implemented!\n"));
-		return B_ERROR;
+	Inode *attribute = NULL;
+	status_t status;
+	if (inode->GetAttribute(name,&attribute) < B_OK) {
+		// if the attribute doesn't exist yet, try to put it in the small_data
+		// section first - if that fails (due to insufficent space), create
+		// a real attribute file
+		status = inode->AddSmallData(&transaction,name,type,(const uint8 *)buffer,*length);
+		if (status == B_DEVICE_FULL) {
+			status = inode->CreateAttribute(&transaction,name,type,&attribute);
+			if (status < B_OK)
+				RETURN_ERROR(status);
+		} else if (status == B_OK)
+			status = inode->WriteBack(&transaction);
 	}
-	if ((status = inode->WriteBack(&transaction)) == B_OK)
+
+	if (attribute != NULL) {
+		status = attribute->WriteAt(&transaction,pos,(const uint8 *)buffer,length);
+		inode->ReleaseAttribute(attribute);
+	}
+
+	if (status == B_OK)
 		transaction.Done();
 
 	return status;
@@ -1222,14 +1254,15 @@ bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, si
 		return B_OK;
 	}
 	// search in the attribute directory
-	Inode *attribute = inode->GetAttribute(name);
-	if (attribute != NULL) {
-		status_t status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
+	Inode *attribute;
+	status_t status = inode->GetAttribute(name,&attribute);
+	if (status == B_OK) {
+		status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
 		inode->ReleaseAttribute(attribute);
 		RETURN_ERROR(status);
 	}
 
-	RETURN_ERROR(B_ENTRY_NOT_FOUND);
+	RETURN_ERROR(status);
 }
 
 

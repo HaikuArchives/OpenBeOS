@@ -99,6 +99,15 @@ class Locker {
 // "chkbfs" - because such a tool may need to lock for some more time
 
 
+// define if you want to have fast locks as the foundation for the
+// ReadWriteLock class - the benefit is that acquire_sem() doesn't
+// have to be called when there is no one waiting.
+// The disadvantage is the use of 2 real semaphores which is quite
+// expensive regarding that BeOS only allows for a total of 64k
+// semaphores.
+
+//#define FAST_LOCK
+#ifdef FAST_LOCK
 class ReadWriteLock {
 	public:
 		ReadWriteLock(const char *name = "bfs r/w lock")
@@ -172,6 +181,55 @@ class ReadWriteLock {
 		vint32		fCount;
 		Benaphore	fWriteLock;
 };
+#else	// FAST_LOCK
+class ReadWriteLock {
+	public:
+		ReadWriteLock(const char *name = "bfs r/w lock")
+			:
+			fSemaphore(create_sem(MAX_READERS, name))
+		{
+		}
+
+		~ReadWriteLock()
+		{
+			delete_sem(fSemaphore);
+		}
+
+		status_t InitCheck()
+		{
+			if (fSemaphore < B_OK)
+				return fSemaphore;
+			
+			return B_OK;
+		}
+
+		status_t Lock()
+		{
+			return acquire_sem(fSemaphore);
+		}
+		
+		void Unlock()
+		{
+			release_sem(fSemaphore);
+		}
+		
+		status_t LockWrite()
+		{
+			return acquire_sem_etc(fSemaphore,MAX_READERS,0,0);
+		}
+		
+		void UnlockWrite()
+		{
+			release_sem_etc(fSemaphore,MAX_READERS,0);
+		}
+
+	private:
+		friend class ReadLocked;
+		friend class WriteLocked;
+
+		sem_id		fSemaphore;
+};
+#endif	// FAST_LOCK
 
 
 class ReadLocked {
