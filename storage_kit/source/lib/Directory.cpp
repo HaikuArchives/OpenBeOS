@@ -126,18 +126,13 @@ BDirectory::~BDirectory()
 status_t
 BDirectory::SetTo(const entry_ref *ref)
 {
-//printf("BDirectory::SetTo(const entry_ref *ref)\n");
 	char path[B_PATH_NAME_LENGTH];
 	status_t error = (ref ? B_OK : B_BAD_VALUE);
-//printf("  error: %x\n", error);
 	if (error == B_OK)
 		error = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
-//printf("  error: %x\n", error);
 	if (error == B_OK)
 		error = SetTo(path);
-//printf("  error: %x\n", error);
 	set_status(error);
-//printf("BDirectory::SetTo(const entry_ref *ref) done\n");
 	return error;
 }
 
@@ -181,27 +176,21 @@ BDirectory::SetTo(const node_ref *nref)
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Currently implemented using StorageKit::entry_ref_to_path().
-		  Reimplement!
+	\todo Implemented using SetTo(entry_ref*). Check, if necessary to
+		  reimplement!
 */
 status_t
 BDirectory::SetTo(const BEntry *entry)
 {
-//printf("BDirectory::SetTo(const BEntry *entry)\n");
 	entry_ref ref;
 	status_t error = (entry ? B_OK : B_BAD_VALUE);
-//printf("  error: %x\n", error);
 	if (error == B_OK && entry->InitCheck() != B_OK)
 		error = B_BAD_VALUE;
-//printf("  error: %x\n", error);
 	if (error == B_OK)
 		error = entry->GetRef(&ref);
-//printf("  error: %x\n", error);
 	if (error == B_OK)
 		error = SetTo(&ref);
-//printf("  error: %x\n", error);
 	set_status(error);
-//printf("BDirectory::SetTo(const BEntry *entry) done\n");
 	return error;
 }
 
@@ -845,18 +834,20 @@ BDirectory::CreateSymLink(const char *path, const char *linkToPath,
 BDirectory &
 BDirectory::operator=(const BDirectory &dir)
 {
-	Unset();
-	if (dir.InitCheck() == B_OK) {
-		// duplicate the file descriptor
-		StorageKit::FileDescriptor fd = -1;
-		status_t status = StorageKit::dup_dir(dir.get_fd(), fd);
-		// set it
-		if (status == B_OK) {
-			status = set_fd(fd);
-			if (status != B_OK)
-				StorageKit::close(fd);
+	if (&dir != this) {	// no need to assign us to ourselves
+		Unset();
+		if (dir.InitCheck() == B_OK) {
+			// duplicate the file descriptor
+			StorageKit::FileDescriptor fd = -1;
+			status_t status = StorageKit::dup_dir(dir.get_fd(), fd);
+			// set it
+			if (status == B_OK) {
+				status = set_fd(fd);
+				if (status != B_OK)
+					StorageKit::close(fd);
+			}
+			set_status(status);
 		}
-		set_status(status);
 	}
 	return *this;
 }

@@ -439,20 +439,22 @@ BFile::SetSize(off_t size)
 BFile &
 BFile::operator=(const BFile &file)
 {
-	Unset();
-	if (file.InitCheck() == B_OK) {
-		// duplicate the file descriptor
-		int fd = -1;
-		status_t status = StorageKit::dup(file.get_fd(), fd);
-		// set it
-		if (status == B_OK) {
-			status = set_fd(fd);
-			if (status == B_OK)
-				fMode = file.fMode;
-			else
-				StorageKit::close(fd);
+	if (&file != this) {	// no need to assign us to ourselves
+		Unset();
+		if (file.InitCheck() == B_OK) {
+			// duplicate the file descriptor
+			int fd = -1;
+			status_t status = StorageKit::dup(file.get_fd(), fd);
+			// set it
+			if (status == B_OK) {
+				status = set_fd(fd);
+				if (status == B_OK)
+					fMode = file.fMode;
+				else
+					StorageKit::close(fd);
+			}
+			set_status(status);
 		}
-		set_status(status);
 	}
 	return *this;
 }
