@@ -27,15 +27,16 @@
 #include <string.h>
 
 
-// I have decided to extend our rules for the kernel, and use virtuals in
-// the query code, virtuals aren't that bad anyway, and the query code
-// shouldn't be in the kernel.
-//
 // The parser has a very static design, but it will do what is required.
 //
 // ParseOr(), ParseAnd(), ParseEquation() are guarantying the operator
 // precedence, that is =,!=,>,<,>=,<= .. && .. ||.
 // Apparently, the "!" (not) can only be used with brackets.
+//
+// If you think that there are too few NULL pointer checks in some places
+// of the code, just read the beginning of the query constructor.
+// The API is not fully available, just the Query and the Expression class
+// are.
 
 
 enum ops {
@@ -91,6 +92,11 @@ class Term {
 		virtual status_t Match(Inode *inode) = 0;
 		virtual void Complement() = 0;
 
+		virtual void CalculateScore(Index &index) = 0;
+		virtual int32 Score() const = 0;
+
+		virtual status_t InitCheck() = 0;
+
 #ifdef DEBUG
 		virtual void	PrintToStream() = 0;
 #endif
@@ -114,18 +120,19 @@ class Equation : public Term {
 		Equation(char **expr);
 		~Equation();
 
-		status_t	InitCheck();
+		virtual status_t InitCheck();
+
 		status_t	ParseQuotedString(char **_start,char **_end);
 		char		*CopyString(char *start, char *end);
 
 		virtual status_t Match(Inode *inode);
 		virtual void Complement();
 
-		status_t	PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator);
+		status_t	PrepareQuery(Volume *volume, Index &index, TreeIterator **iterator);
 		status_t	GetNextMatching(Volume *volume,TreeIterator *iterator,struct dirent *dirent,size_t bufferSize);
 
-		void		SetScore(int32 score) { fScore = score; }
-		int32		Score() const { return fScore; }
+		virtual void CalculateScore(Index &index);
+		virtual int32 Score() const { return fScore; }
 
 #ifdef DEBUG
 		virtual void PrintToStream();
@@ -157,6 +164,11 @@ class Operator : public Term {
 
 		virtual status_t Match(Inode *inode);
 		virtual void Complement();
+		
+		virtual void CalculateScore(Index &index);
+		virtual int32 Score() const;
+		
+		virtual status_t InitCheck();
 
 		//Term		*Copy() const;
 #ifdef DEBUG
@@ -335,6 +347,10 @@ matchString(char *pattern,char *string)
 							return status;
 					}
 
+					// we could be nice here and just jump to the next
+					// UTF-8 character - but we wouldn't gain that much
+					// and it'd be slower (since we're checking for
+					// equality before entering the recursion)
 					if (!*++string)
 						return NO_MATCH;
 				}
@@ -794,13 +810,47 @@ Equation::Match(Inode *inode)
 }
 
 
+void 
+Equation::CalculateScore(Index &index)
+{
+	// As always, these values could be tuned and refined.
+
+	// do we have to operate on a "foreign" index?
+	if (fOp == OP_UNEQUAL || index.SetTo(fAttribute) < B_OK) {
+		fScore = 0;
+		return;
+	}
+
+	// if we have a pattern, how much does it help our search?
+	if (fIsPattern)
+		fScore = getFirstPatternSymbol(fString) << 3;
+	else {
+		// Score by operator
+		if (fOp == OP_EQUAL)
+			// higher than pattern="255 chars+*"
+			fScore = 2048;
+		else
+			// the pattern search is regarded cheaper when you have at
+			// least one character to set your index to
+			fScore = 5;
+	}
+	
+	// take index size into account (1024 is the current node size
+	// in our B+trees)
+	// 2048 * 2048 == 4194304 is the maximum score (for an empty
+	// tree, since the header + 1 node are already 2048 bytes)
+	fScore = fScore * ((2048 * 1024LL) / index.Node()->Size());
+}
+
+
 status_t
-Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
+Equation::PrepareQuery(Volume */*volume*/, Index &index, TreeIterator **iterator)
 {
 	type_code type;
-	status_t status = index->SetTo(fAttribute);
+	status_t status = index.SetTo(fAttribute);
 	
 	// special case for OP_UNEQUAL - it will always operate through the whole index
+	// but we need the call to the original index to get the correct type
 	if (status < B_OK || fOp == OP_UNEQUAL) {
 		// Try to get an index that holds all files (name)
 		// Also sets the default type for all attributes without index
@@ -810,33 +860,34 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 		// the least frequently used one for write accesses...
 		// Perhaps some real world benchmarks would hint to the right
 		// thing
-		type = status < B_OK ? B_STRING_TYPE : index->Type();
+		type = status < B_OK ? B_STRING_TYPE : index.Type();
 
-		if (index->SetTo("name") < B_OK)
+		if (index.SetTo("name") < B_OK)
 			return B_ENTRY_NOT_FOUND;
 		
 		fHasIndex = false;
 	} else {
 		fHasIndex = true;
-		type = index->Type();
+		type = index.Type();
 	}
 
 	if (ConvertValue(type) < B_OK)
 		return B_BAD_VALUE;
 
 	BPlusTree *tree;
-	if (index->Node()->GetTree(&tree) < B_OK)
+	if (index.Node()->GetTree(&tree) < B_OK)
 		return B_ERROR;
 
 	*iterator = new TreeIterator(tree);
 	if (*iterator == NULL)
 		return B_NO_MEMORY;
 
-	if ((fOp == OP_EQUAL || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL || fIsPattern)
+	if ((fOp == OP_EQUAL || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL
+		|| fIsPattern)
 		&& fHasIndex) {
 		// set iterator to the exact position
 
-		int32 keySize = index->KeySize();
+		int32 keySize = index.KeySize();
 		
 		// at this point, fIsPattern is only true if it's a string type, and fOp
 		// is either OP_EQUAL or OP_UNEQUAL
@@ -981,26 +1032,19 @@ status_t
 Operator::Match(Inode *inode)
 {
 	if (fOp == OP_AND) {
-		if (fLeft != NULL) {
-			status_t status = fLeft->Match(inode);
-			if (status != MATCH_OK)
-				return status;
-		}
-		if (fRight != NULL)
-			return fRight->Match(inode);
-	
-		return false;
+		status_t status = fLeft->Match(inode);
+		if (status != MATCH_OK)
+			return status;
+
+		return fRight->Match(inode);
 	} else {
-		// should choose the term with the better score here!
-		if (fLeft != NULL) {
-			status_t status = fLeft->Match(inode);
-			if (status != false)
+		// choose the term with the better score for OP_OR
+		if (fRight->Score() > fLeft->Score()) {
+			status_t status = fRight->Match(inode);
+			if (status != NO_MATCH)
 				return status;
 		}
-		if (fRight != NULL)
-			return fRight->Match(inode);
-	
-		return false;
+		return fLeft->Match(inode);
 	}
 }
 
@@ -1013,10 +1057,47 @@ Operator::Complement()
 	else
 		fOp = OP_AND;
 	
-	if (fLeft != NULL)
-		fLeft->Complement();
-	if (fRight != NULL)
-		fRight->Complement();
+	fLeft->Complement();
+	fRight->Complement();
+}
+
+
+void 
+Operator::CalculateScore(Index &index)
+{
+	fLeft->CalculateScore(index);
+	fRight->CalculateScore(index);
+}
+
+
+int32 
+Operator::Score() const
+{
+	if (fOp == OP_AND) {
+		// return the one with the better score
+		if (fRight->Score() > fLeft->Score())
+			return fRight->Score();
+		
+		return fLeft->Score();
+	}
+	
+	// for OP_OR, be honest, and return the one with the worse score
+	if (fRight->Score() < fLeft->Score())
+		return fRight->Score();
+	
+	return fLeft->Score();
+}
+
+
+status_t 
+Operator::InitCheck()
+{
+	if (fOp != OP_AND && fOp != OP_OR
+		|| fLeft == NULL || fLeft->InitCheck() < B_OK
+		|| fRight == NULL || fRight->InitCheck() < B_OK)
+		return B_ERROR;
+
+	return B_OK;
 }
 
 
@@ -1107,6 +1188,11 @@ Expression::Expression(char *expr)
 		return;
 	
 	fTerm = ParseOr(&expr);
+	if (fTerm != NULL && fTerm->InitCheck() < B_OK) {
+		FATAL(("Corrupt tree in expression!\n"));
+		delete fTerm;
+		fTerm = NULL;
+	}
 	D(if (fTerm != NULL) {
 		fTerm->PrintToStream();
 		D(__out("\n"));
@@ -1253,19 +1339,35 @@ Query::Query(Volume *volume, Expression *expression)
 	fIterator(NULL),
 	fIndex(volume)
 {
+	// if the expression has a valid root pointer, the whole tree has
+	// already passed the sanity check, so that we don't have to check
+	// every pointer
+	if (volume == NULL || expression == NULL || expression->Root() == NULL)
+		return;
+
+	// create index on the stack and delete it afterwards
+	fExpression->Root()->CalculateScore(fIndex);
+	fIndex.Unset();
+
 	Stack<Term *> stack;
 	stack.Push(fExpression->Root());
 
 	Term *term;
 	while (stack.Pop(&term)) {
-		if (term->Op() == OP_OR) {
-			stack.Push(((Operator *)term)->Left());
-			stack.Push(((Operator *)term)->Right());
-		} else if (term->Op() == OP_AND) {
-			// here we should use a scoring system to decide which path to add
-			// for now, we are just using the left
-			stack.Push(((Operator *)term)->Left());
-		} else if (term->Op() <= OP_EQUATION || fStack.Push((Equation *)term) < B_OK)
+		if (term->Op() < OP_EQUATION) {
+			Operator *op = (Operator *)term;
+
+			if (op->Op() == OP_OR) {
+				stack.Push(op->Left());
+				stack.Push(op->Right());
+			} else {
+				// For OP_AND, we can use the scoring system to decide which path to add
+				if (op->Right()->Score() > op->Left()->Score())
+					stack.Push(op->Right());
+				else
+					stack.Push(op->Left());
+			}
+		} else if (term->Op() == OP_EQUATION || fStack.Push((Equation *)term) < B_OK)
 			FATAL(("Unknown term on stack or stack error"));
 	}
 }
@@ -1285,7 +1387,7 @@ Query::GetNextEntry(struct dirent *dirent, size_t size)
 		if (fIterator == NULL) {
 			if (!fStack.Pop(&fCurrent)
 				|| fCurrent == NULL
-				|| fCurrent->PrepareQuery(fVolume,&fIndex,&fIterator) < B_OK)
+				|| fCurrent->PrepareQuery(fVolume,fIndex,&fIterator) < B_OK)
 				return B_ENTRY_NOT_FOUND;
 		}
 		if (fCurrent == NULL)
