@@ -1,7 +1,9 @@
 /* route.c */
 
-#include <kernel/OS.h>
+#ifndef _KERNEL_MODE
 #include <stdio.h>
+#endif
+#include <kernel/OS.h>
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -10,6 +12,7 @@
 #include "net_malloc.h"
 
 #include "net_module.h"
+#include "sys/domain.h"
 #include "net/route.h" /* includes net/radix.h */
 #include "protocols.h"
 #include "net/if.h"
@@ -138,11 +141,9 @@ int rtrequest(int req,  struct sockaddr *dst,
 				RTFREE(rt);
 				(rt = (struct rtentry*)rn)->rt_gwroute = NULL;
 			}
-			/* XXX - we don't do route notifications yet *
 			if ((ifa = rt->rt_ifa) && ifa->ifa_rtrequest)
-				XXX - notify route
-			*/
-			rttrash--;
+				ifa->ifa_rtrequest(RTM_DELETE, rt, NULL);
+			rttrash++;
 			if (ret_nrt)
 				*ret_nrt = rt;
 			else if (rt->rt_refcnt <= 0) {
@@ -199,7 +200,8 @@ makeroute:
 			/* if we've fallen through - copy metrics */
 			if (req == RTM_RESOLVE)
 				rt->rt_rmx = (*ret_nrt)->rt_rmx;
-			/* XXX - handle route request */
+			if (ifa->ifa_rtrequest)
+				ifa->ifa_rtrequest(req, rt, SA(ret_nrt ? *ret_nrt : 0));
 			if (ret_nrt) {
 				*ret_nrt = rt;
 				rt->rt_refcnt++;
@@ -411,9 +413,11 @@ int rtinit(struct ifaddr *ifa, int cmd, int flags)
 
 void rtable_init(void **table)
 {
-	/* we presently support AF_INET and PF_ROUTE */
-	rn_inithead(&table[AF_INET], 32);
-	rn_inithead(&table[PF_ROUTE], 0);
+	struct domain *dom;
+	
+	for (dom = domains; dom; dom = dom->dom_next)
+		if (dom->dom_rtattach)
+			dom->dom_rtattach(&table[dom->dom_family], dom->dom_rtoffset);
 }
 
 void route_init(void)
