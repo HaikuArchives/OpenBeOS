@@ -28,6 +28,7 @@ private:
 	int32 used;
 	int32 miss;
 	int32 hit;
+	int32 last;
 };
 
 #endif
