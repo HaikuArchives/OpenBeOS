@@ -764,7 +764,10 @@ static struct core_module_info core_info = {
 	soo_ioctl,
 	net_sysctl,
 	writeit,
-	readit
+	readit,
+	soselect,
+	sosetopt,
+	sogetopt
 };
 
 _EXPORT module_info *modules[] = {

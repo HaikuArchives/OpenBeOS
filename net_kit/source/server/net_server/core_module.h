@@ -103,6 +103,10 @@ struct core_module_info {
 	int (*net_sysctl)(int *, uint, void *, size_t *, void *, size_t);
 	int (*writeit)(void *, struct iovec *, int);
 	int (*readit)(void*, struct iovec *, int *);
+	int (*soselect)(void *, uint8, uint32, void *);
+	int (*sosetopt)(void *, int, int, const void *, size_t);
+	int (*sogetopt)(void *, int, int, void *, size_t *);
+
 };
 
 #ifdef _KERNEL_MODE

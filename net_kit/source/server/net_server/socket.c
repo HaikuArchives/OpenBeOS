@@ -5,6 +5,7 @@
 #include <iovec.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/time.h>
 
 #include "sys/socket.h"
 #include "sys/socketvar.h"
@@ -819,6 +820,43 @@ printf("soo_ioctl:\n");
 		(struct mbuf*)cmd, (struct mbuf*)data, NULL);
 }
 
+extern int notify_select_event(void *sync, uint32 ref);
+
+/* Hmmm, we need to add code that can wait on an "event" and then
+ * respond as required. Basiaclly if we accept data then we wake up the
+ * rcv buffer, so that's what the read and except bits shoudl wait on,
+ * write waits on either enough data available in the buffer, the socket being
+ * connected if that's required or a few other bits...
+ * That's what's missing here!
+ */
+int soselect(void *sp, uint8 which, uint32 ref, void *sync)
+{
+	struct socket *so = (struct socket*)sp;
+
+printf("soselect: %d, %p\n", which, sync);
+	
+	switch(which) {
+		case B_SELECT_READ:
+			if (soreadable(so))
+				goto event;
+			break;
+		case B_SELECT_WRITE:
+			if (sowriteable(so))
+				goto event;
+			break;
+		case B_SELECT_EXCEPTION:
+		/* just in case, we'll treat anything strange as an exception... */
+		default:
+			if (so->so_oobmark || (so->so_state & SS_RCVATMARK))
+				goto event;
+	}
+	return 0;
+
+event:
+	notify_select_event(sync, ref);
+	return 1;
+}
+
 int soclose(void *sp)
 {
 	struct socket *so = (struct socket*)sp;
@@ -904,6 +942,190 @@ void sofree(struct socket *so)
 	pool_put(spool, so);
 
 	return;
+}
+
+int sosetopt(void *sp, int level, int optnum, const void *data, size_t datalen)
+{
+	struct socket *so = (struct socket*)sp;
+	struct mbuf *m, *m0;
+	int error = 0;
+	
+	m = m_get(MT_SOOPTS);
+	if (!m)
+		return ENOMEM;
+	if (memcpy(mtod(m, void*), data, datalen) == NULL)
+		return ENOMEM;
+	m->m_len = datalen;
+	m0 = m;
+	
+	if (level != SOL_SOCKET) {
+		if (so->so_proto && so->so_proto->pr_ctloutput)
+			return (*so->so_proto->pr_ctloutput)(PRCO_SETOPT, so, level, optnum, &m0);
+		error = ENOPROTOOPT;
+	} else {
+		switch (optnum) {
+			case SO_LINGER:
+				if (datalen != sizeof(struct linger)) {
+					error = EINVAL;
+					goto bad;
+				}
+				so->so_linger = mtod(m, struct linger*)->l_linger;
+				/* fall thru... */
+			case SO_DEBUG:
+			case SO_KEEPALIVE:
+			case SO_DONTROUTE:
+			case SO_USELOOPBACK:
+			case SO_BROADCAST:
+			case SO_REUSEADDR:
+			case SO_REUSEPORT:
+			case SO_OOBINLINE:
+				if (datalen < sizeof(int)) {
+					error = EINVAL;
+					goto bad;
+				}
+				if (*mtod(m, int*))
+					so->so_options |= optnum;
+				else
+					so->so_options &= ~optnum;
+				break;
+			case SO_SNDBUF:
+			case SO_RCVBUF:
+			case SO_SNDLOWAT:
+			case SO_RCVLOWAT:
+				if (datalen < sizeof(int)) {
+					error = EINVAL;
+					goto bad;
+				}
+				switch (optnum) {
+					case SO_SNDBUF:
+					case SO_RCVBUF:
+						if (sbreserve(optnum == SO_SNDBUF ? &so->so_snd : &so->so_rcv,
+						              (uint32)*mtod(m, int32*)) == 0) {
+							error = ENOBUFS;
+							goto bad;
+						}
+						break;
+					case SO_SNDLOWAT:
+						so->so_snd.sb_lowat = *mtod(m, int*);
+						break;
+					case SO_RCVLOWAT:
+						so->so_rcv.sb_lowat = *mtod(m, int*);
+						break;
+				}
+				break;
+			case SO_SNDTIMEO:
+			case SO_RCVTIMEO: 
+			/* bsd has the timeouts as int16, we're using int32... */
+			{
+				struct timeval *tv;
+				int32 val;
+				
+				if (datalen < sizeof(*tv)) {
+					error = EINVAL;
+					goto bad;
+				}
+				tv = mtod(m, struct timeval *);
+				val = tv->tv_sec * 1000000 + tv->tv_usec;
+				switch (optnum) {
+					case SO_SNDTIMEO:
+						so->so_snd.sb_timeo = val;
+						break;
+					case SO_RCVTIMEO:
+						so->so_rcv.sb_timeo = val;
+						break;
+				}
+				break;
+			}	
+/* XXX - add the others... */
+			default:
+				error = ENOPROTOOPT;
+		}
+		if (error == 0 && so->so_proto && so->so_proto->pr_ctloutput) {
+			(*so->so_proto->pr_ctloutput)(PRCO_SETOPT, so, level, optnum, &m0);
+			m = NULL;
+		}
+	}
+bad:
+	if (m)
+		m_free(m);
+	
+	return error;
+}
+
+int sogetopt(void *sp, int level, int optnum, void *data, size_t *datalen)
+{
+	struct socket *so = (struct socket*)sp;
+	struct mbuf *m;
+	
+	m = m_get(MT_SOOPTS);
+	if (memcpy(mtod(m, void*), data, *datalen) == NULL)
+		return ENOMEM;
+	if (*datalen < sizeof(int))
+		return EINVAL;
+	m->m_len = sizeof(int);
+
+	if (level != SOL_SOCKET) {
+		if (so->so_proto && so->so_proto->pr_ctloutput) {
+			return (*so->so_proto->pr_ctloutput)(PRCO_GETOPT, so, level, optnum, &m);
+		} else
+			return ENOPROTOOPT;
+	} else {
+		switch(optnum) {
+			case SO_LINGER:
+				m->m_len = sizeof(struct linger);
+				mtod(m, struct linger*)->l_onoff = so->so_options & SO_LINGER;
+				mtod(m, struct linger*)->l_linger = so->so_linger;
+				break;
+			case SO_DEBUG:
+			case SO_KEEPALIVE:
+			case SO_DONTROUTE:
+			case SO_USELOOPBACK:
+			case SO_BROADCAST:
+			case SO_REUSEADDR:
+			case SO_REUSEPORT:
+			case SO_OOBINLINE:
+				*mtod(m, int*) = so->so_options & optnum;
+				break;
+			case SO_TYPE:
+				*mtod(m, int*) = so->so_type;
+				break;
+			case SO_ERROR:
+				*mtod(m, int*) = so->so_error;
+				so->so_error = 0; /* cleared once read */
+				break;
+			case SO_SNDBUF:
+				*mtod(m, int*) = so->so_snd.sb_hiwat;
+				break;
+			case SO_RCVBUF:
+				*mtod(m, int*) = so->so_rcv.sb_hiwat;
+				break;
+			case SO_SNDLOWAT:
+				*mtod(m, int*) = so->so_snd.sb_lowat;
+				break;
+			case SO_RCVLOWAT:
+				*mtod(m, int*) = so->so_rcv.sb_lowat;
+				break;
+			case SO_SNDTIMEO:
+			case SO_RCVTIMEO:
+			{
+				int32 val = (optnum == SO_SNDTIMEO ? so->so_snd.sb_timeo : so->so_rcv.sb_timeo);
+				
+				m->m_len = sizeof(struct timeval);
+				mtod(m, struct timeval*)->tv_sec = val / 1000000;
+				mtod(m, struct timeval*)->tv_usec = val % 1000000;
+				break;
+			}
+			default:
+				m_free(m);
+				return ENOPROTOOPT;
+		}
+		if (m->m_len > *datalen)
+			/* XXX - horrible fudge... */
+			m->m_len = *datalen;
+		memcpy(data, mtod(m, void *), m->m_len);
+		*datalen = m->m_len;
+		return 0;
+	}
 }
 
 void sowakeup(struct socket *so, struct sockbuf *sb)
