@@ -109,10 +109,11 @@ StatableTest::GetXYZTest()
 		off_t size;
 		time_t mtime;
 		time_t ctime;
-//		time_t atime;
-		BVolume volume;
 // R5: access time unused
-		BVolume vol;
+#if !SK_TEST_R5 && !SK_TEST_OBOS_POSIX
+		time_t atime;
+#endif
+		BVolume volume;
 		CPPUNIT_ASSERT( lstat(entryName.c_str(), &st) == 0 );
 		CPPUNIT_ASSERT( statable->GetNodeRef(&ref) == B_OK );
 		CPPUNIT_ASSERT( statable->GetOwner(&owner) == B_OK );
@@ -121,7 +122,9 @@ StatableTest::GetXYZTest()
 		CPPUNIT_ASSERT( statable->GetSize(&size) == B_OK );
 		CPPUNIT_ASSERT( statable->GetModificationTime(&mtime) == B_OK );
 		CPPUNIT_ASSERT( statable->GetCreationTime(&ctime) == B_OK );
-//		CPPUNIT_ASSERT( statable->GetAccessTime(&atime) == B_OK );
+#if !SK_TEST_R5 && !SK_TEST_OBOS_POSIX
+		CPPUNIT_ASSERT( statable->GetAccessTime(&atime) == B_OK );
+#endif
 		CPPUNIT_ASSERT( statable->GetVolume(&volume) == B_OK );
 		CPPUNIT_ASSERT( ref.device == st.st_dev && ref.node == st.st_ino );
 		CPPUNIT_ASSERT( owner == st.st_uid );
@@ -132,8 +135,13 @@ StatableTest::GetXYZTest()
 		CPPUNIT_ASSERT( size == st.st_size );
 		CPPUNIT_ASSERT( mtime == st.st_mtime );
 		CPPUNIT_ASSERT( ctime == st.st_crtime );
-//		CPPUNIT_ASSERT( atime == st.st_atime );
-//		CPPUNIT_ASSERT( volume == BVolume(st.st_dev) );
+#if !SK_TEST_R5 && !SK_TEST_OBOS_POSIX
+		CPPUNIT_ASSERT( atime == st.st_atime );
+#endif
+// OBOS: BVolume::==() is not implemented yet
+#if !SK_TEST_OBOS_POSIX
+		CPPUNIT_ASSERT( volume == BVolume(st.st_dev) );
+#endif
 	}
 	testEntries.delete_all();
 	// test with uninitialized objects
@@ -197,25 +205,32 @@ StatableTest::SetXYZTest()
 		mode_t perms = 0x0ab;	// -w- r-x -wx	-- unusual enough? ;-)
 		time_t mtime = 1234567;
 		time_t ctime = 654321;
-//		time_t atime = 2345678;
 // R5: access time unused
+#if !SK_TEST_R5 && !SK_TEST_OBOS_POSIX
+		time_t atime = 2345678;
+#endif
 // OBOS: no fchmod(), no FD time setters
 		CPPUNIT_ASSERT( statable->SetOwner(owner) == B_OK );
 		CPPUNIT_ASSERT( statable->SetGroup(group) == B_OK );
-//		CPPUNIT_ASSERT( statable->SetPermissions(perms) == B_OK );
-//		CPPUNIT_ASSERT( statable->SetModificationTime(mtime) == B_OK );
-//		CPPUNIT_ASSERT( statable->SetCreationTime(ctime) == B_OK );
-//		CPPUNIT_ASSERT( statable->SetAccessTime(atime) == B_OK );
+#if !SK_TEST_OBOS_POSIX
+		CPPUNIT_ASSERT( statable->SetPermissions(perms) == B_OK );
+		CPPUNIT_ASSERT( statable->SetModificationTime(mtime) == B_OK );
+		CPPUNIT_ASSERT( statable->SetCreationTime(ctime) == B_OK );
+#endif
+#if !SK_TEST_R5 && !SK_TEST_OBOS_POSIX
+		CPPUNIT_ASSERT( statable->SetAccessTime(atime) == B_OK );
+#endif
 		CPPUNIT_ASSERT( lstat(entryName.c_str(), &st) == 0 );
-//printf("entry: `%s'\n", entryName.c_str());
-//printf("owner: %x, st.st_uid: %x\n", owner, st.st_uid);
-//printf("group: %x, st.st_gid: %x\n", group, st.st_gid);
 		CPPUNIT_ASSERT( owner == st.st_uid );
 		CPPUNIT_ASSERT( group == st.st_gid );
-//		CPPUNIT_ASSERT( perms == (st.st_mode & S_IUMSK) );
-//		CPPUNIT_ASSERT( mtime == st.st_mtime );
-//		CPPUNIT_ASSERT( ctime == st.st_crtime );
-//		CPPUNIT_ASSERT( atime == st.st_atime );
+#if !SK_TEST_OBOS_POSIX
+		CPPUNIT_ASSERT( perms == (st.st_mode & S_IUMSK) );
+		CPPUNIT_ASSERT( mtime == st.st_mtime );
+		CPPUNIT_ASSERT( ctime == st.st_crtime );
+#endif
+#if !SK_TEST_R5 && !SK_TEST_OBOS_POSIX
+		CPPUNIT_ASSERT( atime == st.st_atime );
+#endif
 	}
 	testEntries.delete_all();
 	// test with uninitialized objects

@@ -6,14 +6,9 @@
 #include "StatableTest.h"
 
 #include "Test.StorageKit.h"
-
-#include <Entry.h>
-
-#include <Directory.h>
-#include <Path.h>
-
 #include "TestUtils.h"
 
+class BEntry;
 struct TestEntry;
 
 class EntryTest : public StatableTest
@@ -108,11 +103,6 @@ public:
 	// Checks, whether a symlink exists.
 	bool PingLink(const char *path, const char *target = NULL,
 				  BEntry *entry = NULL);
-/*
-	// n1 and n2 should both be uninitialized. y1a and y1b should be initialized
-	// to the same entry, y2 should be initialized to a different entry
-	void EqualityTest(BEntry &n1, BEntry &n2, BEntry &y1a, BEntry &y1b, BEntry &y2);
-*/
 };
 
 

@@ -119,5 +119,4 @@ StatableTest::AddBaseClassTests(const char *prefix, CppUnit::TestSuite *suite)
 						   &StatableTest::SetXYZTest) );
 }
 
-
 #endif	// __sk_statable_test_h__

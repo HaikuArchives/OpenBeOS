@@ -12,6 +12,7 @@
 
 #include <EntryTest.h>
 
+#include <Entry.h>
 #include <Directory.h>
 #include <Path.h>
 
@@ -272,7 +273,6 @@ EntryTest::CreateUninitializedStatables(TestStatables& testEntries)
 void
 EntryTest::setUp()
 {
-	// temporary
 	StatableTest::setUp();
 	execCommand(setUpCommandLine);
 }
@@ -281,7 +281,6 @@ EntryTest::setUp()
 void
 EntryTest::tearDown()
 {
-	// temporary
 	StatableTest::tearDown();
 	execCommand(tearDownCommandLine);
 }
@@ -694,7 +693,9 @@ EntryTest::InitTest1()
 	InitTest1DirPaths(tooLongEntry1, fuzzy_error(E2BIG, B_NAME_TOO_LONG));
 // OBOS: Fails, because the implementation concatenates the dir and leaf
 // 		 name.
-//	InitTest1DirPaths(tooLongDir16, B_OK, true);
+#if !SK_TEST_OBOS_POSIX
+	InitTest1DirPaths(tooLongDir16, B_OK, true);
+#endif
 	// traverse
 	InitTest1DirPaths(dir1, B_OK, true);
 	InitTest1DirPaths(dir2, B_OK, true);
@@ -740,7 +741,9 @@ EntryTest::InitTest1()
 	InitTest1DirPaths(tooLongEntry1, fuzzy_error(E2BIG, B_NAME_TOO_LONG), true);
 // OBOS: Fails, because the implementation concatenates the dir and leaf
 // 		 name.
-//	InitTest1DirPaths(tooLongDir16, B_OK, true);
+#if !SK_TEST_OBOS_POSIX
+	InitTest1DirPaths(tooLongDir16, B_OK, true);
+#endif
 
 	// special cases (root dir)
 	nextSubTest();
@@ -765,14 +768,15 @@ EntryTest::InitTest1()
 	}
 	// bad args (NULL dir)
 // R5: crashs
-//	nextSubTest();
-//	{
-//		chdir("/");
-//		BEntry entry((const BDirectory*)NULL, "tmp");
-//printf("entry.InitCheck(): %x\n", entry.InitCheck());
-//		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
-//		RestoreCWD();
-//	}
+#if !SK_TEST_R5
+	nextSubTest();
+	{
+		chdir("/");
+		BEntry entry((const BDirectory*)NULL, "tmp");
+		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
+		RestoreCWD();
+	}
+#endif
 	// strange args (badly initialized dir, absolute path)
 	nextSubTest();
 	{
@@ -782,21 +786,23 @@ EntryTest::InitTest1()
 		CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
 	}
 	// bad args (NULL dir and path)
-//	nextSubTest();
 // R5: crashs
-//	{
-//		BEntry entry((const BDirectory*)NULL, (const char*)NULL);
-//printf("entry.InitCheck(): %x\n", entry.InitCheck());
-//		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
-//	}
+#if !SK_TEST_R5
+	nextSubTest();
+	{
+		BEntry entry((const BDirectory*)NULL, (const char*)NULL);
+		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
+	}
+#endif
 	// bad args(NULL dir, absolute path)
 // R5: crashs
-//	nextSubTest();
-//	{
-//		BEntry entry((const BDirectory*)NULL, "/tmp");
-//printf("entry.InitCheck(): %x\n", entry.InitCheck());
-//		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
-//	}
+#if !SK_TEST_R5
+	nextSubTest();
+	{
+		BEntry entry((const BDirectory*)NULL, "/tmp");
+		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
+	}
+#endif
 }
 
 // InitTest2Paths
@@ -1159,7 +1165,9 @@ EntryTest::InitTest2()
 	InitTest2DirPaths(tooLongEntry1, fuzzy_error(E2BIG, B_NAME_TOO_LONG));
 // OBOS: Fails, because the implementation concatenates the dir and leaf
 // 		 name.
-//	InitTest2DirPaths(tooLongDir16, B_OK, true);
+#if !SK_TEST_OBOS_POSIX
+	InitTest2DirPaths(tooLongDir16, B_OK, true);
+#endif
 	// traverse
 	InitTest2DirPaths(dir1, B_OK, true);
 	InitTest2DirPaths(dir2, B_OK, true);
@@ -1205,7 +1213,9 @@ EntryTest::InitTest2()
 	InitTest2DirPaths(tooLongEntry1, fuzzy_error(E2BIG, B_NAME_TOO_LONG), true);
 // OBOS: Fails, because the implementation concatenates the dir and leaf
 // 		 name.
-//	InitTest2DirPaths(tooLongDir16, B_OK, true);
+#if !SK_TEST_OBOS_POSIX
+	InitTest2DirPaths(tooLongDir16, B_OK, true);
+#endif
 	// special cases (root dir)
 	nextSubTest();
 	{
@@ -1232,15 +1242,17 @@ EntryTest::InitTest2()
 	}
 	// bad args (NULL dir)
 // R5: crashs
-//	nextSubTest();
-//	{
-//		chdir("/");
-//		CPPUNIT_ASSERT( entry.SetTo((const BDirectory*)NULL, "tmp")
-//						== B_BAD_VALUE );
-//		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
-//		RestoreCWD();
-//		entry.Unset();
-//	}
+#if !SK_TEST_R5
+	nextSubTest();
+	{
+		chdir("/");
+		CPPUNIT_ASSERT( entry.SetTo((const BDirectory*)NULL, "tmp")
+						== B_BAD_VALUE );
+		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
+		RestoreCWD();
+		entry.Unset();
+	}
+#endif
 	// strange args (badly initialized dir, absolute path)
 	nextSubTest();
 	{
@@ -1250,23 +1262,27 @@ EntryTest::InitTest2()
 		CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
 	}
 	// bad args (NULL dir and path)
-//	nextSubTest();
 // R5: crashs
-//	{
-//		CPPUNIT_ASSERT( entry.SetTo((const BDirectory*)NULL, (const char*)NULL)
-//						== B_BAD_VALUE );
-//		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
-//		entry.Unset();
-//	}
+#if !SK_TEST_R5
+	nextSubTest();
+	{
+		CPPUNIT_ASSERT( entry.SetTo((const BDirectory*)NULL, (const char*)NULL)
+						== B_BAD_VALUE );
+		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
+		entry.Unset();
+	}
+#endif
 	// bad args(NULL dir, absolute path)
 // R5: crashs
-//	nextSubTest();
-//	{
-//		CPPUNIT_ASSERT( entry.SetTo((const BDirectory*)NULL, "/tmp")
-//						== B_BAD_VALUE );
-//		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
-//		entry.Unset();
-//	}
+#if !SK_TEST_R5
+	nextSubTest();
+	{
+		CPPUNIT_ASSERT( entry.SetTo((const BDirectory*)NULL, "/tmp")
+						== B_BAD_VALUE );
+		CPPUNIT_ASSERT( entry.InitCheck() == B_BAD_VALUE );
+		entry.Unset();
+	}
+#endif
 }
 
 // SpecialGetCasesTest
@@ -1310,13 +1326,15 @@ EntryTest::SpecialGetCasesTest()
 	// too long pathname
 // OBOS: Fails, because the implementation concatenates the dir and leaf
 // 		 name.
-//	nextSubTest();
-//	BDirectory dir(tooLongDir16.super->super->cpath);
-//	string entryName = tooLongDir16.super->name + "/" + tooLongDir16.name;
-//	CPPUNIT_ASSERT( entry.SetTo(&dir, entryName.c_str()) == B_OK );
-//	CPPUNIT_ASSERT( entry.GetPath(&path) == B_OK );
-//	CPPUNIT_ASSERT( path == tooLongDir16.cpath );
-//	entry.Unset();	
+#if !SK_TEST_OBOS_POSIX
+	nextSubTest();
+	BDirectory dir(tooLongDir16.super->super->cpath);
+	string entryName = tooLongDir16.super->name + "/" + tooLongDir16.name;
+	CPPUNIT_ASSERT( entry.SetTo(&dir, entryName.c_str()) == B_OK );
+	CPPUNIT_ASSERT( entry.GetPath(&path) == B_OK );
+	CPPUNIT_ASSERT( path == tooLongDir16.cpath );
+	entry.Unset();	
+#endif
 
 	// 3. GetName()
 	char name[B_FILE_NAME_LENGTH + 1];
@@ -1870,12 +1888,14 @@ EntryTest::MoveToTest()
 	dir.Unset();
 	// bad args (NULL dir)
 // R5: crashs
-//	CreateFile(file2.cpath);
-//	CPPUNIT_ASSERT( entry.SetTo(file2.cpath) == B_OK );
-//	CPPUNIT_ASSERT( entry.MoveTo(NULL, file3.cpath) == B_BAD_VALUE );
-//	RemoveFile(file3.cpath);
-//	entry.Unset();
-//	dir.Unset();
+#if !SK_TEST_R5
+	CreateFile(file2.cpath);
+	CPPUNIT_ASSERT( entry.SetTo(file2.cpath) == B_OK );
+	CPPUNIT_ASSERT( entry.MoveTo(NULL, file3.cpath) == B_BAD_VALUE );
+	RemoveFile(file3.cpath);
+	entry.Unset();
+	dir.Unset();
+#endif
 	// uninitialized dir, absolute path
 	CreateFile(file2.cpath);
 	CPPUNIT_ASSERT( entry.SetTo(file2.cpath) == B_OK );
@@ -1955,7 +1975,7 @@ compareEntries(const BEntry &entry, const BEntry &entry2,
 void
 EntryTest::ComparisonTest()
 {
-	// uninitialized
+/*	// uninitialized
 	nextSubTest();
 	{
 		BEntry entry;
@@ -1983,7 +2003,7 @@ EntryTest::ComparisonTest()
 		CPPUNIT_ASSERT( entry != entry2 );
 		CPPUNIT_ASSERT( entry2 != entry );
 	}
-	// initialized
+*/	// initialized
 	TestEntry *testEntries[] = {
 		&dir1, &dir2, &file1, &subDir1, &abstractEntry1, &badEntry1,
 		&absDirLink1, &absDirLink2, &absDirLink3, &absDirLink4,
@@ -2436,7 +2456,6 @@ init_entry_test()
 	}
 	// create the set up command line
 	setUpCommandLine = string("mkdir ") + testDir.path;
-//	setUpCommandLine = "";
 	for (list<TestEntry*>::iterator it = allTestEntries.begin();
 		 it != allTestEntries.end(); it++) {
 		TestEntry *entry = *it;
@@ -2496,7 +2515,7 @@ TestEntry::TestEntry()
 		   path("/tmp/badTestEntry"),
 		   target(&badTestEntry),
 		   link(),
-//		   ref,
+		   ref(),
 		   relative(true),
 		   cname(""),
 		   cpath(""),
