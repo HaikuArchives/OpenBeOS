@@ -1120,7 +1120,7 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 		if (logStream)
 			cached.WriteBack(transaction);
 		else
-			cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize);
+			fVolume->WriteBlocks(cached.BlockNumber(),block,1);
 
 		pos += bytesWritten;
 		
@@ -1137,7 +1137,7 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 	}
 	
 	// the first block_run is already filled in at this point
-	// write the following complete blocks using cached_write(),
+	// write the following complete blocks using Volume::WriteBlocks(),
 	// the last partial block is written using the CachedBlock class
 
 	bool partial = false;
@@ -1159,7 +1159,7 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 				if (logStream)
 					cached.WriteBack(transaction);
 				else
-					cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize);
+					fVolume->WriteBlocks(cached.BlockNumber(),block,1);
 
 				bytesWritten += length;
 				break;
@@ -1173,8 +1173,8 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 			status = transaction->WriteBlocks(fVolume->ToBlock(run),
 						buffer + bytesWritten,run.length);
 		} else {
-			status = cached_write(fVolume->Device(),fVolume->ToBlock(run),
-						buffer + bytesWritten,run.length,blockSize);
+			status = fVolume->WriteBlocks(fVolume->ToBlock(run),
+						buffer + bytesWritten,run.length);
 		}
 		if (status != B_OK) {
 			*_length = bytesWritten;
@@ -1202,6 +1202,10 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 	}
 
 	*_length = bytesWritten;
+
+	// this will flush the dirty blocks to disk from time to time
+	fVolume->WriteCachedBlocksIfNecessary();
+
 	return B_NO_ERROR;
 }
 
@@ -1247,7 +1251,7 @@ Inode::FillGapWithZeros(off_t pos,off_t newSize)
 			bytesWritten = length;
 
 		memset(block + (pos % blockSize),0,bytesWritten);
-		cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize);
+		fVolume->WriteBlocks(cached.BlockNumber(),block,1);
 
 		pos += bytesWritten;
 		
@@ -1270,7 +1274,7 @@ Inode::FillGapWithZeros(off_t pos,off_t newSize)
 			if ((block = cached.SetTo(blockNumber + i,true)) == NULL)
 				RETURN_ERROR(B_IO_ERROR);
 
-			if (cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize) < B_OK)
+			if (fVolume->WriteBlocks(cached.BlockNumber(),block,1) < B_OK)
 				RETURN_ERROR(B_IO_ERROR);
 		}
 
@@ -1446,6 +1450,13 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 }
 
 
+status_t
+Inode::FreeStaticStreamArray(Transaction *transaction,int32 level,block_run *array,uint32 arrayLength,off_t size,off_t &offset,off_t &max)
+{
+	/* ToDo: implement me... */
+}
+
+
 /** Frees all block_runs in the array which come after the specified size.
  *	It also trims the last block_run that contain the size.
  *	"offset" and "max" are maintained until the last block_run that doesn't
@@ -1575,6 +1586,91 @@ status_t
 Inode::Trim(Transaction *transaction)
 {
 	return ShrinkStream(transaction,Size());
+}
+
+
+status_t 
+Inode::Sync()
+{
+	// We may also want to flush the attribute's data stream to
+	// disk here... (do we?)
+
+	data_stream *data = &Node()->data;
+	status_t status;
+
+	// flush direct range
+
+	for (int32 i = 0;i < NUM_DIRECT_BLOCKS;i++) {
+		if (data->direct[i].IsZero())
+			return B_OK;
+		
+		status = flush_blocks(fVolume->Device(),fVolume->ToBlock(data->direct[i]),data->direct[i].length);
+		if (status != B_OK)
+			return status;
+	}
+
+	// flush indirect range
+	
+	if (data->max_indirect_range == 0)
+		return B_OK;
+
+	CachedBlock cached(fVolume);
+	off_t block = fVolume->ToBlock(data->indirect);
+	int32 count = fVolume->BlockSize() / sizeof(block_run);
+
+	for (int32 j = 0;j < data->indirect.length;j++) {
+		block_run *runs = (block_run *)cached.SetTo(block + j);
+		if (runs == NULL)
+			break;
+
+		for (int32 i = 0;i < count;i++) {
+			if (runs[i].IsZero())
+				return B_OK;
+
+			status = flush_blocks(fVolume->Device(),fVolume->ToBlock(runs[i]),runs[i].length);
+			if (status != B_OK)
+				return status;
+		}
+	}
+
+	// flush double indirect range
+	
+	if (data->max_double_indirect_range == 0)
+		return B_OK;
+
+	off_t indirectBlock = fVolume->ToBlock(data->double_indirect);
+	
+	for (int32 l = 0;l < data->double_indirect.length;l++) {
+		block_run *indirectRuns = (block_run *)cached.SetTo(indirectBlock + l);
+		if (indirectRuns == NULL)
+			return B_FILE_ERROR;
+
+		CachedBlock directCached(fVolume);
+
+		for (int32 k = 0;k < count;k++) {
+			if (indirectRuns[k].IsZero())
+				return B_OK;
+
+			block = fVolume->ToBlock(indirectRuns[k]);			
+			for (int32 j = 0;j < indirectRuns[k].length;j++) {
+				block_run *runs = (block_run *)directCached.SetTo(block + j);
+				if (runs == NULL)
+					return B_FILE_ERROR;
+				
+				for (int32 i = 0;i < count;i++) {
+					if (runs[i].IsZero())
+						return B_OK;
+
+					// ToDo: combine single block_runs to bigger ones when
+					// they are adjacent
+					status = flush_blocks(fVolume->Device(),fVolume->ToBlock(runs[i]),runs[i].length);
+					if (status != B_OK)
+						return status;
+				}
+			}
+		}
+	}
+	return B_OK;
 }
 
 

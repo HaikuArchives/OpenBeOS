@@ -263,7 +263,7 @@ Journal::WriteLogEntry()
 	uint8 *arrayBlock = (uint8 *)array;
 
 	for (int32 size = fArray.BlocksUsed();size-- > 0;) {
-		cached_write(fVolume->Device(),logOffset + logPosition,arrayBlock,1,fVolume->BlockSize());
+		write_pos(fVolume->Device(),logOffset + logPosition,arrayBlock,fVolume->BlockSize());
 
 		logPosition = (logPosition + 1) % fLogSize;
 		arrayBlock += fVolume->BlockSize();
@@ -304,7 +304,7 @@ Journal::WriteLogEntry()
 	// possible because we don't have any locked blocks at this
 	// point.
 	if (logPosition < fVolume->LogEnd())
-		flush_device(fVolume->Device(),0);
+		fVolume->FlushDevice();
 
 	fArray.MakeEmpty();
 
@@ -332,7 +332,7 @@ Journal::FlushLogAndBlocks()
 		if (status < B_OK)
 			FATAL(("writing current log entry failed: %s\n",status));
 	}
-	status = flush_device(fVolume->Device(),0);
+	status = fVolume->FlushDevice();
 
 	Unlock((Transaction *)this,true);
 	return status;

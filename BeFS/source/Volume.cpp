@@ -26,6 +26,7 @@ Volume::Volume(nspace_id id)
 	fID(id),
 	fBlockAllocator(this),
 	fLock("bfs volume"),
+	fDirtyCachedBlocks(0),
 	fUniqueID(0),
 	fFlags(0)
 {

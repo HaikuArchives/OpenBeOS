@@ -14,6 +14,8 @@ extern "C" {
 	#	define _IMPEXP_KERNEL
 	#endif
 	#include "fsproto.h"
+	#include "lock.h"
+	#include "cache.h"
 }
 
 #include "bfs.h"
@@ -89,12 +91,16 @@ class Volume {
 		Journal				*GetJournal(off_t /*refBlock*/) const { return fJournal; }
 
 		status_t			WriteSuperBlock();
+		status_t			WriteBlocks(off_t blockNumber,const uint8 *block,uint32 numBlocks);
+		void				WriteCachedBlocksIfNecessary();
+		status_t			FlushDevice();
 
 		void				UpdateLiveQueries(Inode *inode,const char *attribute,int32 type,const uint8 *oldKey,size_t oldLength,const uint8 *newKey,size_t newLength);
 		void				AddQuery(Query *query);
 		void				RemoveQuery(Query *query);
 
 		uint32				GetUniqueID() { return atomic_add(&fUniqueID,1); }
+
 
 	protected:
 		nspace_id			fID;
@@ -106,6 +112,8 @@ class Volume {
 
 		Inode				*fRootNode;
 		Inode				*fIndicesNode;
+
+		vint32				fDirtyCachedBlocks;
 
 		SimpleLock			fQueryLock;
 		Chain<Query>		fQueries;
@@ -134,6 +142,32 @@ inline status_t
 Volume::Free(Transaction *transaction, block_run &run)
 {
 	return fBlockAllocator.Free(transaction,run);
+}
+
+
+inline status_t 
+Volume::WriteBlocks(off_t blockNumber, const uint8 *block, uint32 numBlocks)
+{
+	atomic_add(&fDirtyCachedBlocks,numBlocks);
+	return cached_write(fDevice,blockNumber,block,numBlocks,fSuperBlock.block_size);
+}
+
+
+inline void 
+Volume::WriteCachedBlocksIfNecessary()
+{
+	if (fDirtyCachedBlocks > 64) {
+		force_cache_flush(fDevice,false);
+		fDirtyCachedBlocks = 0;
+	}
+}
+
+
+inline status_t 
+Volume::FlushDevice()
+{
+	fDirtyCachedBlocks = 0;
+	return flush_device(fDevice,0);
 }
 
 

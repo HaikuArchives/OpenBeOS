@@ -129,6 +129,7 @@ class Inode : public CachedBlock {
 		mode_t Mode() const { return Node()->mode; }
 		int32 Flags() const { return Node()->flags; }
 		bool IsDirectory() const { return Mode() & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR); }
+			// note, that this test will also be true for S_IFBLK (not that it's used in the fs :)
 		bool IsIndex() const { return (Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR; }
 			// that's a stupid check, but AFAIK the only possible method...
 
@@ -180,6 +181,8 @@ class Inode : public CachedBlock {
 		status_t SetFileSize(Transaction *transaction,off_t size);
 		status_t Append(Transaction *transaction,off_t bytes);
 		status_t Trim(Transaction *transaction);
+
+		status_t Sync();
 
 		// create/remove inodes
 		status_t Remove(Transaction *transaction,const char *name,off_t *_id = NULL,bool isDirectory = false);

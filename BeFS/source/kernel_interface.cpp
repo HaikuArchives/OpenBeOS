@@ -595,14 +595,14 @@ bfs_deselect(void *ns, void *node, void *cookie, uint8 event, selectsync *sync)
 
 
 int 
-bfs_fsync(void *ns, void *node)
+bfs_fsync(void *_ns, void *_node)
 {
 	FUNCTION();
+	if (_node == NULL)
+		return B_BAD_VALUE;
 
-	// ToDo: implement bfs_fsync()?!
-	// currently follows the implementation in the dosfs
-
-	return bfs_sync(ns);
+	Inode *inode = (Inode *)_node;
+	return inode->Sync();
 }
 
 
