@@ -1,6 +1,42 @@
 SubDir OBOS_TOP sources os kits kernel libm ;  
 
-SubInclude OBOS_TOP sources os kits kernel libm arch ;  
-SubInclude OBOS_TOP sources os kits kernel libm common ;
-SubInclude OBOS_TOP sources os kits kernel libm common_source ;
-SubInclude OBOS_TOP sources os kits kernel libm ieee ;
+KernelStaticLibrary libm
+	:
+	<$(SOURCE_GRIST)>arch/$(ARCH_DIR)/fabs.S
+	<$(SOURCE_GRIST)>arch/$(ARCH_DIR)/frexp.c
+	<$(SOURCE_GRIST)>arch/$(ARCH_DIR)/isinf.c
+	<$(SOURCE_GRIST)>arch/$(ARCH_DIR)/ldexp.c
+
+	<$(SOURCE_GRIST)>common/atan2.c 
+	<$(SOURCE_GRIST)>common/sincos.c
+	<$(SOURCE_GRIST)>common/tan.c
+
+	<$SOURCE_GRIST)>common_source/acosh.c 
+	<$SOURCE_GRIST)>common_source/asincos.c 
+	<$SOURCE_GRIST)>common_source/asinh.c 
+	<$SOURCE_GRIST)>common_source/atan.c 
+	<$SOURCE_GRIST)>common_source/atanh.c 
+	<$SOURCE_GRIST)>common_source/cosh.c 
+	<$SOURCE_GRIST)>common_source/erf.c 
+	<$SOURCE_GRIST)>common_source/exp.c 
+	<$SOURCE_GRIST)>common_source/exp__E.c 
+	<$SOURCE_GRIST)>common_source/expm1.c 
+	<$SOURCE_GRIST)>common_source/floor.c 
+	<$SOURCE_GRIST)>common_source/fmod.c 
+	<$SOURCE_GRIST)>common_source/gamma.c 
+	<$SOURCE_GRIST)>common_source/j0.c 
+	<$SOURCE_GRIST)>common_source/j1.c 
+	<$SOURCE_GRIST)>common_source/jn.c 
+	<$SOURCE_GRIST)>common_source/lgamma.c 
+	<$SOURCE_GRIST)>common_source/log.c 
+	<$SOURCE_GRIST)>common_source/log10.c 
+	<$SOURCE_GRIST)>common_source/log1p.c 
+	<$SOURCE_GRIST)>common_source/log__L.c 
+	<$SOURCE_GRIST)>common_source/pow.c 
+	<$SOURCE_GRIST)>common_source/sinh.c 
+	<$SOURCE_GRIST)>common_source/tanh.c
+
+	<$SOURCE_GRIST)>ieee/cabs.c
+	<$SOURCE_GRIST)>ieee/cbrt.c
+	<$SOURCE_GRIST)>ieee/support.c
+	;
