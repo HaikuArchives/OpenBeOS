@@ -37,7 +37,9 @@ private:
    BOutlineListView *locationlistitem;
    
    BMenuField *connectionmenufield;
+   BMenuField *locationmenufield;
    BMenu *conmenufield;
+   BMenu *locmenufield;
    
    BTextView *tvConnectionProfile;
    BTextView *tvCallWaiting;
