@@ -286,7 +286,7 @@ static void list_devices(void)
 			dprintf(" MULTICAST");
 		printf("\n");
 		if (d->if_addrlist) {
-			ifaddr *ifa = d->if_addrlist;
+			struct ifaddr *ifa = d->if_addrlist;
 			dprintf("\t\t Addresses:\n");
 			while (ifa) {
 				dump_sockaddr(ifa->ifa_addr);
@@ -379,6 +379,9 @@ void add_domain(struct domain *dom, int fam)
 				dprintf("Don't know how to add domain %d\n", fam);
 		}
 	} else {
+		/* find the end of the chain and add ourselves there */
+		for (dm = domains; dm->dom_next;dm = dm->dom_next)
+			continue;
 		if (dm)
 			dm->dom_next = dom;
 		else
@@ -546,15 +549,16 @@ struct protosw *pffindtype(int domain, int type)
 {
 	struct domain *d;
 	struct protosw *p;
-	
+
 	for (d = domains; d; d = d->dom_next) {
 		if (d->dom_family == domain)
 			goto found;
 	}
 	return NULL;
 found:
+
 	for (p=d->dom_protosw; p; p = p->dom_next) {
-		if (p->pr_type && p->pr_type == type)
+		if (p->pr_type && p->pr_type == type) 
 			return p;
 	}
 	return NULL;
@@ -584,6 +588,39 @@ found:
 			maybe = p;
 	}
 	return maybe;
+}
+
+int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
+               void *newp, size_t newlen)
+{
+	struct domain *dp;
+	struct protosw *pr;
+	int family, protocol;
+
+	dprintf("net_sysctl\n");	
+	if (namelen < 3) {
+		dprintf("net_sysctl: EINVAL (namelen < 3, %d)\n", namelen);
+		return EINVAL; // EISDIR??
+	}
+	family = name[0];
+	protocol = name[1];
+	
+	if (family == 0)
+		return 0;
+	
+	for (dp=domains; dp; dp= dp->dom_next)
+		if (dp->dom_family == family)
+			goto found;
+	dprintf("net_sysctl: EPROTOOPT (domain)\n");
+	return EINVAL; //EPROTOOPT;
+found:
+	for (pr=dp->dom_protosw; pr; pr = pr->dom_next) {
+		if (pr->pr_protocol == protocol && pr->pr_sysctl) {
+			return ((*pr->pr_sysctl)(name+2, namelen -2, oldp, oldlenp, newp, newlen));
+		}
+	}
+	dprintf("net_sysctl: EPROTOOPT (protocol)\n");
+	return EINVAL;//EPROTOOPT;
 }
 
 int start_stack(void)
@@ -664,10 +701,17 @@ static struct core_module_info core_info = {
 	start_rx_thread,
 	start_tx_thread,
 
+	pool_init,
+	pool_get,
+	pool_put,
+	pool_destroy,
+	
 	soreserve,
 	sbappendaddr,
 	sowakeup,
 	soisconnected,
+	soisdisconnected,
+	socantsendmore,
 	
 	in_pcballoc,
 	in_pcbdetach,
@@ -677,21 +721,35 @@ static struct core_module_info core_info = {
 	in_pcblookup,
 	in_control,
 
-	m_free,
-	m_freem,
 	m_gethdr,
 	m_adj,
 	m_prepend,
-
+	m_pullup,
+	m_copyback,
+	m_copydata,
+	m_copym,
+	m_free,
+	m_freem,
+	
 	net_server_add_device,
-
+	get_interfaces,
+	
 	rtalloc,
 	rtalloc1,
 	rtfree,
+	rtrequest,
+	rn_addmask,
+	rn_head_search,
+	get_rt_tables,
+	rt_setgate,
 	
 	ifa_ifwithdstaddr,
 	ifa_ifwithnet,
 	if_attach,
+	ifa_ifwithaddr,
+	ifa_ifwithroute,
+	ifaof_ifpforaddr,
+	ifafree,
 	
 	get_primary_addr,
 
@@ -703,7 +761,10 @@ static struct core_module_info core_info = {
 	soconnect,
 	recvit,
 	sendit,
-	soo_ioctl
+	soo_ioctl,
+	net_sysctl,
+	writeit,
+	readit
 };
 
 _EXPORT module_info *modules[] = {
