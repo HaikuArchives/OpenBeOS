@@ -1,5 +1,5 @@
 TARGET=libnet.so
-CFLAGS=-fPIC -DPIC -O2 -g -Wall -DDEBUG=1
+CFLAGS=-fPIC -DPIC -g -O2 -Wall -DDEBUG
 LDFLAGS=-nostart -nostdlib -lroot -Wl,-soname=libnet.so
 INCLUDES=-I../server/include -I../driver
 
