@@ -19,6 +19,7 @@
 #include "config.h"
 
 #include "heap.h"
+#define NEED_LG
 #include "processheap.h"
 #include "superblock.h"
 
