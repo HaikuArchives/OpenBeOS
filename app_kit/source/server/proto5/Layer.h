@@ -6,6 +6,7 @@
 #include <Region.h>
 #include <List.h>
 #include <String.h>
+#include <OS.h>
 
 class ServerWindow;
 
@@ -36,6 +37,7 @@ public:
 	void PruneTree(void);
 	void SetLevel(int32 value);
 	void Invalidate(BRect rect);
+	void Invalidate(BRegion region);
 	virtual void RequestDraw(void);
 
 	BRect ConvertToParent(BRect rect);
@@ -67,6 +69,7 @@ public:
 	uint8 hidecount;
 	bool is_dirty;		// true if we need to redraw
 	bool is_updating;
+	sem_id dirty_sem;
 };
 
 class RootLayer : public Layer
@@ -75,12 +78,19 @@ public:
 	RootLayer(BRect rect, const char *layername, ServerWindow *srvwin,
 		int32 viewflags, int32 token);
 	RootLayer(BRect rect, const char *layername);
+	~RootLayer(void);
 	virtual void RequestDraw(void);
+	void SetVisible(bool is_visible);
+	bool IsVisible(void) const;
 	
 	void SetColor(rgb_color col);
 	rgb_color GetColor(void) const;
+	
+	static int32 UpdaterThread(void *data);
 private:
 	rgb_color bgcolor;
+	thread_id updater_id;
+	bool visible;
 };
 
 extern BLocker *layerlock;

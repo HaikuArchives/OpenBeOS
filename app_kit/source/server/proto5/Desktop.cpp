@@ -54,7 +54,7 @@ public:
 	~Workspace();
 	thread_id tid;
 	
-	Layer *toplayer;
+	RootLayer *toplayer;
 	BList focuslist;
 	rgb_color bgcolor;
 	screen_info screendata,
@@ -88,7 +88,9 @@ Workspace::Workspace(void)
 
 	// We need one top layer for each workspace times the number of monitors - ick.
 	// Currently, we only have 1 monitor. *Whew*
-	toplayer=new Layer(BRect(0,0,639,439),"workspace_root");
+	char wspace_name[128];
+	sprintf(wspace_name,"workspace %ld root",workspace_count);
+	toplayer=new RootLayer(BRect(0,0,639,439),wspace_name);
 }
 
 Workspace::~Workspace(void)
@@ -156,6 +158,8 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	gfxdriver->Clear(pactive_workspace->bgcolor);
 	startup_cursor=new ServerCursor(default_cursor);
 	gfxdriver->SetCursor(startup_cursor);
+
+	pactive_workspace->toplayer->SetVisible(true);
 
 #ifdef DEBUG_WORKSPACES
 printf("Desktop initialized\n");
@@ -262,11 +266,13 @@ void ActivateWorkspace(uint32 workspace)
 		return;
 
 	// Here's where we update all the screen stuff
-	if(pactive_workspace->screendata.spaces != proposed->screendata.spaces)
-	{
+//	if(pactive_workspace->screendata.spaces != proposed->screendata.spaces)
+//	{
 		gfxdriver->SetScreen(proposed->screendata.spaces);
 		gfxdriver->Clear(proposed->bgcolor);
-	}
+		pactive_workspace->toplayer->SetVisible(false);
+		proposed->toplayer->SetVisible(true);
+//	}
 	// more if != then change code goes here. Currently, a lot of the code which
 	// uses this stuff is not implemented, so it's kind of moot. However, when we
 	// use the real graphics HW, it'll become important.

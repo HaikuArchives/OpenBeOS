@@ -161,7 +161,7 @@ void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 		swin->frame.OffsetBy(dx,dy);
 		swin->Unlock();
 
-		parent->RequestDraw();
+		parent->Invalidate(frame);
 		decor->Draw();
 	}
 	mousepos=pt;

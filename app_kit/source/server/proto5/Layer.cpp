@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 //#define DEBUG_LAYERS
+#define DEBUG_REDRAW
 
 
 Layer::Layer(BRect rect, const char *layername, ServerWindow *srvwin,
@@ -49,6 +50,10 @@ printf("Invalid BRect: "); rect.PrintToStream();
 	is_dirty=false;
 	is_updating=false;
 
+	// This bad boy exists so that the redraw thread isn't a CPU hog
+	dirty_sem=create_sem(1,"rootlayer sem");
+	acquire_sem(dirty_sem);
+
 	// Because this is not part of the tree, level is negative (thus, irrelevant)
 	level=0;
 #ifdef DEBUG_LAYERS
@@ -80,6 +85,9 @@ Layer::Layer(BRect rect, const char *layername)
 	flags=0;
 	hidecount=0;
 	is_dirty=false;
+	// This bad boy exists so that the redraw thread isn't a CPU hog
+	dirty_sem=create_sem(1,"rootlayer sem");
+	acquire_sem(dirty_sem);
 	level=0;
 
 	view_token=-1;
@@ -98,6 +106,7 @@ Layer::~Layer(void)
 	if(invalid!=NULL)
 		delete invalid;
 	delete name;
+	delete_sem(dirty_sem);
 }
 
 void Layer::AddChild(Layer *layer)
@@ -274,8 +283,41 @@ Layer *Layer::FindLayer(int32 token)
 	return NULL;
 }
 
+void Layer::Invalidate(BRegion region)
+{
+	// See if the region intersects with our current area
+	if(region.Intersects(frame))
+	{
+		is_dirty=true;
+
+		if(!invalid)
+			invalid=new BRegion();
+
+		// We need to clip all the rectangles in the region to the frame.
+		int32 i;
+		BRect r;
+		
+		for(i=0;i<region.CountRects();i++)
+		{
+			r=region.RectAt(i);
+			if(frame.Intersects(r))
+				invalid->Include(r & frame);
+		}	
+		release_sem(dirty_sem);
+#ifdef DEBUG_REDRAW
+printf("Invalidate: "); invalid->PrintToStream();
+#endif
+	}
+	
+	for(Layer *lay=topchild;lay!=NULL; lay=lay->lowersibling)
+		lay->Invalidate(region);
+}
+
 void Layer::Invalidate(BRect rect)
 {
+#ifdef DEBUG_REDRAW
+printf("Invalidate: ");rect.PrintToStream();
+#endif
 	// Make our own section dirty and pass it on to any children, if necessary....
 	// YES, WE ARE SHARING DIRT! Mudpies anyone? :D
 	is_dirty=true;
@@ -287,6 +329,7 @@ void Layer::Invalidate(BRect rect)
 		invalid->Include(rect);
 	else
 		invalid=new BRegion(rect);
+	release_sem(dirty_sem);
 	
 	Layer *lay;
 	for(lay=topchild;lay!=NULL; lay=lay->lowersibling)
@@ -306,6 +349,13 @@ void Layer::RequestDraw(void)
 		delete invalid;
 		invalid=NULL;
 	}
+	is_dirty=false;
+	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+	{
+		if(lay->IsDirty())
+			lay->RequestDraw();
+	}
+	acquire_sem(dirty_sem);
 }
 
 bool Layer::IsDirty(void) const
@@ -403,11 +453,62 @@ RootLayer::RootLayer(BRect rect, const char *layername, ServerWindow *srvwin,
 	int32 viewflags, int32 token)
 	: Layer(rect,layername,srvwin,viewflags,token)
 {
+	updater_id=-1;
 }
 
 RootLayer::RootLayer(BRect rect, const char *layername)
 	: Layer(rect,layername)
 {
+	updater_id=-1;
+	
+}
+
+RootLayer::~RootLayer(void)
+{
+}
+
+void RootLayer::SetVisible(bool is_visible)
+{
+	if(visible!=is_visible)
+	{
+		visible=is_visible;
+		if(visible)
+		{
+			updater_id=spawn_thread(UpdaterThread,name->String(),B_NORMAL_PRIORITY,this);
+			if(updater_id!=B_NO_MORE_THREADS && updater_id!=B_NO_MEMORY)
+				resume_thread(updater_id);
+		}
+	}
+}
+
+bool RootLayer::IsVisible(void) const
+{
+	return visible;
+}
+
+int32 RootLayer::UpdaterThread(void *data)
+{
+	// Updater thread which checks to see if its layer needs updating. If so, then
+	// call the recursive function RequestDraw.
+	
+	RootLayer *root=(RootLayer*)data;
+
+	while(1)
+	{
+		if(!root->visible)
+		{
+			return 0;
+			exit_thread(1);
+		}
+
+		if(root->IsDirty())
+		{
+			acquire_sem(root->dirty_sem);
+			layerlock->Lock();
+			root->RequestDraw();
+			layerlock->Unlock();
+		}
+	}
 }
 
 void RootLayer::RequestDraw(void)
@@ -422,6 +523,13 @@ void RootLayer::RequestDraw(void)
 	}
 	delete invalid;
 	invalid=NULL;
+	is_dirty=false;
+	
+	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+	{
+		if(lay->IsDirty())
+			lay->RequestDraw();
+	}
 }
 
 void RootLayer::SetColor(rgb_color col)
