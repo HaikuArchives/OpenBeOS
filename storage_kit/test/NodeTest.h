@@ -31,6 +31,8 @@ public:
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Stat Test", &NodeTest::StatTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Sync Test", &NodeTest::SyncTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Dup Test", &NodeTest::DupTest) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Equality Test", &NodeTest::EqualityTest) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Assignment Test", &NodeTest::AssignmentTest) );
 //		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Locking Test", &NodeTest::LockTest) );
 		
 		return suite;
@@ -213,8 +215,48 @@ public:
 	void DupTest() {
 		BNode node("./");
 		int fd = node.Dup();
-		CPPUNIT_ASSERT( fd != -1 );	// Should this be ">= 0" maybe?
+		CPPUNIT_ASSERT( fd != -1 );	
 		::close(fd);
+	}
+
+	// n1 and n2 should both be uninitialized. y1a and y1b should be initialized
+	// to the same node, y2 should be initialized to a different node
+	void EqualityTest(BNode &n1, BNode &n2, BNode &y1a, BNode &y1b, BNode &y2) {
+		CPPUNIT_ASSERT( n1 == n2 );
+		CPPUNIT_ASSERT( !(n1 != n2) );
+		CPPUNIT_ASSERT( n1 != y2 );
+		CPPUNIT_ASSERT( !(n1 == y2) );
+
+		CPPUNIT_ASSERT( y1a != n2 );
+		CPPUNIT_ASSERT( !(y1a == n2) );
+		CPPUNIT_ASSERT( y1a == y1b );
+		CPPUNIT_ASSERT( !(y1a != y1b) );
+		CPPUNIT_ASSERT( y1a != y2 );
+		CPPUNIT_ASSERT( !(y1a == y2) );
+
+		CPPUNIT_ASSERT( n1 == n1 );
+		CPPUNIT_ASSERT( !(n1 != n1) );
+		CPPUNIT_ASSERT( y2 == y2 );
+		CPPUNIT_ASSERT( !(y2 != y2) );			
+	}
+	
+	void EqualityTest() {
+		BNode n1, n2, y1a("/boot"), y1b("/boot"), y2("/");
+		
+		EqualityTest(n1, n2, y1a, y1b, y2);		
+	}
+
+	void AssignmentTest() {	
+		BNode n1, n2, y1a("/boot"), y1b("/boot"), y2("/");
+
+		n1 = n1;		// self n
+		y1a = y1b;		// psuedo self y
+		y1a = y1a;		// self y
+		n2 = y2;		// n = y
+		y1b = n1;		// y = n
+		y2 = y1a;		// y1 = y2
+		
+		EqualityTest(n1, y1b, y1a, y2, n2);
 	}
 	
 	// Locking isn't really implemented yet...
