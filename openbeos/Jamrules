@@ -56,6 +56,10 @@ OBOS_SHLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
 OBOS_STLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
 OBOS_KERNEL_DIR ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system ] ;
 
+OBOS_KERNEL_CONFIG = config.$(OBOS_ARCH).ini ;
+OBOS_KERNEL = kernel.$(OBOS_ARCH) ;
+OBOS_FLOPPY = floppy.$(OBOS_ARCH) ;
+
 rule SetupIncludes
 {
 	OBOS_INCLUDES ?= . add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
@@ -359,7 +363,14 @@ rule KernelLd
 	Depends all : $(1) ;
 	Depends $(1) : $(2) ;
 
-	MakeLocate $(1) : $(LOCATE_TARGET) ;
+	if $(6) {
+		Depends $(OBOS_KERNEL_CONFIG) : $(1) ;
+		for i in $(6) {
+			SECTIONS on $(OBOS_KERNEL_CONFIG) += ":" $(i) elf32 [ FDirName $(LOCATE_TARGET) $(1) ] ;
+		}
+	}
+	
+	MakeLocate $(1) : $(LOCATE_TARGET) ; 
 
 	# Add libgcc.a - NB this should be detected not hard coded!
 	if ! $(5) {
@@ -398,7 +409,6 @@ rule KernelStaticLibraryObjects
 	Depends $(1) : $(2) ;
 
 	MakeLocate $(1) : $(LOCATE_TARGET) ;
-
 }
 
 actions KernelStaticLibraryObjects
@@ -408,31 +418,37 @@ ar -r $(1) $(2) ;
 
 rule SystemMain
 {
-	# Just use as Main but this sets nothing special...
+	# Usage SystemMain <target> : <sources> : <rqd_by> ;
 	SetupObjectsDir ;
 
-	CCFLAGS = $(OPTIM) ;
-	C++FLAGS = $(OPTIM) ;
+	CCFLAGS on $(1) = $(OPTIM) ;
+	C++FLAGS on $(1) = $(OPTIM) ;
 	LINKLIBS = ;
 
+	# This allows us to preset certain commands we use
+	# for building.
+	if $(3) {
+		for obj in $(3) {
+			BUILD_CMD on $(obj) = [ FDirName $(LOCATE_TARGET) $(1) ] ;
+		}
+	}
+	
 	Main $(1) : $(2) ;
 }
 
 rule KernelConfigSection
 {
-	# KernelConfigSection <file> : <section> : <file> ;
-	SECTIONS on $(1) += ":" $(2) $(3:G=) ;
+	# KernelConfigSection <section> : <type> : <file>  ;
+	SECTIONS on $(OBOS_KERNEL_CONFIG) += ":" $(1) $(2) $(3) ;
 }
 
 rule WriteKernelConfig
 {
-	# usage: WriteKernelConfig <target> : <section> ;
+	# usage: WriteKernelConfig <target> ;
 
-	Depends all : $(1) ;
-	Depends $(1) : $(2) ;
+	Depends files : $(1) ;
 	
 	LOCATE on $(1) = $(LOCATE_TARGET) ;
-	SEARCH on $(2) += $(SEARCH_SOURCE) ;
 
 	MakeLocate $(1) : $(LOCATE_TARGET) ;
 	
@@ -449,9 +465,12 @@ actions WriteKernelConfig
 	for i in "$(SECTIONS)" ; do
 		if [ $issection == 1  ]; then
 			section=$i
-			issection=0
+			issection=2
 			echo "["$section"]" >> $target
-			echo "type=elf32" >> $target
+		elif [ $issection == 2 ]; then
+			type=$i
+			issection=3
+			echo "type="$type >> $target
 		else
 			if [ $i == ":" ]; then
 				issection=1
@@ -466,6 +485,56 @@ actions WriteKernelConfig
 			fi
 		fi			
 	done
+}
+
+rule BuildKernel
+{
+	# Usage BuildKernel <target> : <config_file> ;
+	
+	Depends all : $(1) ;
+	Depends $(1) : $(2) ;
+	Clean clean : $(1) ;
+	
+	MakeLocate $(1) : $(LOCATE_TARGET) ;
+}
+
+actions BuildKernel
+{
+	$(BUILD_CMD) --strip-debug --strip-binary strip $(2) -o $(1) ;
+	echo ""
+	echo "Kernel linked!"
+	echo ""
+}
+
+# At present I don't bother moving the final location for
+# the floppy image as it makes copying it onto a floppy easier if it's
+# where you did the build. This is easy enough changed.
+rule KernelFloppyImage
+{
+	# Usage KernelFloppyImage <target> : <kernel> : <bootblock> ;
+
+	Depends all : $(1) ;
+	Depends $(1) : $(2) ;
+	Clean clean : $(1) ;
+
+	BOOT_BLOCK on $(1) = $(3) ;
+}
+
+# This may be a bit verbose, but I think it's useful to show what's
+# going on, at least in this early stage of development.
+actions KernelFloppyImage
+{
+	$(BUILD_CMD) $(BOOT_BLOCK) $(2) $(1) ;
+	echo ""
+	echo "*************************************************"
+	echo "*         Kernel build completed!               *"
+	echo "*    Boot image for a 1.44M floppy created      *"
+	echo "*************************************************"
+	echo ""
+	echo "Floppy image is $(OBOS_FLOPPY)"
+	echo "The following command will write it to a floppy on BeOS"
+	echo "  dd if=$(OBOS_FLOPPY) of=/dev/disk/floppy/raw bs=18k"
+	echo ""
 }
 
 
