@@ -1,8 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=net_srv
-CFLAGS=-Wall -g -O2 
 LOBJS=../util/*.o
-LDFLAGS= 
 
 all:	$(TARGET)
 

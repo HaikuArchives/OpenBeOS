@@ -1,7 +1,13 @@
 OBJS=
 SUBDIRS=util net_server ipv4 udp ethernet arp icmp test 
 
-CFLAGS=-O0 -g -Wall -fPIC -DPIC
+# for profiling, uncomment these next 2 lines.
+#CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
+#LDFLAGS=-p
+# for a normal build use these 2 lines
+CFLAGS=-O2  -g -Wall -fPIC -DPIC
+LDFLAGS=
+
 INCLUDES=-I. -I./include
 
 all: subdirs
@@ -16,7 +22,7 @@ subdirs: $(OBJS)
 			if test -e net_srv; then ln -s net_srv _APP_; fi; \
 		fi; \
 		echo "Making $$i module"; \
-		(cd $$i && $(MAKE)) || exit 1; \
+		(cd $$i && CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(MAKE)) || exit 1; \
 	done;
 	@if test -e _APP_; then rm _APP_; fi
 

@@ -1,8 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ethernet
-CFLAGS=-Wall -g -O2 -fPIC -DPIC -nostart
-LOBJS=../util/misc.o
-LDFLAGS=../_APP_
+LOBJS=../util/misc.o ../_APP_
 
 all:	$(TARGET)
 
@@ -10,4 +8,4 @@ clean:
 	@if test -e ../modules/$(TARGET); then rm ../modules/$(TARGET); fi
 
 $(TARGET):
-	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../modules/$(TARGET) $(TARGET).c
+	@$(CC) -nostart $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../modules/$(TARGET) $(TARGET).c

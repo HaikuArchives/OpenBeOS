@@ -1,8 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=arp
-CFLAGS=-Wall -g -O2 -fPIC -DPIC -nostart
-LOBJS=../util/nhash.o ../util/misc.o
-LDFLAGS=../_APP_
+LOBJS=../util/nhash.o ../util/misc.o ../_APP_
 
 all:	$(TARGET)
 
@@ -10,4 +8,4 @@ clean:
 	@if test -e ../modules/$(TARGET); then rm ../modules/$(TARGET); fi
 
 $(TARGET):
-	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../modules/$(TARGET) $(TARGET).c
+	@$(CC) -nostart $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../modules/$(TARGET) $(TARGET).c
