@@ -36,7 +36,7 @@ CppUnit::Test*
 NodeTest::Suite() {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 
-	StatableTest::AddBaseClassTests<NodeTest>("", suite);
+	StatableTest::AddBaseClassTests<NodeTest>("BNode::", suite);
 
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Init Test1", &NodeTest::InitTest1) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Init Test2", &NodeTest::InitTest2) );
