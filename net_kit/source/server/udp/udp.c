@@ -240,13 +240,7 @@ int udp_input(struct mbuf *buf, int hdrlen)
         dump_udp(buf);
 #endif
 	/* check and adjust sizes as required... */
-	len = ntohs(udp->uh_ulen);//ip->length - hdrlen;
-	if (len + hdrlen != ip->ip_len) {
-		if (len + hdrlen > ip->ip_len)
-			/* we got a corrupt packet as we are missing data... */
-			goto bad;
-		m_adj(buf, len + hdrlen - ip->ip_len);
-	}
+	len = ntohs(udp->uh_ulen) + hdrlen;
 	saved_ip = *ip;
 
 	if (udpcksum && udp->uh_sum) {
@@ -256,7 +250,7 @@ int udp_input(struct mbuf *buf, int hdrlen)
 		/* XXX - if we have options we need to be careful when calculating the
 		 * checksum here...
 		 */
-		if ((ck = in_cksum(buf, len + sizeof(*ip), 0)) != 0) {
+		if ((ck = in_cksum(buf, len, 0)) != 0) {
 			udpstat.udps_badsum++;
 			m_freem(buf);
 			printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
