@@ -98,6 +98,66 @@ int	 x25_makemask __P((void));
 
 extern void show __P((int, char **));	/* XXX - from show.c */
 
+
+int opterr = 1;
+int optind = 1;
+int optopt = 0;
+int optreset = 0;
+char *optarg;
+
+#define BADCH (int)'?'
+#define BADARG (int)':'
+#define EMSG ""
+
+int _getopt(int nargc, char *const *nargv, const char *ostr)
+{
+	static char *place = EMSG;
+	char *oli;
+	
+	if (optreset || !*place) {
+		optreset = 0;
+		if (optind >= nargc || *(place = nargv[optind]) != '-') {
+			place = EMSG;
+			return -1;
+		}
+		if (place[1] && *++place=='-') {
+			++optind;
+			place=EMSG;
+			return -1;
+		}
+	}
+	if ((optopt = (int)*place++) == (int)':' || 
+	    !(oli = strchr(ostr, optopt))) {
+		if (optopt==(int)'-')
+			return -1;
+		if (!*place)
+			++optind;
+		if (opterr && *ostr != ':')
+			fprintf(stderr, "illegal option --%c\n", optopt);
+		return BADCH;
+	}
+	if (*++oli != ':') {
+		optarg = NULL;
+		if (!*place)
+			++optind;
+	} else {
+		if (*place)
+			optarg = place;
+		else if (nargc <= ++optind) {
+			place = EMSG;
+			if (*ostr==':')
+				return BADARG;
+			if (opterr)
+				printf("option requires an argument -- %c\n", optopt);
+			return BADCH;
+		} else 
+			optarg = nargv[optind];
+		place = EMSG;
+		++optind;
+	}
+	return optopt;
+}
+ 	
 void usage(char *cp)
 {
 	printf("route for OpenBeOS!\n");
@@ -138,26 +198,27 @@ main(argc, argv)
 	if (argc < 2)
 		usage(NULL);
 
-	while ((ch = getopt(argc, argv, "nqdtv")) != -1)
+	while ((ch = _getopt(argc, argv, "nqdtv")) != -1) {
 		switch(ch) {
-		case 'n':
-			nflag = 1;
-			break;
-		case 'q':
-			qflag = 1;
-			break;
-		case 'v':
-			verbose = 1;
-			break;
-		case 't':
-			tflag = 1;
-			break;
-		case 'd':
-			debugonly = 1;
-			break;
-		default:
-			usage(NULL);
+			case (int)'n':
+				nflag = 1;
+				break;
+			case 'q':
+				qflag = 1;
+				break;
+			case 'v':
+				verbose = 1;
+				break;
+			case 't':
+				tflag = 1;
+				break;
+			case 'd':
+				debugonly = 1;
+				break;
+			default:
+				usage(NULL);
 		}
+	}
 	argc -= optind;
 	argv += optind;
 
@@ -276,6 +337,7 @@ bad:			usage(*argv);
 		rtm->rtm_type = RTM_DELETE;
 		rtm->rtm_seq = seqno;
 		rlen = write(s, next, rtm->rtm_msglen);
+printf("write gave %d\n", rlen);
 		if (rlen < (int)rtm->rtm_msglen) {
 			(void) fprintf(stderr,
 			    "route: write to routing socket: %s\n",
@@ -340,7 +402,6 @@ char *routename(struct sockaddr *sa)
 			domain[0] = 0;
 		cp = NULL;
 	}
-
 	if (sa->sa_len == 0)
 		strcpy(line, "default");
 	else switch (sa->sa_family) {
