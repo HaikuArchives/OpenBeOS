@@ -313,8 +313,10 @@ bool validate_instantiation(BMessage* from, const char* class_name)
 instantiation_func find_instantiation_func(const char* class_name,
 										   const char* sig)
 {
+	errno = B_OK;
 	if (!class_name)
 	{
+		errno = B_BAD_VALUE;
 		return NULL;
 	}
 
@@ -354,9 +356,12 @@ instantiation_func find_instantiation_func(const char* class_name)
 //------------------------------------------------------------------------------
 instantiation_func find_instantiation_func(BMessage* archive_data)
 {
+	errno = B_OK;
+
 	if (!archive_data)
 	{
 		// TODO:  extended error handling
+		errno = B_BAD_VALUE;
 		return NULL;
 	}
 

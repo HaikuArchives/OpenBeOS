@@ -234,7 +234,7 @@ class _ObserverList
 
 //------------------------------------------------------------------------------
 BHandler::BHandler(const char* name)
-	:	BArchivable()
+	:	BArchivable(), fName(NULL)
 {
 	InitData(name);
 }
@@ -250,10 +250,15 @@ BHandler::~BHandler()
 }
 //------------------------------------------------------------------------------
 BHandler::BHandler(BMessage* data)
-	:	BArchivable(data)
+	:	BArchivable(data), fName(NULL)
 {
 	const char* name = NULL;
-	data->FindString(gArchiveNameField, &name);
+
+	if (data)
+	{
+		data->FindString(gArchiveNameField, &name);
+	}
+
 	InitData(name);
 }
 //------------------------------------------------------------------------------
