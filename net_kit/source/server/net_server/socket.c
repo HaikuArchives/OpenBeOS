@@ -19,7 +19,6 @@
 #include "core_module.h"
 
 static pool_ctl *spool;
-static pool_ctl *sfdpool;
 static benaphore sockets_lock;
 
 
@@ -34,9 +33,6 @@ int sockets_init(void)
 	if (!spool)
 		return ENOMEM;
 
-	if (!sfdpool)
-		pool_init(&sfdpool, sizeof(struct sock_fd));
-
 	INIT_BENAPHORE(sockets_lock, "sockets_lock");
 	return CHECK_BENAPHORE(sockets_lock);
 }
@@ -45,7 +41,6 @@ int sockets_init(void)
 void sockets_shutdown(void)
 {
 	pool_destroy(spool);
-	pool_destroy(sfdpool);
 	
 	UNINIT_BENAPHORE(sockets_lock);
 }
