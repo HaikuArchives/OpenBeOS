@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <kernel/OS.h>
 
-#include "mbuf.h"
+#include "sys/mbuf.h"
 
 #define START_BUFFS	5
 #define LOOPS	128
