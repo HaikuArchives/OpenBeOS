@@ -334,7 +334,7 @@ KernelStaticLibraryObjects libc.a :
 	<$(SOURCE_GRIST)!libc!system>dlfcn.o
 	<$(SOURCE_GRIST)!libc!system>rlimit.o
 	<$(SOURCE_GRIST)!libc!system>syscalls.o
-	<$(SOURCE_GRIST)!libc!system>sysctl.o
+	<$(SOURCE_GRIST)!libc!system>wrappers.o
 	<$(SOURCE_GRIST)!libc!system!arch!$(OBOS_ARCH)>atomic.o
 
 	<$(SOURCE_GRIST)!libc!unistd>close.o
@@ -407,7 +407,7 @@ KernelLd libc.so :
 	<$(SOURCE_GRIST)!libc!system>dlfcn.o
 	<$(SOURCE_GRIST)!libc!system>rlimit.o
 	<$(SOURCE_GRIST)!libc!system>syscalls.o
-	<$(SOURCE_GRIST)!libc!system>sysctl.o
+	<$(SOURCE_GRIST)!libc!system>wrappers.o
 	<$(SOURCE_GRIST)!libc!system!arch!$(OBOS_ARCH)>atomic.o
 
 	<$(SOURCE_GRIST)!libc!unistd>close.o
@@ -661,7 +661,7 @@ KernelLd digit :
         addons/drivers/dev/misc/digit
         ; 
 
-if $(OS) = BEOS 
+if $(OS) = "BEOS" 
 {
 	KernelConfigSection addons/drivers/dev/misc/speaker 
 		: 
@@ -689,6 +689,19 @@ KernelLd testdigit :
         :
         bin/testdigit
         ; 
+
+KernelLd thread_test :
+	libglue2.o
+        <$(SOURCE_GRIST)!apps!tests>thread_test.o
+        libc.so
+        :
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+        :
+        :
+        :
+        bin/thread_test
+        ; 
+
 
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
