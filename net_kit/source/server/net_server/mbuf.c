@@ -285,38 +285,38 @@ void m_adj(struct mbuf *mp, int req_len)
 
 void m_copydata(struct mbuf *m, int off, int len, caddr_t cp)
 {
-        uint count;
+	uint count = 0;
 
-        if (off < 0) {
-                printf("m_copydata: off %d < 0", off);
+	if (off < 0) {
+		printf("m_copydata: off %d < 0", off);
 		return;
 	}
-        if (len < 0) {
-                printf("m_copydata: len %d < 0", len);
+	if (len < 0) {
+		printf("m_copydata: len %d < 0", len);
 		return;
 	}	
-        while (off > 0) {
-                if (m == NULL) {
-                        printf("m_copydata: null mbuf in skip");
+	while (off > 0) {
+		if (m == NULL) {
+			printf("m_copydata: null mbuf in skip");
 			return;
 		}
-                if (off < m->m_len)
-                        break;
-                off -= m->m_len;
-                m = m->m_next;
-        }
-        while (len > 0) {
-                if (m == NULL) {
-                        printf("m_copydata: null mbuf");
+		if (off < m->m_len)
+			break;
+		off -= m->m_len;
+		m = m->m_next;
+	}
+	while (len > 0) {
+		if (m == NULL) {
+			printf("m_copydata: null mbuf");
 			return;
 		}
-                count = min(m->m_len - off, len);
-                memcpy(cp, mtod(m, caddr_t) + off, count);
-                len -= count;
-                cp += count;
-                off = 0;
-                m = m->m_next;
-        }
+		count = min(m->m_len - off, len);
+		memcpy(cp, (void*)(mtod(m, char *) + off), count);
+		len -= count;
+		cp += count;
+		off = 0;
+		m = m->m_next;
+	}
 }
 
 struct mbuf *m_copym(struct mbuf *m, int off0, int len)
@@ -327,68 +327,72 @@ struct mbuf *m_copym(struct mbuf *m, int off0, int len)
 	int copyhdr = 0;
 
 	if (off < 0 || len < 0) {
-		printf("m_copym0: off %d, len %d\n", off, len);
+		printf("PANIC: m_copym: m: off %d, len %d\n", off, len);
 		return NULL;
 	}
-        if (!off && m->m_flags & M_PKTHDR)
-                copyhdr = 1;
-        while (off > 0) {
-                if (!m)
-                        printf("m_copym: null mbuf\n");
-                if (off < m->m_len)
-                        break;
-                off -= m->m_len;
-                m = m->m_next;
-        }
-        np = &top;
-        top = 0;
-        while (len > 0) {
-                if (!m) {
-                        if (len != M_COPYALL)
-                                printf("m_copym0: m == 0 and not COPYALL\n");
-                        break;
-                }
-                MGET(n, m->m_type);
-                *np = n;
-                if (!n)
-                        goto nospace;
-                if (copyhdr) {
-                        M_DUP_PKTHDR(n, m);
-                        if (len == M_COPYALL)
-                                n->m_pkthdr.len -= off0;
-                        else
-                                n->m_pkthdr.len = len;
-                        copyhdr = 0;
-                }
-                n->m_len = min(len, m->m_len - off);
-                if (m->m_flags & M_EXT) {
+	if (off == 0 && m->m_flags & M_PKTHDR)
+		copyhdr = 1;
+	while (off > 0) {
+		if (!m) {
+			printf("PANIC: m_copym: null mbuf\n");
+			return NULL;
+		}
+		if (off < m->m_len)
+			break;
+		off -= m->m_len;
+		m = m->m_next;
+	}
+	np = &top;
+	top = NULL;
+	while (len > 0) {
+		if (!m) {
+			if (len != M_COPYALL) {
+				printf("PANIC: m_copym: m == NULL and not COPYALL\n");
+				return NULL;
+			}
+			break;
+		}
+		MGET(n, m->m_type);
+		*np = n;
+		if (!n)
+			goto nospace;
+		if (copyhdr) {
+			M_DUP_PKTHDR(n, m);
+			if (len == M_COPYALL)
+				n->m_pkthdr.len -= off0;
+			else
+				n->m_pkthdr.len = len;
+			copyhdr = 0;
+		}
+		n->m_len = min(len, m->m_len - off);
+		if (m->m_flags & M_EXT) {
 			/*
-                         * we are unsure about the way m was allocated.
-                         * copy into multiple MCLBYTES cluster mbufs.
-                         */
-                        MCLGET(n);
-                        n->m_len = 0;
-                        n->m_len = M_TRAILINGSPACE(n);
-                        n->m_len = min(n->m_len, len);
-                        n->m_len = min(n->m_len, m->m_len - off);
-                        memcpy(mtod(n, caddr_t), mtod(m, caddr_t) + off,
-                               (unsigned)n->m_len);
-                } else
-                        memcpy(mtod(n, caddr_t), mtod(m, caddr_t)+off,
-                            (unsigned)n->m_len);
-                if (len != M_COPYALL)
-                        len -= n->m_len;
-                off += n->m_len;
-                if (off == m->m_len) {
-                        m = m->m_next;
-                        off = 0;
-                }
-                np = &n->m_next;
-        }
-        return (top);
+			 * we are unsure about the way m was allocated.
+			 * copy into multiple MCLBYTES cluster mbufs.
+			 */
+			MCLGET(n);
+			n->m_len = 0;
+			n->m_len = M_TRAILINGSPACE(n);
+			n->m_len = min(n->m_len, len);
+			n->m_len = min(n->m_len, m->m_len - off);
+			memcpy(mtod(n, caddr_t), (void *)(mtod(m, char *) + off),
+                              (unsigned)n->m_len);
+		} else
+			memcpy(mtod(n, caddr_t), (void*)(mtod(m, char *)+off),
+                           (unsigned)n->m_len);
+		if (len != M_COPYALL)
+			len -= n->m_len;
+		off += n->m_len;
+		if (off == m->m_len) {
+			m = m->m_next;
+			off = 0;
+		}
+		np = &n->m_next;
+	}
+	return (top);
 nospace:
-        m_freem(top);
-        return (0);
+	m_freem(top);
+	return (NULL);
 }
 
 /* Rearrange an mbuf chain so that len bytes are contiguous
