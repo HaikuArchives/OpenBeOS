@@ -35,7 +35,7 @@
 #include <iostream>
 
 // Converts the given error code into a BeOS status_t error code
-status_t ErrnoToBeOSError() {
+status_t PosixErrnoToBeOSError() {
 	switch (errno) {
 		case ENOMEM:
 			return B_NO_MEMORY;
@@ -182,9 +182,9 @@ StorageKit::close_attr_dir ( Dir* dir )
 }
 
 status_t
-StorageKit::stat_attr( FileDescriptor file, const char *name, attr_info *ai )
+StorageKit::stat_attr( FileDescriptor file, const char *name, AttrInfo *ai )
 {
-	return (fs_stat_attr( file, name, ai ) != -1) ? B_OK : errno ;
+	return (fs_stat_attr( file, name, ai ) == -1) ? errno : B_OK ;
 }
 
 // This doesn't work right yet
@@ -242,7 +242,7 @@ StorageKit::get_stat(FileDescriptor file, Stat *s) {
 	if (s == NULL)
 		return B_BAD_VALUE;
 		
-	return (::fstat(file, s) == -1) ? ErrnoToBeOSError() : B_OK ;
+	return (::fstat(file, s) == -1) ? PosixErrnoToBeOSError() : B_OK ;
 }
 
 
@@ -279,5 +279,10 @@ StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
 			return B_BAD_VALUE;	
 	}
 	
-	return (result == -1) ? ErrnoToBeOSError() : B_OK ;
+	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
+}
+
+status_t
+StorageKit::sync( FileDescriptor file ) {
+	return (fsync(file) == -1) ? PosixErrnoToBeOSError() : B_OK ;
 }
