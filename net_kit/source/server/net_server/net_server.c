@@ -66,13 +66,21 @@ static void start_rx(int device) {
 static int open_device(char *driver, char *devno)
 {
 	char path[PATH_MAX];
-	int dev;
+	int dev, i;
 	status_t status;
+	ether_addr ea;
 
 	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
 	dev = open(path, O_RDWR);
 	if (dev < B_OK) {
 		printf("Couldn't open the device %s\n", path);
+		return 0;
+	}
+
+        /* try to get the MAC address */
+        status = ioctl(dev, IF_GETADDR, &ea, 6);
+        if (status < B_OK) {
+                printf("Failed to get a MAC address, ignoring %s\n", path);
 		return 0;
 	}
 
@@ -82,15 +90,21 @@ static int open_device(char *driver, char *devno)
 	devices[ndevs].name = strdup(path);
 	devices[ndevs].type = IFD_ETHERNET;
         devices[ndevs].rx_thread = -1;
+	devices[ndevs].mac = ea;
 
-	/* try to get the MAC address */
-	status = ioctl(dev, IF_GETADDR, &devices[ndevs].mac, 6);
-	if (status < B_OK)
-		printf("Failed to get a MAC address for %s\n", path);
-	else
-		start_rx(ndevs);
+	/* not sure if this is the right place or not... */
+	/* now see which modules are interested... */
+	for (i=0;i<nmods;i++) {
+		if (global_modules[i].mod->dev_init &&
+			global_modules[i].mod->dev_init(&devices[ndevs]) == 0) {
+			atomic_add(&global_modules[i].ref_count, 1);
+		};
+	}
 
-	return ndevs++;
+	start_rx(ndevs);
+
+	ndevs++;
+	return 1;
 }
 
 static void find_devices(void)
@@ -199,6 +213,21 @@ static void find_modules(void)
 	}
 }
 
+static void list_modules(void)
+{
+	int i;
+
+	printf("\nModules List\n"
+		"No. Ref Cnt Name\n"
+		"=== ======= ====================\n");
+	for (i=0;i<nmods;i++) {
+		printf("%02d     %ld    %s\n", i,
+			global_modules[i].ref_count, 
+			global_modules[i].mod->name);
+	}
+	printf("\n");
+}
+
 int main(int argc, char **argv)
 {
 	status_t status;
@@ -227,6 +256,7 @@ int main(int argc, char **argv)
 printf("\n");
 
 	list_devices();
+	list_modules();
 
 printf("\n");
 

@@ -65,13 +65,19 @@ int ipv4_init(loaded_net_module *nm, int *tbl)
 	return 0;
 }
 
+int ipv4_dev_init(ifnet *dev)
+{
+	/* so far all devices will use this!! */
+	return 0;
+}
+
 net_module net_module_data = {
 	"IPv4 module",
 	NS_IPV4,
 	NET_LAYER2,
 
 	&ipv4_init,
-	NULL,
+	&ipv4_dev_init,
 	&ipv4_input,
 	NULL
 };

@@ -95,12 +95,19 @@ int ethernet_input(struct mbuf *buf)
 
 int ether_init(loaded_net_module *ln, int *pt)
 {
-	mbinit();
-
 	net_modules = ln;
 	prot_table = pt;
 
 	return 0;
+}
+
+int ether_dev_init(ifnet *dev)
+{
+	if (dev->type == IFD_ETHERNET)
+		/* we're interested and will be used */
+		return 0;
+
+	return -1;
 }
 
 net_module net_module_data = {
@@ -109,7 +116,7 @@ net_module net_module_data = {
 	NET_LAYER1,
 
 	&ether_init,
-	NULL,
+	&ether_dev_init,
 	&ethernet_input,
 	NULL
 };

@@ -30,7 +30,7 @@ typedef struct net_module {
 struct loaded_net_module {
         struct net_module *mod;
         image_id iid;
-        int ref_count;
+        int32 ref_count;
 };
 
 enum {
