@@ -1,5 +1,4 @@
 *.o
 *.so
 test_mbuf
-testread
 net_srv
