@@ -15,6 +15,7 @@
 #include <KernelExport.h>
 #include <string.h>
 #include <driver_settings.h>
+#include <drivers/module.h>		// For get_module()/put_module()
 
 #include "netinet/in_var.h"
 #include "sys/protosw.h"
