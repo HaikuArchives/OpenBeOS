@@ -8,9 +8,10 @@
 #include "net_misc.h"
 #include "net_module.h"
 #include "protocols.h"
-#include "ipv4/ipv4.h"
+#include "netinet/in_systm.h"
 #include "netinet/in_var.h"
 #include "netinet/in_pcb.h"
+#include "netinet/ip.h"
 #include "sys/domain.h"
 #include "sys/protosw.h"
 #include "netinet/udp_var.h"
@@ -54,13 +55,13 @@ static uint32 udp_recvspace;	/* size of recieve buffer */
 #if SHOW_DEBUG
 static void dump_udp(struct mbuf *buf)
 {
-	ipv4_header *ip = mtod(buf, ipv4_header*);
-	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->hl * 4));
+	struct ip *ip = mtod(buf, struct ip*);
+	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->ip_hl * 4));
 
-        printf("udp_header  :\n");
-        printf("            : src_port      : %d\n", ntohs(udp->src_port));
-        printf("            : dst_port      : %d\n", ntohs(udp->dst_port));
-        printf("            : udp length    : %d bytes\n", ntohs(udp->length));
+	printf("udp_header  :\n");
+	printf("            : src_port      : %d\n", ntohs(udp->src_port));
+	printf("            : dst_port      : %d\n", ntohs(udp->dst_port));
+	printf("            : udp length    : %d bytes\n", ntohs(udp->length));
 }
 #endif /* SHOW_DEBUG */
 
@@ -116,9 +117,9 @@ int udp_output(struct inpcb *inp, struct mbuf *m, struct mbuf *addr,struct mbuf 
 	if (ui->udp.cksum == 0)
 		ui->udp.cksum = 0xffff;
 
-	((ipv4_header*)ui)->length = hdrlen;
-	((ipv4_header*)ui)->ttl = 64;	/* XXX - Fix this! */
-	((ipv4_header*)ui)->tos = 0;	/* XXX - Fix this! */
+	((struct ip*)ui)->ip_len = hdrlen;
+	((struct ip*)ui)->ip_ttl = 64;	/* XXX - Fix this! */
+	((struct ip*)ui)->ip_tos = 0;	/* XXX - Fix this! */
 
 
 	/* XXX - add multicast options when available! */
@@ -226,12 +227,12 @@ release:
 
 int udp_input(struct mbuf *buf, int hdrlen)
 {
-	ipv4_header *ip = mtod(buf, ipv4_header*);
+	struct ip *ip = mtod(buf, struct ip*);
 	udp_header *udp = (udp_header*)((caddr_t)ip + hdrlen);
 	pudp_header *p = (pudp_header *)ip;
 	uint16 ck = 0;
 	int len;
-	ipv4_header saved_ip;
+	struct ip saved_ip;
 	struct mbuf *opts = NULL;
 	struct inpcb *inp = NULL;
 
@@ -242,11 +243,11 @@ int udp_input(struct mbuf *buf, int hdrlen)
 #endif
 	/* check and adjust sizes as required... */
 	len = ntohs(udp->length);//ip->length - hdrlen;
-	if (len + hdrlen != ip->length) {
-		if (len + hdrlen > ip->length)
+	if (len + hdrlen != ip->ip_len) {
+		if (len + hdrlen > ip->ip_len)
 			/* we got a corrupt packet as we are missing data... */
 			goto bad;
-		m_adj(buf, len + hdrlen - ip->length);
+		m_adj(buf, len + hdrlen - ip->ip_len);
 	}
 	saved_ip = *ip;
 
@@ -267,11 +268,11 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	if (inp == NULL ||
 	    inp->lport != udp->dst_port ||
 		inp->fport != udp->src_port ||
-		inp->faddr.s_addr != ip->src.s_addr ||
-		inp->laddr.s_addr != ip->dst.s_addr) {
+		inp->faddr.s_addr != ip->ip_src.s_addr ||
+		inp->laddr.s_addr != ip->ip_dst.s_addr) {
 
-		inp = in_pcblookup(&udb, ip->src, udp->src_port,
-				   ip->dst, udp->dst_port, INPLOOKUP_WILDCARD);
+		inp = in_pcblookup(&udb, ip->ip_src, udp->src_port,
+				   ip->ip_dst, udp->dst_port, INPLOOKUP_WILDCARD);
 		if (inp)
 			udp_last_inpcb = inp;
 	}
@@ -282,14 +283,14 @@ int udp_input(struct mbuf *buf, int hdrlen)
 			goto bad;
 		}
 		*ip = saved_ip;
-		ip->length += hdrlen;
+		ip->ip_len += hdrlen;
 		//printf("UDP: we'd send an ICMP reply...\n");
 		/* XXX - send ICMP reply... */
 		return 0;
 	}
 
 	udp_in.sin_port = udp->src_port;
-	udp_in.sin_addr = ip->src;
+	udp_in.sin_addr = ip->ip_src;
 
 	if (inp->inp_flags & INP_CONTROLOPT) {
 		printf("INP Control Options to process!\n");
