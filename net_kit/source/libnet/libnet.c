@@ -5,6 +5,7 @@
  */
 #include <fcntl.h>
 #include <unistd.h>
+#include <kernel/image.h>
 #include <kernel/OS.h>
 #include <iovec.h>
 #include <stdio.h>
@@ -12,7 +13,74 @@
 #include "sys/socket.h"
 #include "net_structures.h"
 
+typedef int (*select_function)(int, struct fd_set *, struct fd_set *,
+								struct fd_set *, struct timeval *);
+
+
 static char * g_socket_driver_path = "/dev/net/socket";
+
+int select(int nbits, struct fd_set *rbits, 
+                      struct fd_set *wbits, 
+                      struct fd_set *ebits, 
+                      struct timeval *timeout)
+{
+	static select_function sf = NULL;
+	image_id	iid;
+	int tmpfd;
+	struct select_args sa;
+	int rv;
+	int i;
+	
+	if (sf == NULL) {
+		// first time, try to figure if libroot.so have a (better) select() support
+		// TODO: search in LIBRARY_PATH environment variable, not in hardcoded place!
+		iid = load_add_on("/boot/beos/system/lib/libroot.so");
+		if (iid > 0 ) {
+			if (get_image_symbol(iid, "select", B_SYMBOL_TYPE_TEXT, (void **) &sf) != B_OK)
+				// libroot.so don't export a select() function, so we use our
+				sf = select;
+			unload_add_on(iid);
+		};
+		
+	};
+	
+	if (sf != select)
+		// pass the call to libroot.so one...
+		return sf(nbits, rbits, wbits, ebits, timeout);
+	
+	tmpfd = open(g_socket_driver_path, O_RDWR);
+	if (tmpfd < 0)
+		return tmpfd;
+
+	sa.mfd = nbits;
+	sa.rbits = rbits;
+	sa.wbits = wbits;
+	sa.ebits = ebits;
+	sa.tv = timeout;
+	
+	for (i=3; i < sa.mfd;i++) {
+		printf("socket %d: ", i);
+		if (rbits)
+			if (FD_ISSET(i, rbits))
+				printf(" read ");
+		if (wbits)
+			if (FD_ISSET(i, wbits))
+				printf(" write ");
+		if (ebits)
+			if (FD_ISSET(i, ebits))
+				printf(" except ");
+		printf("\n");
+	}
+	
+	sa.rv = B_OK;
+	rv = ioctl(tmpfd, NET_SOCKET_SELECT, &sa, sizeof(sa));
+	printf("error = %d\n", rv);
+
+	close(tmpfd);
+	
+	return (rv < 0) ? rv : sa.rv;
+}
+
 
 int socket(int domain, int type, int protocol)
 {
@@ -97,49 +165,6 @@ int sendto(int sock, caddr_t buffer, size_t buflen, int flags,
 	mh.msg_iovlen = 1;
 
 	return ioctl(sock, NET_SOCKET_SENDTO, &mh, sizeof(mh));
-}
-
-int select(int nbits, struct fd_set *rbits, 
-                      struct fd_set *wbits, 
-                      struct fd_set *ebits, 
-                      struct timeval *timeout)
-{
-	int tmpfd;
-	struct select_args sa;
-	int rv;
-	int i;
-	
-	tmpfd = open(g_socket_driver_path, O_RDWR);
-	if (tmpfd < 0)
-		return tmpfd;
-
-	sa.mfd = nbits;
-	sa.rbits = rbits;
-	sa.wbits = wbits;
-	sa.ebits = ebits;
-	sa.tv = timeout;
-	
-	for (i=3; i < sa.mfd;i++) {
-		printf("socket %d: ", i);
-		if (rbits)
-			if (FD_ISSET(i, rbits))
-				printf(" read ");
-		if (wbits)
-			if (FD_ISSET(i, wbits))
-				printf(" write ");
-		if (ebits)
-			if (FD_ISSET(i, ebits))
-				printf(" except ");
-		printf("\n");
-	}
-	
-	sa.rv = B_OK;
-	rv = ioctl(tmpfd, NET_SOCKET_SELECT, &sa, sizeof(sa));
-	printf("error = %d\n", rv);
-
-	close(tmpfd);
-	
-	return (rv < 0) ? rv : sa.rv;
 }
 
 int shutdown(int sock, int how)
