@@ -305,13 +305,7 @@ void BCheckBox::DetachedFromWindow()
 //------------------------------------------------------------------------------
 void BCheckBox::SetValue(int32 value)
 {
-	if (BControl::Value() == value)
-		return;
-	
-	if (value == B_CONTROL_OFF)
-		BControl::SetValue(B_CONTROL_OFF);
-	else
-		BControl::SetValue(B_CONTROL_ON);
+	BControl::SetValue(value);
 }
 //------------------------------------------------------------------------------
 void BCheckBox::GetPreferredSize(float *width, float *height)
@@ -320,7 +314,7 @@ void BCheckBox::GetPreferredSize(float *width, float *height)
 	GetFontHeight(&fh);
 
 	*height = (float)ceil(fh.ascent + fh.descent + fh.leading) + 6.0f;
-	*width = 22.0f + (float)ceil(StringWidth(BControl::Label()));
+	*width = 22.0f + (float)ceil(StringWidth(Label()));
 }
 //------------------------------------------------------------------------------
 void BCheckBox::ResizeToPreferred()

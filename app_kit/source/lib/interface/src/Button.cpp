@@ -420,9 +420,6 @@ void BButton::DetachedFromWindow()
 //------------------------------------------------------------------------------
 void BButton::SetValue(int32 value)
 {
-	if (BControl::Value() == value)
-		return;
-	
 	BControl::SetValue(value);
 }
 //------------------------------------------------------------------------------
