@@ -53,8 +53,13 @@ static const char *testApp2				= "/boot/beos/apps/CDPlayer";
 static const char *fakeTestApp			= "/__this_isn't_likely_to_exist__";
 
 // BMessage field names
-static const char *typeField			= "type";
-static const char *fileExtField			= "extensions";
+static const char *typeField				= "type";
+static const char *fileExtField				= "extensions";
+static const char *attrInfoField_Name		= "attr:name";
+static const char *attrInfoField_PublicName	= "attr:public_name";
+static const char *attrInfoField_Type		= "attr:type";
+static const char *attrInfoField_Viewable	= "attr:viewable";
+static const char *attrInfoField_Editable	= "attr:editable";
 
 // Descriptions
 static const char *testDescr			= "Just a test, nothing more :-)";
@@ -97,6 +102,8 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::InstallDeleteTest) );
 	suite->addTest( new TC("BMimeType::App Hint Test",
 						   &MimeTypeTest::AppHintTest) );
+	suite->addTest( new TC("BMimeType::Attribute Info Test",
+						   &MimeTypeTest::AttrInfoTest) );
 	suite->addTest( new TC("BMimeType::File Extensions Test",
 						   &MimeTypeTest::FileExtensionsTest) );
 	suite->addTest( new TC("BMimeType::Icon Test (Large)",
@@ -131,7 +138,7 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::SnifferRuleTest) );
 	suite->addTest( new TC("BMimeType::Sniffing Test",
 						   &MimeTypeTest::SniffingTest) );
-
+						   
 	return suite;
 }		
 
@@ -555,6 +562,306 @@ MimeTypeTest::AppHintTest() {
 		CHK(ref == fakeRef);
 		CHK(ref != appRef);
 	}		
+}
+
+// Attr Info
+
+void
+MimeTypeTest::AttrInfoTest() {
+	// Create some messages to sling around
+	const int32 WHAT = 233;	// This is the what value that GAI() returns...not sure if it has a name yet
+	BMessage msg1(WHAT), msg2(WHAT), msg3(WHAT), msgIncomplete1(WHAT), msgIncomplete2(WHAT);
+
+	CHK(msg1.AddString(attrInfoField_Name, "Color") == B_OK);
+	CHK(msg1.AddString(attrInfoField_PublicName, "The Color") == B_OK);
+	CHK(msg1.AddInt32(attrInfoField_Type, B_STRING_TYPE) == B_OK);
+	CHK(msg1.AddBool(attrInfoField_Viewable, true) == B_OK);
+	CHK(msg1.AddBool(attrInfoField_Editable, true) == B_OK);
+
+	CHK(msg1.AddString(attrInfoField_Name, "High Score") == B_OK);
+	CHK(msg1.AddString(attrInfoField_PublicName, "The Highest Score Ever") == B_OK);
+	CHK(msg1.AddInt32(attrInfoField_Type, B_INT32_TYPE) == B_OK);
+	CHK(msg1.AddBool(attrInfoField_Viewable, false) == B_OK);
+	CHK(msg1.AddBool(attrInfoField_Editable, false) == B_OK);
+
+	CHK(msg2.AddString(attrInfoField_Name, "Volume") == B_OK);
+	CHK(msg2.AddString(attrInfoField_PublicName, "Loudness") == B_OK);
+	CHK(msg2.AddInt32(attrInfoField_Type, B_DOUBLE_TYPE) == B_OK);
+	CHK(msg2.AddBool(attrInfoField_Viewable, true) == B_OK);
+	CHK(msg2.AddBool(attrInfoField_Editable, true) == B_OK);
+	
+	CHK(msg3.AddString(attrInfoField_Name, "Volume") == B_OK);
+	CHK(msg3.AddString(attrInfoField_PublicName, "Loudness") == B_OK);
+	CHK(msg3.AddInt32(attrInfoField_Type, B_DOUBLE_TYPE) == B_OK);
+	CHK(msg3.AddBool(attrInfoField_Viewable, true) == B_OK);
+	CHK(msg3.AddBool(attrInfoField_Editable, true) == B_OK);
+	
+	CHK(msgIncomplete1.AddString(attrInfoField_Name, "Color") == B_OK);
+	CHK(msgIncomplete1.AddString(attrInfoField_PublicName, "The Color") == B_OK);
+	CHK(msgIncomplete1.AddInt32(attrInfoField_Type, B_STRING_TYPE) == B_OK);
+	CHK(msgIncomplete1.AddBool(attrInfoField_Viewable, true) == B_OK);
+	CHK(msgIncomplete1.AddBool(attrInfoField_Editable, true) == B_OK);
+
+	CHK(msgIncomplete1.AddString(attrInfoField_Name, "High Score") == B_OK);
+//	CHK(msgIncomplete1.AddString(attrInfoField_PublicName, "The Highest Score Ever") == B_OK);
+	CHK(msgIncomplete1.AddInt32(attrInfoField_Type, B_INT32_TYPE) == B_OK);
+//	CHK(msgIncomplete1.AddBool(attrInfoField_Viewable, false) == B_OK);
+	CHK(msgIncomplete1.AddBool(attrInfoField_Editable, false) == B_OK);
+	
+	CHK(msgIncomplete2.AddString(attrInfoField_Name, "Color") == B_OK);
+//	CHK(msgIncomplete2.AddString(attrInfoField_PublicName, "The Color") == B_OK);
+//	CHK(msgIncomplete2.AddInt32(attrInfoField_Type, B_STRING_TYPE) == B_OK);
+//	CHK(msgIncomplete2.AddBool(attrInfoField_Viewable, true) == B_OK);
+	CHK(msgIncomplete2.AddBool(attrInfoField_Editable, true) == B_OK);
+
+	CHK(msg1 == msg1);
+	CHK(msg2 == msg2);
+	CHK(msg3 == msg3);
+	CHK(msg1 != msg2);
+	CHK(msg1 != msg3);
+	CHK(msg2 == msg3);
+
+	// Uninitialized
+	nextSubTest();
+	{
+		BMimeType mime;
+		BMessage msg;
+		
+		CHK(mime.InitCheck() == B_NO_INIT);
+		CHK(mime.GetAttrInfo(&msg) != B_OK);		// R5 == B_BAD_VALUE
+		CHK(mime.SetAttrInfo(&msg) != B_OK);		// R5 == B_BAD_VALUE
+	}
+	
+	// NULL params
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		BMessage msg;
+		
+		CHK(mime.InitCheck() == B_OK);
+		// Make sure the type isn't installed
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		
+		// Non-installed
+		CHK(!mime.IsInstalled());
+		CHK(mime.GetAttrInfo(NULL) != B_OK);	// R5 == B_ENTRY_NOT_FOUND
+		CHK(!mime.IsInstalled());
+#if !SK_TEST_R5
+		CHK(RES(mime.SetAttrInfo(NULL)) != B_OK);		// R5 == CRASH!!!
+#endif
+		
+		// Installed
+		nextSubTest();
+		CHK(mime.Install() == B_OK);
+		CHK(mime.IsInstalled());
+		CHK(mime.GetAttrInfo(NULL) != B_OK);	// R5 == B_ENTRY_NOT_FOUND
+#if !SK_TEST_R5
+		CHK(RES(mime.SetAttrInfo(NULL)) != B_OK);		// R5 == CRASH!!!
+#endif
+	}
+	
+	// Improperly formatted BMessages
+	nextSubTest();
+	{
+		BMessage msg(WHAT);
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+
+		// Initial Set()/Get()
+		msgIncomplete1.RemoveName(typeField);		// Clear "type" fields, since SAI() just adds another
+		msgIncomplete2.RemoveName(typeField);	
+		CHK(msg != msgIncomplete1);
+		CHK(msg != msgIncomplete2);
+		CHK(mime.SetAttrInfo(&msgIncomplete1) == B_OK);
+		CHK(mime.GetAttrInfo(&msg) == B_OK);
+		CHK(msgIncomplete1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msgIncomplete2.AddString(typeField, testType) == B_OK);
+		CHK(msg == msgIncomplete1);
+		CHK(msg != msgIncomplete2);
+	}
+	
+	// Set() with improperly formatted message
+	nextSubTest();
+	{
+		BMessage msg(WHAT);
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+
+		// Initial Set()/Get()
+		msgIncomplete1.RemoveName(typeField);		// Clear "type" fields, since SAI() just adds another
+		msgIncomplete2.RemoveName(typeField);	
+		CHK(msg != msgIncomplete1);
+		CHK(msg != msgIncomplete2);
+		CHK(mime.SetAttrInfo(&msgIncomplete1) == B_OK);
+		CHK(mime.GetAttrInfo(&msg) == B_OK);
+		CHK(msgIncomplete1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msgIncomplete2.AddString(typeField, testType) == B_OK);
+		CHK(msg == msgIncomplete1);
+		CHK(msg != msgIncomplete2);
+	}
+	
+	// Set() with empty message
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		BMessage msgEmpty(WHAT);
+		BMessage msg(WHAT);
+		CHK(msg.AddInt32("stuff", 1234) == B_OK);	// Add an extra attribute to give us something to compare with
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+		
+		// Set(empty)
+		CHK(msg != msgEmpty);
+		CHK(mime.SetAttrInfo(&msgEmpty) == B_OK);
+		CHK(mime.GetAttrInfo(&msg) == B_OK);
+		CHK(msgEmpty.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg == msgEmpty);
+	}
+	
+	// Set() with extra attributes in message
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		BMessage msg(WHAT);
+		BMessage msgExtraSet(msg1);
+		CHK(msgExtraSet.AddString("extra", ".extra") == B_OK);
+		CHK(msgExtraSet.AddInt32("more_extras", 123) == B_OK);
+		CHK(msgExtraSet.AddInt32("more_extras", 456) == B_OK);
+		CHK(msgExtraSet.AddInt32("more_extras", 789) == B_OK);
+		BMessage msgExtraGet(msgExtraSet);
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+		
+		// Set(extra)/Get(empty)
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msgExtraSet);
+		CHK(mime.SetAttrInfo(&msgExtraSet) == B_OK);
+		CHK(mime.GetAttrInfo(&msg) == B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msgExtraSet.AddString(typeField, testType) == B_OK);
+		CHK(msg == msgExtraSet);
+		CHK(msg != msg1);
+		
+		// Get(extra)
+		nextSubTest();
+		CHK(mime.GetAttrInfo(&msgExtraGet) == B_OK);
+		CHK(msgExtraGet == msgExtraSet);
+		CHK(msgExtraGet != msg1);
+		
+		// Get(extra and then some)
+		nextSubTest();
+		CHK(msgExtraGet.AddInt32("more_extras", 101112) == B_OK);
+		msgExtraGet.RemoveName(typeField);		// Clear "type" fields to be fair, since SFE() just adds another
+		CHK(mime.GetAttrInfo(&msgExtraGet) == B_OK);	// Reinitializes result (clearing extra fields)
+		CHK(msgExtraGet == msgExtraSet);
+		CHK(msgExtraGet != msg1);
+		
+	}	
+	// Normal Function (Non-installed type)
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		BMessage msg(WHAT);
+		BMessage msg2(WHAT);
+		
+		CHK(mime.InitCheck() == B_OK);
+		// Make sure the type isn't installed
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+			
+		CHK(!mime.IsInstalled());
+		CHK(mime.GetAttrInfo(&msg) != B_OK);		// R5 == B_ENTRY_NOT_FOUND
+		CHK(!mime.IsInstalled());
+		CHK(mime.SetAttrInfo(&msg) == B_OK);
+		CHK(mime.IsInstalled());
+		CHK(mime.GetAttrInfo(&msg2) == B_OK);
+		CHK(msg.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GAI() does
+		CHK(msg == msg2);
+	}
+	
+	// Normal Function
+	nextSubTest();
+	{
+		BMessage msg(WHAT);
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+
+		// Initial Set()/Get()
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SAI() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+		CHK(mime.SetAttrInfo(&msg1) == B_OK);
+		CHK(mime.GetAttrInfo(&msg) == B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg2.AddString(typeField, testType) == B_OK);
+		CHK(msg == msg1);
+		CHK(msg != msg2);
+
+		// Followup Set()/Get()
+		nextSubTest();
+		CHK(msg.MakeEmpty() == B_OK);
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+		CHK(mime.SetAttrInfo(&msg2) == B_OK);
+		CHK(mime.GetAttrInfo(&msg) == B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg2.AddString(typeField, testType) == B_OK);
+		CHK(msg != msg1);
+		CHK(msg == msg2);
+
+		// Clear
+		nextSubTest();
+		CHK(msg.MakeEmpty() == B_OK);
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+#if !SK_TEST_R5
+		CHK(RES(mime.SetAttrInfo(NULL)) == B_OK);		// R5 == CRASH! despite what one might think should happen
+		CHK(RES(mime.GetAttrInfo(&msg)) != B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg2.AddString(typeField, testType) == B_OK);
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+#endif
+	}
 }
 
 // File Extensions
@@ -2988,7 +3295,7 @@ printf("type: %s, should be: %s\n", type.Type(), realType);
 +	status_t Delete();
 +	status_t GetIcon(BBitmap *icon, icon_size size) const;
 +	status_t GetPreferredApp(char *signature, app_verb verb = B_OPEN) const;
-	status_t GetAttrInfo(BMessage *info) const;
++	status_t GetAttrInfo(BMessage *info) const;
 +	status_t GetFileExtensions(BMessage *extensions) const;
 +	status_t GetShortDescription(char *description) const;
 +	status_t GetLongDescription(char *description) const;
@@ -2996,7 +3303,7 @@ printf("type: %s, should be: %s\n", type.Type(), realType);
 
 +	status_t SetIcon(const BBitmap *icon, icon_size size);
 +	status_t SetPreferredApp(const char *signature, app_verb verb = B_OPEN);
-	status_t SetAttrInfo(const BMessage *info);
++	status_t SetAttrInfo(const BMessage *info);
 +	status_t SetFileExtensions(const BMessage *extensions);
 +	status_t SetShortDescription(const char *description);
 +	status_t SetLongDescription(const char *description);

@@ -32,6 +32,7 @@ public:
 	//------------------------------------------------------------
 	// Test functions
 	//------------------------------------------------------------
+	void InstallDeleteTest();
 	void AppHintTest();
 	void FileExtensionsTest();
 	void LargeIconTest();
@@ -41,7 +42,7 @@ public:
 	void LongDescriptionTest();
 	void ShortDescriptionTest();
 	void PreferredAppTest();
-	void InstallDeleteTest();
+	void AttrInfoTest();
 
 	void InitTest();
 	void StringTest();
