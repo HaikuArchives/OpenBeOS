@@ -1,5 +1,5 @@
-SUBDIRS=net_server ipv4 udp ethernet arp icmp loop test 
-KERNELDIRS=net_server arp ethernet icmp ipv4 loop udp
+SUBDIRS=net_server ipv4 udp ethernet arp icmp loop route test 
+KERNELDIRS=net_server arp ethernet icmp ipv4 loop udp route
 
 # for profiling, uncomment these next 2 lines.
 #CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
@@ -22,7 +22,7 @@ all: subdirs
 test: 
 	@net_srv
 
-subdirs: $(OBJS)
+subdirs: clean $(OBJS)
 	@if test -e _APP_; then rm _APP_; fi
 	@for i in $(SUBDIRS); do \
 		if ! test -e _APP_; then \
