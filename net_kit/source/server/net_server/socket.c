@@ -62,7 +62,7 @@ int uiomove(caddr_t cp, int n, struct uio *uio)
 	struct iovec *iov;
 	uint cnt;
 	int error = 0;
-	void *ptr;
+	void *ptr = NULL;
 
 	while (n > 0 && uio->uio_resid) {
 		iov = uio->uio_iov;
@@ -77,23 +77,19 @@ int uiomove(caddr_t cp, int n, struct uio *uio)
 			cnt = n;
 
 		switch (uio->uio_segflg) {
+			/* XXX - once "properly" in kernel space, revisit and
+			 * fix this for kernel moves...
+			 */
 			case UIO_USERSPACE:
-				if (uio->uio_rw == UIO_READ)
-					ptr = memcpy(iov->iov_base, cp, cnt);
-				else
-					ptr = memcpy(cp, iov->iov_base, cnt);
-
-				if (!ptr)
-					return (errno);
-				break;
-
 			case UIO_SYSSPACE:
 				if (uio->uio_rw == UIO_READ)
-					ptr = memcpy(cp, iov->iov_base, cnt);
-				else
 					ptr = memcpy(iov->iov_base, cp, cnt);
+				else
+					ptr = memcpy(cp, iov->iov_base, cnt);
+
 				if (!ptr)
-					return(errno);
+					return (errno);			
+				break;
 		}
 		iov->iov_base = (caddr_t)iov->iov_base + cnt;
 		iov->iov_len -= cnt;
@@ -151,7 +147,7 @@ int socreate(int dom, void *sp, int type, int proto)
 	
 	so->so_type = type;
 	so->so_proto = prm;
-	so->so_rcv.sb_pop = create_sem(0, "so_rcv sem");
+	so->so_rcv.sb_pop = create_sem(0, "so_rcv.sb_pop sem");
 	so->so_timeo      = create_sem(0, "so_timeo");
 
 #ifdef _KERNEL_MODE
@@ -372,8 +368,9 @@ int writeit(void *sp, struct iovec *iov, int flags)
 {
 	struct socket *so = (struct socket *)sp;
 	struct uio auio;
-	int rv;
-	
+	int len = iov->iov_len;
+	int error;
+			
 	auio.uio_iov = iov;
 	auio.uio_iovcnt = 1;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -381,9 +378,10 @@ int writeit(void *sp, struct iovec *iov, int flags)
 	auio.uio_offset = 0;
 	auio.uio_resid = iov->iov_len;
 
-	rv = sosend(so, NULL, &auio, NULL, NULL, flags);
-	printf("writeit: sosend = %d\n", rv);
-	return rv;
+	error = sosend(so, NULL, &auio, NULL, NULL, flags);
+	if (error < 0)
+		return error;
+	return (len - auio.uio_resid);
 }
 
 int sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
@@ -525,7 +523,6 @@ nopages:
 				so->so_options |= SO_DONTROUTE;
 
 			/* XXX - locking */
-			printf("sosend: calling PRU_SEND\n");
 			error = (*so->so_proto->pr_userreq)(so, (flags & MSG_OOB) ? PRU_SENDOOB: PRU_SEND,
 						        top, addr, control);
 
@@ -555,7 +552,9 @@ int readit(void *sp, struct iovec *iov, int *flags)
 {
 	struct socket *so = (struct socket *)sp;
 	struct uio auio;
-
+	int len = iov->iov_len;
+	int error;
+		
 	auio.uio_iov = iov;
 	auio.uio_iovcnt = 1;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -563,7 +562,10 @@ int readit(void *sp, struct iovec *iov, int *flags)
 	auio.uio_offset = 0;
 	auio.uio_resid = iov->iov_len;
 
-	return soreceive(so, NULL, &auio, NULL, NULL, flags);
+	error = soreceive(so, NULL, &auio, NULL, NULL, flags);
+	if (error != 0)
+		return error;
+	return (len - auio.uio_resid);
 }
 
 int recvit(void *sp, struct msghdr *mp, caddr_t namelenp, int *retsize)
@@ -650,23 +652,45 @@ int soreceive(struct socket *so, struct mbuf **paddr, struct uio *uio, struct mb
 	if (flagsp)
 		flags = (*flagsp) & ~MSG_EOR;
 
-	/* XXX - handle OOB data */
-
+	if (flags & MSG_OOB) {
+		m = m_get(MT_DATA);
+		error = (*pr->pr_userreq)(so, PRU_RCVOOB, m, (struct mbuf*)(flags & MSG_PEEK), NULL);
+		if (error)
+			goto bad;
+		do {
+			error = uiomove(mtod(m, caddr_t), (int) min(uio->uio_resid, m->m_len), uio);
+			m = m_free(m);
+		} while (uio->uio_resid && error == 0 && m);
+bad:
+		if (m)
+			m_freem(m);
+		return error;
+	}
+	if (mp)
+		*mp = NULL;
+	if (so->so_state & SS_ISCONFIRMING && uio->uio_resid)
+		(*pr->pr_userreq)(so, PRU_RCVD, NULL, NULL, NULL);
+		
 restart:
 	/* XXX - locking */
 	m = so->so_rcv.sb_mb;
-
-	/* if we don't want to wait for incoming packets, let's check the
-	 * the current buffer state if it does fit our requirements
-	 */ 
-	/* XXX - I fixed a warning here, but is this expression correct anyway?
-	 * the last part makes me wonder... -- axeld.
+	/*
+	 * If we have less data than requested, block awaiting more
+	 * (subject to any timeout) if:
+	 *   1. the current count is less than the low water mark,
+	 *   2. MSG_WAITALL is set, and it is possible to do the entire
+	 *	receive operation at once if we block (resid <= hiwat), or
+	 *   3. MSG_DONTWAIT is not set.
+	 * If MSG_WAITALL is set but resid is larger than the receive buffer,
+	 * we have to do the receive in sections, and thus risk returning
+	 * a short count if a timeout or signal occurs after we start.
 	 */
-	if (!m || ((flags & MSG_DONTWAIT) == 0
-			&& so->so_rcv.sb_cc < uio->uio_resid
-			&& (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
-				((flags & MSG_WAITALL) && (uio->uio_resid <= so->so_rcv.sb_hiwat)))
-			&& !m->m_nextpkt && (pr->pr_flags & PR_ATOMIC) == 0)) {
+	if (m == NULL || (((flags & MSG_DONTWAIT) == 0 &&
+	    so->so_rcv.sb_cc < uio->uio_resid) &&
+	    (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
+	    ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+	    m->m_nextpkt == 0 && (pr->pr_flags & PR_ATOMIC) == 0)) {
+
 		if (so->so_error) {
 			if (m)
 				goto dontblock;
@@ -724,6 +748,31 @@ dontblock:
 			}
 		}
 	}
+	while (m && m->m_type == MT_CONTROL && error == 0) {
+		if ((flags & MSG_PEEK)) {
+			if (controlp)
+				*controlp = m_copym(m, 0, m->m_len);
+			m = m->m_next;
+		} else {
+			sbfree(&so->so_rcv, m);
+			if (controlp) {
+				/* XXX technically we should look at control rights here,
+				 * but so far we have no notion of them...
+				 */
+				*controlp = m;
+				so->so_rcv.sb_mb = m->m_next;
+				m->m_next = NULL;
+				m = so->so_rcv.sb_mb;
+			} else {
+				MFREE(m, so->so_rcv.sb_mb);
+				m = so->so_rcv.sb_mb;
+			}
+		}
+		if (controlp) {
+			orig_resid = 0;
+			controlp = &(*controlp)->m_next;
+		}
+	}
 	if (m) {
 		if ((flags & MSG_PEEK) == 0)
 			m->m_nextpkt = nextrecord;
@@ -731,7 +780,6 @@ dontblock:
 		if (type == MT_OOBDATA)
 			flags |= MSG_OOB;
 	}
-
 	moff = 0;
 	offset = 0;
 	while (m && uio->uio_resid > 0 && error == 0) {
@@ -773,7 +821,7 @@ dontblock:
 					m->m_nextpkt = nextrecord;
 			}
 		} else {
-			if (flags & MSG_PEEK)
+			if ((flags & MSG_PEEK))
 				moff += len;
 			else {
 				if (mp)
@@ -798,7 +846,18 @@ dontblock:
 		}
 		if (flags & MSG_EOR)
 			break;
-		/* XXX - wait for more data if reqd */
+		while (flags & MSG_WAITALL && m == NULL && uio->uio_resid > 0 &&
+		       !sosendallatonce(so) && !nextrecord) {
+			if (so->so_error || so->so_state & SS_CANTRCVMORE)
+				break;
+			error = sbwait(&so->so_rcv);
+			if (error) {
+				/* sbunlock */
+				return 0;
+			}
+			if ((m = so->so_rcv.sb_mb))
+				nextrecord = m->m_nextpkt;
+		}
 	}
 
 	if (m && pr->pr_flags & PR_ATOMIC) {
@@ -813,11 +872,12 @@ dontblock:
 			(*pr->pr_userreq)(so, PRU_RCVD, (struct mbuf*)flags, NULL, NULL);
 	}
 	if (orig_resid == uio->uio_resid && orig_resid &&
-		(flags & MSG_EOR) == 0 && (so->so_state & SS_CANTRCVMORE) == 0)
+		(flags & MSG_EOR) == 0 && (so->so_state & SS_CANTRCVMORE) == 0) {
+		/* sbunlock */
 		goto restart;
-	
+	}
 	if (flagsp)
-		*flagsp = flags;
+		*flagsp |= flags;
 
 release:
 	return error;
@@ -858,6 +918,13 @@ int soclose(void *sp)
 	struct socket *so = (struct socket*)sp;
 	int error = 0;
 
+	if (so->so_options & SO_ACCEPTCONN) {
+		while (so->so_q0)
+			(*so->so_proto->pr_userreq)(so, PRU_ABORT, NULL, NULL, NULL);
+		while (so->so_q)
+			(*so->so_proto->pr_userreq)(so, PRU_ABORT, NULL, NULL, NULL);
+	}
+			
 	if (so->so_pcb == NULL)
 		goto discard;
 
@@ -866,6 +933,14 @@ int soclose(void *sp)
 			error = sodisconnect(so);
 			if (error)
 				goto drop;
+		}
+		if (so->so_options & SO_LINGER) {
+			if ((so->so_state & SS_ISDISCONNECTING) &&
+			    (so->so_state & SS_NBIO))
+				goto drop;
+			while (so->so_state & SS_ISCONNECTED)
+				if ((error = nsleep(so->so_timeo, "lingering close", so->so_linger)))
+					break;
 		}
 	}
 
@@ -920,7 +995,6 @@ bad:
 void sofree(struct socket *so)
 {
 	if (so->so_pcb) {
-		printf("Can't free - still have a pcb!\n");
 		return;
 	}
 
@@ -931,6 +1005,8 @@ void sofree(struct socket *so)
 		/* we need to handle this! */
 		so->so_head = NULL;
 	}
+	sbrelease(&so->so_snd);
+	sorflush(so);
 	
 	delete_sem(so->so_rcv.sb_pop);
 	delete_sem(so->so_timeo);
@@ -1290,6 +1366,6 @@ void wakeup(sem_id chan)
 	/* we should release as many as are waiting...
 	 * the number 100 is just something that shuld be large enough...
 	 */
-	release_sem_etc(chan, 100, B_DO_NOT_RESCHEDULE);
+	release_sem_etc(chan, 100, B_CAN_INTERRUPT | B_DO_NOT_RESCHEDULE);
 }
 
