@@ -7,7 +7,14 @@ OBJS = ufunc.o
 
 SUBDIRS=ifconfig route ping arp traceroute
 
-TGTS=	test1 test2 test3 select_test tcp_test at_srv at_client
+TGTS=	test1 \
+	test2 \
+	test3 \
+	select_test \
+	select_test2 \
+	tcp_test \
+	at_srv \
+	at_client
 
 all:	$(TGTS)
 	@for i in $(SUBDIRS); do \
@@ -31,6 +38,9 @@ test3:	libnet $(OBJS) test3.o
 
 select_test:	libnet $(OBJS) select_test.o
 	@$(CC) $(LDFLAGS) -o select_test $(OBJS) select_test.o
+
+select_test2:    libnet $(OBJS) select_test2.o
+	@$(CC) $(LDFLAGS) -o select_test2 $(OBJS) select_test2.o 
 
 tcp_test: libnet $(OBJS) tcp_test.o
 	@$(CC) $(LDFLAGS) -o tcp_test $(OBJS) tcp_test.o
