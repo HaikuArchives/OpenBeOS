@@ -37,7 +37,7 @@ public:
    */
   BNodeInfo();
   //! The Constuctor
-  /*! This just calls SetTo 
+  /*! @see SetTo(BNode *node)
    * @param node The node to gather information on. Can be any favour */
   BNodeInfo(BNode *node);
   virtual ~BNodeInfo();
@@ -54,20 +54,32 @@ public:
    */
   status_t InitCheck() const;
 
+  //! Gets the nodes MIME type
   virtual status_t GetType(char *type) const;
+  //! Sets the nodes MIME type
   virtual status_t SetType(const char *type);
+  //! Gets the nodes icon
   virtual status_t GetIcon(BBitmap *icon, icon_size k = B_LARGE_ICON) const;
+  //! Sets the nodes icon
   virtual status_t SetIcon(const BBitmap *icon, icon_size k = B_LARGE_ICON);
 
+  //! Gets the application which will open the node when a user double-clicks
   status_t GetPreferredApp(char *signature,
 						   app_verb verb = B_OPEN) const;
+  //! Sets the application which will open the node.
   status_t SetPreferredApp(const char *signature,
 						   app_verb verb = B_OPEN);
+  //! Gets a entry_ref which may point to an application which will load when
+  //! the user double clicks
   status_t GetAppHint(entry_ref *ref) const;
+  //! Sets the entry_reg which should point to the app you wish to load when
+  //! node (icon in tracker) is double clicked
   status_t SetAppHint(const entry_ref *ref);
 
+  //! Gets the icon which tracker displays
   status_t GetTrackerIcon(BBitmap *icon,
 						  icon_size k = B_LARGE_ICON) const;
+  //! Sets the icon which tracker will desplay
   static status_t GetTrackerIcon(const entry_ref *ref,
 								 BBitmap *icon,
 								 icon_size k = B_LARGE_ICON);
@@ -82,7 +94,7 @@ private:
   BNodeInfo(const BNodeInfo &);
 
   BNode *fNode; //< The Node in question
-  uint32 _reserved[2];
+  uint32 _reserved[2]; //< FBC
   status_t fCStatus; //< The status to return from InitCheck
 };
 
