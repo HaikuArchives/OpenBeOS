@@ -72,8 +72,24 @@ Volume::Mount(const char *deviceName,uint32 flags)
 		if (init_cache_for_device(fDevice, NumBlocks()) == B_OK) {
 			fRootNode = new Inode(this,ToVnode(Root()));
 
-			if (fRootNode->InitCheck() == B_OK) {
+			if (fRootNode && fRootNode->InitCheck() == B_OK) {
 				if (new_vnode(fID,ToVnode(Root()),(void *)fRootNode) == B_OK) {
+					// try to get indices root dir
+					
+					// question: why doesn't get_vnode() work here??
+					// it returns an error, and bfs_read_vnode is never called...
+					fIndicesNode = new Inode(this,ToVnode(Indices()));
+					if (fIndicesNode == NULL
+						|| fIndicesNode->InitCheck() < B_OK
+						|| !fIndicesNode->IsDirectory()) {
+						dprintf("bfs: volume doesn't have indices!\n");
+
+						if (fIndicesNode) {
+							// in this case, BFS should be mounted as read-only
+							fIndicesNode = NULL;
+						}
+					}
+
 					// all went fine
 					return B_OK;
 				} else
@@ -100,7 +116,11 @@ Volume::Mount(const char *deviceName,uint32 flags)
 
 status_t
 Volume::Unmount()
-{	
+{
+	//if (fIndicesNode)
+	//	put_vnode(fID,ToVnode(Indices()));
+	delete fIndicesNode;
+
 	remove_cached_device_blocks(fDevice,NO_WRITES);
 	close(fDevice);
 

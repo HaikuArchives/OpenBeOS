@@ -59,14 +59,14 @@ struct disk_super_block
 	int32		pad[8];
 };
 
-#define SUPER_BLOCK_FS_LENDIAN		0x42494745 /* BIGE */
+#define SUPER_BLOCK_FS_LENDIAN		'BIGE'		/* BIGE */
 
-#define SUPER_BLOCK_MAGIC1			0x42465331 /* BFS1 */
+#define SUPER_BLOCK_MAGIC1			'BFS1'		/* BFS1 */
 #define SUPER_BLOCK_MAGIC2			0xdd121031
 #define SUPER_BLOCK_MAGIC3			0x15b6830e
 
-#define SUPER_BLOCK_FLAGS_BFS_CLEAN 0x434c454e /* CLEN */
-#define SUPER_BLOCK_FLAGS_BFS_DIRTY	0x44495254 /* DIRT */
+#define SUPER_BLOCK_FLAGS_BFS_CLEAN 'CLEN'		/* CLEN */
+#define SUPER_BLOCK_FLAGS_BFS_DIRTY	'DIRT'		/* DIRT */
 
 //**************************************
 

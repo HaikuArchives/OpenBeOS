@@ -35,6 +35,7 @@ class Volume
 		block_run			Root() const { return fSuperBlock.root_dir; }
 		Inode				*RootNode() const { return fRootNode; }
 		block_run			Indices() const { return fSuperBlock.indices; }
+		Inode				*IndicesNode() const { return fIndicesNode; }
 		int					Device() const { return fDevice; }
 
 		nspace_id			ID() const { return fID; }
@@ -60,6 +61,7 @@ class Volume
 		disk_super_block	fSuperBlock;
 		
 		Inode				*fRootNode;
+		Inode				*fIndicesNode;
 };
 
 #endif	/* VOLUME_H */
