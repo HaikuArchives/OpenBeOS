@@ -177,15 +177,15 @@ enum {
 	}
 
 #define MGETHDR(n, type) \
-        n = (struct mbuf*) pool_get(mbpool); \
-        if (n) { \
-                (n)->m_type = (type); \
-                (n)->m_next = (struct mbuf*)NULL; \
-                (n)->m_nextpkt = (struct mbuf*)NULL; \
-                (n)->m_data = (n)->m_pktdat; \
-                (n)->m_flags = M_PKTHDR; \
-                (n)->m_cksum = 0; \
-        }
+	n = (struct mbuf*) pool_get(mbpool); \
+	if (n) { \
+		(n)->m_type = (type); \
+		(n)->m_next = (struct mbuf*)NULL; \
+		(n)->m_nextpkt = (struct mbuf*)NULL; \
+		(n)->m_data = (n)->m_pktdat; \
+		(n)->m_flags = M_PKTHDR; \
+		(n)->m_cksum = 0; \
+	}
 
 #define _MEXTREMOVE(m) do { \
 	if ((m)->m_flags & M_CLUSTER) { \
