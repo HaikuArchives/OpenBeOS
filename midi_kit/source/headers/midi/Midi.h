@@ -71,9 +71,13 @@ protected:
 
 private:
 	virtual void Run();
+	static int32 _RunThread(void * data);
 
 private:
 	BList * _con_list;
+	thread_id _run_thread_id;
+	bool _is_running;
+	bool _keep_running;
 	// Add size padding here.
 };
 
