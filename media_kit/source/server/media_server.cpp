@@ -6,6 +6,8 @@
 #include <Autolock.h>
 #include "ServerInterface.h"
 #include "BufferManager.h"
+#include "NodeManager.h"
+#include "AppManager.h"
 
 /*
  *
@@ -13,7 +15,7 @@
  * Started by Marcus Overhagen <marcus@overhagen.de> on 2001-10-25
  * 
  * Communication with the OpenBeOS libmedia.so is done using BMessages 
- * sent to the server application, handled in LibInterface_XXX()
+ * sent to the server application, handled in XXX()
  * functions. A simple BMessage reply is beeing send back.
  *
  *
@@ -27,54 +29,6 @@
 
 #define REPLY_TIMEOUT ((bigtime_t)100000)
 
-class CAppManager
-{
-public:
-	CAppManager();
-	~CAppManager();
-	bool HasTeam(team_id);
-	status_t RegisterTeam(team_id, BMessenger);
-	status_t UnregisterTeam(team_id);
-	void BroadcastMessage(BMessage *msg, bigtime_t timeout);
-	void HandleBroadcastError(BMessage *, BMessenger &, team_id team, bigtime_t timeout);
-	status_t LoadState();
-	status_t SaveState();
-private:
-	struct ListItem {
-		team_id team;
-		BMessenger messenger;
-	};
-	BList 	mList;
-	BLocker	mLocker;
-};
-
-class CBufferManager;
-
-class CNodeManager
-{
-public:
-	CNodeManager();
-	~CNodeManager();
-	status_t RegisterNode(BMessenger, media_node &, char const *, long *, char const *, long, char const *, long, media_type, media_type);
-	status_t UnregisterNode(long);
-	status_t GetNodes(BMessage &, char const *);
-	status_t GetLiveNode(BMessage &, char const *, long);
-	status_t GetLiveNodes(BMessage &, char const *, media_format const *, media_format const *, char const *, unsigned long);
-	status_t FindNode(long, media_node &);
-	status_t FindSaveInfo(long, char const **, long *, long *, char const **);
-	status_t FindDormantNodeFor(long, dormant_node_info *);
-	status_t FindNodesFor(long, long, BMessage &, char const *);
-	status_t FindNodesForPort(long, BMessage &, char const *);
-	status_t UnregisterTeamNodes(long, BMessage &, char const *, long *, CBufferManager *);
-	status_t IncrementGlobalRefCount(long);
-	status_t DumpGlobalReferences(BMessage &, char const *);
-	status_t DecrementGlobalRefCount(long, BMessage *);
-	status_t BroadcastMessage(long, void *, long, long long);
-	status_t LoadState();
-	status_t SaveState();
-};
-
-
 class CServerApp : BApplication
 {
 public:
@@ -85,42 +39,42 @@ public:
 	void RegisterBuffer(BMessage *msg);
 	void UnregisterBuffer(BMessage *msg);
 
-	void LibInterface_GetNodeID(BMessage *);
-	void LibInterface_FindRunningInstances(BMessage *);
-	void LibInterface_BufferGroupReg(BMessage *);
-	void LibInterface_GetLatentInfo(BMessage *);
-	void LibInterface_GetDormantFileFormats(BMessage *);
-	void LibInterface_GetDormantFlavor(BMessage *);
-	void LibInterface_BroadcastMessage(BMessage *);
-	void LibInterface_ReleaseNodeReference(BMessage *);
-	void LibInterface_SetRealtimeFlags(BMessage *);
-	void LibInterface_GetRealtimeFlags(BMessage *);
-	void LibInterface_InstantiatePersistentNode(BMessage *);
-	void LibInterface_SniffFile(BMessage *);
-	void LibInterface_QueryLatents(BMessage *);
-	void LibInterface_RegisterApp(BMessage *);
-	void LibInterface_UnregisterApp(BMessage *);
-	void LibInterface_RegisterNode(BMessage *);
-	void LibInterface_UnregisterNode(BMessage *);
-	void LibInterface_SetDefault(BMessage *);
-	void LibInterface_AcquireNodeReference(BMessage *);
-	void LibInterface_RequestNotifications(BMessage *);
-	void LibInterface_CancelNotifications(BMessage *);
-	void LibInterface_SetOutputBuffers(BMessage *);
-	void LibInterface_ReclaimOutputBuffers(BMessage *);
-	void LibInterface_OrphanReclaimableBuffers(BMessage *);
-	void LibInterface_SetTimeSource(BMessage *);
-	void LibInterface_QueryNodes(BMessage *);
-	void LibInterface_GetDormantNode(BMessage *);
-	void LibInterface_FormatChanged(BMessage *);
-	void LibInterface_GetDefaultInfo(BMessage *);
-	void LibInterface_GetRunningDefault(BMessage *);
-	void LibInterface_SetRunningDefault(BMessage *);
-	void LibInterface_TypeItemOp(BMessage *);
-	void LibInterface_FormatOp(BMessage *);
+	void GetNodeID(BMessage *);
+	void FindRunningInstances(BMessage *);
+	void BufferGroupReg(BMessage *);
+	void GetLatentInfo(BMessage *);
+	void GetDormantFileFormats(BMessage *);
+	void GetDormantFlavor(BMessage *);
+	void BroadcastMessage(BMessage *);
+	void ReleaseNodeReference(BMessage *);
+	void SetRealtimeFlags(BMessage *);
+	void GetRealtimeFlags(BMessage *);
+	void InstantiatePersistentNode(BMessage *);
+	void SniffFile(BMessage *);
+	void QueryLatents(BMessage *);
+	void RegisterApp(BMessage *);
+	void UnregisterApp(BMessage *);
+	void RegisterNode(BMessage *);
+	void UnregisterNode(BMessage *);
+	void SetDefault(BMessage *);
+	void AcquireNodeReference(BMessage *);
+	void RequestNotifications(BMessage *);
+	void CancelNotifications(BMessage *);
+	void SetOutputBuffers(BMessage *);
+	void ReclaimOutputBuffers(BMessage *);
+	void OrphanReclaimableBuffers(BMessage *);
+	void SetTimeSource(BMessage *);
+	void QueryNodes(BMessage *);
+	void GetDormantNode(BMessage *);
+	void FormatChanged(BMessage *);
+	void GetDefaultInfo(BMessage *);
+	void GetRunningDefault(BMessage *);
+	void SetRunningDefault(BMessage *);
+	void TypeItemOp(BMessage *);
+	void FormatOp(BMessage *);
 
-	void LibInterface_SetVolume(BMessage *);
-	void LibInterface_GetVolume(BMessage *);
+	void SetVolume(BMessage *);
+	void GetVolume(BMessage *);
 
 /* functionality not yet implemented
 00014a00 T _ServerApp::_ServerApp(void)
@@ -145,12 +99,12 @@ public:
 
 private:
 	BufferManager *fBufferManager;
-	CAppManager *mAppManager;
-	CNodeManager *mNodeManager;
-	BLocker *mLocker;
+	AppManager *fAppManager;
+	NodeManager *fNodeManager;
+	BLocker *fLocker;
 	
-	float mVolumeLeft;
-	float mVolumeRight;
+	float fVolumeLeft;
+	float fVolumeRight;
 
 	void MessageReceived(BMessage *msg);
 	typedef BApplication inherited;
@@ -159,11 +113,11 @@ private:
 CServerApp::CServerApp()
  	: BApplication(NEW_MEDIA_SERVER_SIGNATURE),
  	fBufferManager(new BufferManager),
-	mAppManager(new CAppManager),
-	mNodeManager(new CNodeManager),
-	mLocker(new BLocker),
-	mVolumeLeft(0.0),
-	mVolumeRight(0.0)
+	fAppManager(new AppManager),
+	fNodeManager(new NodeManager),
+	fLocker(new BLocker("server locker")),
+	fVolumeLeft(0.0),
+	fVolumeRight(0.0)
 {
 	//load volume settings from config file
 	//mVolumeLeft = ???;
@@ -173,9 +127,9 @@ CServerApp::CServerApp()
 CServerApp::~CServerApp()
 {
 	delete fBufferManager;
-	delete mAppManager;
-	delete mNodeManager;
-	delete mLocker;
+	delete fAppManager;
+	delete fNodeManager;
+	delete fLocker;
 }
 
 void
@@ -194,193 +148,193 @@ CServerApp::UnregisterBuffer(BMessage *msg)
 }
 
 
-void CServerApp::LibInterface_GetNodeID(BMessage *msg)
+void CServerApp::GetNodeID(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_FindRunningInstances(BMessage *msg)
+void CServerApp::FindRunningInstances(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_BufferGroupReg(BMessage *msg)
+void CServerApp::BufferGroupReg(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_GetLatentInfo(BMessage *msg)
+void CServerApp::GetLatentInfo(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_GetDormantFileFormats(BMessage *msg)
+void CServerApp::GetDormantFileFormats(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_GetDormantFlavor(BMessage *msg)
+void CServerApp::GetDormantFlavor(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_BroadcastMessage(BMessage *msg)
+void CServerApp::BroadcastMessage(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_ReleaseNodeReference(BMessage *msg)
+void CServerApp::ReleaseNodeReference(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_SetRealtimeFlags(BMessage *msg)
+void CServerApp::SetRealtimeFlags(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_GetRealtimeFlags(BMessage *msg)
+void CServerApp::GetRealtimeFlags(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_InstantiatePersistentNode(BMessage *msg)
+void CServerApp::InstantiatePersistentNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_SniffFile(BMessage *msg)
+void CServerApp::SniffFile(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_QueryLatents(BMessage *msg)
+void CServerApp::QueryLatents(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_RegisterApp(BMessage *msg)
+void CServerApp::RegisterApp(BMessage *msg)
 {
 	team_id team;
 	msg->FindInt32("team", &team);
-	mAppManager->RegisterTeam(team, msg->ReturnAddress());
+	fAppManager->RegisterTeam(team, msg->ReturnAddress());
 
 	BMessage reply(B_OK);
 	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 
 
-void CServerApp::LibInterface_UnregisterApp(BMessage *msg)
+void CServerApp::UnregisterApp(BMessage *msg)
 {
 	team_id team;
 	msg->FindInt32("team", &team);
-	mAppManager->UnregisterTeam(team);
+	fAppManager->UnregisterTeam(team);
 
 	BMessage reply(B_OK);
 	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 
 
-void CServerApp::LibInterface_RegisterNode(BMessage *msg)
+void CServerApp::RegisterNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_UnregisterNode(BMessage *msg)
+void CServerApp::UnregisterNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_SetDefault(BMessage *msg)
+void CServerApp::SetDefault(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_AcquireNodeReference(BMessage *msg)
+void CServerApp::AcquireNodeReference(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_RequestNotifications(BMessage *msg)
+void CServerApp::RequestNotifications(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_CancelNotifications(BMessage *msg)
+void CServerApp::CancelNotifications(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_SetOutputBuffers(BMessage *msg)
+void CServerApp::SetOutputBuffers(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_ReclaimOutputBuffers(BMessage *msg)
+void CServerApp::ReclaimOutputBuffers(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_OrphanReclaimableBuffers(BMessage *msg)
+void CServerApp::OrphanReclaimableBuffers(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_SetTimeSource(BMessage *msg)
+void CServerApp::SetTimeSource(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_QueryNodes(BMessage *msg)
+void CServerApp::QueryNodes(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_GetDormantNode(BMessage *msg)
+void CServerApp::GetDormantNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_FormatChanged(BMessage *msg)
+void CServerApp::FormatChanged(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_GetDefaultInfo(BMessage *msg)
+void CServerApp::GetDefaultInfo(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_GetRunningDefault(BMessage *msg)
+void CServerApp::GetRunningDefault(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_SetRunningDefault(BMessage *msg)
+void CServerApp::SetRunningDefault(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_TypeItemOp(BMessage *msg)
+void CServerApp::TypeItemOp(BMessage *msg)
 {
 }
 
 
-void CServerApp::LibInterface_FormatOp(BMessage *msg)
+void CServerApp::FormatOp(BMessage *msg)
 {
 }
 
-void CServerApp::LibInterface_SetVolume(BMessage *msg)
+void CServerApp::SetVolume(BMessage *msg)
 {
 	float left;
 	float right;
 	msg->FindFloat("left", &left);
 	msg->FindFloat("right", &right);
 
-	mLocker->Lock();
-	mVolumeLeft = left;
-	mVolumeRight = right;
-	mLocker->Unlock();
+	fLocker->Lock();
+	fVolumeLeft = left;
+	fVolumeRight = right;
+	fLocker->Unlock();
 
 	//save volume settings to config file
 	// ??? = left;
@@ -390,14 +344,14 @@ void CServerApp::LibInterface_SetVolume(BMessage *msg)
 	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 
-void CServerApp::LibInterface_GetVolume(BMessage *msg)
+void CServerApp::GetVolume(BMessage *msg)
 {
 	BMessage reply(B_OK);
 
-	mLocker->Lock();
-	reply.AddFloat("left", mVolumeLeft);
-	reply.AddFloat("right", mVolumeRight);
-	mLocker->Unlock();
+	fLocker->Lock();
+	reply.AddFloat("left", fVolumeLeft);
+	reply.AddFloat("right", fVolumeRight);
+	fLocker->Unlock();
 
 	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
@@ -411,41 +365,41 @@ void CServerApp::MessageReceived(BMessage *msg)
 		case MEDIA_SERVER_UNREGISTER_BUFFER: UnregisterBuffer(msg);
 	
 	
-		case MEDIA_SERVER_GET_NODE_ID: LibInterface_GetNodeID(msg); break;
-		case MEDIA_SERVER_FIND_RUNNING_INSTANCES: LibInterface_FindRunningInstances(msg); break;
-		case MEDIA_SERVER_BUFFER_GROUP_REG: LibInterface_BufferGroupReg(msg); break;
-		case MEDIA_SERVER_GET_LATENT_INFO: LibInterface_GetLatentInfo(msg); break;
-		case MEDIA_SERVER_GET_DORMANT_FILE_FORMATS: LibInterface_GetDormantFileFormats(msg); break;
-		case MEDIA_SERVER_GET_GETDORMANTFLAVOR: LibInterface_GetDormantFlavor(msg); break;
-		case MEDIA_SERVER_BROADCAST_MESSAGE: LibInterface_BroadcastMessage(msg); break;
-		case MEDIA_SERVER_RELEASE_NODE_REFERENCE: LibInterface_ReleaseNodeReference(msg); break;
-		case MEDIA_SERVER_SET_REALTIME_FLAGS: LibInterface_SetRealtimeFlags(msg); break;
-		case MEDIA_SERVER_GET_REALTIME_FLAGS: LibInterface_GetRealtimeFlags(msg); break;
-		case MEDIA_SERVER_INSTANTIATE_PERSISTENT_NODE: LibInterface_InstantiatePersistentNode(msg); break;
-		case MEDIA_SERVER_SNIFF_FILE: LibInterface_SniffFile(msg); break;
-		case MEDIA_SERVER_QUERY_LATENTS: LibInterface_QueryLatents(msg); break;
-		case MEDIA_SERVER_REGISTER_APP: LibInterface_RegisterApp(msg); break;
-		case MEDIA_SERVER_UNREGISTER_APP: LibInterface_UnregisterApp(msg); break;
-		case MEDIA_SERVER_REGISTER_NODE: LibInterface_RegisterNode(msg); break;
-		case MEDIA_SERVER_UNREGISTER_NODE: LibInterface_UnregisterNode(msg); break;
-		case MEDIA_SERVER_SET_DEFAULT: LibInterface_SetDefault(msg); break;
-		case MEDIA_SERVER_ACQUIRE_NODE_REFERENCE: LibInterface_AcquireNodeReference(msg); break;
-		case MEDIA_SERVER_REQUEST_NOTIFICATIONS: LibInterface_RequestNotifications(msg); break;
-		case MEDIA_SERVER_CANCEL_NOTIFICATIONS: LibInterface_CancelNotifications(msg); break;
-		case MEDIA_SERVER_SET_OUTPUT_BUFFERS: LibInterface_SetOutputBuffers(msg); break;
-		case MEDIA_SERVER_RECLAIM_OUTPUT_BUFFERS: LibInterface_ReclaimOutputBuffers(msg); break;
-		case MEDIA_SERVER_ORPHAN_RECLAIMABLE_BUFFERS: LibInterface_OrphanReclaimableBuffers(msg); break;
-		case MEDIA_SERVER_SET_TIME_SOURCE: LibInterface_SetTimeSource(msg); break;
-		case MEDIA_SERVER_QUERY_NODES: LibInterface_QueryNodes(msg); break;
-		case MEDIA_SERVER_GET_DORMANT_NODE: LibInterface_GetDormantNode(msg); break;
-		case MEDIA_SERVER_FORMAT_CHANGED: LibInterface_FormatChanged(msg); break;
-		case MEDIA_SERVER_GET_DEFAULT_INFO: LibInterface_GetDefaultInfo(msg); break;
-		case MEDIA_SERVER_GET_RUNNING_DEFAULT: LibInterface_GetRunningDefault(msg); break;
-		case MEDIA_SERVER_SET_RUNNING_DEFAULT: LibInterface_SetRunningDefault(msg); break;
-		case MEDIA_SERVER_TYPE_ITEM_OP: LibInterface_TypeItemOp(msg); break;
-		case MEDIA_SERVER_FORMAT_OP: LibInterface_FormatOp(msg); break;
-		case MEDIA_SERVER_SET_VOLUME: LibInterface_SetVolume(msg); break;
-		case MEDIA_SERVER_GET_VOLUME: LibInterface_GetVolume(msg); break;
+		case MEDIA_SERVER_GET_NODE_ID: GetNodeID(msg); break;
+		case MEDIA_SERVER_FIND_RUNNING_INSTANCES: FindRunningInstances(msg); break;
+		case MEDIA_SERVER_BUFFER_GROUP_REG: BufferGroupReg(msg); break;
+		case MEDIA_SERVER_GET_LATENT_INFO: GetLatentInfo(msg); break;
+		case MEDIA_SERVER_GET_DORMANT_FILE_FORMATS: GetDormantFileFormats(msg); break;
+		case MEDIA_SERVER_GET_GETDORMANTFLAVOR: GetDormantFlavor(msg); break;
+		case MEDIA_SERVER_BROADCAST_MESSAGE: BroadcastMessage(msg); break;
+		case MEDIA_SERVER_RELEASE_NODE_REFERENCE: ReleaseNodeReference(msg); break;
+		case MEDIA_SERVER_SET_REALTIME_FLAGS: SetRealtimeFlags(msg); break;
+		case MEDIA_SERVER_GET_REALTIME_FLAGS: GetRealtimeFlags(msg); break;
+		case MEDIA_SERVER_INSTANTIATE_PERSISTENT_NODE: InstantiatePersistentNode(msg); break;
+		case MEDIA_SERVER_SNIFF_FILE: SniffFile(msg); break;
+		case MEDIA_SERVER_QUERY_LATENTS: QueryLatents(msg); break;
+		case MEDIA_SERVER_REGISTER_APP: RegisterApp(msg); break;
+		case MEDIA_SERVER_UNREGISTER_APP: UnregisterApp(msg); break;
+		case MEDIA_SERVER_REGISTER_NODE: RegisterNode(msg); break;
+		case MEDIA_SERVER_UNREGISTER_NODE: UnregisterNode(msg); break;
+		case MEDIA_SERVER_SET_DEFAULT: SetDefault(msg); break;
+		case MEDIA_SERVER_ACQUIRE_NODE_REFERENCE: AcquireNodeReference(msg); break;
+		case MEDIA_SERVER_REQUEST_NOTIFICATIONS: RequestNotifications(msg); break;
+		case MEDIA_SERVER_CANCEL_NOTIFICATIONS: CancelNotifications(msg); break;
+		case MEDIA_SERVER_SET_OUTPUT_BUFFERS: SetOutputBuffers(msg); break;
+		case MEDIA_SERVER_RECLAIM_OUTPUT_BUFFERS: ReclaimOutputBuffers(msg); break;
+		case MEDIA_SERVER_ORPHAN_RECLAIMABLE_BUFFERS: OrphanReclaimableBuffers(msg); break;
+		case MEDIA_SERVER_SET_TIME_SOURCE: SetTimeSource(msg); break;
+		case MEDIA_SERVER_QUERY_NODES: QueryNodes(msg); break;
+		case MEDIA_SERVER_GET_DORMANT_NODE: GetDormantNode(msg); break;
+		case MEDIA_SERVER_FORMAT_CHANGED: FormatChanged(msg); break;
+		case MEDIA_SERVER_GET_DEFAULT_INFO: GetDefaultInfo(msg); break;
+		case MEDIA_SERVER_GET_RUNNING_DEFAULT: GetRunningDefault(msg); break;
+		case MEDIA_SERVER_SET_RUNNING_DEFAULT: SetRunningDefault(msg); break;
+		case MEDIA_SERVER_TYPE_ITEM_OP: TypeItemOp(msg); break;
+		case MEDIA_SERVER_FORMAT_OP: FormatOp(msg); break;
+		case MEDIA_SERVER_SET_VOLUME: SetVolume(msg); break;
+		case MEDIA_SERVER_GET_VOLUME: GetVolume(msg); break;
 		default:
 			printf("\nnew media server: unknown message received\n");
 			msg->PrintToStream();
@@ -460,92 +414,6 @@ int main()
 	return 0;
 }
 
-CAppManager::CAppManager()
-{
-}
-
-CAppManager::~CAppManager()
-{
-}
-
-bool CAppManager::HasTeam(team_id team)
-{
-	BAutolock lock(mLocker);
-	ListItem *item;
-	for (int32 i = 0; (item = (ListItem *)mList.ItemAt(i)) != NULL; i++)
-		if (item->team == team)
-			return true;
-	return false;
-}
-
-status_t CAppManager::RegisterTeam(team_id team, BMessenger messenger)
-{
-	printf("CAppManager::RegisterTeam %d\n",(int) team);
-
-	BAutolock lock(mLocker);
-	ListItem *item;
-
-	if (HasTeam(team))
-		return B_ERROR;
-
-	item = new ListItem;
-	item->team = team;
-	item->messenger = messenger;
-
-	return mList.AddItem(item) ? B_OK : B_ERROR;
-}
-
-status_t CAppManager::UnregisterTeam(team_id team)
-{
-	printf("CAppManager::UnregisterTeam %d\n",(int) team);
-
-	BAutolock lock(mLocker);
-	ListItem *item;
-	for (int32 i = 0; (item = (ListItem *)mList.ItemAt(i)) != NULL; i++)
-		if (item->team == team) {
-			if (mList.RemoveItem(item)) {
-				delete item;
-				return B_OK;
-			} else {
-				break;
-			}
-		}
-	return B_ERROR;
-}
-
-void CAppManager::BroadcastMessage(BMessage *msg, bigtime_t timeout)
-{
-	BAutolock lock(mLocker);
-	ListItem *item;
-	for (int32 i = 0; (item = (ListItem *)mList.ItemAt(i)) != NULL; i++)
-		if (B_OK != item->messenger.SendMessage(msg,(BHandler *)NULL,timeout))
-			HandleBroadcastError(msg, item->messenger, item->team, timeout);
-}
-
-void CAppManager::HandleBroadcastError(BMessage *msg, BMessenger &, team_id team, bigtime_t timeout)
-{
-	BAutolock lock(mLocker);
-	printf("error broadcasting team %d with message after %.3f seconds\n",int(team),timeout / 1000000.0);
-	msg->PrintToStream();	
-}
-
-status_t CAppManager::LoadState()
-{
-	return B_ERROR;
-}
-
-status_t CAppManager::SaveState()
-{
-	return B_ERROR;
-}
-
-CNodeManager::CNodeManager()
-{
-}
-
-CNodeManager::~CNodeManager()
-{
-}
 
 /*
 0001e260 T MBufferManager::MBufferManager(void)
