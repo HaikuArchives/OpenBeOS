@@ -29,13 +29,7 @@ void mbinit(void)
 		pool_init(&mbpool, sizeof(struct mbuf));
 	if (!clpool)
 		pool_init(&clpool, MCLBYTES);
-        
-        /* The max_linkhdr is the biggest link level header 
-         * we need to prepend to a packet before sending it.
-         *  
-         * Here we set it to 14, the size of an ethernet
-         * header (2 x 6-byte MAC address + 2-byte type)
-         */
+	/* XXX - move me to the protocol init routines! */
 	max_linkhdr = 14;
 	max_protohdr = 40;
 	max_hdr = max_linkhdr + max_protohdr;
