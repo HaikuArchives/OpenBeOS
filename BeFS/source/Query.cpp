@@ -15,10 +15,10 @@
 //		gcc -g Query.cpp
 // to compile it.
 //
-// Currently, it just understands || and &&, no brackets, etc., e.g.
-// something like "a||b&&c||d" will fit - whitespace is currently regarded
-// as part of the equation - thanks to !, and the brackets, we will have
-// to filter them out earlier.
+// Currently, it just understands || and &&, and brackets, etc., e.g.
+// something like "(a||b)&&c||d" will fit - whitespace is currently regarded
+// either as part of the equation or filtered out in ParseEquation().
+//
 // It puts out the infix notation of the parsed tree - including brackets
 // to make clear how the operator precedence was handled.
 // The whole equation is currently left unparsed in Equation::fAttribute.
@@ -69,7 +69,7 @@ Equation::Equation(char **expr)
 {
 	char *string = *expr;
 
-	while (*string && *string != '&' && *string != '|')
+	while (*string && *string != '&' && *string != '|' && *string != ')')
 		string++;
 	
 	int32 length = string - *expr + 1;
@@ -185,6 +185,8 @@ class Expression {
 		bool IsOr(char **expr);
 		bool IsAnd(char **expr);
 
+		void SkipWhitespace(char **expr);
+
 		Term *fTerm;
 };
 
@@ -207,8 +209,29 @@ Expression::~Expression()
 Term *
 Expression::ParseEquation(char **expr)
 {
-	//char *string = *expr;
+	SkipWhitespace(expr);
 
+	if (**expr == ')') {
+		// shouldn't be handled here
+		return NULL;
+	} else if (**expr == '(') {
+		(*expr)++;
+		SkipWhitespace(expr);
+		
+		Term *term = ParseOr(expr);
+		
+		SkipWhitespace(expr);
+		
+		if (**expr != ')') {
+			delete term;
+			return NULL;
+		}
+		(*expr)++;
+		
+		SkipWhitespace(expr);
+
+		return term;
+	}
 	// skip whitespace	
 	// handle brackets and "!" (not) here 
 
@@ -220,16 +243,21 @@ Term *
 Expression::ParseAnd(char **expr)
 {
 	Term *left = ParseEquation(expr);
-	Term *right = NULL;
 
 	while (IsAnd(expr)) {
-		if (right != NULL)
-			left = new Term(left,OP_AND,right);
+		Term *right = ParseAnd(expr);
 
-		right = ParseAnd(expr);
+		if (right != NULL) {
+			Term *parent = new Term(left,OP_AND,right);
+			if (parent == NULL) {
+				delete left;
+				delete right;
+
+				return NULL;
+			}
+			left = parent;
+		}
 	}
-	if (right != NULL)
-		return new Term(left,OP_AND,right);
 
 	return left;
 }
@@ -242,13 +270,19 @@ Expression::ParseOr(char **expr)
 	Term *right = NULL;
 
 	while (IsOr(expr)) {
-		if (right != NULL)
-			left = new Term(left,OP_OR,right);
-
 		right = ParseAnd(expr);
+
+		if (right != NULL) {
+			Term *parent = new Term(left,OP_OR,right);
+			if (parent == NULL) {
+				delete left;
+				delete right;
+
+				return NULL;
+			}
+			left = parent;
+		}
 	}
-	if (right != NULL)
-		return new Term(left,OP_OR,right);
 
 	return left;
 }
@@ -277,6 +311,15 @@ Expression::IsAnd(char **expr)
 		return true;
 	}
 	return false;
+}
+
+
+void 
+Expression::SkipWhitespace(char **expr)
+{
+	char *string = *expr;
+	while (*string == ' ' || *string == '\t') string++;
+	*expr = string;
 }
 
 
