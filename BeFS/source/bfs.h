@@ -3,6 +3,7 @@
 /* bfs - BFS definitions and helper functions
 **
 ** Copyright 2001 pinc Software. All Rights Reserved.
+** This file may be used under the terms of the OpenBeOS License.
 */
 
 
@@ -124,7 +125,7 @@ struct bfs_inode
 	uint32		type;				// attribute type
 	
 	int32		inode_size;
-	uint32		etc;				// for in-memory structures
+	uint32		etc;				// for in-memory structures (unused in OpenBeOS' fs)
 
 	union {
 		data_stream		data;
@@ -207,14 +208,6 @@ inline uint64 roundup(uint64 data, uint64 factor)
 /************************ block_run inline functions ************************/
 //	#pragma mark -
 
-
-/*	bool operator<(const block_run &run) const
-	{
-		return allocation_group < run.allocation_group
-			|| allocation_group == run.allocation_group
-			&& start < run.start;
-	}
-*/
 
 inline bool block_run::operator==(const block_run &run) const
 {

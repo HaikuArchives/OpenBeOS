@@ -4,15 +4,15 @@
 ** Roughly based on 'btlib' written by Marcus J. Ranum
 **
 ** Copyright (c) 2001-2002 pinc Software. All Rights Reserved.
+** This file may be used under the terms of the OpenBeOS License.
 */
 
 
+#include "Debug.h"
 #include "cpp.h"
 #include "BPlusTree.h"
 #include "Inode.h"
 #include "Stack.h"
-
-#include <Debug.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -20,6 +20,9 @@
 
 
 // Node Caching for the BPlusTree class
+//
+// with write support, there is the need for a function that allocates new
+// nodes by either returning empty nodes, or by growing the file's data stream
 //
 // Note: This code will fail if the block size is smaller than the node size!
 // Since BFS supports block sizes of 1024 bytes or greater, and the node size
@@ -78,7 +81,10 @@ CachedNode::SetTo(off_t offset,bool check)
 					|| !header->IsValidLink(fNode->overflow_link)
 					|| (int8 *)fNode->Values() + fNode->all_key_count * sizeof(off_t) >
 							(int8 *)fNode + fTree->fNodeSize) {
-					return NULL;}
+					FATAL(("bfs: invalid node read from offset %Ld, inode at %Ld\n",
+							offset,fTree->fStream->ID()));
+					return NULL;
+				}
 			}
 		}
 	}
@@ -134,7 +140,7 @@ BPlusTree::Initialize(int32 nodeSize)
 	if (fHeader == NULL) {
 		fHeader = (bplustree_header *)malloc(fNodeSize);
 		if (fHeader == NULL) {
-			dprintf("bfs: no memory for the b+tree header! Prepare to die...\n");
+			FATAL(("bfs: no memory for the b+tree header! Prepare to die...\n"));
 			return B_NO_MEMORY;
 		}
 	}
@@ -447,7 +453,7 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 	if (SeekDown(stack,key,keyLength) != B_OK)
 		return B_ERROR;
 
-	dprintf("bfs: BPlusTree::Insert() - shouldn't be here, not yet implemented!!\n");
+	FATAL(("bfs: BPlusTree::Insert() - shouldn't be here, not yet implemented!!\n"));
 
 //	CachedNode freeNode(this,BPLUSTREE_NULL);
 //	uint8 *key1 = (uint8 *)freeNode.Node();
@@ -559,6 +565,9 @@ TreeIterator::SetCurrentNode(bplustree_node *node,off_t offset,int8 to)
 status_t
 TreeIterator::Goto(int8 to)
 {
+	if (fTree == NULL || fTree->fHeader == NULL)
+		return B_BAD_VALUE;
+
 	Stack<off_t> stack;
 	stack.Push(fTree->fHeader->root_node_pointer);
 
@@ -575,8 +584,11 @@ TreeIterator::Goto(int8 to)
 			return B_OK;
 		}
 
-		stack.Push(to == BPLUSTREE_END || node->all_key_count == 0 ? node->overflow_link : *node->Values());
+		if (stack.Push(to == BPLUSTREE_END || node->all_key_count == 0 ?
+				node->overflow_link : *node->Values()) < B_OK)
+			break;
 	}
+	FATAL(("bfs: %s fails\n",__PRETTY_FUNCTION__));
 	return B_ERROR;
 }
 

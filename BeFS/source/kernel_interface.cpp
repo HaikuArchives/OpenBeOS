@@ -1,9 +1,11 @@
 /* kernel_interface - file system interface to BeOS' vnode layer
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
+** This file may be used under the terms of the OpenBeOS License.
 */
 
 
+#include "Debug.h"
 #include "cpp.h"
 #include "Volume.h"
 #include "Inode.h"
@@ -206,7 +208,7 @@ static int
 bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 		size_t len, void **data, vnode_id *rootID)
 {
-	dprintf("bfs_mount()\n");
+	FUNCTION();
 
 #ifndef USER
 	load_driver_symbols("obfs");
@@ -218,7 +220,7 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 	if ((status = volume->Mount(device,flags)) == B_OK) {
 		*data = volume;
 		*rootID = volume->ToVnode(volume->Root());
-		dprintf("bfs: mounted \"%s\" (root node at %Ld, device = %s)\n",volume->Name(),*rootID,device);
+		INFORM(("bfs: mounted \"%s\" (root node at %Ld, device = %s)\n",volume->Name(),*rootID,device));
 	}
 	else
 		delete volume;
@@ -230,7 +232,7 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 static int
 bfs_unmount(void *ns)
 {
-	dprintf("bfs_unmount()\n");
+	FUNCTION();
 	Volume* volume = (Volume *)ns;
 
 	int status = volume->Unmount();
@@ -248,8 +250,7 @@ bfs_unmount(void *ns)
 static int
 bfs_rfsstat(void *_ns, struct fs_info *info)
 {
-	dprintf("bfs_rfsstat()\n");
-
+	FUNCTION();
 	Volume *volume = (Volume *)_ns;
 	
 	// File system flags.
@@ -284,8 +285,8 @@ bfs_rfsstat(void *_ns, struct fs_info *info)
 static int
 bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id *vnid)
 {
+	FUNCTION_START(("bfs_walk(file = %s)\n",file));
 	Volume *volume = (Volume *)_ns;
-	dprintf("bfs_walk(file = %s)\n",file);
 
 	Inode *directory = (Inode *)_directory;
 	BPlusTree *tree;
@@ -314,9 +315,8 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id
 static int
 bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
 {
+	FUNCTION_START(("bfs_read_vnode(vnode_id = %Ld)\n",vnid));
 	Volume *volume = (Volume *)_ns;
-
-	dprintf("bfs_read_vnode(vnode_id = %Ld)\n",vnid);
 	
 	Inode *inode = new Inode(volume,vnid,reenter);
 	if (inode->InitCheck() == B_OK) {
@@ -332,7 +332,7 @@ bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
 static int
 bfs_release_vnode(void *ns, void *_node, char reenter)
 {
-	dprintf("bfs_release_vnode(node = %p)\n",_node);
+	FUNCTION_START(("bfs_release_vnode(node = %p)\n",_node));
 	Inode *inode = (Inode *)_node;
 	
 	delete inode;
@@ -345,7 +345,7 @@ bfs_release_vnode(void *ns, void *_node, char reenter)
 static int
 bfs_rstat(void *_ns, void *_node, struct stat *st)
 {
-	dprintf("bfs_rstat()\n");
+	FUNCTION();
 
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
@@ -374,7 +374,7 @@ bfs_rstat(void *_ns, void *_node, struct stat *st)
 static int
 bfs_open(void *_ns, void *_node, int omode, void **cookie)
 {
-	dprintf("bfs_open()\n");
+	FUNCTION();
 
 	// we could actually use a cookie to keep track of:
 	//	- the last block_run
@@ -393,7 +393,7 @@ bfs_open(void *_ns, void *_node, int omode, void **cookie)
 static int
 bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t *_length)
 {
-	dprintf("bfs_read()\n");
+	//FUNCTION();
 	Inode *inode = (Inode *)_node;
 	
 	if (inode->IsSymLink()) {
@@ -410,7 +410,7 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 static int
 bfs_close(void * /*ns*/, void * /*node*/, void * /*cookie*/)
 {
-	dprintf("bfs_close()\n");
+	FUNCTION();
 	return 0;
 }
 
@@ -426,7 +426,7 @@ bfs_free_cookie(void * /*ns*/, void * /*node*/, void * /*cookie*/)
 static int
 bfs_access(void *ns, void *node, int mode)
 {
-	dprintf("bfs_access()\n");
+	FUNCTION();
 	return 0;
 }
 
@@ -434,7 +434,7 @@ bfs_access(void *ns, void *node, int mode)
 static int
 bfs_read_link(void *_ns, void *_node, char *buf, size_t *bufsize)
 {
-	dprintf("bfs_readlink()\n");
+	FUNCTION();
 	return 0;
 }
 
@@ -447,7 +447,7 @@ bfs_read_link(void *_ns, void *_node, char *buf, size_t *bufsize)
 static int
 bfs_open_dir(void *_ns, void *_node, void **_cookie)
 {
-	dprintf("bfs_opendir()\n");
+	FUNCTION();
 	
 	if (_ns == NULL || _node == NULL || _cookie == NULL)
 		return B_BAD_VALUE;
@@ -476,11 +476,11 @@ static int
 bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num, 
 			struct dirent *dirent, size_t bufferSize)
 {
+	FUNCTION();
+
 	TreeIterator *iterator = (TreeIterator *)_cookie;
 	if (iterator == NULL)
 		return B_BAD_VALUE;
-
-	dprintf("bfs_readdir()\n");
 
 	uint16 length;
 	vnode_id id;
@@ -507,7 +507,7 @@ bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num,
 static int
 bfs_rewind_dir(void * /*ns*/, void * /*node*/, void *_cookie)
 {
-	dprintf("bfs_rewind_dir()\n");
+	FUNCTION();
 	TreeIterator *iterator = (TreeIterator *)_cookie;
 
 	if (iterator == NULL)
@@ -522,7 +522,7 @@ bfs_rewind_dir(void * /*ns*/, void * /*node*/, void *_cookie)
 static int		
 bfs_close_dir(void * /*ns*/, void * /*node*/, void * /*_cookie*/)
 {
-	dprintf("bfs_close_dir()\n");
+	FUNCTION();
 	return B_OK;
 }
 
@@ -547,7 +547,7 @@ bfs_free_dir_cookie(void *ns, void *node, void *_cookie)
 int 
 bfs_open_attrdir(void *_ns, void *_node, void **cookie)
 {
-	dprintf("bfs_open_attrdir()\n");
+	FUNCTION();
 	
 	Inode *inode = (Inode *)_node;
 	if (inode == NULL || inode->Node() == NULL)
@@ -565,7 +565,7 @@ bfs_open_attrdir(void *_ns, void *_node, void **cookie)
 int
 bfs_close_attrdir(void *ns, void *node, void *cookie)
 {
-	dprintf("bfs_close_attrdir()\n");
+	FUNCTION();
 	return B_OK;
 }
 
@@ -573,7 +573,7 @@ bfs_close_attrdir(void *ns, void *node, void *cookie)
 int
 bfs_free_attrdir_cookie(void *ns, void *node, void *_cookie)
 {
-	dprintf("bfs_free_attrdir_cookie()\n");
+	FUNCTION();
 	AttributeIterator *iterator = (AttributeIterator *)_cookie;
 
 	if (iterator == NULL)
@@ -587,7 +587,7 @@ bfs_free_attrdir_cookie(void *ns, void *node, void *_cookie)
 int
 bfs_rewind_attrdir(void *_ns, void *_node, void *_cookie)
 {
-	dprintf("bfs_rewind_attrdir()\n");
+	FUNCTION();
 	
 	AttributeIterator *iterator = (AttributeIterator *)_cookie;
 	if (iterator == NULL)
@@ -600,7 +600,7 @@ bfs_rewind_attrdir(void *_ns, void *_node, void *_cookie)
 int 
 bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent *dirent, size_t bufsize)
 {
-	dprintf("bfs_read_attrdir()\n");
+	FUNCTION();
 	AttributeIterator *iterator = (AttributeIterator *)_cookie;
 
 	if (iterator == NULL)
@@ -628,7 +628,7 @@ bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent 
 int
 bfs_remove_attr(void *ns, void *node, const char *name)
 {
-	dprintf("bfs_remove_attr(name = \"%s\")\n",name);
+	FUNCTION_START(("bfs_remove_attr(name = \"%s\")\n",name));
 	return B_ENTRY_NOT_FOUND;
 }
 
@@ -636,7 +636,7 @@ bfs_remove_attr(void *ns, void *node, const char *name)
 int
 bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 {
-	dprintf("bfs_rename_attr(name = \"%s\",to = \"%s\"\n)",oldname,newname);
+	FUNCTION_START(("bfs_rename_attr(name = \"%s\",to = \"%s\"\n)",oldname,newname));
 	return B_ENTRY_NOT_FOUND;
 }
 
@@ -644,7 +644,7 @@ bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 int
 bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo)
 {
-	dprintf("bfs_stat_attr(name = \"%s\")\n",name);
+	FUNCTION_START(("bfs_stat_attr(name = \"%s\")\n",name));
 
 	Inode *inode = (Inode *)_node;
 	if (inode == NULL || inode->Node() == NULL)
@@ -674,7 +674,7 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 int
 bfs_write_attr(void *ns, void *node, const char *name, int type,const void *buf, size_t *len, off_t pos)
 {
-	dprintf("bfs_write_attr(name = \"%s\")\n",name);
+	FUNCTION_START(("bfs_write_attr(name = \"%s\")\n",name));
 	return B_ERROR;
 }
 
@@ -683,7 +683,7 @@ int
 bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, size_t *_length, off_t pos)
 {
 	Inode *inode = (Inode *)_node;
-	dprintf("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->ID(),name,*_length);
+	FUNCTION_START(("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->ID(),name,*_length));
 	
 	if (inode == NULL || inode->Node() == NULL)
 		return B_ERROR;
@@ -725,7 +725,7 @@ bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, si
 int 
 bfs_open_indexdir(void *_ns, void **_cookie)
 {
-	dprintf("bfs_open_indexdir()\n");
+	FUNCTION();
 
 	if (_ns == NULL || _cookie == NULL)
 		return B_BAD_VALUE;
@@ -746,7 +746,7 @@ bfs_open_indexdir(void *_ns, void **_cookie)
 int 
 bfs_close_indexdir(void *_ns, void *_cookie)
 {
-	dprintf("bfs_close_indexdir()\n");
+	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
 		return B_BAD_VALUE;
 
@@ -758,7 +758,7 @@ bfs_close_indexdir(void *_ns, void *_cookie)
 int 
 bfs_free_indexdir_cookie(void *_ns, void *_node, void *_cookie)
 {
-	dprintf("bfs_free_indexdir_cookie()\n");
+	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
 		return B_BAD_VALUE;
 
@@ -770,7 +770,7 @@ bfs_free_indexdir_cookie(void *_ns, void *_node, void *_cookie)
 int 
 bfs_rewind_indexdir(void *_ns, void *_cookie)
 {
-	dprintf("bfs_rewind_indexdir()\n");
+	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
 		return B_BAD_VALUE;
 
@@ -782,7 +782,7 @@ bfs_rewind_indexdir(void *_ns, void *_cookie)
 int 
 bfs_read_indexdir(void *_ns, void *_cookie, long *num, struct dirent *dirent, size_t bufferSize)
 {
-	dprintf("bfs_read_indexdir()\n");
+	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
 		return B_BAD_VALUE;
 
@@ -794,7 +794,7 @@ bfs_read_indexdir(void *_ns, void *_cookie, long *num, struct dirent *dirent, si
 int 
 bfs_create_index(void *ns, const char *name, int type, int flags)
 {
-	dprintf("bfs_create_index()\n");
+	FUNCTION();
 	return B_ERROR;
 }
 
@@ -802,7 +802,7 @@ bfs_create_index(void *ns, const char *name, int type, int flags)
 int 
 bfs_remove_index(void *ns, const char *name)
 {
-	dprintf("bfs_remove_index()\n");
+	FUNCTION();
 	return B_ENTRY_NOT_FOUND;
 }
 
@@ -810,7 +810,7 @@ bfs_remove_index(void *ns, const char *name)
 int 
 bfs_rename_index(void *ns, const char *oldname, const char *newname)
 {
-	dprintf("bfs_rename_index(from = %s,to = %s)\n",oldname,newname);
+	FUNCTION_START(("bfs_rename_index(from = %s,to = %s)\n",oldname,newname));
 	return B_ENTRY_NOT_FOUND;
 }
 
@@ -818,7 +818,7 @@ bfs_rename_index(void *ns, const char *oldname, const char *newname)
 int 
 bfs_stat_index(void *_ns, const char *name, struct index_info *indexInfo)
 {
-	dprintf("bfs_stat_index(name = %s)\n",name);
+	FUNCTION_START(("bfs_stat_index(name = %s)\n",name));
 	if (_ns == NULL || name == NULL || indexInfo == NULL)
 		return B_BAD_VALUE;
 

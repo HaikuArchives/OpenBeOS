@@ -1,9 +1,11 @@
-/* Volume - BFS super block, mounting, etc-
+/* Volume - BFS super block, mounting, etc.
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
+** This file may be used under the terms of the OpenBeOS License.
 */
 
 
+#include "Debug.h"
 #include "cpp.h"
 #include "Volume.h"
 #include "Inode.h"
@@ -82,7 +84,7 @@ Volume::Mount(const char *deviceName,uint32 flags)
 					if (fIndicesNode == NULL
 						|| fIndicesNode->InitCheck() < B_OK
 						|| !fIndicesNode->IsDirectory()) {
-						dprintf("bfs: volume doesn't have indices!\n");
+						INFORM(("bfs: volume doesn't have indices!\n"));
 
 						if (fIndicesNode) {
 							// in this case, BFS should be mounted as read-only
@@ -97,13 +99,14 @@ Volume::Mount(const char *deviceName,uint32 flags)
 			} else
 				status = B_BAD_VALUE;
 
-			dprintf("could not create root node: new_vnode() failed!\n");
+			FATAL(("bfs: could not create root node: new_vnode() failed!\n"));
 
 			remove_cached_device_blocks(fDevice,NO_WRITES);
 		} else {
-			dprintf("could not initialize cache!\n");
+			FATAL(("bfs: could not initialize cache!\n"));
 			status = B_IO_ERROR;
 		}
+		FATAL(("bfs: invalid super block!\n"));
 	}
 	else
 		status = B_BAD_VALUE;
@@ -117,8 +120,6 @@ Volume::Mount(const char *deviceName,uint32 flags)
 status_t
 Volume::Unmount()
 {
-	//if (fIndicesNode)
-	//	put_vnode(fID,ToVnode(Indices()));
 	delete fIndicesNode;
 
 	remove_cached_device_blocks(fDevice,NO_WRITES);

@@ -1,9 +1,11 @@
 /* Index - index access functions
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
+** This file may be used under the terms of the OpenBeOS License.
 */
 
 
+#include "Debug.h"
 #include "cpp.h"
 #include "Index.h"
 #include "Volume.h"
@@ -54,7 +56,7 @@ Index::SetTo(const char *name)
 		return B_ENTRY_NOT_FOUND;
 
 	if (fNode == NULL) {
-		dprintf("bfs: fatal error at Index::InitCheck(), get_vnode() returned NULL pointer\n");
+		FATAL(("bfs: fatal error at Index::InitCheck(), get_vnode() returned NULL pointer\n"));
 		put_vnode(fVolume->ID(),id);
 		return B_ERROR;
 	}
@@ -86,7 +88,7 @@ Index::Type()
 		case S_STR_INDEX:
 			return B_STRING_TYPE;
 	}
-	dprintf("bfs: index has unknown type!\n");
+	FATAL(("bfs: index has unknown type!\n"));
 	return 0;
 }
 

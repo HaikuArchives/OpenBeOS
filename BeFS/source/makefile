@@ -88,7 +88,7 @@ SYMBOLS = TRUE
 DEBUGGER = 
 
 #	specify additional compiler flags for all files
-COMPILER_FLAGS = -fno-exceptions
+COMPILER_FLAGS = -fno-exceptions -fno-rtti
 
 #	specify additional linker flags
 LINKER_FLAGS =

@@ -1,9 +1,11 @@
 /* Inode - inode access functions
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
+** This file may be used under the terms of the OpenBeOS License.
 */
 
 
+#include "Debug.h"
 #include "cpp.h"
 #include "Inode.h"
 #include "BPlusTree.h"
@@ -45,7 +47,7 @@ Inode::InitCheck()
 		|| Node()->attributes.allocation_group > fVolume->AllocationGroups()
 		|| Node()->attributes.allocation_group < 0
 		|| Node()->attributes.start > (1L << fVolume->AllocationGroupShift())) {
-		dprintf("bfs: inode at block %Ld corrupt!\n",fBlockNumber);
+		FATAL(("bfs: inode at block %Ld corrupt!\n",fBlockNumber));
 		return B_ERROR;
 	}
 	return B_OK;
@@ -101,10 +103,14 @@ Inode::FindSmallData(const char *name) const
 Inode *
 Inode::GetAttribute(const char *name)
 {
+	// does this inode even have attributes?
+	if (Attributes().IsZero())
+		return NULL;
+
 	Inode *attributes;
 	if (get_vnode(fVolume->ID(),fVolume->ToVnode(Attributes()),(void **)&attributes) != 0
 		|| attributes == NULL) {
-		dprintf("bfs: get_vnode() failed in Inode::GetAttribute(name = \"%s\")\n",name);
+		FATAL(("bfs: get_vnode() failed in Inode::GetAttribute(name = \"%s\")\n",name));
 		return NULL;
 	}
 
@@ -457,14 +463,14 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 	if (fAttributes == NULL) {
 		if (get_vnode(volume->ID(),volume->ToVnode(fInode->Attributes()),(void **)&fAttributes) != 0
 			|| fAttributes == NULL) {
-			dprintf("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name);
+			FATAL(("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 			return B_ENTRY_NOT_FOUND;
 		}
 		
 		BPlusTree *tree;
 		if (fAttributes->GetTree(&tree) < B_OK
 			|| (fIterator = new TreeIterator(tree)) == NULL) {
-			dprintf("bfs: could not get tree in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name);
+			FATAL(("bfs: could not get tree in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 			return B_ENTRY_NOT_FOUND;
 		}
 	}
@@ -483,7 +489,7 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 		*_length = attribute->Node()->data.size;
 		*_id = id;
 	} else if (status == B_OK) {
-		dprintf("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name);
+		FATAL(("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 		status = B_ERROR;
 	}
 
