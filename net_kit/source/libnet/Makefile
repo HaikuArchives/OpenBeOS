@@ -10,6 +10,7 @@ ETC_FILES=	protocols \
 
 OBJS=	socket.o \
 	select.o \
+	poll.o \
 	compat.o \
 	arc4random.o \
 	base64.o \
@@ -22,7 +23,6 @@ OBJS=	socket.o \
 	inet_pton.o \
 	inet_ntop.o \
 	gethostnamadr.o \
-	gethostname.o \
 	getnetbyaddr.o \
 	getnetbyname.o \
 	getnetnamadr.o \

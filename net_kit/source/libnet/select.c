@@ -6,16 +6,16 @@
 #include <sys/time.h>
 #include <posix/signal.h>
  
-#include "net_structures.h"
+#include "net_stack_driver.h"
 
-extern const char * g_socket_driver_path;
+extern const char * g_stack_driver_path;
 
 typedef int (*select_function)(int, struct fd_set *, struct fd_set *,
 								struct fd_set *, struct timeval *);
 
 void on_select_timeout(int signal);
 
-int select(int nbits, struct fd_set *rbits, 
+_EXPORT int select(int nbits, struct fd_set *rbits, 
                       struct fd_set *wbits, 
                       struct fd_set *ebits, 
                       struct timeval *timeout)
@@ -24,7 +24,7 @@ int select(int nbits, struct fd_set *rbits,
 
 	image_id iid;
 	int tmpfd;
-	struct select_args sa;
+	struct select_args args;
 	int rv;
 	__signal_func_ptr previous_sigalrm_handler = NULL;
 	bigtime_t when = 0;
@@ -46,15 +46,15 @@ int select(int nbits, struct fd_set *rbits,
 		// pass the call to libroot.so one...
 		return sf(nbits, rbits, wbits, ebits, timeout);
 	
-	tmpfd = open(g_socket_driver_path, O_RDWR);
+	tmpfd = open(g_stack_driver_path, O_RDWR);
 	if (tmpfd < 0)
 		return tmpfd;
 
-	sa.mfd = nbits;
-	sa.rbits = rbits;
-	sa.wbits = wbits;
-	sa.ebits = ebits;
-	sa.tv = timeout;
+	args.nbits = nbits;
+	args.rbits = rbits;
+	args.wbits = wbits;
+	args.ebits = ebits;
+	args.timeout = timeout;
 
 	if (timeout) {
 		bigtime_t duration;
@@ -71,10 +71,10 @@ int select(int nbits, struct fd_set *rbits,
 		set_alarm(duration, B_ONE_SHOT_RELATIVE_ALARM);
 	};
 	
-	sa.rv = B_OK;
-	rv = ioctl(tmpfd, NET_SOCKET_SELECT, &sa, sizeof(sa));
+	args.rv = B_OK;
+	rv = ioctl(tmpfd, NET_STACK_SELECT, &args, sizeof(args));
 	if (rv == 0)
-		rv = sa.rv;
+		rv = args.rv;
 		
 	if (timeout) {
 		signal(SIGALRM, previous_sigalrm_handler);
@@ -90,5 +90,6 @@ int select(int nbits, struct fd_set *rbits,
 
 void on_select_timeout(int signal)
 {
+	printf("select() timed out!\n");
 }
 
