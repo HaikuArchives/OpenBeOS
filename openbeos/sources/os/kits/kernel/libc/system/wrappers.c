@@ -2,8 +2,9 @@
 #include <sysctl.h>
 #include <socket.h>
 #include <OS.h>
-#include <sem.h>
-#include <syscalls.h>
+#include <stdio.h>
+
+#include "syscalls.h"
 
 int sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
            void *newp, size_t newlen)

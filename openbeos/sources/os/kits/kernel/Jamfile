@@ -432,6 +432,19 @@ KernelLd libc.so :
 	lib/libc.so
 	;
 
+KernelLd libroot.so :
+	libglue2.o
+	<$(SOURCE_GRIST)!libroot>libroot.o
+	:
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/library.ld
+	:
+	-shared -soname libroot.so
+	:
+	no_gcc
+	:
+	lib/libroot.so
+	;
+
 KernelLd libglue2.o :
 	<$(SOURCE_GRIST)!glue>crt0.o
 	:
@@ -718,3 +731,4 @@ SubInclude OBOS_TOP sources os kits kernel libc ;
 SubInclude OBOS_TOP sources os kits kernel libm ;
 SubInclude OBOS_TOP sources os kits kernel apps ;
 SubInclude OBOS_TOP sources os kits kernel add-ons ;
+SubInclude OBOS_TOP sources os kits kernel libroot ;
