@@ -4,13 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 
-#ifdef USE_DEBUG_MALLOC
-#define malloc dbg_malloc
-#define free dbg_free
-#endif
-
+#include "net_malloc.h"
 #include "nhash.h"
 
 #define MAX_INITIAL 15;
@@ -19,10 +14,6 @@ net_hash *nhash_make(void)
 {
 	net_hash *nn;
 	
-#if SHOW_MALLOC_USAGE
-	dprintf("nhash.c: nhash_make: malloc(%ld)\n",
-		sizeof(net_hash));
-#endif	
 	 nn = (net_hash *)malloc(sizeof(net_hash));
 
 	if (!nn)
@@ -30,10 +21,7 @@ net_hash *nhash_make(void)
 
 	nn->count = 0;
 	nn->max = MAX_INITIAL;
-#if SHOW_MALLOC_USAGE
-	dprintf("nhash.c: nhash_make: malloc(%ld)\n",
-		sizeof(net_hash_entry) * (nn->max + 1));
-#endif	
+
 	nn->array = (net_hash_entry **)malloc(sizeof(net_hash_entry) * (nn->max + 1));
 	memset(nn->array, 0, sizeof(net_hash_entry) * (nn->max +1));
 	pool_init(&nn->pool, sizeof(net_hash_entry));
@@ -69,11 +57,6 @@ static void expand_array(net_hash *nh)
 	net_hash_entry **new_array;
 	int new_max = nh->max * 2 +1;
 	int i;
-
-#if SHOW_MALLOC_USAGE
-	dprintf("nhash.c: expand_array: malloc(%ld)\n",
-		sizeof(net_hash_entry) * new_max);
-#endif
 
 	new_array = (net_hash_entry **)malloc(sizeof(net_hash_entry) * new_max);
 	memset(new_array, 0, sizeof(net_hash_entry) * new_max);
