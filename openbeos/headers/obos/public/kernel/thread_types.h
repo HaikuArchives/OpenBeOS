@@ -61,6 +61,7 @@ struct proc {
 	int state;
 	int pending_signals;
 	void *ioctx;
+	char path[SYS_MAX_PATH_LEN];
 	aspace_id _aspace_id;
 	vm_address_space *aspace;
 	vm_address_space *kaspace;
