@@ -9,9 +9,11 @@
 #include "net_module.h"
 #include "protocols.h"
 #include "ipv4/ipv4.h"
+#include "netinet/in_pcb.h"
 
 int *prot_table;
 loaded_net_module *net_modules;
+static struct inpcb udb;	/* head of the UDP PCB list! */
 
 /* temporary hack */
 #undef SHOW_DEBUG
@@ -64,6 +66,8 @@ int udp_init(loaded_net_module *ln, int *pt)
 {
 	net_modules = ln;
 	prot_table = pt;
+	
+	udb.inp_prev = udb.inp_next = &udb;
 
 	return 0;
 }
