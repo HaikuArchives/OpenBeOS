@@ -1,7 +1,7 @@
 # compiler flags
 CFLAGS = -g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 LDFLAGS = -nostdlib /boot/develop/lib/x86/_KERNEL_
-INCLUDES = -I../server/ -I../server/include -I../libnet
+INCLUDES = -I../server/ -I../server/include -I.
 
 # build target
 TARGET = net_stack_driver

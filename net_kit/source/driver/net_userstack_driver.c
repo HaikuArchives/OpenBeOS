@@ -210,6 +210,38 @@ copy_to_stack(int32 op,uint8 *from,uint8 *to,int32 length)
 			}
 			break;
 		}
+		
+		case NET_STACK_SYSCTL:
+		{
+			struct sysctl_args *fromSys = (struct sysctl_args *)from;
+			struct sysctl_args *toSys = (struct sysctl_args *)to;
+			void *name = to + sizeof(struct sysctl_args);
+			void *oldp = (uint8 *)name + fromSys->namelen;
+			size_t *oldlenp = (size_t *)((uint8 *)oldp + *fromSys->oldlenp);
+			void *newp = (uint8 *)oldlenp + sizeof(size_t);
+
+			memset(toSys,0,sizeof(struct sysctl_args));
+
+			toSys->namelen = fromSys->namelen;
+			if (toSys->namelen > 0) {
+				memcpy(name,fromSys->name,fromSys->namelen);
+				toSys->name = name;
+			}
+			
+			toSys->oldlenp = oldlenp;
+			*oldlenp = *fromSys->oldlenp;
+			if (*oldlenp > 0 && fromSys->oldp) {
+				memcpy(oldp,fromSys->oldp,*oldlenp);
+				toSys->oldp = oldp;
+			}
+			
+			toSys->newlen = fromSys->newlen;
+			if (toSys->namelen > 0 && fromSys->newp) {
+				memcpy(newp,fromSys->newp,fromSys->newlen);
+				toSys->newp = newp;
+			}
+			break;
+		}
 
 		case OSIOCGIFCONF:
 		case SIOCGIFCONF:
@@ -227,6 +259,9 @@ copy_to_stack(int32 op,uint8 *from,uint8 *to,int32 length)
 			break;
 		}
 
+		case NET_STACK_LISTEN:
+		case NET_STACK_SHUTDOWN:
+		case NET_STACK_SOCKET:
 		default:
 			memcpy(to,from,length);
 	}
