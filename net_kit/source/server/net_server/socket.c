@@ -22,13 +22,6 @@
  * They should be moved into libsocket as soon as we have one.
  */
 
-struct sock_fd {
-	struct sock_fd *next;
-	struct sock_fd *prev;
-	int fd;
-	struct socket *so;
-};
-
 /* XXX - This is just so lame! */
 static int32 socknum = 0;
 
@@ -709,11 +702,51 @@ void sowakeup(struct socket *so, struct sockbuf *sb)
 
 //	#pragma mark -
 
+struct sock_fd *make_sock_fd(void)
+{
+	struct sock_fd*sfd;
 
+	sfd = (struct sock_fd*)pool_get(sfdpool);
+
+	if (sfd == NULL)
+		return NULL;
+
+	sfd->fd = atomic_add(&socknum, 1);
+	sfd->so = NULL;
+
+#ifdef _KERNEL_MODE
+	dprintf("craeted a sock_fd structure\n");
+#endif
+
+        /* XXX - add locking! */
+        if (sockets) {
+                sockets->prev->next = sfd;
+                sfd->prev = sockets->prev;
+                sfd->next = sockets;
+                sockets->prev = sfd;
+        } else {
+                sfd->next = sfd->prev = sfd;
+                sockets = sfd;
+        }
+
+	return sfd;
+}
+
+void release_sock_fd(struct sock_fd *sfd)
+{
+	if (sockets == sfd) {
+		sockets = NULL;
+	} else {
+		sfd->next->prev = sfd->prev;
+		sfd->prev->next = sfd->next;
+	}
+	pool_put(sfdpool, sfd);
+}
+ 
 int socket(int dom, int type, int proto)
 {
 	struct socket *so;
-	struct sock_fd *sfd;
+	struct sock_fd *sfd = NULL;
 	/* This is a hack to enable us to create a socket! */
 	int error;
 
@@ -721,20 +754,9 @@ int socket(int dom, int type, int proto)
 	if (error < 0)
 		return error;
 
-	sfd = (struct sock_fd*)pool_get(sfdpool);
+	sfd = make_sock_fd();
 	sfd->so = so;
-	sfd->fd = atomic_add(&socknum, 1);
 
-	/* XXX - add locking! */
-	if (sockets) {
-		sockets->prev->next = sfd;
-		sfd->prev = sockets->prev;
-		sfd->next = sockets;
-		sockets->prev = sfd;
-	} else {
-		sfd->next = sfd->prev = sfd;
-		sockets = sfd;
-	}
 #if SHOW_DEBUG
 	printf("Just created socket #%d (%s)\n",  sfd->fd, sfd->so->so_proto->name);
 #endif
