@@ -7,8 +7,10 @@
 
 
 #include <Application.h>
+#include <Bitmap.h>
 #include <Mime.h>
 #include <MimeTypeTest.h>
+#include <Path.h>			// Only needed for entry_ref dumps
 
 #include "Test.StorageKit.h"
 #include "TestApp.h"
@@ -17,6 +19,9 @@
 static const char *testDir				= "/tmp/mimeTestDir";
 static const char *mimeDatabaseDir		= "/boot/home/config/settings/beos_mime";
 static const char *testType				= "text/StorageKit-Test";
+static const char *testApp				= "/boot/beos/apps/SoundRecorder";
+static const char *testApp2				= "/boot/beos/apps/CDPlayer";
+static const char *fakeTestApp			= "/__this_isn't_likely_to_exist__";
 // Descriptions
 static const char *testDescr			= "Just a test, nothing more :-)";
 static const char *testDescr2			= "Another amazing test string";
@@ -35,12 +40,23 @@ static const char *longSig				= "application/x-vnd.obos.mime-type-test-long."
 "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
 
+// Handy comparison operators for BBitmaps. The size and color depth are compared first,
+// followed by the bitmap data.
+bool operator==(BBitmap &bmp1, BBitmap &b2) {
+	return false;
+}
+bool operator!=(BBitmap &bmp1, BBitmap &b2) {
+	return !(bmp1 == bmp2);
+}
+
 // Suite
 CppUnit::Test*
 MimeTypeTest::Suite() {
 	StorageKit::TestSuite *suite = new StorageKit::TestSuite();
 	typedef CppUnit::TestCaller<MimeTypeTest> TC;
 		
+	suite->addTest( new TC("BMimeType::App Hint Test",
+						   &MimeTypeTest::AppHintTest) );
 	suite->addTest( new TC("BMimeType::Long Description Test",
 						   &MimeTypeTest::LongDescriptionTest) );
 	suite->addTest( new TC("BMimeType::Short Description Test",
@@ -99,6 +115,157 @@ MimeTypeTest::tearDown()
 	}
 	BasicTest::tearDown();
 }
+
+// entry_ref dumping function ; this may be removed at any time
+
+void printRef(entry_ref *ref, char* name = "ref") {
+	if (ref) {
+		BPath path(ref);
+		status_t err = path.InitCheck();
+		if (!err) {
+			printf("%s == '%s'", name, path.Path());
+		} else
+			printf("%s == ERROR", name);
+		printf(" == (%d, %d, '%s')\n", ref->device, ref->directory, ref->name);
+		
+	} else
+		printf("%s == (NULL)\n", name);
+}
+		
+// App Hint
+
+void MimeTypeTest::AppHintTest() {
+	// init a couple of entry_refs to applications
+	BEntry entry(testApp);
+	entry_ref appRef;
+	CHK(entry.InitCheck() == B_OK);
+	CHK(entry.GetRef(&appRef) == B_OK);	
+	BEntry entry2(testApp2);
+	entry_ref appRef2;
+	CHK(entry2.InitCheck() == B_OK);
+	CHK(entry2.GetRef(&appRef2) == B_OK);	
+	// Uninitialized
+	nextSubTest();
+	{
+		BMimeType mime;
+		entry_ref ref;
+		CHK(mime.InitCheck() == B_NO_INIT);
+		CHK(mime.GetAppHint(&ref) != B_OK);		// R5 == B_BAD_VALUE
+		CHK(mime.SetAppHint(&ref) != B_OK);		// R5 == B_BAD_VALUE
+	}
+	// Non-installed type
+	nextSubTest();
+	{
+		entry_ref ref;
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Make sure the type isn't installed
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		CHK(!mime.IsInstalled());
+		CHK(mime.GetAppHint(&ref) != B_OK);		// R5 == B_ENTRY_NOT_FOUND
+		CHK(!mime.IsInstalled());
+		CHK(mime.SetAppHint(&appRef) == B_OK);
+		CHK(mime.IsInstalled());
+		CHK(mime.GetAppHint(&ref) == B_OK);
+		CHK(ref == appRef);
+	}
+	// NULL params
+	nextSubTest();
+	{
+		entry_ref ref;
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Make sure the type isn't installed
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		CHK(!mime.IsInstalled());
+		CHK(mime.GetAppHint(NULL) != B_OK);		// R5 == B_BAD_VALUE
+		CHK(!mime.IsInstalled());
+		CHK(mime.SetAppHint(NULL) != B_OK);		// Installs, R5 == B_ENTRY_NOT_FOUND
+		CHK(mime.IsInstalled());
+		CHK(mime.GetAppHint(NULL) != B_OK);		// R5 == B_BAD_VALUE
+		CHK(mime.SetAppHint(NULL) != B_OK);		// R5 == B_ENTRY_NOT_FOUND
+	}
+	// Installed Type
+	nextSubTest();
+	{
+		entry_ref ref;
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);
+		CHK(mime.IsInstalled());
+		// Get() with no apphint installed
+		CHK(mime.GetAppHint(&ref) == B_ENTRY_NOT_FOUND);
+		// Initial Set()/Get()
+		CHK(mime.SetAppHint(&appRef) == B_OK);
+		CHK(mime.GetAppHint(&ref) == B_OK);
+		CHK(ref == appRef);
+		// Followup Set()/Get()
+		CHK(mime.SetAppHint(&appRef2) == B_OK);
+		CHK(mime.GetAppHint(&ref) == B_OK);
+		CHK(ref == appRef2);
+		CHK(ref != appRef);
+	}
+	// Installed Type, invalid entry_ref
+	nextSubTest();
+	{
+		entry_ref ref(-1, -1, NULL);
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);
+		CHK(mime.IsInstalled());		
+		CHK(mime.SetAppHint(&appRef) == B_OK);
+		CHK(mime.SetAppHint(&ref) != B_OK);	// R5 == B_BAD_VALUE
+	}
+	// Installed Type, fake/invalid entry_ref
+	nextSubTest();
+	{
+		entry_ref ref(0, 0, "__this_ought_not_exist__");
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());		
+		CHK(mime.SetAppHint(&appRef) == B_OK);
+		CHK(mime.SetAppHint(&ref) != B_OK);	// R5 == B_ENTRY_NOT_FOUND
+	}		
+	// Installed Type, abstract entry_ref
+	nextSubTest();
+	{
+		entry_ref fakeRef;
+		entry_ref ref;
+		BEntry entry(fakeTestApp);
+		CHK(entry.InitCheck() == B_OK);
+		CHK(!entry.Exists());
+		CHK(entry.GetRef(&fakeRef) == B_OK);
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());		
+		CHK(mime.SetAppHint(&appRef) == B_OK);
+		CHK(mime.SetAppHint(&fakeRef) == B_OK);
+		CHK(mime.GetAppHint(&ref) == B_OK);
+		CHK(ref == fakeRef);
+		CHK(ref != appRef);
+	}		
+}
+
 
 // Short Description
 

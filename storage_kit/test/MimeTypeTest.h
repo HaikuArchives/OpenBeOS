@@ -28,6 +28,7 @@ public:
 	//------------------------------------------------------------
 	// Test functions
 	//------------------------------------------------------------
+	void AppHintTest();
 	void LongDescriptionTest();
 	void ShortDescriptionTest();
 	void PreferredAppTest();
