@@ -39,18 +39,15 @@ enum {
 };
 
 struct int_args {	// used by NET_STACK_LISTEN/_SHUTDOWN 
-	int rv;
 	int value;
 };
 
 struct sockaddr_args {	// used by NET_STACK_CONNECT/_BIND/_GETSOCKNAME/_GETPEERNAME
-	int rv;
 	struct sockaddr * addr;
 	int addrlen;
 };
 
 struct sockopt_args {	// used by NET_STACK_SETSOCKOPT/_GETSOCKOPT
-	int   	rv;
 	int   	level;
 	int   	option;
 	void  *	optval;
@@ -58,7 +55,6 @@ struct sockopt_args {	// used by NET_STACK_SETSOCKOPT/_GETSOCKOPT
 };
 
 struct data_xfer_args {	// used by NET_STACK_SEND/_SENDTO/_RECV/_RECVFROM
-	int rv;
 	void * data;
 	size_t datalen;
 	int flags;
@@ -67,21 +63,18 @@ struct data_xfer_args {	// used by NET_STACK_SEND/_SENDTO/_RECV/_RECVFROM
 };
 
 struct socket_args {	// used by NET_STACK_SOCKET
-	int rv;
 	int family;
 	int type;
 	int proto;
 };
 
 struct accept_args {	// used by NET_STACK_ACCEPT
-	int rv;
 	void * cookie;
 	struct sockaddr * addr;
 	int addrlen;
 };
 
 struct select_args {	// used by NET_STACK_SELECT
-	int rv;
 	int nbits;
 	struct fd_set * rbits;
 	struct fd_set * wbits;
@@ -90,7 +83,6 @@ struct select_args {	// used by NET_STACK_SELECT
 };
 
 struct sysctl_args {	// used by NET_STACK_SYSCTL
-	int rv;
 	int * name;
 	uint namelen;
 	void * oldp;

@@ -79,14 +79,10 @@ _EXPORT int socket(int family, int type, int protocol)
 	args.type = type;
 	args.proto = protocol;
 
-	args.rv = B_ERROR;
 	rv = ioctl(sock, NET_STACK_SOCKET, &args, sizeof(args));
-	if (rv == 0)
-		rv = args.rv;
-
 	if (rv < 0) {
 		close(sock);
-		sock = rv;
+		return rv;
 	};
 
 	return sock;
@@ -107,7 +103,6 @@ _EXPORT int bind(int sock, const struct sockaddr *addr, int addrlen)
 	args.addr = (struct sockaddr *) addr;
 	args.addrlen = addrlen;
 	
-	args.rv = B_ERROR;
 	return ioctl(sock, NET_STACK_BIND, &args, sizeof(args));
 }
 
@@ -118,7 +113,6 @@ _EXPORT int shutdown(int sock, int how)
 	
 	args.value = how;
 	
-	args.rv = B_ERROR;
 	return ioctl(sock, NET_STACK_SHUTDOWN, &args, sizeof(args));
 }
 
@@ -178,12 +172,7 @@ _EXPORT int accept(int sock, struct sockaddr *addr, int *addrlen)
 	args.addr		= g_beos_r5_compatibility ? &temp : addr;
 	args.addrlen	= g_beos_r5_compatibility ? sizeof(temp) : *addrlen;
 	
-	args.rv = B_ERROR;
-
 	rv = ioctl(sock, NET_STACK_ACCEPT, &args, sizeof(args));
-	if (rv == 0)
-		rv = args.rv;
-	
 	if (rv < 0) {
 		close(new_sock);
 		return rv;
@@ -277,7 +266,6 @@ _EXPORT ssize_t recv(int sock, void *data, size_t datalen, int flags)
 	args.addr = NULL;
 	args.addrlen = 0;
 	
-	args.rv = B_ERROR;
 	rv = ioctl(sock, NET_STACK_RECV, &args, sizeof(args));
 	if (rv < 0)
 		return rv;
@@ -297,7 +285,6 @@ _EXPORT ssize_t send(int sock, const void *data, size_t datalen, int flags)
 	args.addr = NULL;
 	args.addrlen = 0;
 	
-	args.rv = B_ERROR;
 	rv = ioctl(sock, NET_STACK_SEND, &args, sizeof(args));
 	if (rv < 0)
 		return rv;
@@ -367,7 +354,6 @@ _EXPORT int getpeername(int sock, struct sockaddr *addr, int *addrlen)
 	args.addr = g_beos_r5_compatibility ? &temp : addr;
 	args.addrlen = g_beos_r5_compatibility ? sizeof(temp) : *addrlen;
 	
-	args.rv = B_ERROR;
 	rv = ioctl(sock, NET_STACK_GETPEERNAME, &args, sizeof(args));
 	if (rv < 0)
 		return rv;
@@ -378,7 +364,7 @@ _EXPORT int getpeername(int sock, struct sockaddr *addr, int *addrlen)
 	} else
 		*addrlen = args.addrlen;
 
-	return args.rv;
+	return rv;
 }
 
 _EXPORT int getsockname(int sock, struct sockaddr *addr, int *addrlen)
@@ -390,7 +376,6 @@ _EXPORT int getsockname(int sock, struct sockaddr *addr, int *addrlen)
 	args.addr = g_beos_r5_compatibility ? &temp : addr;
 	args.addrlen = g_beos_r5_compatibility ? sizeof(temp) : *addrlen;
 	
-	args.rv = B_ERROR;
 	rv = ioctl(sock, NET_STACK_GETSOCKNAME, &args, sizeof(args));
 	if (rv < 0)
 		return rv;
@@ -401,7 +386,7 @@ _EXPORT int getsockname(int sock, struct sockaddr *addr, int *addrlen)
 	} else
 		*addrlen = args.addrlen;
 
-	return args.rv;
+	return rv;
 }
 
 
@@ -423,12 +408,11 @@ _EXPORT int sysctl (int *name, uint namelen, void *oldp, size_t *oldlenp,
 	sa.newp = newp;
 	sa.newlen = newlen;
 	
-	sa.rv = B_ERROR;
 	rv = ioctl(s, NET_STACK_SYSCTL, &sa, sizeof(sa));
 
 	close(s);
 	
-	return (rv < 0) ? rv : sa.rv;
+	return rv;
 }
 	
 /* 

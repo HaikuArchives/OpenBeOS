@@ -72,7 +72,6 @@ _EXPORT int select(int nbits, struct fd_set *rbits,
 		set_alarm(duration, B_ONE_SHOT_RELATIVE_ALARM);
 	};
 	
-	args.rv = B_OK;
 	rv = ioctl(tmpfd, NET_STACK_SELECT, &args, sizeof(args));
 
 	if (timeout) {
