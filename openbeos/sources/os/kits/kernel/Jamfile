@@ -676,19 +676,6 @@ KernelLd testdigit :
         :
         bin/testdigit
         ; 
- 
-KernelLd sine_test :
-	libglue2.o
-        <$(SOURCE_GRIST)!apps!sine_test>main.o
-        libc.so
-	libm.so
-        :
-	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
-        :
-        :
-        :
-        bin/sine_test
-        ; 
 
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
