@@ -262,6 +262,33 @@ BMimeType::GetAttrInfo(BMessage *info) const
 }
 
 // GetFileExtensions
+//! Fetches the MIME type's associated filename extensions from the MIME database
+/*! The MIME database associates a list of filename extensions (a character string
+	following the rightmost dot, \c ".", character in the filename) with each type.
+	These extensions can then be used to help determine the type of any untyped files
+	that may be	encountered.
+
+	The list of extensions is returned in a pre-allocated BMessage pointed to by
+	the \c extensions parameter (note that the any prior contents of the message
+	will be destroyed). If the method succeeds, the format of the BMessage
+	pointed to by \c extensions will be the following:
+	- The message's \c "extensions" field will contain an indexed array of strings,
+	  one for each extension. The extensions are given without the preceding \c "."
+	  character by convention. 
+	- The message's \c "type" field will be a string containing the MIME type whose
+	  associated file extensions you are fetching.
+	- The \c what member of the BMessage will be set to \c 234, but is otherwise
+	  irrelevant.
+	  
+	Note that any other fields present in the BMessage passed to the most recent
+	\c SetFileExtensions() call will also be returned.
+	  
+	\param extensions Pointer to a pre-allocated BMessage into which the
+	                  MIME type's associated file extensions will be stored.
+	\return
+	- B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::GetFileExtensions(BMessage *extensions) const
 {
@@ -370,6 +397,35 @@ BMimeType::SetAttrInfo(const BMessage *info)
 }
 
 // SetFileExtensions
+//! Sets the list of filename extensions associated with the MIME type
+/*! The MIME database associates a list of filename extensions (a character string
+	following the rightmost dot, \c ".", character in the filename) with each type.
+	These extensions can then be used to help determine the type of any untyped files
+	that may be	encountered.
+
+	The list of extensions is given in a pre-allocated BMessage pointed to by
+	the \c extensions parameter. The format of the message should be as follows:
+	- The message's \c "extensions" field should contain an indexed array of strings,
+	  one for each extension. The extensions are to be given without the preceding \c "."
+	  character (i.e. \c "html" or \c "mp3", not \c ".html" or \c ".mp3" ).
+	- The \c what member of the BMessage is ignored.
+	  
+	Note that any other fields present in the \c BMessage will currently be retained
+	and returned by calls to \c GetFileExtensions(); however, this may change in the
+	future, so it is recommended that you not rely on this behaviour, and that no other
+	fields be present. Also, note that no checking is performed to verify the \c BMessage is
+	properly formatted; it's up to you to do things right.
+	
+	Finally, bear in mind that \c SetFileExtensions() clobbers the existing set of
+	extensions. If you want to augment a type's extensions, you should retrieve the
+	existing set, add the new ones, and then call \c SetFileExtensions(). 
+		  
+	\param extensions Pointer to a pre-allocated, properly formatted BMessage containing
+	                  the new list of file extensions to associate with this MIME type.
+	\return
+	- B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::SetFileExtensions(const BMessage *extensions)
 {
