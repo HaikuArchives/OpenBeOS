@@ -11,60 +11,59 @@
 #include <string.h>
 #include <errors.h>
 
-static int zero_open(dev_ident ident, dev_cookie *cookie)
+static int zero_open(const char *name, uint32 flags, void **cookie)
 {
 	*cookie = NULL;
 	return 0;
 }
 
-static int zero_close(dev_cookie cookie)
+static int zero_close(void * cookie)
 {
 	return 0;
 }
 
-static int zero_freecookie(dev_cookie cookie)
+static int zero_freecookie(void * cookie)
 {
 	return 0;
 }
 
-static int zero_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int zero_seek(void * cookie, off_t pos, seek_type st)
 {
 	return ERR_NOT_ALLOWED;
 }
 
-static int zero_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
+static int zero_ioctl(void * cookie, uint32 op, void *buf, size_t len)
 {
 	return ERR_NOT_ALLOWED;
 }
 
-static ssize_t zero_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t zero_read(void * cookie, off_t pos, void *buf, size_t *len)
 {
 	int rc;
 
-	rc = user_memset(buf, 0, len);
+	rc = user_memset(buf, 0, *len);
 	if(rc < 0)
 		return rc;
 
-	return len;
+	return 0;
 }
 
-static ssize_t zero_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t zero_write(void * cookie, off_t pos, const void *buf, size_t *len)
 {
 	return 0;
 }
 
-static struct dev_calls zero_hooks = {
+device_hooks zero_hooks = {
 	&zero_open,
 	&zero_close,
 	&zero_freecookie,
-	&zero_seek,
 	&zero_ioctl,
 	&zero_read,
 	&zero_write,
-	/* no paging from /dev/zero */
 	NULL,
 	NULL,
-	NULL
+//	NULL,
+//	NULL
 };
 
 int zero_dev_init(kernel_args *ka)
@@ -74,4 +73,3 @@ int zero_dev_init(kernel_args *ka)
 
 	return 0;
 }
-
