@@ -1205,34 +1205,34 @@
 				</task>
 			</class>
 			<class name="BPolygon">
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					BPolygon(const BPoint* ptArray, int32 numPoints);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					BPolygon();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					BPolygon(const BPolygon* poly);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					virtual ~BPolygon();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					BPolygon& operator=(const BPolygon& from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					BRect Frame() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					void AddPoints(const BPoint* ptArray, int32 numPoints);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					int32 CountPoints() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					void MapTo(BRect srcRect, BRect dstRect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Staffan Hellstrom" tests="true" tspec="false">
 					void PrintToStream() const;
 				</task>
 			</class>
