@@ -79,6 +79,7 @@ class Journal {
 		list<log_entry>	fEntries;
 		log_entry	*fCurrent;
 		bool		fHasChangedBlocks;
+		bigtime_t	fTimestamp;
 };
 
 

@@ -49,35 +49,6 @@ Journal::InitCheck()
 
 
 status_t
-Journal::Lock(Transaction *owner)
-{
-	if (owner == fOwner)
-		return B_OK;
-
-	status_t status = fLock.Lock();
-	if (status == B_OK) {
-		fOwner = owner;
-		fOwningThread = find_thread(NULL);
-	}
-	return B_OK;
-}
-
-
-void
-Journal::Unlock(Transaction *owner,bool success)
-{
-	if (owner != fOwner)
-		return;
-
-	TransactionDone(success);
-
-	fOwner = NULL;
-	fOwningThread = -1;
-	fLock.Unlock();
-}
-
-
-status_t
 Journal::CheckLogEntry(int32 count,off_t *array)
 {
 	// ToDo: check log entry integrity (block numbers and entry size)
@@ -184,10 +155,18 @@ Journal::ReplayLog()
 	
 	PRINT(("replaying worked fine!\n"));
 	fVolume->SuperBlock().log_start = fVolume->LogEnd();
+	fVolume->LogStart() = fVolume->LogEnd();
 	fVolume->SuperBlock().flags = SUPER_BLOCK_DISK_CLEAN;
+
 	return fVolume->WriteSuperBlock();
 }
 
+
+/**	This is a callback function that is called by the cache, whenever
+ *	a block is flushed to disk that was updated as part of a transaction.
+ *	This is necessary to keep track of completed transactions, to be
+ *	able to update the log start pointer.
+ */
 
 void
 Journal::blockNotify(off_t blockNumber,size_t numBlocks,void *arg)
@@ -207,17 +186,12 @@ Journal::blockNotify(off_t blockNumber,size_t numBlocks,void *arg)
 	// Set log_start pointer if possible...
 
 	if (logEntry == journal->fEntries.head) {
-		int32 length;
 		if (logEntry->Next() != NULL) {
-			length = logEntry->next->start - logEntry->start;
+			int32 length = logEntry->next->start - logEntry->start;
+			superBlock.log_start = (superBlock.log_start + length) % journal->fLogSize;
 		} else
-			length = logEntry->length;
+			superBlock.log_start = journal->fVolume->LogEnd();
 
-		superBlock.log_start = (superBlock.log_start + length) % journal->fLogSize;
-		update = true;
-	} else if (logEntry == journal->fEntries.last) {
-		// since we're not the first entry, there has to be an entry before us
-		superBlock.log_end = logEntry->start;
 		update = true;
 	}
 	journal->fUsed -= logEntry->length;
@@ -242,6 +216,9 @@ Journal::blockNotify(off_t blockNumber,size_t numBlocks,void *arg)
 status_t
 Journal::WriteLogEntry()
 {
+	fTransactionsInEntry = 0;
+	fHasChangedBlocks = false;
+
 	sorted_array *array = fArray.Array();
 	if (array == NULL || array->count == 0)
 		return B_OK;
@@ -303,7 +280,7 @@ Journal::WriteLogEntry()
 	// circular buffer), all blocks will be flushed out which is
 	// possible because we don't have any locked blocks at this
 	// point.
-	if (logPosition < fVolume->LogEnd())
+	if (logPosition < logStart)
 		fVolume->FlushDevice();
 
 	// We need to flush the drives own cache here to ensure
@@ -316,6 +293,8 @@ Journal::WriteLogEntry()
 	// Update the log end pointer in the super block
 	fVolume->SuperBlock().flags = SUPER_BLOCK_DISK_DIRTY;
 	fVolume->SuperBlock().log_end = logPosition;
+	fVolume->LogEnd() = logPosition;
+
 	fVolume->WriteSuperBlock();
 }
 
@@ -330,9 +309,6 @@ Journal::FlushLogAndBlocks()
 	// write the current log entry to disk
 	
 	if (TransactionSize() != 0) {
-		fTransactionsInEntry = 0;
-		fHasChangedBlocks = false;
-	
 		status = WriteLogEntry();
 		if (status < B_OK)
 			FATAL(("writing current log entry failed: %s\n",status));
@@ -341,6 +317,41 @@ Journal::FlushLogAndBlocks()
 
 	Unlock((Transaction *)this,true);
 	return status;
+}
+
+
+status_t
+Journal::Lock(Transaction *owner)
+{
+	if (owner == fOwner)
+		return B_OK;
+
+	status_t status = fLock.Lock();
+	if (status == B_OK) {
+		fOwner = owner;
+		fOwningThread = find_thread(NULL);
+	}
+	
+	// if the last transaction is older than 2 secs, start a new one
+	if (fTransactionsInEntry != 0 && system_time() - fTimestamp > 2000000L)
+		WriteLogEntry();
+
+	return B_OK;
+}
+
+
+void
+Journal::Unlock(Transaction *owner,bool success)
+{
+	if (owner != fOwner)
+		return;
+
+	TransactionDone(success);
+
+	fTimestamp = system_time();
+	fOwner = NULL;
+	fOwningThread = -1;
+	fLock.Unlock();
 }
 
 
@@ -358,11 +369,9 @@ Journal::TransactionDone(bool success)
 	if (TransactionSize() < fMaxTransactionSize) {
 		fTransactionsInEntry++;
 		fHasChangedBlocks = false;
+
 		return B_OK;
 	}
-
-	fTransactionsInEntry = 0;
-	fHasChangedBlocks = false;
 
 	return WriteLogEntry();
 }
