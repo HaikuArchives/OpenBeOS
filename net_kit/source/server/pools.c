@@ -38,7 +38,6 @@ static void get_mem_block(size_t size, struct pool_ctl *p)
 		blk->next = p->list;
 	p->list = blk;
 	release_sem(p->lock);
-printf("allocated a %ld byte block starting at %p\n", size, blk->ptr);
 
 	return;
 }
