@@ -14,11 +14,11 @@
 #define NO_RECOVERY 3
 #define NO_DATA 4
 
-//#ifndef h_errno
+#ifndef h_errno
 extern int h_errno;
 extern int *_h_errnop(void);
-//#define h_errno (*_h_errnop())
-//#endif /* h_errno */
+#define h_errno (*_h_errnop())
+#endif /* h_errno */
 
 struct hostent {
 	char *h_name;
