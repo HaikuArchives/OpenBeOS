@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)cbrt.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 
-//#include <sys/cdefs.h>
+#include <cdefs.h>
 
 /* kahan's cube root (53 bits IEEE double precision)
  * for IEEE machines only
@@ -53,7 +53,7 @@ static char sccsid[] = "@(#)cbrt.c	8.1 (Berkeley) 6/4/93";
  * On a National machine, it has different ordering; therefore, this code
  * must be compiled with flag -DNATIONAL.
  */
-#if !defined(vax) && !defined(tahoe)
+#if !defined(vax)&&!defined(tahoe)
 
 static unsigned long const B1 = 715094163; /* B1 = (682-0.03306235651)*2**20 */
 static unsigned long const B2 = 696219795; /* B2 = (664-0.03306235651)*2**20 */
