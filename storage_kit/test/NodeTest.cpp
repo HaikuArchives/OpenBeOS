@@ -4,11 +4,15 @@
 #include <NodeTest.h>
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include <sys/stat.h>	// For struct stat
 #include <fs_attr.h>	// For struct attr_info
 
-#include <kernel_interface.h>
+#include <StorageDefs.h>
+#include <TypeConstants.h>
+
+//#include <kernel_interface.h>
 
 #include "TestUtils.h"
 
@@ -184,7 +188,7 @@ NodeTest::AttrBStringTest() {
 // Doesn't do very thorough testing yet (I'll leave that to Mike :-)
 void
 NodeTest::StatTest() {
-	StorageKit::Stat s;
+	struct stat s;
 	
 	BNode node;
 	CPPUNIT_ASSERT( node.GetStat(&s) == B_NO_INIT );

@@ -1,6 +1,7 @@
 // DirectoryTest.cpp
 
 #include <set>
+#include <stdio.h>
 #include <string>
 #include <unistd.h>
 #include <sys/stat.h>

@@ -3,6 +3,8 @@
 #include <Directory.h>
 #include <Path.h>
 
+#include <stdio.h>
+#include <unistd.h>
 #include <sys/utsname.h> // Not needed
 #include <sys/statvfs.h> // Not needed
 
@@ -11,7 +13,7 @@
 //#include <sys/stat.h>	// For struct stat
 //#include <fs_attr.h>	// For struct attr_info
 
-#include <kernel_interface.h>
+//#include <kernel_interface.h>
 
 CppUnit::Test*
 EntryTest::Suite() {
@@ -379,7 +381,7 @@ EntryTest::RenameTest() {
 	
 void
 EntryTest::StatTest() {
-	StorageKit::Stat stat;
+	struct stat stat;
 
 	// Unitialized Entry
 	BEntry null;
