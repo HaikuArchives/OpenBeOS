@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)cabs.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
-
 /* HYPOT(X,Y)
  * RETURN THE SQUARE ROOT OF X^2 + Y^2  WHERE Z=X+iY
  * DOUBLE PRECISION (VAX D format 56 bits, IEEE DOUBLE 53 BITS)

@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)cbrt.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
-
 #include <cdefs.h>
 
 /* kahan's cube root (53 bits IEEE double precision)
