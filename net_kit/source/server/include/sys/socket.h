@@ -7,13 +7,13 @@
 /* NB these should be added to as required... */
 
 #define	AF_UNSPEC		0
-#define AF_INET			1
+#define AF_INET			2
 #define AF_ROUTE		3
-#define AF_LINK			4
-#define AF_INET6		4
-#define AF_IPX			7
+#define AF_LINK			18
+#define AF_IPX			23
+#define AF_INET6		24
 
-#define AF_MAX			9
+#define AF_MAX			24
 
 #define PF_UNSPEC		AF_UNSPEC
 #define PF_INET			AF_INET
