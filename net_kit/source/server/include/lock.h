@@ -22,6 +22,10 @@ struct benaphore {
 };
 
 typedef struct benaphore benaphore;
+// it may make sense to add a status field to the rw_lock to
+// be able to check if the semaphore could be locked
+typedef struct benaphore rw_lock;
+
 
 #define INIT_BENAPHORE(lock,name) \
 	{ \
@@ -46,23 +50,42 @@ typedef struct benaphore benaphore;
 
 /* read/write lock */
 
-#define CREATE_RW_LOCK(name) \
-	create_sem(MAX_READERS, name)
+#define INIT_RW_LOCK(lock,name) \
+	{ \
+		(lock).sem = create_sem(0, name); \
+		(lock).count = MAX_READERS; \
+	}
 
-#define DELETE_RW_LOCK(sem) \
-	delete_sem(sem)
+#define CHECK_RW_LOCK(lock) \
+	((lock).sem)
 
-#define ACQUIRE_READ_LOCK(sem) \
-	while (acquire_sem(sem) == B_INTERRUPTED);
+#define UNINIT_RW_LOCK(lock) \
+	delete_sem((lock).sem)
 
-#define RELEASE_READ_LOCK(sem) \
-	release_sem(sem);
+#define ACQUIRE_READ_LOCK(lock) \
+	{ \
+		if (atomic_add(&(lock).count, -1) <= 0) \
+			acquire_sem((lock).sem); \
+	}
 
-#define ACQUIRE_WRITE_LOCK(sem) \
-	while (acquire_sem_etc(sem, MAX_READERS, B_ABSOLUTE_TIMEOUT, \
-				B_INFINITE_TIMEOUT) == B_INTERRUPTED);
+#define RELEASE_READ_LOCK(lock) \
+	{ \
+		if (atomic_add(&(lock).count, 1) < 0) \
+			release_sem((lock).sem); \
+	}
 
-#define RELEASE_WRITE_LOCK(sem) \
-	release_sem_etc(sem, MAX_READERS, 0);
+#define ACQUIRE_WRITE_LOCK(lock) \
+	{ \
+		int32 readers = atomic_add(&(lock).count, -MAX_READERS); \
+		if (readers < MAX_READERS) \
+			acquire_sem_etc((lock).sem,readers <= 0 ? 1 : MAX_READERS - readers,0,0); \
+	}
+
+#define RELEASE_WRITE_LOCK(lock) \
+	{ \
+		int32 readers = atomic_add(&(lock).count,MAX_READERS); \
+		if (readers < 0) \
+			release_sem_etc((lock).sem,readers <= -MAX_READERS ? 1 : -readers,0); \
+	}
 
 #endif	/* LOCK_H */

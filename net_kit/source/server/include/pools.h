@@ -27,7 +27,7 @@ struct free_blk {
 	char *next;
 };
 
-#define POOL_USES_BENAPHORES 1
+#define POOL_USES_BENAPHORES 0
 
 struct pool_ctl {
 	struct pool_mem *list;
@@ -37,7 +37,7 @@ struct pool_ctl {
 #if POOL_USES_BENAPHORES
 	benaphore lock;
 #else
-	sem_id lock;
+	rw_lock lock;
 #endif
 };
 

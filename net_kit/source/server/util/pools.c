@@ -100,7 +100,8 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 			return B_ERROR;
 		}
 	#else
-		if ((pool->lock = CREATE_RW_LOCK("pool_lock")) < B_OK) {
+		INIT_RW_LOCK(pool->lock, "pool_lock");
+		if (CHECK_RW_LOCK(pool->lock) < B_OK) {
 			free(pool);
 			return B_ERROR;
 		}
@@ -118,7 +119,7 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 		#if POOL_USES_BENAPHORES
 			UNINIT_BENAPHORE(pool->lock);
 		#else
-			DELETE_RW_LOCK(pool->lock);
+			UNINIT_RW_LOCK(pool->lock);
 		#endif
 		free(pool);
 		return B_NO_MEMORY;
@@ -242,7 +243,7 @@ void pool_destroy(struct pool_ctl *p)
 	#if POOL_USES_BENAPHORES
 		UNINIT_BENAPHORE(p->lock);
 	#else
-		DELETE_RW_LOCK(p->lock);
+		UNINIT_RW_LOCK(p->lock);
 	#endif
 	free(p);
 }
