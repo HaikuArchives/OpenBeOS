@@ -351,6 +351,21 @@ uint32 Layer::CountChildren(void)
 	return i;
 }
 
+void Layer::MoveBy(float x, float y)
+{
+	if(visible)
+		visible->OffsetBy(x,y);
+
+	BRect oldframe(frame);
+	frame.OffsetBy(x,y);
+
+	if(!invalid)
+		invalid=new BRegion(oldframe);
+	else
+		invalid->Include(oldframe);
+	invalid->Include(frame);
+}
+
 void Layer::PrintToStream(void)
 {
 	printf("-----------\nLayer %s\n",name->String());

@@ -27,6 +27,9 @@ public:
 	uint32 CountChildren(void);
 	Layer *GetChildAt(BPoint pt, bool recursive=false);
 
+	void MoveBy(float x, float y);
+	void ResizeBy(float x, float y);
+
 	void RebuildRegions(bool include_children=true);
 	void PrintToStream(void);
 	void PruneTree(void);

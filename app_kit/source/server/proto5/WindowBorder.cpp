@@ -143,15 +143,18 @@ void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 {
 	if(movewin)
 	{
-		BRegion dirtyreg(frame);
-		frame.OffsetBy(pt);
+		float dx=pt.x-mousepos.x,
+			dy=pt.y-mousepos.y;
+		
+		decor->MoveBy(BPoint(dx, dy));
+		MoveBy(dx,dy);
 		clientframe.OffsetBy(pt);
 
-		dirtyreg.Exclude(frame);
-		for(int32 i=0;i<dirtyreg.CountRects();i++)
-			parent->Invalidate(dirtyreg.RectAt(i));
+		swin->Lock();
+		swin->frame.OffsetBy(dx,dy);
+		swin->Unlock();
+
 		parent->RequestDraw();
-		decor->MoveBy(BPoint(pt.x-mousepos.x, pt.y-mousepos.y));
 		decor->Draw();
 	}
 	mousepos=pt;
