@@ -1,9 +1,0 @@
-elf.c
-
-Functions for loading an elf executable into a process.
-
-static int verify_eheader(struct Elf32_Ehdr *eheader)
-	Checks the header for magic numbers to confirm that header is valid. Returns -1 if bad, 0 if good.
-
-int elf_load(const char *path, struct proc *p, int flags, addr *entry)   
-	Opens the file specified in path. Reads the eheader and verifies it using verify_eheader. Reads in the pheaders, then for each region of the code: creates an anonymous region of vm and reads the region in.

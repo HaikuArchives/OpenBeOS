@@ -1,6 +1,0 @@
-dev_init.c
-
-Creates the functions to initialize the /dev filesyste,.
-
-int dev_init(kernel_args *ka)
-	Calls sys_create to make a stream type dir. Bootstraps the bootfs. Calls sys_create (same way) to make /boot. Calls sys_mount on /boot.
