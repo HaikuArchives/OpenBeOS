@@ -1,0 +1,3 @@
+SubDir OBOS_TOP sources os kits kernel libc stdlib ;
+
+KernelStaticLibrary stdlib :  assert.c atoi.c bsearch.c heapsort.c merge.c qsort.c radixsort.c rand.c random.c ;

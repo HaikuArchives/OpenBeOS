@@ -1,0 +1,4 @@
+SubDir OBOS_TOP sources os kits kernel drivers common ;
+
+KernelStaticLibrary driverscommon : null.c zero.c ;
+

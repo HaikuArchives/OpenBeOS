@@ -1,0 +1,3 @@
+SubDir OBOS_TOP sources os kits kernel libm arch sh4 ;
+
+KernelStaticLibrary libmsh4 : fabs.S frexp.c isinf.c ldexp.c ;

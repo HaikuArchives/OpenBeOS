@@ -1,0 +1,6 @@
+SubDir OBOS_TOP sources os kits kernel libm ;  
+
+SubInclude OBOS_TOP sources os kits kernel libm arch ;  
+SubInclude OBOS_TOP sources os kits kernel libm common ;
+SubInclude OBOS_TOP sources os kits kernel libm common_source ;
+SubInclude OBOS_TOP sources os kits kernel libm ieee ;

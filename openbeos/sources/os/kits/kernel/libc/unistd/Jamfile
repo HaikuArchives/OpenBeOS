@@ -1,0 +1,3 @@
+SubDir OBOS_TOP sources os kits kernel libc unistd ;
+
+KernelStaticLibrary unistd : close.c dup.c dup2.c lseek.c open.c pread.c pwrite.c read.c sleep.c usleep.c write.c ;

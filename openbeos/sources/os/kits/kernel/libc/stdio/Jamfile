@@ -1,0 +1,3 @@
+SubDir OBOS_TOP sources os kits kernel libc stdio ;
+
+KernelStaticLibrary stdio : stdio.c vsprintf.c ;

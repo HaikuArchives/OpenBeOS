@@ -1,0 +1,6 @@
+SubDir OBOS_TOP sources os kits kernel core addons bus_managers ;
+
+KernelStaticLibrary bus : bus_init.c bus_man.c ;
+
+SubInclude OBOS_TOP sources os kits kernel core addons bus_managers isa  ;
+SubInclude OBOS_TOP sources os kits kernel core addons bus_managers pci  ;

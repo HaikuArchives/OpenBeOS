@@ -1,0 +1,3 @@
+SubDir OBOS_TOP sources os kits kernel libc string ;
+
+KernelStaticLibrary string : bcopy.c bzero.c memchr.c memcmp.c memcpy.c memmove.c memset.c strcat.c strchr.c strcmp.c strcpy.c strerror.c strlcat.c strlcpy.c strlen.c strncat.c strncmp.c strncpy.c strnicmp.c strnlen.c strpbrk.c strrchr.c strspn.c strstr.c strtok.c  ;

@@ -1,0 +1,4 @@
+SubDir OBOS_TOP sources os kits kernel core addons fs ;
+
+SubInclude OBOS_TOP sources os kits kernel core addons fs zfs ;
+SubInclude OBOS_TOP sources os kits kernel core addons fs iso9660 ;

@@ -1,0 +1,3 @@
+SubDir OBOS_TOP sources os kits kernel libm arch i386 ;
+
+KernelStaticLibrary libmi386 : fabs.S frexp.c isinf.c ldexp.c ;

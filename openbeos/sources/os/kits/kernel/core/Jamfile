@@ -1,0 +1,8 @@
+SubDir OBOS_TOP sources os kits kernel core ;
+
+KernelStaticLibrary core : cbuf.c console.c cpu.c debug.c elf.c faults.c gdb.c heap.c int.c khash.C linkhack.c lock.c main.c misc.c module.c port.c queue.c sem.c smp.c syscalls.c thread.c timer.c ;
+
+SubInclude OBOS_TOP sources os kits kernel core addons ;
+SubInclude OBOS_TOP sources os kits kernel core arch ;
+SubInclude OBOS_TOP sources os kits kernel core fs ;
+SubInclude OBOS_TOP sources os kits kernel core vm ;

@@ -1,0 +1,3 @@
+SubDir OBOS_TOP sources os kits kernel libm ieee ;
+
+KernelStaticLibrary ieee : cabs.c cbrt.c support.c ;

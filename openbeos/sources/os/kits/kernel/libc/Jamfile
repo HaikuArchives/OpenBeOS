@@ -1,0 +1,14 @@
+SubDir OBOS_TOP sources os kits kernel libc ;
+
+KernelStaticLibrary libc : nulibc_init.c ;
+
+SubInclude OBOS_TOP sources os kits kernel libc arch ; 
+# SubInclude OBOS_TOP sources os kits kernel libc hoard ;
+SubInclude OBOS_TOP sources os kits kernel libc locale ;
+SubInclude OBOS_TOP sources os kits kernel libc stdio ;
+SubInclude OBOS_TOP sources os kits kernel libc stdlib ;
+SubInclude OBOS_TOP sources os kits kernel libc string ;
+SubInclude OBOS_TOP sources os kits kernel libc sys ;
+SubInclude OBOS_TOP sources os kits kernel libc system ;
+SubInclude OBOS_TOP sources os kits kernel libc unistd ;
+
