@@ -12,6 +12,7 @@
 #include <File.h>
 #include <Mime.h>
 #include <Resources.h>
+#include <String.h>
 #include <TypeConstants.h>
 
 #include "Test.StorageKit.h"
@@ -195,7 +196,9 @@ void
 ResourcesTest::setUp()
 {
 	BasicTest::setUp();
-	string resourcesTestDir(shell.TestDir());
+	BString unescapedTestDir(shell.TestDir());
+	unescapedTestDir.CharacterEscape(" \t\n!\"'`$&()?*+{}[]<>|", '\\');
+	string resourcesTestDir(unescapedTestDir.String());
 	resourcesTestDir += "/resources";
 	execCommand(string("mkdir ") + testDir
 				+ " ; cp " + resourcesTestDir + "/" + x86ResName + " "
