@@ -330,7 +330,7 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size) {
 	if (rotate) {
 		PDF_save(fPdf);
 		PDF_translate(fPdf, x, y);
-		PDF_rotate(fPdf, 180.0 / PI * rotation);
+		PDF_rotate(fPdf, rotation);
 	    PDF_set_text_pos(fPdf, 0, 0);
 	} else 
 	    PDF_set_text_pos(fPdf, x, y);
