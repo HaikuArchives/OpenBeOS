@@ -19,6 +19,7 @@
 #include <errno.h>		// errno
 #include <new>
 #include <fs_attr.h>	//  BeOS's C-based attribute functions
+#include <fs_query.h>	//  BeOS's C-based query functions
 #include <Entry.h>		// entry_ref
 #include <image.h>		// used by get_app_path()
 #include <utime.h>		// for utime() and struct utimbuf
@@ -846,6 +847,89 @@ StorageKit::read_link( FileDescriptor fd, char *result, size_t size )
 	if (error == B_OK)
 		error = B_ERROR;
 	return error;
+}
+
+
+//------------------------------------------------------------------------------
+// Query Functions
+//------------------------------------------------------------------------------
+
+status_t
+StorageKit::open_query( dev_t device, const char *query, uint32 flags,
+						FileDescriptor &result )
+{
+	if (flags & B_LIVE_QUERY)
+		return B_BAD_VALUE;
+	result = NullFd;
+	if (DIR *dir = fs_open_query(device, query, flags)) {
+		result = dir->fd;
+		free(dir);
+	}
+	return (result < 0) ? errno : B_OK ;
+}
+
+status_t
+StorageKit::open_live_query( dev_t device, const char *query, uint32 flags,
+							 port_id port, int32 token,
+							 FileDescriptor &result )
+{
+	if (!(flags & B_LIVE_QUERY))
+		return B_BAD_VALUE;
+	result = NullFd;
+	if (DIR *dir = fs_open_live_query(device, query, flags, port, token)) {
+		result = dir->fd;
+		free(dir);
+	}
+	return (result < 0) ? errno : B_OK ;
+}
+
+/*!	\param query the query
+	\param buffer the dirent structure to be filled
+	\param length the size of the dirent structure
+	\param count the maximal number of entries to be read
+	\return
+	- the number of entries stored in the supplied buffer,
+	- \c 0, if at the end of the entry list,
+	- \c B_BAD_VALUE, if \a buffer is NULL, or the supplied buffer is too small
+*/
+int32
+StorageKit::read_query( FileDescriptor query, DirEntry *buffer, size_t length,
+						int32 count )
+{
+	// init a DIR structure
+	LongDIR queryDir;
+	queryDir.fd = query;
+	// check parameters
+	int32 result = (buffer == NULL ? B_BAD_VALUE : 0);
+	if (result == 0 && count > 0) {
+		// read one entry and copy it into the buffer
+		if (dirent *entry = fs_read_query(&queryDir)) {
+			// Don't trust entry->d_reclen.
+			// Unlike stated in BeBook::BEntryList, the value is not the length
+			// of the whole structure, but only of the name. Some FSs count
+			// the terminating '\0', others don't.
+			// So we calculate the size ourselves (including the '\0'):
+			size_t entryLen = entry->d_name + strlen(entry->d_name) + 1
+							  - (char*)entry;
+			if (length >= entryLen) {
+				memcpy(buffer, entry, entryLen);
+				result = 1;
+			} else	// buffer too small
+				result = B_BAD_VALUE;
+		}
+	}
+	return result;
+}
+
+status_t
+StorageKit::close_query( FileDescriptor query )
+{
+	// init a DIR structure
+	if (LongDIR* queryDir = (LongDIR*)malloc(sizeof(LongDIR))) {
+		queryDir->fd = query;
+		return (fs_close_query(queryDir) == -1) ? errno : B_OK;
+	}
+	return B_NO_MEMORY;
 }
 
 

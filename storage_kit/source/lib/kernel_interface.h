@@ -227,6 +227,27 @@ ssize_t read_link(FileDescriptor fd, char *result, size_t size);
 
 
 //------------------------------------------------------------------------------
+// Query Functions
+//------------------------------------------------------------------------------
+/*! \brief Opens a query. Sets result to a properly "unitialized" query
+	if the function fails. */
+status_t open_query(dev_t device, const char *query, uint32 flags,
+					FileDescriptor &result);
+
+/*! \brief Opens a live query. Sets result to a properly "unitialized" query
+	if the function fails. */
+status_t open_live_query(dev_t device, const char *query, uint32 flags,
+						 port_id port, int32 token, FileDescriptor &result);
+
+//! Returns the next entries in the given query.
+int32 read_query(FileDescriptor query, DirEntry *buffer, size_t length,
+				 int32 count = INT_MAX);
+
+/*! Closes the given query. */
+status_t close_query(FileDescriptor dir);
+
+
+//------------------------------------------------------------------------------
 // Miscellaneous Functions
 //------------------------------------------------------------------------------
 /*! Converts the given entry_ref into an absolute pathname, returning
