@@ -4,24 +4,27 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <kernel/OS.h>
 
 #include "ipv4/ipv4.h"
 #include "protocols.h"
 #include "net_module.h"
+#include "mbuf.h"
 
 loaded_net_module *net_modules;
 int *prot_table;
 
-static void dump_ipv4_addr(char *msg, ipv4_addr *ad)
-{
-	uint8 *b = (uint8*)ad;
-	printf("%s %d.%d.%d.%d\n", msg, b[0], b[1], b[2], b[3]);
-}
-
 int ipv4_input(struct mbuf *buf)
 {
 	ipv4_header *ip = mtod(buf, ipv4_header *);
-	
+
+
+	if (in_cksum(buf, ip->hl * 4) != 0) {
+		printf("Bogus checksum! Discarding packet.\n");
+		m_freem(buf);
+		return 0;
+	}
+
 	printf("IPv4 Header :\n");
 	printf("            : version       : %d\n", ip->ver);
 	printf("            : header length : %d\n", ip->hl);
@@ -31,22 +34,21 @@ int ipv4_input(struct mbuf *buf)
 	printf("            : flags         : 0x%02x\n", IPV4_FLAGS(ip));
 	printf("            : frag offset   : %d\n", ntohs(IPV4_FRAG(ip)));
 	printf("            : ttl           : %d\n", ip->ttl);
-        dump_ipv4_addr("            : src address   :", &ip->src);
-        dump_ipv4_addr("            : dst address   :", &ip->dst);
+	dump_ipv4_addr("            : src address   :", &ip->src);
+	dump_ipv4_addr("            : dst address   :", &ip->dst);
 
 	printf("            : protocol      : ");
-	/* move the pointer... */
-	/* Yuck - big hack - adding 14 isn't correct! */
-	m_adj(buf, (ip->hl * 4) + 14);
+	/* move the pointer... not sure if all protocols will want this! */
+	m_adj(buf, (ip->hl * 4));
 
 	switch(ip->prot) {
 		case IP_ICMP:
 			printf("ICMP\n");
 			break;
-		case IP_UDP:
+		case IP_UDP: {
 			printf("UDP\n");
-			net_modules[prot_table[ip->prot]].mod->input(buf);
 			break;
+		}
 		case IP_TCP:
 			printf("TCP\n");
 			break;
@@ -54,13 +56,16 @@ int ipv4_input(struct mbuf *buf)
 			printf("unknown (0x%02x)\n", ip->prot);
 	}
 
+	if (net_modules[prot_table[ip->prot]].mod->input)
+		net_modules[prot_table[ip->prot]].mod->input(buf);
+
 	return 0; 
 }
 
-int ipv4_init(loaded_net_module *nm, int *tbl)
+int ipv4_init(loaded_net_module *ln, int *pt)
 {
-	net_modules = nm;
-	prot_table = tbl;
+	net_modules = ln;
+	prot_table = pt;
 
 	return 0;
 }
@@ -68,7 +73,7 @@ int ipv4_init(loaded_net_module *nm, int *tbl)
 int ipv4_dev_init(ifnet *dev)
 {
 	/* so far all devices will use this!! */
-	return 0;
+	return 1;
 }
 
 net_module net_module_data = {
@@ -78,6 +83,6 @@ net_module net_module_data = {
 
 	&ipv4_init,
 	&ipv4_dev_init,
-	&ipv4_input,
+	NULL, 
 	NULL
 };

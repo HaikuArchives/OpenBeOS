@@ -32,6 +32,4 @@ typedef struct ipv4_header {
 #define IPV4_FLAGS(a)		(a)->flags_frag >> 13
 #define IPV4_FRAG(a)		(a)->flags_frag & 0x1fff
 
-int ipv4_input(struct mbuf* buf);
-
 #endif /* OBOS_IPV4_H */
