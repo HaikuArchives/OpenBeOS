@@ -17,6 +17,9 @@
 #include <arch/cpu.h>
 #include <resource.h>
 
+#define _KERNEL_
+#include <sysctl.h>
+
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
 
 #define arg0  (((uint32 *)arg_buffer)[0])
@@ -262,6 +265,11 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_TEST_AND_SET:
 			*call_ret = user_test_and_set((int *)arg0, (int)arg1, (int)arg2);
+			break;
+		case SYSCALL_SYSCTL:
+			*call_ret = user_sysctl((int *)arg0, (uint)arg1, (void *)arg2, 
+			                        (size_t *)arg3, (void *)arg4, 
+			                        (size_t)arg5);
 			break;
 		default:
 			*call_ret = -1;
