@@ -33,9 +33,9 @@ class TestSuite : public Test
 {
 public:
     TestSuite       (std::string name = "");
-    ~TestSuite      ();
+    virtual ~TestSuite      ();
 
-    void                run             (TestResult *result);
+    virtual void        run             (TestResult *result);
     int                 countTestCases  () const;
     std::string         getName         () const;
     std::string         toString        () const;
