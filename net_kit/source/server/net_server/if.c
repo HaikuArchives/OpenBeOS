@@ -20,8 +20,10 @@
 extern struct ifnet *devices;
 extern int ndevs;
 
-/* global pointer to all interfaces list... */
+/* Variables used outside this file */
 struct ifaddr **ifnet_addrs;
+
+/* Private variables */
 static int if_index;
 static int if_indexlim;
 
@@ -276,6 +278,9 @@ next:
         return (ifa_maybe);
 }
 
+/* XXX - we have a memory leak here! When we clean up we need to free the memory
+ *       that is malloc'd here
+ */
 void if_attach(struct ifnet *ifp)
 {
 	uint socksize, ifasize;
@@ -290,7 +295,7 @@ void if_attach(struct ifnet *ifp)
 
 	sprintf(dname, "%s%d", ifp->name, ifp->if_unit);
 	ifp->if_name = strdup(dname);
-	
+
 	while (*p)
 		p = &((*p)->if_next);
 	
@@ -326,7 +331,6 @@ void if_attach(struct ifnet *ifp)
 	if (socksize < sizeof(*sdl))
 		socksize = sizeof(*sdl);
 	ifasize = sizeof(*ifa) + 2 * socksize;
-
 	if ((ifa = (struct ifaddr*)malloc(ifasize))) {
 		memset(ifa, 0, ifasize);
 
@@ -373,14 +377,11 @@ int ifconf(int cmd, caddr_t data)
 	ifrp = ifc->ifc_req;
 	ep = ifr.ifr_name + sizeof(ifr.ifr_name) - 2;
 	
-	printf("ifconf\n");
-	
 	for (; space > sizeof(ifr) && ifp; ifp = ifp->if_next) {
 		strncpy(ifr.ifr_name, ifp->if_name, sizeof(ifr.ifr_name) - 2);
 		for (cp = ifr.ifr_name;cp < ep && *cp; cp++)
 			continue;
 		*cp = '\0';
-printf("ifp->if_addrlist = %p\n", ifp->if_addrlist);
 		if ((ifa = ifp->if_addrlist) == NULL) {
 			memset((caddr_t)&ifr.ifr_addr, 0, sizeof(ifr.ifr_addr));
 			copyptr = memcpy((caddr_t) ifrp, (caddr_t) &ifr, sizeof(ifr));
