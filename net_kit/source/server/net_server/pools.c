@@ -9,10 +9,16 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
+#define AREA_ADDR_FLAG  B_ANY_KERNEL_ADDRESS
+#define AREA_FLAGS      B_CONTIGUOUS|B_FULL_LOCK
+#else
+#define AREA_ADDR_FLAG  B_ANY_ADDRESS
+#define AREA_FLAGS      B_CONTIGUOUS|B_FULL_LOCK
 #endif
 
 #define ROUND_TO_PAGE_SIZE(x) (((x) + (B_PAGE_SIZE) - 1) & ~((B_PAGE_SIZE) - 1))
 
+#ifdef WALK_POOL_LIST
 void walk_pool_list(struct pool_ctl *p)
 {
 	struct pool_mem *pb = p->list;
@@ -24,6 +30,7 @@ void walk_pool_list(struct pool_ctl *p)
 		pb = pb->next;
 	}
 }
+#endif
 
 void pool_debug_walk(struct pool_ctl *p)
 {
@@ -61,27 +68,17 @@ void pool_debug(struct pool_ctl *p, char *name)
 static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 {
 	struct pool_mem *block;
-	int32 where; /* where should new block be allocated */
-	int32 how; /* what type of memory do we want */
 
 	block = (struct pool_mem *)malloc(sizeof(struct pool_mem));
 	if (block == NULL)
 		return NULL;
 
-printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
-	block, (char*)block + sizeof(struct pool_mem));
-	
-#ifndef _KERNEL_MODE
-	where = B_ANY_ADDRESS;
-	how = B_LAZY_LOCK|B_CONTIGUOUS;
-#else
-	where = B_ANY_KERNEL_ADDRESS;
-	how = B_FULL_LOCK|B_CONTIGUOUS;
-#endif
+	memset(block, 0, sizeof(*block));
 	
 	block->aid = create_area("net_stack_pools_block",
 						(void**)&block->base_addr,
-						where, pool->block_size, how, 
+						AREA_ADDR_FLAG, pool->block_size,
+						AREA_FLAGS, 
 						B_READ_AREA|B_WRITE_AREA);
 	if (block->aid < B_OK) {
 		free(block);
@@ -105,8 +102,10 @@ printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
 
 		pool->list = block;
 
-walk_pool_list(pool);
-		
+#ifdef WALK_POOL_LIST
+		walk_pool_list(pool);
+#endif
+
 		#if POOL_USES_BENAPHORES
 			RELEASE_BENAPHORE(pool->lock);
 		#else
@@ -135,9 +134,6 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 	pool = (struct pool_ctl*)malloc(sizeof(struct pool_ctl));
 	if (pool == NULL)
 		return B_NO_MEMORY;
-
-printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
-	pool, (char*)pool + sizeof(struct pool_ctl));
 
 	memset(pool, 0, sizeof(*pool));
 	
