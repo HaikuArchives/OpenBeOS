@@ -1,6 +1,6 @@
 /*
 
-DUNView by Sikosis
+DUNView by Sikosis for OpenBeOS
 
 (C) 2002
 
@@ -18,7 +18,7 @@ DUNView by Sikosis
 // DUNView -- the view so we can put objects like text boxes on it
 DUNView::DUNView (BRect frame) : BView (frame, "DUNView", B_FOLLOW_ALL_SIDES, B_WILL_DRAW ) {
 	// Set the Background Color
-	SetViewColor(220,220,220,255);
+	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 }
 
 void DUNView::Draw (BRect updateRect) {
