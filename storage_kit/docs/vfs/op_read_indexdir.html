@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>
+			op_read_indexdir
+		</title>
+	</head>
+	<body>
+		<h1>
+			op_read_indexdir - Reads the next entry(s) in the attribute set.
+		</h1>
+		<p>
+			Reads the next entry(s) in the index, and returns them as a
+			<code>dirent</code>. The number of dirent's is specified by 
+			<code>num</code>.
+		</p>
+		<h2>
+			Declaration
+		</h2>
+		<p>
+			<code>
+			int op_read_indexdir(void *ns, void *cookie, long *num, struct dirent *buf, size_t bufsize);
+			</code>
+		</p>
+		<h2>
+			Parameters
+		</h2>
+		<h3>
+			Inputs
+		</h3>
+		<p>
+			<code>ns</code> - pointer to a volume structure<br>
+			<code>cookie</code> - The index's cookie<br>
+			<code>bufize</code> - Ignored by implementations seen so far<br>
+		</p>
+		<h3>
+			Outputs
+		</h3>
+		<p>
+			<code>num</code> - The number of attributes returned in buf,
+						can be zero.<br>
+			<code>buf</code> - The <code>dirent</code>s.<br>
+		</p>
+		<h2>
+			Return
+		</h2>
+		<p>
+			<code>B_OK</code> - Operation completed <br>
+			<code>ENOMEM</code> - Not enough memory<br>
+			<code>EINVAL</code> - Invaild parameters<br>
+			<code>B_BAD_VALUE</code> - Invaild parameters<br>
+		</p>
+		<h2>
+			Notes
+		</h2>
+		<p>
+			This definition was devised using the source for the AtheOS file 
+			system driver (downloadable from bebits.com) and OpenBeFS from 
+			the OpenBeOS CVS.
+		</p>
+	</body>
+</html>
