@@ -452,7 +452,8 @@ KernelLd ls :
 
 KernelConfigSection config.$(OBOS_ARCH).ini : bin/ls : ls ;
 
-KernelLd shell :
+# Note: shell is a built in target, thus we need the grist.
+KernelLd <$(SOURCE_GRIST)>shell :
 	libglue2.o
 	<$(SOURCE_GRIST)!apps!shell>main.o
 	<$(SOURCE_GRIST)!apps!shell>args.o
