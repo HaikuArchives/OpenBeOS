@@ -246,9 +246,13 @@ Journal::WriteLogEntry()
 	if (array == NULL || array->count == 0)
 		return B_OK;
 
-	// make sure there is enough space in the log
-	while (TransactionSize() > FreeLogBlocks())
+	// Make sure there is enough space in the log.
+	// ToDo: We currently call this function once for every log entry
+	// that's written to disk, which might not be necessary - but
+	// we may want to do this at other places, too.
+	do {
 		force_cache_flush(fVolume->Device(),true);
+	} while (TransactionSize() > FreeLogBlocks());
 
 	off_t logOffset = fVolume->ToBlock(fVolume->Log());
 	off_t logStart = fVolume->LogEnd();
@@ -273,8 +277,7 @@ Journal::WriteLogEntry()
 		if (block == NULL)
 			return B_IO_ERROR;
 
-		// ToDo: try if copying them to a buffer and writing them to disk at once
-		// is faster
+		// ToDo: try if using an iovec an a sequential read speeds up the operation
 		write_pos(fVolume->Device(),logOffset + logPosition,block,fVolume->BlockSize());
 		logPosition = (logPosition + 1) % fLogSize;
 	}
