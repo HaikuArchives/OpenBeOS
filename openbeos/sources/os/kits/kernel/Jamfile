@@ -573,6 +573,19 @@ KernelLd hostname :
 	bin/hostname
 	;
 
+KernelLd filetest :
+	libglue2.o
+	<$(SOURCE_GRIST)!apps!filetest>main.o
+	libc.so
+	libm.so
+	:
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	:
+	:
+	bin/filetest
+	;
+
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
 BuildKernel $(OBOS_KERNEL) : $(OBOS_KERNEL_CONFIG) ;
