@@ -110,12 +110,8 @@ private:
 	virtual	void _PennyEntry5();
 	virtual	void _PennyEntry6();
 	
-	/*! The entry's parent directory. This may replace fDfd once we
-		get the new kernel. */
-	StorageKit::Dir fDir;
-
 	/*! Currently unused. */
-	uint32 _pennyData[3];
+	uint32 _pennyData[4];
 
 	virtual	status_t set_stat(struct stat &st, uint32 what);
 	status_t move(int fd, const char *path);
@@ -123,18 +119,24 @@ private:
 	status_t set(StorageKit::Dir dir, const char *path, bool traverse);
 	status_t clear();
 
-	/*! File descriptor for the entry's parent directory. */
-	int	fDfd;
+//	/*! File descriptor for the entry's parent directory. */
+//	int	fDfd;
 	
+	/*! The entry's parent directory. This may replace fDfd once we
+		get the new kernel. */
+	StorageKit::Dir fDir;
+
 	/*! Leaf name of the entry. */
-	char *fLeaf;
+	char *fName;
 	
 	/*! Probably the status_t result of the most recent function call */
 	status_t fCStatus;
 	
-	status_t SetLeaf(const char *leaf);
+	status_t SetName(const char *name);
 
 	static bool SplitPathInTwain(const char* fullPath, char *&path, char *&leaf);
+	
+	void Dump(const char *name = NULL);
 };
 
 #ifdef USE_OPENBEOS_NAMESPACE

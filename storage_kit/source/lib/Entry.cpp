@@ -8,16 +8,84 @@
 #include <Entry.h>
 
 #include <Directory.h>
+#include <Path.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 using namespace OpenBeOS;
 #endif
 
+//----------------------------------------------------------------------------
+// struct entry_ref
+//----------------------------------------------------------------------------
+
+entry_ref::entry_ref() : device(0), directory(0), name(NULL) {
+}
+
+entry_ref::entry_ref(dev_t dev, ino_t dir, const char *name) :
+	device(dev), directory(dir), name(NULL) {
+	set_name(name);
+}
+
+entry_ref::entry_ref(const entry_ref &ref) : device(ref.device), directory(ref.directory),
+	name(NULL) {
+	set_name(ref.name);	
+}
+
+entry_ref::~entry_ref() {
+	if (name != NULL)
+		delete [] name;
+}
+	
+status_t entry_ref::set_name(const char *name) {
+	if (this->name != NULL) {
+		delete [] this->name;
+	}
+	
+	if (name == NULL) {
+		this->name = NULL;
+	} else {
+		this->name = new char[strlen(name)+1];
+		if (this->name == NULL)
+			return B_NO_MEMORY;
+		strcpy(this->name, name);
+	}
+	
+	return B_OK;			
+}
+
+bool
+entry_ref::operator==(const entry_ref &ref) const {
+	return (	device == ref.device &&
+				directory == ref.directory &&
+				strcmp(name, ref.name) == 0		);
+}
+
+bool
+entry_ref::operator!=(const entry_ref &ref) const {
+	return !(*this == ref);
+}
+
+entry_ref&
+entry_ref::operator=(const entry_ref &ref) {
+	if (this == &ref)
+		return *this;	
+
+	device = ref.device;
+	directory = ref.directory;
+	set_name(ref.name);
+	return *this;
+}
+
+
+//----------------------------------------------------------------------------
+// BEntry
+//----------------------------------------------------------------------------
+
 /*! Creates an uninitialized BEntry object. */
 BEntry::BEntry() :
 	fCStatus(B_NO_INIT),
 	fDir(StorageKit::NullDir),
-	fLeaf(NULL)
+	fName(NULL)
 {
 }
 
@@ -38,7 +106,7 @@ BEntry::BEntry(const entry_ref *ref, bool traverse = false){
 BEntry::BEntry(const char *path, bool traverse = false) :
 	fCStatus(B_NO_INIT),
 	fDir(StorageKit::NullDir),
-	fLeaf(NULL)
+	fName(NULL)
 {
 	SetTo(path, traverse);
 };
@@ -90,6 +158,9 @@ BEntry::SetTo(const char *path, bool traverse = false) {
 		char *pathStr, *leafStr;
 		pathStr = leafStr = NULL;
 		if (SplitPathInTwain(path, pathStr, leafStr)) {
+//			printf("path == '%s'\n", pathStr);
+//			printf("leaf == '%s'\n", leafStr);
+			
 			// Open the directory
 			StorageKit::Dir dir;
 			fCStatus = StorageKit::open_dir(pathStr, dir);
@@ -116,18 +187,44 @@ BEntry::Unset() {
 	}
 	
 	// Free our leaf name
-	if (fLeaf != NULL) {
-		delete [] fLeaf;
+	if (fName != NULL) {
+		delete [] fName;
 	}
 
 	fDir = StorageKit::NullDir;
-	fLeaf = NULL;
+	fName = NULL;
 	fCStatus = B_NO_INIT;
 };
 
 /*! Gets an entry_ref structure from the BEntry */
 status_t
 BEntry::GetRef(entry_ref *ref) const {
+	if (ref == NULL)
+		return B_BAD_VALUE;
+	
+	// Unset the entry_ref
+	ref->device = ref->directory = 0;
+	ref->set_name(NULL);
+	
+	if (fCStatus != B_OK)
+		return fCStatus;
+		
+	// Find ourselves in the directory listing
+	StorageKit::rewind_dir(fDir);	
+	StorageKit::DirEntry *entry;
+	for (	entry = StorageKit::read_dir(fDir);
+			entry != NULL;
+			entry = StorageKit::read_dir(fDir)	) {
+		if (strcmp(entry->d_name, ".") == 0) {
+			ref->device = entry->d_dev;
+			ref->directory = entry->d_ino;
+			ref->set_name(fName);
+			return B_OK;					
+		}
+	}
+	
+	return B_FILE_ERROR;
+	
 };
 
 /*! Gets the path for the BEntry */
@@ -164,19 +261,52 @@ status_t
 BEntry::Remove() {
 };
 
+
 /*! Equality operator */
 bool
 BEntry::operator==(const BEntry &item) const {
+
+	// First check statuses
+	if (this->InitCheck() == B_NO_INIT && item.InitCheck() == B_NO_INIT) {
+		return true;
+	} else if (this->InitCheck() == B_OK && item.InitCheck() == B_OK) {
+
+		// Directories don't compare well directly, so we'll
+		// compare entry_refs instead
+		entry_ref ref1, ref2;
+		if (this->GetRef(&ref1) != B_OK)
+			return false;
+		if (item.GetRef(&ref2) != B_OK)
+			return false;
+		return (ref1 == ref2);
+
+	} else {
+		return false;
+	}	
+
 };
 
 /*! Inequality operator */
 bool
 BEntry::operator!=(const BEntry &item) const {
+	return !(*this == item);
 };
 
-/*! Reinitialises the BEntry to be a copy of the arguement */
+/*! Reinitializes the BEntry to be a copy of the arguement */
 BEntry&
 BEntry::operator=(const BEntry &item) {
+	if (this == &item)
+		return *this;
+
+	Unset();
+	if (item.fCStatus == B_OK) {
+		fCStatus = StorageKit::dup_dir(item.fDir, fDir);
+		if (fCStatus == B_OK) {
+			fCStatus = SetName(item.fName);
+		}
+	}
+	
+	return *this;
 };
 
 /*! Currently unused. */
@@ -237,13 +367,14 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 				entry = StorageKit::read_dir(dir)	) {
 
 			if (strcmp(entry->d_name, leaf) == 0) {
+//				printf("Found Leaf '%s'\n", leaf);
 			
 				// We've found the entry in the directory, now we convert
 				// it to an absolute pathname and find out if it's a symbolic
 				// link. If so, we traverse it.
 				char path[B_PATH_NAME_LENGTH+1];
 				status_t result = StorageKit::entry_ref_to_path(entry->d_pdev,
-					entry->d_pino, entry->d_name, path, B_PATH_NAME_LENGTH+1);
+					entry->d_pino, leaf, path, B_PATH_NAME_LENGTH+1);
 					
 				if (result == B_OK) {
 //					printf("Entry == '%s'\n", path);	// Prints out the full path of this entry
@@ -318,7 +449,7 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 	*/
 	
 	fDir = dir;
-	SetLeaf(leaf);
+	SetName(leaf);
 	return B_OK;
 };
 
@@ -329,19 +460,19 @@ BEntry::clear(){
 
 /*! Handles string allocation, deallocation, and copying for our leaf name. */
 status_t
-BEntry::SetLeaf(const char *leaf) {
-	if (leaf == NULL)
+BEntry::SetName(const char *name) {
+	if (name == NULL)
 		return B_BAD_VALUE;	
 	
-	if (fLeaf != NULL) {
-		delete [] fLeaf;
+	if (fName != NULL) {
+		delete [] fName;
 	}
 	
-	fLeaf = new char[strlen(leaf)+1];
-	if (fLeaf == NULL)
+	fName = new char[strlen(name)+1];
+	if (fName == NULL)
 		return B_NO_MEMORY;
 		
-	strcpy(fLeaf, leaf);
+	strcpy(fName, name);
 	
 	return B_OK;
 }
@@ -433,8 +564,9 @@ BEntry::SplitPathInTwain(const char* fullPath, char *&path, char *&leaf) {
 	// Alloc new strings and copy the path and leaf over
 	if (pathEnd == -2) {
 		// empty path
-		path = new char[1];
-		path[0] = 0;	
+		path = new char[2];
+		path[0] = '.';
+		path[1] = 0;
 	} else {
 		// non-empty path
 		len = pathEnd + 1;
@@ -451,3 +583,29 @@ BEntry::SplitPathInTwain(const char* fullPath, char *&path, char *&leaf) {
 	return true;
 }
 
+
+/*! Debugging function, dumps the given entry to stdout. This function is not part of
+	the R5 implementation, and thus calls to it will mean you can't link with the
+	R5 Storage Kit. */
+void
+BEntry::Dump(const char *name = NULL) {
+	if (name != NULL) {
+		printf("------------------------------------------------------------\n");
+		printf("%s\n", name);
+		printf("------------------------------------------------------------\n");
+	}
+	
+	printf("fCStatus == %d\n", fCStatus);
+	
+	StorageKit::DirEntry *entry;
+	if (fDir != StorageKit::NullDir && StorageKit::find_dir(fDir, ".", entry) == B_OK) {
+		printf("dir.device == %ld\n", entry->d_pdev);
+		printf("dir.inode  == %lld\n", entry->d_pino);
+	} else {
+		printf("dir == NullDir\n");
+	}
+	
+	printf("leaf == '%s'\n", fName);
+	printf("\n");
+
+}
