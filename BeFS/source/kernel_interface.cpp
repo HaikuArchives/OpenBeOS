@@ -384,7 +384,7 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vn
 	Inode *directory = (Inode *)_directory;
 
 	if (!directory->CheckPermissions(X_OK))
-		return B_NOT_ALLOWED;
+		RETURN_ERROR(B_NOT_ALLOWED);
 
 	BPlusTree *tree;
 	if (directory->GetTree(&tree) != B_OK)
@@ -427,8 +427,10 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vn
 				free(data);
 			} else
 				status = B_NO_MEMORY;
-		} else
+		} else {
 			status = new_path((char *)&inode->Node()->short_symlink, &newPath);
+			printf("status = %ld, %s\n",status,strerror(status));
+		}
 
 		put_vnode(volume->ID(), inode->ID());
 		if (status == B_OK)
@@ -572,7 +574,7 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 
 	Inode *inode = (Inode *)_node;
 	if (!inode->CheckPermissions(OModeToAccess(omode)))
-		return B_NOT_ALLOWED;
+		RETURN_ERROR(B_NOT_ALLOWED);
 
 	// we could actually use a cookie to keep track of:
 	//	- the last block_run
@@ -638,7 +640,7 @@ bfs_free_cookie(void * /*ns*/, void * /*node*/, void * /*cookie*/)
  */
 
 static int
-bfs_access(void *_ns, void *_node, int mode)
+bfs_access(void *_ns, void *_node, int accessMode)
 {
 	FUNCTION();
 	
@@ -646,8 +648,8 @@ bfs_access(void *_ns, void *_node, int mode)
 		return B_BAD_VALUE;
 
 	Inode *inode = (Inode *)_node;
-	if (!inode->CheckPermissions(mode))
-		return B_NOT_ALLOWED;
+	if (!inode->CheckPermissions(accessMode))
+		RETURN_ERROR(B_NOT_ALLOWED);
 
 	return B_OK;
 }

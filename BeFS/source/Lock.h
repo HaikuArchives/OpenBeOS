@@ -3,7 +3,7 @@
 /* Lock - read/write lock implementation
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
-** Based on a sample code from Nathan Schrenk.
+** Roughly based on a sample code from Nathan Schrenk.
 **
 ** This file may be used under the terms of the OpenBeOS License.
 */
@@ -11,33 +11,39 @@
 
 #include <KernelExport.h>
 
-#include "lock.h"
 
+// These is a "fast" implementation of a sinlge writer/many reader
+// locking scheme. It's fast because it uses the benaphore idea
+// to do lazy semaphore locking - in most cases it will only do
+// simple integer arithmetic.
 
 #define MAX_READERS 100000
 
-// it may be a good idea to have timeouts for the WriteLocked class,
+// Timeouts:
+// It may be a good idea to have timeouts for the WriteLocked class,
 // in case something went wrong - we'll see if this is necessary,
 // but it would be a somewhat poor work-around a deadlock...
 // But the only real problem with timeouts could be for things like
 // "chkbfs" - because such a tool may need to lock for some more time
 
+
 class ReadWriteLock {
 	public:
 		ReadWriteLock()
 		{
-			fSem = create_sem(MAX_READERS, "bfs r/w lock");
+			fSemaphore = create_sem(0, "bfs r/w lock");
+			fCount = MAX_READERS;
 		}
 
 		~ReadWriteLock()
 		{
-			delete_sem(fSem);
+			delete_sem(fSemaphore);
 		}
 
 		status_t InitCheck()
 		{
-			if (fSem < B_OK)
-				return fSem;
+			if (fSemaphore < B_OK)
+				return fSemaphore;
 			
 			return B_OK;
 		}
@@ -46,56 +52,70 @@ class ReadWriteLock {
 		friend class ReadLocked;
 		friend class WriteLocked;
 
-		sem_id	fSem;
+		sem_id	fSemaphore;
+		int32	fCount;
 };
 
 
 class ReadLocked {
 	public:
 		ReadLocked(ReadWriteLock &lock)
-			: fSem(lock.fSem)
+			: fLock(lock)
 		{
-			while (acquire_sem(fSem) == B_INTERRUPTED);
+			if (atomic_add(&lock.fCount, -1) <= 0)
+				acquire_sem(lock.fSemaphore);
 		}
 		
 		~ReadLocked()
 		{
-			release_sem(fSem);
+			if (atomic_add(&fLock.fCount, 1) < 0)
+				release_sem(fLock.fSemaphore);
 		}
 	
 	private:
-		sem_id	fSem;
+		ReadWriteLock	&fLock;
 };
 
 
 class WriteLocked {
 	public:
 		WriteLocked(ReadWriteLock &lock)
-			: fSem(lock.fSem)
+			: fLock(lock)
 		{
-			status_t status;
-			while ((status = acquire_sem_etc(fSem, MAX_READERS, B_ABSOLUTE_TIMEOUT,
-						B_INFINITE_TIMEOUT)) == B_INTERRUPTED);
+			int32 readers = atomic_add(&lock.fCount, -MAX_READERS);
+			if (readers < MAX_READERS) {
+				// Acquire sem for all readers currently not using a semaphore.
+				// But if we are not the only write lock in the queue, just get
+				// the one for us
+				if (readers <= 0)
+					readers = 1;
+				else
+					readers = MAX_READERS - readers;
 
-			// if something failed, we don't have write access
-			// overwriting fSem saves us from using another variable
-			if (status < B_OK)
-				fSem = status;
+				fStatus = acquire_sem_etc(lock.fSemaphore,readers,0,0);
+			} else
+				fStatus = B_OK;
 		}
-		
+
 		~WriteLocked()
 		{
-			if (fSem >= B_OK)
-				release_sem_etc(fSem, MAX_READERS, 0);
+			int32 readers = atomic_add(&fLock.fCount,MAX_READERS);
+			if (readers < 0) {
+				// release sem for all readers only when we were the only writer
+				if (readers <= -MAX_READERS)
+					readers = -1;
+				release_sem_etc(fLock.fSemaphore,-readers,0);
+			}
 		}
 
 		status_t IsLocked()
 		{
-			return fSem < B_OK ? fSem : B_OK;
+			return fStatus;
 		}
 
 	private:
-		sem_id	fSem;
+		ReadWriteLock	&fLock;
+		status_t		fStatus;
 };
 
 #endif	/* LOCK_H */
