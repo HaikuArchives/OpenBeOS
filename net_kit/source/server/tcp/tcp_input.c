@@ -436,12 +436,14 @@ findpcb:
 	}
 	if (inp == NULL) {
 		printf("inp is NULL\n");
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 	
 	tp = intotcpcb(inp);
 	if (tp == NULL) {
 		printf("tp is NULL\n");
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 
@@ -640,6 +642,7 @@ findpcb:
 			if (tiflags & TH_RST)
 				goto drop;
 			if (tiflags & TH_ACK) {
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto dropwithreset;
 			}
 			if ((tiflags & TH_SYN) == 0)
@@ -713,11 +716,13 @@ findpcb:
 				if (tiflags & TH_SYN) {
 					tcpstat.tcps_badsyn++;
 					printf("SYN + ACK in a reply\n");
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 					goto dropwithreset;
 				}
 				if (SEQ_LEQ(ti->ti_ack, tp->snd_una) ||
 				    SEQ_GT(ti->ti_ack, tp->snd_max)) {
 				    printf("SEQ outside of boundaries...\n");
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 					goto dropwithreset;
 				}
 			}
@@ -740,6 +745,7 @@ findpcb:
 		    	(SEQ_LEQ(ti->ti_ack, tp->iss) ||
 		     	SEQ_GT(ti->ti_ack, tp->snd_max))) {
 		     	printf("SYN_SENT but ACK was not for our request!\n");
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto dropwithreset;
 			}
 			if (tiflags & TH_RST) {
@@ -885,6 +891,7 @@ trimthenstep6:
 	    tp->t_state > TCPS_CLOSE_WAIT && ti->ti_len) {
 		tp = tcp_close(tp);
 		tcpstat.tcps_rcvafterclose++;
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 
@@ -981,6 +988,7 @@ close:
 	 */
 	if (tiflags & TH_SYN) {
 		tp = tcp_drop(tp, ECONNRESET);
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 
@@ -1002,8 +1010,10 @@ close:
 		 */
 		case TCPS_SYN_RECEIVED:
 			if (SEQ_GT(tp->snd_una, ti->ti_ack) ||
-			    SEQ_GT(ti->ti_ack, tp->snd_max))
+			    SEQ_GT(ti->ti_ack, tp->snd_max)) {
+printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto dropwithreset;
+			}
 			tcpstat.tcps_connects++;
 			soisconnected(so);
 			tp->t_state = TCPS_ESTABLISHED;

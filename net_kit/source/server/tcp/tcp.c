@@ -424,6 +424,7 @@ int tcp_userreq(struct socket *so, int req, struct mbuf *m,
 				tp->t_state = TCPS_LISTEN;
 			break;
 		case PRU_CONNECT:
+			printf("tcp: PRU_CONNECT\n");
 			if (inp->lport == 0) {
 				error = in_pcbbind(inp, NULL);
 				if (error)
