@@ -9,6 +9,7 @@
 #include <vm.h>
 #include <arch/cpu.h>
 #include <stage2.h>
+#include <atomic.h>
 
 #include <string.h>
 
