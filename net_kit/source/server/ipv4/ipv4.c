@@ -777,7 +777,8 @@ found:
 
 	ipstat.ips_delivered++;
 	if (proto[ip->ip_p] && proto[ip->ip_p]->pr_input) {
-		return; /* proto[ip->ip_p]->pr_input(m, hlen);*/
+		proto[ip->ip_p]->pr_input(m, hlen);
+		return;
 	} else {
 		printf("proto[%d] = %p\n", ip->ip_p, proto[ip->ip_p]);
 		goto bad;

@@ -290,7 +290,9 @@ badcode:
 
 raw:
 	if (raw)
-		return; /* raw->input(buf, 0);*/
+		raw->input(buf, 0);
+
+	return;
 
 freeit:
 	m_freem(buf);
@@ -498,3 +500,4 @@ _EXPORT module_info *modules[] = {
 	NULL
 };
 #endif
+

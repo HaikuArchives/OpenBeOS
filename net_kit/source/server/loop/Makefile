@@ -11,11 +11,7 @@ OBJS=loop.o
 all:	$(TARGET)
 
 clean:
-	@if test -e $(TGT); then \
-		rm $(TGT) *.o; \
-	fi
-	@if test -e $(TARGET); then rm $(TARGET) *.o ; fi
-	@if test -e $(OBJS); then rm $(OBJS); fi
+	@rm -f *.o *.xMAP *.dbg $(TGT)
 
 $(TARGET): $(OBJS)
 	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
