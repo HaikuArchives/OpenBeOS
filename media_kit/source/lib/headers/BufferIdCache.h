@@ -4,7 +4,7 @@
 /***********************************************************************
  * AUTHOR: Marcus Overhagen
  *   FILE: BufferIdCache.h
- *  DESCR: used to cache BBuffers to be received by 
+ *  DESCR: in_use to cache BBuffers to be received by 
  *         BBufferConsumer::BufferReceived()
  ***********************************************************************/
 
@@ -22,13 +22,13 @@ private:
 	{
 		BBuffer *buffer;
 		media_buffer_id id;
-		bigtime_t lastused;
+		int32 last_used;
 	};
 	_buffer_id_info info[MAX_CACHED_BUFFER];
+	int32 in_use;
 	int32 used;
-	int32 miss;
-	int32 hit;
-	int32 last;
+	int32 stat_missed;
+	int32 stat_hit;
 };
 
 #endif

@@ -64,7 +64,8 @@ void
 _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 {
 	CALLED();
-	// delete all BBuffers of this group
+
+	// delete all BBuffers of this group, then unmap from memory
 	
 	Lock();
 
@@ -105,6 +106,7 @@ _shared_buffer_list::AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 	Lock();
 	
 	if (buffercount == MAX_BUFFER) {
+		Unlock();
 		debugger("we are doomed");
 	}
 
