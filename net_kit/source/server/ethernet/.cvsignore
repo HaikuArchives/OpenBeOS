@@ -1,3 +1,5 @@
 CVS
 *.o
+*.xMAP
+_KERNEL_
 ethernet
