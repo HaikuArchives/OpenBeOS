@@ -248,35 +248,30 @@ int tcp_mssdflt;
 int tcp_do_rfc1323;
 unsigned long tcp_now;
 
-void tcp_input(struct mbuf *, int);
-int  tcp_output(struct tcpcb*);
-int  tcp_mss(struct tcpcb *, uint);
-void tcp_mss_update(struct tcpcb *);
-void tcp_quench(struct inpcb *, int);
-int  tcp_userreq(struct socket *, int, struct mbuf *, struct mbuf *, 
+void   tcp_input(struct mbuf *, int);
+int    tcp_output(struct tcpcb*);
+int    tcp_mss(struct tcpcb *, uint);
+void   tcp_mss_update(struct tcpcb *);
+void   tcp_quench(struct inpcb *, int);
+int    tcp_userreq(struct socket *, int, struct mbuf *, struct mbuf *, 
                 struct mbuf *);
 struct tcpcb * tcp_timers(struct tcpcb *, int);
 struct tcpcb *tcp_close(struct tcpcb *);
-void tcp_setpersist(struct tcpcb *);
+void   tcp_setpersist(struct tcpcb *);
 struct tcpcb *tcp_drop(struct tcpcb *, int);
-void tcp_respond(struct tcpcb *, struct tcpiphdr *, struct mbuf *,
+void   tcp_respond(struct tcpcb *, struct tcpiphdr *, struct mbuf *,
                  tcp_seq, tcp_seq, int);
-void tcp_xmit_timer(struct tcpcb *, int16);
-void tcp_dooptions(struct tcpcb *, u_char *, int, struct tcpiphdr *,
+void   tcp_xmit_timer(struct tcpcb *, int16);
+void   tcp_dooptions(struct tcpcb *, u_char *, int, struct tcpiphdr *,
                    int *, uint32 *, uint32 *);
 struct tcpiphdr *tcp_template(struct tcpcb *);
-void tcp_pulloutofband(struct socket *, struct tcpiphdr *, struct mbuf *);
+void   tcp_pulloutofband(struct socket *, struct tcpiphdr *, struct mbuf *);
 
-void tcp_canceltimers(struct tcpcb *);
-void tcp_trace(int16, int16, struct tcpcb *, void *, int, int);
+void   tcp_canceltimers(struct tcpcb *);
+void   tcp_trace(int16, int16, struct tcpcb *, void *, int, int);
 
-/* Timer functions */
-#ifndef _KERNEL_MODE
-typedef void timer;
-#endif
-
-int32 tcp_slowtimer(timer *data);
-int32 tcp_fasttimer(timer *data);
+void   tcp_slowtimer(void *data);
+void   tcp_fasttimer(void *data);
 
 /* These are GCC only, so we'll need PPC version eventually... */
 struct quehead {

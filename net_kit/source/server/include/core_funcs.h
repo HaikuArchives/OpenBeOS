@@ -13,6 +13,9 @@
 #	define start_rx_thread	   core->start_rx_thread
 #	define start_tx_thread	   core->start_tx_thread
 
+#   define net_add_timer       core->net_add_timer
+#   define net_remove_timer    core->net_remove_timer
+
 #	define pool_init           core->pool_init
 #	define pool_get            core->pool_get
 #	define pool_put            core->pool_put

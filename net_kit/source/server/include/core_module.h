@@ -26,7 +26,7 @@ typedef struct module_info {
 #include "sys/socketvar.h"
 #include "netinet/in_pcb.h"
 #include "net/if.h"
-
+#include "net_timer.h"
 
 struct core_module_info {
 	module_info	module;
@@ -38,7 +38,12 @@ struct core_module_info {
 	void (*add_protosw)(struct protosw *prt[], int layer);
 	void (*start_rx_thread)(struct ifnet *dev);
 	void (*start_tx_thread)(struct ifnet *dev);
-	
+
+	/* timer functions */
+	net_timer_id (*net_add_timer)(net_timer_hook ,void *,
+	                              bigtime_t);
+	status_t (*net_remove_timer)(net_timer_id);
+	                           	
 	/* pool functions */
 	status_t (*pool_init)(pool_ctl **p, size_t sz);
 	char *(*pool_get)(pool_ctl *p);
@@ -138,7 +143,7 @@ struct core_module_info {
 	int (*readit)(void*, struct iovec *, int *);
 	int (*sosetopt)(void *, int, int, const void *, size_t);
 	int (*sogetopt)(void *, int, int, void *, size_t *);
-	int (*set_socket_event_callback)(void *, socket_event_callback, void *);
+	int (*set_socket_event_callback)(void *, socket_event_callback, void *, int);
 	int (*sogetpeername)(void *, struct sockaddr *, int *);
 	int (*sogetsockname)(void *, struct sockaddr *, int *);
 	int (*soaccept)(void *, void **, void *, int *);

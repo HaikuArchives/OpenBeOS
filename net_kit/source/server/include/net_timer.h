@@ -12,7 +12,7 @@
 #include <SupportDefs.h>
 
 
-typedef int32 (*net_timer_hook)(void *);
+typedef void (*net_timer_hook)(void *);
 typedef int32 net_timer_id;
 
 
