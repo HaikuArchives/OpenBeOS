@@ -96,8 +96,8 @@ bool operator==(BMessage &msg1, BMessage &msg2) {
 	status_t err = B_OK;
 	
 	// For now I'm ignoring the what fields...I shall deal with that later :-)
-//	if (msg1.what != msg2.what)
-//		return false;
+	if (msg1.what != msg2.what)
+		return false;
 
 /*
 	printf("----------------------------------------------------------------------\n");
@@ -490,7 +490,7 @@ void MimeTypeTest::AppHintTest() {
 
 void MimeTypeTest::FileExtensionsTest() {
 	// Create some messages to sling around
-	const int32 WHAT = 888;
+	const int32 WHAT = 234;	// This is the what value that GFE returns...not sure if it has a name yet
 	BMessage msg1(WHAT), msg2(WHAT), msg3(WHAT);
 
 	CHK(msg1.AddString(fileExtField, ".data") == B_OK);
@@ -551,12 +551,86 @@ void MimeTypeTest::FileExtensionsTest() {
 	// Set() with empty message
 	nextSubTest();
 	{
+		BMimeType mime(testType);
+		BMessage msgEmpty(WHAT);
+		BMessage msg(WHAT);
+		CHK(msg.AddInt32("stuff", 1234) == B_OK);	// Add an extra attribute to give us something to compare with
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+		
+		// Set(empty)
+		CHK(msg != msgEmpty);
+		CHK(mime.SetFileExtensions(&msgEmpty) == B_OK);
+		CHK(mime.GetFileExtensions(&msg) == B_OK);
+		msg.PrintToStream();
+		CHK(msgEmpty.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg == msgEmpty);
 	}
 	// Set() with extra attributes in message
 	nextSubTest();
 	{
+		BMimeType mime(testType);
+		BMessage msg(WHAT);
+		BMessage msgExtraSet(msg1);
+		CHK(msgExtraSet.AddString("extra", ".extra") == B_OK);
+		CHK(msgExtraSet.AddInt32("more_extras", 123) == B_OK);
+		CHK(msgExtraSet.AddInt32("more_extras", 456) == B_OK);
+		CHK(msgExtraSet.AddInt32("more_extras", 789) == B_OK);
+		BMessage msgExtraGet(msgExtraSet);
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+		
+		// Set(extra)/Get(empty)
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msgExtraSet);
+		CHK(mime.SetFileExtensions(&msgExtraSet) == B_OK);
+		CHK(mime.GetFileExtensions(&msg) == B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msgExtraSet.AddString(typeField, testType) == B_OK);
+		msg.PrintToStream();
+		CHK(msg == msgExtraSet);
+		CHK(msg != msg1);
+		
+		// Get(extra)
+		nextSubTest();
+		CHK(mime.GetFileExtensions(&msgExtraGet) == B_OK);
+		CHK(msgExtraGet == msgExtraSet);
+		CHK(msgExtraGet != msg1);
+		
+		// Get(extra and then some)
+		nextSubTest();
+		CHK(msgExtraGet.AddInt32("more_extras", 101112) == B_OK);
+		msgExtraGet.RemoveName(typeField);		// Clear "type" fields to be fair, since SFE() just adds another
+		CHK(mime.GetFileExtensions(&msgExtraGet) == B_OK);	// Reinitializes result (clearing extra fields)
+		CHK(msgExtraGet == msgExtraSet);
+		CHK(msgExtraGet != msg1);
+		
+	}
+	{
+		BMimeType mime("audio/x-mpeg");
+		BMessage msg;
+		status_t err;
+		
+		err = mime.GetFileExtensions(&msg);
+		if (!err)
+			msg.PrintToStream();
+		else
+			printf("ERRORS SUCK BALLS!\n");
 	}
 	// Normal function
+	nextSubTest();
 	{
 		BMessage msg(WHAT);
 		BMimeType mime(testType);
@@ -567,8 +641,8 @@ void MimeTypeTest::FileExtensionsTest() {
 		if (!mime.IsInstalled())
 			CHK(mime.Install() == B_OK);			
 		CHK(mime.IsInstalled());
+
 		// Initial Set()/Get()
-		nextSubTest();
 		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
 		msg2.RemoveName(typeField);	
 		CHK(msg != msg1);
@@ -579,6 +653,7 @@ void MimeTypeTest::FileExtensionsTest() {
 		CHK(msg2.AddString(typeField, testType) == B_OK);
 		CHK(msg == msg1);
 		CHK(msg != msg2);
+
 		// Followup Set()/Get()
 		nextSubTest();
 		CHK(msg.MakeEmpty() == B_OK);
@@ -592,6 +667,7 @@ void MimeTypeTest::FileExtensionsTest() {
 		CHK(msg2.AddString(typeField, testType) == B_OK);
 		CHK(msg != msg1);
 		CHK(msg == msg2);
+
 		// Clear
 		nextSubTest();
 		CHK(msg.MakeEmpty() == B_OK);
@@ -600,7 +676,7 @@ void MimeTypeTest::FileExtensionsTest() {
 		CHK(msg != msg1);
 		CHK(msg != msg2);
 #if !SK_TEST_R5
-		CHK(RES(mime.SetFileExtensions(NULL)) == B_OK);		// R5 == CRASH!
+		CHK(RES(mime.SetFileExtensions(NULL)) == B_OK);		// R5 == CRASH! despite what the BeBook says
 		CHK(RES(mime.GetFileExtensions(&msg)) != B_OK);
 		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
 		CHK(msg2.AddString(typeField, testType) == B_OK);
@@ -1485,7 +1561,7 @@ MimeTypeTest::StringTest()
 +	status_t GetIcon(BBitmap *icon, icon_size size) const;
 +	status_t GetPreferredApp(char *signature, app_verb verb = B_OPEN) const;
 	status_t GetAttrInfo(BMessage *info) const;
-	status_t GetFileExtensions(BMessage *extensions) const;
++	status_t GetFileExtensions(BMessage *extensions) const;
 +	status_t GetShortDescription(char *description) const;
 +	status_t GetLongDescription(char *description) const;
 	status_t GetSupportingApps(BMessage *signatures) const;
