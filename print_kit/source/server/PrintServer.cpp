@@ -173,6 +173,15 @@ status_t PrintServer::ScanForPrinters()
 					Printer::CreateFrom(node);
 				}
 			}
+			else
+				break;
 		}
+		
+			// If we ended the while-loop because no (more) entries were found,
+			//	  return B_OK
+		if (rc == B_ENTRY_NOT_FOUND)
+			rc = B_OK;
 	}
+	
+	return rc;
 }

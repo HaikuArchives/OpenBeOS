@@ -24,9 +24,10 @@ THE SOFTWARE.
 
 #include "Printer.h"
 
-#include "print_server.h"
 #include "Transport.h"
 #include "Driver.h"
+
+#include "print_server.h"
 
 #include <PropertyInfo.h>
 #include <Message.h>
@@ -144,7 +145,7 @@ Printer::GetSupportedSuites(BMessage* msg)
 {
 	BPropertyInfo prop_info(prop_list);
 	
-	msg->AddString("suites", B_PSRV_PRINT_SUITE);	
+	msg->AddString("suites", B_PSRV_PRINTER_SUITE);	
 	msg->AddFlat("messages", &prop_info); 
 	
 	return Inherited::GetSupportedSuites(msg); 

@@ -25,6 +25,8 @@ THE SOFTWARE.
 #include "PrintServer.h"
 #include "Printer.h"
 
+#include "print_server.h"
+
 #include <PropertyInfo.h>
 
 static property_info prop_list[] = {
