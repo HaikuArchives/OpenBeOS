@@ -263,11 +263,12 @@ static status_t net_stack_open(const char * name,
 	nsc = (net_stack_cookie *) malloc(sizeof(*nsc));
 	if (!nsc)
 		return B_NO_MEMORY;
-printf("net_stack_open\n");	
 	memset(nsc, 0, sizeof(*nsc));
 	nsc->socket = NULL; /* the socket will be allocated in NET_STACK_SOCKET ioctl */
 	nsc->open_flags = flags;
-
+	nsc->sync.rbits = &nsc->r;
+	nsc->sync.wbits = &nsc->w;
+	nsc->sync.ebits = &nsc->e;
   	/* attach this new net_socket_cookie to file descriptor */
 	*cookie = nsc; 
 
@@ -441,27 +442,35 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 			/* if we get this opcode, we are using the r5 kernel select() call,
 			 * so we can't use his notify_select_event() too. Let's do it ourself! */
 			g_nse = r5_notify_select_event;
-			memcpy(&nsc->sync, args->sync, sizeof(nsc->sync));
-			nsc->sync.rbits = &nsc->r;
-			nsc->sync.wbits = &nsc->w;
-			nsc->sync.ebits = &nsc->e;
-			if (((struct r5_selectsync *)args->sync)->rbits)
-				memcpy(&nsc->r, ((struct r5_selectsync *)args->sync)->rbits, sizeof(fd_set));
-			if (((struct r5_selectsync *)args->sync)->wbits)
-				memcpy(&nsc->w, ((struct r5_selectsync *)args->sync)->wbits, sizeof(fd_set));
-			if (((struct r5_selectsync *)args->sync)->ebits)
-				memcpy(&nsc->e, ((struct r5_selectsync *)args->sync)->ebits, sizeof(fd_set));
+			nsc->sync.wait = ((struct r5_selectsync *)args->sync)->wait;
+			nsc->sync.lock = ((struct r5_selectsync *)args->sync)->lock;
 			return net_stack_select(cookie, (args->ref & 0x0F), args->ref, (selectsync *)&nsc->sync);
 		}
 		case NET_STACK_DESELECT: {
 			struct select_args * args = (struct select_args *) data;
-			if (((struct r5_selectsync *)args->sync)->rbits)
-				memcpy(((struct r5_selectsync *)args->sync)->rbits, &nsc->r, sizeof(fd_set));
-			if (((struct r5_selectsync *)args->sync)->wbits)
-				memcpy(((struct r5_selectsync *)args->sync)->wbits, &nsc->w, sizeof(fd_set));
-			if (((struct r5_selectsync *)args->sync)->ebits)
-				memcpy(((struct r5_selectsync *)args->sync)->ebits, &nsc->e, sizeof(fd_set));
-			((struct r5_selectsync *)args->sync)->nfd = nsc->sync.nfd;
+			
+			if (((struct r5_selectsync *)args->sync)->rbits && ((args->ref & 0x0f) == 1)) {
+				if (FD_ISSET((args->ref >> 8), &nsc->r)) {
+					((struct r5_selectsync *)args->sync)->nfd++;
+					FD_SET((args->ref >> 8), ((struct r5_selectsync *)args->sync)->rbits);
+				} else 
+					FD_CLR((args->ref >> 8), ((struct r5_selectsync *)args->sync)->rbits);
+			}
+			if (((struct r5_selectsync *)args->sync)->wbits && ((args->ref & 0x0f) == 2)) {
+				if (FD_ISSET((args->ref >> 8), &nsc->w)) {
+					((struct r5_selectsync *)args->sync)->nfd++;
+					FD_SET((args->ref >> 8), ((struct r5_selectsync *)args->sync)->wbits);
+				} else 
+					FD_CLR((args->ref >> 8), ((struct r5_selectsync *)args->sync)->wbits);
+			}
+			if (((struct r5_selectsync *)args->sync)->ebits && ((args->ref & 0x0f) == 3)) {
+				if (FD_ISSET((args->ref >> 8), &nsc->e)) {
+					((struct r5_selectsync *)args->sync)->nfd++;
+					FD_SET((args->ref >> 8), ((struct r5_selectsync *)args->sync)->ebits);
+				} else 
+					FD_CLR((args->ref >> 8), ((struct r5_selectsync *)args->sync)->ebits);
+			}
+			
 			return net_stack_deselect(cookie, (args->ref & 0x0F), (selectsync *)&nsc->sync);
 		}
 		default:
@@ -538,8 +547,7 @@ static status_t net_stack_write(void *cookie,
 	return error;	
 }
 
-
-static status_t net_stack_select(void * cookie, uint8 event, uint32 ref, selectsync *sync)
+static status_t net_stack_select(void *cookie, uint8 event, uint32 ref, selectsync *sync)
 {
 	net_stack_cookie *	nsc = (net_stack_cookie *) cookie;
 
@@ -553,6 +561,18 @@ static status_t net_stack_select(void * cookie, uint8 event, uint32 ref, selects
 	nsc->selectinfo[event - 1].sync = sync;
 	nsc->selectinfo[event - 1].ref = ref;
 
+	switch (event) {
+		case 1:
+			FD_CLR((ref >> 8), &nsc->r);
+			break;
+		case 2:
+			FD_CLR((ref >> 8), &nsc->w);
+			break;
+		case 3:
+			FD_CLR((ref >> 8), &nsc->e);
+			break;
+	}
+					
 	/* start (or continue) to monitor for socket event */
 	return core->set_socket_event_callback(nsc->socket, on_socket_event, nsc, event);
 }
@@ -572,6 +592,7 @@ static status_t net_stack_deselect(void* cookie, uint8 event, selectsync* sync)
 
 	nsc->selectinfo[event - 1].sync = NULL;
 	nsc->selectinfo[event - 1].ref = 0;
+
 	core->set_socket_event_callback(nsc->socket, NULL, NULL, event);
 	
 	for (i = 0; i < 3; i++) {
