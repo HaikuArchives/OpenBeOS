@@ -1,4 +1,4 @@
-BFS - ToDo, May 26th, 2002
+BFS - ToDo, June 3rd, 2002
 -----
 
 BlockAllocator
@@ -7,7 +7,6 @@ BlockAllocator
  - the first free and the largest range are currently not correctly maintained (only efficiency suffers - it does work correctly)
  - the allocation policies will have to stand against some real world tests
  - the access to the block bitmap is currently managed using a global lock
- - the updated disk's super block is not written back yet (used block counter)
 
 
 DataStream
@@ -26,9 +25,7 @@ Queries
 
 Journal
 
- - The transaction class currently does nothing else than writing the blocks directly to disk.
  - Check if there are any standard and often-happening cases for a transaction to fail, and if so, start the transaction only when necessary
- - make sure that bfs_remove_vnode() gets the right transaction
  - if the system crashes between bfs_unlink() and bfs_remove_vnode(), the inode can be removed from the tree, but its memory is still allocated - this can happen if the inode is still in use by someone (and that's what the "chkbfs" utility is for, mainly).
  - add delayed index updating (+ delete actions to solve the issue above)
  - multiple log files, parallel transactions?
@@ -39,7 +36,6 @@ Journal
 BPlusTree
 
  - BPlusTree::Remove() could trigger CachedNode::Free() to go through the free nodes list and free all pages at the end of the data stream
- - duplicate_array::Insert() should do a binary search to speed up finding the value if there are more than a certain number (e.g. 8) of entries
  - updating the TreeIterators doesn't work yet for duplicates (which may be a problem if a duplicate node will go away after a remove)
  - BPlusTree::RemoveDuplicate() could spread the contents of duplicate node with only a few entries to save some space (right now, only empty nodes are freed)
 
@@ -59,9 +55,6 @@ Attributes
 
 Volume
 
- - can't write super block yet (i.e. in bfs_write_fs_stat())
- - needs a lock to protect the super block
-
 
 kernel_interface
 
@@ -71,9 +64,6 @@ kernel_interface
 
 general stuff
 
- - if any transaction that changes an inode fails, the changed inode is still in memory and had to be reloaded or the changes be undone...
- - much more stuff for full write capabilities ...
- - There is still much locking missing
  - There are also some comments with a leading "ToDo:" directly in the code which may not be mentioned here.
 
 

@@ -41,8 +41,14 @@ class Journal {
 		Journal(Volume *);
 		~Journal();
 		
+		status_t InitCheck();
+
 		status_t Lock(Transaction *owner);
 		void Unlock(Transaction *owner,bool success);
+
+		status_t CheckLogEntry(int32 count, off_t *array);
+		status_t ReplayLogEntry(int32 *start);
+		status_t ReplayLog();
 
 		status_t WriteLogEntry();
 		status_t LogBlocks(off_t blockNumber,const uint8 *buffer, size_t numBlocks);

@@ -114,7 +114,9 @@ Volume::Mount(const char *deviceName,uint32 flags)
 	if (IsValidSuperBlock()) {
 		if (init_cache_for_device(fDevice, NumBlocks()) == B_OK) {
 			fJournal = new Journal(this);
-			if (fJournal && fBlockAllocator.Initialize() == B_OK) {
+			// replaying the log is the first thing we will do on this disk
+			if (fJournal && fJournal->InitCheck() == B_OK
+				&& fBlockAllocator.Initialize() == B_OK) {
 				fRootNode = new Inode(this,ToVnode(Root()));
 
 				if (fRootNode && fRootNode->InitCheck() == B_OK) {
@@ -149,8 +151,9 @@ Volume::Mount(const char *deviceName,uint32 flags)
 
 				FATAL(("could not create root node: new_vnode() failed!\n"));
 			} else {
+				// ToDo: improve error reporting for a bad journal
 				status = B_NO_MEMORY;
-				FATAL(("could not initialize block bitmap allocator!\n"));
+				FATAL(("could not initialize journal/block bitmap allocator!\n"));
 			}
 
 			remove_cached_device_blocks(fDevice,NO_WRITES);
@@ -172,15 +175,13 @@ Volume::Mount(const char *deviceName,uint32 flags)
 status_t
 Volume::Unmount()
 {
-	FlushLogs();
+	// This will also flush the log
+	delete fJournal;
+	fJournal = NULL;
 
 	delete fIndicesNode;
 
 	remove_cached_device_blocks(fDevice,ALLOW_WRITES);
-
-	delete fJournal;
-	fJournal = NULL;
-
 	close(fDevice);
 
 	return B_OK;
