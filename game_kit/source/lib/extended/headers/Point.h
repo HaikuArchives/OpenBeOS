@@ -33,7 +33,13 @@
 #include <iomanip>
 #include <SupportDefs.h>
 
+
+#ifdef TESTING
 class BRect;
+#else
+template <typename StorageType> class Rect;
+#endif
+
 
 template
 <
