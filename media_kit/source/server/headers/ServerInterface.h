@@ -140,6 +140,7 @@ struct xfer_producer_connect
 	media_source source;
 	media_destination destination;
 	media_format format;
+	char name[B_MEDIA_NAME_LENGTH];
 	port_id reply_port;
 };
 

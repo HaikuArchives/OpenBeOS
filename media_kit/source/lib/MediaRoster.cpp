@@ -10,6 +10,7 @@
 #include <StopWatch.h>
 #include <OS.h>
 #include "debug.h"
+#include "PortPool.h"
 #include "../server/headers/ServerInterface.h"
 
 static BMessenger *ServerMessenger = 0;
@@ -242,6 +243,14 @@ BMediaRoster::Connect(const media_source & from,
 					  media_input * out_input)
 {
 	UNIMPLEMENTED();
+/*
+
+ProducerNode::FormatProposal
+ConsumerNode::AcceptFormat
+ProducerNode::PrepareToConnect
+ConsumerNode::Connected
+ProducerNode::Connect
+*/
 	return B_ERROR;
 }
 
@@ -276,8 +285,14 @@ status_t
 BMediaRoster::StartNode(const media_node & node,
 						bigtime_t at_performance_time)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+
+	xfer_node_start msg;
+	msg.performance_time = at_performance_time;
+	
+	return write_port(node.port, NODE_START, &msg, sizeof(msg));
 }
 
 
@@ -286,8 +301,15 @@ BMediaRoster::StopNode(const media_node & node,
 					   bigtime_t at_performance_time,
 					   bool immediate)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+
+	xfer_node_stop msg;
+	msg.performance_time = at_performance_time;
+	msg.immediate = immediate;
+	
+	return write_port(node.port, NODE_STOP, &msg, sizeof(msg));
 }
 
 					   
@@ -296,8 +318,15 @@ BMediaRoster::SeekNode(const media_node & node,
 					   bigtime_t to_media_time,
 					   bigtime_t at_performance_time)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+
+	xfer_node_seek msg;
+	msg.media_time = to_media_time;
+	msg.performance_time = at_performance_time;
+	
+	return write_port(node.port, NODE_SEEK, &msg, sizeof(msg));
 }
 
 
@@ -344,16 +373,26 @@ status_t
 BMediaRoster::SetRunModeNode(const media_node & node,
 							 BMediaNode::run_mode mode)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+
+	xfer_node_set_run_mode msg;
+	msg.mode = mode;
+	
+	return write_port(node.port, NODE_SET_RUN_MODE, &msg, sizeof(msg));
 }
 
 							 
 status_t 
 BMediaRoster::PrerollNode(const media_node & node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+
+	char dummy;
+	return write_port(node.port, NODE_PREROLL, &dummy, sizeof(dummy));
 }
 
 
@@ -443,8 +482,43 @@ BMediaRoster::GetAllInputsFor(const media_node & node,
 							  int32 buf_num_inputs,
 							  int32 * out_total_count)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0 || (node.kind & B_BUFFER_CONSUMER) == 0)
+		return B_MEDIA_BAD_NODE;
+	if (out_inputs == NULL || out_total_count == NULL)
+		return B_BAD_VALUE;
+		
+	status_t rv;
+	status_t rv2;
+	port_id port;
+	int32 code;
+	int32 cookie;
+		
+	port = _PortPool->GetPort();
+	*out_total_count = 0;
+	cookie = 0;
+	for (int32 i = 0; i < buf_num_inputs; i++) {
+		xfer_consumer_get_next_input msg;		
+		xfer_consumer_get_next_input_reply reply;
+		msg.cookie = cookie;
+		msg.reply_port = port;
+		rv = write_port(node.port, CONSUMER_GET_NEXT_INPUT, &msg, sizeof(msg));
+		if (rv != B_OK)
+			break;
+		rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
+		if (rv != B_OK || reply.result != B_OK)
+			break;
+		*out_total_count += 1;
+		out_inputs[i] = reply.input;
+		cookie = reply.cookie;
+	}
+	_PortPool->PutPort(port);
+	
+	xfer_consumer_dispose_input_cookie msg2;
+	msg2.cookie = cookie;
+	rv2 = write_port(node.port, CONSUMER_DISPOSE_INPUT_COOKIE, &msg2, sizeof(msg2));
+
+	return (rv != B_OK) ? rv : rv2;
 }
 
 							  
@@ -477,8 +551,43 @@ BMediaRoster::GetAllOutputsFor(const media_node & node,
 							   int32 buf_num_outputs,
 							   int32 * out_total_count)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0 || (node.kind & B_BUFFER_PRODUCER) == 0)
+		return B_MEDIA_BAD_NODE;
+	if (out_outputs == NULL || out_total_count == NULL)
+		return B_BAD_VALUE;
+		
+	status_t rv;
+	status_t rv2;
+	port_id port;
+	int32 code;
+	int32 cookie;
+		
+	port = _PortPool->GetPort();
+	*out_total_count = 0;
+	cookie = 0;
+	for (int32 i = 0; i < buf_num_outputs; i++) {
+		xfer_producer_get_next_output msg;		
+		xfer_producer_get_next_output_reply reply;
+		msg.cookie = cookie;
+		msg.reply_port = port;
+		rv = write_port(node.port, PRODUCER_GET_NEXT_OUTPUT, &msg, sizeof(msg));
+		if (rv != B_OK)
+			break;
+		rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
+		if (rv != B_OK || reply.result != B_OK)
+			break;
+		*out_total_count += 1;
+		out_outputs[i] = reply.output;
+		cookie = reply.cookie;
+	}
+	_PortPool->PutPort(port);
+	
+	xfer_producer_dispose_output_cookie msg2;
+	msg2.cookie = cookie;
+	rv2 = write_port(node.port, PRODUCER_DISPOSE_OUTPUT_COOKIE, &msg2, sizeof(msg2));
+
+	return (rv != B_OK) ? rv : rv2;
 }
 
 
@@ -665,6 +774,7 @@ BMediaRoster::GetLatencyFor(const media_node & producer,
 							bigtime_t * out_latency)
 {
 	UNIMPLEMENTED();
+	*out_latency = 0;
 	return B_ERROR;
 }
 
@@ -675,6 +785,8 @@ BMediaRoster::GetInitialLatencyFor(const media_node & producer,
 								   uint32 * out_flags)
 {
 	UNIMPLEMENTED();
+	*out_latency = 0;
+	*out_flags = 0;
 	return B_ERROR;
 }
 
@@ -684,6 +796,7 @@ BMediaRoster::GetStartLatencyFor(const media_node & time_source,
 								 bigtime_t * out_latency)
 {
 	UNIMPLEMENTED();
+	*out_latency = 0;
 	return B_ERROR;
 }
 

@@ -138,7 +138,7 @@ BBufferProducer::HandleMessage(int32 message,
 		{
 			const xfer_producer_connect *data = (const xfer_producer_connect *)data;
 			xfer_producer_connect_reply reply;
-			reply.name[0] = 0;
+			memcpy(reply.name, data->name, B_MEDIA_NAME_LENGTH);
 			Connect(data->error, data->source, data->destination, data->format, reply.name);
 			write_port(data->reply_port, 0, &reply, sizeof(reply));
 			return B_OK;
