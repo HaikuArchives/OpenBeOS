@@ -693,11 +693,16 @@ int soo_ioctl(void *sp, int cmd, caddr_t data)
 			return 0;
 	}
 
-//	if (IOCGROUP(cmd) == 'i')
-		/* call ifioctl... */
-	
-
-	return 0;
+	if (IOCGROUP(cmd) == 'i') {
+		printf("calling ifioctl...\n");
+		return ifioctl(so, cmd, data);
+	}
+	if (IOCGROUP(cmd) == 'r') {
+		printf("I'd call rtioctl...\n");
+		return 0;
+	}	
+	return (*so->so_proto->pr_userreq)(so, PRU_CONTROL, 
+		(struct mbuf*)cmd, (struct mbuf*)data, NULL);
 }
 
 int soclose(void *sp)
