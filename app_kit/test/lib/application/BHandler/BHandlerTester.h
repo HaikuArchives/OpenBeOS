@@ -24,23 +24,59 @@ class TBHandlerTester : public TestCase
 	public:
 		TBHandlerTester(std::string name) : TestCase(name) {;}
 
-		void Case1();
-		void Case2();
-		void Case3();
-		void Case4();
-		void Case5();
-		void Case6();
-		void Case7();
-		void Case8();
-		void Case9();
-		void Case10();
-		void Case11();
-		void Case12();
-		void Case13();
-		void Case14();
-		void Case15();
-		void Case16();
-		void Case17();
+		void BHandler1();
+		void BHandler2();
+		void BHandler3();
+		void BHandler4();
+		void BHandler5();
+
+		void Archive1();
+		void Archive2();
+		void Archive3();
+		void Archive4();
+
+		void Instantiate1();
+		void Instantiate2();
+		void Instantiate3();
+
+		void SetName1();
+		void SetName2();
+
+		void Perform1();
+
+		void IsWatched1();
+		void IsWatched2();
+
+		void Looper1();
+		void Looper2();
+
+		void SetNextHandler1();
+		void SetNextHandler2();
+		void SetNextHandler3();
+		void SetNextHandler4();
+		void SetNextHandler5();
+		void SetNextHandler6();
+		void SetNextHandler7();
+		void SetNextHandler8();
+		void SetNextHandler9();
+		void SetNextHandler10();
+		void SetNextHandler11();
+
+		void NextHandler1();
+		void NextHandler2();
+
+		void AddFilter1();
+		void AddFilter2();
+		void AddFilter3();
+		void AddFilter4();
+
+		void RemoveFilter1();
+		void RemoveFilter2();
+		void RemoveFilter3();
+		void RemoveFilter4();
+		void RemoveFilter5();
+		void RemoveFilter6();
+		void RemoveFilter7();
 
 		static Test* Suite();
 };

@@ -10,8 +10,12 @@
 
 #ifdef SYSTEM_TEST
 #include <be/app/Handler.h>
+#include <be/app/Looper.h>
+#include <be/app/MessageFilter.h>
 #else
 #include "../../../../source/lib/application/headers/Handler.h"
+#include <be/app/Looper.h>
+#include "../../../../source/lib/application/headers/MessageFilter.h"
 #endif
 
 // Project Includes ------------------------------------------------------------
@@ -30,7 +34,7 @@
 	@param	name	NULL
 	@results		BHandler::Name() should return NULL
  */
-void TBHandlerTester::Case1()
+void TBHandlerTester::BHandler1()
 {
 	BHandler Handler((const char*)NULL);
 	assert(Handler.Name() == NULL);
@@ -42,7 +46,7 @@ void TBHandlerTester::Case1()
 	@param	name	valid string
 	@results		BHandler::Name() returns name
  */
-void TBHandlerTester::Case2()
+void TBHandlerTester::BHandler2()
 {
 	BHandler Handler("name");
 	assert(string("name") == Handler.Name());
@@ -54,7 +58,7 @@ void TBHandlerTester::Case2()
 	@param	archive	valid BMessage pointer
 	@results		BHandler::Name() returns _name
  */
-void TBHandlerTester::Case3()
+void TBHandlerTester::BHandler3()
 {
 	BMessage Archive;
 	Archive.AddString("_name", "the name");
@@ -68,7 +72,7 @@ void TBHandlerTester::Case3()
 	@param	archive	valid BMessage pointer
 	@results		BHandler::Name() returns NULL
  */
-void TBHandlerTester::Case4()
+void TBHandlerTester::BHandler4()
 {
 	BMessage Archive;
 	BHandler Handler(&Archive);
@@ -84,7 +88,7 @@ void TBHandlerTester::Case4()
 					as it doesn't check for a NULL parameter and seg faults.
  */
 
-void TBHandlerTester::Case5()
+void TBHandlerTester::BHandler5()
 {
 #if !defined(SYSTEM_TEST)
 	BHandler Handler((BMessage*)NULL);
@@ -101,7 +105,7 @@ void TBHandlerTester::Case5()
 	@note			This test is not enabled against the original implementation
 					as it doesn't check for NULL parameters and seg faults
  */
-void TBHandlerTester::Case6()
+void TBHandlerTester::Archive1()
 {
 #if !defined(SYSTEM_TEST)
 	BHandler Handler;
@@ -118,7 +122,7 @@ void TBHandlerTester::Case6()
 	@note			This test is not enabled against the original implementation
 					as it doesn't check for NULL parameters and seg faults
  */
-void TBHandlerTester::Case7()
+void TBHandlerTester::Archive2()
 {
 #if !defined(SYSTEM_TEST)
 	BHandler Handler;
@@ -137,7 +141,7 @@ void TBHandlerTester::Case7()
 					Resultant archive has string field labeled "class"
 					Field "class" contains the string "BHandler"
  */
-void TBHandlerTester::Case8()
+void TBHandlerTester::Archive3()
 {
 	BMessage Archive;
 	BHandler Handler("a name");
@@ -161,7 +165,7 @@ void TBHandlerTester::Case8()
 					Resultant archive has string field labeled "class"
 					Field "class" contains the string "BHandler"
  */
-void TBHandlerTester::Case9()
+void TBHandlerTester::Archive4()
 {
 	BMessage Archive;
 	BHandler Handler("another name");
@@ -182,7 +186,7 @@ void TBHandlerTester::Case9()
 	@note			This test is not enabled against the original implementation
 					as it doesn't check for NULL parameters and seg faults
  */
-void TBHandlerTester::Case10()
+void TBHandlerTester::Instantiate1()
 {
 #if !defined(SYSTEM_TEST)
 	assert(BHandler::Instantiate(NULL) == NULL);
@@ -198,7 +202,7 @@ void TBHandlerTester::Case10()
 					string "a name"
 	@results		BHandler::Name() returns "a name"
  */
-void TBHandlerTester::Case11()
+void TBHandlerTester::Instantiate2()
 {
 	BMessage Archive;
 	Archive.AddString("class", "BHandler");
@@ -219,7 +223,7 @@ void TBHandlerTester::Case11()
 	@results		BHandler::Name() returns NULL
  */
 
-void TBHandlerTester::Case12()
+void TBHandlerTester::Instantiate3()
 {
 	BMessage Archive;
 	Archive.AddString("class", "BHandler");
@@ -239,7 +243,7 @@ void TBHandlerTester::Case12()
 	@results		BHandler::Name() returns NULL
 	
  */
-void TBHandlerTester::Case13()
+void TBHandlerTester::SetName1()
 {
 	BHandler Handler("a name");
 	assert(string("a name") == Handler.Name());
@@ -255,7 +259,7 @@ void TBHandlerTester::Case13()
 	@param	name	Valid string pointer
 	@results		BHandler::Name returns name
  */
-void TBHandlerTester::Case14()
+void TBHandlerTester::SetName2()
 {
 	BHandler Handler("a name");
 	assert(string("a name") == Handler.Name());
@@ -271,45 +275,545 @@ void TBHandlerTester::Case14()
 	@param	arg	NULL
 	@results	Returns B_ERROR
  */
-void TBHandlerTester::Case15()
+void TBHandlerTester::Perform1()
 {
 	BHandler Handler;
 	assert(Handler.Perform(0, NULL) == B_ERROR);
 }
 //------------------------------------------------------------------------------
-//IsWatched()
-//case 1: No added watchers; should return false
-//case 2: Add watcher, should return true; remove watcher, should return false
+/**
+	IsWatched()
+	@case		No added watchers
+	@results	Returns false
+ */
 
-void TBHandlerTester::Case16()
+void TBHandlerTester::IsWatched1()
 {
+	BHandler Handler;
+	assert(Handler.IsWatched() == false);
 }
 //------------------------------------------------------------------------------
-void TBHandlerTester::Case17()
+/**
+	IsWatched()
+	@case		Add then remove watcher
+	@results		Returns true after add, returns false after remove
+	@note		Original implementation fails this test.  Either the removal
+				doesn't happen (unlikely) or some list-within-a-list doesn't
+				get removed when there's nothing in it anymore.
+ */
+void TBHandlerTester::IsWatched2()
 {
+	BHandler Handler;
+	BHandler Watcher;
+	Handler.StartWatching(&Watcher, '1234');
+	assert(Handler.IsWatched() == true);
+
+	Handler.StopWatching(&Watcher, '1234');
+	assert(Handler.IsWatched() == false);
+}
+//------------------------------------------------------------------------------
+/**
+	Looper()
+	@case		Not added to a BLooper
+	@results		Returns NULL
+ */
+void TBHandlerTester::Looper1()
+{
+	BHandler Handler;
+	assert(Handler.Looper() == NULL);
+}
+//------------------------------------------------------------------------------
+/**
+	Looper()
+	@case		Add to a BLooper, then remove
+	@results	Returns the added-to BLooper; when removed, returns NULL
+ */
+void TBHandlerTester::Looper2()
+{
+	BHandler Handler;
+	BLooper Looper;
+	Looper.AddHandler(&Handler);
+	assert(Handler.Looper() == &Looper);
+
+	assert(Looper.RemoveHandler(&Handler));
+	assert(Handler.Looper() == NULL);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 and Handler2 do not belong to a BLooper
+	@param	handler	Valid BHandler pointer
+	@results		NextHandler() returns NULL
+					debug message "handler must belong to looper before setting
+					NextHandler"
+ */
+void TBHandlerTester::SetNextHandler1()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == NULL);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 belongs to a unlocked BLooper, Handler2 does not
+	@param	handler	Valid BHandler pointer
+	@results		NextHandler() returns BLooper
+					debug message "The handler and its NextHandler must have
+					the same looper"
+ */
+void TBHandlerTester::SetNextHandler2()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper;
+	Looper.AddHandler(&Handler1);
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Looper);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 belongs to a locked BLooper, Handler2 does not
+	@param	handler	Valid BHandler pointer
+	@results		NextHandler() returns BLooper
+					debug message "The handler and its NextHandler must have
+					the same looper"
+ */
+void TBHandlerTester::SetNextHandler3()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper;
+	Looper.AddHandler(&Handler1);
+	Looper.Lock();
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Looper);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler2 belongs to a unlocked BLooper, Handler1 does not
+	@param	handler	Valid BHandler pointer
+	@results		NextHandler() returns NULL
+					debug message "handler must belong to looper before setting
+					NextHandler"
+ */
+void TBHandlerTester::SetNextHandler4()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper;
+	Looper.AddHandler(&Handler2);
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == NULL);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler2 belongs to a locked BLooper, Handler1 does not
+	@param	handler	Valid BHandler pointer
+	@results		NextHandler() returns NULL
+					debug message "handler must belong to looper before setting
+					NextHandler"
+ */
+void TBHandlerTester::SetNextHandler5()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper;
+	Looper.AddHandler(&Handler2);
+	Looper.Lock();
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == NULL);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 and Handler2 belong to different unlocked BLoopers
+	@param	handler	Valid BHandler pointer
+	@results		Returns BLooper;
+					debug message "The handler and its NextHandler must have the
+					same looper"
+ */
+void TBHandlerTester::SetNextHandler6()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper1;
+	BLooper Looper2;
+	Looper1.AddHandler(&Handler1);
+	Looper2.AddHandler(&Handler2);
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Looper1);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 and Handler2 belong to different BLoopers;
+					Handler1's is locked; Handler2's is not
+	@param	handler	Valid BHandler pointer
+	@result			Returns BLooper;
+					debug message "The handler and its NextHandler must have the
+					same looper"
+ */
+void TBHandlerTester::SetNextHandler7()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper1;
+	BLooper Looper2;
+	Looper1.AddHandler(&Handler1);
+	Looper2.AddHandler(&Handler2);
+	Looper1.Lock();
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Looper1);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 and Handler2 belong to different BLoopers;
+					Handler1's is unlocked; Handler2's is locked
+	@param	handler	Valid BHandler pointer
+	@results		Returns BLooper
+					debug message "The handler and its NextHandler must have the
+					same looper"
+ */
+void TBHandlerTester::SetNextHandler8()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper1;
+	BLooper Looper2;
+	Looper1.AddHandler(&Handler1);
+	Looper2.AddHandler(&Handler2);
+	Looper2.Lock();
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Looper1);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 and Handler2 belong to different locked BLoopers
+	@param	handler	Valid BHandler pointer
+	@results		Returns BLooper
+					debug message "The handler and its NextHandler must have the
+					same looper"
+ */
+void TBHandlerTester::SetNextHandler9()
+{
+	BHandler Handler1;
+	BHandler Handler2;
+	BLooper Looper1;
+	BLooper Looper2;
+	Looper1.AddHandler(&Handler1);
+	Looper2.AddHandler(&Handler2);
+	Looper1.Lock();
+	Looper2.Lock();
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Looper1);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 and Handler2 belong to the same unlocked BLooper
+	@param	handler	Valid BHandler pointer
+	@results		Returns Handler2
+	@note			Docs say the looper must be locked, but the original
+					implementation allows the next handler to be set anyway.
+ */
+void TBHandlerTester::SetNextHandler10()
+{
+	BLooper Looper;
+	BHandler Handler1;
+	BHandler Handler2;
+	Looper.AddHandler(&Handler1);
+	Looper.AddHandler(&Handler2);
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Handler2);
+}
+//------------------------------------------------------------------------------
+/**
+	SetNextHandler(BHandler* handler);
+	NextHandler();
+	@case			Handler1 and Handler2 belong to the same locked BLooper
+	@param	handler	Valid BHandler pointer
+	@results		Returns Handler2
+ */
+void TBHandlerTester::SetNextHandler11()
+{
+	BLooper Looper;
+	BHandler Handler1;
+	BHandler Handler2;
+	Looper.AddHandler(&Handler1);
+	Looper.AddHandler(&Handler2);
+	Looper.Lock();
+	Handler1.SetNextHandler(&Handler2);
+	assert(Handler1.NextHandler() == &Handler2);
+}
+//------------------------------------------------------------------------------
+/**
+	NextHandler()
+	@case		Default constructed BHandler
+	@results	Returns NULL
+ */
+void TBHandlerTester::NextHandler1()
+{
+	BHandler Handler;
+	assert(Handler.NextHandler() == NULL);
+}
+//------------------------------------------------------------------------------
+/**
+	NextHandler();
+	@case		Default constructed BHandler added to BLooper
+	@results	Returns parent BLooper
+ */
+void TBHandlerTester::NextHandler2()
+{
+	BHandler Handler;
+	BLooper Looper;
+	Looper.AddHandler(&Handler);
+	assert(Handler.NextHandler() == &Looper);
+}
+//------------------------------------------------------------------------------
+/**
+	AddFilter(BMessageFilter* filter)
+	@case			filter is NULL
+	@param	filter	NULL
+	@results		None (i.e., no seg faults, etc.)
+	@note			Contrary to documentation, BHandler doesn't seem to care if
+					it belongs to a BLooper when a filter gets added.  Also,
+					the original implementation does not handle a NULL param
+					gracefully, so this test is not enabled against it.
+ */
+void TBHandlerTester::AddFilter1()
+{
+#if !defined(SYSTEM_TEST)
+	BHandler Handler;
+	Handler.AddFilter(NULL);
+#endif
+}
+//------------------------------------------------------------------------------
+/**
+	AddFilter(BMessageFilter* filter)
+	@case			filter is valid, handler has no looper
+	@param	filter	Valid BMessageFilter pointer
+	@results		None (i.e., no seg faults, etc.)
+	@note			Contrary to documentation, BHandler doesn't seem to care if
+					it belongs to a BLooper when a filter gets added.
+ */
+void TBHandlerTester::AddFilter2()
+{
+	BHandler Handler;
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	Handler.AddFilter(Filter);
+}
+//------------------------------------------------------------------------------
+/**
+	AddFilter(BMessageFilter* filter)
+	@case			filter is valid, handler has looper, looper isn't locked
+	@param	filter	Valid BMessageFilter pointer
+	@results		None (i.e., no seg faults, etc.)
+	@note			Contrary to documentation, BHandler doesn't seem to care if
+					if belongs to a BLooper when a filter gets added, or
+					whether the looper is locked.
+ */
+void TBHandlerTester::AddFilter3()
+{
+	BLooper Looper;
+	BHandler Handler;
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	Looper.AddHandler(&Handler);
+	Handler.AddFilter(Filter);
+}
+//------------------------------------------------------------------------------
+/**
+	AddFilter(BMessageFilter* filter)
+	@case			filter is valid, handler has looper, looper is locked
+	@param	filter	Valid BMessageFilter pointer
+	@results		None (i.e., no seg faults, etc.)
+ */
+void TBHandlerTester::AddFilter4()
+{
+	BLooper Looper;
+	BHandler Handler;
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	Looper.Lock();
+	Looper.AddHandler(&Handler);
+	Handler.AddFilter(Filter);
+}
+//------------------------------------------------------------------------------
+/**
+	RemoveFilter(BMessageFilter* filter)
+	@case			filter is NULL
+	@param	filter	NULL
+	@results		Returns false
+ */
+void TBHandlerTester::RemoveFilter1()
+{
+	BHandler Handler;
+	assert(!Handler.RemoveFilter(NULL));
+}
+//------------------------------------------------------------------------------
+/**
+	RemoveFilter(BMessageFilter* filter)
+	@case			filter is valid, handler has no looper
+	@param	filter	Valid BMessageFilter pointer
+	@results		Returns true.  Contrary to documentation, original
+					implementation of BHandler doesn't care if it belongs to a
+					looper or not.
+ */
+void TBHandlerTester::RemoveFilter2()
+{
+	BHandler Handler;
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	Handler.AddFilter(Filter);
+	assert(Handler.RemoveFilter(Filter));
+}
+//------------------------------------------------------------------------------
+/**
+	RemoveFilter(BMessageFilter* filter)
+	@case			filter is valid, handler has looper, looper isn't locked
+	@param	filter	Valid BMessageFilter pointer
+	@results		Returns true.  Contrary to documentation, original
+					implementation of BHandler doesn't care if it belongs to a
+					looper or not.
+ */
+void TBHandlerTester::RemoveFilter3()
+{
+	BLooper Looper;
+	BHandler Handler;
+	Looper.AddHandler(&Handler);
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	Handler.AddFilter(Filter);
+	assert(Handler.RemoveFilter(Filter));
+}
+//------------------------------------------------------------------------------
+/**
+	RemoveFilter(BMessageFilter* filter)
+	@case			filter is valid, handler has looper, looper is locked
+	@param	filter	Valid BMessageFilter pointer
+	@results		Return true.
+ */
+void TBHandlerTester::RemoveFilter4()
+{
+	BLooper Looper;
+	BHandler Handler;
+	Looper.AddHandler(&Handler);
+	Looper.Lock();
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	Handler.AddFilter(Filter);
+	assert(Handler.RemoveFilter(Filter));
+}
+//------------------------------------------------------------------------------
+/**
+	RemoveFilter(BMessageFilter* filter)
+	@case			filter is valid, but not owned by handler, handler has no looper
+	@param	filter	Valid BMessageFilter pointer
+	@results		Returns false.  Contrary to documentation, original
+					implementation of BHandler doesn't care if it belongs to a
+					looper or not.
+ */
+void TBHandlerTester::RemoveFilter5()
+{
+	BHandler Handler;
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	assert(!Handler.RemoveFilter(Filter));
+}
+//------------------------------------------------------------------------------
+/**
+	RemoveFilter(BMessageFilter* filter)
+	@case			filter is valid, but not owned by handler, handler has
+					looper, looper isn't locked
+	@param	filter	Valid BMessageFilter pointer
+	@results		Returns false.  Contrary to documentation, original
+					implementation of BHandler doesn't care if its looper is
+					locked or not.
+ */
+void TBHandlerTester::RemoveFilter6()
+{
+	BLooper Looper;
+	BHandler Handler;
+	Looper.AddHandler(&Handler);
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	assert(!Handler.RemoveFilter(Filter));
+}
+//------------------------------------------------------------------------------
+/**
+	RemoveFilter(BMessageFilter* filter)
+	@case			filter is valid, but not owned by handler, handler has
+					looper, looper is locked
+	@param	filter	Valid BMessageFilter pointer
+	@results		Returns false.
+ */
+void TBHandlerTester::RemoveFilter7()
+{
+	BLooper Looper;
+	BHandler Handler;
+	Looper.AddHandler(&Handler);
+	Looper.Lock();
+	BMessageFilter* Filter = new BMessageFilter('1234');
+	assert(!Handler.RemoveFilter(Filter));
 }
 //------------------------------------------------------------------------------
 Test* TBHandlerTester::Suite()
 {
 	TestSuite* SuiteOfTests = new TestSuite;
 
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case1);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case2);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case3);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case4);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case5);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case6);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case7);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case8);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case9);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case10);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case11);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case12);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case13);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case14);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case15);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case16);
-	ADD_TEST(SuiteOfTests, TBHandlerTester, Case17);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, BHandler1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, BHandler2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, BHandler3);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, BHandler4);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, BHandler5);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Archive1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Archive2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Archive3);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Archive4);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Instantiate1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Instantiate2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Instantiate3);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, SetName1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, SetName2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Perform1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, IsWatched1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, IsWatched2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Looper1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, Looper2);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler1);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler2);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler3);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler4);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler5);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler6);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler7);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler8);
+//	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler9);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler10);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, SetNextHandler11);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, NextHandler1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, NextHandler2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, AddFilter1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, AddFilter2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, AddFilter3);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, AddFilter4);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, RemoveFilter1);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, RemoveFilter2);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, RemoveFilter3);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, RemoveFilter4);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, RemoveFilter5);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, RemoveFilter6);
+	ADD_TEST(SuiteOfTests, TBHandlerTester, RemoveFilter7);
 
 	return SuiteOfTests;
 }
