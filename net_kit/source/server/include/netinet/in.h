@@ -7,6 +7,9 @@
 #ifndef _NETINET_IN_H_
 #define _NETINET_IN_H_
 
+/* XXX - This really doesn't belong in here... */
+typedef uint32	in_addr_t; 
+
 /* Protocol definitions - add to as required... */
 enum {
 	IPPROTO_IP	= 0,	/* IPv4 */
@@ -63,6 +66,7 @@ struct sockaddr_in {
 
 #define INADDR_ANY              __IPADDR(0x00000000)
 #define INADDR_LOOPBACK         __IPADDR(0x7f000001)
+#define INADDR_NONE             __IPADDR(0xffffffff)
 
 #define IN_CLASSA(i)            (((uint32)(i) & __IPADDR(0x80000000)) == \
                                  __IPADDR(0x00000000))
@@ -91,7 +95,6 @@ struct sockaddr_in {
 #define IN_CLASSD_NSHIFT        28
 #define IN_CLASSD_HOST          __IPADDR(0x0fffffff)
 
-
 #define IN_MULTICAST(i)		IN_CLASSD(i)
 
 /* some helpful macro's :) */
@@ -101,6 +104,8 @@ struct sockaddr_in {
 #define satosin(sa)     ((struct sockaddr_in *)(sa))
 #define sintosa(sin)    ((struct sockaddr *)(sin))
 
+#ifdef _NETWORK_STACK
 int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp);
+#endif
 
 #endif /* NETINET_IN_H */

@@ -13,6 +13,8 @@ LDFLAGS=-nostdlib -L/boot/beos/system/lib -L/boot/develop/lib/x86 -lroot -lbe /b
 #CFLAGS=-nostart -no-fpic -D_KERNEL_MODE
 #LDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 
+CFLAGS+=-D_NETWORK_STACK
+
 INCLUDES=-I. -I./include
 
 all: subdirs

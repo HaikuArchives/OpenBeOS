@@ -16,7 +16,7 @@ CORE_OBJS:= 	socket.o \
 
 CORE_C:=	$(CORE_OBJS:.o=.c)
 
-KCFLAGS=-nostart -no-fpic -D_KERNEL_MODE
+KCFLAGS=-nostart -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 
 

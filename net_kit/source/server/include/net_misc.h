@@ -2,6 +2,8 @@
  * Miscellaneous networking stuff that doesn't yet have a home.
  */
 
+#ifdef _NETWORK_STACK
+
 #include <kernel/OS.h>
 #include <ByteOrder.h>
 #include <Errors.h>
@@ -46,7 +48,6 @@ typedef struct ether_addr {
 } ether_addr;
 
 typedef	uint32	ipv4_addr;
-typedef uint32	in_addr_t; /* this for commonality with BSD code */
 
 /* XXX - add some macro's for inserting various types of address
  */
@@ -86,3 +87,5 @@ struct sock_fd *make_sock_fd(void);
 void release_sock_fd(struct sock_fd *sfd);
 
 #endif /* OBOS_NET_MISC_H */
+
+#endif /* _NETWORK_STACK */
