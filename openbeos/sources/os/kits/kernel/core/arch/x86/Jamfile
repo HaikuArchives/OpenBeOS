@@ -14,5 +14,5 @@ KernelStaticLibrary libx86 :
 	<$(SOURCE_GRIST)>arch_x86.S
 	<$(SOURCE_GRIST)>arch_interrupts.S
 	:
-	-fno-pic
+	-fno-pic -Wno-unused
 	;
