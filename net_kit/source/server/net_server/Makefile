@@ -11,8 +11,7 @@ CORE_OBJS:= 	socket.o \
 		misc.o \
 		cksum.o \
 		nhash.o \
-		pools.o \
-		net_server.o
+		pools.o
 
 CORE_C:=	$(CORE_OBJS:.o=.c)
 
@@ -24,10 +23,10 @@ all:	$(TARGET)
 
 kernel:
 	if test -e socket.o; then rm *.o; fi
-	for obj in $(CORE_C); do \
+	for obj in $(CORE_C) core.c ; do \
 		$(CC) $(KCFLAGS) $(INCLUDES) -c $$obj;  \
 	done
-	$(CC) $(KLDFLAGS) -o core $(CORE_OBJS)
+	$(CC) $(KLDFLAGS) -o core $(CORE_OBJS) core.o
 	
 installkernel: kernel
 	cp core /boot/home/config/add-ons/kernel/network/core
@@ -36,8 +35,8 @@ clean:
 	@rm -f $(TARGET)
 	@rm -f *.o
 
-$(TARGET): $(CORE_OBJS) net_timer.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(CORE_OBJS) -o $(TARGET) net_timer.o
+$(TARGET): $(CORE_OBJS) net_timer.o net_server.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(CORE_OBJS) -o $(TARGET) net_timer.o net_server.o
 
 .SUFFIXES: .c .o
 
