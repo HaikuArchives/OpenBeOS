@@ -158,15 +158,18 @@ int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
 		flags |= RTF_HOST;
 	}
 
-printf("in_ifaddr:\n");
-printf("         : ia_net          : %08lx\n", ia->ia_net);
-printf("         : ia_netmask      : %08lx\n", ia->ia_netmask);
-printf("         : ia_subnet       : %08lx\n", ia->ia_subnet);
-printf("         : ia_subnetmask   : %08lx\n", ia->ia_subnetmask);
-printf("         : ia_netbroadcast : %08lx\n", ia->ia_netbroadcast.s_addr);
-printf("         : ia_addr         : %08lx\n", ia->ia_addr.sin_addr.s_addr);
-printf("         : ia_dstaddr      : %08lx\n", ia->ia_dstaddr.sin_addr.s_addr);
-printf("         : ia_sockmask     : %08lx\n", ia->ia_sockmask.sin_addr.s_addr);
+	/* This is really useful debugging code, but not needed at the moment... */
+#if 0
+	printf("in_ifaddr:\n");
+	printf("         : ia_net          : %08lx\n", ia->ia_net);
+	printf("         : ia_netmask      : %08lx\n", ia->ia_netmask);
+	printf("         : ia_subnet       : %08lx\n", ia->ia_subnet);
+	printf("         : ia_subnetmask   : %08lx\n", ia->ia_subnetmask);
+	printf("         : ia_netbroadcast : %08lx\n", ia->ia_netbroadcast.s_addr);
+	printf("         : ia_addr         : %08lx\n", ia->ia_addr.sin_addr.s_addr);
+	printf("         : ia_dstaddr      : %08lx\n", ia->ia_dstaddr.sin_addr.s_addr);
+	printf("         : ia_sockmask     : %08lx\n", ia->ia_sockmask.sin_addr.s_addr);
+#endif
 
 	error = rtinit(&(ia->ia_ifa), (int)RTM_ADD, flags);
 	if (error == 0)
