@@ -16,7 +16,7 @@ typedef struct {
 class KeyboardSettings{
 public :
 	KeyboardSettings();
-	virtual ~KeyboardSettings();
+	~KeyboardSettings();
 	BRect WindowPosition() const { return fWindowFrame; }
 	int32 KeyboardRepeatRate() const { return fsettings.key_repeat_rate; }
 	bigtime_t KeyboardDelayRate() const { return fsettings.key_repeat_delay; }

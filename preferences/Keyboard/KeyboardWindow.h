@@ -21,7 +21,7 @@ class KeyboardWindow : public BWindow
 {
 public:
 					KeyboardWindow(KeyboardSettings *fSettings);
-	virtual			~KeyboardWindow();
+					~KeyboardWindow();
 	virtual	bool	QuitRequested();
 	virtual void 	MessageReceived(BMessage *message);
 	virtual void 	FrameMoved(BPoint origin);

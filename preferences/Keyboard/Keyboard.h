@@ -21,7 +21,7 @@ class KeyboardApplication : public BApplication
 {
 public:
 					KeyboardApplication();
-	virtual 		~KeyboardApplication();
+	 		~KeyboardApplication();
 	virtual void 	MessageReceived(BMessage *message);
 	virtual void 	AboutRequested(void);
 private:
