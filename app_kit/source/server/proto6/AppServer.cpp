@@ -166,6 +166,7 @@ printf("AppServer::MainLoop()\n");
 			{
 				case CREATE_APP:
 				case DELETE_APP:
+				case GET_SCREEN_MODE:
 				case B_QUIT_REQUESTED:
 					DispatchMessage(msgcode,msgbuffer);
 					break;
