@@ -74,6 +74,12 @@ strerror(int errnum)
 		case ENXIO:
 			return "Device not configured";
 
+		case ESPIPE:
+			return "Illegal seek";
+
+		case EFTYPE:
+			return "Inappropriate file type or format";
+
 //		case ERR_UNIMPLEMENTED:
 		case ENOSYS:
 			return "Unimplemented";
