@@ -193,7 +193,8 @@ virtual		status_t _Reserved_BufferConsumer_15(void *);
 
 		media_type fConsumerType;
 		_buffer_id_cache * fBufferCache;
-		uint32 _reserved_buffer_consumer_[15];
+		BBufferGroup *fDeleteBufferGroup;
+		uint32 _reserved_buffer_consumer_[14];
 
 };
 

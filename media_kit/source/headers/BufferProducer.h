@@ -218,14 +218,12 @@ virtual		status_t _Reserved_BufferProducer_14(void *);
 virtual		status_t _Reserved_BufferProducer_15(void *);
 
 
-volatile	int32 _m_change;
-		media_type _m_producer_type;
-		bigtime_t	_m_recordDelay;
-		bigtime_t	_m_initialLatency;
-		uint32		_m_initialFlags;
+		media_type	fProducerType;
+		bigtime_t	fInitialLatency;
+		uint32		fInitialFlags;
 
 static	status_t clip_shorts_to_region(
-				int16 * data,
+				const int16 * data,
 				int count,
 				BRegion * output);
 static	status_t clip_region_to_shorts(
@@ -234,14 +232,7 @@ static	status_t clip_region_to_shorts(
 				int max_count,
 				int * out_count);
 
-		uint32 _reserved_buffer_producer_[11];
-
-static	status_t SendRequestResult(
-				const media_request_info & result,
-				port_id port, bool sync=false);
-
-		void PSetRecordDelay(
-				bigtime_t inDelay);
+		uint32 _reserved_buffer_producer_[14];
 };
 
 #endif /* _BUFFER_PRODUCER_H */

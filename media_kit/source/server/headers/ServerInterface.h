@@ -61,6 +61,7 @@ enum {
 	NODE_PREROLL,
 	NODE_REGISTERED,
 	NODE_SET_TIMESOURCE,
+	NODE_REQUEST_COMPLETED,
 	CONSUMER_ACCEPT_FORMAT,
 	CONSUMER_GET_NEXT_INPUT,
 	CONSUMER_DISPOSE_INPUT_COOKIE,
@@ -71,12 +72,168 @@ enum {
 	CONSUMER_DISCONNECTED,
 	CONSUMER_FORMAT_CHANGED,
 	CONSUMER_SEEK_TAG_REQUESTED,
-	PRODUCER_LATE_NOTICE,
-	PRODUCER_OUTPUT_ENABLE,
-	PRODUCER_LATENCY_CHANGE,
+	PRODUCER_LATE_NOTICE_RECEIVED,
+	PRODUCER_ENABLE_OUTPUT,
+	PRODUCER_LATENCY_CHANGED,
 	PRODUCER_ADDITIONAL_BUFFER_REQUESTED,
-	NODE_REQUEST_COMPLETED,
+	PRODUCER_VIDEO_CLIPPING_CHANGED,
+	PRODUCER_FORMAT_CHANGE_REQUESTED,
+	PRODUCER_SET_BUFFER_GROUP,
+	PRODUCER_GET_LATENCY,
+	PRODUCER_GET_NEXT_OUTPUT,
+	PRODUCER_DISPOSE_OUTPUT_COOKIE,
+	PRODUCER_GET_INITIAL_LATENCY,
+	PRODUCER_FORMAT_SUGGESTION_REQUESTED,
+	PRODUCER_FORMAT_PROPOSAL,
+	PRODUCER_PREPARE_TO_CONNECT,
+	PRODUCER_CONNECT,
+	PRODUCER_DISCONNECT,
+	PRODUCER_SET_PLAY_RATE,
 	END
+};
+
+
+struct xfer_producer_format_suggestion_requested
+{
+	media_type type;
+	int32 quality;
+	port_id reply_port;
+};
+
+struct xfer_producer_format_suggestion_requested_reply
+{
+	media_format format;
+	status_t result;
+};
+
+struct xfer_producer_format_proposal
+{
+	media_source output;
+	media_format format;
+	port_id reply_port;
+};
+
+struct xfer_producer_format_proposal_reply
+{
+	status_t result;
+};
+
+struct xfer_producer_prepare_to_connect
+{
+	media_source source;
+	media_destination destination;
+	media_format format;
+	port_id reply_port;
+};
+
+struct xfer_producer_prepare_to_connect_reply
+{
+	media_format format;
+	media_source out_source;
+	char name[B_MEDIA_NAME_LENGTH];
+	status_t result;
+};
+
+struct xfer_producer_connect
+{
+	status_t error;
+	media_source source;
+	media_destination destination;
+	media_format format;
+	port_id reply_port;
+};
+
+struct xfer_producer_connect_reply
+{
+	char name[B_MEDIA_NAME_LENGTH];
+};
+
+struct xfer_producer_disconnect
+{
+	media_source source;
+	media_destination destination;
+};
+
+struct xfer_producer_set_play_rate
+{
+	int32 numer;
+	int32 denom;
+	port_id reply_port;
+};
+
+struct xfer_producer_set_play_rate_reply
+{
+	status_t result;
+};
+
+struct xfer_producer_get_initial_latency
+{
+	port_id reply_port;
+};
+
+struct xfer_producer_get_initial_latency_reply
+{
+	bigtime_t initial_latency;
+	uint32 flags;
+};
+
+struct xfer_producer_get_latency
+{
+	port_id reply_port;
+};
+
+struct xfer_producer_get_latency_reply
+{
+	bigtime_t latency;
+	status_t result;
+};
+
+struct xfer_producer_get_next_output
+{
+	int32 cookie;
+	port_id reply_port;
+};
+
+struct xfer_producer_get_next_output_reply
+{
+	int32 cookie;
+	media_output output;
+	status_t result;
+};
+
+struct xfer_producer_dispose_output_cookie
+{
+	int32 cookie;
+};
+
+struct xfer_producer_set_buffer_group
+{
+	media_source source;
+	media_destination destination;
+	void *user_data;
+	int32 change_tag;
+	int32 buffer_count;
+	media_buffer_id buffers[1];
+};
+
+struct xfer_producer_format_change_requested
+{
+	media_source source;
+	media_destination destination;
+	media_format format;
+	void *user_data;
+	int32 change_tag;
+};
+
+struct xfer_producer_video_clipping_changed
+{
+	media_source source;
+	media_destination destination;
+	media_video_display_info display;
+	void *user_data;
+	int32 change_tag;
+	int32 short_count;
+	int16 shorts[1];
 };
 
 struct xfer_producer_additional_buffer_requested
@@ -88,7 +245,7 @@ struct xfer_producer_additional_buffer_requested
 	media_seek_tag prev_tag;
 };
 
-struct xfer_producer_latency_change
+struct xfer_producer_latency_changed
 {
 	media_source source;
 	media_destination destination;
@@ -101,7 +258,7 @@ struct xfer_node_request_completed
 	media_request_info info;
 };
 
-struct xfer_producer_output_enable
+struct xfer_producer_enable_output
 {
 	media_source source;
 	media_destination destination;
@@ -110,7 +267,7 @@ struct xfer_producer_output_enable
 	int32 change_tag;
 };
 
-struct xfer_producer_late_notice
+struct xfer_producer_late_notice_received
 {
 	media_source source;
 	bigtime_t how_much;
@@ -155,64 +312,64 @@ struct xfer_node_set_timesource
 	media_node_id timesource_id;
 };
 
-struct xfer_producer_accept_format
+struct xfer_consumer_accept_format
 {
 	media_destination dest;
 	media_format format;
 	port_id reply_port;
 };
 
-struct xfer_producer_accept_format_reply
+struct xfer_consumer_accept_format_reply
 {
 	media_format format;
 	status_t result;
 };
 
-struct xfer_producer_get_next_input
+struct xfer_consumer_get_next_input
 {
 	int32 cookie;
 	port_id reply_port;
 };
 
-struct xfer_producer_get_next_input_reply
+struct xfer_consumer_get_next_input_reply
 {
 	int32 cookie;
 	media_input input;
 	status_t result;
 };
 
-struct xfer_producer_dispose_input_cookie
+struct xfer_consumer_dispose_input_cookie
 {
 	int32 cookie;
 };
 
-struct xfer_producer_buffer_received
+struct xfer_consumer_buffer_received
 {
 	media_buffer_id buffer;
 	media_header header;
 };
 
-struct xfer_producer_data_status
+struct xfer_consumer_producer_data_status
 {
 	media_destination for_whom;
 	int32 status;
 	bigtime_t at_performance_time;
 };
 
-struct xfer_producer_get_latency_for
+struct xfer_consumer_get_latency_for
 {
 	media_destination for_whom;
 	port_id reply_port;
 };
 
-struct xfer_producer_get_latency_for_reply
+struct xfer_consumer_get_latency_for_reply
 {
 	bigtime_t latency;
 	media_node_id timesource;
 	status_t result;
 };
 	
-struct xfer_producer_connected
+struct xfer_consumer_connected
 {
 	media_source producer;
 	media_destination where;
@@ -220,19 +377,19 @@ struct xfer_producer_connected
 	port_id reply_port;
 };
 
-struct xfer_producer_connected_reply
+struct xfer_consumer_connected_reply
 {
 	media_input input;
 	status_t result;
 };
 
-struct xfer_producer_disconnected
+struct xfer_consumer_disconnected
 {
 	media_source producer;
 	media_destination where;
 };
 
-struct xfer_producer_format_changed
+struct xfer_consumer_format_changed
 {
 	media_source producer;
 	media_destination consumer;
@@ -241,12 +398,12 @@ struct xfer_producer_format_changed
 	port_id reply_port;
 };
 
-struct xfer_producer_format_changed_reply
+struct xfer_consumer_format_changed_reply
 {
 	status_t result;
 };
 
-struct xfer_producer_seek_tag_requested
+struct xfer_consumer_seek_tag_requested
 {
 	media_destination destination;
 	bigtime_t target_time;
@@ -254,7 +411,7 @@ struct xfer_producer_seek_tag_requested
 	port_id reply_port;
 };
 
-struct xfer_producer_seek_tag_requested_reply
+struct xfer_consumer_seek_tag_requested_reply
 {
 	media_seek_tag seek_tag;
 	bigtime_t tagged_time;
