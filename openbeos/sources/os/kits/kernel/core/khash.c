@@ -3,12 +3,12 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-// #include <heap.h>
-#include <khash.h>
+
 #include <memheap.h>
 #include <debug.h>
 #include <errors.h>
 #include <string.h>
+#include <khash.h>
 
 #define malloc kmalloc
 #define free kfree
