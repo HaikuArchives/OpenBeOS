@@ -27,7 +27,6 @@ THE SOFTWARE.
 
 */
 
-#include <stdio.h>
 #include "LinePathBuilder.h"
 
 static const float kNearZero   = 0.000000000001;
@@ -135,9 +134,6 @@ LinePathBuilder::Corner(BPoint a, BPoint b, bool start)
 		}
 		if (start) r = ra; else r = rb;
 		AddPoint(r);
-	} else {
-		fprintf(stderr, "Error in Corner!\n");
-		fSubPath->Print();
 	}
 }
 
@@ -218,11 +214,6 @@ LinePathBuilder::Connect(BPoint a, BPoint b, BPoint c)
 				AddPoint(b - v); AddPoint(p[2] - v);
 				break;
 		}
-	} else {
-		fprintf(stderr, "Error in connect!\n");
-		fprintf(stderr, "A(%f, %f), B(%f, %f), C(%f, %f)",
-			a.x, a.y, b.x, b.y, c.x, c.y);
-		fSubPath->Print();
 	}
 }
 
