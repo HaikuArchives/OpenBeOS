@@ -168,18 +168,39 @@ void Layer::RemoveSelf(void)
 	parent->RemoveChild(this);
 }
 
-Layer *Layer::GetChildAt(BPoint pt)
+Layer *Layer::GetChildAt(BPoint pt, bool recursive=false)
 {
 	// Find out which child gets hit if we click at a certain spot. Returns NULL
 	// if there are no visible children or if the click does not hit a child layer
+	// If recursive==true, then it will continue to call until it reaches a layer
+	// which has no children, i.e. a layer that is at the top of its 'branch' in
+	// the layer tree
 	
 	Layer *child;
-	for(child=topchild; child!=NULL; child=child->lowersibling)
+	if(recursive)
 	{
-		if(child->hidecount>0)
-			continue;
-		if(child->frame.Contains(pt))
-			return child;
+		for(child=topchild; child!=NULL; child=child->lowersibling)
+		{
+			if(child->topchild!=NULL)
+				child->GetChildAt(pt,true);
+			
+			if(child->hidecount>0)
+				continue;
+			
+			if(child->frame.Contains(pt))
+				return child;
+		}
+	}
+	else
+	{
+		for(child=topchild; child!=NULL; child=child->lowersibling)
+		{
+			if(child->hidecount>0)
+				continue;
+			
+			if(child->frame.Contains(pt))
+				return child;
+		}
 	}
 	return NULL;
 }

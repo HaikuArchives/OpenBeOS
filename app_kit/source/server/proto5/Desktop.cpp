@@ -9,6 +9,7 @@
 #include <Path.h>
 #include <GraphicsCard.h>
 #include <stdio.h>
+#include <Locker.h>
 #include "ServerWindow.h"
 #include "Layer.h"
 #include "DisplayDriver.h"
@@ -38,6 +39,7 @@ color_map system_palette;
 DisplayDriver *gfxdriver;
 int32 token_count=-1;
 BLocker *workspacelock;
+BLocker *layerlock;
 //----------------------------------------------------
 
 
@@ -111,6 +113,7 @@ printf("init_desktop(%d)\n",workspaces);
 	gfxdriver->Initialize();
 
 	workspacelock=new BLocker();
+	layerlock=new BLocker();
 
 #ifdef DEBUG_WORKSPACES
 printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT initialized");
@@ -170,6 +173,7 @@ void shutdown_desktop(void)
 	gfxdriver->Shutdown();
 	delete gfxdriver;
 	delete workspacelock;
+	delete layerlock;
 }
 
 
@@ -350,6 +354,15 @@ void RemoveWindowFromDesktop(ServerWindow *win)
 	// elegant solution.
 	win->winborder->RemoveSelf();
 	workspacelock->Unlock();
+}
+
+Layer *GetRootLayer(void)
+{
+	layerlock->Lock();
+	Layer *lay=(workspace_count>0)?pactive_workspace->toplayer:NULL;
+	layerlock->Unlock();
+	
+	return lay;
 }
 
 // Another "just in case DW screws up again" section

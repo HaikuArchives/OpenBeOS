@@ -14,11 +14,12 @@ public:
 	WindowBorder(ServerWindow *win, const char *bordertitle);
 	~WindowBorder(void);
 	void MouseDown(BPoint pt, uint32 buttons);
-	void MouseMoved(BPoint pt);
+	void MouseMoved(BPoint pt, uint32 buttons);
 	void MouseUp(BPoint pt, uint32 buttons);
 	void Draw(BRect update);
 	void SystemColorsUpdated(void);
 	void SetDecorator(Decorator *newdecor);
+	ServerWindow *Window(void) const;
 
 	ServerWindow *swin;
 	BString *title;
@@ -27,6 +28,8 @@ public:
 	BRect frame, clientframe;
 	uint32 mbuttons;
 	bool update;
+	bool movewin;
+	bool resizewin;
 };
 
 #endif

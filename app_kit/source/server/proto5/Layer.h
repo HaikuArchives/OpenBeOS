@@ -23,7 +23,7 @@ public:
 	void AddChild(Layer *child);
 	void RemoveChild(Layer *child);
 	void RemoveSelf(void);
-	Layer *GetChildAt(BPoint pt);
+	Layer *GetChildAt(BPoint pt, bool recursive=false);
 
 	void RebuildRegions(bool include_children=true);
 	void PrintToStream(void);

@@ -9,7 +9,7 @@ public:
 	BeDecorator(Layer *lay, uint32 dflags, window_look wlook);
 	~BeDecorator(void);
 	
-	click_type Clicked(BPoint pt);
+	click_type Clicked(BPoint pt, uint32 buttons);
 	void Resize(BRect rect);
 	BRect GetBorderSize(void);
 	BPoint GetMinimumSize(void);

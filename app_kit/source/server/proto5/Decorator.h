@@ -9,9 +9,11 @@
 class Layer;
 class DisplayDriver;
 
-typedef enum { CLICK_NONE, CLICK_ZOOM, CLICK_CLOSE, CLICK_MINIMIZE,
-	CLICK_SEND_TO_BACK, CLICK_DRAG, CLICK_RESIZE_L, CLICK_RESIZE_T,
-	CLICK_RESIZE_R, CLICK_RESIZE_B, CLICK_RESIZE_LT, CLICK_RESIZE_RT,
+typedef enum { CLICK_NONE=0, CLICK_ZOOM, CLICK_CLOSE, CLICK_MINIMIZE,
+	CLICK_TAB, CLICK_DRAG, CLICK_MOVETOBACK, CLICK_MOVETOFRONT,
+	
+	CLICK_RESIZE, CLICK_RESIZE_L, CLICK_RESIZE_T, 
+	CLICK_RESIZE_R, CLICK_RESIZE_B, CLICK_RESIZE_LT, CLICK_RESIZE_RT, 
 	CLICK_RESIZE_LB, CLICK_RESIZE_RB } click_type;
 
 class Decorator
@@ -22,7 +24,7 @@ public:
 	
 	Layer* GetLayer(void);
 	
-	virtual click_type Clicked(BPoint pt);
+	virtual click_type Clicked(BPoint pt, uint32 buttons);
 	virtual void Resize(BRect rect);
 	virtual BRect GetBorderSize(void);
 	virtual BPoint GetMinimumSize(void);

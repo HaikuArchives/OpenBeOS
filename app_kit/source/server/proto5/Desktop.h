@@ -8,6 +8,7 @@
 
 class DisplayDriver;
 class ServerWindow;
+class Layer;
 
 void init_desktop(int8 workspaces);
 void shutdown_desktop(void);
@@ -21,10 +22,11 @@ int32 CurrentWorkspace(void);
 void ActivateWorkspace(uint32 workspace);
 
 const color_map *SystemColors(void);
-status_t SetScreenSpace(uint32 index, uint32 res, bool stick = true);
+status_t SetScreenSpace(uint32 index, uint32 res, bool stick=true);
 
 void AddWindowToDesktop(ServerWindow *win,uint32 workspace);
 void RemoveWindowFromDesktop(ServerWindow *win);
+Layer *GetRootLayer(void);
 int32 GetViewToken(void);
 
 typedef struct 

@@ -1,13 +1,16 @@
 /*
 	ServerWindow.cpp
-		Class which works with a BWindow. Handles all messages coming
-		from and going to its window plus all drawing calls.
+		Class which works with a BWindow. Handles all messages coming from and
+		going to its window plus all drawing calls.
 */
 #include <AppDefs.h>
 #include <Rect.h>
 #include <string.h>
 #include <stdio.h>
+#include <Debug.h>
+#include <View.h>	// for B_XXXXX_MOUSE_BUTTON defines
 #include "AppServer.h"
+#include "Layer.h"
 #include "PortLink.h"
 #include "ServerWindow.h"
 #include "ServerApp.h"
@@ -318,4 +321,133 @@ int32 ServerWindow::MonitorWin(void *data)
 	win->Loop();
 	exit_thread(0);
 	return 0;
+}
+
+void ServerWindow::HandleMouseEvent(int32 code, int8 *buffer)
+{
+	ServerWindow *mousewin=NULL;
+	int8 *index=buffer;
+	
+	// Find the window which will receive our mouse event.
+	Layer *root=GetRootLayer();
+	WindowBorder *winborder;
+	ASSERT(root!=NULL);
+
+	// Dispatch the mouse event to the proper window
+	switch(code)
+	{
+		case B_MOUSE_DOWN:
+		{
+			// Attached data:
+			// 1) int64 - time of mouse click
+			// 2) float - x coordinate of mouse click
+			// 3) float - y coordinate of mouse click
+			// 4) int32 - modifier keys down
+			// 5) int32 - buttons down
+			// 6) int32 - clicks
+
+//			int64 time=*((int64*)index);
+			index+=sizeof(int64);
+			float x=*((float*)index);
+			index+=sizeof(float);
+			float y=*((float*)index);
+			index+=sizeof(float);
+//			int32 modifiers=*((int32*)index);
+			index+=sizeof(uint32);
+			uint32 buttons=*((uint32*)index);
+			index+=sizeof(uint32);
+//			int32 clicks=*((int32*)index);
+			BPoint pt(x,y);
+
+			// If we have clicked on a window, 			
+			winborder=(WindowBorder*)root->GetChildAt(pt);
+			if(winborder)
+			{
+				mousewin=winborder->Window();
+				ASSERT(mousewin!=NULL);
+				
+				winborder->MouseDown(pt,buttons);
+				
+#ifdef DEBUG_SERVERWIN
+printf("ServerWindow() %s: MouseDown(%.1f,%.1f)\n",mousewin->title->String(),x,y);
+#endif
+			}
+			break;
+		}
+		case B_MOUSE_UP:
+		{
+			// Attached data:
+			// 1) int64 - time of mouse click
+			// 2) float - x coordinate of mouse click
+			// 3) float - y coordinate of mouse click
+			// 4) int32 - modifier keys down
+
+//			int64 time=*((int64*)index);
+			index+=sizeof(int64);
+			float x=*((float*)index);
+			index+=sizeof(float);
+			float y=*((float*)index);
+			index+=sizeof(float);
+//			int32 modifiers=*((int32*)index);
+			BPoint pt(x,y);
+			
+			winborder=(WindowBorder*)root->GetChildAt(pt);
+			if(winborder)
+			{
+				mousewin=winborder->Window();
+				ASSERT(mousewin!=NULL);
+				
+				// Eventually, we will build in MouseUp messages with buttons specified
+				// For now, we just "assume" no mouse specification with a 0.
+				winborder->MouseUp(pt,0);
+				
+				// Do cool mouse stuff here
+				
+#ifdef DEBUG_SERVERWIN
+printf("ServerWindow() %s: MouseUp(%.1f,%.1f)\n",mousewin->title->String(),x,y);
+#endif
+			}
+			break;
+		}
+		case B_MOUSE_MOVED:
+		{
+			// Attached data:
+			// 1) int64 - time of mouse click
+			// 2) float - x coordinate of mouse click
+			// 3) float - y coordinate of mouse click
+			// 4) int32 - buttons down
+//			int64 time=*((int64*)index);
+			index+=sizeof(int64);
+			float x=*((float*)index);
+			index+=sizeof(float);
+			float y=*((float*)index);
+			index+=sizeof(float);
+			uint32 buttons=*((uint32*)index);
+			BPoint pt(x,y);
+			
+			winborder=(WindowBorder*)root->GetChildAt(pt);
+			if(winborder)
+			{
+				mousewin=winborder->Window();
+				ASSERT(mousewin!=NULL);
+
+				winborder->MouseMoved(pt,buttons);
+
+				// Do cool mouse stuff here
+				
+#ifdef DEBUG_SERVERWIN
+printf("ServerWindow() %s: MouseMoved(%.1f,%.1f)\n",mousewin->title->String(),x,y);
+#endif
+			}
+			break;
+		}
+		default:
+		{
+#ifdef DEBUG_SERVERWIN
+printf("HandleMouseEvent() received an unrecognized mouse event");
+PrintMessageCode(code);
+#endif
+			break;
+		}
+	}
 }

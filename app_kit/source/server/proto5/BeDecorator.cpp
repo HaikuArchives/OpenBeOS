@@ -2,7 +2,7 @@
 #include "DisplayDriver.h"
 #include "BeDecorator.h"
 
-#define DEBUG_DECOR
+//#define DEBUG_DECOR
 
 #ifdef DEBUG_DECOR
 #include <stdio.h>
@@ -52,29 +52,55 @@ printf("~BeDecorator()\n");
 #endif
 }
 
-click_type BeDecorator::Clicked(BPoint pt)
+click_type BeDecorator::Clicked(BPoint pt, uint32 buttons)
 {
-#ifdef DEBUG_DECOR
-printf("BeDecorator():Clicked(%f,%f)",pt.x,pt.y);
-#endif
 	// the case order is important - we go from smallest to largest
 	if(closerect.Contains(pt))
+	{
+
+#ifdef DEBUG_DECOR
+printf("BeDecorator():Clicked() - Close\n");
+#endif
+
 		return CLICK_CLOSE;
+	}
 
 	if(zoomrect.Contains(pt))
-		return CLICK_ZOOM;
+	{
 
+#ifdef DEBUG_DECOR
+printf("BeDecorator():Clicked() - Zoom\n");
+#endif
+
+		return CLICK_ZOOM;
+	}
+	
 	if(resizerect.Contains(pt))
+	{
+
+#ifdef DEBUG_DECOR
+printf("BeDecorator():Clicked() - Resize thumb\n");
+#endif
+
 		return CLICK_RESIZE_RB;
+	}
 
 	// We got this far, so user is clicking on the border?
 	BRect borderrect(frame);
 	borderrect.top+=19;
 	BRect clientrect(borderrect.InsetByCopy(2,2));
 	if(borderrect.Contains(pt) && !clientrect.Contains(pt))
-		return CLICK_DRAG;
+	{
+#ifdef DEBUG_DECOR
+printf("BeDecorator():Clicked() - Drag\n");
+#endif
+		return CLICK_TAB;
+	}
 
 	// Guess user didn't click anything
+#ifdef DEBUG_DECOR
+printf("BeDecorator():Clicked()\n");
+#endif
 	return CLICK_NONE;
 }
 

@@ -46,6 +46,7 @@ public:
 	
 	void DispatchMessage(int32 code, int8 *msgbuffer);
 	static int32 MonitorWin(void *data);
+	static void HandleMouseEvent(int32 code, int8 *buffer);
 	void Loop(void);
 	
 	BString *title;

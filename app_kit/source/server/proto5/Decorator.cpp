@@ -20,7 +20,7 @@ Layer* Decorator::GetLayer(void)
 	return layer;
 }
 
-click_type Decorator::Clicked(BPoint pt)
+click_type Decorator::Clicked(BPoint pt, uint32 buttons)
 {
 	return CLICK_NONE;
 }
