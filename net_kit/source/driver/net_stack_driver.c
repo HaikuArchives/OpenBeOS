@@ -27,7 +27,7 @@
 #define  B_SELECT_WRITE      2 
 #define  B_SELECT_EXCEPTION  3 
 
-extern void notify_select_event(selectsync * sync, uint32 ref); 
+extern void notify_select_event(selectsync * sync, uint32 ref);
 
 #define SHOW_INSANE_DEBUGGING   (0)
 #define SERIAL_DEBUGGING        (1)
@@ -57,6 +57,8 @@ extern void notify_select_event(selectsync * sync, uint32 ref);
 #ifndef ERR
 #define ERR "ERROR: "
 #endif
+
+typedef void (*notify_select_event_function)(selectsync * sync, uint32 ref);
 
 /* the cookie we attach to each file descriptor opened on our driver entry */
 typedef struct {
@@ -91,11 +93,11 @@ static status_t net_stack_deselect(void *cookie, uint8 event, selectsync *sync);
 
 /* Privates prototypes */
 static void on_socket_event(void * socket, uint32 event, void * cookie);
+static void r5_notify_select_event(selectsync * sync, uint32 ref);
 
 #if STAY_LOADED
 static status_t	keep_driver_loaded();
 static status_t	unload_driver();
-int	g_stay_loaded_fd = -1;
 #endif
 
 /*
@@ -123,6 +125,13 @@ device_hooks g_net_stack_driver_hooks =
 };
 
 struct core_module_info * core = NULL;
+
+/* by default, assert that we're using kernel select() support */
+notify_select_event_function g_nse = notify_select_event;
+
+#if STAY_LOADED
+int	g_stay_loaded_fd = -1;
+#endif
 
 /*
  * Driver API calls
@@ -214,8 +223,10 @@ _EXPORT void uninit_driver (void)
 #endif
 
 	if (core) {
+#if STAY_LOADED
 		// shutdown the network stack
-		// core->stop();
+		core->stop();
+#endif
 		put_module(CORE_MODULE_PATH);
 	};
 }
@@ -305,7 +316,7 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 	net_stack_cookie *	nsc = (net_stack_cookie *) cookie;
 
 #if SHOW_INSANE_DEBUGGING
-	dprintf(LOGID "net_stack_control(%p, %ld, %p, %ld)\n", cookie, op, data, len);
+	dprintf(LOGID "net_stack_control(%p, 0x%lX, %p, %ld)\n", cookie, op, data, len);
 #endif
 
 #if STAY_LOADED
@@ -316,7 +327,7 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 		case NET_STACK_SOCKET: {
 			struct socket_args * args = (struct socket_args *) data;
 			int rv;
-			
+
 			rv = core->initsocket(&nsc->socket);
 			if (rv == 0)
 				rv = core->socreate(args->family, nsc->socket, args->type, args->proto);
@@ -411,30 +422,35 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 			/* args->addr == sockaddr to accept the peername */
 			return core->sogetpeername(nsc->socket, args->addr, &args->addrlen);
 		}
-
-		case NET_STACK_STOP:
+		case NET_STACK_STOP: {
 			core->stop();
 			return B_OK;
-
-		case B_SET_BLOCKING_IO:
+		}
+		case B_SET_BLOCKING_IO: {
 			nsc->open_flags &= ~O_NONBLOCK;
 			return B_OK;
-
-		case B_SET_NONBLOCKING_IO:
+		}
+		case B_SET_NONBLOCKING_IO: {
 			nsc->open_flags |= O_NONBLOCK;
 			return B_OK;
-
-		case NET_STACK_SELECT:
-			{
+		}
+		case NET_STACK_SELECT: {
 			struct select_args * args = (struct select_args *) data;
-			return select(args->nbits, args->rbits, args->wbits, args->ebits, args->timeout);
-			};
-			
+			/* if we get this opcode, we aren't using the r5 kernel select() call,
+			   so we can't use his notify_select_event() too. Let's do it ourself! */
+			g_nse = r5_notify_select_event;
+			return net_stack_select(cookie, (args->ref & 0x0F), args->ref, args->sync);
+		}
+		case NET_STACK_DESELECT: {
+			struct select_args * args = (struct select_args *) data;
+			return net_stack_deselect(cookie, (args->ref & 0x0F), args->sync);
+		}
 		default:
-			return core->soo_ioctl(nsc->socket, op, data);
+			if (nsc->socket)
+				return core->soo_ioctl(nsc->socket, op, data);
+			return B_BAD_VALUE;
 	}
 }
-
 
 static status_t net_stack_read(void *cookie,
                                 off_t position,
@@ -559,6 +575,13 @@ static void on_socket_event(void *socket, uint32 event, void *cookie)
 	if (!nsc)
 		return;
 
+	if (nsc->socket != socket) {
+		#if SHOW_INSANE_DEBUGGING
+			dprintf(LOGID "on_socket_event(%p, %ld, %p): socket is higly suspect! Aborting.\n", socket, event, cookie);
+		#endif
+		return;
+	}	
+
 #if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "on_socket_event(%p, %ld, %p)\n", socket, event, cookie);
 #endif
@@ -568,7 +591,39 @@ static void on_socket_event(void *socket, uint32 event, void *cookie)
 	 */
 	event--;
 	if (nsc->selectinfo[event].sync)
-		notify_select_event(nsc->selectinfo[event].sync, nsc->selectinfo[event].ref);
+		g_nse(nsc->selectinfo[event].sync, nsc->selectinfo[event].ref);
+}
+
+
+static void r5_notify_select_event(selectsync * sync, uint32 ref)
+{
+	struct r5_selectsync * rss = (struct r5_selectsync *) sync;
+	
+#if SHOW_INSANE_DEBUGGING
+	dprintf(LOGID "r5_notify_select_event(%p, %ld)\n", sync, ref);
+#endif
+
+	if (acquire_sem(rss->lock) != B_OK) {
+		/* if we can't acquire the lock, it's that select() is done,
+		   or whatever it can be, we can do anything more about it here...
+		*/
+#if SHOW_INSANE_DEBUGGING
+		dprintf(LOGID "r5_notify_select_event(%p, %ld)\n", sync, ref);
+#endif
+
+		return;
+	};
+	
+	rss->nfd++;
+	
+	switch (ref & 0x0F) {
+	case 1: FD_SET((ref >> 8), rss->rbits); break;
+	case 2: FD_SET((ref >> 8), rss->wbits); break;
+	case 3: FD_SET((ref >> 8), rss->ebits); break;
+	};
+
+	release_sem(rss->wait); /* wakeup r5_select() */
+	release_sem(rss->lock);
 }
 
 #if STAY_LOADED
@@ -591,7 +646,6 @@ static status_t	keep_driver_loaded()
 
 	return B_OK;
 }
-
 
 static status_t unload_driver()
 {

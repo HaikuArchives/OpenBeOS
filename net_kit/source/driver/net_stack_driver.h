@@ -12,7 +12,7 @@ enum {
 	// You never know what another device driver ioctl() will do
 	// if think our NET_STACK_* is in fact his DO_RISKY_BUSINESS opcode, or whatever...
  	NET_IOCTL_BASE = 0xbe230000,			
-	NET_STACK_IOCTL_BASE = NET_IOCTL_BASE + 0x200,
+	NET_STACK_IOCTL_BASE = NET_IOCTL_BASE + 0x200
 };
 
 enum {
@@ -33,10 +33,11 @@ enum {
 
 	NET_STACK_SYSCTL,							// sysctl_args *
 	NET_STACK_SELECT,							// select_args *
+	NET_STACK_DESELECT,							// select_args *
 	NET_STACK_GET_COOKIE,						// void **
 	
 	NET_STACK_STOP,                             /* stop the stack */
-
+	
 	NET_STACK_IOCTL_MAX
 };
 
@@ -80,14 +81,6 @@ struct accept_args {	// used by NET_STACK_ACCEPT
 	int addrlen;
 };
 
-struct select_args {	// used by NET_STACK_SELECT
-	int    nbits;
-	struct fd_set *rbits;
-	struct fd_set *wbits;
-	struct fd_set *ebits;
-	struct timeval *timeout;
-};
-
 struct sysctl_args {	// used by NET_STACK_SYSCTL
 	int *name;
 	uint namelen;
@@ -95,6 +88,23 @@ struct sysctl_args {	// used by NET_STACK_SYSCTL
 	size_t *oldlenp;
 	void *newp;
 	size_t newlen;
+};
+
+/* r5 select() kernel support is too buggy to be used, so
+   here are the structures we used to support select() on sockets */
+
+struct select_args {	// used by NET_STACK_SELECT and NET_STACK_DESELECT
+	struct selectsync * sync;
+	uint32 ref;
+};
+
+struct r5_selectsync {
+	sem_id lock;
+	sem_id wait;
+	uint32 nfd;
+	struct fd_set * rbits;
+	struct fd_set * wbits;
+	struct fd_set * ebits;
 };
 
 #endif /* NET_STACK_DRIVER_H */
