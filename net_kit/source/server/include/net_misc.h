@@ -4,6 +4,7 @@
 
 #include <kernel/OS.h>
 #include <ByteOrder.h>
+#include <Errors.h>
 
 #include "mbuf.h"
 
@@ -11,20 +12,27 @@
 #define OBOS_NET_MISC_H
 
 
-/* DEBUG!
- * Make this 1 to see a LOT of debugging stuff thrown at you...
- * We'll default it to 0 here :)
+/* Not really sure if this is safe... */
+#define EHOSTDOWN	(B_POSIX_ERROR_BASE + 45)
+
+
+/* DEBUG Options!
+ *
+ * Having a single option is sort of lame so I'm going to start adding more here...
+ *
  */
-#define SHOW_DEBUG 	0
+#define SHOW_DEBUG 	0	/* general debugging stuff (verbose!) */
+#define SHOW_ROUTE	0	/* show routing information */
+#define ARP_DEBUG	0	/* show ARP debug info */
 
 
 typedef struct ifnet	ifnet;
 
 /* ARP lookup return codes... */
 enum {
-	ARP_LOOKUP_OK = 1,
-	ARP_LOOKUP_QUEUED,
-	ARP_LOOKUP_FAILED
+	ARP_LOOKUP_OK 		= 1,
+	ARP_LOOKUP_QUEUED 	= 2,
+	ARP_LOOKUP_FAILED 	= 3
 };
 
 /* structure for Ethernet MAC address xx:xx:xx:xx:xx:xx */
@@ -61,5 +69,6 @@ void print_ipv4_addr(void *ad);
 void dump_ether_addr(char *msg, void *ma);
 void print_ether_addr(void *ea);
 void dump_buffer(char *buffer, int len);
+void dump_sockaddr(void *ptr);
 
 #endif /* OBOS_NET_MISC_H */

@@ -8,6 +8,7 @@
 #include "pools.h"
 #include "ipv4/ipv4.h"
 #include "netinet/in.h"
+#include "net/route.h"
 
 #ifndef IN_PCB_H
 #define IN_PCB_H
@@ -41,13 +42,17 @@ struct inpcb {
 
 	ipv4_header inp_ip;	/* header prototype */	
 	int inp_flags;		/* flags */
+	struct mbuf *inp_options; /* IP options */
 	/* more will be required */
+	struct route inp_route;	/* the route to host */
 };
 
 int      in_pcballoc (struct socket *, struct inpcb *head);
 int      in_pcbbind (struct inpcb *, struct mbuf *);
 int      in_pcbconnect (struct inpcb *, struct mbuf *);
 void     in_pcbdetach (struct inpcb *);
+int 	 in_pcbdisconnect(struct inpcb *inp);
+
 struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 			   uint16 fport_a, struct in_addr laddr,
 			   uint16 lport_a, int flags);
