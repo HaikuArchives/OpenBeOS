@@ -498,12 +498,31 @@ bfs_access(void *ns, void *node, int mode)
 	return B_OK;
 }
 
-
 static int
 bfs_read_link(void *_ns, void *_node, char *buf, size_t *bufsize)
 {
 	FUNCTION();
-	return B_OK;
+
+	status_t status = B_OK;
+	
+	Inode *inode = (Inode *)_node;
+	
+	if (inode->IsSymLink()) {
+		if (inode->Flags() & INODE_LONG_SYMLINK) {
+			status = inode->ReadAt(0, buf, bufsize);
+		} else {
+			size_t numBytes = strlen((char *)&inode->Node()->short_symlink);
+			if (numBytes > *bufsize)
+				memcpy(buf, inode->Node()->short_symlink, *bufsize);
+			else
+				memcpy(buf, inode->Node()->short_symlink, numBytes);
+
+			*bufsize = numBytes;
+		}
+	} else
+		status = B_BAD_VALUE;			
+	
+	RETURN_ERROR(status);
 }
 
 
