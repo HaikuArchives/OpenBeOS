@@ -95,6 +95,9 @@ Application::HandleMessage(int32 code, void *data, size_t size)
 			} 
 			break;
 		}
+
+		default:
+			printf("media_addon_server: received unknown message code %#08x\n",code);
 	}
 }
 
