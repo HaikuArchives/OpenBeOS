@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 	printf("\nDigit was one of the example device drivers that Be\n"
 	       "provided, so this test basically justs runs a simple test\n"
 	       "to make sure it works with OpenBeOS.\n"
-	       "\nNB This is a simple test :)\n");
+	       "\nNB This is a simple test :)\n\n");
 
 	fd = open(DIGIT, 0);
 	if (fd < 0) {
@@ -36,7 +36,8 @@ int main(int argc, char **argv)
 		if ((i & 15) == 15)
 			printf("\n");
 	}
-	
+	printf("\n");
+		
 	close(fd);
 	
 	printf("closed device.\n");
