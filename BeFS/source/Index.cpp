@@ -258,10 +258,9 @@ status_t
 Index::UpdateLastModified(Transaction *transaction, Inode *inode, off_t modified)
 {
 	off_t oldModified = inode->OldLastModified();
-	if (modified == -1) {
-		modified = ((bigtime_t)time(NULL) << INODE_TIME_SHIFT)
-				   | (fVolume->GetUniqueID() & INODE_TIME_MASK);
-	}
+	if (modified == -1)
+		modified = (bigtime_t)time(NULL) << INODE_TIME_SHIFT;
+	modified |= fVolume->GetUniqueID() & INODE_TIME_MASK;
 
 	status_t status = Update(transaction,"last_modified",B_INT64_TYPE,(uint8 *)&oldModified,sizeof(int64),
 								(uint8 *)&modified,sizeof(int64),inode->ID());

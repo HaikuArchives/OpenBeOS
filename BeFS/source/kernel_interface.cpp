@@ -629,13 +629,19 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 		else {
 			status = inode->SetFileSize(&transaction,stat->st_size);
 
-			// update "size" index
+			Index index(volume);
+			index.UpdateSize(&transaction,inode);
+			
+			// ToDo: should we also update the last_modified time?
+			//if ((mask & WSTAT_MTIME) == 0)
+			//	index.UpdateLastModified(&transaction,inode);
 		}
 	}
 
 	if (mask & WSTAT_MTIME) {
-		node->last_modified_time = (bigtime_t)stat->st_mtime << INODE_TIME_SHIFT;
-		// update "last_modified" index
+		// Index::UpdateLastModified() will set the new time in the inode
+		Index index(volume);
+		index.UpdateLastModified(&transaction,inode,(bigtime_t)stat->st_mtime << INODE_TIME_SHIFT);
 	}
 	if (mask & WSTAT_CRTIME) {
 		node->create_time = (bigtime_t)stat->st_crtime << INODE_TIME_SHIFT;
