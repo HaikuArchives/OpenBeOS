@@ -76,16 +76,8 @@ private:
 
 	MarginView * 			marginView;
 	
-	// settings stuff
-	BMessage * 				settings;
-	BPath					settingsPath;
+	// used for saving settings 
 	BString					printerDirName;
-
-	status_t	LoadSettings();
-	status_t	SaveSettings();
-	status_t	SaveString(const char *name, const char *string);
-	status_t	SaveInt32(const char *name, int32 i);
-	status_t	SaveRect(const char *name, BRect r);
 
 	//private class constants
 	static const int MARGIN = 10;
