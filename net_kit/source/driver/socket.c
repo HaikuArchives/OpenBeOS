@@ -251,6 +251,7 @@ static status_t net_socket_open(const char * name,
 	return B_OK;
 }
 
+
 static status_t net_socket_close(void *cookie)
 {
 	net_socket_cookie * nsc = (net_socket_cookie *) cookie;
@@ -263,6 +264,7 @@ static status_t net_socket_close(void *cookie)
 	return B_OK;
 }
 
+
 /* Resources are freed on the stack when we close... */
 static status_t net_socket_free(void *cookie)
 {
@@ -271,6 +273,7 @@ static status_t net_socket_free(void *cookie)
 #endif
 	return B_OK;
 }
+
 
 static status_t net_socket_control(void *cookie,
                                 uint32 op,
@@ -285,7 +288,7 @@ static status_t net_socket_control(void *cookie,
 
 	switch (op) {
 		case NET_SOCKET_CREATE: {
-			struct socket_args *sa = (struct socket_args*)data;
+			struct socket_args * sa = (struct socket_args*)data;
 			nsc->r5 = sa->r5;
 			
 			sa->rv = core->initsocket(&nsc->socket);
@@ -296,21 +299,11 @@ static status_t net_socket_control(void *cookie,
 			/* This is where the open flags need to be addressed */
 			return B_OK;
 		}
-		case NET_SOCKET_BIND: {
-			struct bind_args *ba = (struct bind_args*)data;
-			
-			ba->rv = core->sobind(nsc->socket, ba->data, ba->dlen);
-			return B_OK;
-		}
-		case NET_SOCKET_LISTEN: {
-			struct listen_args *la = (struct listen_args*)data;
-			la->rv = core->solisten(nsc->socket, la->backlog);
-			return B_OK;
-		}
 		case NET_SOCKET_CONNECT: {
-			struct connect_args *ca = (struct connect_args*)data;
-			struct be_sockaddr_in *bsa;
+			struct connect_args * ca = (struct connect_args *) data;
+			struct be_sockaddr_in * bsa;
 			struct sockaddr_in sin;
+			
 			if (nsc->r5) {
 				dprintf("BEOS R5 App!\n");
 				bsa = (struct be_sockaddr_in*)ca->name;
@@ -326,18 +319,38 @@ dprintf("connect: sin: [%d] %08lx:%d\n", sin.sin_family, sin.sin_addr.s_addr, si
 			ca->rv = core->soconnect(nsc->socket, ca->name, ca->namelen);
 			/* restore original settings... */
 			if (nsc->r5) {
-				ca->name = (caddr_t)bsa;
+				ca->name = (caddr_t) bsa;
 				ca->namelen = sizeof(struct be_sockaddr_in);
 			}			
 			return B_OK;
 		}
-		case NET_SOCKET_SELECT: {
-			struct select_args *sa = (struct select_args *)data;
-		
-			sa->rv = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, sa->tv);
-			dprintf("kernel select returned %d\n", sa->rv);
+		case NET_SOCKET_BIND: {
+			struct bind_args * ba = (struct bind_args *) data;
+			
+			ba->rv = core->sobind(nsc->socket, ba->data, ba->dlen);
 			return B_OK;
 		}
+		case NET_SOCKET_LISTEN: {
+			struct listen_args * la = (struct listen_args *) data;
+			la->rv = core->solisten(nsc->socket, la->backlog);
+			return B_OK;
+		}
+		case NET_SOCKET_GET_COOKIE: {
+			// this is needed by libnet.so accept() call, to be able to pass 
+			// in NET_STACK_ACCEPT opcode the cookie of the filedescriptor to 
+			// use for the new accepted socket
+dprintf("net_stack: net_socket_control %p: NET_SOCKET_GET_COOKIE.\n", nsc);
+			*((void **) data) = cookie;
+			return B_OK;
+		}
+		case NET_SOCKET_ACCEPT: {
+			struct accept_args * aa = (struct accept_args *) data;
+			net_socket_cookie *	ansc = (net_socket_cookie *) aa->cookie;
+			// aa->cookie == net_socket_cookie * of the already opened fd to use for the 
+			// newly accepted socket
+			// aa->rv = core->soaccept(nsc->socket, &ansc->socket, aa->name, &aa->namelen);
+			return B_OK;
+		}	
 		case NET_SOCKET_RECVFROM:
 		{
 			struct msghdr *mh = (struct msghdr *)data;
@@ -374,27 +387,27 @@ dprintf("connect: sin: [%d] %08lx:%d\n", sin.sin_family, sin.sin_addr.s_addr, si
 			
 			ga->rv = core->sogetopt(nsc->socket, ga->level, ga->optnum,
 			                        ga->val, ga->valsize);
-			return ga->rv;
+			return B_OK;
 		}
 		case NET_SOCKET_SETSOCKOPT: {
 			struct setopt_args *sa = (struct setopt_args*)data;
 			
 			sa->rv = core->sosetopt(nsc->socket, sa->level, sa->optnum,
 			                        sa->val, sa->valsize);
-			return sa->rv;
+			return B_OK;
 		}		
 
 		case NET_SOCKET_GETSOCKNAME: {
 			struct getname_args *ga = (struct getname_args*)data;
 
 			ga->rv = core->sogetsockname(nsc->socket, ga->name, ga->namelen);
-			return ga->rv;
+			return B_OK;
 		}
 		case NET_SOCKET_GETPEERNAME: {
 			struct getname_args *ga = (struct getname_args*)data;
 
 			ga->rv = core->sogetpeername(nsc->socket, ga->name, ga->namelen);
-			return ga->rv;
+			return B_OK;
 		}
 
 /*
@@ -410,10 +423,20 @@ dprintf("connect: sin: [%d] %08lx:%d\n", sin.sin_family, sin.sin_addr.s_addr, si
 			nsc->open_flags |= O_NONBLOCK;
 			return B_OK;
 
+		case NET_SOCKET_SELECT:
+			{
+			struct select_args *sa = (struct select_args *)data;
+		
+			sa->rv = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, sa->tv);
+			dprintf("kernel select returned %d\n", sa->rv);
+			return B_OK;
+			};
+			
 		default:
 			return core->soo_ioctl(nsc->socket, op, data);
 	}
 }
+
 
 static status_t net_socket_read(void *cookie,
                                 off_t position,
@@ -436,6 +459,7 @@ static status_t net_socket_read(void *cookie,
     return error;
 }
 
+
 static status_t net_socket_write(void *cookie,
                                  off_t position,
                                  const void *buffer,
@@ -457,6 +481,7 @@ static status_t net_socket_write(void *cookie,
 	return error;	
 }
 
+
 static status_t net_socket_select(void * cookie, 
                                   uint8 event, 
                                   uint32 ref,
@@ -475,6 +500,7 @@ static status_t net_socket_select(void * cookie,
 	/* start (or continue) to monitor for socket event */
 	return core->set_socket_event_callback(nsc->socket, on_socket_event, nsc);
 }
+
 
 static status_t net_socket_deselect(void * cookie, 
                                     uint8 event,
