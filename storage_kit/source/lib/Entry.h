@@ -24,9 +24,6 @@ class	BDirectory;
 class	BPath;
 struct	entry_ref;
 
-//_IMPEXP_BE status_t	get_ref_for_path(const char *path, entry_ref *ref);
-//_IMPEXP_BE bool operator<(const entry_ref & a, const entry_ref & b);
-
 struct entry_ref {
 						entry_ref();
   						entry_ref(dev_t dev, ino_t dir, const char *name);
@@ -113,6 +110,13 @@ private:
 
 	void Dump(const char *name = NULL);
 };
+
+// C functions
+
+status_t get_ref_for_path(const char *path, entry_ref *ref);
+// What's that?
+//bool operator<(const entry_ref & a, const entry_ref & b);
+
 
 #ifdef USE_OPENBEOS_NAMESPACE
 };		// namespace OpenBeOS
