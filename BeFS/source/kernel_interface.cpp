@@ -427,10 +427,8 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vn
 				free(data);
 			} else
 				status = B_NO_MEMORY;
-		} else {
+		} else
 			status = new_path((char *)&inode->Node()->short_symlink, &newPath);
-			printf("status = %ld, %s\n",status,strerror(status));
-		}
 
 		put_vnode(volume->ID(), inode->ID());
 		if (status == B_OK)
