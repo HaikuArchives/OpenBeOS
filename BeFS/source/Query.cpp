@@ -1480,8 +1480,14 @@ Query::LiveUpdate(Inode *inode,const char *attribute,int32 type,const uint8 *old
 	status_t oldStatus = fExpression->Root()->Match(inode,attribute,type,oldKey,oldLength);
 	status_t newStatus = fExpression->Root()->Match(inode,attribute,type,newKey,newLength);
 	int32 op;
-	if (oldStatus == MATCH_OK && newStatus == MATCH_OK
-		|| oldStatus != MATCH_OK && newStatus != MATCH_OK) {
+	if (oldStatus == MATCH_OK && newStatus == MATCH_OK) {
+		// only send out a notification if the name was changed 
+		if (oldKey == NULL || strcmp(attribute,"name"))
+			return;
+
+		send_notification(fPort,fToken,B_QUERY_UPDATE,B_ENTRY_REMOVED,fVolume->ID(),0,fVolume->ToVnode(inode->Parent()),0,inode->ID(),(const char *)oldKey);
+		op = B_ENTRY_CREATED;
+	} else if (oldStatus != MATCH_OK && newStatus != MATCH_OK) {
 		// nothing has changed
 		return;
 	} else if (oldStatus == MATCH_OK && newStatus != MATCH_OK)
