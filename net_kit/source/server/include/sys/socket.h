@@ -3,6 +3,8 @@
 #ifndef OBOS_SYS_SOCKET_H
 #define OBOS_SYS_SOCKET_H
 
+#include <kernel/OS.h>
+
 /* These are the address/protocol families we'll be using... */
 /* NB these should be added to as required... */
 
@@ -55,11 +57,89 @@
 #define SO_TYPE         0x1008          /* get socket type */
 #define SO_NETPROC      0x1020          /* multiplex; network processing */
 
+/*
+ * These are the valid values for the "how" field used by shutdown(2).
+ */
+#define SHUT_RD         1
+#define SHUT_WR         2
+#define SHUT_RDWR       3
+
+
 struct sockaddr {
 	uint8	sa_len;
 	uint8	sa_family;
 	uint8	sa_data[30];
 };
+
+/* this can hold ANY sockaddr we care to throw at it! */
+struct sockaddr_storage {
+	uint8       ss_len;         /* total length */
+	uint8       ss_family;      /* address family */
+	u_char      __ss_pad1[6];   /* align to quad */
+	uint64      __ss_pad2;      /* force alignment for stupid compilers */
+	uchar       __ss_pad3[240]; /* pad to a total of 256 bytes */
+};
+
+struct sockproto {
+	uint16 sp_family;
+	uint16 sp_protocol;
+};
+
+#define CTL_NET         4
+
+#define CTL_NET_NAMES { \
+        { 0, 0 }, \
+        { "unix", CTLTYPE_NODE }, \
+        { "inet", CTLTYPE_NODE }, \
+        { "implink", CTLTYPE_NODE }, \
+        { "pup", CTLTYPE_NODE }, \
+        { "chaos", CTLTYPE_NODE }, \
+        { "xerox_ns", CTLTYPE_NODE }, \
+        { "iso", CTLTYPE_NODE }, \
+        { "emca", CTLTYPE_NODE }, \
+        { "datakit", CTLTYPE_NODE }, \
+        { "ccitt", CTLTYPE_NODE }, \
+        { "ibm_sna", CTLTYPE_NODE }, \
+        { "decnet", CTLTYPE_NODE }, \
+        { "dec_dli", CTLTYPE_NODE }, \
+        { "lat", CTLTYPE_NODE }, \
+        { "hylink", CTLTYPE_NODE }, \
+        { "appletalk", CTLTYPE_NODE }, \
+        { "route", CTLTYPE_NODE }, \
+        { "link_layer", CTLTYPE_NODE }, \
+        { "xtp", CTLTYPE_NODE }, \
+        { "coip", CTLTYPE_NODE }, \
+        { "cnt", CTLTYPE_NODE }, \
+        { "rtip", CTLTYPE_NODE }, \
+        { "ipx", CTLTYPE_NODE }, \
+        { "inet6", CTLTYPE_NODE }, \
+        { "pip", CTLTYPE_NODE }, \
+        { "isdn", CTLTYPE_NODE }, \
+        { "natm", CTLTYPE_NODE }, \
+        { "encap", CTLTYPE_NODE }, \
+        { "sip", CTLTYPE_NODE }, \
+        { "key", CTLTYPE_NODE }, \
+}
+
+/*
+ * PF_ROUTE - Routing table
+ *
+ * Three additional levels are defined:
+ *      Fourth: address family, 0 is wildcard
+ *      Fifth: type of info, defined below
+ *      Sixth: flag(s) to mask with for NET_RT_FLAGS
+ */
+#define NET_RT_DUMP     1               /* dump; may limit to a.f. */
+#define NET_RT_FLAGS    2               /* by flags, e.g. RESOLVING */
+#define NET_RT_IFLIST   3               /* survey interface list */
+#define NET_RT_MAXID    4
+
+#define CTL_NET_RT_NAMES { \
+        { 0, 0 }, \
+        { "dump", CTLTYPE_STRUCT }, \
+        { "flags", CTLTYPE_STRUCT }, \
+        { "iflist", CTLTYPE_STRUCT }, \
+}
 
 				/* Max listen queue for a socket */
 #define SOMAXCONN	5	/* defined as 128 in OpenBSD */
@@ -93,12 +173,18 @@ struct cmsghdr {
 	/* there now follows uchar[] cmsg_data */
 };
 
+
 /* Function declarations */
+/* These should probably return ssize_t */
 int     socket (int, int, int);
 int     closesocket(int);
 int     bind(int, const struct sockaddr *, int);
+int     connect(int, const struct sockaddr *, int);
 int     sendto(int, caddr_t, size_t, int, const struct sockaddr*, size_t);
-int     recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t);
+int     recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t*);
+int     sysctl (int *, uint, void *, size_t *, void *, size_t);
+int     shutdown(int sock, int how);
+int     send(int, caddr_t, int, int);
 
 #endif /* OBOS_SYS_SOCKET_H */
 
