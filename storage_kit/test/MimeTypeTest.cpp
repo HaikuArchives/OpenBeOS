@@ -567,7 +567,6 @@ void MimeTypeTest::FileExtensionsTest() {
 		CHK(msg != msgEmpty);
 		CHK(mime.SetFileExtensions(&msgEmpty) == B_OK);
 		CHK(mime.GetFileExtensions(&msg) == B_OK);
-		msg.PrintToStream();
 		CHK(msgEmpty.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
 		CHK(msg == msgEmpty);
 	}
@@ -599,7 +598,6 @@ void MimeTypeTest::FileExtensionsTest() {
 		CHK(mime.GetFileExtensions(&msg) == B_OK);
 		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
 		CHK(msgExtraSet.AddString(typeField, testType) == B_OK);
-		msg.PrintToStream();
 		CHK(msg == msgExtraSet);
 		CHK(msg != msg1);
 		
@@ -617,17 +615,6 @@ void MimeTypeTest::FileExtensionsTest() {
 		CHK(msgExtraGet == msgExtraSet);
 		CHK(msgExtraGet != msg1);
 		
-	}
-	{
-		BMimeType mime("audio/x-mpeg");
-		BMessage msg;
-		status_t err;
-		
-		err = mime.GetFileExtensions(&msg);
-		if (!err)
-			msg.PrintToStream();
-		else
-			printf("ERRORS SUCK BALLS!\n");
 	}
 	// Normal function
 	nextSubTest();
