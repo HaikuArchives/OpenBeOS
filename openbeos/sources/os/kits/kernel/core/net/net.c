@@ -18,6 +18,7 @@
 #define NETWORK_INTERFACES "network/interfaces"
 
 int net_init(kernel_args *ka);
+int sockets_init(kernel_args *ka);
 
 static void find_interface_modules(void)
 {
@@ -28,7 +29,7 @@ static void find_interface_modules(void)
 //	int rv;
 
 	if (ml == NULL) {
-		printf("failed to open the %s directory\n", 
+		dprintf("failed to open the %s directory\n", 
 			NETWORK_INTERFACES);
 		return;
 	}
@@ -50,6 +51,7 @@ dprintf("module: %s\n", name);
 int net_init(kernel_args *ka)
 {
 	dprintf("net_init: starting!\n");
+	sockets_init(ka);
 	find_interface_modules();
 	return 0;
 }

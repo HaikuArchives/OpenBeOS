@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <debug.h>
 #include <pools.h>
 #include <mbuf.h>
 
@@ -70,7 +70,7 @@ void m_freem(struct mbuf *m)
 		return;
 	do {
 		MFREE(m, n);
-//printf("m_freem(%p, %p)\n", m, n);
+//dprintf("m_freem(%p, %p)\n", m, n);
 	} while ((m = n) != NULL);
 }
 
@@ -289,16 +289,16 @@ void m_copydata(struct mbuf *m, int off, int len, char * cp)
 	uint count = 0;
 
 	if (off < 0) {
-		printf("m_copydata: off %d < 0", off);
+		dprintf("m_copydata: off %d < 0", off);
 		return;
 	}
 	if (len < 0) {
-		printf("m_copydata: len %d < 0", len);
+		dprintf("m_copydata: len %d < 0", len);
 		return;
 	}	
 	while (off > 0) {
 		if (m == NULL) {
-			printf("m_copydata: null mbuf in skip");
+			dprintf("m_copydata: null mbuf in skip");
 			return;
 		}
 		if (off < m->m_len)
@@ -308,7 +308,7 @@ void m_copydata(struct mbuf *m, int off, int len, char * cp)
 	}
 	while (len > 0) {
 		if (m == NULL) {
-			printf("m_copydata: null mbuf");
+			dprintf("m_copydata: null mbuf");
 			return;
 		}
 		count = min(m->m_len - off, len);
@@ -328,14 +328,14 @@ struct mbuf *m_copym(struct mbuf *m, int off0, int len)
 	int copyhdr = 0;
 
 	if (off < 0 || len < 0) {
-		printf("PANIC: m_copym: m: off %d, len %d\n", off, len);
+		dprintf("PANIC: m_copym: m: off %d, len %d\n", off, len);
 		return NULL;
 	}
 	if (off == 0 && m->m_flags & M_PKTHDR)
 		copyhdr = 1;
 	while (off > 0) {
 		if (!m) {
-			printf("PANIC: m_copym: null mbuf\n");
+			dprintf("PANIC: m_copym: null mbuf\n");
 			return NULL;
 		}
 		if (off < m->m_len)
@@ -348,7 +348,7 @@ struct mbuf *m_copym(struct mbuf *m, int off0, int len)
 	while (len > 0) {
 		if (!m) {
 			if (len != M_COPYALL) {
-				printf("PANIC: m_copym: m == NULL and not COPYALL\n");
+				dprintf("PANIC: m_copym: m == NULL and not COPYALL\n");
 				return NULL;
 			}
 			break;
@@ -451,7 +451,7 @@ struct mbuf *m_pullup(struct mbuf *n, int len)
 	} while (len > 0 && n);
 
 	if (len > 0) {
-printf("m_pullup: failed: len = %d\n", len);
+dprintf("m_pullup: failed: len = %d\n", len);
 		(void)m_free(m);
 		goto bad;
 	}

@@ -5,6 +5,7 @@ KernelObjects
 	<$(SOURCE_GRIST)>nhash.c
 	<$(SOURCE_GRIST)>mbuf.c
 	<$(SOURCE_GRIST)>net.c
+	<$(SOURCE_GRIST)>socket.c
 	: 
 	-DNEWOS=1 -fno-pic
 	;

@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
+#include <debug.h>
 #include <pools.h>
 
 static sem_id init_sem = -1;
@@ -23,10 +23,10 @@ void walk_pool_list(struct pool_ctl *p)
 {
 	struct pool_mem *pb = p->list;
 
-	printf("Pool: %p\n", p);
-	printf("    -> list = %p\n", pb);
+	dprintf("Pool: %p\n", p);
+	dprintf("    -> list = %p\n", pb);
 	while (pb) {
-		printf("    -> mem_block %p, %p\n", pb, pb->next);
+		dprintf("    -> mem_block %p, %p\n", pb, pb->next);
 		pb = pb->next;
 	}
 }
@@ -37,7 +37,7 @@ void pool_debug_walk(struct pool_ctl *p)
 	char *ptr;
 	int i = 1;	
 	
-	printf("%ld byte blocks allocated, but now free:\n\n", p->alloc_size);
+	dprintf("%ld byte blocks allocated, but now free:\n\n", p->alloc_size);
 
 	#if POOL_USES_BENAPHORES
 		ACQUIRE_BENAPHORE(p->lock);
@@ -46,7 +46,7 @@ void pool_debug_walk(struct pool_ctl *p)
 	#endif
 	ptr = p->freelist;	
 	while (ptr) {
-		printf("  %02d: %p\n", i++, ptr);
+		dprintf("  %02d: %p\n", i++, ptr);
 		ptr = ((struct free_blk*)ptr)->next;
 	}
 	#if POOL_USES_BENAPHORES
@@ -200,7 +200,7 @@ char *pool_get(struct pool_ctl *p)
 		rv = p->freelist;
 
 		if (p->debug)
-			printf("%s: allocating %p, setting freelist to %p\n",
+			dprintf("%s: allocating %p, setting freelist to %p\n",
 				p->name, p->freelist, 
 				((struct free_blk*)rv)->next);
 
@@ -278,14 +278,14 @@ void pool_put(struct pool_ctl *p, void *ptr)
 	((struct free_blk*)ptr)->next = p->freelist;
 
 	if (p->debug) {
-		printf("%s: adding %p, setting next = %p\n",
+		dprintf("%s: adding %p, setting next = %p\n",
 			p->name, ptr, p->freelist);
 	}
 
 	p->freelist = ptr;
 
 	if (p->debug)
-		printf("%s: freelist = %p\n", p->name, p->freelist);
+		dprintf("%s: freelist = %p\n", p->name, p->freelist);
 
 	#if POOL_USES_BENAPHORES
 		RELEASE_BENAPHORE(p->lock);
