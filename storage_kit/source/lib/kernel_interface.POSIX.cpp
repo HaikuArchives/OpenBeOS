@@ -18,12 +18,26 @@
 	
 #include <errno.h>
 	// errno
+
+#include <string.h>
+	// strerror()
 	
 #include <fs_attr.h>
 	//  BeOS's C-based attribute functions
 
+
+
 #include "Error.h"
 	// SKError
+	
+// This is just for cout while developing; shouldn't need it
+// when all is said and done.
+#include <iostream>
+
+#define ERROR_CASE(number,string) \
+case number: \
+	throw new StorageKit::Error(errno, string); \
+	break; 
 
 // Used to throw the appropriate error as noted by errno
 void ThrowError() {
@@ -40,40 +54,24 @@ void ThrowError() {
 			throw new StorageKit::Error(errno, "Some portion of the path that was expected to be a directory was in fact not");
 			break;
 
-/*       ENXIO  O_NONBLOCK | O_WRONLY is set, the named file is a FIFO and no process  has  the  file  open  for
-              reading.  Or, the file is a device special file and no corresponding device exists.
-
-       ENODEV pathname  refers  to a device special file and no corresponding device exists.  (This is a Linux
-              kernel bug - in this situation ENXIO must be returned.)
-
-       EROFS  pathname refers to a file on a read-only filesystem and write access was requested.
-
-       ETXTBSY
-              pathname refers to an executable image which is currently being executed and  write  access  was
-              requested.
-
-       EFAULT pathname points outside your accessible address space.
-
-       ELOOP  Too  many symbolic links were encountered in resolving pathname, or O_NOFOLLOW was specified but
-              pathname was a symbolic link.
-
-       ENOSPC pathname was to be created but the device containing pathname has no room for the new file.
-
-       ENOMEM Insufficient kernel memory was available.
-
-       EMFILE The process already has the maximum number of files open.
-
-       ENFILE The limit on the total number of files open on the system has been reached.*/
-       
-       default:
-			throw new StorageKit::Error(errno);
+		case EACCES:
+			throw new StorageKit::Error(errno, "Operation is prohibited by locks held by other processes.");
 			break;
+			
+		ERROR_CASE(EAGAIN, " Operation is prohibited because the file has been memory-mapped by another process")
+		
+		ERROR_CASE(EBADF, "Operation is prohibited because the file has been memory-mapped by another process")
+		
+		default:
+			throw new StorageKit::Error(errno, strerror(errno));
+			break;
+
 	}
 }
 
 
 StorageKit::FileDescriptor
-StorageKit::open(const char *path, StorageKit::OpenMode mode) {
+StorageKit::open(const char *path, StorageKit::Mode mode) {
 	// Choose the proper posix flags
 	int posix_flags;
 	switch (mode) { 
@@ -129,13 +127,13 @@ StorageKit::write_attr ( StorageKit::FileDescriptor file, const char *attribute,
   return fs_write_attr ( file, attribute, type, pos, buf, count );
 }
 
-int
+status_t
 StorageKit::remove_attr ( StorageKit::FileDescriptor file, const char *attr ) {
-  int result = fs_remove_attr ( file, attr );
-  if(result < B_OK) {
-    ThrowError();
-  }
-  return result;
+	// fs_remove_attr is supposed to set errno properly upon failure,
+	// but currently does not appear to. It isn't set consistent
+	// with what is returned by R5::BNode::RemoveAttr(), and it isn't
+	// set consistent with what the BeBook's claims it is set to either.
+	return fs_remove_attr ( file, attr ) == -1 ? errno : B_OK ;
 }
 
 StorageKit::Dir*
@@ -167,7 +165,7 @@ StorageKit::close_attr_dir ( Dir* dir )
 }
 
 int
-StorageKit::stat_attr( StorageKit::FileDescriptor file, const char *name, attr_info *ai )
+StorageKit::stat_attr( FileDescriptor file, const char *name, attr_info *ai )
 {
   int result = fs_stat_attr( file, name, ai );
   if ( result < B_OK ) {
@@ -175,3 +173,54 @@ StorageKit::stat_attr( StorageKit::FileDescriptor file, const char *name, attr_i
   }
   return result;
 }
+
+// This doesn't work right yet
+status_t
+StorageKit::unlock(FileDescriptor file, FileLock *lock) {
+	if (lock == NULL)
+//		throw new StorageKit::Error(-1, "NULL FileLock passed to StorageKit::unlock()");
+		return B_BAD_VALUE;
+	
+	lock->l_type = F_UNLCK;
+	
+	if ( ::fcntl(file, F_SETLK, lock) != 0 )
+		return B_BAD_VALUE;
+//		ThrowError();
+}
+
+// This doesn't work right yet
+status_t
+StorageKit::lock(FileDescriptor file, Mode mode, FileLock *lock) {
+	if (lock == NULL)
+		//throw new StorageKit::Error(-1, "NULL FileLock passed to StorageKit::lock()");
+		return B_BAD_VALUE;
+
+/*	cout << "l_type == " << lock->l_type << endl;
+	::fcntl(file, F_GETLK, lock);
+	if (lock->l_type != F_UNLCK) {
+		cout << "l_type == " << lock->l_type << endl;
+		return B_BUSY;
+	} */
+	
+	short lock_type;
+	switch (mode) {
+		READ:
+			lock_type = F_RDLCK;
+			break;
+			
+		WRITE:
+			lock_type = F_WRLCK;
+			break;
+			
+		READ_WRITE:
+			lock_type = F_RDLCK & F_WRLCK;
+			break;
+	}
+	
+	lock->l_type = lock_type;
+	
+	if ( ::fcntl(file, F_SETLK) != 0 )
+//		return B_ERROR;
+		ThrowError();
+}
+
