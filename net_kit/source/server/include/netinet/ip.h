@@ -77,11 +77,11 @@ struct  ip_timestamp {
 	uint8 ipt_len;/* size of structure (variable) */
 	uint8 ipt_ptr;/* index of current entry */
 #if B_HOST_IS_BENDIAN
-	uint8 ipt_flow:4,
+	uint8 ipt_oflw:4,
 	      ipt_flg:4;
 #else
 	uint8 ipt_flg:4,
-	      ipt_flow:4;
+	      ipt_oflw:4;
 #endif
 	union ipt_timestamp {
 		n_time ipt_time[1];
