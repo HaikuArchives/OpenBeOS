@@ -29,13 +29,11 @@ static int isa_uninit( void )
 
 static uint8 isa_read_io_8(int mapped_io_addr)
 {
-	dprintf("isa_read_io_8(%d)\n", mapped_io_addr);
 	return in8( mapped_io_addr );
 }
 
 static void isa_write_io_8(int mapped_io_addr, uint8 value)
 {
-	dprintf("isa_write_io_8(%d, %d)\n", mapped_io_addr, value);
 	out8( value, mapped_io_addr );
 }
 
