@@ -232,6 +232,7 @@ class PDFWriter : public PrinterDriver
 		int32           fStateDepth;
 		BList           fFontCache;
 		BList           fFontFiles;
+		int64           fEmbedMaxFontSize;
 		enum {
 			kDrawingMode,
 			kClippingMode

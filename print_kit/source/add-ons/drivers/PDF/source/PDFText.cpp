@@ -147,8 +147,6 @@ PDFWriter::GetFontName(BFont *font, char *fontname, bool &embed, font_encoding e
 
 	strcat(strcat(strcpy(fontname, family), "-"), style);
 
-	embed = embed && EmbedFont(fontname);
-
 	switch (encoding) {
 		case japanese_encoding:
 			strcpy(fontname, "HeiseiMin-W3"); return;
@@ -187,13 +185,23 @@ static const char* encoding_names[] = {
 int 
 PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding) 
 {
+	static Font* cache = NULL;
+	if (cache && cache->encoding == encoding && strcmp(cache->name.String(), fontName) == 0) 
+		return cache->font;
+
 	fprintf(fLog, "FindFont %s\n", fontName); 
-	Font *cache = NULL;
+	Font *f = NULL;
 	const int n = fFontCache.CountItems();
 	for (int i = 0; i < n; i++) {
-		cache = (Font*)fFontCache.ItemAt(i);
-		if (cache->encoding == encoding && strcmp(cache->name.String(), fontName) == 0) return cache->font;
+		f = (Font*)fFontCache.ItemAt(i);
+		if (f->encoding == encoding && strcmp(f->name.String(), fontName) == 0) {
+			cache = f;
+			return f->font;
+		}
 	}
+	
+	if (embed) embed = EmbedFont(fontName);
+
 	fprintf(fLog, "Create new font\n");
 	int font = PDF_findfont(fPdf, fontName, encoding_names[encoding], embed);
 	if (font != -1) {
@@ -337,14 +345,6 @@ PDFWriter::DrawString(char *string, float deltax, float deltay)
 	fprintf(fLog, "DrawString string=\"%s\", deltax=%f, deltay=%f, at %f, %f\n",
 			string, deltax, deltay, fState->penX, fState->penY);
 
-	fprintf(fLog, "   Encoding= %d\n", fState->beFont.Encoding());
-	{
-		for (int i = 0; string[i]; i++) {
-			fprintf(fLog, "%2.2x", string[i]);
-		}
-		fprintf(fLog, "\n");
-	}
-
 	if (IsClipping()) {
 		fprintf(fLog, "DrawPixels for clipping not implemented yet!");
 		return;
@@ -391,10 +391,16 @@ PDFWriter::DrawString(char *string, float deltax, float deltay)
 
 bool
 PDFWriter::EmbedFont(const char* name) {
+	static FontFile* cache = NULL;
+	if (cache && cache->name.Compare(name)) return cache->size < fEmbedMaxFontSize;
+	
 	const int n = fFontFiles.CountItems();
 	for (int i = 0; i < n; i++) {
 		FontFile* f = (FontFile*)fFontFiles.ItemAt(i);
-		if (f->name.Compare(name) == 0) return f->size < 250*1024;
+		if (f->name.Compare(name) == 0) {
+			cache = f;
+			return f->size < fEmbedMaxFontSize;
+		}
 	}
 	return false;
 }
