@@ -6,6 +6,11 @@ include $(SUBDIR)/support/support.src ;
 
 UsePrivateHeaders app ;
 UsePrivateHeaders interface ;
+UsePrivateHeaders support ;
+
+UsePublicHeaders app ;
+UsePublicHeaders interface ;
+UsePublicHeaders support ;
 
 SharedLibrary openbeos :
 	<$(SOURCE_GRIST)>app/$(APP_KIT_SOURCE)
