@@ -15,7 +15,7 @@
  * Constructor.
  * @param frame The size to make the window.
  */	
-MainWindow::MainWindow(BRect frame, VMSettings *Settings)
+MainWindow::MainWindow(BRect frame, PosSettings *Settings)
 			:BWindow(frame, "DriveSetup", B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE){
 
 	BRect bRect;

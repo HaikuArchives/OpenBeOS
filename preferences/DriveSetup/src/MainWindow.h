@@ -37,9 +37,9 @@
 		#include <stdio.h>
 		
 	#endif
-	#ifndef VM_SETTINGS_H
+	#ifndef POS_SETTINGS_H
 	
-		#include "VMSettings.h"
+		#include "PosSettings.h"
 
 	#endif
 	
@@ -52,12 +52,12 @@
 	
 		private:
 		
-			VMSettings	*fSettings;
+			PosSettings	*fSettings;
 			BMenuBar *rootMenu;
 			
 		public:
 		
-			MainWindow(BRect frame, VMSettings *fSettings);
+			MainWindow(BRect frame, PosSettings *fSettings);
 			virtual bool QuitRequested();
 			virtual void MessageReceived(BMessage *message);
 			virtual void FrameMoved(BPoint origin);

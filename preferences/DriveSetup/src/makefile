@@ -32,7 +32,7 @@ TYPE= APP
 #	in folder names do not work well with this makefile.
 SRCS= main.cpp \
             MainWindow.cpp \
-            VMSettings.cpp
+            PosSettings.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

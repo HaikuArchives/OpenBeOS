@@ -18,9 +18,9 @@
 		#include <stdio.h>
 		
 	#endif
-	#ifndef VM_SETTINGS_H
+	#ifndef POS_SETTINGS_H
 	
-		#include "VMSettings.h"
+		#include "PosSettings.h"
 		
 	#endif
 	
@@ -40,7 +40,7 @@
 			virtual ~DriveSetup();
 		
 		private:
-			VMSettings	*fSettings;
+			PosSettings	*fSettings;
 			
 	};
 	

@@ -1,5 +1,5 @@
-#ifndef VM_SETTINGS_H
-#include "VMSettings.h"
+#ifndef POS_SETTINGS_H
+#include "PosSettings.h"
 #endif
 #ifndef _APPLICATION_H
 #include <Application.h>
@@ -16,9 +16,9 @@
 
 #include <stdio.h>
 
-const char VMSettings::kVMSettingsFile[] = "DriveSetup_prefs";
+const char PosSettings::kVMSettingsFile[] = "DriveSetup_prefs";
 
-VMSettings::VMSettings()
+PosSettings::PosSettings()
 {//VMSettings::VMSettings
 
 	BPath path;
@@ -64,7 +64,7 @@ VMSettings::VMSettings()
 */
 }//VMSettings::VMSettings
 
-VMSettings::~VMSettings()
+PosSettings::~PosSettings()
 {//VMSettings::~VMSettings
 printf("enter\n");
 	BPath path;
@@ -84,7 +84,7 @@ printf("create file\n");
 printf("exit\n");
 }//MouseSettings::~MouseSettings
 
-void VMSettings::SetWindowPosition(BRect f)
+void PosSettings::SetWindowPosition(BRect f)
 {//VMSettings::SetWindowFrame
 	fcorner.x=f.left;
 	fcorner.y=f.top;

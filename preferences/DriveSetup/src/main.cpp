@@ -43,7 +43,7 @@ int main(int, char**){
 DriveSetup::DriveSetup()
 			:BApplication("application/x-vnd.MSM-DriveSetupPrefPanel"){
 	
-	fSettings = new VMSettings();
+	fSettings = new PosSettings();
     
 	/*
 	 * The main interface window.

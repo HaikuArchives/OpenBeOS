@@ -1,13 +1,13 @@
-#ifndef VM_SETTINGS_H_
-#define VM_SETTINGS_H_
+#ifndef POS_SETTINGS_H_
+#define POS_SETTINGS_H_
 
 #include <SupportDefs.h>
 #include <Screen.h>
 
-class VMSettings{
+class PosSettings{
 public :
-	VMSettings();
-	virtual ~VMSettings();
+	PosSettings();
+	virtual ~PosSettings();
 	BRect WindowPosition() const { return fWindowFrame; }
 	void SetWindowPosition(BRect);
 	
