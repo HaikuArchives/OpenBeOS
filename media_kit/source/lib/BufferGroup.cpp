@@ -11,7 +11,7 @@
 
 
 enum {
-	MEDIA_SERVER_GET_SHARED_BUFFER_LIST
+	MEDIA_SERVER_GET_SHARED_BUFFER_AREA
 };
 
 /*************************************************************
@@ -38,7 +38,7 @@ BBufferGroup::InitBufferGroup()
 	}
 
 	// ask media_server to get the area_id of the shared buffer list
-	BMessage request(MEDIA_SERVER_GET_SHARED_BUFFER_LIST);
+	BMessage request(MEDIA_SERVER_GET_SHARED_BUFFER_AREA);
 	BMessage reply;
 
 	// XXX call media server here
