@@ -18,14 +18,12 @@ extern "C" {
 #endif
 
 
-/* These all belong is sys/ */
-/* XXX - change these when sys/ is available */
 #include <sys/ioccom.h>
 
 #include <sys/filio.h>
-#include <socket.h>
+#include <sys/socket.h>
 
-#ifndef _KERNEL_
+#ifndef _KERNEL_MODE
   /** @fn int ioctl(int fd, ulong cmd, ...)
    * Manipulates the characteristics of the affected descriptor. May be used
    * on all forms of descriptor, including sockets and pipes. cmd should be one
@@ -33,7 +31,7 @@ extern "C" {
    * @ref IOCTL_cmds
    */
   int ioctl(int, ulong, ...);
-#endif /* !_KERNEL_ */
+#endif /* !_KERNEL_MODE */
 
 /** @} */
 #endif /* _SYS_IOCTL_H */
