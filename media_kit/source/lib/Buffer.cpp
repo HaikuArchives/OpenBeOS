@@ -8,12 +8,7 @@
 #include <Message.h>
 #include "SharedBufferList.h"
 #include "debug.h"
-
-enum {
-	MEDIA_SERVER_GET_SHARED_BUFFER_AREA,
-	MEDIA_SERVER_REGISTER_BUFFER,
-	MEDIA_SERVER_UNREGISTER_BUFFER
-};
+#include "../server/headers/ServerInterface.h"
 
 static team_id CurrentTeam();
 team_id CurrentTeam()

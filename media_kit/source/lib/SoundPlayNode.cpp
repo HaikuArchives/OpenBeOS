@@ -390,14 +390,14 @@ _SoundPlayNode::PlayThread()
 			fPlayer->PlayBuffer(fPlayer->_m_buf,fPlayer->_m_bufsize,(const media_raw_audio_format)fFormat);
 			source = fPlayer->_m_buf;
 			if (ChangeSampleformat) {
-				media_kit_private::SampleConverter::convert(
+				MediaKitPrivate::SampleConverter::convert(
 					temp1, media_raw_audio_format::B_AUDIO_SHORT, 
             		source, fFormat.format, 
             		fFramesPerBuffer * fFormat.channel_count);
             	source = temp1;
 			}
 			if (ChangeSamplingrate) {
-				media_kit_private::SamplingrateConverter::convert(
+				MediaKitPrivate::SamplingrateConverter::convert(
 					temp2, ResampledFramesPerBuffer,
             		source, fFramesPerBuffer,
             		media_raw_audio_format::B_AUDIO_SHORT,		
@@ -405,7 +405,7 @@ _SoundPlayNode::PlayThread()
             	source = temp2;
 			}
 			if (ChangeChannelcount) {
-				media_kit_private::ChannelMixer::mix(
+				MediaKitPrivate::ChannelMixer::mix(
 					temp3, 2,
             		source, fFormat.channel_count,
             		ResampledFramesPerBuffer,

@@ -11,7 +11,7 @@
  *         Feel free to send me better versions to marcus@overhagen.de
  ***********************************************************************/
 
-namespace media_kit_private {
+namespace MediaKitPrivate {
 
 class SamplingrateConverter
 {
@@ -23,7 +23,7 @@ public:
             int channel_count);
 };
 
-} //namespace media_kit_private
+} //namespace MediaKitPrivate
 
 #endif
 

@@ -20,7 +20,7 @@ struct _shared_buffer_list
 		// also used as a unique identifier of the group
 		sem_id			reclaim_sem; 
 	};
-	enum { MAX_BUFFER = 512 };			// this is probably very evil
+	enum { MAX_BUFFER = 666 };			// this fixed limit is probably very evil
 
 	sem_id		locker_sem;
 	int32		locker_atom;
@@ -44,7 +44,7 @@ struct _shared_buffer_list
 	status_t	Lock();
 	status_t	Unlock();
 	
-	// call this one with the list locked
+	// used by RequestBuffer, call this one with the list locked!
 	void 		RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_buffer_id id);
 };
 

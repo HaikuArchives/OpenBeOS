@@ -8,9 +8,9 @@
 #include <Messenger.h>
 #include "debug.h"
 #include "VolumeControl.h"
-#include "../server/headers/MediaServerTypes.h"
+#include "../server/headers/ServerInterface.h"
 
-namespace media_kit_private {
+namespace MediaKitPrivate {
 
 status_t GetMasterVolume(float *left, float *right)
 {
@@ -54,5 +54,5 @@ status_t SetMasterVolume(float left, float right)
 	return (status_t)reply.what;
 }
 
-} //namespace media_kit_private
+} //namespace MediaKitPrivate
 

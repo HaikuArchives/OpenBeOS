@@ -10,7 +10,7 @@
 
 #include "SampleConverter.h"
 
-namespace media_kit_private {
+namespace MediaKitPrivate {
 
 status_t 
 SampleConverter::convert(void *dest, uint32 dest_format, 
@@ -275,4 +275,4 @@ void SampleConverter::convert(float *dest, const uint8 *source, int samplecount)
 		*dest++ = (float(*source++) - 128.0f) / 127.0f;
 }
 
-} //namespace media_kit_private
+} //namespace MediaKitPrivate

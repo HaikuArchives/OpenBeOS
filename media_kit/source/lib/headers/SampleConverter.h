@@ -12,7 +12,7 @@
  *           media_raw_audio_format::B_AUDIO_UCHAR
  ***********************************************************************/
 
-namespace media_kit_private {
+namespace MediaKitPrivate {
 
 class SampleConverter
 {
@@ -48,6 +48,6 @@ public:
 	static void convert(float *dest, const uint8 *source, int samplecount);
 };
 
-} //namespace media_kit_private
+} //namespace MediaKitPrivate
 
 #endif

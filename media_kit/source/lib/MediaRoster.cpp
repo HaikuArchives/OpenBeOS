@@ -10,7 +10,7 @@
 #include <StopWatch.h>
 #include <OS.h>
 #include "debug.h"
-#include "../server/headers/MediaServerTypes.h"
+#include "../server/headers/ServerInterface.h"
 
 static BMessenger *ServerMessenger = 0;
 static team_id team;
@@ -46,6 +46,15 @@ public:
 };
 
 RosterSingleton singleton;
+
+namespace MediaKitPrivate {
+
+status_t QueryServer(BMessage *query, BMessage *reply)
+{
+	return ServerMessenger->SendMessage(query,reply);
+}
+
+};
 
 /*************************************************************
  * public BMediaRoster

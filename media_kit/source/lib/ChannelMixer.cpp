@@ -11,7 +11,7 @@
 
 #include "ChannelMixer.h"
 
-namespace media_kit_private {
+namespace MediaKitPrivate {
 
 status_t 
 ChannelMixer::mix(void *dest, int dest_chan_count, 
@@ -157,4 +157,4 @@ ChannelMixer::mix_1_to_2(void *dest, const void *source, int framecount, uint32 
 	}
 }
 
-} //namespace media_kit_private
+} //namespace MediaKitPrivate

@@ -82,10 +82,11 @@ _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 			delete info[i].buffer;
 			// decrement buffer count by one
 			buffercount--;
-			// fill the gap in the list with the last element
-			if (buffercount > 0)
+			// fill the gap in the list with the last entry
+			if (buffercount > 0) {
 				info[i] = info[buffercount];
-			i--; // make sure we check this entry again
+				i--; // make sure we check this entry again
+			}
 		}
 	}
 	
@@ -185,7 +186,7 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 		}
 		
 		for (int32 i = 0; i < buffercount; i++) {
-			// we need a BBuffer from the group, and it must be reclaimed
+			// we need a BBuffer from the group, and it must be marked as reclaimed
 			if (info[i].reclaim_sem == group_reclaim_sem && info[i].reclaimed) {
 				if (
 					  (size != 0 && size <= info[i].buffer->SizeAvailable()) ||
@@ -199,6 +200,7 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 					if (count > 1)
 						release_sem_etc(group_reclaim_sem, count - 1, B_DO_NOT_RESCHEDULE);
 					
+					// and mark all buffers with the same ID as requested in all other buffer groups
 					RequestBufferInOtherGroups(group_reclaim_sem, info[i].buffer->ID());
 
 					Unlock();
@@ -222,7 +224,7 @@ void
 _shared_buffer_list::RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_buffer_id id)
 {
 	for (int32 i = 0; i < buffercount; i++) {
-		// find buffers belonging to other groups
+		// find buffers with same id, but belonging to other groups
 		if (info[i].id == id && info[i].reclaim_sem != group_reclaim_sem) {
 
 			// and mark them as requested 

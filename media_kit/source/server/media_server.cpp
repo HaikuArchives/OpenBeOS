@@ -4,7 +4,7 @@
 #include <MediaDefs.h>
 #include <MediaFormats.h>
 #include <Autolock.h>
-#include "MediaServerTypes.h"
+#include "ServerInterface.h"
 
 /*
  *
@@ -545,6 +545,7 @@ CNodeManager::~CNodeManager()
 00020f7c T MBufferManager::CleanupPurgedBufferGroup(long, long, long, void *, bool, BMessage &)
 00021080 T MBufferManager::LoadState(void)
 0002108c T MBufferManager::SaveState(void)
+
 000210a0 T MDefaultManager::MDefaultManager(void)
 0002123c T MDefaultManager::~MDefaultManager(void)
 000212f4 T MDefaultManager::SaveState(void)

@@ -15,7 +15,7 @@
 #include "SamplingrateConverter.h"
 
 
-namespace media_kit_private {
+namespace MediaKitPrivate {
 
 static void Upsample_stereo(const float *inbuffer, int inframecount, float *outbuffer, int outframecount);
 static void Upsample_mono(const float *inbuffer, int inframecount, float *outbuffer, int outframecount);
@@ -386,4 +386,4 @@ void Downsample_mono(const uint8 *inbuffer, int inframecount, uint8 *outbuffer, 
 	}
 }
 
-} //namespace media_kit_private
+} //namespace MediaKitPrivate

@@ -9,7 +9,7 @@
  *         (multiple channel support should be added in the future)
  ***********************************************************************/
 
-namespace media_kit_private {
+namespace MediaKitPrivate {
 
 class ChannelMixer
 {
@@ -27,6 +27,6 @@ public:
 	
 };
 
-} //namespace media_kit_private
+} //namespace MediaKitPrivate
 
 #endif

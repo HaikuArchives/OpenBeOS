@@ -8,11 +8,7 @@
 #include <Message.h>
 #include "debug.h"
 #include "SharedBufferList.h"
-
-
-enum {
-	MEDIA_SERVER_GET_SHARED_BUFFER_AREA
-};
+#include "../server/headers/ServerInterface.h"
 
 /*************************************************************
  * private BBufferGroup
