@@ -23,4 +23,9 @@ typedef unsigned long       addr;
 
 #define _OBOS_TIME_T_   int   /* basic time_t type */
 
+/* define this as not all platforms have it set, but we'll make sure as 
+ * some conditional checks need it
+ */
+#define __INTEL__ 1
+
 #endif /* _ARCH_x86_TYPES_H */
