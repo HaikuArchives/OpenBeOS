@@ -1,4 +1,5 @@
 #include <String.h>
+#include <Locker.h>
 #include <Region.h>
 #include <Debug.h>
 #include "View.h"	// for mouse button defines
@@ -13,6 +14,9 @@
 #include <stdio.h>
 #endif
 
+bool is_moving_window=false;
+WindowBorder *activeborder=NULL;
+
 WindowBorder::WindowBorder(ServerWindow *win, const char *bordertitle)
  : Layer(win->frame,win->title->String())
 {
@@ -22,7 +26,6 @@ printf("WindowBorder()\n");
 	mbuttons=0;
 	swin=win;
 	title=new BString(bordertitle);
-	movewin=false;
 	hresizewin=false;
 	vresizewin=false;
 }
@@ -86,7 +89,8 @@ printf("WindowBorder(): MoveToFront\n");
 			decor->SetFocus(true);
 			decor->Draw();
 			layerlock->Unlock();
-			movewin=true;
+			is_moving_window=true;
+			activeborder=this;
 			break;
 		}
 		case CLICK_CLOSE:
@@ -119,7 +123,10 @@ printf("WindowBorder(): SetMinimizeButton\n");
 printf("WindowBorder(): Click Tab\n");
 #endif
 			if(buttons==B_PRIMARY_MOUSE_BUTTON)
-				movewin=true;
+			{
+				is_moving_window=true;
+				activeborder=this;
+			}
 			break;
 		}
 		case CLICK_NONE:
@@ -141,7 +148,7 @@ printf("WindowBorder()::MouseDown: Undefined click type\n");
 
 void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 {
-	if(movewin)
+	if(is_moving_window==true)
 	{
 		float dx=pt.x-mousepos.x,
 			dy=pt.y-mousepos.y;
@@ -167,9 +174,8 @@ printf("WindowBorder()::MouseUp\n");
 #endif
 //	mbuttons&= ~buttons;
 	mbuttons=buttons;
-
-	// This message isn't sent until no mouse buttons are down
-	movewin=false;
+	activeborder=NULL;
+	is_moving_window=false;
 }
 
 void WindowBorder::Draw(BRect update_rect)

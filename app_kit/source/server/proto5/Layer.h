@@ -31,6 +31,7 @@ public:
 	void ResizeBy(float x, float y);
 
 	void RebuildRegions(bool include_children=true);
+	bool IsDirty(void) const;
 	void PrintToStream(void);
 	void PruneTree(void);
 	void SetLevel(int32 value);

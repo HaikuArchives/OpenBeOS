@@ -21,6 +21,7 @@
 #include "DisplayDriver.h"
 #include "DebugTools.h"
 #include "BeDecorator.h"
+//#include "YMakDecorator.h"
 
 //#define DEBUG_APPSERVER_THREAD
 
@@ -394,6 +395,7 @@ Decorator *instantiate_decorator(Layer *lay, uint32 dflags, window_look wlook)
 		decor=app_server->make_decorator(lay, dflags, wlook);
 	else
 		decor=new BeDecorator(lay, dflags, wlook);
+//		decor=new YMakDecorator(lay, dflags, wlook);
 
 	app_server->decor_lock->Unlock();
 	return decor;

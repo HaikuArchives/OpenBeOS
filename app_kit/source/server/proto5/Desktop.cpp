@@ -50,6 +50,7 @@ public:
 	Workspace(void);
 	Workspace(BPath imagepath);
 	~Workspace();
+	thread_id tid;
 	
 	Layer *toplayer;
 	BList focuslist;
@@ -143,7 +144,6 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	}
 	else
 		printf("DW goofed on the workspace index :P\n");
-
 
 	// Activate workspace 0
 	pactive_workspace=(Workspace *)desktop->ItemAt(0);

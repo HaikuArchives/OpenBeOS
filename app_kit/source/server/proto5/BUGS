@@ -1,7 +1,5 @@
 Redraw code needs work.
 
-When moving a window, if the mouse somehow gets outside the window's frame, it stops moving. Need a better input handling system for move/resize
-
 Server needs to set a cursor at startup
 
 Get a General OS Error followed by a segfault only when an application is started and the server is running under the debugger.

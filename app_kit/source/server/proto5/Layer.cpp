@@ -308,6 +308,10 @@ void Layer::RequestDraw(void)
 	}
 }
 
+bool Layer::IsDirty(void) const
+{
+	return is_dirty;
+}
 void Layer::ShowLayer(void)
 {
 	if(hidecount==0)

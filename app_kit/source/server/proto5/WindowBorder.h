@@ -29,8 +29,9 @@ public:
 	uint32 mbuttons;
 	BPoint mousepos;
 	bool update;
-	bool movewin;
 	bool hresizewin,vresizewin;
 };
 
+extern bool is_moving_window;
+extern WindowBorder *activeborder;
 #endif

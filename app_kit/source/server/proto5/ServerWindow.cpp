@@ -22,6 +22,7 @@
 
 // Used for providing identifiers for views
 int32 view_counter=0;
+bool movewin=false;
 
 ServerWindow::ServerWindow(BRect rect, const char *string, uint32 winflags,
 	ServerApp *winapp,  port_id winport, uint32 index)
@@ -398,6 +399,7 @@ printf("ServerWindow() %s: MouseDown(%.1f,%.1f)\n",mousewin->title->String(),x,y
 //			int32 modifiers=*((int32*)index);
 			BPoint pt(x,y);
 			
+			is_moving_window=false;
 			winborder=(WindowBorder*)root->GetChildAt(pt);
 			if(winborder)
 			{
@@ -431,8 +433,10 @@ printf("ServerWindow() %s: MouseUp(%.1f,%.1f)\n",mousewin->title->String(),x,y);
 			index+=sizeof(float);
 			uint32 buttons=*((uint32*)index);
 			BPoint pt(x,y);
-			
+
 			winborder=(WindowBorder*)root->GetChildAt(pt);
+			if(activeborder)
+				winborder=activeborder;
 			if(winborder)
 			{
 				mousewin=winborder->Window();
