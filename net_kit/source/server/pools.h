@@ -14,6 +14,7 @@ struct pool_mem {
 	size_t mem_size;
 	char *ptr;
 	size_t avail;
+	sem_id lock;
 };
 
 struct free_blk {
@@ -24,6 +25,7 @@ struct pool_ctl {
 	struct pool_mem *list;
 	size_t alloc_size;
 	char *freelist;
+	sem_id lock;
 };
 
 void pool_init(struct pool_ctl **p, size_t sz);

@@ -17,7 +17,7 @@ void pool_debug_walk(struct pool_ctl *p)
 	}
 }
 
-static struct pool_mem *get_mem_block(size_t size, struct pool_mem *nxt)
+static void get_mem_block(size_t size, struct pool_ctl *p)
 {
 	struct pool_mem *blk = malloc(sizeof(struct pool_mem));
 	blk->aid = create_area("net_stack_pools_block", (void**)&blk->base_addr,
@@ -25,14 +25,24 @@ static struct pool_mem *get_mem_block(size_t size, struct pool_mem *nxt)
 						B_READ_AREA|B_WRITE_AREA);
 
 	if (!blk->aid)
-		return NULL;
+		return;
 	
 	blk->mem_size = blk->avail = size;
 	blk->ptr = blk->base_addr;
-	if (nxt)
-		blk->next = nxt;
+        blk->lock = create_sem(1, "pool_mem_lock");
+
+	if (!blk->ptr || blk->lock < B_OK)
+		return;
+
+	acquire_sem(p->lock);
+	if (p->list)
+		blk->next = p->list;
+	p->list = blk;
+	release_sem(p->lock);
+
+printf("allocated pool_mem block for %ld byte allocations\n", size);
 	
-	return blk;
+	return;
 }
 
 void pool_init(struct pool_ctl **p, size_t sz)
@@ -43,22 +53,24 @@ void pool_init(struct pool_ctl **p, size_t sz)
 	if (!pnew)
 		return;	
 
-	/* minimum block size is 4 */
-	if (sz < 4)
+	/* minimum block size is sizeof the free_blk structure */
+	if (sz < sizeof(struct free_blk))
 		return;
 
 	/* normally we allocate 4096 bytes... */
 	if (sz > alloc_sz)
-/* XXX - needs to be page sized */
-			alloc_sz = sz;
+		alloc_sz = sz;
+
+        pnew->lock = create_sem(1, "pool_lock");
 			
 	/* now add a first block */
-	pnew->list = get_mem_block(alloc_sz, NULL);
+	get_mem_block(alloc_sz, pnew);
 	if (!pnew->list)
 		return;
 	
-	pnew->freelist = pnew->tail = NULL;
+	pnew->freelist = NULL;
 	pnew->alloc_size = sz;
+
 	(*p) = pnew;
 }
 
@@ -68,34 +80,55 @@ char *pool_get(struct pool_ctl *p)
 	struct pool_mem *mp = p->list;
 	char *rv = NULL;
 
+	acquire_sem(p->lock);
 	if (p->freelist) {
+//	printf("freelist %p\n", p->freelist);
 		/* woohoo, just grab a block! */
 		rv = p->freelist;
 		p->freelist = ((struct free_blk*)rv)->next;
+		release_sem(p->lock);
 		return rv;
 	}
+	release_sem(p->lock);
 	
 	/* no free blocks, try to allocate of the top of the memory blocks */
 	do {
+		acquire_sem(mp->lock);
 		if (mp->avail >= p->alloc_size) {
 			rv = mp->ptr;
 			mp->ptr += p->alloc_size;
 			mp->avail -= p->alloc_size;
+			release_sem(mp->lock);
 			break;
 		}
+		release_sem(mp->lock);
 	} while ((mp = mp->next) != NULL);
 
 /* XXX - we should allocate more memory if we get here with rv == NULL */
+	if (rv)
+		return rv;
+
+	get_mem_block(B_PAGE_SIZE, p);
+	mp = p->list;
+	acquire_sem(mp->lock);
+	if (mp->avail >= p->alloc_size) {
+		rv = mp->ptr;
+        	mp->ptr += p->alloc_size;
+        	mp->avail -= p->alloc_size;
+	}
+    release_sem(mp->lock);
 
 	return rv;
 }
 
 void pool_put(struct pool_ctl *p, void *ptr)
 {
+	acquire_sem(p->lock);
 	if (p->freelist) {
 		((struct free_blk*)ptr)->next = p->freelist;
 	}
 	p->freelist = ptr;
+	release_sem(p->lock);
 }
 
 void pool_destroy(struct pool_ctl *p)
@@ -107,7 +140,9 @@ void pool_destroy(struct pool_ctl *p)
 		delete_area(mp->aid);
 		temp = mp;
 		mp = mp->next;
+		delete_sem(mp->lock);
 		free(temp);
 	} while (mp);
+	delete_sem(p->lock);
 	free(p);
 }

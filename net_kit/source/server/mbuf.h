@@ -195,5 +195,7 @@ struct mbuf *m_free(struct mbuf *mfree);
 /* debug functions */
 void dump_freelist(void);
 
-	
+/* Stats structure */
+/* XXX - add me! */
+
 #endif /* OBOS_MBUF_H */
