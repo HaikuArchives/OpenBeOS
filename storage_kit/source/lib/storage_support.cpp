@@ -7,7 +7,10 @@
 //  Storage Kit internal support functionality.
 //----------------------------------------------------------------------
 
-#include "SupportDefs.h"
+#include <string.h>
+
+#include <StorageDefs.h>
+#include <SupportDefs.h>
 #include "storage_support.h"
 
 namespace StorageKit {
@@ -167,5 +170,138 @@ split_path(const char *fullPath, char **path, char **leaf)
 	
 	return true;
 }
+
+/*! The length of the first component is returned as well as the index, at
+	which the next one starts. These values are only valid, if the function
+	returns \c B_OK.
+	\param path the path to be parsed
+	\param length the variable the length of the first component is written
+		   into
+	\param nextComponent the variable the index of the next component is
+		   written into. \c 0 is returned, if there is no next component.
+	\return \c B_OK, if \a path is not \c NULL, \c B_BAD_VALUE otherwise
+*/
+status_t
+parse_first_path_component(const char *path, int32& length,
+						   int32& nextComponent)
+{
+	status_t error = (path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		int32 i = 0;
+		// find first '\' or end of name
+		for (; path[i] != '/' && path[i] != '\0'; i++);
+		// handle special case "/..." (absolute path)
+		if (i == 0 && path[i] != '\0')
+			i = 1;
+		length = i;
+		// find last '\' or end of name
+		for (; path[i] == '/' && path[i] != '\0'; i++);
+		if (path[i] == '\0')	// this covers "" as well
+			nextComponent = 0;
+		else
+			nextComponent = i;
+	}
+	return error;
+}
+
+/*! A string containing the first component is returned and the index, at
+	which the next one starts. These values are only valid, if the function
+	returns \c B_OK.
+	\param path the path to be parsed
+	\param component the variable the pointer to the newly allocated string
+		   containing the first path component is written into. The caller
+		   is responsible for delete[]'ing the string.
+	\param nextComponent the variable the index of the next component is
+		   written into. \c 0 is returned, if there is no next component.
+	\return \c B_OK, if \a path is not \c NULL, \c B_BAD_VALUE otherwise
+*/
+status_t
+parse_first_path_component(const char *path, char *&component,
+						   int32& nextComponent)
+{
+	int32 length;
+	status_t error = parse_first_path_component(path, length, nextComponent);
+	if (error == B_OK) {
+		component = new char[length + 1];
+		strncpy(component, path, length);
+		component[length] = '\0';
+	}
+	return error;
+}
+
+/*!	An entry name is considered valid, if its length doesn't exceed
+	\c B_FILE_NAME_LENGTH (including the terminating null) and it doesn't
+	contain any \c "/".
+	\param entry the entry name
+	\return
+	- \c B_OK, if \a entry is valid,
+	- \c B_BAD_VALUE, if \a entry is \c NULL or contains a "/",
+	- \c B_NAME_TOO_LONG, if \a entry is too long
+	\note \c "" is considered a valid entry name.
+	\note According to a couple of tests the deal is the following:
+		  The length of an entry name must not exceed \c B_FILE_NAME_LENGTH
+		  including the terminating null character, whereas the null character
+		  is not included in the \c B_PATH_NAME_LENGTH characters for a path
+		  name.
+		  Therefore the sufficient buffer sizes for entry/path names are
+		  \c B_FILE_NAME_LENGTH and \c B_PATH_NAME_LENGTH + 1 respectively.
+		  However, I recommend to use "+ 1" in both cases.
+*/
+status_t
+check_entry_name(const char *entry)
+{
+	status_t error = (entry ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		if (strlen(entry) >= B_FILE_NAME_LENGTH)
+			error = B_NAME_TOO_LONG;
+	}
+	if (error == B_OK) {
+		for (int32 i = 0; error == B_OK && entry[i] != '\0'; i++) {
+			if (entry[i] == '/')
+				error = B_BAD_VALUE;
+		}
+	}
+	return error;
+}
+
+/*!	An path name is considered valid, if its length doesn't exceed
+	\c B_PATH_NAME_LENGTH (NOT including the terminating null) and each of
+	its components is a valid entry name.
+	\param entry the entry name
+	\return
+	- \c B_OK, if \a path is valid,
+	- \c B_BAD_VALUE, if \a path is \c NULL,
+	- \c B_NAME_TOO_LONG, if \a path, or any of its components is too long
+	\note \c "" is considered a valid path name.
+	\note According to a couple of tests the deal is the following:
+		  The length of an entry name must not exceed \c B_FILE_NAME_LENGTH
+		  including the terminating null character, whereas the null character
+		  is not included in the \c B_PATH_NAME_LENGTH characters for a path
+		  name.
+		  Therefore the sufficient buffer sizes for entry/path names are
+		  \c B_FILE_NAME_LENGTH and \c B_PATH_NAME_LENGTH + 1 respectively.
+		  However, I recommend to use "+ 1" in both cases.
+*/
+status_t
+check_path_name(const char *path)
+{
+	status_t error = (path ? B_OK : B_BAD_VALUE);
+	// check the path components
+	const char *remainder = path;
+	int32 length, nextComponent;
+	do {
+		error = parse_first_path_component(remainder, length, nextComponent);
+		if (error == B_OK) {
+			if (length >= B_FILE_NAME_LENGTH)
+				error = B_NAME_TOO_LONG;
+			remainder += nextComponent;
+		}
+	} while (error == B_OK && nextComponent != 0);
+	// check the length of the path
+	if (error == B_OK && strlen(path) > B_PATH_NAME_LENGTH)
+		error = B_NAME_TOO_LONG;
+	return error;
+}
+
 
 } // namespace StorageKit
