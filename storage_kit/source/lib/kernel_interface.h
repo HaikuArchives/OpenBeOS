@@ -145,7 +145,7 @@ status_t rewind_attr_dir(FileDescriptor dir);
 
 /*! Returns the next item in the given attribute directory, or
 	B_ENTRY_NOT_FOUND if at the end of the list. */
-DirEntry* read_attr_dir(FileDescriptor dir);
+status_t read_attr_dir(FileDescriptor dir, DirEntry &buffer);
 
 /*! Closes an attribute directory previously opened with open_attr_dir(). */
 status_t close_attr_dir(FileDescriptor dir);
