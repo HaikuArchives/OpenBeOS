@@ -34,45 +34,64 @@ extern "C" {
 #endif
 
 
-/*  Start of fundamental (read-only) required functions */
 extern "C" {
 	static int bfs_mount(nspace_id nsid, const char *device, ulong flags,
-						void *parms, size_t len, void **data, vnode_id *vnid);
+					void *parms, size_t len, void **data, vnode_id *vnid);
 	static int bfs_unmount(void *_ns);
+	static int bfs_read_fs_stat(void *_ns, struct fs_info *);
+	static int bfs_write_fs_stat(void *ns, struct fs_info *, long mode);
+	static int bfs_initialize(const char *devname, void *parms, size_t len);
 
-	static int bfs_walk(void *_ns, void *_base, const char *file,
-						char **newpath, vnode_id *vnid);
-	
+	static int bfs_sync(void *ns);
+
 	static int bfs_read_vnode(void *_ns, vnode_id vnid, char r, void **node);
 	static int bfs_release_vnode(void *_ns, void *_node, char r);
+	static int bfs_remove_vnode(void *ns, void *node, char r);
+	static int bfs_secure_vnode(void *ns, void *node);
 
+	static int bfs_walk(void *_ns, void *_base, const char *file,
+					char **newpath, vnode_id *vnid);
+	
 	static int bfs_ioctl(void *ns, void *node, void *cookie, int cmd, void *buf,size_t len);
 	static int bfs_setflags(void *ns, void *node, void *cookie, int flags);
 
-	static int bfs_rstat(void *_ns, void *_node, struct stat *st);
+	static int bfs_select(void *ns, void *node, void *cookie, uint8 event,
+					uint32 ref, selectsync *sync);
+	static int bfs_deselect(void *ns, void *node, void *cookie, uint8 event,
+					selectsync *sync);
+	static int bfs_fsync(void *ns,void *node);
+
+	static int bfs_create(void *ns, void *dir, const char *name,
+					int perms, int omode, vnode_id *vnid, void **cookie);
+	static int bfs_symlink(void *ns, void *dir, const char *name,
+					const char *path);
+	static int bfs_link(void *ns, void *dir, const char *name, void *node);
+	static int bfs_unlink(void *ns, void *dir, const char *name);
+	static int bfs_rename(void *ns, void *oldDir, const char *oldName, void *newDir, const char *newName);
+
+	static int bfs_read_stat(void *_ns, void *_node, struct stat *st);
+	static int bfs_write_stat(void *ns, void *node, struct stat *st, long mask);
+
 	static int bfs_open(void *_ns, void *_node, int omode, void **cookie);
 	static int bfs_read(void *_ns, void *_node, void *cookie, off_t pos,
-						void *buf, size_t *len);
-	// bfs_free_cookie - free cookie for file created in open.
+					void *buf, size_t *len);
+	static int bfs_write(void *ns, void *node, void *cookie, off_t pos,
+					const void *buf, size_t *len);
 	static int bfs_free_cookie(void *ns, void *node, void *cookie);
 	static int bfs_close(void *ns, void *node, void *cookie);
 	
-	// bfs_access - 		checks permissions for access.
 	static int bfs_access(void *_ns, void *_node, int mode);
+	static int bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize);
 
 	// directory functions	
-	static int bfs_open_dir(void* _ns, void* _node, void** cookie);
+	static int bfs_mkdir(void *ns, void *dir, const char *name, int perms);
+	static int bfs_rmdir(void *ns, void *dir, const char *name);
+	static int bfs_open_dir(void *_ns, void *_node, void **cookie);
 	static int bfs_read_dir(void *_ns, void *_node, void *cookie,
-						long *num, struct dirent *dirent, size_t bufferSize);
+					long *num, struct dirent *dirent, size_t bufferSize);
 	static int bfs_rewind_dir(void *_ns, void *_node, void *cookie);
 	static int bfs_close_dir(void *_ns, void *_node, void *cookie);
 	static int bfs_free_dir_cookie(void *_ns, void *_node, void *cookie);
-	
-	// bfs_rfsstat - Fill in bfs_info struct for device.
-	static int bfs_rfsstat(void *_ns, struct fs_info *);
-	
-	// bfs_read_link - Read in the name of a symbolic link.
-	static int bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize);
 
 	// attribute support
 	static int bfs_open_attrdir(void *ns, void *node, void **cookie);
@@ -110,24 +129,6 @@ extern "C" {
 	static int bfs_free_query_cookie(void *ns, void *node, void *cookie);
 	static int bfs_read_query(void *ns, void *cookie, long *num,
 					struct dirent *buf, size_t bufsize);
-
-#if 0
-	static int		bfs_remove_vnode(void *ns, void *node, char r);
-	static int		bfs_secure_vnode(void *ns, void *node);
-	static int		bfs_create(void *ns, void *dir, const char *name,
-						int perms, int omode, vnode_id *vnid, void **cookie);
-	static int		bfs_mkdir(void *ns, void *dir, const char *name, int perms);
-	static int		bfs_unlink(void *ns, void *dir, const char *name);
-	static int		bfs_rmdir(void *ns, void *dir, const char *name);
-	static int		bfs_wstat(void *ns, void *node, struct stat *st, long mask);
-	static int		bfs_write(void *ns, void *node, void *cookie, off_t pos,
-							const void *buf, size_t *len);
-	static int		bfs_ioctl(void *ns, void *node, void *cookie, int cmd,
-							void *buf, size_t len);
-	static int		bfs_wfsstat(void *ns, struct bfs_info *);
-	static int		bfs_sync(void *ns);
-	static int     	bfs_initialize(const char *devname, void *parms, size_t len);
-#endif 
 }	// extern "C"
 
 
@@ -138,17 +139,17 @@ extern "C" {
 vnode_ops fs_entry =  {
 	&bfs_read_vnode,			// read_vnode
 	&bfs_release_vnode,			// write_vnode
-	NULL, 						// remove_vnode
-	NULL,						// secure_vnode
+	&bfs_remove_vnode,			// remove_vnode
+	&bfs_secure_vnode,			// secure_vnode
 	&bfs_walk,					// walk
 	&bfs_access,				// access
-	NULL, 						// create
-	NULL, 						// mkdir
-	NULL,						// symlink
-	NULL,						// link
-	NULL,						// rename
-	NULL, 						// unlink
-	NULL, 						// rmdir
+	&bfs_create,				// create
+	&bfs_mkdir,					// mkdir
+	&bfs_symlink,				// symlink
+	&bfs_link,					// link
+	&bfs_rename,				// rename
+	&bfs_unlink,				// unlink
+	&bfs_rmdir,					// rmdir
 	&bfs_read_link,				// readlink
 	&bfs_open_dir,				// opendir
 	&bfs_close_dir,				// closedir
@@ -159,22 +160,22 @@ vnode_ops fs_entry =  {
 	&bfs_close,					// close file
 	&bfs_free_cookie,			// free cookie
 	&bfs_read,					// read file
-	NULL, 						// write file
+	&bfs_write,					// write file
 	NULL,						// readv
 	NULL,						// writev
 	&bfs_ioctl,					// ioctl
 	&bfs_setflags,				// setflags file
-	&bfs_rstat,					// rstat
-	NULL, 						// wstat
-	NULL,						// fsync
-	NULL,						// initialize
+	&bfs_read_stat,				// read stat
+	&bfs_write_stat,			// write stat
+	&bfs_fsync,					// fsync
+	&bfs_initialize,			// initialize
 	&bfs_mount,					// mount
 	&bfs_unmount,				// unmount
-	NULL,						// sync
-	&bfs_rfsstat,				// rfsstat
-	NULL,						// wfsstat
-	NULL,						// select
-	NULL,						// deselect
+	&bfs_sync,					// sync
+	&bfs_read_fs_stat,			// read fs stat
+	&bfs_write_fs_stat,			// write fs stat
+	&bfs_select,				// select
+	&bfs_deselect,				// deselect
 
 	&bfs_open_indexdir,			// open index dir
 	&bfs_close_indexdir,		// close index dir
@@ -251,10 +252,12 @@ bfs_unmount(void *ns)
 	return status;
 }
 
-// bfs_rfsstat - Fill in bfs_info struct for device.
+
+/**	Fill in bfs_info struct for device.
+ */
 
 static int
-bfs_rfsstat(void *_ns, struct fs_info *info)
+bfs_read_fs_stat(void *_ns, struct fs_info *info)
 {
 	FUNCTION();
 	Volume *volume = (Volume *)_ns;
@@ -283,11 +286,91 @@ bfs_rfsstat(void *_ns, struct fs_info *info)
 }
 
 
+static int
+bfs_write_fs_stat(void *_ns, struct fs_info *info, long mask)
+{
+	FUNCTION_START(("mask = %ld\n",mask));
+	Volume *volume = (Volume *)_ns;
+	return B_ERROR;
+}
+
+
+int 
+bfs_initialize(const char *deviceName, void *parms, size_t len)
+{
+	FUNCTION_START(("deviceName = %s, parameter len = %ld\n",deviceName,len));
+	return B_ERROR;
+}
+
+
+int 
+bfs_sync(void *ns)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
 //	#pragma mark -
 
-// bfs_walk - the walk function just "walks" through a directory looking for
-//				the specified file. When you find it, call get_vnode on its vnid to init
-//				it for the kernel.
+
+// bfs_read_vnode - Using vnode id, read in vnode information into fs-specific struct,
+//				and return it in node. the reenter flag tells you if this function
+//				is being called via some other fs routine, so that things like 
+//				double-locking can be avoided.
+
+static int
+bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
+{
+	FUNCTION_START(("vnode_id = %Ld\n",vnid));
+	Volume *volume = (Volume *)_ns;
+	
+	Inode *inode = new Inode(volume,vnid,reenter);
+	if (inode->InitCheck() == B_OK) {
+		*node = (void *)inode;
+		return B_OK;
+	}
+
+	delete inode;
+	RETURN_ERROR(B_ERROR);
+}
+
+
+static int
+bfs_release_vnode(void *ns, void *_node, char reenter)
+{
+	FUNCTION_START(("node = %p\n",_node));
+	Inode *inode = (Inode *)_node;
+	
+	delete inode;
+
+	return B_NO_ERROR;
+}
+
+
+int 
+bfs_remove_vnode(void *ns, void *node, char r)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
+int 
+bfs_secure_vnode(void *ns, void *node)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
+//	#pragma mark -
+
+
+/**	the walk function just "walks" through a directory looking for the
+ *	specified file. It calls get_vnode() on its vnode-id to init it
+ *	for the kernel.
+ */
 
 static int
 bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vnode_id *vnid)
@@ -357,39 +440,6 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vn
 	return B_OK;
 }
 
-// bfs_read_vnode - Using vnode id, read in vnode information into fs-specific struct,
-//				and return it in node. the reenter flag tells you if this function
-//				is being called via some other fs routine, so that things like 
-//				double-locking can be avoided.
-
-static int
-bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
-{
-	FUNCTION_START(("vnode_id = %Ld\n",vnid));
-	Volume *volume = (Volume *)_ns;
-	
-	Inode *inode = new Inode(volume,vnid,reenter);
-	if (inode->InitCheck() == B_OK) {
-		*node = (void *)inode;
-		return B_OK;
-	}
-
-	delete inode;
-	RETURN_ERROR(B_ERROR);
-}
-
-
-static int
-bfs_release_vnode(void *ns, void *_node, char reenter)
-{
-	FUNCTION_START(("node = %p\n",_node));
-	Inode *inode = (Inode *)_node;
-	
-	delete inode;
-
-	return B_NO_ERROR;
-}
-
 
 int 
 bfs_ioctl(void *ns, void *node, void *cookie, int cmd, void *buf, size_t len)
@@ -406,10 +456,36 @@ bfs_setflags(void *ns, void *node, void *cookie, int flags)
 	return B_OK;
 }
 
-// bfs_rstat - fill in stat struct
+
+int 
+bfs_select(void *ns, void *node, void *cookie, uint8 event, uint32 ref, selectsync *sync)
+{
+	FUNCTION_START(("event = %d, ref = %lu, sync = %p\n",event,ref,sync));
+	return B_ERROR;
+}
+
+
+int 
+bfs_deselect(void *ns, void *node, void *cookie, uint8 event, selectsync *sync)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
+int 
+bfs_fsync(void *ns, void *node)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
+/**	Fills in the stat struct for a node
+ */
 
 static int
-bfs_rstat(void *_ns, void *_node, struct stat *st)
+bfs_read_stat(void *_ns, void *_node, struct stat *st)
 {
 	FUNCTION();
 
@@ -434,8 +510,57 @@ bfs_rstat(void *_ns, void *_node, struct stat *st)
 	return B_NO_ERROR;
 }
 
-// bfs_open - Create a vnode cookie, if necessary, to use when
-// 				reading/writing a file
+
+int 
+bfs_write_stat(void *ns, void *node, struct stat *st, long mask)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
+int 
+bfs_create(void *ns, void *dir, const char *name, int perms, int omode, vnode_id *vnid, void **cookie)
+{
+	FUNCTION_START(("name = \"%s\", perms = %ld, omode = %ld\n",name,perms,omode));
+	return B_ERROR;
+}
+
+
+int 
+bfs_symlink(void *ns, void *dir, const char *name, const char *path)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
+int 
+bfs_link(void *ns, void *dir, const char *name, void *node)
+{
+	FUNCTION_START(("name = \"%s\"\n",name));
+	return B_ERROR;
+}
+
+
+int 
+bfs_unlink(void *ns, void *dir, const char *name)
+{
+	FUNCTION_START(("name = \"%s\"\n",name));
+	return B_ERROR;
+}
+
+
+int 
+bfs_rename(void *ns, void *oldDir, const char *oldName, void *newDir, const char *newName)
+{
+	FUNCTION_START(("oldName = \"%s\", newName = \"%s\"\n",oldName,newName));
+	return B_ERROR;
+}
+
+
+/**	Opens the file with the specified mode.
+ */
 
 static int
 bfs_open(void *_ns, void *_node, int omode, void **_cookie)
@@ -460,8 +585,10 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	return B_OK;
 }
 
-// bfs_read - Read a file specified by node, using information in cookie
-//				and at offset specified by pos. read len bytes into buffer buf.
+
+/**	Read a file specified by node, using information in cookie
+ *	and at offset specified by pos. read len bytes into buffer buf.
+ */
 
 static int
 bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t *_length)
@@ -474,11 +601,22 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 		RETURN_ERROR(B_BAD_VALUE);
 	}
 	
+	ReadLocked locked(inode->Lock());
 	return inode->ReadAt(pos,buffer,_length);
 }
 
-// bfs_close - Do whatever is necessary to close a file, EXCEPT for freeing
-//				the cookie!
+
+int 
+bfs_write(void *ns, void *node, void *cookie, off_t pos, const void *buf, size_t *len)
+{
+	FUNCTION();
+	return B_ERROR;
+}
+
+
+/**	Do whatever is necessary to close a file, EXCEPT for freeing
+ *	the cookie!
+ */
 
 static int
 bfs_close(void * /*ns*/, void * /*node*/, void * /*cookie*/)
@@ -494,12 +632,23 @@ bfs_free_cookie(void * /*ns*/, void * /*node*/, void * /*cookie*/)
 	return B_OK;
 }
 
-// bfs_access - checks permissions for access.
+
+/**	Checks access permissions, return B_NOT_ALLOWED if the action
+ *	is not allowed.
+ */
 
 static int
-bfs_access(void *ns, void *node, int mode)
+bfs_access(void *_ns, void *_node, int mode)
 {
 	FUNCTION();
+	
+	if (_ns == NULL || _node == NULL)
+		return B_BAD_VALUE;
+
+	Inode *inode = (Inode *)_node;
+	if (!inode->CheckPermissions(mode))
+		return B_NOT_ALLOWED;
+
 	return B_OK;
 }
 
@@ -536,9 +685,28 @@ bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize)
 
 
 //	#pragma mark -
+//	Directory functions
 
-// bfs_opendir - creates fs-specific "cookie" struct that keeps track of where
-//					you are at in reading through directory entries in bfs_readdir.
+
+int 
+bfs_mkdir(void *ns, void *dir, const char *name, int perms)
+{
+	FUNCTION_START(("name = \"%s\", perms = %ld\n",name,perms));
+	return B_ERROR;
+}
+
+
+int 
+bfs_rmdir(void *ns, void *dir, const char *name)
+{
+	FUNCTION_START(("name = \"%s\"\n",name));
+	return B_ERROR;
+}
+
+
+/**	creates fs-specific "cookie" struct that keeps track of where
+ *	you are at in reading through directory entries in bfs_readdir.
+ */
 
 static int
 bfs_open_dir(void *_ns, void *_node, void **_cookie)
@@ -565,8 +733,6 @@ bfs_open_dir(void *_ns, void *_node, void **_cookie)
 	return B_OK;
 }
 
-// bfs_readdir - read 1 or more dirents, keep state in cookie, return
-//					0 when no more entries.
 
 static int
 bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num, 
@@ -596,9 +762,10 @@ bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num,
 	*num = 1;
 	return B_OK;
 }
-			
-// bfs_rewinddir - set cookie to represent beginning of directory, so
-//					later bfs_readdir calls start at beginning.
+
+		
+/** Sets the TreeIterator back to the beginning of the directory
+ */
 
 static int
 bfs_rewind_dir(void * /*ns*/, void * /*node*/, void *_cookie)
@@ -612,17 +779,15 @@ bfs_rewind_dir(void * /*ns*/, void * /*node*/, void *_cookie)
 	return iterator->Rewind();
 }
 
-// bfs_closedir - Do whatever you need to to close a directory (sometimes
-//					nothing), but DON'T free the cookie!
 
 static int		
 bfs_close_dir(void * /*ns*/, void * /*node*/, void * /*_cookie*/)
 {
 	FUNCTION();
+	// Do whatever you need to to close a directory, but DON'T free the cookie!
 	return B_OK;
 }
 
-// bfs_free_dircookie - Free the fs-specific cookie struct
 
 static int
 bfs_free_dir_cookie(void *ns, void *node, void *_cookie)
@@ -639,6 +804,7 @@ bfs_free_dir_cookie(void *ns, void *node, void *_cookie)
 
 //	#pragma mark -
 //	Attribute functions
+
 
 int 
 bfs_open_attrdir(void *_ns, void *_node, void **cookie)

@@ -48,9 +48,11 @@ Inode::InitCheck()
 		|| Node()->attributes.allocation_group < 0
 		|| Node()->attributes.start > (1L << fVolume->AllocationGroupShift())) {
 		FATAL(("inode at block %Ld corrupt!\n",fBlockNumber));
-		RETURN_ERROR(B_ERROR);
+		RETURN_ERROR(B_BAD_DATA);
 	}
-	return B_OK;
+	// it's more important to know that the inode is corrupt
+	// so we check for the lock not until here
+	return fLock.InitCheck();
 }
 
 
@@ -64,8 +66,8 @@ Inode::CheckPermissions(int accessMode) const
 	if (accessMode & W_OK && fVolume->IsReadOnly())
 		return false;
 
-	// root users always have full access
-	if (user == 0)
+	// root users always have full access (but they can't execute anything)
+	if (user == 0 && !((accessMode & X_OK) && (Mode() & S_IXUSR) == 0))
 		return true;
 
 	// shift mode bits, to check directly against accessMode

@@ -23,6 +23,7 @@ extern "C" {
 }
 
 #include "Volume.h"
+#include "Lock.h"
 
 
 class BPlusTree;
@@ -93,6 +94,7 @@ class Inode : public CachedBlock
 		Inode(Volume *volume,vnode_id id,uint8 reenter = 0);
 		~Inode();
 
+		ReadWriteLock &Lock() { return fLock; }
 		bfs_inode *Node() const { return (bfs_inode *)fBlock; }
 		vnode_id ID() const { return fVolume->ToVnode(fBlockNumber); }
 
@@ -127,8 +129,9 @@ class Inode : public CachedBlock
 		status_t WriteAt(off_t pos,void *buffer,size_t *length);
 	
 	private:
-		BPlusTree	*fTree;
-		Inode		*fAttributes;
+		BPlusTree		*fTree;
+		Inode			*fAttributes;
+		ReadWriteLock	fLock;
 };
 
 

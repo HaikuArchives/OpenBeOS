@@ -23,8 +23,11 @@
 
 // Node Caching for the BPlusTree class
 //
-// with write support, there is the need for a function that allocates new
+// With write support, there is the need for a function that allocates new
 // nodes by either returning empty nodes, or by growing the file's data stream
+//
+// The CachedNode class assumes that you have properly locked the stream
+// before asking for nodes.
 //
 // Note: This code will fail if the block size is smaller than the node size!
 // Since BFS supports block sizes of 1024 bytes or greater, and the node size
@@ -433,6 +436,9 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
 		RETURN_ERROR(B_BAD_VALUE);
 
+	// lock access to stream
+	WriteLocked locked(fStream->Lock());
+
 	Stack<node_and_key> stack;
 	if (SeekDown(stack,key,keyLength) != B_OK)
 		RETURN_ERROR(B_ERROR);
@@ -498,6 +504,9 @@ BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 		|| value == NULL || key == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
+	// lock access to stream
+	ReadLocked locked(fStream->Lock());
+
 	Stack<node_and_key> stack;
 	if (SeekDown(stack,key,keyLength) != B_OK)
 		RETURN_ERROR(B_ERROR);
@@ -548,6 +557,9 @@ TreeIterator::Goto(int8 to)
 	if (stack.Push(fTree->fHeader->root_node_pointer) < B_OK)
 		RETURN_ERROR(B_NO_MEMORY);
 
+	// lock access to stream
+	ReadLocked locked(fTree->fStream->Lock());
+
 	CachedNode cached(fTree);
 	bplustree_node *node;
 	off_t pos;
@@ -578,6 +590,9 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 	if (fCurrentNodeOffset == BPLUSTREE_NULL
 		&& Goto(direction == BPLUSTREE_FORWARD ? BPLUSTREE_BEGIN : BPLUSTREE_END) < B_OK) 
 		RETURN_ERROR(B_ERROR);
+
+	// lock access to stream
+	ReadLocked locked(fTree->fStream->Lock());
 
 	CachedNode cached(fTree);
 	bplustree_node *node;
@@ -706,6 +721,9 @@ TreeIterator::Find(uint8 *key, uint16 keyLength)
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
 		|| key == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
+
+	// lock access to stream
+	ReadLocked locked(fTree->fStream->Lock());
 
 	off_t nodeOffset = fTree->fHeader->root_node_pointer;
 
