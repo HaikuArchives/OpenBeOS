@@ -11,6 +11,9 @@ extern "C" {
 
 #include <types.h>
 
+typedef uint16 mode_t;
+typedef int pid_t;
+
 typedef int thread_id;
 typedef int region_id;
 typedef int aspace_id;
@@ -21,6 +24,11 @@ typedef int image_id;
 
 typedef uint64 vnode_id;
 typedef uint32 fs_id;
+
+#ifdef _OBOS_TIME_T_
+typedef _OBOS_TIME_T_     time_t;
+#undef _OBOS_TIME_T_
+#endif /* _OBOS_TIME_T_ */
 
 typedef int64 bigtime_t;
 #ifndef NULL
@@ -56,10 +64,13 @@ typedef int64               off_t;
 typedef unsigned char           u_char;
 typedef unsigned short          u_short;
 typedef unsigned int            u_int;
-typedef unsigned long  u_long;
+typedef unsigned long           u_long;
 
 typedef unsigned char           uchar;
-typedef unsigned short     ulong; 
+typedef unsigned short          ushort; 
+typedef unsigned int            uint;
+typedef unsigned long           ulong;
+
 // Handled in arch_ktypes.h
 
 //typedef unsigned long addr;
