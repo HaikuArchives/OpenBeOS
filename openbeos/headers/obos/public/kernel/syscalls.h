@@ -13,38 +13,40 @@
 #include <vm_types.h>
 #include <thread_types.h>
 #include <OS.h>
+#include <sys/stat.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int sys_null();
+int     sys_null();
 
 /* fs api */
-int sys_mount(const char *path, const char *device, const char *fs_name, void *args);
-int sys_unmount(const char *path);
-int sys_sync();
-int sys_open(const char *path, stream_type st, int omode);
-int sys_close(int fd);
-int sys_fsync(int fd);
+int     sys_mount(const char *path, const char *device, const char *fs_name, void *args);
+int     sys_unmount(const char *path);
+int     sys_sync();
+int     sys_open(const char *path, stream_type st, int omode);
+int     sys_close(int fd);
+int     sys_fsync(int fd);
 ssize_t sys_read(int fd, void *buf, off_t pos, size_t len);
 ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len);
-int sys_seek(int fd, off_t pos, int seek_type);
-int sys_ioctl(int fd, ulong op, void *buf);
-int sys_create(const char *path, stream_type stream_type);
-int sys_unlink(const char *path);
-int sys_rename(const char *oldpath, const char *newpath);
-int sys_rstat(const char *path, struct file_stat *stat);
-int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
-char *sys_getcwd(char* buf, size_t size);
-int sys_setcwd(const char* path);
-int sys_dup(int fd);
-int sys_dup2(int ofd, int nfd);
+int     sys_seek(int fd, off_t pos, int seek_type);
+int     sys_ioctl(int fd, ulong op, void *buf);
+int     sys_create(const char *path, stream_type stream_type);
+int     sys_unlink(const char *path);
+int     sys_rename(const char *oldpath, const char *newpath);
+int     sys_rstat(const char *path, struct stat *stat);
+int     sys_wstat(const char *path, struct stat *stat, int stat_mask);
+int     sys_fstat(int, struct stat *);
+char   *sys_getcwd(char* buf, size_t size);
+int     sys_setcwd(const char* path);
+int     sys_dup(int fd);
+int     sys_dup2(int ofd, int nfd);
 
 bigtime_t sys_system_time();
-int sys_snooze(bigtime_t time);
-int sys_getrlimit(int resource, struct rlimit * rlp);
-int sys_setrlimit(int resource, const struct rlimit * rlp);
+int     sys_snooze(bigtime_t time);
+int     sys_getrlimit(int resource, struct rlimit * rlp);
+int     sys_setrlimit(int resource, const struct rlimit * rlp);
 
 /* sem functions */
 sem_id kern_create_sem(int count, const char *name);

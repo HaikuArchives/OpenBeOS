@@ -1,6 +1,8 @@
 #ifndef VFS_TYPES_H
 #define VFS_TYPES_H
 
+#include <sys/uio.h>
+
 typedef enum {
 	STREAM_TYPE_ANY = 0,
 	STREAM_TYPE_FILE,
@@ -8,20 +10,14 @@ typedef enum {
 	STREAM_TYPE_DEVICE
 } stream_type;
 
-//typedef enum {
-//	SEEK_SET = 0,
-//	SEEK_CUR,
-//	SEEK_END
-//} seek_type;
-
 typedef void * fs_cookie;
 typedef void * file_cookie;
 typedef void * fs_vnode;
 
-typedef struct iovec {
-	void *start;
-	size_t len;
-} iovec;
+//typedef struct iovec {
+//	void *start;
+//	size_t len;
+//} iovec;
 
 typedef struct iovecs {
 	size_t num;
@@ -29,11 +25,11 @@ typedef struct iovecs {
 	iovec vec[0];
 } iovecs;
 
-struct file_stat {
-	vnode_id 	vnid;
-	stream_type	type;
-	off_t		size;
-};
+//struct file_stat {
+//	vnode_id 	vnid;
+//	stream_type	type;
+//	off_t		size;
+//};
 
 #endif
 
