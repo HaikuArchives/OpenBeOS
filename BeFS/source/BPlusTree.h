@@ -249,6 +249,10 @@ class TreeIterator {
 		status_t	GetPreviousEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate = NULL);
 		void		SkipDuplicates();
 
+#ifdef DEBUG
+		void		Dump();
+#endif
+
 	private:
 		BPlusTree	*fTree;
 

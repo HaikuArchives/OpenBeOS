@@ -196,7 +196,7 @@ CachedNode::Allocate(Transaction *transaction, bplustree_node **_node, off_t *_o
 	if (SetTo(offset,false) != NULL) {
 		*_offset = offset;
 
-		if (fTree->fCachedHeader.WriteBack(transaction) == B_OK) {
+		if (fTree->fCachedHeader.WriteBack(transaction) >= B_OK) {
 			fNode->Initialize();
 			*_node = fNode;
 			return B_OK;
@@ -650,6 +650,12 @@ BPlusTree::InsertDuplicate(Transaction *transaction,CachedNode *cached,bplustree
 				return B_IO_ERROR;
 
 			duplicate_array *array = duplicate->FragmentAt(bplustree_node::FragmentIndex(oldValue));
+			if (array->value_count > NUM_FRAGMENT_VALUES
+				|| array->value_count < 1) {
+				FATAL(("insertDuplicate: Invalid array[%ld] size in fragment %Ld == %Ld!\n",bplustree_node::FragmentIndex(oldValue),bplustree_node::FragmentOffset(oldValue),array->value_count));
+				return B_BAD_DATA;
+			}
+
 			if (array->value_count < NUM_FRAGMENT_VALUES) {
 				array->Insert(value);
 			} else {
@@ -671,7 +677,7 @@ BPlusTree::InsertDuplicate(Transaction *transaction,CachedNode *cached,bplustree
 					status = cachedNewDuplicate.Allocate(transaction,&newDuplicate,&offset);
 					if (status < B_OK)
 						return status;
-	
+
 					// copy the array from the fragment node to the duplicate node
 					// and free the old entry (by zero'ing all values)
 					newDuplicate->overflow_link = array->value_count;
@@ -712,6 +718,11 @@ BPlusTree::InsertDuplicate(Transaction *transaction,CachedNode *cached,bplustree
 				return B_IO_ERROR;
 
 			array = duplicate->DuplicateArray();
+			if (array->value_count > NUM_DUPLICATE_VALUES
+				|| array->value_count < 0) {
+				FATAL(("removeDuplicate: Invalid array size in duplicate %Ld == %Ld!\n",duplicateOffset,array->value_count));
+				return B_BAD_DATA;
+			}
 		} while (array->value_count >= NUM_DUPLICATE_VALUES && (oldValue = duplicate->right_link) != BPLUSTREE_NULL);
 
 		if (array->value_count < NUM_DUPLICATE_VALUES) {
@@ -1164,15 +1175,26 @@ BPlusTree::RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedN
 	if (bplustree_node::LinkType(oldValue) == BPLUSTREE_DUPLICATE_FRAGMENT) {
 		duplicate_array *array = duplicate->FragmentAt(bplustree_node::FragmentIndex(oldValue));
 
+		if (array->value_count > NUM_FRAGMENT_VALUES
+			|| array->value_count < 1) {
+			FATAL(("removeDuplicate: Invalid array[%ld] size in fragment %Ld == %Ld!\n",bplustree_node::FragmentIndex(oldValue),duplicateOffset,array->value_count));
+			return B_BAD_DATA;
+		}
 		if (!array->Remove(value))
-			FATAL(("Oh no, value %Ld not found in fragments of node %Ld...",value,duplicateOffset));
+			FATAL(("Oh no, value %Ld not found in fragments of node %Ld...\n",value,duplicateOffset));
 
-		// remove the fragment node if it is empty
-		if (array->value_count == 1 && duplicate->FragmentsUsed(fNodeSize) == 1) {
+		// remove the array from the fragment node if it is empty
+		if (array->value_count == 1) {
 			// set the link to the remaining value
 			values[index] = array->values[0];
 
-			if ((status = cachedDuplicate.Free(transaction,duplicateOffset)) < B_OK)
+			// Remove the whole fragment node, if this was the only array,
+			// otherwise just write the changes back
+			if (duplicate->FragmentsUsed(fNodeSize) == 1)
+				status = cachedDuplicate.Free(transaction,duplicateOffset);
+			else
+				status = cachedDuplicate.WriteBack(transaction);
+			if (status < B_OK)
 				return status;
 
 			return cached->WriteBack(transaction);
@@ -1180,14 +1202,27 @@ BPlusTree::RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedN
 		return cachedDuplicate.WriteBack(transaction);
 	}
 
+	//
 	// Remove value from a duplicate node!
+	//
 
 	duplicate_array *array;
 	uint32 count = 1;
 
+	if (duplicate->left_link != BPLUSTREE_NULL) {
+		FATAL(("invalid duplicate node: first left link points to %Ld!\n",duplicate->left_link));
+		return B_BAD_DATA;
+	}
+
 	// Search the duplicate nodes until the entry could be found (and removed)
 	while (duplicate != NULL) {
 		array = duplicate->DuplicateArray();
+		if (array->value_count > NUM_DUPLICATE_VALUES
+			|| array->value_count < 0) {
+			FATAL(("removeDuplicate: Invalid array size in duplicate %Ld == %Ld!\n",duplicateOffset,array->value_count));
+			return B_BAD_DATA;
+		}
+
 		if (array->Remove(value))
 			break;
 
@@ -1234,6 +1269,21 @@ BPlusTree::RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedN
 		off_t left = duplicate->left_link;
 		off_t right = duplicate->right_link;
 		
+		// update the duplicate link if needed
+		if (duplicateOffset == bplustree_node::FragmentOffset(oldValue)) {
+			// possibly the original BFS don't convert duplicate node into
+			// duplicate fragment nodes - if this is the case, both, the
+			// right link, and the left link could be empty here
+			if (right == BPLUSTREE_NULL && left == BPLUSTREE_NULL) {
+				FATAL(("Empty duplicate node found! Change original value to 0.\n"));
+				values[index] = 0;
+			} else
+				values[index] = bplustree_node::MakeLink(BPLUSTREE_DUPLICATE_NODE,right);
+
+			if ((status = cached->WriteBack(transaction)) < B_OK)
+				return status;
+		}
+
 		if ((status = cachedDuplicate.Free(transaction,duplicateOffset)) < B_OK)
 			return status;
 
@@ -1802,6 +1852,22 @@ TreeIterator::Stop()
 {
 	fTree = NULL;
 }
+
+
+#ifdef DEBUG
+void 
+TreeIterator::Dump()
+{
+	__out("TreeIterator at %p:\n",this);
+	__out("\tfTree = %p\n",fTree);
+	__out("\tfCurrentNodeOffset = %Ld\n",fCurrentNodeOffset);
+	__out("\tfCurrentKey = %ld\n",fCurrentKey);
+	__out("\tfDuplicateNode = %Ld\n",bplustree_node::FragmentOffset(fDuplicateNode));
+	__out("\tfDuplicate = %u\n",fDuplicate);
+	__out("\tfNumDuplicates = %u\n",fNumDuplicates);
+	__out("\tfIsFragment = %s\n",fIsFragment ? "true" : "false");
+}
+#endif
 
 
 //	#pragma mark -
