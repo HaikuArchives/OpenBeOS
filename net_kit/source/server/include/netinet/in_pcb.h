@@ -47,15 +47,17 @@ struct inpcb {
 	struct route inp_route;	    /* the route to host */
 };
 
-int      in_pcballoc (struct socket *, struct inpcb *head);
-int      in_pcbbind (struct inpcb *, struct mbuf *);
-int      in_pcbconnect (struct inpcb *, struct mbuf *);
-void     in_pcbdetach (struct inpcb *);
-int 	 in_pcbdisconnect(struct inpcb *inp);
+int      in_pcballoc      (struct socket *, struct inpcb *head);
+int      in_pcbbind       (struct inpcb *, struct mbuf *);
+int      in_pcbconnect    (struct inpcb *, struct mbuf *);
+void     in_pcbdetach     (struct inpcb *);
+int 	 in_pcbdisconnect (struct inpcb *inp);
+void     in_losing        (struct inpcb *inp);
 
 struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 			   uint16 fport_a, struct in_addr laddr,
 			   uint16 lport_a, int flags);
+struct rtentry *in_pcbrtentry (struct inpcb *);
 
 /* helpful macro's */
 #define     sotoinpcb(so)   ((struct inpcb *)(so)->so_pcb)
