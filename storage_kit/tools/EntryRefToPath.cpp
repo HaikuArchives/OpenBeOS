@@ -15,7 +15,10 @@
 //---------------------------------------------------------------------
 
 #include <iostream>
-#include <Be.h>
+//#include <Be.h>
+#include <Entry.h>
+#include <Path.h>
+#include <stdio.h>
 
 void PrintUsage() {
 	cout << endl;
@@ -36,6 +39,8 @@ int main(int argc, char *argv[]) {
 	char *name = NULL;
 
 	try {
+
+		int q = 0;
 	
 		// Decode the given arguments
 		if (argc != 4) 
@@ -50,7 +55,7 @@ int main(int argc, char *argv[]) {
 			throw (status_t)B_INVALID_ARGS;
 
 		// Third arg is the name
-		name = new char[strlen(argv[3])];
+		name = new char[strlen(argv[3])+1];
 		if (name == NULL)
 			throw (status_t)B_NO_MEMORY;
 		strcpy(name, argv[3]);		
@@ -79,6 +84,8 @@ int main(int argc, char *argv[]) {
 		cout << i << endl;
 		if (i == B_INVALID_ARGS)
 			PrintUsage();
+		else
+			cout << "0x" << hex << i << dec << endl;
 	}
 
 	delete [] name;
