@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-#include "mbuf.h"
 #include "net_misc.h"
 #include "net_module.h"
 #include "protocols.h"
@@ -223,7 +222,7 @@ release:
 	return error;
 }
 
-int udp_input(struct mbuf *buf, int hdrlen)
+void udp_input(struct mbuf *buf, int hdrlen)
 {
 	struct ip *ip = mtod(buf, struct ip*);
 	struct udphdr *udp = (struct udphdr*)((caddr_t)ip + hdrlen);
@@ -251,7 +250,7 @@ int udp_input(struct mbuf *buf, int hdrlen)
 			udpstat.udps_badsum++;
 			m_freem(buf);
 			printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
-			return 0;
+			return;
 		}
 	}
 	inp = udp_last_inpcb;
@@ -277,7 +276,7 @@ int udp_input(struct mbuf *buf, int hdrlen)
 		ip->ip_len += hdrlen;
 		printf("UDP: we'd send an ICMP reply...\n");
 		/* XXX - send ICMP reply... */
-		return 0;
+		return;
 	}
 
 	udp_in.sin_port = udp->uh_sport;
@@ -299,14 +298,14 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	}
 
 	sorwakeup(inp->inp_socket);
-	return 0;
+	return;
 
 bad:
 	if (opts)
 		m_freem(opts);
 	m_freem(buf);
 
-	return 0;
+	return;
 }
 
 void udp_init(void)

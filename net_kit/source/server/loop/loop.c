@@ -15,21 +15,20 @@
 #include "sys/sockio.h"
 
 #include "net_malloc.h"
+#include "net_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include <module.h>
 #include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
+
 #include "net_device.h"
 #include "loop_module.h"
-
-#define start_rx_thread	core->start_rx_thread
-#define start_tx_thread	core->start_tx_thread
 
 struct core_module_info *core = NULL;
 #endif
 
-#include "net_module.h"
 
 static struct protosw *proto[IPPROTO_MAX];
 static struct ifnet *me = NULL;
@@ -51,10 +50,8 @@ int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 	return 0;
 }
 
-int loop_input(struct mbuf *buf)
+void loop_input(struct mbuf *buf)
 {
-	int error = 0;
-
 	buf->m_pkthdr.rcvif = me;
 	
 	if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
@@ -62,13 +59,8 @@ int loop_input(struct mbuf *buf)
 	else
 		printf("No input tourtine found for IP\n");
 
-#ifndef _KERNEL_MODE
 	m_freem(buf);
-#else
-	core->m_freem(buf);
-#endif
-
-	return error;
+	return;
 }
 
 static int loop_dev_stop(ifnet *dev)
@@ -131,14 +123,8 @@ static int loop_init(void)
 	me->stop = &loop_dev_stop;
 	me->ioctl = &loop_ioctl;
 	
-#ifndef _KERNEL_MODE
 	add_protosw(proto, NET_LAYER1);
 	if_attach(me);
-#else
-	core->if_attach(me);
-	core->add_protosw(proto, NET_LAYER1);
-
-#endif
 
 	return 0;
 }

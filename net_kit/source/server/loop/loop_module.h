@@ -4,7 +4,6 @@
 #define LOOP_MODULE_H
 
 #include <module.h>
-#include "mbuf.h"
 #include "net/if.h"
 #include "net_module.h"
 

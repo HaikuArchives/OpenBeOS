@@ -45,12 +45,12 @@ int ether_dev_stop (ifnet *dev);
 struct protosw *proto[IPPROTO_MAX];
 static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices */
 
-int ether_input(struct mbuf *buf);
-int ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
+void ether_input(struct mbuf *buf);
+int  ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
 		 struct rtentry *rt0);
-int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data);
-int ether_dev_attach(ifnet *dev);
-int ether_dev_stop(ifnet *dev);
+int  ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data);
+int  ether_dev_attach(ifnet *dev);
+int  ether_dev_stop(ifnet *dev);
 void arp_rtrequest(int req, struct rtentry *rt, struct sockaddr *sa);
 static void arpinput(struct mbuf *m);
 
@@ -307,8 +307,7 @@ static void dump_ether_details(struct mbuf *buf)
 }
 #endif
 
-/* what should the return value be? */
-int ether_input(struct mbuf *m)
+void ether_input(struct mbuf *m)
 {
 	struct ether_header *eth = mtod(m, struct ether_header *);
 	int len = sizeof(struct ether_header);
@@ -341,7 +340,7 @@ int ether_input(struct mbuf *m)
 	}
 
 	m_freem(m);
-	return 0;	
+	return;	
 }
 
 #define senderr(e)	{ error = (e); goto bad; }
