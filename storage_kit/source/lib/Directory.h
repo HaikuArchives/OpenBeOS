@@ -69,7 +69,7 @@ public:
 	status_t CreateDirectory(const char *path, BDirectory *dir);
 	status_t CreateFile(const char *path, BFile *file,
 						bool failIfExists = false);
-	status_t CreateSymlink(const char *path, const char *linkToPath,
+	status_t CreateSymLink(const char *path, const char *linkToPath,
 						   BSymLink *link);
 
 	BDirectory &operator=(const BDirectory &dir);

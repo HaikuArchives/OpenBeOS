@@ -187,7 +187,7 @@ BDirectory::SetTo(const char *path)
 	\param path the directory's path name relative to \a dir
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a dir or \a path.
+	- \c B_BAD_VALUE: NULL \a dir or \a path, or \a path is absolute.
 	- \c B_ENTRY_NOT_FOUND: Directory not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -359,7 +359,7 @@ BDirectory::GetStatFor(const char *path, struct stat *st) const
 	\return
 	- \c B_OK: Everything went fine.
 	- \c B_BAD_VALUE: NULL \a entry.
-	- \c B_ENTRY_NOT_FOUND: Entry not found.
+	- \c B_ENTRY_NOT_FOUND: No more entries found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
 	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.
@@ -386,7 +386,7 @@ BDirectory::GetNextEntry(BEntry *entry, bool traverse)
 	\return
 	- \c B_OK: Everything went fine.
 	- \c B_BAD_VALUE: NULL \a ref.
-	- \c B_ENTRY_NOT_FOUND: Entry not found.
+	- \c B_ENTRY_NOT_FOUND: No more entries found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
 	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.
@@ -453,7 +453,7 @@ BDirectory::Rewind()
 //!	Returns the number of entries in this directory.
 /*!	CountEntries() uses the directory iterator also used by GetNextEntry(),
 	GetNextRef() and GetNextDirents(). It does a Rewind(), iterates through
-	the entries and Rewind()s again.
+	the entries and Rewind()s again. The entries "." and ".." are not counted.
 	\return
 	- \c B_OK: Everything went fine.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
@@ -531,7 +531,7 @@ BDirectory::CreateFile(const char *path, BFile *file, bool failIfExists)
 	return NOT_IMPLEMENTED;
 }
 
-// CreateSymlink
+// CreateSymLink
 //! Creates a new symbolic link.
 /*! If an entry with the supplied name does already exist, the method fails.
 	\param path the new symbolic link's path name. May be relative to this
@@ -553,7 +553,7 @@ BDirectory::CreateFile(const char *path, BFile *file, bool failIfExists)
 	\todo Implement!
 */
 status_t
-BDirectory::CreateSymlink(const char *path, const char *linkToPath,
+BDirectory::CreateSymLink(const char *path, const char *linkToPath,
 						  BSymLink *link)
 {
 	return NOT_IMPLEMENTED;
