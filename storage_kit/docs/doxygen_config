@@ -77,14 +77,14 @@ HIDE_UNDOC_CLASSES     = NO
 # the file and class documentation (similar to JavaDoc). 
 # Set to NO to disable this. 
 
-BRIEF_MEMBER_DESC      = NO
+BRIEF_MEMBER_DESC      = YES
 
 # If the REPEAT_BRIEF tag is set to YES (the default) Doxygen will prepend 
 # the brief description of a member or function before the detailed description. 
 # Note: if both HIDE_UNDOC_MEMBERS and BRIEF_MEMBER_DESC are set to NO, the 
 # brief descriptions will be completely suppressed. 
 
-REPEAT_BRIEF           = NO
+REPEAT_BRIEF           = YES
 
 # If the ALWAYS_DETAILED_SEC and REPEAT_BRIEF tags are both set to YES then 
 # Doxygen will generate a detailed section even if there is only a brief 
@@ -244,7 +244,7 @@ WARN_FORMAT            = "$file:$line: $text"
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces. 
 
-INPUT                  = ../source/lib/
+INPUT                  = ../source/lib/ 
 
 # If the value of the INPUT tag contains directories, you can use the 
 # FILE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
