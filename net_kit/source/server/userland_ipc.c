@@ -8,28 +8,36 @@
 
 #include "userland_ipc.h"
 
+#include "sys/socket.h"
+#include "net_misc.h"
+#include "core_module.h"
+#include "net_module.h"
+#include "sys/sockio.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 
+extern struct core_module_info *core;
+
 // installs a main()
-#define COMMUNICATION_TEST
+//#define COMMUNICATION_TEST
 
 // maximum 2048 / sizeof(net_command) == 256 commands
 #define NUM_COMMANDS 32
-#define NUM_READ_BUFFERS 8
-#define NUM_WRITE_BUFFERS 8
+#define CONNECTION_BUFFER_SIZE (65536 + 4096 - CONNECTION_COMMAND_SIZE)
 
 #define ROUND_TO_PAGE_SIZE(x) (((x) + (B_PAGE_SIZE) - 1) & ~((B_PAGE_SIZE) - 1))
 
 typedef struct {
 	port_id		localPort,port;
 	area_id		area;
+	void		*socket;
 
-	void		*readBuffer,*writeBuffer;
-	sem_id		commandSemaphore;
+	uint8		*buffer;
 	net_command *commands;
+	sem_id		commandSemaphore;
 
 	int32		openFlags;
 
@@ -41,9 +49,17 @@ port_id gStackPort = -1;
 thread_id gConnectionOpener = -1;
 
 // prototypes
+static inline uint8 *get_buffer(connection_cookie *cookie, int32 offset);
 static int32 connection_runner(void *_cookie);
 static status_t init_connection(net_connection *connection, connection_cookie **_cookie);
 static void shutdown_connection(connection_cookie *cookie);
+
+
+static inline uint8 *
+get_buffer(connection_cookie *cookie,int32 offset)
+{
+	return cookie->buffer + offset;
+}
 
 
 static int32
@@ -54,9 +70,10 @@ connection_runner(void *_cookie)
 
 	while (run) {
 		net_command *command;
+		status_t status = B_OK;
+		uint8 *buffer;
 		int32 index;
-		char buffer[256];
-		ssize_t bytes = read_port(cookie->localPort,&index,buffer,sizeof(buffer));
+		ssize_t bytes = read_port(cookie->localPort,&index,NULL,0);
 		if (bytes < B_OK)
 			break;
 
@@ -65,24 +82,36 @@ connection_runner(void *_cookie)
 			continue;
 		}
 		command = cookie->commands + index;
+		buffer = get_buffer(cookie,command->buffer);
+		printf("command %lx (index = %ld), buffer = %p, length = %ld, result = %ld\n",command->op,index,buffer,command->length,command->result);
 
 		switch (command->op) {
 			case NET_STACK_OPEN:
-				cookie->openFlags = *(int32 *)&buffer;
-				printf("opening socket, mode = %ld!\n",cookie->openFlags);
+				cookie->openFlags = *(int32 *)buffer;
+				printf("opening socket, mode = %lx!\n",cookie->openFlags);
 				break;
 			case NET_STACK_CLOSE:
 				printf("closing socket...\n");
 				run = false;
 				break;
+			case NET_STACK_SOCKET:
+			{
+				struct socket_args *args = (struct socket_args *)buffer;
+
+				printf("open a socket... family = %d, type = %d, proto = %d\n",args->family,args->type,args->proto);
+				status = core->initsocket(&cookie->socket);
+				if (status == 0)
+					status = core->socreate(args->family,cookie->socket,args->type,args->proto);
+				break;
+			}
 			default:
-				printf("received command: %lx (%ld bytes read)\n",command->op,bytes);
-				// ToDo: call the core stack here
+				printf("received command: %lx (%ld bytes read)\n",command->op,command->length);
+				status = core->soo_ioctl(cookie->socket,command->op,buffer);
 				break;
 		}
 		// mark the command as done
+		command->result = status;
 		command->op = 0;
-		command->result = B_OK;
 
 		// notify the command pipeline that we're done with the command
 		release_sem(cookie->commandSemaphore);
@@ -108,7 +137,7 @@ init_connection(net_connection *connection,connection_cookie **_cookie)
 	}
 
 	connection->area = create_area("net connection",(void *)&commands,B_ANY_ADDRESS,
-			(NUM_READ_BUFFERS + NUM_WRITE_BUFFERS + 2) * NET_BUFFER_SIZE,
+			CONNECTION_BUFFER_SIZE + CONNECTION_COMMAND_SIZE,
 			B_NO_LOCK,B_READ_AREA | B_WRITE_AREA);
 	if (connection->area < B_OK) {
 		fprintf(stderr,"couldn't create area: %s.\n",strerror(connection->area));
@@ -145,14 +174,12 @@ init_connection(net_connection *connection,connection_cookie **_cookie)
 	}
 
 	connection->numCommands = NUM_COMMANDS;
-	connection->numReadBuffers = NUM_READ_BUFFERS;
-	connection->numWriteBuffers = NUM_WRITE_BUFFERS;
+	connection->bufferSize = CONNECTION_BUFFER_SIZE;
 
 	// setup connection cookie
 	cookie->area = connection->area;
 	cookie->commands = commands;
-	cookie->readBuffer = (uint8 *)commands + NET_BUFFER_SIZE;
-	cookie->writeBuffer = (uint8 *)cookie->readBuffer + NUM_READ_BUFFERS * NET_BUFFER_SIZE;
+	cookie->buffer = (uint8 *)commands + CONNECTION_COMMAND_SIZE;
 	cookie->commandSemaphore = connection->commandSemaphore;
 	cookie->localPort = connection->port;
 	cookie->openFlags = 0;
@@ -196,14 +223,14 @@ connection_opener(void *_unused)
 			if (init_connection(&connection,&cookie) == B_OK)
 				write_port(port,NET_STACK_NEW_CONNECTION,&connection,sizeof(net_connection));
 		} else
-			fprintf(stderr,"connection_opener: received unknown command: %ld\n",msg);
+			fprintf(stderr,"connection_opener: received unknown command: %lx (expected = %lx)\n",msg,(int32)NET_STACK_NEW_CONNECTION);
 	}
 	return 0;
 }
 
 
 status_t
-init_userland_ipc()
+init_userland_ipc(void)
 {
 	gStackPort = create_port(CONNECTION_QUEUE_LENGTH,NET_STACK_PORTNAME);
 	if (gStackPort < B_OK)
@@ -224,7 +251,7 @@ init_userland_ipc()
 
 
 void
-shutdown_userland_ipc()
+shutdown_userland_ipc(void)
 {
 	delete_port(gStackPort);
 	kill_thread(gConnectionOpener);

@@ -1,14 +1,21 @@
+#!/bin/sh
+
 # This file can be used to start the server and set all the required pieces.
 # NB NB change to fit your requirements - this is just a sample!
 
 # NB I use full paths here as it can then be run from anywhere. sym linking
 # ifconfig and route to /boot/home/config/bin is another (easier) option.
 
+apps_base=/boot/home/openbeos/net_kit/source/apps
+
 # Set a network card - netmask automatically determined
-/boot/home/openbeos/net_kit/source/apps/ifconfig/ifconfig tulip0 inet 192.168.0.133
+$apps_base/ifconfig/ifconfig tulip0 inet 192.168.0.133
+
 # Set up the loopback address
-/boot/home/openbeos/net_kit/source/apps/ifconfig/ifconfig loop0 inet 127.0.0.1
+$apps_base/ifconfig/ifconfig loop0 inet 127.0.0.1
+
 # Add a default route (gateway)
-/boot/home/openbeos/net_kit/source/apps/route/route add default 192.168.0.1
+$apps_base/route/route add default 192.168.0.1
+
 # Set the routing for the loopback so we can send to/from it
-/boot/home/openbeos/net_kit/source/apps/route/route -n add -net 127 127.0.0.1 -reject 
+$apps_base/route/route -n add -net 127 127.0.0.1 -reject 

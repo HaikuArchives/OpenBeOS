@@ -22,19 +22,23 @@ enum {
 
 typedef struct {
 	int32	op;
+	int32	buffer;
+	int32	length;
 	int32	result;
 } net_command;
 
 #define CONNECTION_QUEUE_LENGTH 128
-#define NET_BUFFER_SIZE 2048
+#define CONNECTION_COMMAND_SIZE 2048
 
 typedef struct {
 	port_id	port;
 	area_id area;
 
 	sem_id	commandSemaphore;	// command queue
-	uint32	numCommands;
-	uint32	numReadBuffers,numWriteBuffers;
+	uint32	numCommands,bufferSize;
 } net_connection;
+
+extern status_t init_userland_ipc(void);
+extern void shutdown_userland_ipc(void);
 
 #endif	/* USERLAND_IPC_H */

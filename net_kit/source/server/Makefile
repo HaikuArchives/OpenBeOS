@@ -2,30 +2,35 @@ SUBDIRS=net_server ipv4 udp ethernet icmp loop route raw tcp test
 KERNELDIRS=net_server ethernet icmp ipv4 loop udp route raw tcp
 
 # for profiling, uncomment these next 2 lines.
+# currently broken for the userland stack!
 #CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
 #LDFLAGS=-p
 
-# for a normal build use these 2 lines
-CFLAGS=-O2 -g -Wall -D_NETWORK_STACK
-LDFLAGS=-nostdlib -L/boot/beos/system/lib -L/boot/develop/lib/x86 -lroot
+# decides wether to build a kernel or a userland stack
+ifeq ($(USERLAND), true)
+	CFLAGS = -O0 -g -Wall -DUSER -fPIC -DPIC
+	LDFLAGS = -nostart
+else
+	CFLAGS = -nostart -no-fpic -D_KERNEL_MODE
+	LDFLAGS = -nostdlib /boot/develop/lib/x86/_KERNEL_
+endif
 
-# Uncomment these to build a device driver!
-#CFLAGS=-nostart -no-fpic -D_KERNEL_MODE
-#LDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
+CFLAGS += -D_NETWORK_STACK
+INCLUDES = -I. -I./include -I../driver
 
-CFLAGS+=-D_NETWORK_STACK
-
-INCLUDES=-I. -I./include
-
-all: subdirs net_srv
+all: subdirs userland_server net_srv
 
 test: 
 	@net_srv
 
+userland_server: userland_ipc.c userland_server.c
+	$(CC) -o userland_server $(CFLAGS) $(INCLUDES) userland_server.c userland_ipc.c
+# -fcheck-memory-usage -D_NO_INLINE_ASM
+
 net_srv: net_srv.o
 	$(CC) $(LDFLAGS) -o net_srv /boot/develop/lib/x86/start_dyn.o net_srv.o
 
-subdirs: clean $(OBJS)
+subdirs: $(OBJS)
 	@for i in $(SUBDIRS); do \
 		echo "Making $$i module"; \
 		(cd $$i && CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(MAKE)) || exit 1; \
