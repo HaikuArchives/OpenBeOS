@@ -12,6 +12,14 @@
 #define FD_SETSIZE 256
 #endif /* FD_SETSIZE */
 
+/* compatability with BSD */
+#define NBBY    8               /* number of bits in a byte */
+
+typedef int32 fd_mask;
+
+#ifndef howmany
+#define howmany(x, y)   (((x) + ((y) - 1)) / (y))
+#endif
 
 /*
  * Compatibily only: use FD_SETSIZE instead
@@ -33,15 +41,9 @@ typedef struct fd_set {
 #define FD_CLR(fd, setp) ((setp)->mask[_FDMSKNO(fd)] &= ~(1 << (_FDBITNO(fd))))
 #define FD_ISSET(fd, setp) ((setp)->mask[_FDMSKNO(fd)] & (1 << (_FDBITNO(fd))))
 
-#ifdef _NETWORK_STACK
 int select(int nbits, struct fd_set *rbits, 
                       struct fd_set *wbits, 
                       struct fd_set *ebits, 
                       struct timeval *timeout);
-#else
-int net_select(int nbits, struct fd_set *rbits, 
-                      struct fd_set *wbits, 
-                      struct fd_set *ebits, 
-                      struct timeval *timeout);
-#endif
+
 #endif /* _SYS_SELECT_H */
