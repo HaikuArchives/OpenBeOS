@@ -5,7 +5,7 @@
 
 #include "rld_priv.h"
 
-RLD_STARTUP(void *args)
+int RLD_STARTUP(void *args)
 {
 #if DEBUG_RLD
 	sys_close(0); open("/dev/console", 0); /* stdin   */
