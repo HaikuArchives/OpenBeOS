@@ -30,7 +30,7 @@ public:
 	static int32 controlthread(void *arg);
 
 	Map<ino_t,media_addon_id> *filemap;
-	Map<media_addon_id,BMediaAddon *> *addonmap;
+	Map<media_addon_id,BMediaAddOn *> *addonmap;
 
 	BMediaRoster *mediaroster;
 	ino_t		DirNodeSystem;
@@ -44,7 +44,7 @@ Application::Application(const char *sig) :
 {
 	mediaroster = BMediaRoster::Roster();
 	filemap = new Map<ino_t,media_addon_id>;
-	addonmap = new Map<media_addon_id,BMediaAddon *>;
+	addonmap = new Map<media_addon_id,BMediaAddOn *>;
 	control_port = create_port(64,"media_addon_server port");
 	control_thread = spawn_thread(controlthread,"media_addon_server control",12,this);
 	resume_thread(control_thread);
@@ -56,8 +56,8 @@ Application::~Application()
 	status_t err;
 	wait_for_thread(control_thread,&err);
 
-	// delete all BMediaAddon objects
-	BMediaAddon *addon;
+	// delete all BMediaAddOn objects
+	BMediaAddOn *addon;
 	for (int32 index = 0; addonmap->GetAt(index,&addon); index++)
 		delete addon;
 	
@@ -220,7 +220,7 @@ void
 Application::AddOnRemoved(ino_t file_node)
 {	
 	media_addon_id id;
-	BMediaAddon *addon;
+	BMediaAddOn *addon;
 	if (!filemap->Get(file_node,&id)) {
 		printf("inode %Ld removed, but no media add-on found\n",file_node);
 		return;
