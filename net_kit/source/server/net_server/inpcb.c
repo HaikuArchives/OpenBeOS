@@ -323,18 +323,13 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 	return 0;
 }
 
+/* XXX - why is this an int? */
 int in_pcbdisconnect(struct inpcb *inp)
 {
 	inp->faddr.s_addr = INADDR_ANY;
 	inp->fport = 0;
-
-	/* BSD sockets are fd's and as such their lifetimes are
-	 * controlled by the system. On traditional BSD systems we'd
-	 * check to see if we still had references to the socket in the
-	 * fd table, but we can't do that. As the socket is the kernel cookie
-	 * the fact we're here implies there is still a reference.
-	 */
-	in_pcbdetach(inp);
+	if (inp->inp_socket->so_state & SS_NOFDREF)
+		in_pcbdetach(inp);
 	return 0;
 }
 

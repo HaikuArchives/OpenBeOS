@@ -254,10 +254,10 @@ int sbwait(struct sockbuf *sb)
 
 void sbinsertoob(struct sockbuf *sb, struct mbuf *m0)
 {
-struct mbuf *m;
-struct mbuf **mp;
+	struct mbuf *m;
+	struct mbuf **mp;
 
-        if (m0 == NULL)
+	if (m0 == NULL)
 		return;
 	for (mp = &sb->sb_mb; (m = *mp) != NULL; mp = &((*mp)->m_nextpkt)) {
 again:
