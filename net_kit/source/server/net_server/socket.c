@@ -18,18 +18,8 @@
 #include "sys/net_uio.h"
 #include "core_module.h"
 
-/* XXX - This file has the various system calls in it, socket, bind, sendto 
- * which really don't belong here and are just here to allow for testing.
- * They should be moved into libsocket as soon as we have one.
- */
-
-/* XXX - This is just so lame! */
-static int32 socknum = 0;
-
 static pool_ctl *spool;
 static pool_ctl *sfdpool;
-
-static struct sock_fd *sockets = NULL;
 static benaphore sockets_lock;
 
 
@@ -116,8 +106,10 @@ int initsocket(void **sp)
 {
 	struct socket *so = (struct socket*)pool_get(spool);
 
-	if (so == NULL)
+	if (so == NULL) {
+		printf("initsocket - no memory!!\n");
 		return ENOMEM;
+	}
 
 	memset(so, 0, sizeof(*so));
 
@@ -128,29 +120,35 @@ int initsocket(void **sp)
 
 int socreate(int dom, void *sp, int type, int proto)
 {
-	net_module *prm = NULL; /* protocol module */
+	struct protosw *prm = NULL; /* protocol module */
 	struct socket *so = (struct socket*)sp;
 	int error;
 
-	if (so == NULL)
+	if (so == NULL) {
+		printf("socket passed in was NULL!\n");
 		return EINVAL;
+	}
 	
 	if (proto)
 		prm = pffindproto(dom, proto, type);
 	else
 		prm = pffindtype(dom, type);
-	
-	if (!prm || !prm->userreq)
+
+	if (!prm || !prm->pr_userreq)
 		return EPROTONOSUPPORT;
 	
-	if (prm->sock_type != type)
+	if (prm->pr_type != type)
 		return EPROTOTYPE;
 	
 	so->so_type = type;
 	so->so_proto = prm;
 	so->so_rcv.sb_pop = create_sem(0, "so_rcv sem");
 
-	error = prm->userreq(so, PRU_ATTACH, NULL, (struct mbuf *)proto, NULL);
+#ifdef _KERNEL_MODE
+	set_sem_owner(so->so_rcv.sb_pop, B_SYSTEM_TEAM);
+#endif
+
+	error = prm->pr_userreq(so, PRU_ATTACH, NULL, (struct mbuf *)proto, NULL);
 
 	return error;
 }
@@ -185,7 +183,7 @@ int sobind(void *sp, struct mbuf *nam)
 	struct socket *so = (struct socket*)sp;
 	
 /* xxx - locking! */
-	error = (*so->so_proto->userreq) (so, PRU_BIND, NULL, nam, NULL);
+	error = (*so->so_proto->pr_userreq) (so, PRU_BIND, NULL, nam, NULL);
 
 	return error;
 }
@@ -193,7 +191,7 @@ int sobind(void *sp, struct mbuf *nam)
 
 int sendit(int sock, struct msghdr *mp, int flags, size_t *retsize)
 {
-	struct sock_fd *sfd;
+	struct sock_fd *sfd = NULL;
 	struct uio auio;
 	struct iovec *iov;
 	int i;
@@ -283,7 +281,7 @@ int sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *t
 	}
 
 	dontroute = (flags & MSG_DONTROUTE) && (so->so_options & SO_DONTROUTE) == 0 &&
-		    (so->so_proto->flags & PR_ATOMIC);
+		    (so->so_proto->pr_flags & PR_ATOMIC);
 
 	if (control)
 		clen = control->m_len;
@@ -299,7 +297,7 @@ restart:
 		if (so->so_error)
 			snderr(so->so_error);
 		if ((so->so_state & SS_ISCONNECTED) == 0) {
-			if (so->so_proto->flags & PR_CONNREQUIRED) {
+			if (so->so_proto->pr_flags & PR_CONNREQUIRED) {
 				/* we need to be connected and we're not... */
 				if ((so->so_state & SS_ISCONFIRMING) == 0 &&
 				    !(resid == 0 && clen != 0))
@@ -396,7 +394,7 @@ nopages:
 				so->so_options |= SO_DONTROUTE;
 
 			/* XXX - locking */
-			error = (*so->so_proto->userreq)(so, (flags & MSG_OOB) ? PRU_SENDOOB: PRU_SEND,
+			error = (*so->so_proto->pr_userreq)(so, (flags & MSG_OOB) ? PRU_SENDOOB: PRU_SEND,
 						        top, addr, control);
 
 			/* XXX - unlock */
@@ -422,18 +420,15 @@ out:
 }
 
 
-int recvit(int s, struct msghdr *mp, caddr_t namelenp, int *retsize)
+int recvit(void *sp, struct msghdr *mp, caddr_t namelenp, int *retsize)
 {
-	struct sock_fd *sfd;
+	struct socket *so = (struct socket*)sp;
 	struct uio auio;
 	struct iovec *iov;
 	struct mbuf *control = NULL;
 	struct mbuf *from = NULL;
 	int error = 0, i, len = 0;
-/*
-	if ((error = get_sock(s, &sfd)) != 0)
-		return error;
-*/
+
 	auio.uio_iov = mp->msg_iov;
 	auio.uio_iovcnt = mp->msg_iovlen;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -450,7 +445,7 @@ int recvit(int s, struct msghdr *mp, caddr_t namelenp, int *retsize)
 	}
 	len = auio.uio_resid;
 
-	if ((error = soreceive(sfd->so, &from, &auio,
+	if ((error = soreceive(so, &from, &auio,
 				NULL, mp->msg_control ? &control : NULL, 
 				&mp->msg_flags)) != 0) {
 		if (auio.uio_resid != len && (error == EINTR || error == EWOULDBLOCK))
@@ -496,7 +491,7 @@ int soreceive(struct socket *so, struct mbuf **paddr, struct uio *uio, struct mb
 	struct mbuf *nextrecord;
 	int moff, type = 0;
 	int orig_resid = uio->uio_resid;
-	struct net_module *pr = so->so_proto;
+	struct protosw *pr = so->so_proto;
 
 	mp = mp0;
 	if (paddr)
@@ -524,7 +519,7 @@ restart:
 			&& so->so_rcv.sb_cc < uio->uio_resid
 			&& (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
 				((flags & MSG_WAITALL) && (uio->uio_resid <= so->so_rcv.sb_hiwat)))
-			&& !m->m_nextpkt && (pr->flags & PR_ATOMIC) == 0)) {
+			&& !m->m_nextpkt && (pr->pr_flags & PR_ATOMIC) == 0)) {
 		if (so->so_error) {
 			if (m)
 				goto dontblock;
@@ -545,7 +540,7 @@ restart:
 				goto dontblock;
 			}
 		if ((so->so_state & (SS_ISCONNECTED | SS_ISCONNECTING)) == 0 &&
-			(so->so_proto->flags & PR_CONNREQUIRED)) {
+			(so->so_proto->pr_flags & PR_CONNREQUIRED)) {
 			error = ENOTCONN;
 			goto release;
 		}
@@ -563,7 +558,7 @@ restart:
 
 dontblock:
 	nextrecord = m->m_nextpkt;
-	if (pr->flags & PR_ADDR) {
+	if (pr->pr_flags & PR_ADDR) {
 		orig_resid = 0;
 		if (flags & MSG_PEEK) {
 			if (!paddr)
@@ -659,7 +654,7 @@ dontblock:
 		/* XXX - wait for more data if reqd */
 	}
 
-	if (m && pr->flags & PR_ATOMIC) {
+	if (m && pr->pr_flags & PR_ATOMIC) {
 		flags |= MSG_TRUNC;
 		if ((flags & MSG_PEEK) == 0) 
 			sbdroprecord(&so->so_rcv);
@@ -667,8 +662,8 @@ dontblock:
 	if ((flags & MSG_PEEK) == 0) {
 		if (!m)
 			so->so_rcv.sb_mb = nextrecord;
-		if (pr->flags & PR_WANTRCVD && so->so_pcb)
-			(*pr->userreq)(so, PRU_RCVD, (struct mbuf*)flags, NULL, NULL);
+		if (pr->pr_flags & PR_WANTRCVD && so->so_pcb)
+			(*pr->pr_userreq)(so, PRU_RCVD, (struct mbuf*)flags, NULL, NULL);
 	}
 	if (orig_resid == uio->uio_resid && orig_resid &&
 		(flags & MSG_EOR) == 0 && (so->so_state & SS_CANTRCVMORE) == 0)
@@ -715,7 +710,7 @@ int soclose(void *sp)
 
 	if (so->so_state & SS_ISCONNECTED) {
 		if ((so->so_state & SS_ISDISCONNECTING) == 0) {
-//			error = sodisconnect(so);
+			error = sodisconnect(so);
 			if (error)
 				goto drop;
 		}
@@ -723,7 +718,7 @@ int soclose(void *sp)
 
 drop:
 	if (so->so_pcb) {
-		int error2 = (*so->so_proto->userreq)(so, PRU_DETACH, NULL, NULL, NULL);
+		int error2 = (*so->so_proto->pr_userreq)(so, PRU_DETACH, NULL, NULL, NULL);
 		if (error2 == 0)
 			error = error2;
 	}
@@ -734,19 +729,41 @@ discard:
 	return error;
 }
 
-int sofree(struct socket *so)
+int sodisconnect(struct socket *so)
 {
-	if (so->so_pcb)
+	int error;
+	
+	if ((so->so_state & SS_ISCONNECTED) == 0) {
+		error = ENOTCONN;
+		goto bad;
+	}
+	if (so->so_state & SS_ISDISCONNECTING) {
+		error = EALREADY;
+		goto bad;
+	}
+	error = so->so_proto->pr_userreq(so, PRU_DISCONNECT, 
+		NULL, NULL, NULL);
+
+bad:
+	return error;
+}
+
+void sofree(struct socket *so)
+{
+	if (so->so_pcb) {
+		printf("Can't free - still have a pcb!\n");
 		return;
+	}
 
 	if (so->so_head) {
 		/* we need to handle this! */
 		so->so_head = NULL;
 	}
-
+	
+	delete_sem(so->so_rcv.sb_pop);
 	pool_put(spool, so);
 
-	return 0;
+	return;
 }
 
 void sowakeup(struct socket *so, struct sockbuf *sb)
@@ -757,79 +774,4 @@ void sowakeup(struct socket *so, struct sockbuf *sb)
 		release_sem(sb->sb_pop);
 	}
 }	
-
-
-//	#pragma mark -
-
-/* NB normally we'd be worried about kernel vs userland here, but
- * that's not a worry for a userland stack.
- * XXX - if this ever goes into kernel, fix this!!!
- */
-
-int bind(int sock, struct sockaddr *name, size_t namelen)
-{
-	int error;
-	struct mbuf *nam;
-	struct sock_fd *sfd;
-/*
-	if ((error = get_sock(sock, &sfd)))
-		return error;
-*/
-	nam = m_get(MT_SONAME);
-	nam->m_len = namelen;
-	memcpy(mtod(nam, char*), name, namelen);
-
-	error = sobind(sfd->so, nam);
-	m_freem(nam);
-	return error;
-}
-
-
-int sendto(int sock, caddr_t buf, size_t len, int flags, 
-	   struct sockaddr *to, size_t tolen)
-{
-	struct msghdr msg;
-	struct iovec aiov;
-	size_t retval = 0;
-	int error = 0;
-
-	msg.msg_name = (caddr_t)to;
-	msg.msg_namelen = tolen;
-	msg.msg_iov = &aiov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = NULL;
-
-	aiov.iov_base = (char*)buf;
-	aiov.iov_len = len;
-
-	error = sendit(sock, &msg, flags, &retval);
-	if (error < 0)
-		return error;
-	return retval;
-}
-
-
-int recvfrom(int sock, caddr_t buf, size_t len, int flags,
-           struct sockaddr *from, size_t fromlen)
-{
-	struct msghdr msg;
-	struct iovec aiov;
-	int retval = 0;
-	int error = 0;
-
-	msg.msg_name = (caddr_t)from;
-	msg.msg_namelen = fromlen;
-	msg.msg_iov = &aiov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = NULL;
-	msg.msg_flags = flags;
-
-	aiov.iov_base = (char*)buf;
-	aiov.iov_len = len;
-	
-	error = recvit(sock, &msg, NULL, &retval);
-	if (error < 0)
-		return error;
-	return retval;
-}
 
