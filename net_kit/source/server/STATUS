@@ -1,0 +1,46 @@
+Status of net_server
+====================
+
+Outstanding items should be added and if things are left for later finishing they
+should be added to this file.
+This file should be reviewed on a regular basis and every effort made to keep it
+up to date.
+Votes are entered here as well :) registered as
+	+1 = yes
+	0  = no opinion
+	-1 = no
+
+Questions for discussion.
+
+-  do we want a CHANGES file as well?
+   +1: david
+   -1:	
+
+-  should the ethernet_input function be called from the rx_thread with the buffer
+   and then strip the ethernet header while creating the mbuf to pass into the chain?
+   This removes one issue with the "upper" protocols and is closer to what a conventional
+   BSD stack would do.
+   +1: david
+   -1: 
+
+   One thng that remains uncertain is how we'd manage the different function declarations
+   in the structure. Do we really want to add another input with different paramters that
+   will only be used by one module?
+   +1: 
+   0:  david
+   -1: 
+
+-  do we keep a single arp cache or one per interface?
+   +1:
+   0:  david
+   -1:
+
+
+
+To Do Items
+
+-  the input functions should take the length of the headers read in the previous
+   protocol as a second paramter. Most protocols have variable length headers, which is
+   why this is neccesary.
+
+
