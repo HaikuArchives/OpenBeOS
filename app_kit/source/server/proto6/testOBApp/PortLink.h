@@ -19,6 +19,7 @@ public:
 	~PortLink(void);
 	void SetOpCode(int32 code);
 	void SetPort(port_id port);
+	port_id GetPort(void);
 	void Flush(bigtime_t timeout=B_INFINITE_TIMEOUT);
 	int8* FlushWithReply(int32 *code, status_t *status, ssize_t *buffersize,
 		bigtime_t timeout=B_INFINITE_TIMEOUT);

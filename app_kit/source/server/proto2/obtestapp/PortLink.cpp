@@ -76,6 +76,12 @@ void PortLink::SetPort(port_id port)
 	target=port;
 }
 
+port_id PortLink::GetPort(void)
+{
+	// Simply returns the port at which the object is pointed.
+	return target;
+}
+
 void PortLink::Flush(bigtime_t timeout=B_INFINITE_TIMEOUT)
 {
 	// Fires a message off to the target, complete with attachments. NOTE:
