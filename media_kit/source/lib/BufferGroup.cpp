@@ -11,9 +11,114 @@
  * _shared_buffer_list
  *************************************************************/
 
+#define MAX_BUFFER 256 // this is probably evil
+
+struct _shared_buffer_info
+{
+	media_buffer_id id;
+	team_id 		team;
+	BBuffer *		buffer;
+	BBufferGroup *	group;
+	bool 			reclaimed;
+};
+
+// created in the media server, cloned into 
+// each BBufferGroup (visible in all address spaces / teams)
 struct _shared_buffer_list
 {
+	sem_id		locker_sem;
+	int32		locker_atom;
+
+	sem_id		recycled_sem;
+	
+	_shared_buffer_info info[MAX_BUFFER];
+	
+	void 		AddBuffer(BBuffer *buffer);
+	
+		
+	status_t 	Init();
+
+	static _shared_buffer_list *Clone(area_id id = -1);
+	void 		Terminate();
+
+	void 		Lock();
+	void 		Unlock();
+	
 };
+
+status_t
+_shared_buffer_list::Init()
+{
+	locker_atom = 0;
+	locker_sem = create_sem(0,"shared buffer list lock");
+	recycled_sem = create_sem(0,"shared buffer free count");
+	for (int i = 0; i < MAX_BUFFER; i++) {
+		info.id = -1;
+		info.team = 0;
+		info.buffer = 0;
+		info.group = 0;
+		info.reclaimed = false;
+	}
+	
+	return B_OK;
+}
+
+_shared_buffer_list *
+_shared_buffer_list::Clone(area_id id)
+{
+	// if id == -1, we are in the media_server team, 
+	// and create the initial list, else we clone it
+
+	_shared_buffer_list *adr;
+	status_t status;
+
+	if (id == -1) {
+		size_t size = ((sizeof(_shared_buffer_list)) + (B_PAGE_SIZE - 1)) & ~(B_PAGE_SIZE - 1);
+		status = create_area("shared buffer list",(void **)&adr,B_ANY_KERNEL_ADDRESS,size,B_LAZY_LOCK,B_READ_AREA | B_WRITE_AREA);
+		if (status >= B_OK) {
+			status = adr->Init();
+			if (status != B_OK)
+				delete_area(area_for(adr));
+		}
+	} else {
+		status = clone_area("shared buffer list clone",(void **)&adr,B_ANY_KERNEL_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
+	}
+	
+	return (status < B_OK) ? NULL : adr;
+}
+
+void
+_shared_buffer_list::Terminate()
+{
+	area_id id;
+	id = area_for(this);
+	if (id >= B_OK)
+		delete_area(id);
+}
+
+void 
+_shared_buffer_list::Lock()
+{ 
+	if (atomic_add(&locker_atom, 1) > 0)
+		while (B_INTERRUPTED == acquire_sem(locker_sem))
+			;
+}
+
+void
+_shared_buffer_list::Unlock()
+{ 
+	if (atomic_add(&locker_atom, -1) > 1)
+		release_sem(locker_sem);
+}
+
+void
+_shared_buffer_list::AddBuffer(BBuffer *buffer)
+{
+	Lock();
+	Unlock();
+}
+
+
 
 /*************************************************************
  * _buffer_id_cache
@@ -22,6 +127,26 @@ struct _shared_buffer_list
 class _buffer_id_cache
 {
 };
+
+/*************************************************************
+ * private BBufferGroup
+ *************************************************************/
+
+status_t				
+BBufferGroup::InitBufferGroup()
+{
+	area_id id;
+
+	//ask media_server to get the area_id of the shared buffer list
+	id = 0;
+
+	fRequestError = B_OK;
+	fBufferCount = 0;
+	fBufferList = _shared_buffer_list::Clone(id);
+	fInitError = (fBufferList != NULL) ? B_OK : B_ERROR;
+
+	return fInitError;
+}
 
 /*************************************************************
  * public BBufferGroup
@@ -106,7 +231,7 @@ BBufferGroup::BBufferGroup(int32 count,
 	if (InitBufferGroup() != B_OK)
 		return;
 
-	// this one creates buffers from buffer_ids passed 
+	// this one creates "BBuffer"s from "media_buffer_id"s passed 
 	// by the application.
 
 	fBufferCount = count;
@@ -130,7 +255,8 @@ BBufferGroup::BBufferGroup(int32 count,
 
 BBufferGroup::~BBufferGroup()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	fBufferList->Terminate();
 }
 
 
@@ -186,10 +312,8 @@ BBufferGroup::RequestBuffer(BBuffer *buffer,
 status_t
 BBufferGroup::RequestError()
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return fRequestError;
 }
 
 
@@ -219,17 +343,15 @@ BBufferGroup::GetBufferList(int32 buf_count,
 status_t
 BBufferGroup::WaitForBuffers()
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return B_OK;
 }
 
 
 status_t
 BBufferGroup::ReclaimAllBuffers()
 {
-	UNIMPLEMENTED();
+	CALLED();
 	status_t dummy;
 
 	return dummy;
