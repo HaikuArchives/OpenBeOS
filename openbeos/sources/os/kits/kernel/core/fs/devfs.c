@@ -774,7 +774,7 @@ static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 	return err;
 }
 
-static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, void *buf, size_t len)
+static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
@@ -793,7 +793,7 @@ static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, 
 
 		return v->stream.u.dev.calls->control(cookie->u.dev.dcookie, op, buf, len);
 	} else {
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	}
 }
 

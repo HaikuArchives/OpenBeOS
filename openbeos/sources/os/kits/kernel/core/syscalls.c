@@ -4,7 +4,6 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel.h>
-#include <syscalls.h>
 #include <ksyscalls.h>
 #include <int.h>
 #include <arch/int.h>
@@ -20,6 +19,7 @@
 #include <fd.h>
 #include <sysctl.h>
 #include <socket.h>
+#include <sys/ioccom.h>
 
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
 
@@ -77,7 +77,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_seek((int)arg0, (off_t)INT32TOINT64(arg1, arg2), (int)arg3);
 			break;
 		case SYSCALL_IOCTL:
-			*call_ret = user_ioctl((int)arg0, (int)arg1, (void *)arg2, (size_t)arg3);
+			*call_ret = user_ioctl((int)arg0, (ulong)arg1, (void *)arg2, (size_t)IOCPARM_LEN((ulong)arg1));
 			break;
 		case SYSCALL_CREATE:
 			*call_ret = user_create((const char *)arg0, (stream_type)arg1);
@@ -278,7 +278,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = socket((int)arg0, (int)arg1, (int)arg2, false);
 			break;
 		case SYSCALL_GETDTABLESIZE:
-			*call_ret = (get_current_ioctx(false))->table_size;//getdtablesize();
+			*call_ret = (get_current_ioctx(false))->table_size;
 			break;
 		default:
 			*call_ret = -1;

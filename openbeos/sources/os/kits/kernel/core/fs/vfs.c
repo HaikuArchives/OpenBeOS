@@ -87,7 +87,7 @@ static int vfs_seek(int fd, off_t pos, int seek_type, bool kernel);
 
 static ssize_t vfs_read(struct file_descriptor *, void *, off_t, size_t *);
 static ssize_t vfs_write(struct file_descriptor *, const void *, off_t, size_t *);
-static int vfs_ioctl(struct file_descriptor *, int, void *buf, size_t len);
+static int vfs_ioctl(struct file_descriptor *, ulong, void *buf, size_t len);
 static int vfs_close(struct file_descriptor *, int, struct ioctx *);
 static void vfs_free_fd(struct file_descriptor *);
 
@@ -1259,7 +1259,7 @@ err:
 
 }
 
-static int vfs_ioctl(struct file_descriptor *f, int op, void *buf, size_t len)
+static int vfs_ioctl(struct file_descriptor *f, ulong op, void *buf, size_t len)
 {
 	struct vnode *v;
 	int err;

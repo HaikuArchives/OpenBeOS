@@ -2,6 +2,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <OS.h>
 #include <kernel.h>
 #include <lock.h>
 #include <debug.h>
@@ -10,6 +11,7 @@
 #include <bus.h>
 #include <string.h>
 #include <Errors.h>
+#include <fd.h>
 
 #include <pci_bus.h>
 

@@ -12,6 +12,7 @@
 #include <OS.h>
 #include <vfs.h>
 #include <debug.h>
+#include <fd.h>
 
 #include <stdarg.h>
 #include <stdio.h>

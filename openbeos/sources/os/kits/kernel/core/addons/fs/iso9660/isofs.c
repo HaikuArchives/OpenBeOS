@@ -149,7 +149,7 @@ static int isofs_delete_vnode(struct isofs *fs, struct isofs_vnode *v, bool forc
 	// and has children
 //TODO:
 //	if(!force_delete && ((v->stream.type == STREAM_TYPE_DIR && v->stream.u.dir.dir_head != NULL) || v->dir_next != NULL)) {
-//		return ERR_NOT_ALLOWED;
+//		return EPERM;
 //	}
 
 	// remove it from the global hash table
@@ -170,7 +170,7 @@ static int isofs_delete_vnode(struct isofs *fs, struct isofs_vnode *v, bool forc
 static int isofs_insert_in_dir(struct isofs_vnode *dir, struct isofs_vnode *v)
 {
 	if(dir->stream.type != STREAM_TYPE_DIR)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	v->dir_next = dir->stream.dir_head;
 	dir->stream.dir_head = v;
@@ -316,7 +316,7 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args,
 
 	fs = kmalloc(sizeof(struct isofs));
 	if(fs == NULL) {
-		err = ERR_NO_MEMORY;
+		err = ENOMEM;
 		goto err;
 	}
 
@@ -339,7 +339,7 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args,
 	fs->vnode_list_hash = hash_init(ISOFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		&isofs_vnode_compare_func, &isofs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
-		err = ERR_NO_MEMORY;
+		err = ENOMEM;
 		goto err2;
 	}
 
@@ -407,7 +407,7 @@ static int isofs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_id
 	TRACE(("isofs_lookup: entry dir 0x%x, name '%s'\n", dir, name));
 
 	if(dir->stream.type != STREAM_TYPE_DIR)
-		return ERR_VFS_NOT_DIR;
+		return ENOTDIR;
 
 	mutex_lock(&fs->lock);
 
@@ -525,7 +525,7 @@ static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 	// Allocate our cookie for storage of position
 	cookie = kmalloc(sizeof(struct isofs_cookie));
 	if(cookie == NULL) {
-		err = ERR_NO_MEMORY;
+		err = ENOMEM;
 		goto err;
 	}
 
@@ -616,7 +616,7 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 
 			// If buffer is too small, bail out
 			if ((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > *len) {
-				err = ERR_VFS_INSUFFICIENT_BUF;
+				err = ENOBUFS;
 				goto error;
 			}
 
@@ -686,7 +686,7 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 			break;
 
 		default:
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 	}
 error:
 	mutex_unlock(&fs->lock);
@@ -706,7 +706,7 @@ static ssize_t isofs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const v
 {
 	TRACE(("isofs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, *len));
 
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
 //--------------------------------------------------------------------------------
@@ -767,12 +767,12 @@ static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 						cookie->u.file.pos = pos + cookie->s->data_len;
 					break;
 				default:
-					err = ERR_INVALID_ARGS;
+					err = EINVAL;
 
 			}
 			break;
 		default:
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 	}
 
 	mutex_unlock(&fs->lock);
@@ -781,11 +781,11 @@ static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, void *buf, size_t len)
+static int isofs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
 {
 	TRACE(("isofs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
 
-	return ERR_INVALID_ARGS;
+	return EINVAL;
 }
 
 //--------------------------------------------------------------------------------
@@ -808,25 +808,25 @@ static ssize_t isofs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t po
 #endif
 	TRACE(("isofs_readpage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 //--------------------------------------------------------------------------------
 static int isofs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
 {
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
 //--------------------------------------------------------------------------------
 static int isofs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 {
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
 //--------------------------------------------------------------------------------
 static int isofs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
 {
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
 //--------------------------------------------------------------------------------
@@ -838,7 +838,7 @@ static ssize_t isofs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 #endif
 	TRACE(("isofs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 //--------------------------------------------------------------------------------
@@ -863,7 +863,7 @@ static int isofs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 			stat->size = v->stream.data_len;
 			break;
 		default:
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 			break;
 	}
 
@@ -876,7 +876,7 @@ static int isofs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 //--------------------------------------------------------------------------------
 static int isofs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
 {
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
 //================================================================================

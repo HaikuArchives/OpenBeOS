@@ -147,7 +147,7 @@ ssize_t user_write(int fd, const void *buf, off_t pos, size_t len)
 		return EOPNOTSUPP;
 }
 
-int user_ioctl(int fd, int op, void *buf, size_t len)
+int user_ioctl(int fd, ulong op, void *buf, size_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
 
@@ -225,7 +225,7 @@ ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len)
 		return EOPNOTSUPP;
 }
 
-int sys_ioctl(int fd, int op, void *buf, size_t len)
+int sys_ioctl(int fd, ulong op, void *buf, size_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
 
@@ -255,3 +255,4 @@ int sys_close(int fd)
 	else
 		return EOPNOTSUPP;
 }
+

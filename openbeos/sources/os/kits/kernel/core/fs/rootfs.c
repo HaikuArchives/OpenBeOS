@@ -524,11 +524,11 @@ static int rootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 	return err;
 }
 
-static int rootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, void *buf, size_t len)
+static int rootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
 {
 	TRACE(("rootfs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
 
-	return ERR_INVALID_ARGS;
+	return EINVAL;
 }
 
 static int rootfs_canpage(fs_cookie _fs, fs_vnode _v)
@@ -538,12 +538,12 @@ static int rootfs_canpage(fs_cookie _fs, fs_vnode _v)
 
 static ssize_t rootfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static ssize_t rootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
@@ -559,7 +559,7 @@ static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_
 
 	// we only support stream types of STREAM_TYPE_DIR
 	if(st != STREAM_TYPE_DIR) {
-		err = ERR_NOT_ALLOWED;
+		err = EPERM;
 		goto err;
 	}
 
@@ -570,13 +570,13 @@ static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_
 		dprintf("rootfs_create: creating new vnode\n");
 		new_vnode = rootfs_create_vnode(fs);
 		if(new_vnode == NULL) {
-			err = ERR_NO_MEMORY;
+			err = ENOMEM;
 			goto err;
 		}
 		created_vnode = true;
 		new_vnode->name = kstrdup(name);
 		if(new_vnode->name == NULL) {
-			err = ERR_NO_MEMORY;
+			err = ENOMEM;
 			goto err1;
 		}
 		new_vnode->parent = dir;
@@ -682,7 +682,7 @@ static int rootfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, f
 			if(!v1->name) {
 				// bad place to be, at least restore
 				v1->name = ptr;
-				err = ERR_NO_MEMORY;
+				err = ENOMEM;
 				goto err;
 			}
 			kfree(ptr);
@@ -735,7 +735,7 @@ static int rootfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int 
 	TRACE(("rootfs_wstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 #endif
 	// cannot change anything
-	return ERR_INVALID_ARGS;
+	return EINVAL;
 }
 
 static struct fs_calls rootfs_calls = {
