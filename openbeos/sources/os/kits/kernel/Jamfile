@@ -297,19 +297,29 @@ KernelStaticLibraryObjects libc.a :
 	<$(SOURCE_GRIST)!libc!stdio>fclose.o
 	<$(SOURCE_GRIST)!libc!stdio>feof.o
  	<$(SOURCE_GRIST)!libc!stdio>fflush.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fgetc.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fgetln.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fgets.o
 	<$(SOURCE_GRIST)!libc!stdio>findfp.o
 	<$(SOURCE_GRIST)!libc!stdio>flags.o
 	<$(SOURCE_GRIST)!libc!stdio>flockfile.o
  	<$(SOURCE_GRIST)!libc!stdio>fopen.o
  	<$(SOURCE_GRIST)!libc!stdio>fprintf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fputc.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fputs.o
 	<$(SOURCE_GRIST)!libc!stdio>fread.o
 	<$(SOURCE_GRIST)!libc!stdio>fwrite.o
  	<$(SOURCE_GRIST)!libc!stdio>fvwrite.o
 	<$(SOURCE_GRIST)!libc!stdio>fwalk.o
 	<$(SOURCE_GRIST)!libc!stdio>getc.o
 	<$(SOURCE_GRIST)!libc!stdio>getchar.o
- 	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>gets.o
+	<$(SOURCE_GRIST)!libc!stdio>getw.o
+	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
 	<$(SOURCE_GRIST)!libc!stdio>printf.o
+	<$(SOURCE_GRIST)!libc!stdio>putc.o
+	<$(SOURCE_GRIST)!libc!stdio>puts.o
+	<$(SOURCE_GRIST)!libc!stdio>putw.o
 	<$(SOURCE_GRIST)!libc!stdio>refill.o
 	<$(SOURCE_GRIST)!libc!stdio>rget.o
 	<$(SOURCE_GRIST)!libc!stdio>sscanf.o
@@ -400,19 +410,29 @@ KernelLd libc.so :
 	<$(SOURCE_GRIST)!libc!stdio>fclose.o
 	<$(SOURCE_GRIST)!libc!stdio>feof.o
  	<$(SOURCE_GRIST)!libc!stdio>fflush.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fgetc.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fgetln.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fgets.o
 	<$(SOURCE_GRIST)!libc!stdio>findfp.o
 	<$(SOURCE_GRIST)!libc!stdio>flags.o
 	<$(SOURCE_GRIST)!libc!stdio>flockfile.o
  	<$(SOURCE_GRIST)!libc!stdio>fopen.o
  	<$(SOURCE_GRIST)!libc!stdio>fprintf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fputc.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fputs.o
 	<$(SOURCE_GRIST)!libc!stdio>fread.o
 	<$(SOURCE_GRIST)!libc!stdio>fwrite.o
  	<$(SOURCE_GRIST)!libc!stdio>fvwrite.o
 	<$(SOURCE_GRIST)!libc!stdio>fwalk.o
 	<$(SOURCE_GRIST)!libc!stdio>getc.o
 	<$(SOURCE_GRIST)!libc!stdio>getchar.o
- 	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
+	<$(SOURCE_GRIST)!libc!stdio>gets.o
+	<$(SOURCE_GRIST)!libc!stdio>getw.o
+	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
 	<$(SOURCE_GRIST)!libc!stdio>printf.o
+	<$(SOURCE_GRIST)!libc!stdio>putc.o
+	<$(SOURCE_GRIST)!libc!stdio>puts.o
+	<$(SOURCE_GRIST)!libc!stdio>putw.o
 	<$(SOURCE_GRIST)!libc!stdio>refill.o
 	<$(SOURCE_GRIST)!libc!stdio>rget.o
 	<$(SOURCE_GRIST)!libc!stdio>sscanf.o
