@@ -1,6 +1,7 @@
 #include <NodeInfo.h>
 
 #include <Node.h>
+#include <AppFileInfo.h>
 
 #include <be/kernel/fs_attr.h>
 
@@ -120,7 +121,7 @@ BNodeInfo::GetPreferredApp(char *signature,
 			  char *mimetpye = new char[B_MIME_TYPE_LENGTH];
 			  if( GetMineType(mimetype) >= B_OK ) {
 				BMimeType mime(mimetype);
-				error = GetPreferredApp(signature, verb);
+				error = mine.GetPreferredApp(signature, verb);
 			  }
 			  
 			  delete minetype;
@@ -160,7 +161,7 @@ BNodeInfo::GetAppHint(entry_ref *ref) const
 			error = fNode->ReadAttr(NI_HINT, attrInfo.type, 0, 
 									ref, attrInfo.size);
 			if(error < B_OK) {
-			  char *mimetpye = new char[B_MIME_TYPE_LENGTH];
+			  char *mimetype = new char[B_MIME_TYPE_LENGTH];
 			  if( GetMineType(mimetype) >= B_OK ) {
 				BMimeType mime(mimetype);
 				error = mime.GetAppHint(ref);
@@ -189,7 +190,39 @@ status_t
 BNodeInfo::GetTrackerIcon(BBitmap *icon,
 						icon_size k = B_LARGE_ICON) const
 {
-  return B_ERROR;
+  status_t getIconReturn = GetIcon(icon, k);
+  entry_ref ref;
+  char mimetype[B_MIME_TYPE_LENGTH];
+
+  // Ask the attr
+  if(getIconReturn == B_OK)
+	return OK;
+
+  // Ask the File Type db based on app sig
+  if( GetAppHint(&ref) == B_OK ) {
+	BFile appFile(ref);
+	if(appFile.InitCheck() == B_OK) {
+	  BAppFileInfo appFileInfo( appFile );
+	  if( appFileInfo.GetIcon( icon, k ) == B_OK) {
+		return B_OK;
+	  }
+	}
+  }
+
+  // Ask FTdb based on mime type
+
+  if( GetMimeType(&mimetype) ) 
+	if( BMimeType.GetIconForType(mimetype, icon, k) == B_OK)
+	  return B_OK;
+
+
+  // asks the File Type database for the preferred app based on the node's 
+  // file type, and then asks that app for the icon it uses to display this 
+  // node's file type.
+
+
+  // Quit
+  return getIconReturn;
 }
 
 
