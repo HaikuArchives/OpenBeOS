@@ -7,7 +7,7 @@ TIMER_OBJS = ../util/net_timer.o
 CFLAGS=-O2 -g -Wall
 INCLUDES=-I. -I../include
 
-all: test_mbuf timer_test
+all: test_mbuf timer_test test_cpy
 
 0 test: test_mbuf
 	@test_mbuf
@@ -20,6 +20,9 @@ test_mbuf:
 
 timer_test:
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(TIMER_OBJS) $@.c
+
+test_cpy:
+	$(CC) $(CFLAGS) -o test_cpy test_cpy.c
 
 clean:
 	@rm -f test_mbuf timer_test

@@ -1,3 +1,4 @@
 test_mbuf
 timer_test
+test_cpy
 *.o
