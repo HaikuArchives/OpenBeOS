@@ -1494,6 +1494,6 @@ Query::LiveUpdate(Inode *inode,const char *attribute,int32 type,const uint8 *old
 	if (type != B_STRING_TYPE || value == NULL)
 		value = "";
 
-	send_notification(fPort,fToken,B_QUERY_UPDATE,op,fVolume->ID(),0,inode->ID(),0,0,value);
+	send_notification(fPort,fToken,B_QUERY_UPDATE,op,fVolume->ID(),0,fVolume->ToVnode(inode->Parent()),0,inode->ID(),value);
 }
 

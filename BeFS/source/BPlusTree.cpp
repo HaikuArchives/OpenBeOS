@@ -106,7 +106,8 @@ CachedNode::InternalSetTo(off_t offset)
 
 	off_t fileOffset;
 	block_run run;
-	if (fTree->fStream->FindBlockRun(offset,run,fileOffset) == B_OK) {
+	if (offset < fTree->fStream->Size()
+		&& fTree->fStream->FindBlockRun(offset,run,fileOffset) == B_OK) {
 		Volume *volume = fTree->fStream->GetVolume();
 
 		int32 blockOffset = (offset - fileOffset) / volume->BlockSize();
@@ -141,7 +142,7 @@ CachedNode::Free(Transaction *transaction,off_t offset)
 	off_t lastOffset = fTree->fHeader->maximum_size - fTree->fNodeSize;
 	if (offset == lastOffset) {
 		fTree->fHeader->maximum_size = lastOffset;
-		
+
 		status_t status = fTree->fStream->SetFileSize(transaction,lastOffset);
 		if (status < B_OK)
 			return status;

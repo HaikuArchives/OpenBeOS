@@ -28,11 +28,11 @@ class Index {
 
 		status_t Create(Transaction *transaction, const char *name, uint32 type);
 
-		status_t Update(Transaction *transaction, const char *name, int32 type, const uint8 *oldKey, uint16 oldLength, const uint8 *newKey, uint16 newLength, off_t id);
+		status_t Update(Transaction *transaction, const char *name, int32 type, const uint8 *oldKey, uint16 oldLength, const uint8 *newKey, uint16 newLength, Inode *inode);
 
-		status_t InsertName(Transaction *transaction,const char *name,off_t id);
-		status_t RemoveName(Transaction *transaction,const char *name,off_t id);
-		status_t UpdateName(Transaction *transaction,const char *oldName,const char *newName,off_t id);
+		status_t InsertName(Transaction *transaction,const char *name,Inode *inode);
+		status_t RemoveName(Transaction *transaction,const char *name,Inode *inode);
+		status_t UpdateName(Transaction *transaction,const char *oldName,const char *newName,Inode *inode);
 
 		status_t InsertSize(Transaction *transaction, Inode *inode);
 		status_t RemoveSize(Transaction *transaction, Inode *inode);

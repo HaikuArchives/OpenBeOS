@@ -952,7 +952,7 @@ bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const c
 		status = inode->SetName(&transaction,newName);
 		if (status == B_OK) {
 			Index index(volume);
-			index.UpdateName(&transaction,oldName,newName,id);
+			index.UpdateName(&transaction,oldName,newName,inode);
 			nameUpdated = true;
 		}
 	}

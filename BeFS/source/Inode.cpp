@@ -645,7 +645,7 @@ Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t
 			if (length > BPLUSTREE_MAX_KEY_LENGTH)
 				length = BPLUSTREE_MAX_KEY_LENGTH;
 
-			index.Update(transaction,name,0,oldData,oldLength,buffer,length,ID());
+			index.Update(transaction,name,0,oldData,oldLength,buffer,length,this);
 		}
 	}
 	return status;
@@ -672,7 +672,7 @@ Inode::RemoveAttribute(Transaction *transaction,const char *name)
 			uint32 length = smallData->data_size;
 			if (length > BPLUSTREE_MAX_KEY_LENGTH)
 				length = BPLUSTREE_MAX_KEY_LENGTH;
-			index.Update(transaction,name,0,smallData->Data(),length,NULL,0,ID());
+			index.Update(transaction,name,0,smallData->Data(),length,NULL,0,this);
 		}
 		fSmallDataLock.Unlock();
 	}
@@ -693,7 +693,7 @@ Inode::RemoveAttribute(Transaction *transaction,const char *name)
 			uint8 data[BPLUSTREE_MAX_KEY_LENGTH];
 			size_t length = BPLUSTREE_MAX_KEY_LENGTH;
 			if (attribute->ReadAt(0,data,&length) == B_OK)
-				index.Update(transaction,name,0,data,length,NULL,0,ID());
+				index.Update(transaction,name,0,data,length,NULL,0,this);
 
 			ReleaseAttribute(attribute);
 		}
@@ -1632,7 +1632,7 @@ Inode::Remove(Transaction *transaction,const char *name,off_t *_id,bool isDirect
 
 	Index index(fVolume);
 	if ((inode->Mode() & (S_ATTR_DIR | S_ATTR | S_INDEX_DIR)) == 0) {
-		index.RemoveName(transaction,name,id);
+		index.RemoveName(transaction,name,inode);
 			// If removing from the index fails, it is not regarded as a
 			// fatal error and will not be reported back!
 			// Deleted inodes won't be visible in queries anyway.
@@ -1767,7 +1767,7 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 	// update the main indices (name, size & last_modified)
 	Index index(volume);
 	if ((mode & (S_ATTR_DIR | S_ATTR | S_INDEX_DIR)) == 0) {
-		status = index.InsertName(transaction,name,inode->ID());
+		status = index.InsertName(transaction,name,inode);
 		if (status < B_OK && status != B_BAD_INDEX)
 			return status;
 	}
