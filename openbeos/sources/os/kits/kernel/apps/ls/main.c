@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
 	
 	rc = sys_rstat(arg, &stat);
 	if(rc < 0) {
-		printf("%s: sys_rstat() returned error: %s!\n", __progname,
-		       strerror(rc));
+		printf("%s: %s: %s\n", __progname,
+		       arg, strerror(rc));
 		goto err_ls;
 	}
 
@@ -77,8 +77,8 @@ int main(int argc, char *argv[])
 
 			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
-				printf("%s: sys_open() returned error: %s!\n", 
-				       __progname, strerror(fd));
+				printf("%s: %s: %s\n", 
+				       __progname, arg, strerror(fd));
 				break;
 			}
 

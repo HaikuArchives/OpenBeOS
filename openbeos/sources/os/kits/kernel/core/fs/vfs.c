@@ -505,10 +505,10 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 	struct vnode *curr_v;
 	struct vnode *next_v;
 	vnode_id vnid;
-	int err;
+	int err = 0;
 
 	if(!p)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	// figure out if we need to start at root or at cwd
 	if(*p == '/') {
@@ -1356,7 +1356,7 @@ static int vfs_rstat(char *path, struct file_stat *stat, bool kernel)
 
 	err = path_to_vnode(path, &v, kernel);
 	if(err < 0)
-		goto err;
+		return err;
 
 	err = v->mount->fs->calls->fs_rstat(v->mount->fscookie, v->priv_vnode, stat);
 

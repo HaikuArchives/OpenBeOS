@@ -458,7 +458,7 @@ static int bootfs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_i
 	// look it up
 	v = bootfs_find_in_dir(dir, name);
 	if(!v) {
-		err = ERR_NOT_FOUND;
+		err = ENOENT;
 		goto err;
 	}
 
@@ -497,7 +497,7 @@ static int bootfs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 	if(*v)
 		return 0;
 	else
-		return ERR_NOT_FOUND;
+		return ENOENT;
 }
 
 static int bootfs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
@@ -848,7 +848,7 @@ static int bootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 			stat->size = v->stream.u.file.len;
 			break;
 		default:
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 			break;
 	}
 

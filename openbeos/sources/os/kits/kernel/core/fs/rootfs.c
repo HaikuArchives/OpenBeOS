@@ -306,7 +306,7 @@ static int rootfs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_i
 	// look it up
 	v = rootfs_find_in_dir(dir, name);
 	if(!v) {
-		err = ERR_NOT_FOUND;
+		err = ENOENT;
 		goto err;
 	}
 
