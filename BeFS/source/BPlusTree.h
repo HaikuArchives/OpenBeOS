@@ -198,7 +198,9 @@ class CachedNode
 		bool			fIsDirty;
 };
 
-//***** helper classes *****
+//***** helper classes/functions *****
+
+extern int32 compareKeys(type_code type,const void *key1, int keyLength1, const void *key2, int keyLength2);
 
 class TreeIterator
 {

@@ -14,6 +14,8 @@
 #include "Inode.h"
 #include "Stack.h"
 
+#include <TypeConstants.h>
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -263,71 +265,32 @@ BPlusTree::InitCheck()
 int32
 BPlusTree::CompareKeys(const void *key1, int keyLength1, const void *key2, int keyLength2)
 {
+	type_code type = 0;
 	switch (fHeader->data_type)
 	{
 	    case BPLUSTREE_STRING_TYPE:
-    	{
-			int len = min_c(keyLength1,keyLength2);
-			int result = strncmp((const char *)key1,(const char *)key2,len);
-			
-			if (result == 0)
-				result = keyLength1 - keyLength2;
-
-			return result;
-		}
-
+	    	type = B_STRING_TYPE;
+	    	break;
 		case BPLUSTREE_INT32_TYPE:
-			return *(int32 *)key1 - *(int32 *)key2;
-			
+	    	type = B_INT32_TYPE;
+	    	break;
 		case BPLUSTREE_UINT32_TYPE:
-		{
-			if (*(uint32 *)key1 == *(uint32 *)key2)
-				return 0;
-			else if (*(uint32 *)key1 > *(uint32 *)key2)
-				return 1;
-
-			return -1;
-		}
-			
+	    	type = B_UINT32_TYPE;
+	    	break;
 		case BPLUSTREE_INT64_TYPE:
-		{
-			if (*(int64 *)key1 == *(int64 *)key2)
-				return 0;
-			else if (*(int64 *)key1 > *(int64 *)key2)
-				return 1;
-
-			return -1;
-		}
-
+	    	type = B_INT64_TYPE;
+	    	break;
 		case BPLUSTREE_UINT64_TYPE:
-		{
-			if (*(uint64 *)key1 == *(uint64 *)key2)
-				return 0;
-			else if (*(uint64 *)key1 > *(uint64 *)key2)
-				return 1;
-
-			return -1;
-		}
-
+	    	type = B_UINT64_TYPE;
+	    	break;
 		case BPLUSTREE_FLOAT_TYPE:
-		{
-			float result = *(float *)key1 - *(float *)key2;
-			if (result == 0.0f)
-				return 0;
-
-			return (result < 0.0f) ? -1 : 1;
-		}
-
+	    	type = B_FLOAT_TYPE;
+	    	break;
 		case BPLUSTREE_DOUBLE_TYPE:
-		{
-			double result = *(double *)key1 - *(double *)key2;
-			if (result == 0.0)
-				return 0;
-
-			return (result < 0.0) ? -1 : 1;
-		}
+	    	type = B_DOUBLE_TYPE;
+	    	break;
 	}
-	return 0;
+   	return compareKeys(type,key1,keyLength1,key2,keyLength2);
 }
 
 
@@ -721,7 +684,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 		}
 		else
 		{
-			// shouldn't happen, but we're dealing here with corrupt disks...
+			// shouldn't happen, but we're dealing here with potentially corrupt disks...
 			fDuplicateNode = 0;
 			offset = 0;
 		}
@@ -732,8 +695,9 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 }
 
 
-/**	This is more or less a copy of BPlusTree::Find() - but unlike that one
- *	it just sets the current position in the iterator
+/**	This is more or less a copy of BPlusTree::SeekDown() - but it just
+ *	sets the current position in the iterator, regardless of if the
+ *	key could be found or not.
  */
 
 status_t 
@@ -743,31 +707,28 @@ TreeIterator::Find(uint8 *key, uint16 keyLength)
 		|| key == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
-	Stack<node_and_key> stack;
-	if (fTree->SeekDown(stack,key,keyLength) != B_OK)
-		RETURN_ERROR(B_ERROR);
-
-	node_and_key nodeAndKey;
-	bplustree_node *node;
+	off_t nodeOffset = fTree->fHeader->root_node_pointer;
 
 	CachedNode cached(fTree);
-	if (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
-	{
-		status_t status = fTree->FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
-		//if (status == B_ERROR)
-		//	return B_ERROR;
-		
-		if (status == B_OK && node->overflow_link == BPLUSTREE_NULL)
+	bplustree_node *node;
+	while ((node = cached.SetTo(nodeOffset)) != NULL) {
+		uint16 keyIndex = 0;
+		off_t nextOffset;
+		status_t status = fTree->FindKey(node,key,keyLength,&keyIndex,&nextOffset);
+
+		if (node->overflow_link == BPLUSTREE_NULL)
 		{
-			fCurrentNodeOffset = nodeAndKey.nodeOffset;
-			// is it always legal to do that? We'll find out...
-			fCurrentKey = nodeAndKey.keyIndex - 1;
+			fCurrentNodeOffset = nodeOffset;
+			fCurrentKey = keyIndex - 1;
 			fDuplicateNode = 0;
 
-			return B_OK;
-		}
+			return status;
+		} else if (nextOffset == nodeOffset)
+			RETURN_ERROR(B_ERROR);
+		
+		nodeOffset = nextOffset;
 	}
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -817,4 +778,79 @@ bplustree_node::DuplicateAt(off_t offset,bool isFragment,int8 index) const
 
 	return ((off_t *)this)[start + 1 + index];
 }
+
+
+//	#pragma mark -
+
+
+int32
+compareKeys(type_code type,const void *key1, int keyLength1, const void *key2, int keyLength2)
+{
+	switch (type)
+	{
+	    case B_STRING_TYPE:
+    	{
+			int len = min_c(keyLength1,keyLength2);
+			int result = strncmp((const char *)key1,(const char *)key2,len);
+			
+			if (result == 0)
+				result = keyLength1 - keyLength2;
+
+			return result;
+		}
+
+		case B_INT32_TYPE:
+			return *(int32 *)key1 - *(int32 *)key2;
+			
+		case B_UINT32_TYPE:
+		{
+			if (*(uint32 *)key1 == *(uint32 *)key2)
+				return 0;
+			else if (*(uint32 *)key1 > *(uint32 *)key2)
+				return 1;
+
+			return -1;
+		}
+			
+		case B_INT64_TYPE:
+		{
+			if (*(int64 *)key1 == *(int64 *)key2)
+				return 0;
+			else if (*(int64 *)key1 > *(int64 *)key2)
+				return 1;
+
+			return -1;
+		}
+
+		case B_UINT64_TYPE:
+		{
+			if (*(uint64 *)key1 == *(uint64 *)key2)
+				return 0;
+			else if (*(uint64 *)key1 > *(uint64 *)key2)
+				return 1;
+
+			return -1;
+		}
+
+		case B_FLOAT_TYPE:
+		{
+			float result = *(float *)key1 - *(float *)key2;
+			if (result == 0.0f)
+				return 0;
+
+			return (result < 0.0f) ? -1 : 1;
+		}
+
+		case B_DOUBLE_TYPE:
+		{
+			double result = *(double *)key1 - *(double *)key2;
+			if (result == 0.0)
+				return 0;
+
+			return (result < 0.0) ? -1 : 1;
+		}
+	}
+	return 0;
+}
+
 

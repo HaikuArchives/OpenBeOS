@@ -49,10 +49,15 @@ enum ops {
 
 	OP_EQUAL,
 	OP_UNEQUAL,
-	OP_GREATER,
-	OP_LESSER,
-	OP_GREATER_OR_EQUAL,
-	OP_LESSER_OR_EQUAL,
+	OP_GREATER_THAN,
+	OP_LESS_THAN,
+	OP_GREATER_THAN_OR_EQUAL,
+	OP_LESS_THAN_OR_EQUAL,
+};
+
+enum match {
+	NO_MATCH = 0,
+	MATCH_OK = 1
 };
 
 union value {
@@ -62,7 +67,7 @@ union value {
 	uint32	Uint32;
 	float	Float;
 	double	Double;
-	char	*String;
+	char	String[INODE_FILE_NAME_LENGTH];
 };
 
 class Term {
@@ -106,13 +111,15 @@ class Equation : public Term {
 #endif
 
 	private:
-		status_t ConvertValue(type_code type);
-		uint8 *Value() const { return fType == B_STRING_TYPE ? (uint8 *)fString : (uint8 *)&fValue; }
+		status_t	ConvertValue(type_code type);
+		bool		CompareTo(uint8 *value, uint16 size);
+		uint8		*Value() const { return (uint8 *)&fValue; }
 
 		char		*fAttribute;
 		char		*fString;
 		union value fValue;
 		type_code	fType;
+		size_t		fSize;
 		bool		fIsRegExp;
 		
 		int32		fScore;
@@ -230,10 +237,10 @@ Equation::Equation(char **expr)
 			fOp = OP_EQUAL;
 			break;
 		case '>':
-			fOp = *(string + 1) == '=' ? OP_GREATER_OR_EQUAL : OP_GREATER;
+			fOp = *(string + 1) == '=' ? OP_GREATER_THAN_OR_EQUAL : OP_GREATER_THAN;
 			break;
 		case '<':
-			fOp = *(string + 1) == '=' ? OP_LESSER_OR_EQUAL : OP_LESSER;
+			fOp = *(string + 1) == '=' ? OP_LESS_THAN_OR_EQUAL : OP_LESS_THAN;
 			break;
 		case '!':
 			if (*(string + 1) != '=')
@@ -364,29 +371,38 @@ Equation::ConvertValue(type_code type)
 	char *string = fString;
 
 	switch (type) {
-		case B_STRING_TYPE:
 		// B_MIME_STRING_TYPE is defined in Mime.h which I didn't want to include just for that
 		case 'MIMS':
 			type = B_STRING_TYPE;
-			fValue.String = string;
+			// supposed to fall through
+		case B_STRING_TYPE:
+			strncpy(fValue.String,string,INODE_FILE_NAME_LENGTH);
+			fValue.String[INODE_FILE_NAME_LENGTH - 1] = '\0';
+			fSize = strlen(fValue.String);
 			break;
 		case B_INT32_TYPE:
 			fValue.Int32 = strtol(string,&string,0);
+			fSize = sizeof(int32);
 			break;
 		case B_UINT32_TYPE:
 			fValue.Int32 = strtoul(string,&string,0);
+			fSize = sizeof(uint32);
 			break;
 		case B_INT64_TYPE:
 			fValue.Int64 = strtoll(string,&string,0);
+			fSize = sizeof(int64);
 			break;
 		case B_UINT64_TYPE:
 			fValue.Uint64 = strtoull(string,&string,0);
+			fSize = sizeof(uint64);
 			break;
 		case B_FLOAT_TYPE:
 			fValue.Float = strtod(string,&string);
+			fSize = sizeof(float);
 			break;
 		case B_DOUBLE_TYPE:
 			fValue.Double = strtod(string,&string);
+			fSize = sizeof(double);
 			break;
 		default:
 			FATAL(("query value conversion to 0x%lx requested!\n",type));
@@ -397,8 +413,35 @@ Equation::ConvertValue(type_code type)
 }
 
 
+/**	Returns true when the key matches the equation. You have to
+ *	call ConvertValue() before this one.
+ */
+
+bool
+Equation::CompareTo(uint8 *value,uint16 size)
+{
+	int32 compare = compareKeys(fType,value,size,Value(),fSize);
+	switch (fOp) {
+		case OP_EQUAL:
+			return compare == 0;
+		case OP_UNEQUAL:
+			return compare != 0;
+		case OP_LESS_THAN:
+			return compare < 0;
+		case OP_LESS_THAN_OR_EQUAL:
+			return compare <= 0;
+		case OP_GREATER_THAN:
+			return compare > 0;
+		case OP_GREATER_THAN_OR_EQUAL:
+			return compare >= 0;
+	}
+	FATAL(("Unknown/Unsupported operation: %d\n",fOp));
+	return false;
+}
+
+
 /**	Matches the inode's attribute value with the equation.
- *	Returns 1 if it matches, 0 if not, < 0 if something went wrong
+ *	Returns MATCH_OK if it matches, NO_MATCH if not, < 0 if something went wrong
  */
 
 status_t
@@ -453,13 +496,10 @@ Equation::Match(Inode *inode)
 			ownBuffer = true;
 		}
 	}
-	// prepare value for use, if it is possible to convert it
+	// prepare own value for use, if it is possible to convert it
 	status_t status = ConvertValue(type);
-	if (status == B_OK) {
-		status = true;
-	}
-
-	// compare the values here!
+	if (status == B_OK)
+		status = CompareTo(buffer,size) ? MATCH_OK : NO_MATCH;
 
 	if (ownBuffer)
 		free(buffer);
@@ -491,7 +531,8 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 	if (*iterator == NULL)
 		return B_NO_MEMORY;
 
-	if (fOp == OP_EQUAL && fHasIndex && !fIsRegExp) {
+	if ((fOp == OP_EQUAL || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL)
+		&& fHasIndex && !fIsRegExp) {
 		// set iterator to the exact position
 		
 		int32 keySize = index->KeySize();
@@ -501,7 +542,13 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 			else
 				RETURN_ERROR(B_ENTRY_NOT_FOUND);
 		}
-		RETURN_ERROR((*iterator)->Find(Value(),keySize));
+		status_t status = (*iterator)->Find(Value(),keySize);
+		if (fOp == OP_EQUAL)
+			return status;
+		else if (status == B_ENTRY_NOT_FOUND && (fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL))
+			return B_OK;
+
+		RETURN_ERROR(status);
 	}
 
 	return B_OK;
@@ -512,34 +559,78 @@ status_t
 Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 		struct dirent *dirent, size_t bufferSize)
 {
-	union value indexValue;
-	uint16 keyLength;
-	off_t offset;
-	status_t status;
+	while (true) {
+		union value indexValue;
+		uint16 keyLength;
+		off_t offset;
 
-	if (fOp == OP_GREATER || fOp == OP_GREATER_OR_EQUAL)
-		status = iterator->GetPreviousEntry(&indexValue,&keyLength,(uint16)sizeof(indexValue),&offset);
-	else
-		status = iterator->GetNextEntry(&indexValue,&keyLength,(uint16)sizeof(indexValue),&offset);
+		status_t status = iterator->GetNextEntry(&indexValue,&keyLength,(uint16)sizeof(indexValue),&offset);
+		if (status < B_OK)
+			return status;
 
-	if (status < B_OK)
-		return status;
+		if (!CompareTo((uint8 *)&indexValue,keyLength)) {
+			// they aren't equal? let the operation decide what to do
+			if (fOp == OP_LESS_THAN || OP_LESS_THAN_OR_EQUAL)
+				return B_ENTRY_NOT_FOUND;
+			continue;
+		}
 
-	// comparing is missing!
+		Inode *inode;
+		if ((status = get_vnode(volume->ID(),offset,(void **)&inode)) != B_OK) {
+			REPORT_ERROR(status);
+			FATAL(("could not get inode %Ld in index \"%s\"!\n",offset,fAttribute));
+			// try with next
+			continue;
+		}
 
-	Inode *inode;
-	if ((status = get_vnode(volume->ID(),offset,(void **)&inode)) != B_OK) {
-		REPORT_ERROR(status);
-		return B_ENTRY_NOT_FOUND;
+		// go up in the tree until a &&-operator is found, and check if the
+		// inode matches with the rest of the expression - we don't have to
+		// check ||-operators for that
+		Term *term = this;
+		status = MATCH_OK;
+	
+		while (term != NULL) {
+			Operator *parent = (Operator *)term->Parent();
+			if (parent == NULL)
+				break;
+	
+			if (parent->Op() == OP_AND) {
+				// choose the other child of the parent
+				Term *other = parent->Right();
+				if (other == term)
+					other = parent->Left();
+	
+				if (other == NULL) {
+					FATAL(("&&-operator has only one child... (parent = %p)\n",parent));
+					break;
+				}
+				status = other->Match(inode);
+				if (status < 0) {
+					REPORT_ERROR(status);
+					status = NO_MATCH;
+					break;
+				}
+				else if (status != MATCH_OK)
+					break;
+			}
+			term = (Term *)parent;
+		}
+		
+		if (status == MATCH_OK) {
+			dirent->d_dev = volume->ID();
+			dirent->d_ino = offset;
+			dirent->d_pdev = volume->ID();
+			dirent->d_pino = volume->ToVnode(inode->Parent());
+			strcpy(dirent->d_name,inode->Name());
+			dirent->d_reclen = strlen(dirent->d_name);
+		}
+	
+		put_vnode(volume->ID(), inode->ID());
+		
+		if (status == MATCH_OK)
+			return B_OK;
 	}
-
-	dirent->d_dev = volume->ID();
-	dirent->d_ino = offset;
-	strcpy(dirent->d_name,inode->Name());
-	dirent->d_reclen = strlen(dirent->d_name);
-
-	put_vnode(volume->ID(), inode->ID());
-	return B_OK;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -617,14 +708,12 @@ AndOperator::Match(Inode *inode)
 {
 	if (fLeft != NULL) {
 		status_t status = fLeft->Match(inode);
-		if (status < true)
+		if (status != MATCH_OK)
 			return status;
 	}
-	if (fRight != NULL) {
-		status_t status = fRight->Match(inode);
-		if (status < B_OK)
-			return status;
-	}
+	if (fRight != NULL)
+		return fRight->Match(inode);
+
 	return false;
 }
 
@@ -687,10 +776,10 @@ Equation::PrintToStream()
 	switch (fOp) {
 		case OP_EQUAL: symbol = "=="; break;
 		case OP_UNEQUAL: symbol = "!="; break;
-		case OP_GREATER: symbol = ">"; break;
-		case OP_GREATER_OR_EQUAL: symbol = ">="; break;
-		case OP_LESSER: symbol = "<"; break;
-		case OP_LESSER_OR_EQUAL: symbol = "<="; break;
+		case OP_GREATER_THAN: symbol = ">"; break;
+		case OP_GREATER_THAN_OR_EQUAL: symbol = ">="; break;
+		case OP_LESS_THAN: symbol = "<"; break;
+		case OP_LESS_THAN_OR_EQUAL: symbol = "<="; break;
 	}
 	D(__out("[\"%s\" %s \"%s\"]",fAttribute,symbol,fString));
 }
@@ -870,21 +959,25 @@ Query::GetNextEntry(struct dirent *dirent, size_t size)
 {
 	// If we don't have an equation to use yet/anymore, get a new one
 	// from the stack
-	if (fIterator == NULL) {
-		if (!fStack.Pop(&fCurrent)
-			|| fCurrent == NULL
-			|| fCurrent->PrepareQuery(fVolume,&fIndex,&fIterator) < B_OK)
-			return B_ENTRY_NOT_FOUND;
+	while (true) {
+		if (fIterator == NULL) {
+			if (!fStack.Pop(&fCurrent)
+				|| fCurrent == NULL
+				|| fCurrent->PrepareQuery(fVolume,&fIndex,&fIterator) < B_OK)
+				return B_ENTRY_NOT_FOUND;
+		}
+		if (fCurrent == NULL)
+			RETURN_ERROR(B_ERROR);
+	
+		status_t status = fCurrent->GetNextMatching(fVolume,fIterator,dirent,size);
+		if (status < B_OK) {
+			delete fIterator;
+			fIterator = NULL;
+			fCurrent = NULL;
+		} else {
+			// only return if we have another entry
+			return B_OK;
+		}
 	}
-	if (fCurrent == NULL)
-		RETURN_ERROR(B_ERROR);
-
-	status_t status = fCurrent->GetNextMatching(fVolume,fIterator,dirent,size);
-	if (status < B_OK) {
-		delete fIterator;
-		fIterator = NULL;
-		fCurrent = NULL;
-	}
-	return status;
 }
 

@@ -513,9 +513,10 @@ bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize)
 		RETURN_ERROR(inode->ReadAt(0, buffer, bufferSize));
 
 	size_t numBytes = strlen((char *)&inode->Node()->short_symlink);
+
 	if (numBytes > *bufferSize) {
 		FATAL(("link size is greater than buffer size, %ld > %ld\n",numBytes,*bufferSize));
-		numBytes = *bufferSize;
+		return B_NAME_TOO_LONG;
 	} else
 		*bufferSize = numBytes;
 
