@@ -79,8 +79,8 @@ should be binary compatible in no time!
 	        void SomeFunc();
 	    private:
 	        int32 fBar;
-	        int32 fQux;
 	        char  fZig;
+	        int32 fQux;
 	        int32 fUnused[2];
 	};
 		</pre>
@@ -102,7 +102,10 @@ should be binary compatible in no time!
 	};
 		</pre>
 		</code>
-		Nothing could be easier!<br>
+		Nothing could be easier! An additional twist that should be noted is that
+		data member order must also be preserved.  In much the same way as existing
+		apps will "look" for virtual functions in a specific place in the vtable,
+		so will they "look" for data members in a specific place in an object.<br>
 		"But what if I don't need <code>fZig</code>, either?" you wonder. "It's only
 		one byte, not four like an <code>int32</code>!"  Have no fear!  Just rename it
 		"<code>fUnusedChar</code>" and be done with it.<p>
@@ -163,15 +166,15 @@ should be binary compatible in no time!
 	<hr>
 
 <!-- The obligatory SourceForge plug -->
-<center> 
-<small>The OpenBeOS project is hosted by:</small><br><br> 
-<a href="http://sourceforge.net"> 
+<center>
+<small>The OpenBeOS project is hosted by:</small><br><br>
+<a href="http://sourceforge.net">
 <img src="http://sourceforge.net/sflogo.php?group_id=33869&type=1" width="88" height="31" border="0" alt="SourceForge Logo">
-</a> 
-<p> 
+</a>
+<p>
 
 <small>Copyright &copy; 2001-2002
-<a href="http://www.openbeos.org">OpenBeOS</a> Project</small> 
+<a href="http://www.openbeos.org">OpenBeOS</a> Project</small>
 </center>
 
 </body>
