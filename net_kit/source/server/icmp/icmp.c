@@ -58,7 +58,6 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 	struct icmp *ic;
 	int icl = ip->ip_len;
 	struct route rt;
-	int error = 0;
 	struct in_addr tmp;
 
 	ic = (struct icmp*)((caddr_t)ip + hdrlen);
@@ -85,7 +84,6 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 			ip->ip_dst = tmp;
 			ip->ip_len += hdrlen;
 			
-			printf("icmp_output: replying...\n");
 			return proto[IPPROTO_IP]->pr_output(buf, NULL, NULL, 0, NULL);
 			break;
 		}
