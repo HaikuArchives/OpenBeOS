@@ -59,11 +59,11 @@ Journal::Unlock(Transaction *owner,bool success)
 	if (owner != fOwner)
 		return;
 
+	TransactionDone(success);
+
 	fOwner = NULL;
 	fOwningThread = -1;
 	fLock.Unlock();
-
-	TransactionDone(success);
 }
 
 
@@ -278,10 +278,6 @@ status_t
 Journal::TransactionDone(bool success)
 {
 	PRINT(("%ld blocks of the log are in use...\n",fUsed));
-	if (fOwningThread != find_thread(NULL)) {
-		PRINT(("Wrong thread in Journal::TransactionDone()!\n"));
-		return B_ERROR;
-	}
 
 	if (!success && fTransactionsInEntry == 0) {
 		// we can safely abort the transaction
