@@ -13,11 +13,11 @@
 #include "netinet/in_var.h"
 #include "netinet/ip_var.h"
 
-#include "ipv4/ipv4_module.h"
-#include "raw/raw_module.h"
 #include "core_module.h"
 #include "net_module.h"
 #include "core_funcs.h"
+#include "raw/raw_module.h"
+#include "ipv4/ipv4_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -27,7 +27,6 @@ static image_id ipid;
 #endif
 
 static struct core_module_info *core = NULL;
-
 static struct ipv4_module_info *ipm = NULL;
 
 static struct inpcb rawinpcb;
