@@ -115,6 +115,9 @@ status_t
 _shared_buffer_list::AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 {
 	CALLED();
+	
+	if (buffer == NULL)
+		return B_BAD_VALUE;
 
 	if (Lock() != B_OK)
 		return B_ERROR;
@@ -130,9 +133,8 @@ _shared_buffer_list::AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 	info[buffercount].reclaim_sem = group_reclaim_sem;
 	info[buffercount].reclaimed = true;
 	buffercount++;
-
-	Unlock();
-	return B_OK;
+	
+	return Unlock();
 }
 
 status_t	
