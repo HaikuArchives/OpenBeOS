@@ -183,11 +183,14 @@ _shared_buffer_list::RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_
 {
 	for (int32 i = 0; i < buffercount; i++) {
 		// find buffers belonging to other groups
-		if (info[i].reclaim_sem != group_reclaim_sem && info[i].id == id) {
+		if (info[i].id == id && info[i].reclaim_sem != group_reclaim_sem) {
 
-			// and mark them as requested
+			// and mark them as requested 
+			// XXX this can deadlock if BBuffers with same media_buffer_id
+			// XXX exist in more than one BBufferGroup, and RequestBuffer()
+			// XXX is called on both groups (which should not be done).
 			while (B_INTERRUPTED == acquire_sem(info[i].reclaim_sem))
-			;
+				;
 
 			if (info[i].reclaimed == false) {
 				TRACE("Error, BBuffer 0x%08x, id = 0x%08x not reclaimed while requesting\n",(int)info[i].buffer,(int)id);
@@ -226,7 +229,6 @@ _shared_buffer_list::ReclaimBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 	if (debug_reclaim == 0)
 		TRACE("Error, BBuffer 0x%08x, id = 0x%08x NOT reclaimed\n",(int)buffer,(int)buffer->ID());
 }
-
 
 status_t	
 _shared_buffer_list::GetBufferList(sem_id group_reclaim_sem, int32 buf_count, BBuffer **out_buffers)
