@@ -25,6 +25,7 @@ public:
    void DrawZoom(BRect r);
    void DrawClose(BRect r);
    void CalculateBorders(void);
+   void MoveBy(BPoint pt);
 private:
    BRect frame;
    

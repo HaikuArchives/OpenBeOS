@@ -122,7 +122,7 @@ printf("WindowBorder(): SetMinimizeButton\n");
 			decor->SetMinimizeButton(true);
 			break;
 		}
-		case CLICK_TAB:
+		case CLICK_DRAG:
 		{
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder(): Click Tab\n");

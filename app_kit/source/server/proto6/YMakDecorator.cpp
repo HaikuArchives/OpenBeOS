@@ -74,6 +74,7 @@ printf("ZoomRect:");ZoomRect.PrintToStream();
    if(ZoomRect.Contains(pt)){
       return CLICK_ZOOM;
    }
+
    //return CLICK_RESIZE_RB;
    //return CLICK_NONE;
    return CLICK_DRAG;
@@ -254,7 +255,7 @@ void YMakDecorator::Draw(BRect update){
       //   b.right -= 20;	 
       //}
       
-      
+/*      
       driver->SetHighColor(cW.red,cW.green,cW.blue,cW.alpha);
       driver->MovePenTo(BPoint(b.left,b.top+0));driver->StrokeLine(BPoint(b.right-1,b.top+0),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+2));driver->StrokeLine(BPoint(b.right-1,b.top+2),NULL);
@@ -262,11 +263,16 @@ void YMakDecorator::Draw(BRect update){
       driver->MovePenTo(BPoint(b.left,b.top+6));driver->StrokeLine(BPoint(b.right-1,b.top+6),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+8));driver->StrokeLine(BPoint(b.right-1,b.top+8),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+10));driver->StrokeLine(BPoint(b.right-1,b.top+10),NULL);
+*/
+      // tightened the loop to reflect the changes in the DisplayDriver API
+      for(int j=0;j<12;j+=2)
+         driver->StrokeLine(BPoint(b.left,b.top+j),BPoint(b.right-1,b.top+j),cW);
       
 #ifdef DEBUG_DECOR
 printf("About to draw high lines\n");
 printf("do done\n");
 #endif
+/*
       driver->SetHighColor(cD.red,cD.green,cD.blue,cD.alpha);
       driver->MovePenTo(BPoint(b.left+1,b.top+1));driver->StrokeLine(BPoint(b.right,b.top+1),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+3));driver->StrokeLine(BPoint(b.right,b.top+3),NULL);
@@ -274,7 +280,11 @@ printf("do done\n");
       driver->MovePenTo(BPoint(b.left+1,b.top+7));driver->StrokeLine(BPoint(b.right,b.top+7),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+9));driver->StrokeLine(BPoint(b.right,b.top+9),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+11));driver->StrokeLine(BPoint(b.right,b.top+11),NULL);
-            
+*/
+      // tightened the loop to reflect the changes in the DisplayDriver API
+      for(int j=1;j<13;j+=2)
+         driver->StrokeLine(BPoint(b.left+1,b.top+j),BPoint(b.right,b.top+j),cD);
+
    }else{
       driver->SetHighColor(cL.red,cL.green,cL.blue,cL.alpha);
       // Fill top
@@ -445,26 +455,37 @@ void YMakDecorator::Draw(void)
       //   b.right -= 20;	 
       //}
       
-      
+/*      
       driver->SetHighColor(cW.red,cW.green,cW.blue,cW.alpha);
+
       driver->MovePenTo(BPoint(b.left,b.top+0));driver->StrokeLine(BPoint(b.right-1,b.top+0),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+2));driver->StrokeLine(BPoint(b.right-1,b.top+2),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+4));driver->StrokeLine(BPoint(b.right-1,b.top+4),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+6));driver->StrokeLine(BPoint(b.right-1,b.top+6),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+8));driver->StrokeLine(BPoint(b.right-1,b.top+8),NULL);
       driver->MovePenTo(BPoint(b.left,b.top+10));driver->StrokeLine(BPoint(b.right-1,b.top+10),NULL);
+*/
+      // tightened the loop to reflect the changes in the DisplayDriver API
+      for(int j=0;j<12;j+=2)
+         driver->StrokeLine(BPoint(b.left,b.top+j),BPoint(b.right-1,b.top+j),cW);
       
 #ifdef DEBUG_DECOR
 printf("About to draw high lines\n");
 printf("do done\n");
 #endif
+/*
       driver->SetHighColor(cD.red,cD.green,cD.blue,cD.alpha);
+
       driver->MovePenTo(BPoint(b.left+1,b.top+1));driver->StrokeLine(BPoint(b.right,b.top+1),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+3));driver->StrokeLine(BPoint(b.right,b.top+3),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+5));driver->StrokeLine(BPoint(b.right,b.top+5),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+7));driver->StrokeLine(BPoint(b.right,b.top+7),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+9));driver->StrokeLine(BPoint(b.right,b.top+9),NULL);
       driver->MovePenTo(BPoint(b.left+1,b.top+11));driver->StrokeLine(BPoint(b.right,b.top+11),NULL);
+*/
+      // tightened the loop to reflect the changes in the DisplayDriver API
+      for(int j=1;j<13;j+=2)
+         driver->StrokeLine(BPoint(b.left+1,b.top+j),BPoint(b.right,b.top+j),cD);
             
    }else{
       driver->SetHighColor(cL.red,cL.green,cL.blue,cL.alpha);
@@ -651,6 +672,9 @@ void YMakDecorator::CalculateBorders(void){
 	}
 }
 
-
-
-
+void YMakDecorator::MoveBy(BPoint pt)
+{
+	frame.OffsetBy(pt);
+	CloseRect.OffsetBy(pt);
+	ZoomRect.OffsetBy(pt);
+}
