@@ -27,8 +27,13 @@
 #include <fs_attr.h>
 	//  BeOS's C-based attribute functions
 
+#include <Entry.h>
+	// entry_ref
+
 #include "Error.h"
 	// StorageKit::Error
+	
+	
 	
 // This is just for cout while developing; shouldn't need it
 // when all is said and done.
@@ -126,7 +131,7 @@ StorageKit::open( const char *path, Mode mode, FileDescriptor &result ) {
 
 status_t
 StorageKit::close(StorageKit::FileDescriptor file) {
-	return ::close(file);
+	return (::close(file) == -1) ? errno : B_OK ;
 }
 
 StorageKit::FileDescriptor
@@ -166,26 +171,26 @@ StorageKit::remove_attr ( StorageKit::FileDescriptor file, const char *attr ) {
 	return fs_remove_attr ( file, attr ) == -1 ? errno : B_OK ;
 }
 
-StorageKit::Dir*
+StorageKit::Dir
 StorageKit::open_attr_dir( FileDescriptor file ) {
 	return fs_fopen_attr_dir( file );
 }
 
 
 void
-StorageKit::rewind_attr_dir( Dir *dir )
+StorageKit::rewind_attr_dir( Dir dir )
 {
 	if (dir != NULL)
 		fs_rewind_attr_dir( dir );
 }
 
 StorageKit::DirEntry*
-StorageKit::read_attr_dir( Dir* dir ) {
-	return (dir == NULL) ? NULL : fs_read_attr_dir( dir );
+StorageKit::read_attr_dir( Dir dir ) {
+	return (dir == NullDir) ? NULL : fs_read_attr_dir( dir );
 }
 
 status_t
-StorageKit::close_attr_dir ( Dir* dir )
+StorageKit::close_attr_dir ( Dir dir )
 {
 	if (dir == NULL)
 		return B_BAD_VALUE;
@@ -346,4 +351,139 @@ StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
 status_t
 StorageKit::sync( FileDescriptor file ) {
 	return (fsync(file) == -1) ? PosixErrnoToBeOSError() : B_OK ;
+}
+
+status_t
+StorageKit::open_dir( const char *path, Dir &result ) {
+//	cout << endl << "open_dir()" << endl;
+	result = ::opendir( path );
+	return (result == NULL) ? errno : B_OK ;
+}
+
+StorageKit::DirEntry*
+StorageKit::read_dir( Dir dir ) {
+	return (dir == NullDir) ? NULL : readdir(dir) ;
+}
+
+status_t
+StorageKit::close_dir( Dir dir ) {
+//	cout << endl << "close_dir()" << endl;
+	return (::closedir(dir) == -1) ? errno : B_OK;	
+}
+
+
+ssize_t
+StorageKit::read_link( const char *path, char *result, int size ) {
+	if (result == NULL || size < 1)
+		return B_BAD_VALUE;
+		
+	int len = ::readlink(path, result, size-1);
+	if (len == -1) {
+		result[0] = 0;		// Null terminate
+		return errno;	
+	} else {
+		result[len] = 0;	// Null terminate
+		return len;
+	}
+	
+}
+
+
+status_t
+StorageKit::entry_ref_to_path( struct entry_ref *ref, char *result, int size ) {
+	if (ref == NULL) {
+		return B_BAD_VALUE;
+	} else {
+		return entry_ref_to_path(ref->device, ref->directory, ref->name, result, size);
+	}
+}
+
+status_t
+StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size ) {
+	if (result == NULL || size < 1)
+		return B_BAD_VALUE;
+
+	// A list of possible relative pathnames to our EntryRefToPath program
+	const char app1[] = "tools/EntryRefToPath";
+	const char app2[] = "../tools/EntryRefToPath";
+	const char app3[] = "../../tools/EntryRefToPath";
+	const char app4[] = "storage_kit/tools/EntryRefToPath";
+	const char app5[] = "../../../tools/EntryRefToPath";
+	const char app6[] = "open-beos/storage_kit/tools/EntryRefToPath";
+	const char app7[] = "OpenBeOS/storage_kit/tools/EntryRefToPath";
+	const char app8[] = "/boot/home/config/lib/EntryRefToPath";
+	const int APP_COUNT = 8;
+	const char *app[APP_COUNT] = { app1, app2, app3, app4, app5, app6, app7, app8 };
+	char *app_path = NULL;
+	
+	// Try to find our EntryRefToPath program
+	for (int i = 0; i < APP_COUNT; i++) {
+		int fd = ::open(app[i], O_RDONLY);
+		if (fd != -1) {
+			::close(fd);
+			app_path = (char *)app[i];
+			break;
+		}
+	}
+	
+	if (app_path == NULL) {
+		result[0] = 0;
+		return B_ERROR;
+	}
+	
+	
+	// Attempt to invoke our EntryRefToPath program using the
+	// various pathnames from above. If one succeeds, it will
+	// return B_OK and the others will not be tried.
+	char cmd[B_PATH_NAME_LENGTH];
+
+	// Create our command line
+	sprintf(cmd, "%s %ld %lld %s", app_path, device, directory, name);
+
+	// Invoke the command, grabbing a pipe to its stdout
+	errno = B_OK;
+	FILE* file = popen(cmd, "r");
+
+	// If the command succeeded, read everything piped out to us
+	if (file != NULL && (int)file != -1) {
+		char *pos = result;
+		int bytes = 0;
+		int bytesLeft = size-1;	// Leave room for the NULL
+
+		// Do buffered reads just in case
+		while (!feof(file) && bytesLeft > 0) {
+			bytes = fread(pos, 1, bytesLeft, file);
+			pos += bytes;
+			bytesLeft -= bytes;
+		}
+		pos[0] = 0;	// Null terminate the string we just read
+
+		pclose(file);
+			
+		// If nothing is read from the pipe, then the call must have
+		// failed, because EntryRefToPipe will *always* print out
+		// at least one character. Unfortunately, we have to check
+		// this because popen() doesn't seem to think it's an error
+		// when the given command cannot be executed (we still get
+		// a valid pipe instead of an error code).
+		if (bytesLeft < size-1) {
+			// Check for an error. The first character will *always* be
+			// a '/' character if there's no error (because the pathname
+			// is absolute). If there's no error, we're done.
+			if (result[0] != '/') {
+				status_t status;
+				if (sscanf(result, "%ld\n%s", &status, NULL) >= 1) {
+					status = B_ERROR;
+				}
+				result[0] = 0;
+				return status;
+			} else {
+				return B_OK;
+			}
+		}
+	}
+	
+	result[0] = 0;
+	return B_ERROR;
+	
 }
