@@ -5,7 +5,7 @@
 #ifndef _NEWOS_KERNEL_ARCH_KERNEL_H
 #define _NEWOS_KERNEL_ARCH_KERNEL_H
 
-#ifdef ARCH_i386
+#ifdef ARCH_x86
 #include <arch/x86/kernel.h>
 #endif
 #ifdef ARCH_sh4
@@ -29,5 +29,12 @@
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 #define STACK_SIZE  (PAGE_SIZE*16)
+
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+
+#define CHECK_BIT(a, b) ((a) & (1 << (b)))
+#define SET_BIT(a, b) ((a) | (1 << (b)))
+#define CLEAR_BIT(a, b) ((a) & (~(1 << (b))))
 
 #endif
