@@ -116,9 +116,9 @@ int ipv4_input(struct mbuf *buf, int hdrlen)
 	if (buf->m_len > ip->length)
 		 m_adj(buf, ip->length - buf->m_len);
 
-	if (proto[ip->prot] && proto[ip->prot]->pr_input)
+	if (proto[ip->prot] && proto[ip->prot]->pr_input) {
 		return proto[ip->prot]->pr_input(buf, ip->hl * 4);
-	else
+	} else
 		printf("proto[%d] = %p\n", ip->prot, proto[ip->prot]);
 
 	return 0; 
@@ -164,9 +164,7 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 		if (ro->ro_rt == NULL)
 			rtalloc(ro);
 		if (ro->ro_rt == NULL) {
-#if SHOW_DEBUG
 			printf("EHOSTUNREACH\n");
-#endif
 			error = EHOSTUNREACH;
 			goto bad;
 		}
@@ -190,9 +188,9 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 #if SHOW_ROUTE
 	/* This just shows which interface we're planning on using */
 	printf("Sending to address ");
-	print_ipv4_addr(&ip->dst);
+	printf("%08lx", ip->dst.s_addr);
 	printf(" via device %s using source ", ifp->if_name);
-	dump_ipv4_addr("address ", &ip->src);
+	printf("%08lx\n", ip->src.s_addr);
 #endif
 
 	ip->ver = 4;
