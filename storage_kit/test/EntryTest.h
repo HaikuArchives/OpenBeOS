@@ -7,6 +7,9 @@
 
 #include <Entry.h>
 
+#include <Directory.h>
+#include <Path.h>
+
 #include <sys/utsname.h> // Not needed
 #include <sys/statvfs.h> // Not needed
 
@@ -25,19 +28,44 @@ public:
 	static Test* Suite() {
 		CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 		
-		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Init Test", &EntryTest::InitTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Traversal Test", &EntryTest::TraversalTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Copy Constructor Test", &EntryTest::CopyConstructorTest) );
 		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Equality Test", &EntryTest::EqualityTest) );
 		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Assignment Test", &EntryTest::AssignmentTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Conversion Test", &EntryTest::ConversionTest) );
+//		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Miscellaneous Test", &EntryTest::MiscTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Existence Test", &EntryTest::ExistenceTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Rename Test", &EntryTest::RenameTest) );
 		
 		return suite;
 	}		
 
+	// Filenames
+	static const char mainFile[] = "/boot/beos/apps/Clock";
+	static const char link[] = "EntryTest.Link";
+	static const char relLink[] = "EntryTest.RelLink";
+	static const char fourLink[] = "EntryTest.4Link";
+	static const char tripleLinkLeaf[] = "EntryTest.TripleLink";
+	char tripleLink[B_PATH_NAME_LENGTH+1];
+
+	EntryTest() {
+		// Create our tripleLink filename, which is absolute (most of
+		// the others are relative)
+		CPPUNIT_ASSERT( getcwd(tripleLink, B_PATH_NAME_LENGTH) == tripleLink );
+		sprintf(tripleLink, "%s%s%s", tripleLink,
+			((tripleLink[strlen(tripleLink)-1] == '/') ? "" : "/"),
+			tripleLinkLeaf);
+	}	
+
 	// This function called before *each* test added in Suite()
-	void setUp() {}
+	void setUp() {
+	}
 	
 	// This function called after *each* test added in Suite()
-	void tearDown()	{}
+	void tearDown()	{
+	}
 
+	// Creates a symbolic link named link that points to target
 	bool CreateLink(const char *link, const char *target) {
 		if (link == NULL || target == NULL)
 			return false;
@@ -58,14 +86,28 @@ public:
 		
 		// Create a new one
 		sprintf(str, "ln -s %s %s", target, link);
-//		printf("link str == '%s'\n", str);
 		system(str);
 	
 		return true;	
 	}
 	
-	bool RemoveLink(const char *link) {
-		if (link == NULL)
+	// Creates the given file
+	bool CreateFile(const char *file) {
+		if (file == NULL)
+			return false;
+			
+		int fd = ::open(file, O_CREAT | O_RDONLY);
+		if (fd >= 0) {
+			:: close(fd);
+			return true;
+		} else {
+			return false;
+		}
+	}
+			
+	// Removes the given file if it exsists
+	bool RemoveFile(const char *file) {
+		if (file == NULL)
 			return false;
 			
 		char str[1024];
@@ -73,62 +115,94 @@ public:
 		// If the link doesn't exist, we'll get an error message if we
 		// try to remove it. So we'll just go ahead and make sure it
 		// exists first :-)
-		int fd = ::open(link, O_CREAT);
+		int fd = ::open(file, O_CREAT);
 		if (fd >= 0)
 			::close( fd );
 			
 		// Remove the old file
-		sprintf(str, "rm %s", link);
+		sprintf(str, "rm %s", file);
 		system(str);
 		
 		return true;
 	}
 
-	void InitTest() {
+	void TraversalTest() {
+		CreateLink(link, mainFile);
+		CreateLink(relLink, link);
+		CreateLink( tripleLink, relLink );
+		CreateLink( fourLink, tripleLink );
+
 		BEntry entry;
 		CPPUNIT_ASSERT( entry.InitCheck() == B_NO_INIT );
 		
-		const char mainFile[] = "/boot/beos/apps/Clock";
-		const char link[] = "EntryTest.Link";
-		const char relLink[] = "EntryTest.RelLink";
-		const char fourLink[] = "EntryTest.4Link";
-//		const char tripleLink[] = "EntryTest.TripleLink";
-
-		// Construct an absolute pathname for the third link
-		const char tripleLinkLeaf[] = "EntryTest.TripleLink";
-		char tripleLink[B_PATH_NAME_LENGTH+1];
-		CPPUNIT_ASSERT( getcwd(tripleLink, B_PATH_NAME_LENGTH) == tripleLink );
-		sprintf(tripleLink, "%s%s%s", tripleLink,
-			((tripleLink[strlen(tripleLink)-1] == '/') ? "" : "/"),
-			tripleLinkLeaf);
-		
 		BEntry mainEntry(mainFile);
-
-		CreateLink(link, mainFile);
+		CPPUNIT_ASSERT( mainEntry.InitCheck() == B_OK );
+		
 		BEntry linkEntry( link, true );
 		CPPUNIT_ASSERT( linkEntry.InitCheck() == B_OK );
 		CPPUNIT_ASSERT( linkEntry == mainEntry );
 		
-		CreateLink(relLink, link);
 		BEntry relLinkEntry( relLink, true );
 		CPPUNIT_ASSERT( relLinkEntry.InitCheck() == B_OK );
 		CPPUNIT_ASSERT( relLinkEntry == mainEntry );
+		CPPUNIT_ASSERT( relLinkEntry == linkEntry );
 		
-		CreateLink( tripleLink, relLink );
 		BEntry tripleLinkEntry( tripleLink, true );
 		CPPUNIT_ASSERT( tripleLinkEntry.InitCheck() == B_OK );
 		CPPUNIT_ASSERT( tripleLinkEntry == mainEntry );
+		CPPUNIT_ASSERT( tripleLinkEntry == linkEntry );
+		CPPUNIT_ASSERT( tripleLinkEntry == relLinkEntry );
 		
-		CreateLink( fourLink, tripleLink );
 		BEntry fourLinkEntry( fourLink, true );
 		CPPUNIT_ASSERT( fourLinkEntry.InitCheck() == B_OK );
 		CPPUNIT_ASSERT( fourLinkEntry == mainEntry );
+		CPPUNIT_ASSERT( fourLinkEntry == linkEntry );
+		CPPUNIT_ASSERT( fourLinkEntry == relLinkEntry );
+		CPPUNIT_ASSERT( fourLinkEntry == tripleLinkEntry );
 				
+		RemoveFile(link);
+		RemoveFile(relLink);
+		RemoveFile(tripleLink);
+		RemoveFile(fourLink);		
+	}
+	
+	void CopyConstructorTest() {
+		CreateLink(link, mainFile);
 		
-		RemoveLink(link);
-		RemoveLink(relLink);
-		RemoveLink(tripleLink);
-		RemoveLink(fourLink);
+		BEntry entry(mainFile);
+		BEntry entry2(entry);
+		BEntry linkEntry(link);
+		BEntry linkEntry2(linkEntry);
+		
+		CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( entry2.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( linkEntry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( linkEntry2.InitCheck() == B_OK );
+		
+		CPPUNIT_ASSERT( entry == entry2 );
+		CPPUNIT_ASSERT( entry != linkEntry );
+		CPPUNIT_ASSERT( entry != linkEntry2 );
+
+		CPPUNIT_ASSERT( entry2 == entry );
+		CPPUNIT_ASSERT( entry2 != linkEntry );
+		CPPUNIT_ASSERT( entry2 != linkEntry2 );
+		
+		CPPUNIT_ASSERT( linkEntry == linkEntry2 );
+		CPPUNIT_ASSERT( linkEntry != entry );
+		CPPUNIT_ASSERT( linkEntry != entry2 );
+		
+		CPPUNIT_ASSERT( linkEntry2 == linkEntry );
+		CPPUNIT_ASSERT( linkEntry2 != entry );
+		CPPUNIT_ASSERT( linkEntry2 != entry2 );
+		
+		// Uncomment the following lines if you want to double-check
+		// the paths the various entries are pointing to
+/*		cout << BPath(&entry).Path() << endl;
+		cout << BPath(&entry2).Path() << endl;
+		cout << BPath(&linkEntry).Path() << endl;
+		cout << BPath(&linkEntry2).Path() << endl; */
+		
+		RemoveFile(link);		
 	}
 	
 	// n1 and n2 should both be uninitialized. y1a and y1b should be initialized
@@ -182,6 +256,125 @@ public:
 		
 		
 		EqualityTest(n1, y1b, y1a, y2, n2);
+	}
+
+	void ConversionTest() {
+		BEntry entry;
+
+		entry_ref ref;
+		BPath path;
+		BEntry entry2;
+		BDirectory dir;
+		
+		char str[B_FILE_NAME_LENGTH];
+		
+		// Test unitialized BEntry
+		CPPUNIT_ASSERT( entry.GetRef(&ref) == B_NO_INIT );
+		CPPUNIT_ASSERT( entry.GetPath(&path) == B_NO_INIT );
+		CPPUNIT_ASSERT( entry.GetParent(&entry2) == B_NO_INIT );
+		CPPUNIT_ASSERT( entry.GetParent(&dir) == B_NO_INIT );
+		CPPUNIT_ASSERT( entry.GetName(str) == B_NO_INIT );
+		
+		entry.SetTo("/boot");
+		
+		CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( entry.GetRef(&ref) == B_OK );
+		CPPUNIT_ASSERT( entry.GetPath(&path) == B_OK );
+		CPPUNIT_ASSERT( entry.GetParent(&entry2) == B_OK );
+//		CPPUNIT_ASSERT( DecodeResult(entry.GetParent(&dir)) == B_OK );
+
+		entry.SetTo("/");
+		
+		CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( entry.GetRef(&ref) == B_OK );
+		CPPUNIT_ASSERT( entry.GetPath(&path) == B_OK );
+		CPPUNIT_ASSERT( entry.GetParent(&entry2) == B_ENTRY_NOT_FOUND );
+//		CPPUNIT_ASSERT( DecodeResult(entry.GetParent(&dir)) == B_OK );
+		
+		BEntry entry3;
+		
+		// Verify result of GetRef()
+		entry3.SetTo(&ref);
+		CPPUNIT_ASSERT( entry3.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( entry == entry3 );
+		
+		// Verify result of GetPath()
+		entry3.SetTo(path.Path());
+		CPPUNIT_ASSERT( entry3.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( entry == entry3 );
+		
+		// Verify result of GetParent() calls
+//		entry3.SetTo(&dir, entry.Name());
+//		CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
+//		CPPUNIT_ASSERT( entry == entry3 );
+
+		// Test GetName()
+		CPPUNIT_ASSERT( entry.GetName(str) == B_OK );
+		CPPUNIT_ASSERT( strcmp(str, ".") == B_OK );
+		
+	}
+
+	
+	void MiscTest() {
+		BNode node(mainFile);
+		BEntry entry(mainFile);
+		
+		CPPUNIT_ASSERT(node.Lock() == B_OK);
+		CPPUNIT_ASSERT( entry.Exists() );
+	}
+	
+	void ExistenceTest() {
+		BEntry realEntry("/");
+		BEntry abstractEntry("/I_am_beggining_to_doubt_your_dedication_to_Sparkle_Motion");
+		CPPUNIT_ASSERT( realEntry.Exists() );
+		CPPUNIT_ASSERT( !abstractEntry.Exists() );
+	}
+
+	void RenameTest() {
+		// Verify attempts to rename root
+		BEntry root("/");
+		CPPUNIT_ASSERT( root.Rename("/", false) == B_FILE_EXISTS );
+		CPPUNIT_ASSERT( root.Rename("/", true) == B_NOT_ALLOWED );
+		
+		const char sparkleMotion[] = "/boot/I_am_beggining_to_doubt_your_dedication_to_Sparkle_Motion";
+		const char someFile[] = "/boot/SomeFileNameThatWeReallyReallyLikeALot";
+
+		// Verify abstract entries
+		RemoveFile(sparkleMotion);		// Make sure it doesn't exist
+		BEntry abstract(sparkleMotion);
+		CPPUNIT_ASSERT( abstract.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( !abstract.Exists() );
+		CPPUNIT_ASSERT( abstract.Rename("/boot/DoesntMatter") == B_ENTRY_NOT_FOUND );
+		CPPUNIT_ASSERT( abstract.Rename("/boot/DontMatter", true) == B_ENTRY_NOT_FOUND );
+		CPPUNIT_ASSERT( abstract.Rename("/DoesntMatter") == B_CROSS_DEVICE_LINK );
+		CPPUNIT_ASSERT( abstract.Rename("/DontMatter", true) == B_CROSS_DEVICE_LINK );
+		
+		// Verify concrete entries renamed to absolute filenames
+		CreateLink(sparkleMotion, mainFile);
+		CPPUNIT_ASSERT( abstract.Exists() );
+		CPPUNIT_ASSERT( RemoveFile(someFile) );
+		CPPUNIT_ASSERT( abstract.Rename(someFile) == B_OK );
+		CreateLink(sparkleMotion, "/boot");
+		CPPUNIT_ASSERT( abstract.Rename(sparkleMotion, false) == B_FILE_EXISTS );
+		CPPUNIT_ASSERT( abstract.Rename(sparkleMotion, true) == B_OK );
+		
+		// Verify that the rename properly clobbered the old link by checking that
+		// it points to the mainFile and not "/boot"
+		entry_ref ref;
+		CPPUNIT_ASSERT( abstract.GetRef(&ref) == B_OK );
+		BEntry verifier(&ref, true);	// Traverse the link
+		BEntry verifiee(mainFile, true);
+		CPPUNIT_ASSERT( verifier.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( verifiee.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( verifier == verifiee );
+		CPPUNIT_ASSERT( verifier != abstract );
+		
+		// Verify concrete entries renamed to relative filenames
+		
+
+		// Clean up
+		RemoveFile(sparkleMotion);	
+
 	}
 	
 	// This is a non-CPPUNIT test called by EntryTest.Private.cpp to test
