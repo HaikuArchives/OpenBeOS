@@ -191,3 +191,16 @@ Location:    GetNextDirents()
 Description: Crashs when passing a NULL buffer.
 
 
+OS:          BeOS R5
+Module:      BMimeType
+Location:    {Get,Set}LongDescription()
+Description: Crashes when passed a NULL description
+
+OS:          BeOS R5
+Modeule:     BMimeType
+Location:    SetShortDescription()
+Description: When passed a NULL description, doesn't crash, but does
+             appear to make the result of following calls to SetShortDescription
+             unreliable (sometimes they work, sometimes they don't).
+
+
