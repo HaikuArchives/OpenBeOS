@@ -44,6 +44,7 @@ THE SOFTWARE.
 #include "DrawShape.h"
 #include "XReferences.h"
 #include "Log.h"
+#include "Report.h"
 #include "pdflib.h"
 
 typedef struct
@@ -217,7 +218,7 @@ PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding)
 	if (cache && cache->encoding == encoding && strcmp(cache->name.String(), fontName) == 0) 
 		return cache->font;
 
-	LOG((fLog, "FindFont %s\n", fontName)); 
+	REPORT(kDebug, fPage, "FindFont %s", fontName); 
 	Font *f = NULL;
 	const int n = fFontCache.CountItems();
 	for (int i = 0; i < n; i++) {
@@ -230,10 +231,10 @@ PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding)
 	
 	if (embed) embed = EmbedFont(fontName);
 
-	LOG((fLog, "Create new font\n"));
+	REPORT(kDebug, fPage, "Create new font");
 	int font = PDF_findfont(fPdf, fontName, encoding_names[encoding], embed);
 	if (font != -1) {
-		LOG((fLog, "font created\n"));
+		REPORT(kDebug, fPage, "font created");
 		cache = new Font(fontName, font, encoding);
 		fFontCache.AddItem(cache);
 	}
@@ -375,7 +376,7 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 	GetFontName(&fState->beFont, fontName, embed, encoding);
 	font = FindFont(fontName, embed, encoding);	
 	if (font < 0) {
-		LOG((fLog, "**** PDF_findfont(%s) failed, back to default font\n", fontName));
+		REPORT(kWarning, fPage, "**** PDF_findfont(%s) failed, back to default font", fontName);
 		font = PDF_findfont(fPdf, "Helvetica", "macroman", 0);
 	}
 
@@ -421,7 +422,7 @@ PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 si
 		glyphs[0] = &glyph;
 		font->GetGlyphShapes(utf8, 1, glyphs);
 	} else {
-		LOG((fLog, "glyph for %*.*s not found!\n", size, size, utf8));
+		REPORT(kWarning, fPage, "glyph for %*.*s not found!", size, size, utf8);
 		// create a rectangle instead
 		font_height height;
 		fState->beFont.GetHeight(&height);
@@ -460,11 +461,12 @@ PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 si
 void	
 PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_space)
 {
-	LOG((fLog, "DrawString string=\"%s\", escapement_nospace=%f, escapement_space=%f, at %f, %f\n", \
-			string, escapement_nospace, escapement_space, fState->penX, fState->penY));
+	REPORT(kDebug, fPage, "DrawString string=\"%s\", escapement_nospace=%f, escapement_space=%f, at %f, %f", \
+			string, escapement_nospace, escapement_space, fState->penX, fState->penY);
 
 	if (IsDrawing()) {
-		SetColor();
+		// text color is always the high color and not the pattern!
+		SetColor(fState->foregroundColor);
 	}
 	// convert string to UTF8
 	BString utf8;
