@@ -473,8 +473,8 @@ ours:
 
 #if SHOW_ROUTE
 	/* This just shows which interface we're planning on using */
-	printf("Accepting packet to address %08lx via device %s from src addr %08lx\n",
-	       ntohl(ip->ip_dst.s_addr), m->m_pkthdr.rcvif->if_name, 
+	printf("Accepting packet [%d] to address %08lx via device %s from src addr %08lx\n",
+	       ip->ip_p, ntohl(ip->ip_dst.s_addr), m->m_pkthdr.rcvif->if_name, 
 	       ntohl(ip->ip_src.s_addr));
 #endif
 
