@@ -82,6 +82,11 @@ PDFWriter::~PDFWriter()
 	}
 	fFontFiles.MakeEmpty();
 	
+	for (int i = 0; i < fPatterns.CountItems(); i++) {
+		delete (Pattern*)fPatterns.ItemAt(i);
+	}
+	fPatterns.MakeEmpty();
+	
 	if (Transport())
 		CloseTransport();
 
@@ -112,8 +117,14 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 	uint32		i;
 	int32       orientation;
 	
-
 	status = B_OK;
+
+	if (pageNumber == 1) {
+		if (MakesPattern()) 
+			fprintf(fLog, ">>>>> Collecting patterns...\n");
+		else if (MakesPDF())
+			fprintf(fLog, ">>>>> Generating PDF...\n");
+	}
 	
 	paperRect = JobMsg()->FindRect("paper_rect");
 	printRect = JobMsg()->FindRect("printable_rect");
@@ -237,8 +248,6 @@ PDFWriter::InitWriter()
 
 	DeclareFonts();
 
-	CreatePatterns();
-
 	fprintf(fLog, "End of fonts declaration.\n");	
 
 	fState = NULL;
@@ -260,11 +269,13 @@ PDFWriter::BeginPage(BRect paperRect, BRect printRect)
 	ASSERT(fState == NULL);
 	fState = new State();
 	fState->height = height;
-    PDF_begin_page(fPdf, width, fState->height);
+    if (MakesPDF())
+    	PDF_begin_page(fPdf, width, fState->height);
 
 	fprintf(fLog, ">>>> PDF_begin_page [%f, %f]\n", width, fState->height);
 	
-	PDF_initgraphics(fPdf);
+	if (MakesPDF())
+		PDF_initgraphics(fPdf);
 	
 	fState->fontChanged 	= true;
 
@@ -287,7 +298,8 @@ PDFWriter::EndPage()
 {
 	while (fState->prev != NULL) PopState();
 
-    PDF_end_page(fPdf);
+    if (MakesPDF())
+    	PDF_end_page(fPdf);
 	fprintf(fLog, ">>>> PDF_end_page\n");
 
 	delete fState; fState = NULL;
@@ -677,6 +689,7 @@ PDFWriter::PopInternalState()
 void 
 PDFWriter::SetColor(rgb_color color) 
 {
+	if (!MakesPDF()) return;
 	if (fState->currentColor.red != color.red || 
 		fState->currentColor.blue != color.blue || 
 		fState->currentColor.green != color.green || 
@@ -691,24 +704,45 @@ PDFWriter::SetColor(rgb_color color)
 
 
 // --------------------------------------------------
-void
-PDFWriter::CreatePatterns() 
+int
+PDFWriter::FindPattern() 
 {
-/*
-	fPattern = -1;
-	fprintf(fLog, "CreatePatterns\n");
-	BBitmap bm(BRect(0, 0, 7, 7), B_RGB24);
-	if (!bm.IsValid()) {
-		fprintf(fLog, "CreatePattern could not create bitmap\n");
-		return;
+	// TODO: use hashtable instead of BList for fPatterns
+	const int n = fPatterns.CountItems();
+	for (int i = 0; i < n; i ++) {
+		Pattern* p = (Pattern*)fPatterns.ItemAt(i);
+		if (p->Matches(fState->pattern, fState->backgroundColor, fState->foregroundColor)) return p->patternId;
+	}
+	return -1;
+}
+
+
+// --------------------------------------------------
+void
+PDFWriter::CreatePattern() 
+{
+	// TODO: create mask for transparent pixels
+	fprintf(fLog, "CreatePattern\n");
+	uint8 bitmap[8*8*3];
+	uint8* data = (uint8*)fState->pattern.data;
+
+	uint8* b = bitmap;
+	for (int8 y = 0; y <= 7; y ++, data ++) {
+		uint8 d = *data;
+		for (int8 x = 0; x <= 7; x ++, d >>= 1, b += 3) {
+			if (d & 1 == 1) {
+				b[0] = fState->foregroundColor.red;
+				b[1] = fState->foregroundColor.green;
+				b[2] = fState->foregroundColor.blue;
+			} else {
+				b[0] = fState->backgroundColor.red;
+				b[1] = fState->backgroundColor.green;
+				b[2] = fState->backgroundColor.blue;
+			}
+		} 
 	}
 
-	int8* c = (int8*)bm.Bits();
-	c[0] = 255;
-	c[3  +1] = 255;
-	c[2*3+2] = 255;
-
-	int image = PDF_open_image(fPdf, "raw", "memory", (const char *) bm.Bits(), bm.BytesPerRow()*8, 8, 8, 3, 8, 0);
+	int image = PDF_open_image(fPdf, "raw", "memory", (const char *) bitmap, sizeof(bitmap), 8, 8, 3, 8, 0);
 	if (image == -1) {
 		fprintf(fLog, "CreatePattern could not create image\n");
 		return;
@@ -719,12 +753,12 @@ PDFWriter::CreatePatterns()
 		PDF_close_image(fPdf, image);
 		return;
 	}
-	fPattern = pattern;
 	PDF_place_image(fPdf, image, 0, 0, 1);
 	PDF_end_pattern(fPdf);
 	PDF_close_image(fPdf, image);
-	fprintf(fLog, "Pattern created\n");
-*/
+	
+	Pattern* p = new Pattern(fState->pattern, fState->backgroundColor, fState->foregroundColor, pattern);
+	fPatterns.AddItem(p);
 }
 
 
@@ -732,10 +766,19 @@ PDFWriter::CreatePatterns()
 void
 PDFWriter::SetPattern() 
 {
-/*
-	fprintf(fLog, "SetPattern %d\n", fPattern);
-	PDF_setcolor(fPdf, "both", "pattern", fPattern, 0, 0, 0);
-*/
+	fprintf(fLog, "SetPattern\n");
+	if (MakesPattern()) {
+		if (FindPattern() == -1) CreatePattern();
+	} else {
+		// assert(MakesPDF());
+		int pattern = FindPattern();
+		if (pattern != -1) {
+			PDF_setcolor(fPdf, "both", "pattern", pattern, 0, 0, 0);
+		} else {
+			// TODO: fall back to another method
+			fprintf(fLog, "error: pattern missing!");
+		}
+	}
 }
 
 
@@ -776,12 +819,22 @@ PDFWriter::Paint(bool stroke)
 
 
 // --------------------------------------------------
-static bool 
-IsSame(pattern p1, pattern p2) 
+bool 
+PDFWriter::IsSame(const pattern &p1, const pattern &p2)
 {
 	char *a = (char*)p1.data;
 	char *b = (char*)p2.data;
 	return strncmp(a, b, 8) == 0;
+}
+
+
+// --------------------------------------------------
+bool 
+PDFWriter::IsSame(const rgb_color &c1, const rgb_color &c2)
+{
+	char *a = (char*)&c1;
+	char *b = (char*)&c1;
+	return strncmp(a, b, sizeof(rgb_color)) == 0;
 }
 
 
@@ -793,19 +846,9 @@ PDFWriter::SetColor()
 		SetColor(fState->foregroundColor);
 	} else if (IsSame(fState->pattern, B_SOLID_LOW)) {
 		SetColor(fState->backgroundColor);
-//	} else {
-//		SetPattern();
-//	} 
-	} else if (IsSame(fState->pattern, B_MIXED_COLORS)) {
-		rgb_color mixed; // XXX
-		mixed.red    = (fState->foregroundColor.red + fState->backgroundColor.red) / 2; 
-		mixed.green  = (fState->foregroundColor.green + fState->backgroundColor.green) / 2; 
-		mixed.blue   = (fState->foregroundColor.blue + fState->backgroundColor.blue) / 2; 
-		mixed.alpha  = (fState->foregroundColor.alpha + fState->backgroundColor.alpha) / 2; 
-		SetColor(mixed);
 	} else {
-		SetColor(fState->foregroundColor);
-	}
+		SetPattern();
+	} 
 }
 
 
@@ -1524,9 +1567,25 @@ PDFWriter::StrokeLine(BPoint start,	BPoint end)
 			start.x, start.y, end.x, end.y);
 
 	SetColor();			
-	PDF_moveto(fPdf, tx(start.x), ty(start.y));
-	PDF_lineto(fPdf, tx(end.x),   ty(end.y));
-	StrokeOrClip();
+	if (!MakesPDF()) return;
+	if (IsClipping()) {
+		BPoint d = start - end; // calculate direction vector
+		double len = sqrt(d.x*d.x + d.y*d.y); // normalize to length of 1
+		d.x = d.x * fState->penSize / len; d.y = d.y * fState->penSize / len;
+		d.x /= 2; d.y /= 2;
+		BPoint r(d.y, d.x); // rotate 90 degrees
+//		start += d; end -= d; // increase length of line by penSize
+		// generate rectangle that represents the line with width penSize
+		PDF_moveto(fPdf, tx(start.x + r.x), ty(start.y + r.y));
+		PDF_lineto(fPdf, tx(start.x - r.x), ty(start.y - r.y));
+		PDF_lineto(fPdf, tx(end.x - r.x),   ty(end.y - r.y));
+		PDF_lineto(fPdf, tx(end.x + r.x),   ty(end.y + r.y));
+		PDF_closepath(fPdf);
+	} else {
+		PDF_moveto(fPdf, tx(start.x), ty(start.y));
+		PDF_lineto(fPdf, tx(end.x),   ty(end.y));
+		StrokeOrClip();
+	}
 }
 
 
@@ -1538,6 +1597,7 @@ PDFWriter::StrokeRect(BRect rect)
 			rect.left, rect.top, rect.right, rect.bottom);
 
 	SetColor();			
+	if (!MakesPDF()) return;
 	PDF_rect(fPdf, tx(rect.left), ty(rect.bottom), scale(rect.Width()), scale(rect.Height()));
 	StrokeOrClip();
 }
@@ -1551,6 +1611,7 @@ PDFWriter::FillRect(BRect rect)
 			rect.left, rect.top, rect.right, rect.bottom);
 
 	SetColor();			
+	if (!MakesPDF()) return;
 	PDF_rect(fPdf, tx(rect.left), ty(rect.bottom), scale(rect.Width()), scale(rect.Height()));
 	FillOrClip();
 }
@@ -1562,6 +1623,9 @@ PDFWriter::FillRect(BRect rect)
 // The constant 0.555... is taken from gobeProductive.
 void	
 PDFWriter::PaintRoundRect(BRect rect, BPoint radii, bool stroke) {
+	SetColor();
+	if (!MakesPDF()) return;
+
 	BPoint center;
 	
 	float sx = scale(radii.x);
@@ -1571,8 +1635,6 @@ PDFWriter::PaintRoundRect(BRect rect, BPoint radii, bool stroke) {
 	float bx = 0.5555555555555 * sx;
 	float ay = sy;
 	float by = 0.5555555555555 * sy;
-
-	SetColor();
 
 	center.x = tx(rect.left) + sx;
 	center.y = ty(rect.top) - sy;
@@ -1636,6 +1698,7 @@ PDFWriter::StrokeBezier(BPoint	*control)
 {
 	fprintf(fLog, "StrokeBezier\n");
 	SetColor();
+	if (!MakesPDF()) return;
 	PDF_moveto(fPdf, tx(control[0].x), ty(control[0].y));
 	PDF_curveto(fPdf, tx(control[1].x), ty(control[1].y),
 	            tx(control[2].x), ty(control[2].y),
@@ -1650,6 +1713,7 @@ PDFWriter::FillBezier(BPoint *control)
 {
 	fprintf(fLog, "FillBezier\n");
 	SetColor();
+	if (!MakesPDF()) return;
 	PDF_moveto(fPdf, tx(control[0].x), ty(control[0].y));
 	PDF_curveto(fPdf, tx(control[1].x), ty(control[1].y),
 	            tx(control[2].x), ty(control[2].y),
@@ -1667,7 +1731,9 @@ PDFWriter::PaintArc(BPoint center, BPoint radii, float startTheta, float arcThet
 	float sx = scale(radii.x);
 	float sy = scale(radii.y);
 	float smax = sx > sy ? sx : sy;
+
 	SetColor();
+	if (!MakesPDF()) return;
 
 	PDF_save(fPdf);
 	PDF_scale(fPdf, sx, sy);
@@ -1713,6 +1779,7 @@ PDFWriter::PaintEllipse(BPoint center, BPoint radii, bool stroke)
 	float by = 0.5555555555555 * sy;
 
 	SetColor();
+	if (!MakesPDF()) return;
 
 	PDF_moveto(fPdf, center.x - ax, center.y);
 	PDF_curveto(fPdf, 
@@ -1771,6 +1838,8 @@ PDFWriter::StrokePolygon(int32 numPoints, BPoint *points, bool isClosed)
 	x0 = y0 = 0.0;
 		
 	SetColor();		
+	if (!MakesPDF()) return;
+
 	for ( i = 0; i < numPoints; i++, points++ ) {
 		fprintf(fLog, " [%f, %f]", points->x, points->y);
 		if (i != 0) {
@@ -1798,6 +1867,8 @@ PDFWriter::FillPolygon(int32 numPoints, BPoint *points, bool isClosed)
 			numPoints, isClosed);
 			
 	SetColor();		
+	if (!MakesPDF()) return;
+
 	for ( i = 0; i < numPoints; i++, points++ ) {
 		fprintf(fLog, " [%f, %f]", points->x, points->y);
 		if (i != 0) {
@@ -1817,6 +1888,7 @@ void PDFWriter::StrokeShape(BShape *shape)
 {
 	fprintf(fLog, "StrokeShape\n");
 	SetColor();			
+	if (!MakesPDF()) return;
 	DrawShape iterator(this, true);
 	iterator.Iterate(shape);
 }
@@ -1827,6 +1899,7 @@ void PDFWriter::FillShape(BShape *shape)
 {
 	fprintf(fLog, "FillShape\n");
 	SetColor();			
+	if (!MakesPDF()) return;
 	DrawShape iterator(this, false);
 	iterator.Iterate(shape);
 }
@@ -1837,6 +1910,7 @@ void
 PDFWriter::ClipToPicture(BPicture *picture, BPoint point, bool clip_to_inverse_picture)
 {
 	fprintf(fLog, "ClipToPicture at (%f, %f) clip_to_inverse_picture = %s\n", point.x, point.y, clip_to_inverse_picture ? "true" : "false");
+	if (!MakesPDF()) return;
 	if (clip_to_inverse_picture) {
 		fprintf(fLog, "Clipping to inverse picture not implemented!\n");
 		return;
@@ -1880,6 +1954,8 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 					dest.left, dest.top, dest.right, dest.bottom,
 					width, height, bytesPerRow, pixelFormat, flags, data);
 
+	if (!MakesPDF()) return;
+
 	if (IsClipping()) {
 		fprintf(fLog, "DrawPixels for clipping not implemented yet!");
 		return;
@@ -1887,8 +1963,8 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 
 	mask = CreateMask(src, bytesPerRow, pixelFormat, flags, data);
 
-	float scaleX = dest.Width() / src.Width();
-	float scaleY = dest.Height() / src.Height();
+	float scaleX = (dest.Width()+1) / (src.Width()+1);
+	float scaleY = (dest.Height()+1) / (src.Height()+1);
 
 	if (mask) {
 		int32 w = (width+7)/8;
@@ -1943,6 +2019,8 @@ PDFWriter::SetClippingRects(BRect *rects, uint32 numRects)
 	
 	fprintf(fLog, "SetClippingRects numRects=%ld\nrects=",
 			numRects);
+
+	if (!MakesPDF()) return;
 	
 	for ( i = 0; i < numRects; i++, rects++ ) {
 		fprintf(fLog, " [%f, %f, %f, %f]",
@@ -1964,6 +2042,7 @@ PDFWriter::PushState()
 {
 	PushInternalState();
 	fprintf(fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0);
+	if (!MakesPDF()) return;
 	PDF_save(fPdf);
 }
 
@@ -1973,6 +2052,7 @@ void
 PDFWriter::PopState()
 {
 	if (PopInternalState()) {
+		if (!MakesPDF()) return;
 		PDF_restore(fPdf);
 	}
 }
@@ -2059,6 +2139,7 @@ PDFWriter::SetLineMode(cap_mode capMode, join_mode joinMode, float miterLimit)
 	fState->capMode    = capMode;
 	fState->joinMode   = joinMode;
 	fState->miterLimit = miterLimit;
+	if (!MakesPDF()) return;
 	int m = 0;
 	switch (capMode) {
 		case B_BUTT_CAP:   m = 0; break;
@@ -2088,9 +2169,10 @@ PDFWriter::SetPenSize(float size)
 {
 	fprintf(fLog, "SetPenSize size=%f\n", size);
 	if (size <= 0.00001) size = 1;
-	PDF_setlinewidth(fPdf, size);
 	// XXX scaling required?
 	fState->penSize = scale(size);
+	if (!MakesPDF()) return;
+	PDF_setlinewidth(fPdf, size);
 }
 
 

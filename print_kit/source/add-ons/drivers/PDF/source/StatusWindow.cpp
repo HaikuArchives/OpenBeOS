@@ -35,12 +35,14 @@ THE SOFTWARE.
 
 
 // --------------------------------------------------
-StatusWindow::StatusWindow(int32 pages, PrinterDriver *pd) 
+StatusWindow::StatusWindow(int32 passes, int32 pages, PrinterDriver *pd) 
 	:	HWindow(BRect(100, 100, 400, 185), "PDF Writer", 
 			B_TITLED_WINDOW, 
 			B_NOT_RESIZABLE|B_NOT_ZOOMABLE|B_NOT_CLOSABLE,
 			B_CURRENT_WORKSPACE, 'cncl') 
 {
+	fPass = 0;
+	fPages = pages;
 	fPrinterDriver = pd;
 	fPageCount = 0;
 //	fPopyCount = 0;
@@ -72,7 +74,7 @@ StatusWindow::StatusWindow(int32 pages, PrinterDriver *pd)
 
 	r.Set(10, 15, Frame().Width()-10, 10);
 	fPageStatus = new BStatusBar(r, "pageStatus");
-	fPageStatus->SetMaxValue(pages);
+	fPageStatus->SetMaxValue(pages * passes);
 	fPageStatus->SetBarHeight(12);
 	fPanel->AddChild(fPageStatus);
 
@@ -112,7 +114,14 @@ StatusWindow::MessageReceived(BMessage *msg)
 			break;
 		case 'page':
 			fPage = "";
-			fPage << "Generating Page: " << ++fPageCount;
+			if (fPass == 0) 
+				fPage << "Collecting Patters Page: " << ++fPageCount;
+			else				
+				fPage << "Generating Page: " << ++fPageCount;
+			if (fPageCount == fPages) {
+				fPass ++;
+				fPageCount = 0;
+			}
 			fPageLabel->SetText(fPage.String());
 			fPageStatus->Update(1);
 			break;

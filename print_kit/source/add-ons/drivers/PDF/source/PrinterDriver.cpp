@@ -97,6 +97,7 @@ PrinterDriver::PrintJob
 	int32 				page;
 	uint32				copy;
 	uint32				copies;
+	const int32         passes = 2;
 
 	fJobFile		= jobFile;
 	fPrinterNode	= printerNode;
@@ -125,23 +126,25 @@ PrinterDriver::PrintJob
 	}
 	
 	// show status window
-	fStatusWindow = new StatusWindow(pfh.page_count, this);
+	fStatusWindow = new StatusWindow(passes, pfh.page_count, this);
 
 	status = BeginJob();
 
 	fPrinting = true;
-	for (copy = 0; copy < copies && status == B_OK && fPrinting; copy++) 
-	{
-		for (page = 1; page <= pfh.page_count && status == B_OK && fPrinting; page++) {
-			fStatusWindow->PostMessage(new BMessage('page'));
-			status = PrintPage(page, pfh.page_count);
+	for (fPass = 0; fPass < passes && status == B_OK && fPrinting; fPass++) {
+		for (copy = 0; copy < copies && status == B_OK && fPrinting; copy++) 
+		{
+			for (page = 1; page <= pfh.page_count && status == B_OK && fPrinting; page++) {
+				fStatusWindow->PostMessage(new BMessage('page'));
+				status = PrintPage(page, pfh.page_count);
+			}
+	
+			// re-read job message for next page
+			fJobFile->Seek(sizeof(pfh), SEEK_SET);
+			msg->Unflatten(fJobFile);
 		}
-
-		// re-read job message for next page
-		fJobFile->Seek(sizeof(pfh), SEEK_SET);
-		msg->Unflatten(fJobFile);
 	}
-
+	
 	status_t s = EndJob();
 	if (status == B_OK) status = s;
 		

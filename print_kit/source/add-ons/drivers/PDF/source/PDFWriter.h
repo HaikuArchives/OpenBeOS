@@ -53,7 +53,6 @@ THE SOFTWARE.
 #define DEGREE2RAD(d) (PI * d / 180.0)
 
 class DrawShape;
-class RotateShape;
 
 enum font_encoding 
 {
@@ -88,7 +87,6 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 {
 	
 	friend class DrawShape;
-	friend class RotateShape;
 	
 	public:
 		// constructors / destructor
@@ -205,6 +203,9 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		void		SetFontShear(float shear);
 		void		SetFontFace(int32 flags);
 		
+		static inline bool IsSame(const pattern &p1, const pattern &p2);
+		static inline bool IsSame(const rgb_color &c1, const rgb_color &c2);
+		
 	private:
 	
 		class State 
@@ -281,6 +282,25 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 			int64     size;
 			font_type type;
 		};
+
+		class Pattern
+		{
+		public:
+			pattern     pat;
+			rgb_color   lowColor, highColor;
+			int         patternId;
+			
+			Pattern(const pattern &p, rgb_color low, rgb_color high, int id)
+				: pat(p)
+				, lowColor(low)
+				, highColor(high)
+				, patternId(id)
+			{};
+			
+			inline bool Matches(const pattern &p, rgb_color low, rgb_color high) const {
+				return IsSame(pat, p) && IsSame(lowColor, low) && IsSame(highColor, high);
+			};
+		};
 	
 		FILE			*fLog;
 		PDF				*fPdf;
@@ -288,8 +308,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		int32           fStateDepth;
 		BList           fFontCache;
 		BList           fFontFiles;
+		BList           fPatterns;
 		int64           fEmbedMaxFontSize;
-		int             fPattern;
 		BScreen         *fScreen;
 		
 		enum 
@@ -302,6 +322,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		inline float ty(float y)    { return fState->height - (fState->y0 + fState->scale*y); }
 		inline float scale(float f) { return fState->scale * f; }
 
+		inline bool MakesPattern()  { return Pass() == 0; }
+		inline bool MakesPDF()      { return Pass() == 1; }
 		inline bool IsDrawing() const  { return fMode == kDrawingMode; }
 		inline bool IsClipping() const { return fMode == kClippingMode; }
 
@@ -313,9 +335,10 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		void PushInternalState();
 		bool PopInternalState();
 
-		void CreatePatterns();
 		void SetColor(rgb_color toSet);
 		void SetColor();
+		void CreatePattern();
+		int  FindPattern();
 		void SetPattern();
 		
 		void StrokeOrClip();

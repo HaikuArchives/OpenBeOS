@@ -80,6 +80,7 @@ public:
 	inline BMessage			*JobMsg()		{ return fJobMsg; }
 	inline BDataIO			*Transport()	{ return fTransport; }
 	inline BWindow     		*Status()       { return fStatusWindow; }
+	inline int32            Pass() const    { return fPass; }
 	
 	// publics status code
 	typedef enum {
@@ -97,6 +98,7 @@ private:
 	volatile Orientation	fOrientation;
 	
 	bool					fPrinting;
+	int32                   fPass;
 	
 	// transport-related 
 	BDataIO					*fTransport;

@@ -349,8 +349,6 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 	PDF_set_parameter(fPdf, "strikeout", (face & B_STRIKEOUT_FACE) != 0 ? "true" : "false");
 	PDF_set_value(fPdf, "textrendering", (face & B_OUTLINED_FACE) != 0 ? 1 : 0); 
 
-	SetColor();
-
 	PDF_setfont(fPdf, fState->font, scale(fState->beFont.Size()));
 
 	const float x = tx(fState->penX);
@@ -404,6 +402,11 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 {
 	fprintf(fLog, "DrawString string=\"%s\", escapement_nospace=%f, escapement_space=%f, at %f, %f\n",
 			string, escapement_nospace, escapement_space, fState->penX, fState->penY);
+
+	if (IsDrawing()) {
+		SetColor();
+	}
+	if (!MakesPDF()) return;
 
 	// convert string to UTF8
 	BString utf8;

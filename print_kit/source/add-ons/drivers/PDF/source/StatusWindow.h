@@ -41,6 +41,8 @@ THE SOFTWARE.
 class StatusWindow : public HWindow 
 {
 private:
+	int32 fPass;
+	int32 fPages;
 //	BString fCopy;
 	BString fPage;
 	int32 fPageCount;
@@ -55,7 +57,7 @@ private:
 public:
 	typedef HWindow inherited;
 	
-	StatusWindow(int32 pages, PrinterDriver *pd);
+	StatusWindow(int32 passes, int32 pages, PrinterDriver *pd);
 	
 	void MessageReceived(BMessage *msg);
 };
