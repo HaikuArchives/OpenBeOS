@@ -13,7 +13,6 @@ typedef struct udp_header {
 	uint16 cksum;
 } _PACKED udp_header;
 
-int udp_input(struct mbuf *buf);
 
 #endif /* OBOS_UDP_H */
 

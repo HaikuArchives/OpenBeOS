@@ -12,13 +12,13 @@
 int *prot_table;
 loaded_net_module *net_modules;
 
-int udp_input(struct mbuf*buf)
+int udp_input(struct mbuf *buf)
 {
 	udp_header *udp = mtod(buf, udp_header *);
 
 	printf("udp_header  :\n");
 	printf("            : src_port      : %d\n", ntohs(udp->src_port));
-        printf("            : dst_port      : %d\n", ntohs(udp->dst_port));
+	printf("            : dst_port      : %d\n", ntohs(udp->dst_port));
 	printf("            : udp length    : %d bytes\n", ntohs(udp->length));
 
 	return 0;
