@@ -12,4 +12,15 @@
 status_t DecodeResult(status_t result);
 
 
+// Calls system() with the concatenated string of command and parameter.
+void ExecCommand(const char *command, const char *parameter);
+
+// Calls system() with the concatenated string of command, parameter1,
+// " " and parameter2.
+void ExecCommand(const char *command, const char *parameter1,
+							const char *parameter2);
+
+// Calls system() with the given command (kind of silly, but it's consistent :-)
+void ExecCommand(const char *command);
+	
 #endif	// __sk_test_utils_h__

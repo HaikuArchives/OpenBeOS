@@ -164,3 +164,32 @@ status_t DecodeResult(status_t result) {
 	
 	return result;
 }
+
+void ExecCommand(const char *command) {
+	if (command)
+		system(command);
+}
+
+void ExecCommand(const char *command, const char *parameter) {
+	if (command && parameter) {
+		char *cmdLine = new char[strlen(command) + strlen(parameter) + 1];
+		strcpy(cmdLine, command);
+		strcat(cmdLine, parameter);
+		system(cmdLine);
+		delete[] cmdLine;
+	}
+}
+
+void ExecCommand(const char *command, const char *parameter1,
+							const char *parameter2) {
+	if (command && parameter1 && parameter2) {
+		char *cmdLine = new char[strlen(command) + strlen(parameter1)
+								 + 1 + strlen(parameter2) + 1];
+		strcpy(cmdLine, command);
+		strcat(cmdLine, parameter1);
+		strcat(cmdLine, " ");
+		strcat(cmdLine, parameter2);
+		system(cmdLine);
+		delete[] cmdLine;
+	}
+}
