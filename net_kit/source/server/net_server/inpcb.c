@@ -101,7 +101,7 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 	int reuseport = (so->so_options & SO_REUSEPORT);
 
 	if (inp->lport || inp->laddr.s_addr != INADDR_ANY) {
-		printf("in_pcbbind: EINVAL\n");
+		printf("in_pcbbind: EINVAL (%08lx:%d)\n", inp->laddr.s_addr, inp->lport);
 		return EINVAL;
 	}
 
@@ -117,7 +117,8 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 	if (nam) {
 		sin = mtod(nam, struct sockaddr_in *);
 		if (nam->m_len != sizeof(*sin)) {
-			printf("in_pcbind: EINVAL\n");
+			printf("in_pcbind: EINVAL (m_len = %ld vs %ld)\n",
+			       nam->m_len, sizeof(*sin));
 			/* whoops, too much data! */
 			return EINVAL;
 		}
@@ -313,7 +314,6 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 		printf("in_pcbconnect: EADDRINUSE\n"); 
 		return EADDRINUSE;
 	}
-
 
 	if (inp->laddr.s_addr == INADDR_ANY) {
 		if (inp->lport == 0)
