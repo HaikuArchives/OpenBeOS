@@ -233,8 +233,8 @@ rule KernelStaticLibrary
 	UseArchHeaders $(OBOS_ARCH) ;
 
 	SetupObjectsDir ;
-	CCFLAGS += -nostdinc -Wall ;
-	C++FLAGS += -nostdinc -Wall ;
+	CCFLAGS += -nostdinc -Wall -fno-pic -finline ;
+	C++FLAGS += -nostdinc -Wall -fno-pic -finline ;
 	Library lib$(<).a : $(>) ;
 	MakeLocate lib$(<).so : $(OBOS_STLIB_DIR) ;
 }
@@ -277,4 +277,34 @@ rule assemble
 actions assemble
 {
 gcc -c $(>) -O2 -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_i386 -DNEWOS=1 -fno-pic -o $(<) ;
+}
+
+rule Stage2
+{
+	# Builds the stage 2 loader
+	# Stage2 <sources> ;
+	SetupObjectsDir ;
+	UsePublicHeaders kernel ;
+	UsePrivateHeaders kernel ;
+	UseArchHeaders $(OBOS_ARCH) ;
+
+	CCFLAGS += -nostdinc -Wall -fno-pic -finline ;
+	LINK = ld ;
+
+	# XXX - fix me!!
+	LINKFLAGS = -dN --script=stage2.ld ;
+
+	# libc.a should be the entire of libc, but as we have in smaller chunks, just include
+	# the chunks we need. Messy, but it works.
+	LINKLIBS = [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc libc.a ] ;
+	LINKLIBS +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc stdio libstdio.a ] ;
+	LINKLIBS +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc string libstring.a ] ;
+	LINKLIBS +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc locale liblocale.a ] ;
+
+	# TODO - This location of libgcc.a should be detected and set at a higher level
+	LINKLIBS += -L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc ;
+
+	# ??? - this will invoke a load of apps to do various things to the file. Do we really want
+	#         or need them all to be run on stage2?
+	Main stage2 :  $(<) ;
 }
