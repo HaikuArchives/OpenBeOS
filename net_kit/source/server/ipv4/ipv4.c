@@ -75,13 +75,13 @@ int ipv4_dev_init(ifnet *dev)
 {
 	ifaddr *ifa = malloc(sizeof(ifaddr));
 
-	ifa->if_addr.type = AF_INET;
-	ifa->if_addr.len = 4;
+	ifa->if_addr.sa_family = AF_INET;
+	ifa->if_addr.sa_len = 4;
 	/* Yuck - hard coded address! */
-	ifa->if_addr.addr[0] = 192; 
-	ifa->if_addr.addr[1] = 168;
-	ifa->if_addr.addr[2] = 0;
-	ifa->if_addr.addr[3] = 133;
+	ifa->if_addr.sa_data[0] = 192; 
+	ifa->if_addr.sa_data[1] = 168;
+	ifa->if_addr.sa_data[2] = 0;
+	ifa->if_addr.sa_data[3] = 133;
 
 	ifa->ifn = dev;
 	ifa->next = NULL;
@@ -90,6 +90,7 @@ int ipv4_dev_init(ifnet *dev)
 	else
 		dev->if_addrlist = ifa;
 
+	insert_local_address(&ifa->if_addr, dev);
 	/* so far all devices will use this!! */
 	return 1;
 }
@@ -102,5 +103,6 @@ net_module net_module_data = {
 	&ipv4_init,
 	&ipv4_dev_init,
 	&ipv4_input, 
+	NULL,
 	NULL
 };
