@@ -7,7 +7,7 @@ ifeq ($(BE_CPLUS_COMPILER),mwcc)
 	LDFLAGS = -nodefaults -export all -G /boot/develop/lib/ppc/glue-noinit.a /boot/develop/lib/ppc/_KERNEL_ -map $(TARGET).xMAP
 else
 	CFLAGS = -g -Wall -no-fpic -D_KERNEL_MODE -D_KERNEL_ -D_NETWORK_STACK
-	LDFLAGS = -nostdlib -export pragma /boot/develop/lib/$(BE_HOST_CPU)/_KERNEL_  -Wl,-M=$(TARGET).xMAP
+	LDFLAGS = -nostdlib /boot/develop/lib/$(BE_HOST_CPU)/_KERNEL_  -Wl,-M=$(TARGET).xMAP
 endif
 INCLUDES = -I../server/ -I../server/include -I.
 
