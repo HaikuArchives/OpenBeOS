@@ -34,7 +34,7 @@ status_t _get_area_info(area_id id, area_info *ainfo, size_t size)
 	if (size < sizeof(ainfo)) 
 		return B_ERROR; 
 	else 
-		return sys_vm_get_region_info(id, ainfo);
+		return sys_vm_get_region_info(id, (void *)ainfo);
 	}
 
 // TO DO
