@@ -1,11 +1,17 @@
 # Determine if we're building on PPC or x86
 # Determine mimetype of executable
+# Cross compiling can come later
 if $(METROWERKS) {
 	OBOS_TARGET ?= "ppc.R5" ;
 	OBOS_TARGET_TYPE ?= "application/x-be-executable" ;
+	OBOS_ARCH ?= "ppc" ; 
+	OBOS_TARGET_DEFINE ?= "ARCH_ppc" ;
 } else {
 	OBOS_TARGET ?= "x86.R5" ;
 	OBOS_TARGET_TYPE ?= "application/x-vnd.Be-elfexecutable" ;
+	OBOS_ARCH ?= "x86" ;
+	OBOS_TARGET_DEFINE ?= "ARCH_i386" ;
+	OBOS_TARGET_DIR ?= "i386" ;
 }
 
 # If no OBOS_OBJECT_TARGET is not defined yet, use our default directory and
@@ -42,14 +48,11 @@ OBOS_SHLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
 OBOS_STLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
 OBOS_KERNEL_DIR ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system ] ;
 
-OBOS_INCLUDES ?= add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
-
-for i in $(OBOS_INCLUDES)
+rule SetupIncludes
 {
-	CCFLAGS += -isystem [ FDirName $(OBOS_TOP) headers os public $(i) ] ;
+	OBOS_INCLUDES ?= add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
+	UsePublicHeaders $(OBOS_INCLUDES) ;
 }
-
-C++FLAGS ?= $(CCFLAGS) ;
 
 #-------------------------------------------------------------------------------
 # General High-level OBOS target rules
@@ -58,7 +61,7 @@ C++FLAGS ?= $(CCFLAGS) ;
 rule Preference
 {
 	# Preference <name> : <sources> ;
-	
+	SetupIncludes ;
 	SetupObjectsDir ;
 	Main $(<) : $(>) ;
 	MakeLocate $(<) : $(OBOS_PREFS_DIR) ;
@@ -68,6 +71,7 @@ rule Server
 {
 	# Server <name> : <sources> ;
 	
+	SetupIncludes ;
 	SetupObjectsDir ;
 	Main $(<) : $(>) ;
 	MakeLocate $(<) : $(OBOS_SERVER_DIR) ;
@@ -77,6 +81,7 @@ rule Addon
 {
 	# Addon <name> : <relpath> : <sources> ;	
 	
+	SetupIncludes ;
 	SetupObjectsDir ;
 	Main $(1) : $(3) ;
 
@@ -92,6 +97,7 @@ rule StaticLibrary
 {
 	# SharedLibrary <name> : <sources> ;
 	
+	SetupIncludes ;
 	SetupObjectsDir ;
 	Library lib$(<).a : $(>) ;
 	MakeLocate lib$(<).so : $(OBOS_STLIB_DIR) ;
@@ -101,6 +107,7 @@ rule SharedLibrary
 {
 	# SharedLibrary <name> : <sources> ;
 	
+	SetupIncludes ;
 	SetupObjectsDir ;
 	Main lib$(<).so : $(>) ;
 	MakeLocate lib$(<).so : $(OBOS_SHLIB_DIR) ;
@@ -142,6 +149,23 @@ rule AddResources
 	}
 }
 
+rule UsePublicHeaders
+{
+	local opt;
+
+	# UsePublicHeaders <group list> ;
+
+	opt = "" ;
+
+	for i in $(<)
+	{
+		opt += -I [ FDirName $(OBOS_TOP) headers obos public $(i) ] ;
+	}
+	
+	SubDirCcFlags $(opt)  ;
+	SubDirC++Flags $(opt)  ;
+}
+
 rule UsePrivateHeaders
 {
 	local opt;
@@ -152,9 +176,18 @@ rule UsePrivateHeaders
 
 	for i in $(<)
 	{
-		opt += -isystem [ FDirName $(OBOS_TOP) headers os private $(i) ] ;
+		opt += -I [ FDirName $(OBOS_TOP) headers obos private $(i) ] ;
 	}
 	
+	SubDirCcFlags $(opt)  ;
+	SubDirC++Flags $(opt)  ;
+}
+
+rule UseArchHeaders
+{
+	local opt;
+	opt = "" ;
+	opt += -I [ FDirName $(OBOS_TOP) headers obos private kernel arch $(1) ] -D$(OBOS_TARGET_DEFINE) ;
 	SubDirCcFlags $(opt)  ;
 	SubDirC++Flags $(opt)  ;
 }
@@ -192,6 +225,20 @@ actions Link bind NEEDLIBS
 	mimeset -f "$(<)" ;
 }
 
+rule KernelStaticLibrary
+{
+	# SharedLibrary <name> : <sources> ;
+	UsePublicHeaders kernel ;
+	UsePrivateHeaders kernel ;
+	UseArchHeaders $(OBOS_ARCH) ;
+
+	SetupObjectsDir ;
+	CCFLAGS += -nostdinc ;
+	C++FLAGS += -nostdinc ;
+	Library lib$(<).a : $(>) ;
+	MakeLocate lib$(<).so : $(OBOS_STLIB_DIR) ;
+}
+
 rule Kernel
 {
 	# Kernel <kernelname> : <sourcefiles> ;
@@ -210,4 +257,24 @@ rule Kernel
 
 	# Specify some extra options for the linker
 	LINKFLAGS on $(<) += -nostart -Xlinker -soname=\"$(<)\" ;
+}
+
+rule UserObject
+{
+	switch $(>)
+	{
+	case *.S    : assemble $(<) : $(>) ;
+	case *      : ECHO "unknown suffix on" $(>) ;
+	}
+}
+
+rule assemble
+{
+	DEPENDS $(<) : $(>) ;
+	Clean clean : $(<) ;
+}
+
+actions assemble
+{
+gcc -c $(>) -O2 -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_i386 -DNEWOS=1 -fno-pic -o $(<) ;
 }
