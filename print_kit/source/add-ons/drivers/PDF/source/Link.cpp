@@ -35,10 +35,18 @@ THE SOFTWARE.
 // TODO: check this list and add more prefixes
 char* Link::fURLPrefix[] = {
 	"http://",
-	"shttp://",
+	"https://",
 	"ftp://",
 	"telnet://",
 	"mailto:",
+	"news://",
+	"nntp://",
+	"gopher://",
+	"wais://",
+	"prospero://",
+	"mid:",
+	"cid:",
+	"afs://",
 	NULL
 };
 
@@ -124,7 +132,7 @@ Link::IsValidStart(const char* cp)
 bool
 Link::IsValidChar(const char* cp)
 {
-	return isalnum(*cp) || *cp == '.' || *cp == '@';
+	return !isspace(*cp); // isalnum(*cp) || *cp == '-' || *cp == '.' || *cp == '@';
 }
 
 // TODO: add better url detection (ie. "e.g." is detected as "http://e.g")
