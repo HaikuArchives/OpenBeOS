@@ -11,7 +11,6 @@
 #include "sys/socketvar.h"
 #include "pools.h"
 #include "netinet/in_pcb.h"
-#include "net_module.h"
 #include "net_misc.h"
 #include "protocols.h"
 
@@ -247,13 +246,10 @@ void sbdroprecord(struct sockbuf *sb)
 
 int sbwait(struct sockbuf *sb)
 {
-	status_t rv = 0;
-
+	if (sb->sb_cc > 0)
+		return 0;
 	sb->sb_flags |= SB_WAIT;
-	if (sb->sb_pop > 0)
-		rv = acquire_sem_etc(sb->sb_pop, 1, B_CAN_INTERRUPT, 0);
-
-	return (int)rv;
+	return nsleep(sb->sb_pop, "sbwait", sb->sb_timeo);
 }
 
 void sbinsertoob(struct sockbuf *sb, struct mbuf *m0)
