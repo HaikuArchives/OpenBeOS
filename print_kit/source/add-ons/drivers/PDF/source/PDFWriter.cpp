@@ -142,6 +142,7 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 	status_t	status;
 	BRect		r;
 	uint32 		pictureCount;
+	BRect		paperRect;
 	BRect 		printRect;
 	BRect		*picRects;
 	BPoint		*picPoints;
@@ -153,6 +154,7 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 
 	status = B_OK;
 	
+	paperRect = JobMsg()->FindRect("paper_rect");
 	printRect = JobMsg()->FindRect("printable_rect");
 	if (B_OK != JobMsg()->FindInt32("orientation", &orientation)) orientation = 0;
 	if (orientation == 1) 
@@ -190,7 +192,7 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 		InitWriter();
 	}
 	
-	BeginPage(printRect);
+	BeginPage(paperRect, printRect);
 	for (i = 0; i < pictureCount; i++) {
 		pictures[i]->Play(playbackHandlers, 50, this);
 		delete pictures[i];
@@ -265,10 +267,10 @@ PDFWriter::InitWriter()
 
 // --------------------------------------------------
 status_t 
-PDFWriter::BeginPage(BRect printRect)
+PDFWriter::BeginPage(BRect paperRect, BRect printRect)
 {
-	float width = printRect.Width() < 10 ? a4_width : printRect.Width();
-	float height = printRect.Height() < 10 ? a4_height : printRect.Height();
+	float width = printRect.Width() < 10 ? a4_width : paperRect.Width();
+	float height = paperRect.Height() < 10 ? a4_height : paperRect.Height();
 	
 	fMode = kDrawingMode;
 	
@@ -283,8 +285,12 @@ PDFWriter::BeginPage(BRect printRect)
 	
 	fState->fontChanged 	= true;
 
-	fState->x0 = fState->penX = 0;
-	fState->y0 = fState->penY = 0;
+	fState->x0 = printRect.left;
+	fState->y0 = printRect.top;
+	fState->penX = 0;
+	fState->penY = 0;
+
+	// XXX should we clip to the printRect here?
 
 	PushState(); // so that fState->prev != NULL
 
@@ -417,8 +423,6 @@ PDFWriter::CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 fla
 	bool	alpha;
 	rgb_color	transcolor = B_TRANSPARENT_COLOR;
 	
-	return NULL;
-
 	int32	width = src.IntegerWidth() + 1;
 	int32	height = src.IntegerHeight() + 1;
 		
@@ -1348,8 +1352,6 @@ PDFWriter::SetFontFamily(char *family)
 void
 PDFWriter::SetFontStyle(char *style)
 {
-	font_family f;
-	font_style  s;
 	fprintf(fLog, "SetFontStyle style=\"%s\"\n", style);
 
 	fState->fontChanged = true;

@@ -60,7 +60,7 @@ class PDFWriter : public PrinterDriver
 		// public methods
 		status_t 	PrintPage(int32 pageNumber, int32 pageCount);
 		status_t	InitWriter();
-		status_t	BeginPage(BRect printRect);
+		status_t	BeginPage(BRect paperRect, BRect printRect);
 		status_t	EndPage();
 		
 		// PDFLib callbacks
