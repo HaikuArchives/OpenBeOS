@@ -153,6 +153,7 @@ Inode::RemoveSmallData(Transaction *transaction,const char *name,small_data *ite
 			last = last->Next();
 
 		int32 size = (uint8 *)last - (uint8 *)next + last->Size();
+		//printf("size = %ld, max = %ld\n",size,(uint8 *)Node() + fVolume->BlockSize() - (uint8 *)next);
 		if (size < 0 || size > (uint8 *)Node() + fVolume->BlockSize() - (uint8 *)next)
 			return B_BAD_DATA;
 
@@ -388,7 +389,7 @@ Inode::ReleaseAttribute(Inode *attribute)
 	if (attribute == NULL)
 		return;
 
-	put_vnode(fVolume->ID(),fVolume->ToVnode(Attributes()));
+	put_vnode(fVolume->ID(),attribute->ID());
 }
 
 
@@ -452,8 +453,29 @@ Inode::GetTree(BPlusTree **tree)
 bool 
 Inode::IsEmpty()
 {
-	// ToDo: implement me!
-	return false;
+	BPlusTree *tree;
+	status_t status = GetTree(&tree);
+	if (status < B_OK)
+		return status;
+
+	TreeIterator iterator(tree);
+
+	// index and attribute directories are really empty when they are
+	// empty - directories for standard files always contain ".", and
+	// "..", so we need to ignore those two
+
+	uint32 count = 0;
+	char name[16];
+	uint16 length;
+	vnode_id id;
+	while (iterator.GetNextEntry(name,&length,B_FILE_NAME_LENGTH,&id) == B_OK) {
+		if (Mode() & (S_ATTR_DIR | S_INDEX_DIR))
+			return false;
+
+		if (++count > 2 || strcmp(".",name) && strcmp("..",name))
+			return false;
+	}
+	return true;
 }
 
 
@@ -467,24 +489,26 @@ Inode::IsEmpty()
 status_t
 Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 {
+	data_stream *data = &Node()->data;
+
 	// Inode::ReadAt() does already does this
-	//if (pos > Node()->data.size)
+	//if (pos > data->size)
 	//	return B_ENTRY_NOT_FOUND;
 
 	// find matching block run
 
-	if (Node()->data.max_direct_range > 0 && pos >= Node()->data.max_direct_range) {
-		if (Node()->data.max_double_indirect_range > 0 && pos >= Node()->data.max_indirect_range) {
+	if (data->max_direct_range > 0 && pos >= data->max_direct_range) {
+		if (data->max_double_indirect_range > 0 && pos >= data->max_indirect_range) {
 			// access to double indirect blocks
 
 			//printf("find double indirect block: %ld,%d!\n",Node()->data.double_indirect.allocation_group,Node()->data.double_indirect.start);
 
-			CachedBlock cached(fVolume,Node()->data.indirect);
+			CachedBlock cached(fVolume,data->indirect);
 			block_run *indirect = (block_run *)cached.Block();
 			if (indirect == NULL)
 				RETURN_ERROR(B_ERROR);
 
-			off_t start = pos - Node()->data.max_indirect_range;
+			off_t start = pos - data->max_indirect_range;
 			int32 indirectSize = (16 << fVolume->BlockShift()) * (fVolume->BlockSize() / sizeof(block_run));
 			int32 directSize = 4 << fVolume->BlockShift();
 			int32 index = start / indirectSize;
@@ -499,7 +523,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 			int32 current = (start % indirectSize) / directSize;
 
 			run = indirect[current];
-			offset = Node()->data.max_indirect_range + (index * indirectSize) + (current * directSize);
+			offset = data->max_indirect_range + (index * indirectSize) + (current * directSize);
 			//printf("\tfCurrent = %ld, fRunFileOffset = %Ld, fRunBlockEnd = %Ld, fRun = %ld,%d\n",fCurrent,fRunFileOffset,fRunBlockEnd,fRun.allocation_group,fRun.start);
 		} else {
 			// access to indirect blocks
@@ -509,9 +533,9 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 			if (indirect == NULL)
 				RETURN_ERROR(B_ERROR);
 
-			int32 indirectRuns = (Node()->data.indirect.length << fVolume->BlockShift()) / sizeof(block_run);
+			int32 indirectRuns = (data->indirect.length << fVolume->BlockShift()) / sizeof(block_run);
 
-			off_t runBlockEnd = Node()->data.max_direct_range;
+			off_t runBlockEnd = data->max_direct_range;
 			int32 current = -1;
 
 			while (++current < indirectRuns) {
@@ -536,19 +560,20 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 		int32 current = -1;
 
 		while (++current < NUM_DIRECT_BLOCKS) {
-			if (Node()->data.direct[current].IsZero())
+			if (data->direct[current].IsZero())
 				break;
 
-			runBlockEnd += Node()->data.direct[current].length << fVolume->BlockShift();
+			runBlockEnd += data->direct[current].length << fVolume->BlockShift();
 			if (runBlockEnd > pos) {
-				run = Node()->data.direct[current];
+				run = data->direct[current];
 				offset = runBlockEnd - (run.length << fVolume->BlockShift());
 				//printf("### run[%ld] = (%ld,%d,%d), offset = %Ld\n",fCurrent,fRun.allocation_group,fRun.start,fRun.length,fRunFileOffset);
 				return B_OK;
 			}
 		}
-		RETURN_ERROR(B_ERROR);
-	}	
+		PRINT(("FindBlockRun() failed in direct range: size = %Ld, pos = %Ld\n",data->size,pos));
+		return B_ENTRY_NOT_FOUND;
+	}
 	return B_OK;
 }
 
@@ -897,12 +922,84 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 }
 
 
+/** Frees all block_runs in the array which come after the specified size.
+ *	It also trims the last block_run that contain the size.
+ *	"offset" and "max" are maintained until the last block_run that doesn't
+ *	have to be freed - after this, the values won't be correct anymore, but
+ *	will still assure correct function for all subsequent calls.
+ */
+
+status_t
+Inode::FreeStreamArray(Transaction *transaction,block_run *array,uint32 arrayLength,off_t size,off_t &offset,off_t &max)
+{
+	off_t newOffset = offset;
+	uint32 i = 0;
+	for (;i < arrayLength;i++,offset = newOffset) {
+		if (array[i].IsZero())
+			break;
+
+		newOffset += (off_t)array[i].length << fVolume->BlockShift();
+		if (newOffset < size)
+			continue;
+
+		block_run run = array[i];
+
+		// determine the block_run to be freed
+		if (newOffset > size && offset < size) {
+			// free partial block_run (and update the original block_run)
+			run.start = array[i].start + ((size - offset) >> fVolume->BlockShift()) + 1;
+			array[i].length = run.start - array[i].start;
+			run.length -= array[i].length;
+
+			// update maximum range
+			max = offset + ((off_t)array[i].length << fVolume->BlockShift());
+		} else {
+			// free the whole block_run
+			array[i].SetTo(0,0,0);
+			
+			if (max > offset)
+				max = offset;
+		}
+
+		if (fVolume->Free(transaction,run) < B_OK)
+			return B_IO_ERROR;
+	}
+	return B_OK;
+}
+
+
 status_t 
 Inode::ShrinkStream(Transaction *transaction, off_t size)
 {
 	data_stream *data = &Node()->data;
+	off_t offset = 0;
 
-	// ToDo: implement me for real, please!
+	if (data->max_double_indirect_range > size) {
+		// ToDo: implement me, please!
+	}
+	if (data->max_indirect_range > size) {
+		CachedBlock cached(fVolume);
+		off_t num = fVolume->ToBlock(data->indirect);
+		bool freeArray = false;
+
+		offset = data->max_direct_range;
+
+		for (int32 i = 0;i < data->indirect.length;i++) {
+			block_run *array = (block_run *)cached.SetTo(num + i);
+			if (array == NULL)
+				break;
+
+			if (FreeStreamArray(transaction,array,fVolume->BlockSize() / sizeof(block_run),size,offset,data->max_indirect_range) == B_OK) {
+				if (i == 0 && array[0].IsZero())
+					freeArray = true;
+			}
+		}
+		if (freeArray)
+			fVolume->Free(transaction,data->indirect);
+	}
+	if (data->max_direct_range > size)
+		FreeStreamArray(transaction,data->direct,NUM_DIRECT_BLOCKS,size,offset,data->max_direct_range);
+
 	data->size = size;
 	return B_OK;
 }
@@ -947,7 +1044,7 @@ Inode::Trim()
 
 
 status_t
-Inode::Remove(const char *name,bool isDirectory)
+Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 {
 	if (!strcmp(name,".") || !strcmp(name,".."))
 		return B_NOT_ALLOWED;
@@ -977,23 +1074,20 @@ Inode::Remove(const char *name,bool isDirectory)
 	if (isDirectory && !inode->IsEmpty())
 		return B_DIRECTORY_NOT_EMPTY;
 
-	Transaction transaction(fVolume,inode->BlockNumber());
-
 	// remove_vnode() allows the inode to be accessed until the last put_vnode()
 	if (remove_vnode(fVolume->ID(),id) != B_OK)
 		return B_ERROR;
 
-	if (tree->Remove(&transaction,(uint8 *)name,(uint16)strlen(name),id) < B_OK) {
+	if (tree->Remove(transaction,(uint8 *)name,(uint16)strlen(name),id) < B_OK) {
 		unremove_vnode(fVolume->ID(),id);
 		RETURN_ERROR(B_ERROR);
 	}
 
 	// update the inode, so that no one will ever doubt it's deleted :-)
 	inode->Node()->flags |= INODE_DELETED;
-	if (inode->WriteBack(&transaction) < B_OK)
+	if (inode->WriteBack(transaction) < B_OK)
 		return B_ERROR;
 
-	transaction.Done();
 	return B_OK;
 }
 

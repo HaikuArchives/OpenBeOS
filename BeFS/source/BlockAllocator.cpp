@@ -123,10 +123,10 @@ AllocationBlock::Free(uint16 start,uint16 numBlocks)
 {
 	start = start % fNumBits;
 	if (numBlocks == 0xffff) {
-		// allocate all blocks after "start"
+		// free all blocks after "start"
 		numBlocks = fNumBits - start;
 	} else if (start + numBlocks > fNumBits) {
-		FATAL(("should allocate more blocks than there are in a block!\n"));
+		FATAL(("should free more blocks than there are in a block!\n"));
 		numBlocks = fNumBits - start;
 	}
 
@@ -428,6 +428,42 @@ BlockAllocator::Allocate(Transaction *transaction,const Inode *inode, uint16 num
 status_t 
 BlockAllocator::Free(Transaction *transaction,block_run &run)
 {
+	if (run.allocation_group >= fNumGroups)
+		return B_ENTRY_NOT_FOUND;
+	if (run.length == 0)
+		return B_BAD_VALUE;
+
+	AllocationBlock cached(fVolume);
+	Locker lock(fLock);
+
+	uint16 group = run.allocation_group;
+	uint16 start = run.start;
+	uint32 block = run.start / fGroups[group].fNumBits;
+	uint16 length = run.length;
+
+	if (fGroups[group].fFirstFree > start)
+		fGroups[group].fFirstFree = start;
+
+	for (;block < fBlocksPerGroup;block++) {
+		if (cached.SetTo(fGroups[group],block) < B_OK)
+			RETURN_ERROR(B_IO_ERROR);
+
+		uint16 freeLength = length;
+		if (start + length > cached.NumBlockBits())
+			freeLength = cached.NumBlockBits() - start;
+
+		cached.Free(start,freeLength);
+
+		if (cached.WriteBack(transaction) < B_OK)
+			return B_IO_ERROR;
+
+		length -= freeLength;
+		if (length <= 0)
+			break;
+
+		start = 0;
+	}
+
 	return B_OK;
 }
 

@@ -105,4 +105,4 @@ install::
 #	cp obj.x86/$(NAME) $(INSTALL_DIR)
 
 tar zip backup:
-	zip -y $(NAME)-`date +%Y-%m-%d`.zip *.[ch]* makefile *.rsrc test/*.[ch]* test/makefile
+	zip -y $(NAME)-`date +%Y-%m-%d`.zip *.[ch]* makefile ToDo *.rsrc test/*.[ch]* test/makefile

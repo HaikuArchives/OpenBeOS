@@ -12,7 +12,7 @@ BlockAllocator
 
 DataStream
 
- - shrinking the stream size is not implemented right now
+ - shrinking the stream size is not completely implemented (indirect range is untested, double indirect range is not yet implemented)
  - growing does only work for the direct range
 
 

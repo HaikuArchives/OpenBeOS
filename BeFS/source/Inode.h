@@ -165,10 +165,11 @@ class Inode : public CachedBlock {
 		status_t Trim();
 
 		// create/remove inodes
-		status_t Remove(const char *name, bool isDirectory = false);
+		status_t Remove(Transaction *transaction,const char *name, bool isDirectory = false);
 		static status_t Create(Transaction *transaction,Inode *parent,const char *name,int32 mode,int omode,uint32 type,off_t *id = NULL);
 
 	private:
+		status_t FreeStreamArray(Transaction *transaction, block_run *array, uint32 arrayLength, off_t size, off_t &offset, off_t &max);
 		status_t GrowStream(Transaction *transaction,off_t size);
 		status_t ShrinkStream(Transaction *transaction,off_t size);
 

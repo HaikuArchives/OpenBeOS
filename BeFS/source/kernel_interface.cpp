@@ -373,11 +373,24 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 	if (_ns == NULL || _node == NULL)
 		return B_BAD_VALUE;
 
+	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
-	// ToDo: free data_stream, attributes, inode space etc.
+	Transaction transaction(volume,inode->BlockNumber());
 
-	delete inode;
+	status_t status = inode->SetFileSize(&transaction,0);
+	if (status < B_OK)
+		return status;
+
+	// ToDo: free attributes, etc.
+	// perhaps there should be an implementation of Inode::ShrinkStream() that
+	// just frees the data_stream, but doesn't change the inode (since it is
+	// freed anyway) - that would make an undelete command possible
+
+	if ((status = volume->Free(&transaction,inode->BlockRun())) == B_OK) {
+		transaction.Done();
+		delete inode;
+	}
 
 	return B_OK;
 }
@@ -597,7 +610,7 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 		RETURN_ERROR(status);
 
 	WriteLocked locked(inode->Lock());
-	if (!locked.IsLocked())
+	if (locked.IsLocked() < B_OK)
 		RETURN_ERROR(B_ERROR);
 
 	Transaction transaction(volume,volume->ToBlock(inode->BlockRun()));
@@ -617,8 +630,8 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 		if (inode->IsDirectory())
 			return B_IS_A_DIRECTORY;
 		else {
-			//inode->SetFileSize();
-			// not yet implemented
+			status = inode->SetFileSize(&transaction,stat->st_size);
+
 			// update "size" index
 		}
 	}
@@ -696,13 +709,19 @@ bfs_unlink(void *_ns, void *_directory, const char *name)
 	if (_ns == NULL || _directory == NULL || name == NULL || *name == '\0')
 		return B_BAD_VALUE;
 
+	Volume *volume = (Volume *)_ns;
 	Inode *directory = (Inode *)_directory;
-	
+
 	status_t status = directory->CheckPermissions(W_OK);
 	if (status < B_OK)
 		return status;
 
-	return directory->Remove(name);
+	Transaction transaction(volume,directory->BlockNumber());
+
+	if ((status = directory->Remove(&transaction,name)) == B_OK)
+		transaction.Done();
+
+	return status;
 }
 
 
@@ -797,6 +816,9 @@ bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, s
 		pos = inode->Size();
 
 	WriteLocked locked(inode->Lock());
+	if (locked.IsLocked() < B_OK)
+		RETURN_ERROR(B_ERROR);
+
 	Transaction transaction(volume,inode->BlockNumber());
 
 	status_t status = inode->WriteAt(&transaction,pos,(const uint8 *)buffer,_length);
@@ -926,10 +948,22 @@ bfs_mkdir(void *_ns, void *_directory, const char *name, int mode)
 
 
 int 
-bfs_rmdir(void *ns, void *dir, const char *name)
+bfs_rmdir(void *_ns, void *_directory, const char *name)
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
-	return B_ERROR;
+	
+	if (_ns == NULL || _directory == NULL || name == NULL || *name == '\0')
+		return B_BAD_VALUE;
+
+	Inode *directory = (Inode *)_directory;
+
+	Transaction transaction(directory->GetVolume(),directory->BlockNumber());
+
+	status_t status = directory->Remove(&transaction,name,true);
+	if (status == B_OK)
+		transaction.Done();
+
+	return status;
 }
 
 
@@ -1127,16 +1161,36 @@ bfs_remove_attr(void *_ns, void *_node, const char *name)
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
+	status_t status = inode->CheckPermissions(W_OK);
+	if (status < B_OK)
+		return status;
+
 	Transaction transaction(volume,inode->BlockNumber());
 
-	status_t status = inode->RemoveSmallData(&transaction,name);
-	if (status == B_OK) {
+	if ((status = inode->RemoveSmallData(&transaction,name)) == B_OK) {
 		status = inode->WriteBack(&transaction);
 	} else if (status == B_ENTRY_NOT_FOUND) {
-		// remove attribute file if it exists
-		// ToDo: implement me!
-		FATAL(("real file attribute removal not yet implemented...\n"));
-		RETURN_ERROR(B_ENTRY_NOT_FOUND);
+		// remove the attribute file if it exists
+		Vnode vnode(volume,inode->Attributes());
+		Inode *attributes;
+		if ((status = vnode.Get(&attributes)) < B_OK)
+			return status;
+
+		if ((status = attributes->Remove(&transaction,name)) < B_OK)
+			return status;
+
+		if (attributes->IsEmpty()) {
+			// remove attribute directory (don't fail if to remove the
+			// attribute if that fails)
+			if (remove_vnode(volume->ID(),attributes->ID()) == B_OK) {
+				// update the inode, so that no one will ever doubt it's deleted :-)
+				attributes->Node()->flags |= INODE_DELETED;
+				if (attributes->WriteBack(&transaction) == B_OK) {
+					inode->Attributes().SetTo(0,0,0);
+					inode->WriteBack(&transaction);
+				}
+			}
+		}
 	}
 	if (status == B_OK)
 		transaction.Done();
