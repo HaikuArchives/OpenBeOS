@@ -1,6 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ethernet
-LOBJS=../util/misc.o ../_APP_
+LOBJS=../_APP_
 
 all:	$(TARGET)
 
