@@ -20,21 +20,11 @@ class BDirectory;
 class BEntry;
 struct entry_ref;
 
-//! Pathname wrapper
-/*! <b>BPath</b> - A pathname wrapper class that manages conversion to and from various means of expressing pathnames, as
-	well as any necessary resource allocation and deallocation.
-	@see <a href="http://www.opensource.org/licenses/mit-license.html">MIT License</a>
-	@author <a href="mailto:tylerdauwalder@users.sf.net">Tyler Dauwalder</a>
-	@author Be Inc.
-	@version 0
-*/
 class BPath /*: BFlattenable */ {
 public:
 
-	/*! Creates an uninitialized BPath object. */
 	BPath();
 	
-	/*! Creates a BPath object and initializes it to the specified path or path and filename combination. */
 	BPath(const char *dir, const char *leaf = NULL, bool normalize = false);
 	
 	/*! Creates a BPath object and initializes it to the specified directory and filename combination. */
@@ -67,9 +57,6 @@ public:
 	/*! Reinitializes the object to the specified filesystem entry. */
 	status_t SetTo(const entry_ref *ref);	
 	
-
-	/*! Appends the given (relative) path to the end of the current path. This call fails if the
-		path is absolute or the object to which you're appending is uninitialized. */
 	status_t Append(const char *path, bool normalize = false);
 	
 	/*! Returns the object to an uninitialized state. The object frees any resources it
@@ -141,16 +128,11 @@ private:
 	/*! (Probably used to free fName, but I'm not sure yet) */
 	status_t clear();	
 	
-	/*! Pointer to the object's path name string */
-	char *fName;
-	
-	/*! (I'm not sure what this is yet) */ 
+	char *fName;	
 	status_t fCStatus;
 
-	/*! Internal exception class thrown by MustNormalize when given invalid input. */
 	class EBadInput { };
 	
-	/*! Checks a path string to see if normalization is required. */
 	static bool MustNormalize(const char *path);
 	
 };
