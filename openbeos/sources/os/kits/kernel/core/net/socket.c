@@ -32,7 +32,7 @@ void sofree(struct socket *);
 
 static ssize_t so_read(struct file_descriptor *, void *, off_t, size_t *);
 static ssize_t so_write(struct file_descriptor *, const void *, off_t, size_t *);
-static int so_close(struct file_descriptor *,int, struct ioctx *);
+static int so_close(struct file_descriptor *,int, struct io_context *);
 static int so_ioctl(struct file_descriptor *, ulong, void *, size_t);
 static int so_stat(struct file_descriptor *fd, struct stat *stat);
 
@@ -70,19 +70,19 @@ int socket(int dom, int type, int protocol, bool kernel)
 	/* try to create a socket. If we fail we simply return. */
 
 	err = socreate(dom, &so, type, protocol);
-	if(err < 0)
+	if (err < 0)
 		return err;
 
 	/* So we have a socket...now get a file descriptor for it */
 	f = alloc_fd();
-	if(!f)
+	if (!f)
 		return ENOMEM;
-	
+
 	f->cookie = so;
 	f->ops    = &socket_functions;
-	f->fd_type   = DTYPE_SOCKET;
+	f->type   = FDTYPE_SOCKET;
 
-	err = new_fd(get_current_ioctx(kernel), f);
+	err = new_fd(get_current_io_context(kernel), f);
 	/* Hmm, this will loose any info from new_fd... */
 	if (err < 0)
 		err = ERR_VFS_FD_TABLE_FULL;
@@ -120,14 +120,13 @@ static ssize_t so_write(struct file_descriptor *f, const void *buf, off_t pos, s
 	return 0;
 }
 
-static int so_close(struct file_descriptor *f, int fd, struct ioctx *io)
+static int so_close(struct file_descriptor *f, int fd, struct io_context *io)
 {
 	sofree((struct socket*)f->cookie);
 	f->cookie = NULL;
-	
+
 	dprintf("so_close: %d\n", fd);
 	remove_fd(io, fd);
-	put_fd(f);
 
 	return 0;
 }
