@@ -16,11 +16,11 @@
 #include "netinet/ip_var.h"
 
 #include "ipv4/ipv4_module.h"
+#include "raw/raw_module.h"
 
 #ifdef _KERNEL_MODE
 #include "net_server/core_module.h"
 #include <KernelExport.h>
-#include "raw/raw_module.h"
 
 #define m_copym             core->m_copym
 #define m_free              core->m_free
@@ -42,7 +42,6 @@
 
 static struct core_module_info *core = NULL;
 #else
-#define RAW_MODULE_PATH              "modules/protocols/raw"
 static image_id ipid;
 #endif
 
@@ -107,6 +106,9 @@ int rip_output(struct mbuf *m, struct socket *so, uint32 dst)
 	struct inpcb *inp = sotoinpcb(so);
 	struct mbuf *opts;
 	int flags = (so->so_options & SO_DONTROUTE) | IP_ALLOWBROADCAST;
+
+printf("rip_output: dst = %08lx\n", dst);
+printf("rip_input: inp->laddr = %08lx\n", inp->laddr.s_addr);
 
 	if ((inp->inp_flags & INP_HDRINCL) == 0) {
 		M_PREPEND(m, sizeof(struct ip));

@@ -13,16 +13,18 @@
 #include "sys/protosw.h"
 #include "sys/domain.h"
 
+#include "raw/raw_module.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
-#include "raw/raw_module.h"
 
 #define m_freem             core->m_freem
 static struct core_module_info *core = NULL;
 static struct raw_module_info *raw = NULL;
 #define ICMP_MODULE_PATH	"network/protocol/icmp"
 #else
+static struct raw_module_info *raw = NULL;
 #define ICMP_MODULE_PATH	"modules/protocol/icmp"
 #endif
 

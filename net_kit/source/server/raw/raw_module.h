@@ -8,14 +8,19 @@
 
 #include <KernelExport.h>
 #include <module.h>
-
-struct raw_module_info {
-	module_info info;
-	int (*input)(struct mbuf *, int);
-};
-
 #define RAW_MODULE_PATH	"network/protocol/raw"
 
-#endif /* _KERNEL_MODE */
+#else
+
+#define RAW_MODULE_PATH              "modules/protocols/raw"
+
+#endif
+
+struct raw_module_info {
+#ifdef _KERNEL_MODE
+	module_info info;
+#endif
+	int (*input)(struct mbuf *, int);
+};
 
 #endif /* RAW_MODULE_H */
