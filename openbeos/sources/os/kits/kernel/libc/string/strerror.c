@@ -59,6 +59,18 @@ strerror(int errnum)
 			return "No more handles";
 		;
 
+		case EBADF:
+			return "Bad file descriptor";
+
+		case ENOENT:
+			return "No such file or directory";
+
+		case ENFILE:
+			return "Too many open files in system";
+			
+		case EMFILE:
+			return "Too many open files";
+
 //		case ERR_UNIMPLEMENTED:
 		case ENOSYS:
 			return "Unimplemented";
