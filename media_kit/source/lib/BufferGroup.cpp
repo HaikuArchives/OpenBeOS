@@ -88,7 +88,7 @@ BBufferGroup::BBufferGroup(size_t size,
 		bci.area = buffer_area;
 		bci.offset = i * size;
 		bci.size = size;
-		buffer = new BBuffer(fReclaimSem,bci);
+		buffer = new BBuffer(bci);
 		if (0 == buffer->Data()) {
 			// BBuffer::Data() will return 0 if an error occured
 			TRACE("error while creating buffer\n");
@@ -131,7 +131,7 @@ BBufferGroup::BBufferGroup(int32 count,
 	BBuffer *buffer;
 	for (int32 i = 0; i < count; i++) {	
 		bci.buffer = buffers[i];
-		buffer = new BBuffer(fReclaimSem,bci);
+		buffer = new BBuffer(bci);
 		if (0 == buffer->Data()) {
 			// BBuffer::Data() will return 0 if an error occured
 			TRACE("error while creating buffer\n");
@@ -172,7 +172,7 @@ BBufferGroup::AddBuffer(const buffer_clone_info &info,
 	// XXX we need to make sure that a media_buffer_id is only added once to each group
 
 	BBuffer *buffer;	
-	buffer = new BBuffer(fReclaimSem,info);
+	buffer = new BBuffer(info);
 	if (0 == buffer->Data()) {
 		// BBuffer::Data() will return 0 if an error occured
 		TRACE("error while creating buffer\n");

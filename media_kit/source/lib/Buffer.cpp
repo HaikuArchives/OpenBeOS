@@ -92,7 +92,7 @@ BBuffer::Recycle()
 	CALLED();
 	if (fBufferList == NULL)
 		return;
-	fBufferList->ReclaimBuffer(fGroupReclaimSem,this);
+	fBufferList->ReclaimBuffer(this);
 }
 
 
@@ -164,15 +164,14 @@ BBuffer::Size()
  *************************************************************/
 
 /* explicit */
-BBuffer::BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info) : 
-	fGroupReclaimSem(0),
+BBuffer::BBuffer(const buffer_clone_info & info) : 
 	fBufferList(0), // must be 0 if not correct initialized
 	fData(0) // must be 0 if not correct initialized
 {
 	CALLED();
 	
 	// special case for BSmallBuffer
-	if (group_reclaim_sem == -1)
+	if (info.area == 0 && info.buffer == 0)
 		return;
 
 	area_id id;
@@ -193,7 +192,6 @@ BBuffer::BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info) :
 	create.AddInt32("size",info.size);
 	create.AddInt32("flags",info.flags);
 	create.AddInt32("buffer",info.buffer);
-	create.AddInt32("group",group_reclaim_sem); // it is possible that this one is 0 (but "buffer" is then != 0)
 
 	// ask media_server to register this buffer, 
 	// either identified by "buffer" or by area information.
@@ -212,7 +210,6 @@ BBuffer::BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info) :
 	fFlags = response.FindInt32("flags");
 	fOffset = response.FindInt32("offset");
 	id = response.FindInt32("area");
-	fGroupReclaimSem = response.FindInt32("group");
 
 	fArea = clone_area("a cloned BBuffer", &fData, B_ANY_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
 	if (fArea <= B_OK) {
@@ -266,7 +263,7 @@ BBuffer::SetHeader(media_header *header)
 
 static const buffer_clone_info info;
 BSmallBuffer::BSmallBuffer()
-	: BBuffer(-1,info)
+	: BBuffer(info)
 {
 	UNIMPLEMENTED();
 	debugger("BSmallBuffer::BSmallBuffer called\n");

@@ -203,7 +203,7 @@ _shared_buffer_list::RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_
 }
 
 void
-_shared_buffer_list::ReclaimBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
+_shared_buffer_list::ReclaimBuffer(BBuffer *buffer)
 {
 	CALLED();
 	

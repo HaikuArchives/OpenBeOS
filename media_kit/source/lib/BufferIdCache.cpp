@@ -65,7 +65,7 @@ _buffer_id_cache::GetBuffer(media_buffer_id id)
 	BBuffer *buffer;
 	buffer_clone_info ci;
 	ci.buffer = id;
-	buffer = new BBuffer(0,ci);
+	buffer = new BBuffer(ci);
 
 	// insert into cache
 	for (int i = 0; i < MAX_CACHED_BUFFER; i++) {

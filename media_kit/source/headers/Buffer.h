@@ -72,7 +72,7 @@ private:
 		friend class 			BBufferGroup;
 		friend class			BSmallBuffer;
 
-		explicit BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info);
+		explicit BBuffer(const buffer_clone_info & info);
 		~BBuffer();	/* BBuffer is NOT a virtual class!!! */
 
 		BBuffer(); /* not implemented */
@@ -82,7 +82,6 @@ private:
 		void					SetHeader(media_header *header);
 
 		media_header			fMediaHeader;
-		sem_id					fGroupReclaimSem;
 		_shared_buffer_list *	fBufferList;
 		area_id 				fArea;
 		void * 					fData;
@@ -91,7 +90,7 @@ private:
 		media_buffer_id 		fBufferID;
 		int32 					fFlags;
 
-		uint32 			_reserved_buffer_[10];
+		uint32 			_reserved_buffer_[11];
 
 };
 
