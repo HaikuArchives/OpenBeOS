@@ -79,7 +79,7 @@ main (int argc, char *argv[])
 				file_count += do_wc (arg);
 			}
 		
-		if (file_count > 0)
+		if (file_count > 1)
 			display (TotalLines, TotalWords, TotalBytes, "total");
 		}
 	
