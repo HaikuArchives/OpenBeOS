@@ -11,8 +11,12 @@ KeymapWindow::KeymapWindow( BRect frame )
 	rgb_color	temp_color;
 	BRect		bounds = Bounds();
 	BMenuBar	*menubar;
+	KeymapApplication	*theApplication;
 
 
+	theApplication = (KeymapApplication*) be_app;
+	fSelectedMap = theApplication->CurrentMap();
+	
 	// Add the menu bar
 	menubar = AddMenuBar();
 
@@ -26,6 +30,13 @@ KeymapWindow::KeymapWindow( BRect frame )
 
 	// Create the Maps box and contents
 	AddMaps();
+	
+	// The 'Use' button
+	bounds.Set( 527,200, 600,220 );
+	fUseButton = new BButton( bounds, "useButton", "Use",
+		new BMessage( USE_KEYMAP ));
+	placeholderView->AddChild( fUseButton );
+	
 }
 
 BMenuBar * KeymapWindow::AddMenuBar()
@@ -85,12 +96,15 @@ BMenuBar * KeymapWindow::AddMenuBar()
 
 void KeymapWindow::AddMaps()
 {
-	KeymapApplication	*theApplication = (KeymapApplication*) be_app;
 	BBox		*mapsBox;
 	BRect		bounds;
 	BList		*entryList;
 	BList		*listItems;
 	KeymapListItem	*currentKeymapItem;
+	KeymapApplication	*theApplication;
+
+
+	theApplication = (KeymapApplication*) be_app;
 
 	// The Maps box
 	bounds = BRect( 9,11, 140, 227 );
@@ -107,6 +121,7 @@ void KeymapWindow::AddMaps()
 	fSystemListView->AddList( listItems );
 	mapsBox->AddChild( new BScrollView( "systemScrollList", fSystemListView,
 		B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true ));
+	fSystemListView->SetSelectionMessage( new BMessage( SYSTEM_MAP_SELECTED ));
 	delete listItems;
 	delete entryList;
 
@@ -126,6 +141,7 @@ void KeymapWindow::AddMaps()
 	fUserListView->AddList( listItems );
 	mapsBox->AddChild( new BScrollView( "systemScrollList", fUserListView,
 		B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true ));
+	fUserListView->SetSelectionMessage( new BMessage( USER_MAP_SELECTED ));
 	delete listItems;
 	delete entryList;
 }
@@ -167,7 +183,7 @@ KeymapListItem* KeymapWindow::ItemFromEntry( BEntry *entry )
 	{
 		item = NULL;
 	}
-	
+
 	return item;
 }
 
@@ -199,9 +215,60 @@ void KeymapWindow::MessageReceived( BMessage* message )
 			break;
 		case MENU_EDIT_SELECT_ALL:
 			break;
+		case SYSTEM_MAP_SELECTED:
+			HandleSystemMapSelected( message );
+			break;
+		case USER_MAP_SELECTED:
+			HandleUserMapSelected( message );
+			break;
+		case USE_KEYMAP:
+			UseKeymap();
+			break;
 
 		default:	
 			BWindow::MessageReceived( message );
 			break;
 	}
+}
+
+void KeymapWindow::HandleSystemMapSelected( BMessage *selectionMessage )
+{
+	// Deselect all user maps
+	fUserListView->Deselect( fUserListView->CurrentSelection() );
+
+	// Get matching entry
+	void			**item = new void*;	
+	KeymapListItem	*keymapListItem;
+
+	selectionMessage->FindPointer( "index", 0, item );
+	keymapListItem = (KeymapListItem*)&item;
+	fSelectedMap = keymapListItem->KeymapEntry();
+	delete item;
+
+	// Display selected map
+
+}
+
+void KeymapWindow::HandleUserMapSelected( BMessage *selectionMessage )
+{
+	// Deselect all system maps
+	fSystemListView->Deselect( fSystemListView->CurrentSelection() );
+
+	// Get matching entry
+	void			**item = new void*;	
+	KeymapListItem	*keymapListItem;
+
+	selectionMessage->FindPointer( "index", 0, item );
+	keymapListItem = (KeymapListItem*)&item;
+	fSelectedMap = keymapListItem->KeymapEntry();
+	delete item;
+
+	// Display selected map
+
+}
+
+void KeymapWindow::UseKeymap()
+{
+
+
 }

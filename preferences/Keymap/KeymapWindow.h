@@ -15,6 +15,8 @@
 #include <be/interface/Box.h>
 #include <be/interface/ListView.h>
 #include <be/interface/ScrollView.h>
+#include <be/interface/Button.h>
+//#include "KeymapApplication.h"
 #include "KeymapListItem.h"
 
 
@@ -35,6 +37,9 @@
 #define MENU_EDIT_PASTE		'mMEV'
 #define MENU_EDIT_CLEAR		'mMEL'
 #define MENU_EDIT_SELECT_ALL 'mMEA'
+#define SYSTEM_MAP_SELECTED	'SmST'
+#define USER_MAP_SELECTED	'UmST'
+#define	USE_KEYMAP			'UkyM'
 
 
 class KeymapWindow : public BWindow
@@ -45,15 +50,22 @@ class KeymapWindow : public BWindow
 		void	MessageReceived( BMessage* message );
 	
 	protected:
-		BView		*placeholderView;
-		BListView	*fSystemListView;
-		BListView	*fUserListView;
-		const char	*title;
+//		KeymapApplication	*fApplication;
+		BView				*placeholderView;
+		BListView			*fSystemListView;
+		BListView			*fUserListView;
+		// the map that's currently highlighted
+		BEntry				*fSelectedMap;
+		BButton				*fUseButton;
+		const char			*title;
 		
 		BMenuBar		*AddMenuBar();
 		void			AddMaps();
 		BList			*ListItemsFromEntryList( BList * entryList);
 		KeymapListItem* ItemFromEntry( BEntry *entry );
+		void			HandleSystemMapSelected( BMessage* );
+		void			HandleUserMapSelected( BMessage* );
+		void			UseKeymap();
 
 };
 
