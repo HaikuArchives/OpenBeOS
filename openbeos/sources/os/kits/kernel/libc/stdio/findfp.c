@@ -40,7 +40,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arch_param.h>
 
 #include "local.h"
 #include "glue.h"
@@ -49,6 +48,14 @@
 void f_prealloc(void);
 
 int	__sdidinit;
+
+/* XXX - these belong in sys/param.h
+ * Round p (pointer or byte index) up to a correctly-aligned value
+ * for all data types (int, long, ...).   The result is u_int and
+ * must be cast to any desired pointer type.
+ */
+#define ALIGNBYTES      (sizeof(int) - 1)
+#define ALIGN(p)        (((u_int)(p) + ALIGNBYTES) &~ ALIGNBYTES) 
 
 #define	NDYNAMIC 10		/* add ten more whenever necessary */
 
