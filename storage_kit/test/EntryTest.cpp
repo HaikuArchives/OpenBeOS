@@ -1,5 +1,6 @@
 // EntryTest.cpp
 
+#include <errno.h>
 #include <list>
 #include <map>
 #include <set>
@@ -223,6 +224,8 @@ EntryTest::Suite()
 						   &EntryTest::ComparisonTest) );
 	suite->addTest( new TC("BEntry::Assignment Test",
 						   &EntryTest::AssignmentTest) );
+	suite->addTest( new TC("BEntry::C Functions Test",
+						   &EntryTest::CFunctionsTest) );
 //	suite->addTest( new TC("BEntry::Miscellaneous Test", &EntryTest::MiscTest) );
 
 	return suite;
@@ -1286,6 +1289,11 @@ EntryTest::SpecialGetCasesTest()
 	CPPUNIT_ASSERT( entry.SetTo(badEntry1.cpath) == B_ENTRY_NOT_FOUND );
 	CPPUNIT_ASSERT( entry.Exists() == false );
 	entry.Unset();	
+	// root
+	nextSubTest();
+	CPPUNIT_ASSERT( entry.SetTo("/") == B_OK );
+	CPPUNIT_ASSERT( entry.Exists() == true );
+	entry.Unset();	
 
 	// 2. GetPath()
 	BPath path;
@@ -1360,7 +1368,7 @@ EntryTest::SpecialGetCasesTest()
 	entry.Unset();	
 
 	// 6. GetRef()
-	entry_ref ref;
+	entry_ref ref, ref2;
 	// uninitialized
 	nextSubTest();
 	CPPUNIT_ASSERT( entry.InitCheck() == B_NO_INIT );
@@ -2092,7 +2100,121 @@ EntryTest::AssignmentTest()
 	}
 }
 
+// get_entry_ref_for_entry
+static
+status_t
+get_entry_ref_for_entry(const char *dir, const char *leaf, entry_ref *ref)
+{
+	status_t error = (dir && leaf ? B_OK : B_BAD_VALUE);
+	struct stat dirStat;
+	if (lstat(dir, &dirStat) == 0) {
+		ref->device = dirStat.st_dev;
+		ref->directory = dirStat.st_ino;
+		ref->set_name(leaf);
+	} else
+		error = errno;
+	return error;
+}
 
+// entry_ref >
+bool
+operator>(const entry_ref & a, const entry_ref & b)
+{
+	return (a.device > b.device
+		|| (a.device == b.device
+			&& (a.directory > b.directory
+			|| (a.directory == b.directory
+				&& (a.name != NULL && b.name == NULL
+				|| (a.name != NULL && b.name != NULL
+					&& strcmp(a.name, b.name) > 0))))));
+}
+
+// CFunctionsTest
+void
+EntryTest::CFunctionsTest()
+{
+	// get_ref_for_path(), <
+	TestEntry *testEntries[] = {
+		&dir1, &dir2, &file1, &subDir1, &abstractEntry1, &badEntry1,
+		&absDirLink1, &absDirLink2, &absDirLink3, &absDirLink4,
+		&relDirLink1, &relDirLink2, &relDirLink3, &relDirLink4,
+		&absFileLink1, &absFileLink2, &absFileLink3, &absFileLink4,
+		&relFileLink1, &relFileLink2, &relFileLink3, &relFileLink4,
+		&absBadLink1, &absBadLink2, &absBadLink3, &absBadLink4,
+		&relBadLink1, &relBadLink2, &relBadLink3, &relBadLink4,
+		&absVeryBadLink1, &absVeryBadLink2, &absVeryBadLink3, &absVeryBadLink4,
+		&relVeryBadLink1, &relVeryBadLink2, &relVeryBadLink3, &relVeryBadLink4
+	};
+	int32 testEntryCount = sizeof(testEntries) / sizeof(TestEntry*);
+	for (int32 i = 0; i < testEntryCount; i++) {
+		nextSubTest();
+		TestEntry *testEntry = testEntries[i];
+		const char *path = testEntry->cpath;
+		entry_ref ref;
+		if (testEntry->isBad())
+			CPPUNIT_ASSERT( get_ref_for_path(path, &ref) == B_ENTRY_NOT_FOUND );
+		else {
+			CPPUNIT_ASSERT( get_ref_for_path(path, &ref) == B_OK );
+			const entry_ref &testEntryRef = testEntry->get_ref();
+			CPPUNIT_ASSERT( testEntryRef.device == ref.device );
+			CPPUNIT_ASSERT( testEntryRef.directory == ref.directory );
+			CPPUNIT_ASSERT( strcmp(testEntryRef.name, ref.name) == 0 );
+			CPPUNIT_ASSERT( testEntryRef == ref );
+			CPPUNIT_ASSERT( !(testEntryRef != ref) );
+			CPPUNIT_ASSERT(  ref == testEntryRef );
+			CPPUNIT_ASSERT(  !(ref != testEntryRef) );
+			for (int32 k = 0; k < testEntryCount; k++) {
+				TestEntry *testEntry2 = testEntries[k];
+				const char *path2 = testEntry2->cpath;
+				entry_ref ref2;
+				if (!testEntry2->isBad()) {
+					CPPUNIT_ASSERT( get_ref_for_path(path2, &ref2) == B_OK );
+					int cmp = 0;
+					if (ref > ref2)
+						cmp = 1;
+					else if (ref2 > ref)
+						cmp = -1;
+					CPPUNIT_ASSERT(  (ref == ref2) == (cmp == 0) );
+					CPPUNIT_ASSERT(  (ref2 == ref) == (cmp == 0) );
+					CPPUNIT_ASSERT(  (ref != ref2) == (cmp != 0) );
+					CPPUNIT_ASSERT(  (ref2 != ref) == (cmp != 0) );
+					CPPUNIT_ASSERT(  (ref < ref2) == (cmp < 0) );
+					CPPUNIT_ASSERT(  (ref2 < ref) == (cmp > 0) );
+				}
+			}
+		}
+	}
+	// root dir
+	nextSubTest();
+	entry_ref ref, ref2;
+	CPPUNIT_ASSERT( get_ref_for_path("/", &ref) == B_OK );
+	CPPUNIT_ASSERT( get_entry_ref_for_entry("/", ".", &ref2) == B_OK );
+	CPPUNIT_ASSERT( ref.device == ref2.device );
+	CPPUNIT_ASSERT( ref.directory == ref2.directory );
+	CPPUNIT_ASSERT( strcmp(ref.name, ref2.name) == 0 );
+	CPPUNIT_ASSERT(  ref == ref2 );
+	// fs root dir
+	nextSubTest();
+	CPPUNIT_ASSERT( get_ref_for_path("/boot", &ref) == B_OK );
+	CPPUNIT_ASSERT( get_entry_ref_for_entry("/", "boot", &ref2) == B_OK );
+	CPPUNIT_ASSERT( ref.device == ref2.device );
+	CPPUNIT_ASSERT( ref.directory == ref2.directory );
+	CPPUNIT_ASSERT( strcmp(ref.name, ref2.name) == 0 );
+	CPPUNIT_ASSERT(  ref == ref2 );
+	// uninitialized
+	nextSubTest();
+	ref = entry_ref();
+	ref2 = entry_ref();
+	CPPUNIT_ASSERT(  ref == ref2 );
+	CPPUNIT_ASSERT(  !(ref != ref2) );
+	CPPUNIT_ASSERT(  !(ref < ref2) );
+	CPPUNIT_ASSERT(  !(ref2 < ref) );
+	CPPUNIT_ASSERT( get_entry_ref_for_entry("/", ".", &ref2) == B_OK );
+	CPPUNIT_ASSERT(  !(ref == ref2) );
+	CPPUNIT_ASSERT(  ref != ref2 );
+	CPPUNIT_ASSERT(  ref < ref2 );
+	CPPUNIT_ASSERT(  !(ref2 < ref) );
+}
 
 
 // isHarmlessPathname
@@ -2455,15 +2577,8 @@ TestEntry::completeInit()
 const entry_ref &
 TestEntry::get_ref()
 {
-	if (isConcrete() || isAbstract()) {
-		struct stat parentStat;
-		if (lstat(super->cpath, &parentStat) == 0) {
-			ref.device = parentStat.st_dev;
-			ref.directory = parentStat.st_ino;
-			ref.set_name(cname);
-		} else
-			printf("WARNING: couldn't get stat of `%s'\n", super->cpath);
-	}
+	if (isConcrete() || isAbstract())
+		get_entry_ref_for_entry(super->cpath, cname, &ref);
 	return ref;
 }
 

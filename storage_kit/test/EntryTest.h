@@ -88,6 +88,7 @@ public:
 	void ComparisonTest();
 	void AssignmentTest();	
 	void MiscTest();
+	void CFunctionsTest();
 
 	//-------------------------------------------------------------------------
 	// Helper functions
