@@ -1,0 +1,42 @@
+debug.c
+
+Contains all of the functions for the kernel debugger.
+
+static int debug_read_line(char *buf, int max_len) 
+	Reads bytes from arch_dbg_con_read(). Contains a simple command line parser with history.
+
+static int debug_parse_line(char *buf, char **argv, int *argc, int max_args)
+	Parses a command line into argc and argv.
+
+void kernel_debugger()
+	Reads, parses and calls associated commands for each line typed.
+
+int panic(const char *fmt, ...)
+	Halts all of the processors not the "current" one, then calls kernel debugger.
+
+int dprintf(const char *fmt, ...)
+	Calls vsprintf to format line, then calls dbg_puts.
+
+char dbg_putch(char c)
+	Disables interrupts, aquires the debug spinlock, puts a character to the serial port with "arch_dbg_con_putch", then enables interrupts, frees the spinlock and returns the character output.
+
+void dbg_puts(const char *s)
+	Same as above, but passes call to arch_dbg_con_puts.
+
+int dbg_add_command(void (*func)(int, char **), const char *name, const char *desc)
+	Adds a command to the debugger.
+
+static void cmd_reboot(int argc, char **argv)
+	Calls reboot().
+
+static void cmd_help(int argc, char **argv)
+	Prints all of the commands in the debuggers function list.
+
+int dbg_init(kernel_args *ka)
+	Calls arch_dbg_con_init(ka).
+
+int dbg_init2(kernel_args *ka)
+	Adds help and reboot to the commands for the debugger.
+
+bool dbg_set_serial_debug(bool new_val)  
+	Accessor for turning on/off serial debugging.

@@ -1,0 +1,49 @@
+PS-Resources-1.0
+FontOutline
+.
+//boot/beos/etc/fonts/ttfonts
+
+FontOutline
+Baskerville-Roman=Baskerville.ttf
+Baskerville-Bold=Baskerville_Bold.ttf
+Baskerville-Bold Italic=Baskerville_BoldItalic.ttf
+Baskerville-Italic=Baskerville_Italic.ttf
+ClassGarmnd BT-Roman=ClassicalGaramond.ttf
+ClassGarmnd BT-Bold=ClassicalGaramond_Bold.ttf
+ClassGarmnd BT-Bold Italic=ClassicalGaramond_BoldItalic.ttf
+ClassGarmnd BT-Italic=ClassicalGaramond_Italic.ttf
+CommercialScript-Regular=CommercialScript.ttf
+CopprplGoth Bd BT-Bold=Copperplate_Gothic_Bold.ttf
+Courier10 BT-Roman=Courier10Pitch.ttf
+Courier10 BT-Bold=Courier10Pitch_Bold.ttf
+Courier10 BT-Bold Italic=Courier10Pitch_BoldItalic.ttf
+Courier10 BT-Italic=Courier10Pitch_Italic.ttf
+Dutch801 Rm BT-Roman=Dutch801.ttf
+Dutch801 Rm BT-Bold=Dutch801_Bold.ttf
+Dutch801 Rm BT-Bold Italic=Dutch801_BoldItalic.ttf
+Dutch801 Rm BT-Italic=Dutch801_Italic.ttf
+Embassy-Regular=Embassy.ttf
+Haru-Regular=Haru.ttf
+Haru-Bold=Haru_Bold.ttf
+Haru Tohaba-Regular=Haru_Tohaba.ttf
+Humnst777 BT-Roman=Humanist777.ttf
+Humnst777 BT-Bold=Humanist777_Bold.ttf
+Humnst777 BT-Bold Italic=Humanist777_BoldItalic.ttf
+Humnst777 BT-Italic=Humanist777_Italic.ttf
+Monospac821 BT-Roman=Monospace821.ttf
+Monospac821 BT-Bold=Monospace821_Bold.ttf
+Monospac821 BT-Bold Italic=Monospace821_BoldItalic.ttf
+Monospac821 BT-Italic=Monospace821_Italic.ttf
+ProFontISOLatin1-Regular=ProFont.ttf
+Swis721 BT-Roman=Swiss721.ttf
+Swis721 BT-Bold=Swiss721_Bold.ttf
+Swis721 BT-Bold Italic=Swiss721_BoldItalic.ttf
+Swis911 XCm BT-Regular=Swiss721_ExtraCompressed.ttf
+Swis721 BT-Italic=Swiss721_Italic.ttf
+SymbolProp BT-Regular=Symbol_Proportional.ttf
+VAGRounded BT-Regular=VAG_Rounded.ttf
+Zurich-Roman=Zurich.ttf
+Zurich-Bold=Zurich_Bold.ttf
+Zurich-Bold Italic=Zurich_BoldItalic.ttf
+Zurich-Italic=Zurich_Italic.ttf 
+.

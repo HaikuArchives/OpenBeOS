@@ -1,0 +1,11 @@
+TODO
+
+(in abitrary order)
+- eventually add a status window that shows the progress of pdf file generation
+  and allows to abort it
+- pdf generation
+  - CJK font support
+  - font encodings
+  - implement the remaining graphic primitives
+  - alpha channel support
+- fix crashing bug: when file dialog is canceled
