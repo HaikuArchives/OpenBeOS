@@ -313,6 +313,7 @@ BNode::set_fd(int fd) {
 		close_fd();
 		
 	fFd = fd;
+	return B_OK;
 }
 
 void
