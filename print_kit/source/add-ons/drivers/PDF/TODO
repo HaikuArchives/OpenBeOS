@@ -1,18 +1,12 @@
 TODO
 
 (in abitrary order)
-- eventually add a status window that shows the progress of pdf file generation
-  and allows to abort it
 - pdf generation
-  - implement the remaining graphic primitives
   - alpha channel support
   - patterns
   - clip to stroke graphic primitives has no equivalent in PDF
     (clip to StrokeShape, StrokeRect, ...)
   - embed font with different encodings only once
-  - text attributes
-  - check: char spacing
-- fix crashing bug: when file dialog is canceled
 
 - security settings (printing, copying, changing, ...)
 - password protection

@@ -3,7 +3,6 @@
 launchdir=$(dirname $0)
 copyattr -d "$launchdir/PDF Writer" "$HOME/config/add-ons/Print/PDF Writer"
 copyattr -d "$launchdir/libpdf.so" "$HOME/config/lib/libpdf.so"
-copyattr -d "$launchdir/pdflib.upr" "$HOME/config/settings/pdflib.upr"
 
 mkdir /boot/home/config/settings/PDF\ Writer
 cd $launchdir

@@ -1887,8 +1887,8 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 
 	mask = CreateMask(src, bytesPerRow, pixelFormat, flags, data);
 
-	float scaleX = (dest.right  - dest.left+1) / (src.right  - src.left+1);
-	float scaleY = (dest.bottom - dest.top+1) / (src.bottom - src.top+1);
+	float scaleX = dest.Width() / src.Width();
+	float scaleY = dest.Height() / src.Height();
 
 	if (mask) {
 		int32 w = (width+7)/8;

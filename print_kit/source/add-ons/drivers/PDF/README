@@ -42,17 +42,21 @@ Contact
 
 Either one of the developers or post to the print_kit mailing list
 open-beos-printing@freelists.org (preferred)
+Before any post, you'll need to subscribe it:
+http://www.freelists.org/cgi-bin/list?list_id=open-beos-printing
 
 
 Build Instructions for BeOS on x86 platform
 
 Building for x86
 - copy libpdf.so into /boot/home/config/lib
-- make "PDF Writer" with "PDF Writer (release).proj"
+- make "PDF Writer x86" with "PDF Writer_x86.proj"
+- rename into "PDF Writer"
 
 Building for PPC
 - copy libpdf.so into /boot/develop/tools/develop_ppc/lib/ppc
-- make "PDF Writer.ppc" with "PDF Writer-ppc.proj"
+- make "PDF Writer ppc" with "PDF Writer_ppc.proj"
+- rename into "PDF Writer"
 
 Both
 After making the binary copy it to /boot/home/config/add-ons/Print
