@@ -17,6 +17,9 @@
 */
 
 //#define DEBUG_DRIVER_MODULE
+//#define DEBUG_SERVER_EMU
+
+#define DISABLE_SERVER_EMU
 
 #include <stdio.h>
 #include <iostream.h>
@@ -134,6 +137,9 @@ void VDView::Draw(BRect rect)
 
 void VDView::MouseDown(BPoint pt)
 {
+#ifdef DEBUG_SERVER_EMU
+printf("ViewDriver::MouseDown\t");
+#endif
 	// Attach data:
 	// 1) int64 - time of mouse click
 	// 2) float - x coordinate of mouse click
@@ -141,7 +147,7 @@ void VDView::MouseDown(BPoint pt)
 	// 4) int32 - modifier keys down
 	// 5) int32 - buttons down
 	// 6) int32 - clicks
-
+#ifndef DISABLE_SERVER_EMU
 	BPoint p;
 
 	uint32 buttons,
@@ -160,6 +166,7 @@ void VDView::MouseDown(BPoint pt)
 	serverlink->Attach(&buttons, sizeof(uint32));
 	serverlink->Attach(&clicks, sizeof(uint32));
 	serverlink->Flush();
+#endif
 }
 
 void VDView::MouseMoved(BPoint pt, uint32 transit, const BMessage *msg)
@@ -169,6 +176,7 @@ void VDView::MouseMoved(BPoint pt, uint32 transit, const BMessage *msg)
 	// 2) float - x coordinate of mouse click
 	// 3) float - y coordinate of mouse click
 	// 4) int32 - buttons down
+#ifndef DISABLE_SERVER_EMU
 	BPoint p;
 	uint32 buttons;
 	int64 time=(int64)real_time_clock();
@@ -180,15 +188,20 @@ void VDView::MouseMoved(BPoint pt, uint32 transit, const BMessage *msg)
 	GetMouse(&p,&buttons);
 	serverlink->Attach(&buttons,sizeof(int32));
 	serverlink->Flush();
+#endif
 }
 
 void VDView::MouseUp(BPoint pt)
 {
+#ifdef DEBUG_SERVER_EMU
+printf("ViewDriver::MouseUp\t");
+#endif
 	// Attach data:
 	// 1) int64 - time of mouse click
 	// 2) float - x coordinate of mouse click
 	// 3) float - y coordinate of mouse click
 	// 4) int32 - modifier keys down
+#ifndef DISABLE_SERVER_EMU
 	BPoint p;
 
 	uint32 buttons,
@@ -204,6 +217,7 @@ void VDView::MouseUp(BPoint pt)
 	serverlink->Attach(&pt.y,sizeof(float));
 	serverlink->Attach(&mod, sizeof(uint32));
 	serverlink->Flush();
+#endif
 }
 
 void VDView::SetMode(int16 width, int16 height, uint8 bpp)
@@ -669,6 +683,7 @@ printf("pattern: {%llx}\n",temp64);
 		{
 			BPoint pt(0,0),pt2(0,0);
 			int64 temp64;
+			rgb_color tcol, oldcol;
 
 			msg->FindPoint("from",&pt);
 			msg->FindPoint("to",&pt2);
@@ -677,7 +692,19 @@ printf("pattern: {%llx}\n",temp64);
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
-			view->drawview->StrokeLine(pt,pt2,*((pattern *)&temp64));
+
+			if(msg->FindInt8("red",(int8*)&tcol.red)!=B_NAME_NOT_FOUND)
+			{
+				msg->FindInt8("green",(int8*)&tcol.green);
+				msg->FindInt8("blue",(int8*)&tcol.blue);
+				msg->FindInt8("alpha",(int8*)&tcol.alpha);
+				oldcol=view->drawview->HighColor();
+				view->drawview->SetHighColor(tcol);
+				view->drawview->StrokeLine(pt,pt2,*((pattern *)&temp64));
+				view->drawview->SetHighColor(oldcol);
+			}
+			else
+				view->drawview->StrokeLine(pt,pt2,*((pattern *)&temp64));
 			view->viewbmp->RemoveChild(view->drawview);
 			view->viewbmp->Unlock();
 
@@ -1419,6 +1446,21 @@ void ViewDriver::StrokeLine(BPoint point, uint8 *pattern)
 		int64 pat=*((int64*)pattern);
 		msg->AddInt64("pattern",pat);
 	}
+
+	screenwin->PostMessage(msg);
+	locker->Unlock();
+}
+
+void ViewDriver::StrokeLine(BPoint pt1, BPoint pt2, rgb_color col)
+{
+	locker->Lock();
+	BMessage *msg=new BMessage(VDWIN_STROKELINE);
+	msg->AddPoint("from",pt1);
+	msg->AddPoint("to",pt2);
+	msg->AddInt8("red",col.red);
+	msg->AddInt8("green",col.green);
+	msg->AddInt8("blue",col.blue);
+	msg->AddInt8("alpha",col.alpha);
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
