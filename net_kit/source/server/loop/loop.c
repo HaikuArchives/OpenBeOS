@@ -32,6 +32,7 @@ struct core_module_info *core = NULL;
 #include "net_module.h"
 
 static struct protosw *proto[IPPROTO_MAX];
+static struct ifnet *me = NULL;
 
 int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 			struct rtentry *rt)
@@ -54,8 +55,10 @@ int loop_input(struct mbuf *buf)
 {
 	int error = 0;
 
+	buf->m_pkthdr.rcvif = me;
+	
 	if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
-		error = proto[IPPROTO_IP]->pr_input(buf, 0);
+		return proto[IPPROTO_IP]->pr_input(buf, 0);
 	else
 		printf("No input tourtine found for IP\n");
 
@@ -105,7 +108,10 @@ static int loop_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 	
 static int loop_init(void)
 {
-	struct ifnet *me = (ifnet*)malloc(sizeof(ifnet));
+	me = (ifnet*)malloc(sizeof(ifnet));
+	if (!me)
+		return NULL;
+		
 	memset(me, 0, sizeof(*me));
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
