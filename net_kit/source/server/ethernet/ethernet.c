@@ -170,9 +170,28 @@ int ethernet_input(struct mbuf *buf)
 	}
 
 	printf("\n");
-	
+
 	m_freem(buf);
 	return 0;	
+}
+
+int ether_output(struct mbuf *buf, int prot, ifnet *ifa, struct sockaddr *tgt)
+{
+	ethernet_header *eth;
+
+	M_PREPEND(buf, sizeof(ethernet_header));
+	eth = mtod(buf, ethernet_header*);
+
+	memcpy(&eth->src, &ifa->link_addr->sa_data, ifa->link_addr->sa_len);
+	if (buf->m_flags & M_BCAST) {
+		memset(&eth->dest, 0xff, 6);
+	}
+	if (prot == NS_ARP)
+		eth->type = htons(ETHER_ARP);
+
+	IFQ_ENQUEUE(ifa->txq, buf);
+
+	return 0;
 }
 
 int ether_init(loaded_net_module *ln, int *pt)
@@ -194,14 +213,14 @@ int ether_dev_init(ifnet *dev)
 		return 0;
 
         /* try to get the MAC address */
-        status = ioctl(dev->dev, IF_GETADDR, &ifa->if_addr.addr[0], 6);
+        status = ioctl(dev->dev, IF_GETADDR, &ifa->if_addr.sa_data, 6);
         if (status < B_OK) {
                 printf("Failed to get a MAC address, ignoring %s%d\n", dev->name, dev->unit);
                 return 0;
         }
 	/* Add the link address to address list for device */
-	ifa->if_addr.len = 6;
-	ifa->if_addr.type = AF_LINK;
+	ifa->if_addr.sa_len = 6;
+	ifa->if_addr.sa_family = AF_LINK;
 	ifa->ifn = dev;
 	ifa->next = NULL;
 	if (dev->if_addrlist)
@@ -210,6 +229,7 @@ int ether_dev_init(ifnet *dev)
 		dev->if_addrlist = ifa;
 	/* also add link from dev->link_addr */
 	dev->link_addr = &ifa->if_addr;
+	insert_local_address(dev->link_addr, dev);
 
         status = ioctl(dev->dev, IF_SETPROMISC, &on, 1);
         if (status == B_OK) {
@@ -233,6 +253,7 @@ net_module net_module_data = {
 	&ether_init,
 	&ether_dev_init,
 	&ethernet_input,
+	&ether_output,
 	NULL
 };
 
