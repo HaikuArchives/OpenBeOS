@@ -27,6 +27,7 @@ BNetBuffer::BNetBuffer(const BNetBuffer &) {
 }
 
 BNetBuffer &BNetBuffer::operator=(const BNetBuffer &) {
+	return *this;
 }
 
 

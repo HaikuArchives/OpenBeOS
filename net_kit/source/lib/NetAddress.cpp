@@ -2,6 +2,10 @@
 
 #include "NetAddress.h"
 
+#ifdef USE_OPENBEOS_NAMESPACE
+namespace OpenBeOS {
+#endif
+
 BNetAddress::BNetAddress(BMessage *archive) {
 }
 
@@ -9,9 +13,11 @@ BNetAddress::~BNetAddress() {
 }
 
 status_t BNetAddress::Archive(BMessage *into, bool deep = true) const {
+	return B_UNSUPPORTED;
 }
 
 BArchivable *BNetAddress::Instantiate(BMessage *archive) {
+	return NULL;
 }
  
 BNetAddress::BNetAddress(const char *hostname = 0, unsigned short port = 0) {
@@ -33,6 +39,7 @@ BNetAddress::BNetAddress(const char *hostname, const char *protocol, const char 
 }
 
 BNetAddress &BNetAddress::operator=(const BNetAddress &) {
+	return *this;
 }
 
 status_t BNetAddress::InitCheck() {
@@ -89,3 +96,6 @@ void BNetAddress::_ReservedBNetAddressFBCCruft5() {
 void BNetAddress::_ReservedBNetAddressFBCCruft6() {
 }
 
+#ifdef USE_OPENBEOS_NAMESPACE
+}	// namespace OpenBeOS
+#endif
