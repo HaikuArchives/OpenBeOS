@@ -5,15 +5,14 @@
 
 #include <SupportDefs.h>
 
-#include <cppunit/TestCase.h>
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
 
-class DirectoryTest : public CppUnit::TestCase
+#include "BasicTest.h"
+
+class DirectoryTest : public BasicTest
 {
 public:
-	DirectoryTest();
-
 	static Test* Suite();
 
 	// This function called before *each* test added in Suite()
@@ -46,15 +45,7 @@ public:
 
 	void CreateDirectoryTest();
 
-	// helper functions
 
-	void nextSubTest();
-
-	static void execCommand(const char *command, const char *parameter);
-	static void execCommand(const char *command, const char *parameter1,
-							const char *parameter2);
-	
-			int32				subTestNumber;
 	static	const char *		existingFilename;
 	static	const char *		existingSuperFilename;
 	static	const char *		existingRelFilename;
@@ -83,6 +74,7 @@ public:
 	static	const char *		cyclicLinkname1;
 	static	const char *		cyclicLinkname2;
 	static	const char *		allFilenames[];
+	static	const int32 		allFilenameCount;
 };
 
 #endif	// __sk_directory_test_h__

@@ -1,6 +1,5 @@
 // DirectoryTest.cpp
 
-#include <set>
 #include <stdio.h>
 #include <string>
 #include <unistd.h>
@@ -15,197 +14,62 @@
 #include "Test.StorageKit.h"
 #include "DirectoryTest.h"
 
-// == for struct stat
-static
-bool
-operator==(const struct stat &st1, const struct stat &st2)
-{
-	return (
-		st1.st_dev == st2.st_dev
-		&& st1.st_ino == st2.st_ino
-		&& st1.st_mode == st2.st_mode
-		&& st1.st_nlink == st2.st_nlink
-		&& st1.st_uid == st2.st_uid
-		&& st1.st_gid == st2.st_gid
-		&& st1.st_size == st2.st_size
-		&& st1.st_blksize == st2.st_blksize
-		&& st1.st_atime == st2.st_atime
-		&& st1.st_mtime == st2.st_mtime
-		&& st1.st_ctime == st2.st_ctime
-		&& st1.st_crtime == st2.st_crtime
-	);
-}
-
-// first parameter is equal to the second or third
-template<typename A, typename B, typename C>
-inline
-bool
-equals(const A &a, const B &b, const C &c)
-{
-	return (a == b || a == c);
-}
-
-// A little helper class for tests, that works like a set of strings, that
-// are marked tested or untested.
-class TestSet {
-public:
-	typedef set<string> nameset;
-
-public:
-	TestSet()
-	{
-	}
-
-	void add(string name)
-	{
-		if (fTestedNames.find(name) == fTestedNames.end())
-			fUntestedNames.insert(name);
-	}
-
-	void remove(string name)
-	{
-		if (fUntestedNames.find(name) != fUntestedNames.end())
-			fUntestedNames.erase(name);
-		else if (fTestedNames.find(name) != fTestedNames.end())
-			fTestedNames.erase(name);
-	}
-
-	void clear(string name)
-	{
-		fUntestedNames.clear();
-		fTestedNames.clear();
-	}
-
-	void rewind()
-	{
-		fUntestedNames.insert(fTestedNames.begin(), fTestedNames.end());
-		fTestedNames.clear();
-	}
-
-	bool test(string name, bool dump = shell.BeVerbose())
-	{
-		bool result = (fUntestedNames.find(name) != fUntestedNames.end());
-		if (result) {
-			fUntestedNames.erase(name);
-			fTestedNames.insert(name);
-		} else if (dump) {
-			// dump untested
-			printf("TestSet::test(`%s')\n", name.c_str());
-			printf("untested:\n");
-			for (nameset::iterator it = fUntestedNames.begin();
-				 it != fUntestedNames.end();
-				 ++it) {
-				printf("  `%s'\n", it->c_str());
-			}
-		}
-		return result;
-	}
-
-	bool testDone()
-	{
-		return (fUntestedNames.empty());
-	}
-
-private:
-	nameset	fUntestedNames;
-	nameset	fTestedNames;
-};
-
-
-// DirectoryTestCaller
-//
-// a TestCaller that cleans up after the test is finished
-
-template <typename Fixture,
-		  typename ExpectedException = class CppUnit::NoExceptionExpected>
-struct DirectoryTestCaller
-	: public CppUnit::TestCaller<Fixture, ExpectedException> {
-	DirectoryTestCaller(std::string name, TestMethod test)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test) {}
-	DirectoryTestCaller(std::string name, TestMethod test, Fixture& fixture)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test,
-														  fixture) {}
-	DirectoryTestCaller(std::string name, TestMethod test, Fixture* fixture)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test,
-														  fixture) {}
-
-	void setUp()
-	{
-		fValidCWD = getcwd(fCurrentWorkingDir, B_PATH_NAME_LENGTH);
-		DirectoryTest::execCommand("touch ", DirectoryTest::existingFilename);
-		DirectoryTest::execCommand("mkdir ", DirectoryTest::existingDirname);
-		DirectoryTest::execCommand("mkdir ",
-								   DirectoryTest::existingSubDirname);
-		DirectoryTest::execCommand("ln -s ", DirectoryTest::existingDirname,
-								   DirectoryTest::dirLinkname);
-		DirectoryTest::execCommand("ln -s ", DirectoryTest::existingFilename,
-								   DirectoryTest::fileLinkname);
-		DirectoryTest::execCommand("ln -s ", DirectoryTest::nonExistingDirname,
-								   DirectoryTest::badLinkname);
-		DirectoryTest::execCommand("ln -s ", DirectoryTest::cyclicLinkname1,
-								   DirectoryTest::cyclicLinkname2);
-		DirectoryTest::execCommand("ln -s ", DirectoryTest::cyclicLinkname2,
-								   DirectoryTest::cyclicLinkname1);
-	}
-
-	void tearDown ()
-	{
-		// cleanup
-		if (fValidCWD)
-			chdir(fCurrentWorkingDir);
-		else
-			chdir("/");
-		for (int32 i = 0;
-			 i < sizeof(DirectoryTest::allFilenames) / sizeof(const char*);
-			 i++) {
-			DirectoryTest::execCommand("rm -rf ",
-									   DirectoryTest::allFilenames[i]);
-		}
-		if (shell.BeVerbose())
-			printf("\n");
-	}
-
-	char fCurrentWorkingDir[B_PATH_NAME_LENGTH];
-	bool fValidCWD;
-};
-
-
-
-// DirectoryTest
-
-// constructor
-DirectoryTest::DirectoryTest()
-	: CppUnit::TestCase(),
-	  subTestNumber(0)
-{
-}
-
 // Suite
 DirectoryTest::Test*
 DirectoryTest::Suite()
 {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
+	typedef CppUnit::TestCaller<DirectoryTest> TC;
 	
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::Init Test 1", &DirectoryTest::InitTest1) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::Init Test 2", &DirectoryTest::InitTest2) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::GetEntry Test", &DirectoryTest::GetEntryTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::IsRoot Test", &DirectoryTest::IsRootTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::FindEntry Test", &DirectoryTest::FindEntryTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::Contains Test (NOTE: this fails with R5 libraries)", &DirectoryTest::ContainsTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::GetStatFor Test", &DirectoryTest::GetStatForTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::EntryIteration Test", &DirectoryTest::EntryIterationTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::Creation Test", &DirectoryTest::EntryCreationTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::Assignment Test", &DirectoryTest::AssignmentTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::CreateDirectory Test", &DirectoryTest::CreateDirectoryTest) );
+	suite->addTest( new TC("BDirectory::Init Test 1",
+						   &DirectoryTest::InitTest1) );
+	suite->addTest( new TC("BDirectory::Init Test 2",
+						   &DirectoryTest::InitTest2) );
+	suite->addTest( new TC("BDirectory::GetEntry Test",
+						   &DirectoryTest::GetEntryTest) );
+	suite->addTest( new TC("BDirectory::IsRoot Test",
+						   &DirectoryTest::IsRootTest) );
+	suite->addTest( new TC("BDirectory::FindEntry Test",
+						   &DirectoryTest::FindEntryTest) );
+	suite->addTest( new TC("BDirectory::Contains Test"
+						   " (NOTE: this fails with R5 libraries)",
+						   &DirectoryTest::ContainsTest) );
+	suite->addTest( new TC("BDirectory::GetStatFor Test",
+						   &DirectoryTest::GetStatForTest) );
+	suite->addTest( new TC("BDirectory::EntryIteration Test",
+						   &DirectoryTest::EntryIterationTest) );
+	suite->addTest( new TC("BDirectory::Creation Test",
+						   &DirectoryTest::EntryCreationTest) );
+	suite->addTest( new TC("BDirectory::Assignment Test",
+						   &DirectoryTest::AssignmentTest) );
+	suite->addTest( new TC("BDirectory::CreateDirectory Test",
+						   &DirectoryTest::CreateDirectoryTest) );
 	
 	return suite;
 }		
 
 // setUp
-void DirectoryTest::setUp() {}
+void DirectoryTest::setUp()
+{
+	BasicTest::setUp();
+	execCommand(string("touch ") + existingFilename);
+	execCommand(string("mkdir ") + existingDirname);
+	execCommand(string("mkdir ") + existingSubDirname);
+	execCommand(string("ln -s ") + existingDirname + " " + dirLinkname);
+	execCommand(string("ln -s ") + existingFilename + " " + fileLinkname);
+	execCommand(string("ln -s ") + nonExistingDirname + " " + badLinkname);
+	execCommand(string("ln -s ") + cyclicLinkname1 + " " + cyclicLinkname2);
+	execCommand(string("ln -s ") + cyclicLinkname2 + " " + cyclicLinkname1);
+}
 
 // tearDown
-void DirectoryTest::tearDown()	{}
+void DirectoryTest::tearDown()
+{
+	BasicTest::tearDown();
+	// cleanup
+	for (int32 i = 0; i < allFilenameCount; i++)
+		execCommand(string("rm -rf ") + allFilenames[i]);
+}
 
 // InitTest1
 void
@@ -349,7 +213,6 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 	}
 
 	// 5. BDirectory(const node_ref*)
-/* Doesn't link: needs some node_ref implementation.
 	nextSubTest();
 	{
 		BNode node(existing);
@@ -359,11 +222,13 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 		BDirectory dir(&nref);
 		CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 	}
+/*	R5: crashs, when passing a NULL node_ref.
 	nextSubTest();
 	{
 		BDirectory dir((node_ref *)NULL);
 		CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	}
+*/
 	nextSubTest();
 	{
 		BNode node(existingFile);
@@ -371,10 +236,10 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 		node_ref nref;
 		CPPUNIT_ASSERT( node.GetNodeRef(&nref) == B_OK );
 		BDirectory dir(&nref);
-		// R5 returns B_BAD_VALUE instead of B_NOT_A_DIRECTORY.
-		CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
+		// R5: returns B_BAD_VALUE instead of B_NOT_A_DIRECTORY.
+		// OBOS: returns B_ENTRY_NOT_FOUND instead of B_NOT_A_DIRECTORY.
+		CPPUNIT_ASSERT( equals(dir.InitCheck(), B_BAD_VALUE, B_ENTRY_NOT_FOUND) );
 	}
-*/
 
 	// 6. BDirectory(const BDirectory*, const char*)
 	nextSubTest();
@@ -581,7 +446,6 @@ DirectoryTest::InitTest2()
 	dir.Unset();
 
 	// 5. BDirectory(const node_ref*)
-/* Doesn't link: needs some node_ref implementation.
 	nextSubTest();
 	BNode node(existing);
 	CPPUNIT_ASSERT( node.InitCheck() == B_OK );
@@ -591,20 +455,21 @@ DirectoryTest::InitTest2()
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 	dir.Unset();
 	//
+/*	R5: crashs, when passing a NULL node_ref.
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo((node_ref *)NULL) == B_BAD_VALUE );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	dir.Unset();
+*/
 	//
 	nextSubTest();
-	BNode node(existingFile);
-	CPPUNIT_ASSERT( node.InitCheck() == B_OK );
+	CPPUNIT_ASSERT( node.SetTo(existingFile) == B_OK );
 	CPPUNIT_ASSERT( node.GetNodeRef(&nref) == B_OK );
 	// R5 returns B_BAD_VALUE instead of B_NOT_A_DIRECTORY.
-	CPPUNIT_ASSERT( dir.SetTo(&nref) == B_BAD_VALUE );
-	CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
+	// OBOS: returns B_ENTRY_NOT_FOUND instead of B_NOT_A_DIRECTORY.
+	CPPUNIT_ASSERT( equals(dir.SetTo(&nref), B_BAD_VALUE, B_ENTRY_NOT_FOUND) );
+	CPPUNIT_ASSERT( equals(dir.InitCheck(), B_BAD_VALUE, B_ENTRY_NOT_FOUND) );
 	dir.Unset();
-*/
 
 	// 6. BDirectory(const BDirectory*, const char*)
 	nextSubTest();
@@ -879,7 +744,7 @@ DirectoryTest::FindEntryTest()
 	dir.Unset();
 	entry.Unset();
 	path.Unset();
-/* BEntry doesn't seem to check the entry name length.
+/* BEntry doesn't seem to check handle cyclic links correctly.
 	// traverse a cyclic link
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT );
@@ -1293,7 +1158,7 @@ DirectoryTest::EntryIterationTest()
 	const char *cyclicLink1 = cyclicLinkname1;
 	const char *cyclicLink2 = cyclicLinkname2;
 	// create a test directory
-	execCommand("mkdir ", testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	// 1. empty directory
 	TestSet testSet;
 	testSet.add(".");
@@ -1337,31 +1202,34 @@ DirectoryTest::EntryIterationTest()
 	// 2. non-empty directory
 	string dirPathName(string(testDir1) + "/");
 	string entryName("file1");
-	execCommand("touch ", (dirPathName + entryName).c_str());
+	execCommand(string("touch ") + dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("file2");
-	execCommand("touch ", (dirPathName + entryName).c_str());
+	execCommand(string("touch ") + dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("file3");
-	execCommand("touch ", (dirPathName + entryName).c_str());
+	execCommand(string("touch ") + dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("dir1");
-	execCommand("mkdir ", (dirPathName + entryName).c_str());
+	execCommand(string("mkdir ") + dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("dir2");
-	execCommand("mkdir ", (dirPathName + entryName).c_str());
+	execCommand(string("mkdir ") + dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("dir3");
-	execCommand("mkdir ", (dirPathName + entryName).c_str());
+	execCommand(string("mkdir ") + dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("link1");
-	execCommand("ln -s ", existingFile, (dirPathName + entryName).c_str());
+	execCommand(string("ln -s ") + existingFile + " "
+				+ dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("link2");
-	execCommand("ln -s ", existingFile, (dirPathName + entryName).c_str());
+	execCommand(string("ln -s ") + existingFile + " "
+				+ dirPathName + entryName);
 	testSet.add(entryName);
 	entryName = ("link3");
-	execCommand("ln -s ", existingFile, (dirPathName + entryName).c_str());
+	execCommand(string("ln -s ") + existingFile + " "
+				+ dirPathName + entryName);
 	testSet.add(entryName);
 	// GetNextEntry
 /* OBOS: BPath lacks Leaf() implementation
@@ -1470,10 +1338,11 @@ printf("  path: `%s'\n", path.Path());
 
 	// 7. link traversation
 	nextSubTest();
-	execCommand("rm -rf ", testDir1);
-	execCommand("mkdir ", testDir1);
+	execCommand(string("rm -rf ") + testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	entryName = ("link1");
-	execCommand("ln -s ", existingFile, (dirPathName + entryName).c_str());
+	execCommand(string("ln -s ") + existingFile + " "
+				+ dirPathName + entryName);
 	CPPUNIT_ASSERT( dir.SetTo(testDir1) == B_OK );
 	CPPUNIT_ASSERT( dir.GetNextEntry(&entry, true) == B_OK );
 	BPath path;
@@ -1511,7 +1380,7 @@ DirectoryTest::EntryCreationTest()
 	const char *cyclicLink1 = cyclicLinkname1;
 	const char *cyclicLink2 = cyclicLinkname2;
 	// create a test directory
-	execCommand("mkdir ", testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	// 1. relative path
 	BDirectory dir(testDir1);
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
@@ -1581,8 +1450,8 @@ DirectoryTest::EntryCreationTest()
 
 	// 2. absolute path
 	dir.Unset();
-	execCommand("rm -rf ", testDir1);
-	execCommand("mkdir ", testDir1);
+	execCommand(string("rm -rf ") + testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	CPPUNIT_ASSERT( dir.SetTo(existing) == B_OK );
 	// CreateDirectory
 	// dir doesn't already exist
@@ -1643,8 +1512,8 @@ DirectoryTest::EntryCreationTest()
 
 	// 3. uninitialized BDirectory, absolute path
 	dir.Unset();
-	execCommand("rm -rf ", testDir1);
-	execCommand("mkdir ", testDir1);
+	execCommand(string("rm -rf ") + testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT );
 	// CreateDirectory
 	// dir doesn't already exist
@@ -1705,8 +1574,8 @@ DirectoryTest::EntryCreationTest()
 
 	// 4. uninitialized BDirectory, relative path, current directory
 	dir.Unset();
-	execCommand("rm -rf ", testDir1);
-	execCommand("mkdir ", testDir1);
+	execCommand(string("rm -rf ") + testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT );
 	chdir(testDir1);
 	// CreateDirectory
@@ -1771,8 +1640,8 @@ DirectoryTest::EntryCreationTest()
 
 	// 5. bad args
 	dir.Unset();
-	execCommand("rm -rf ", testDir1);
-	execCommand("mkdir ", testDir1);
+	execCommand(string("rm -rf ") + testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	CPPUNIT_ASSERT( dir.SetTo(testDir1) == B_OK );
 	// CreateDirectory
 	nextSubTest();
@@ -1803,8 +1672,8 @@ DirectoryTest::EntryCreationTest()
 
 	// 6. uninitialized BDirectory, absolute path, no second param
 	dir.Unset();
-	execCommand("rm -rf ", testDir1);
-	execCommand("mkdir ", testDir1);
+	execCommand(string("rm -rf ") + testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT );
 	// CreateDirectory
 	// dir doesn't already exist
@@ -1928,7 +1797,7 @@ DirectoryTest::CreateDirectoryTest()
 	const char *cyclicLink1 = cyclicLinkname1;
 	const char *cyclicLink2 = cyclicLinkname2;
 	// 1. absolute path
-	execCommand("mkdir ", testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	// two levels
 	nextSubTest();
 	string dirPathName(string(testDir1) + "/");
@@ -1951,8 +1820,8 @@ DirectoryTest::CreateDirectoryTest()
 	subdir.Unset();
 
 	// 2. relative path
-	execCommand("rm -rf ", testDir1);
-	execCommand("mkdir ", testDir1);
+	execCommand(string("rm -rf ") + testDir1);
+	execCommand(string("mkdir ") + testDir1);
 	chdir(testDir1);
 	// two levels
 	nextSubTest();
@@ -1987,51 +1856,6 @@ DirectoryTest::CreateDirectoryTest()
 	CPPUNIT_ASSERT( create_directory(NULL, 0x1ff) == B_BAD_VALUE );
 }
 
-
-// nextSubTest
-void
-DirectoryTest::nextSubTest()
-{
-	if (shell.BeVerbose())
-		printf("[%ld]", subTestNumber++);
-}
-
-// Calls system() with the concatenated string of command and parameter.
-// Probably one of the exec*() functions serves the same purpose, but
-// I don't have the reference at hand.
-// execCommand
-void
-DirectoryTest::execCommand(const char *command, const char *parameter)
-{
-	if (command && parameter) {
-		char *cmdLine = new char[strlen(command) + strlen(parameter) + 1];
-		strcpy(cmdLine, command);
-		strcat(cmdLine, parameter);
-		system(cmdLine);
-		delete[] cmdLine;
-	}
-}
-
-// Calls system() with the concatenated string of command, parameter1,
-// " " and parameter2.
-// Probably one of the exec*() functions serves the same purpose, but
-// I don't have the reference at hand.
-// execCommand
-void
-DirectoryTest::execCommand(const char *command, const char *parameter1,
-						   const char *parameter2)
-{
-	if (command && parameter1 && parameter2) {
-		char *cmdLine = new char[strlen(command) + strlen(parameter1)
-								 + 1 + strlen(parameter2) + 1];
-		strcpy(cmdLine, command);
-		strcat(cmdLine, parameter1);
-		strcat(cmdLine, " ");
-		strcat(cmdLine, parameter2);
-		system(cmdLine);
-		delete[] cmdLine;
-	}
-}
 
 
 // some filenames to be used in tests
@@ -2085,4 +1909,6 @@ const char *DirectoryTest::allFilenames[]		=  {
 	DirectoryTest::cyclicLinkname1,
 	DirectoryTest::cyclicLinkname2,
 };
+const int32 DirectoryTest::allFilenameCount
+	= sizeof(allFilenames) / sizeof(const char*);
 
