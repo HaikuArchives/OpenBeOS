@@ -791,7 +791,6 @@ int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 	if (ifp->devid == -1) {
 		char path[PATH_MAX];
 		sprintf(path, "%s/%s/%d", DRIVER_DIRECTORY, ifp->name, ifp->if_unit);
-		printf("opening %s\n", path);	
 		ifp->devid = open(path, O_RDWR);
 		if (ifp->devid < 0) {
 			ifp->devid = -1;
@@ -878,7 +877,16 @@ static int ether_init(void *cpp)
 
 static int ether_stop()
 {
+	struct ether_device *dptr = ether_devices, *odev;
+
+	while (dptr) {
+		odev = dptr;
+		dptr = odev->next;
+		free(odev);
+	}
+		
 	net_remove_timer(arptimer_id);
+	
 	return 0;
 }
 
@@ -902,6 +910,7 @@ static int32 ether_ops(int32 op, ...)
 			get_module(CORE_MODULE_PATH, (module_info**)&core);
 			if (!core)
 				return B_ERROR;
+			load_driver_symbols("ethernet");
 			return B_OK;
 		case B_MODULE_UNINIT:
 			return B_OK;
