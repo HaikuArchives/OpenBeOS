@@ -1,6 +1,7 @@
 #include "router.h"
 #include <InterfaceDefs.h>
 #include <String.h>
+#include <View.h>
 #include <AppDefs.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -74,6 +75,45 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
       serverlink->Attach(&buttons,sizeof(int32));
       serverlink->Flush();
       }break;
+   case B_MOUSE_UP:{
+		BPoint p;
+	
+		uint32 mod=modifiers();
+		// Eventually, we will also be sending a uint32 buttons.
+	
+		int64 time=(int64)real_time_clock();
+	
+        message->FindPoint("where",&p);
+	
+		serverlink->SetOpCode(B_MOUSE_UP);
+		serverlink->Attach(&time, sizeof(int64));
+		serverlink->Attach(&p.x,sizeof(float));
+		serverlink->Attach(&p.y,sizeof(float));
+		serverlink->Attach(&mod, sizeof(uint32));
+		serverlink->Flush();
+      }break;
+   case B_MOUSE_DOWN:{
+		BPoint p;
+	
+		uint32 buttons,
+			mod=modifiers();
+		int32 clicks;
+		message->FindInt32("clicks",&clicks);
+        message->FindPoint("where",&p);
+        message->FindInt32("buttons",(int32*)&buttons);
+	
+		int64 time=(int64)real_time_clock();
+
+		serverlink->SetOpCode(B_MOUSE_DOWN);
+		serverlink->Attach(&time, sizeof(int64));
+		serverlink->Attach(&p.x,sizeof(float));
+		serverlink->Attach(&p.y,sizeof(float));
+		serverlink->Attach(&mod, sizeof(uint32));
+		serverlink->Attach(&buttons, sizeof(uint32));
+		serverlink->Attach(&clicks, sizeof(uint32));
+		serverlink->Flush();
+      }break;
+
    // Should be some Mouse Down and Up code here ..
    // Along with some Key Down and up codes ..
    default:
