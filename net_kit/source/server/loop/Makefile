@@ -1,12 +1,11 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=loop
 CFLAGS+=-nostart
-LOBJS=../_APP_ ../net_server/misc.o
+LOBJS=../net_server/misc.o
 OBJS=loop.o
 
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=#./net_server/area_malloc.o
 
 all:	$(TARGET)
 
@@ -25,7 +24,7 @@ clean:
 	@if test -e $(OBJS); then rm $(OBJS); fi
 
 $(TARGET): $(OBJS)
-	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o ../modules/interface/$(TARGET)
+	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o ../modules/interface/$(TARGET)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

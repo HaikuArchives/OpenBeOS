@@ -15,25 +15,25 @@
 #include "sys/sockio.h"
 
 #include "net_malloc.h"
+#include "core_module.h"
 #include "net_module.h"
+#include "core_funcs.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include <module.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
 
 #include "net_device.h"
 #include "loop_module.h"
 
-struct core_module_info *core = NULL;
 #endif
 
+static struct core_module_info *core = NULL;
 
 static struct protosw *proto[IPPROTO_MAX];
 static struct ifnet *me = NULL;
 
-int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
+int loop_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 			struct rtentry *rt)
 {
 	/* turn it straight back... */
@@ -52,6 +52,9 @@ int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 
 void loop_input(struct mbuf *buf)
 {
+	if (!buf)
+		return;
+
 	buf->m_pkthdr.rcvif = me;
 	
 	if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
@@ -63,7 +66,7 @@ void loop_input(struct mbuf *buf)
 	return;
 }
 
-static int loop_dev_stop(ifnet *dev)
+static int loop_dev_stop(struct ifnet *dev)
 {
 	if (!dev || dev->if_type != IFT_LOOP)
 		return EINVAL;
@@ -100,7 +103,7 @@ static int loop_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 	
 static int loop_init(void)
 {
-	me = (ifnet*)malloc(sizeof(ifnet));
+	me = (struct ifnet*)malloc(sizeof(struct ifnet));
 	if (!me)
 		return -1;
 		
@@ -129,14 +132,21 @@ static int loop_init(void)
 	return 0;
 }
 
-		
+#ifndef _KERNEL_MODE
+static int loop_module_init(struct core_module_info *cp)
+{
+	core = cp;
+	loop_init();
+	
+	return 0;
+}
 
-struct device_info device_info = {
+_EXPORT struct device_info device_info = {
 	"Loopback Device Driver",
-	&loop_init
+	&loop_module_init
 };
 
-#ifdef _KERNEL_MODE
+#else
 
 static status_t loop_ops(int32 op, ...)
 {
