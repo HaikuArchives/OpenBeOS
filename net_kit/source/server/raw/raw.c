@@ -115,6 +115,9 @@ int rip_output(struct mbuf *m, struct socket *so, uint32 dst)
 		ip->ip_tos = 0;
 	} else {
 		ip = mtod(m, struct ip *);
+		/* ip_output relies on having the ip->ip_len in host
+		 * order...this is lame... */
+		ip->ip_len = ntohs(ip->ip_len);
 		if (ip->ip_id == 0)
 #ifdef _KERNEL_MODE
 			if (ipm)
@@ -128,8 +131,10 @@ int rip_output(struct mbuf *m, struct socket *so, uint32 dst)
 	}
 
 #ifdef _KERNEL_MODE
-	if (ipm)
+	if (ipm) {
+		printf("calling ip output!\n");
 		return ipm->ip_output(m, opts, &inp->inp_route, flags, NULL);
+	}
 	/* XXX - last arg should be inp->inp_moptions when we have multicast */
 #endif
 
