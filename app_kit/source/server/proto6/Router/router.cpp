@@ -60,6 +60,10 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
    
    switch(message->what){
    case B_MOUSE_MOVED:{
+      port_id pid = find_port(SERVER_INPUT_PORT);
+       if(pid==B_NAME_NOT_FOUND)
+       	break;
+      serverlink->SetPort(pid);
       BPoint p;
       uint32 buttons = 0;
       // get piont and button from msg
@@ -75,9 +79,13 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
       serverlink->Attach(&buttons,sizeof(int32));
 
       // prevent server crashes from hanging the Input Server
-      serverlink->Flush(1000000);
+      serverlink->Flush(50000);
       }break;
    case B_MOUSE_UP:{
+        port_id pid = find_port(SERVER_INPUT_PORT);
+        if(pid==B_NAME_NOT_FOUND)
+        	break;
+        serverlink->SetPort(pid);
 		BPoint p;
 	
 		uint32 mod=modifiers();
@@ -94,9 +102,13 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
 		serverlink->Attach(&mod, sizeof(uint32));
 
         // prevent server crashes from hanging the Input Server
-        serverlink->Flush(1000000);
+        serverlink->Flush(50000);
       }break;
    case B_MOUSE_DOWN:{
+        port_id pid = find_port(SERVER_INPUT_PORT);
+        if(pid==B_NAME_NOT_FOUND)
+        	break;
+        serverlink->SetPort(pid);
 		BPoint p;
 	
 		uint32 buttons,
@@ -117,7 +129,7 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
 		serverlink->Attach(&clicks, sizeof(uint32));
 
         // prevent server crashes from hanging the Input Server
-        serverlink->Flush(1000000);
+        serverlink->Flush(50000);
       }break;
 
    // Should be some Mouse Down and Up code here ..
