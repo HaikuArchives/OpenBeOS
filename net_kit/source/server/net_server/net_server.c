@@ -187,7 +187,10 @@ static void find_modules(void)
 	dir = opendir(cdir);
 
 	while ((m = readdir(dir)) != NULL) {
-		if (strcmp(m->d_name, ".") == 0 || strcmp(m->d_name, "..") == 0)
+		/* last 2 entries are only valid for development... */
+		if (strcmp(m->d_name, ".") == 0 || strcmp(m->d_name, "..") == 0
+			|| strcmp(m->d_name, ".cvsignore") == 0 
+			|| strcmp(m->d_name, "CVS") == 0)
                         continue;
 		/* ok so we try it... */
 		sprintf(path, "%s/%s", cdir, m->d_name);
