@@ -214,7 +214,7 @@ class PDFWriter : public PrinterDriver
 class DrawShape : public BShapeIterator {
 	PDFWriter *fWriter;
 	bool       fStroke;
-	BPoint     fPoint;
+	bool       fDrawn;
 	
 	inline FILE *Log()			{ return fWriter->fLog; }
 	inline PDF *Pdf()			{ return fWriter->fPdf; }
@@ -226,10 +226,13 @@ class DrawShape : public BShapeIterator {
 	
 public:
 	DrawShape(PDFWriter *writer, bool stroke);
+	~DrawShape();
 	status_t IterateBezierTo(int32 bezierCount, BPoint *bezierPoints);
 	status_t IterateClose(void);
 	status_t IterateLineTo(int32 lineCount, BPoint *linePoints);
 	status_t IterateMoveTo(BPoint *point);
+	
+	void Draw();
 };
 
 // PDFLib C callbacks class instance redirectors
