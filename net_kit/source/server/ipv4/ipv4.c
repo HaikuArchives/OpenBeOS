@@ -15,26 +15,30 @@
 #include "netinet/ip.h"
 #include "netinet/ip_var.h"
 #include "netinet/in_pcb.h"
+#include "netinet/ip_icmp.h"
 #include "protocols.h"
-#include "net_module.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
 
 #include "ipv4_module.h"
+#include "core_module.h"
+#include "core_funcs.h"
+#include "net_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
+#endif	/* _KERNEL_MODE */
 
 static struct core_module_info *core = NULL;
 
-#endif	/* _KERNEL_MODE */
-
 struct protosw *proto[IPPROTO_MAX];
 struct in_ifaddr *in_ifaddr;
+struct route ipforward_rt;
 uint16 ip_id = 0;
 int ipforwarding = 0; /* we don't forward IP packets by default... */
+
+#define INA struct in_ifaddr *
+#define SA  struct sockaddr *
 
 #if SHOW_DEBUG
 static void dump_ipv4_header(struct mbuf *buf)
@@ -105,16 +109,210 @@ printf("ip_stripoptions\n");
 	ip->ip_hl = sizeof(struct ip) >> 2;
 }
 
+static struct in_ifaddr * ip_rtaddr(struct in_addr dst)
+{
+	struct sockaddr_in *sin;
+	
+	sin = (struct sockaddr_in*)&ipforward_rt.ro_dst;
+	
+	if (ipforward_rt.ro_rt == NULL || dst.s_addr != sin->sin_addr.s_addr) {
+		if (ipforward_rt.ro_rt) {
+			RTFREE(ipforward_rt.ro_rt);
+			ipforward_rt.ro_rt = NULL;
+		}
+		sin->sin_family = AF_INET;
+		sin->sin_len = sizeof(*sin);
+		sin->sin_addr = dst;
+		
+		rtalloc(&ipforward_rt);
+	}
+	if (ipforward_rt.ro_rt == NULL)
+		return NULL;
+	return ((struct in_ifaddr*) ipforward_rt.ro_rt->rt_ifa);
+}
+
+static void save_rte(uchar *option, struct in_addr dst)
+{
+	uint olen;
+
+	printf("save_rte\n");
+	
+	olen = option[IPOPT_OLEN];
+	if (olen > sizeof(struct ip_srcrt) - (1 + sizeof(dst)))
+		return;
+	memcpy((caddr_t) ip_srcrt.srcopt, (caddr_t)option, olen);
+	ip_nhops = (olen - IPOPT_OFFSET - 1) / sizeof(struct in_addr);
+printf("save_rte: ip_nhops = %d\n", ip_nhops);
+	ip_srcrt.dst = dst;
+}
+
+static void ip_forward(struct mbuf *m, int srcrt)
+{
+	struct ip *ip = mtod(m, struct ip*);
+	struct sockaddr_in *sin;
+	struct rtentry *rt;
+	n_long dest;
+	
+	dest = 0;
+	if (m->m_flags & M_BCAST || in_canforward(ip->ip_dst) == 0) {
+		ipstat.ips_cantforward++;
+		m_freem(m);
+		return;
+	}
+	ip->ip_id = htons(ip->ip_id);
+	if (ip->ip_ttl <= IPTTLDEC) {
+		/* icmp_error */
+		return;
+	}
+	ip->ip_ttl -= IPTTLDEC;
+	
+	sin = (struct sockaddr_in *)&ipforward_rt.ro_dst;
+	/* XXX - finish me!! */
+}
+
 int ip_dooptions(struct mbuf *m)
 {
 	struct ip *ip = mtod(m, struct ip*);
-//	u_char *cp;
-	struct in_addr dst;
-printf("ip_dooptions\n");	
+	uint8 *cp;
+	struct in_addr dst, *sin;
+	struct sockaddr_in ipaddr;
+	int cnt, optlen, opt, code, off;
+	int type = ICMP_PARAMPROB;
+	int forward = 0;
+	struct in_ifaddr *ia;
+	struct ip_timestamp*ipt;
+	n_time ntime;
+
+printf("ip_dooptions\n");
+	
 	dst = ip->ip_dst;
-// XXX - complete me!	
+	cp = (uint8*)(ip + 1);
+	cnt = (ip->ip_hl << 2) - sizeof(struct ip);
+	for (; cnt > 0; cnt -= optlen, cp+= optlen) {
+		opt = cp[IPOPT_OPTVAL];
+		if (opt == IPOPT_EOL)
+			break;
+		if (opt == IPOPT_NOP)
+			optlen = 1;
+		else {
+			optlen = cp[IPOPT_OLEN];
+			if (optlen <= 0 || optlen > cnt) {
+				code = &cp[IPOPT_OLEN] - (uint8 *)ip;
+				goto bad;
+			}
+		}
+		switch (opt) {
+			case IPOPT_LSRR:
+			case IPOPT_SSRR:
+				if ((off = cp[IPOPT_OFFSET]) < IPOPT_MINOFF) {
+					code = &cp[IPOPT_OFFSET] - (uint8 *)ip;
+					goto bad;
+				}
+				ipaddr.sin_addr = ip->ip_dst;
+				ia = (struct in_ifaddr*)ifa_ifwithaddr((struct sockaddr*)&ipaddr);
+				if (ia == NULL) {
+					if (opt == IPOPT_SSRR) {
+						type = ICMP_UNREACH;
+						code = ICMP_UNREACH_SRCFAIL;
+						goto bad;
+					}
+					break;
+				}
+				off--;
+				if (off > optlen - sizeof(struct in_addr)) {
+					save_rte(cp, ip->ip_src);
+					break;
+				}
+				memcpy(&ipaddr.sin_addr, cp+off, sizeof(ipaddr.sin_addr));
+				if (opt == IPOPT_SSRR) {
+					if ((ia = (INA) ifa_ifwithdstaddr((SA)&ipaddr)) == NULL)
+						ia = (INA) ifa_ifwithnet((SA)&ipaddr);
+				} else 
+					ia = ip_rtaddr(ipaddr.sin_addr);
+				if (ia == NULL) {
+					type = ICMP_UNREACH;
+					code = ICMP_UNREACH_SRCFAIL;
+					goto bad;
+				}
+				ip->ip_dst = ipaddr.sin_addr;
+				memcpy(cp+off, &(IA_SIN(ia)->sin_addr), sizeof(struct in_addr));
+				cp[IPOPT_OFFSET] += sizeof(struct in_addr);
+				forward = !IN_MULTICAST(ntohl(ip->ip_dst.s_addr));
+				break;
+			case IPOPT_RR:
+				if ((off = cp[IPOPT_OFFSET]) < IPOPT_MINOFF) {
+					code = &cp[IPOPT_OFFSET] - (uint8*)ip;
+					goto bad;
+				}
+				off--;
+				if (off > optlen - sizeof(struct in_addr))
+					break;
+				memcpy(&ipaddr.sin_addr, &ip->ip_dst, sizeof(ipaddr.sin_addr));
+				if ((ia = (INA)ifa_ifwithaddr((SA)&ipaddr)) == NULL &&
+				    (ia = ip_rtaddr(ipaddr.sin_addr)) == NULL) {
+					type = ICMP_UNREACH;
+					code = ICMP_UNREACH_HOST;
+					goto bad;
+				}
+				memcpy(cp+off, &(IA_SIN(ia)->sin_addr), sizeof(struct in_addr));
+				cp[IPOPT_OFFSET] += sizeof(struct in_addr);
+				break;
+			case IPOPT_TS:
+				code = cp - (uint8*)ip;
+				ipt = (struct ip_timestamp *)cp;
+				if (ipt->ipt_len < 5)
+					goto bad;
+				if (ipt->ipt_ptr > ipt->ipt_len - sizeof(uint32)) {
+					if (++ipt->ipt_oflw == 0)
+						goto bad;
+					break;
+				}
+				sin = (struct in_addr *)(cp + ipt->ipt_ptr - 1);
+				switch (ipt->ipt_flg) {
+					case IPOPT_TS_TSONLY:
+						break;
+					case IPOPT_TS_TSANDADDR:
+						if (ipt->ipt_ptr + sizeof(n_time) + 
+						    sizeof(struct in_addr) > ipt->ipt_len)
+							goto bad;
+						ipaddr.sin_addr = dst;
+						ia = (INA)ifaof_ifpforaddr((SA) &ipaddr, m->m_pkthdr.rcvif);
+						if (!ia)
+							continue;
+						memcpy(sin, &IA_SIN(ia)->sin_addr, sizeof(struct in_addr));
+						ipt->ipt_ptr += sizeof(struct in_addr);
+						break;
+					case IPOPT_TS_PRESPEC:
+						if (ipt->ipt_ptr + sizeof(n_time) +
+						    sizeof(struct in_addr) > ipt->ipt_len)
+							goto bad;
+						memcpy(&ipaddr.sin_addr, sin, sizeof(struct in_addr));
+						if (ifa_ifwithaddr((SA)&ipaddr) == 0)
+							continue;
+						ipt->ipt_ptr += sizeof(struct in_addr);
+						break;
+					default:
+						goto bad;
+				}
+				ntime = iptime();
+				memcpy(cp+ipt->ipt_ptr - 1, &ntime, sizeof(n_time));
+				ipt->ipt_ptr += sizeof(n_time);
+			default:
+				break;
+		}
+	}
+	if (forward) {
+		ip_forward(m, 1);
+		return 1;
+	}
+	return 0;
+bad:
+	ip->ip_len -= ip->ip_hl << 2;
+	/* icmp_error */
+	ipstat.ips_badoptions++;
 	return 1;
 }
+
 
 struct mbuf * ip_srcroute(void)
 {
@@ -234,6 +432,7 @@ void ipv4_input(struct mbuf *m, int hdrlen)
 
 	/* options processing */	
 	ip_nhops = 0;
+	printf("hlen = %d\n", hlen);
 	if (hlen > sizeof(struct ip) && ip_dooptions(m))
 		return;
 	
@@ -367,6 +566,8 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 	 */
 	if (ip->ip_src.s_addr == INADDR_ANY)
 		ip->ip_src = IA_SIN(ia)->sin_addr;
+
+printf("in_broadcast...(%08lx)\n", dst->sin_addr.s_addr);
 
 	if ((in_broadcast(dst->sin_addr, ifp))) {
 		if ((ifp->if_flags & IFF_BROADCAST) == 0) {
@@ -505,7 +706,6 @@ static void ipv4_init(void)
 
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
-
 	add_protosw(proto, NET_LAYER2);
 }
 
@@ -531,8 +731,9 @@ struct protosw my_proto = {
 
 #ifndef _KERNEL_MODE
 
-static void ipv4_protocol_init(void)
+static void ipv4_protocol_init(struct core_module_info *cm)
 {
+	core = cm;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 }
@@ -542,7 +743,13 @@ struct protocol_info protocol_info = {
 	&ipv4_protocol_init
 };
 
+void set_core(struct core_module_info *cp)
+{
+	core = cp;
+}
+
 struct ipv4_module_info ipv4_module_info = {
+	set_core,
 	ipv4_output,
 	get_ip_id,
 	ipv4_ctloutput,
@@ -557,11 +764,12 @@ static int k_init(void)
 	if (!core)
 		get_module(CORE_MODULE_PATH, (module_info**)&core);
 
-	core->add_domain(NULL, AF_INET);
-	core->add_protocol(&my_proto, AF_INET);
+	add_domain(NULL, AF_INET);
+	add_protocol(&my_proto, AF_INET);
 	
 	return 0;	
 }
+
 
 static status_t ipv4_ops(int32 op, ...)
 {

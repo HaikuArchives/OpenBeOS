@@ -19,7 +19,10 @@
 struct ipv4_module_info {
 #ifdef _KERNEL_MODE
 	module_info info;
+#else
+	void (*set_core)(struct core_module_info *);
 #endif
+
 	int (*output)(struct mbuf *, 
 	                 struct mbuf *, 
 	                 struct route *,

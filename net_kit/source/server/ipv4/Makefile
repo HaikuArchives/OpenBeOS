@@ -1,6 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ipv4
-LOBJS=../_APP_ ../net_server/misc.o ../net_server/cksum.o
+LOBJS=../net_server/misc.o ../net_server/cksum.o
 INSTALL_DIR=../modules/protocol
 TGT=$(INSTALL_DIR)/$(TARGET)
 OBJS=$(TARGET).o
@@ -26,7 +26,7 @@ installkernel:  kernel
 	@cp ipv4 /boot/home/config/add-ons/kernel/network/protocol/ipv4
 
 $(TARGET): $(OBJS)
-	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
-	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
