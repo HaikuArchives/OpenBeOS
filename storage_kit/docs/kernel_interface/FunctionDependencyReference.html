@@ -1,0 +1,83 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<title>Storage Kit Kernel Interface Function Dependency Reference</title>
+	</head>
+	<body>
+
+		<h1>Storage Kit Kernel Interface Function Dependency Reference</h1>
+		<ul>
+			<li><a href='#open'> open </a></li>
+			<li><a href='#close'> close </a></li>
+
+<!-- TEMPLATE:
+
+			<li><a href='#FUNCTION'> FUNCTION </a></li>
+
+-->
+
+		</ul>
+
+		<!-- OPEN -->
+		<a name='open'>
+		<hr>
+		<h1>open</h1>
+		<b>NewOS:</b><br>
+		<code>
+		int user_open(const char *path, stream_type st, int omode);<br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "stdio.h" <br>
+		FILE* fopen(const char *fname, const char *mode); <br>
+		</code>
+		<br>
+		<br>
+
+		<!-- CLOSE -->
+		<a name='close'>
+		<hr>
+		<h1>close</h1>
+		<b>NewOS:</b><br>
+		<code>
+		int user_close(int fd); <br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "stdio.h" <br>
+		int fclose(FILE *stream); <br>
+		</code>
+		<br>
+		<br>
+
+<!--	TEMPLATE (NOTE that the comment immediately
+			following this one is not finished, you'll need
+			to add an extra "-" to close it off)
+
+		<!-- FUNCTION ->
+		<a name='FUNCTION'>
+		<hr>
+		<h1> FUNCTION </h1>
+		<b>NewOS:</b><br>
+		<code>
+		NEW_OS_FUNCTION_DECLARATION <br>
+		</code>
+		<br>
+
+		<b>POSIX:</b><br>
+		<code>
+		#include "REQUIRED_HEADER_FILE" <br>
+		POSIX_FUNCTION_DECLARATIONS <br>
+		</code>
+		<br>
+		<br>
+
+-->
+		
+		<hr>
+	</body>
+</html>
