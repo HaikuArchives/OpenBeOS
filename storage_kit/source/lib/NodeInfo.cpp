@@ -211,16 +211,26 @@ BNodeInfo::GetTrackerIcon(BBitmap *icon,
 
   // Ask FTdb based on mime type
 
-  if( GetMimeType(&mimetype) ) 
-	if( BMimeType.GetIconForType(mimetype, icon, k) == B_OK)
+  if( GetMimeType(&mimetype) ) {
+	if( BMimeType.GetIconForType(mimetype, icon, k) == B_OK) 
 	  return B_OK;
-
-
+	
   // asks the File Type database for the preferred app based on the node's 
   // file type, and then asks that app for the icon it uses to display this 
   // node's file type.
+	BMimeType mime(mimetype);
+	if( mime.GetAppHint(&ref) == B_OK ) {
+	  BFile appFile(ref);
+	  if(appFile.InitCheck() == B_OK) {
+		BAppFileInfo appFileInfo( appFile );
+		if( appFileInfo.GetIcon( icon, k ) == B_OK) {
+		  return B_OK;
+		}
+	  }
+	}
 
-
+  }
+  
   // Quit
   return getIconReturn;
 }
@@ -231,7 +241,14 @@ BNodeInfo::GetTrackerIcon(const entry_ref *ref,
 							BBitmap *icon,
 							icon_size k = B_LARGE_ICON)
 {
-	return B_ERROR;
+  BNode node(ref);
+  if( node.InitCheck() == B_OK ) {
+	BNodeInfo nodeInfo(node);
+	if( nodeInfo.InitCheck() == B_OK ) {
+	  return nodeInfo.GetTrackerIcon(icon, k);
+	}
+  }
+  return B_NO_INIT;
 }
 
 void 
