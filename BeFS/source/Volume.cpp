@@ -89,7 +89,7 @@ Volume::Mount(const char *deviceName,uint32 flags)
 	if (fstat(fDevice,&stat) < 0)
 		RETURN_ERROR(B_ERROR);
 
-#ifndef USER
+//#ifndef USER
 	if (stat.st_mode & S_FILE && ioctl(fDevice,IOCTL_FILE_UNCACHED_IO,NULL) < 0) {
 		// mount read-only if the cache couldn't be disabled
 #	ifdef DEBUG
@@ -99,7 +99,7 @@ Volume::Mount(const char *deviceName,uint32 flags)
 		Panic();
 #	endif
 	}
-#endif
+//#endif
 
 	// read the super block
 	char buffer[1024];
@@ -177,6 +177,8 @@ status_t
 Volume::Unmount()
 {
 	// This will also flush the log
+	Sync();
+	
 	delete fJournal;
 	fJournal = NULL;
 
@@ -189,10 +191,11 @@ Volume::Unmount()
 }
 
 
-void 
-Volume::FlushLogs()
+status_t 
+Volume::Sync()
 {
 	fJournal->FlushLog();
+	return flush_device(fDevice,0);
 }
 
 

@@ -60,12 +60,13 @@ class Journal {
 		status_t FlushLog();
 		Volume *GetVolume() const { return fVolume; }
 
+		inline int32 FreeLogBlocks() const;
+
 	private:
 		friend log_entry;
 
 		static void blockNotify(off_t blockNumber, size_t numBlocks, void *arg);
 		status_t TransactionDone(bool success);
-		status_t FlushLogEntry(uint32 start);
 
 		Volume		*fVolume;
 		Benaphore	fLock;
@@ -79,6 +80,15 @@ class Journal {
 		log_entry	*fCurrent;
 		bool		fHasChangedBlocks;
 };
+
+
+inline int32 
+Journal::FreeLogBlocks() const
+{
+	return fVolume->LogStart() <= fVolume->LogEnd() ?
+		fLogSize - fVolume->LogEnd() + fVolume->LogStart()
+		: fVolume->LogStart() - fVolume->LogEnd();
+}
 
 
 // For now, that's only a dumb class that does more or less nothing

@@ -330,8 +330,7 @@ bfs_sync(void *_ns)
 
 	Volume *volume = (Volume *)_ns;
 
-	volume->FlushLogs();
-	return flush_device(volume->Device(),0);
+	return volume->Sync();
 }
 
 

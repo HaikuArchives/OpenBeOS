@@ -11,10 +11,6 @@
 #include "cpp.h"
 
 
-// ToDo: remove this counter
-int32 gLogEntries = 0;
-
-
 Journal::Journal(Volume *volume)
 	:
 	fVolume(volume),
@@ -23,16 +19,18 @@ Journal::Journal(Volume *volume)
 	fOwningThread(-1),
 	fArray(volume->BlockSize()),
 	fLogSize(volume->Log().length),
-	fMaxTransactionSize(128), //fLogSize / 4),
+	fMaxTransactionSize(4 * 125), //fLogSize / 4 - 5),
 	fUsed(0),
 	fTransactionsInEntry(0)
 {
+	if (fMaxTransactionSize > fLogSize / 2)
+		fMaxTransactionSize = fLogSize / 2 - 5;
 }
 
 
 Journal::~Journal()
 {
-	FlushLog();
+	// be sure to have flushed all logged blocks at this point
 }
 
 
@@ -197,34 +195,42 @@ Journal::blockNotify(off_t blockNumber,size_t numBlocks,void *arg)
 	log_entry *logEntry = (log_entry *)arg;
 
 	logEntry->cached_blocks -= numBlocks;
-	if (logEntry->cached_blocks <= 0) {
-		Journal *journal = logEntry->journal;
-		disk_super_block &superBlock = journal->fVolume->SuperBlock();
+	if (logEntry->cached_blocks > 0) {
+		// nothing to do yet...
+		return;
+	}
 
-		// Set log_start pointer if possible...
+	Journal *journal = logEntry->journal;
+	disk_super_block &superBlock = journal->fVolume->SuperBlock();
+	bool update = false;
 
-		if (logEntry == journal->fEntries.head) {
-			int32 length;
-			if (logEntry->Next() != NULL) {
-				length = logEntry->next->start - logEntry->start;
-			} else
-				length = logEntry->length;
+	// Set log_start pointer if possible...
 
-			superBlock.log_start = (superBlock.log_start + length) % journal->fLogSize;
-		} else if (logEntry == journal->fEntries.last) {
-			// since we're not the first entry, there has to be an entry before us
-			superBlock.log_end = logEntry->start;
-		}
-		journal->fUsed -= logEntry->length;
-			
-		journal->fEntriesLock.Lock();
-		logEntry->Remove();
-		journal->fEntriesLock.Unlock();
+	if (logEntry == journal->fEntries.head) {
+		int32 length;
+		if (logEntry->Next() != NULL) {
+			length = logEntry->next->start - logEntry->start;
+		} else
+			length = logEntry->length;
 
-		free(logEntry);
+		superBlock.log_start = (superBlock.log_start + length) % journal->fLogSize;
+		update = true;
+	} else if (logEntry == journal->fEntries.last) {
+		// since we're not the first entry, there has to be an entry before us
+		superBlock.log_end = logEntry->start;
+		update = true;
+	}
+	journal->fUsed -= logEntry->length;
+		
+	journal->fEntriesLock.Lock();
+	logEntry->Remove();
+	journal->fEntriesLock.Unlock();
 
-		// update the super block, and change the disk's state, if necessary
+	free(logEntry);
 
+	// update the super block, and change the disk's state, if necessary
+
+	if (update) {
 		if (superBlock.log_start == superBlock.log_end)
 			superBlock.flags = SUPER_BLOCK_DISK_CLEAN;
 
@@ -239,6 +245,10 @@ Journal::WriteLogEntry()
 	sorted_array *array = fArray.Array();
 	if (array == NULL || array->count == 0)
 		return B_OK;
+
+	// make sure there is enough space in the log
+	while (TransactionSize() > FreeLogBlocks())
+		force_cache_flush(fVolume->Device(),true);
 
 	off_t logOffset = fVolume->ToBlock(fVolume->Log());
 	off_t logStart = fVolume->LogEnd();
@@ -281,20 +291,20 @@ Journal::WriteLogEntry()
 		fCurrent = logEntry;
 		fUsed += logEntry->length;
 
-		// ToDo: remove counter
-		gLogEntries++;
 		set_blocks_info(fVolume->Device(),&array->values[0],array->count,blockNotify,logEntry);
 	}
 
 	// Flush blocks in log (writes the log entry to disk)
 
-	if (logPosition > fLogSize)
+	// if the log goes to the next round (the log is written as a
+	// circular buffer), all blocks will be flushed out which is
+	// possible because we don't have any locked blocks at this
+	// point.
+	if (logPosition < fVolume->LogEnd())
+		flush_device(fVolume->Device(),0);
+	else
 		flush_blocks(fVolume->Device(),logOffset + logStart,logPosition);
-	else {
-		// log "overflow"
-		flush_blocks(fVolume->Device(),logOffset + logStart,fLogSize - logStart);
-		flush_blocks(fVolume->Device(),logOffset,logPosition);
-	}
+
 	fArray.MakeEmpty();
 
 	// Update the log end pointer in the super block
@@ -304,90 +314,26 @@ Journal::WriteLogEntry()
 }
 
 
-status_t
-Journal::FlushLogEntry(uint32 start)
-{
-	CachedBlock cached(fVolume);
-	off_t arrayBlock = (start % fLogSize) + fVolume->ToBlock(fVolume->Log());
-	int32 count = 1,valuesInBlock = fVolume->BlockSize() / sizeof(off_t);
-	bool first = true;
-
-	while (count > 0) {
-		off_t *array = (off_t *)cached.SetTo(arrayBlock);
-		if (array == NULL)
-			return B_IO_ERROR;
-
-		int32 index = 0;
-		if (first) {
-			count = array[0];
-			if (count < 1 || count >= fLogSize)
-				return B_BAD_DATA;
-
-			first = false;
-			index++;
-				// the first entry in the first block is the number
-				// of blocks in that log entry
-		}
-
-		for (;index < valuesInBlock && count-- > 0;index++) {
-			// batch following near blocks together
-			off_t first = array[index];
-			int32 numBlocks = 1;
-			while (count > 0 && index < valuesInBlock - 1
-				&& array[index + 1] - array[index] < 16) {
-				numBlocks += array[index + 1] - array[index];
-				index++;
-				count--;
-			}
-
-			flush_blocks(fVolume->Device(),first,numBlocks);
-		}
-		arrayBlock++;
-		if (arrayBlock > fVolume->ToBlock(fVolume->Log()) + fLogSize)
-			arrayBlock = fVolume->ToBlock(fVolume->Log());
-	}
-	return B_OK;
-}
-
-
 status_t 
 Journal::FlushLog()
 {
-	// if the current transaction can be flushed (i.e. there are
-	// no new blocks in the current transaction), write the log
-	// entry to disk
-	if (!fHasChangedBlocks) {
+	status_t status = Lock((Transaction *)this);
+	if (status != B_OK)
+		return status;
+
+	// write the current log entry to disk
+	
+	if (TransactionSize() != 0) {
 		fTransactionsInEntry = 0;
 		fHasChangedBlocks = false;
-
-		status_t status = WriteLogEntry();
+	
+		status = WriteLogEntry();
 		if (status < B_OK)
 			FATAL(("writing current log entry failed: %s\n",status));
 	}
 
-	// flush all log entries - this will put the disk
-	// in a consistent and clean state
-
-	int32 lastStart = -1;
-	while (true) {
-		int32 start = fVolume->LogStart();
-
-		// stop if the log is completely flushed
-		if (start == fVolume->LogEnd())
-			return B_OK;
-
-		if (start == lastStart) {
-			// strange, flushing the log hasn't changed the log_start pointer
-			return B_ERROR;
-		}
-		lastStart = start;
-
-		status_t status = FlushLogEntry(start);
-		if (status < B_OK) {
-			FATAL(("flushing log entry from %u failed: %s\n",start,status));
-			return B_ERROR;
-		}
-	}
+	Unlock((Transaction *)this,true);
+	return status;
 }
 
 
@@ -418,6 +364,10 @@ Journal::TransactionDone(bool success)
 status_t
 Journal::LogBlocks(off_t blockNumber,const uint8 *buffer,size_t numBlocks)
 {
+	// ToDo: that's for now - we should change the log file size here
+	if (TransactionSize() + numBlocks + 1 > fLogSize)
+		return B_DEVICE_FULL;
+
 	fHasChangedBlocks = true;
 	int32 blockSize = fVolume->BlockSize();
 
@@ -434,23 +384,8 @@ Journal::LogBlocks(off_t blockNumber,const uint8 *buffer,size_t numBlocks)
 	}
 
 	// If necessary, flush the log, so that we have enough space for this transaction
-
-	int32 sizeNeeded = TransactionSize();
-	while (fVolume->LogEnd() < fVolume->LogStart() && fVolume->LogEnd() + sizeNeeded >= fVolume->LogStart()
-			|| fVolume->LogEnd() > fVolume->LogStart() && (fVolume->LogEnd() + sizeNeeded) % fLogSize >= fVolume->LogStart()) {
-		// flush older transactions if the log is full
-		off_t start = fVolume->LogStart();
-		FlushLogEntry(start);
-
-		if (fVolume->LogStart() == fVolume->LogEnd())
-			break;
-
-		if (start == fVolume->LogStart()) {
-			PRINT(("used = %ld blocks, transaction size = %ld, numBlocks = %ld\n",fUsed,TransactionSize(),numBlocks));
-			PRINT(("log_start = %Ld, log_end = %Ld\n",fVolume->SuperBlock().log_start,fVolume->SuperBlock().log_end));
-			return B_DEVICE_FULL;
-		}	
-	}
+	if (TransactionSize() > FreeLogBlocks())
+		force_cache_flush(fVolume->Device(),true);
 
 	return B_OK;
 }

@@ -85,7 +85,7 @@ class Volume {
 		BlockAllocator		&Allocator() { return fBlockAllocator; }
 #endif
 
-		void				FlushLogs();
+		status_t			Sync();
 		Journal				*GetJournal(off_t /*refBlock*/) const { return fJournal; }
 
 		status_t			WriteSuperBlock();
