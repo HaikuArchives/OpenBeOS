@@ -277,6 +277,7 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 		    && (ro->ro_rt == NULL 
 			|| ro->ro_rt->rt_ifp == NULL)) {
 			/* we don't have a route, try to get one */
+			memset(&ro->ro_dst, 0, sizeof(ro->ro_dst));
 			ro->ro_dst.sa_family = AF_INET;
 			ro->ro_dst.sa_len = sizeof(struct sockaddr_in);
 			((struct sockaddr_in*)&ro->ro_dst)->sin_addr = sin->sin_addr;
@@ -371,6 +372,8 @@ struct rtentry *in_pcbrtentry(struct inpcb *inp)
 		memset(ro, 0, sizeof(struct route));
 
 		if (inp->faddr.s_addr != INADDR_ANY) {
+			/* this probably isn't needed, but better safe than sorry */
+			memset(&ro->ro_dst, 0, sizeof(ro->ro_dst));
 			ro->ro_dst.sa_family = AF_INET;
 			ro->ro_dst.sa_len = sizeof(ro->ro_dst);
 			satosin(&ro->ro_dst)->sin_addr = inp->faddr;
