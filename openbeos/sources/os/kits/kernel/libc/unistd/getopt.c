@@ -36,11 +36,11 @@
 #include <string.h>
 #include <unistd.h>
 
-int	opterr = 1,		/* if error message should be printed */
-	optind = 1,		/* index into parent argv vector */
-	optopt,			/* character checked for validity */
-	optreset;		/* reset getopt */
-char	*optarg;		/* argument associated with option */
+int	opterr = 1;         /* if error message should be printed */
+int	optind = 1;         /* index into parent argv vector */
+int	optopt = 0;	        /* character checked for validity */
+int	optreset = 0;       /* reset getopt */
+char *optarg = NULL;    /* argument associated with option */
 
 #define	BADCH	(int)'?'
 #define	BADARG	(int)':'
@@ -56,7 +56,7 @@ getopt(nargc, nargv, ostr)
 	char * const *nargv;
 	const char *ostr;
 {
-//	extern char *__progname;
+	extern char *__progname;
 	static char *place = EMSG;		/* option letter processing */
 	char *oli;				/* option letter list index */
 
@@ -84,7 +84,8 @@ getopt(nargc, nargv, ostr)
 			++optind;
 		if (opterr && *ostr != ':')
 			/* this should really be fprintf(stderr... */
-			(void)printf("getopt illegal option -- %c\n", optopt);
+			(void)printf("%s: illegal option -- %c\n", 
+			              __progname, optopt);
 		return (BADCH);
 	}
 	if (*++oli != ':') {			/* don't need argument */
@@ -93,7 +94,7 @@ getopt(nargc, nargv, ostr)
 			++optind;
 	}
 	else {					/* need an argument */
-		if (*place)			/* no white space */
+		if (*place)		/* no white space */
 			optarg = place;
 		else if (nargc <= ++optind) {	/* no arg */
 			place = EMSG;
@@ -101,8 +102,8 @@ getopt(nargc, nargv, ostr)
 				return (BADARG);
 			if (opterr)
 				/* XXX - This is really fprintf(stderr... */
-				(void)printf("getopt: option requires an argument -- %c\n",
-				    optopt);
+				(void)printf("%s: option requires an argument -- %c\n",
+				             __progname, optopt);
 			return (BADCH);
 		}
 	 	else				/* white space */
