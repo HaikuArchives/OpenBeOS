@@ -96,7 +96,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	if ( printerName ) {
 		BString	title;
 		
-		title << printerName << " Job Setup";
+		title << printerName << " Page Setup";
 		SetTitle( title.String() );
 
 		// save the printer name
