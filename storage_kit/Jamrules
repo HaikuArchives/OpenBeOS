@@ -73,3 +73,21 @@ actions LinkShared
 	g++ -nostart -Xlinker -soname=$(1) $(LINKFLAGS) $(LINKLIBS) -o $(1) $(2) ;
 }
 
+rule SharedFromSources
+{
+	# SharedFromSources <sharedlib> : <sources> ;
+	# Builds shared library <sharedlib> from sources <sources>.
+	
+	Objects $(2) ;
+	local objects = <$(SOURCE_GRIST)>$(2:S=$(SUFOBJ)) ;
+	LinkShared $(1) : $(objects) ;
+}
+
+rule LinkSharedLibs
+{
+	# LinkSharedLibs <target> : <libs>
+	# Adds <libs> to the libraries <target> will be linked with and
+	# makes <target> depend on <libs>.
+	LinkSharedOSLibs $(1) : $(2) ;
+	DEPENDS $(1) : $(2) ;
+}
