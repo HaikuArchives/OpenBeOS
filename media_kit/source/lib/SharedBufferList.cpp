@@ -121,10 +121,12 @@ status_t
 _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_group, size_t size, media_buffer_id wantID, BBuffer **buffer, bigtime_t timeout)
 {
 	CALLED();
-	// we always search for a buffer from "group" and the team of the group (==current team)
+	// we always search for a buffer from the group indicated by group_reclaim_sem first
 	// if "size" != 0, we search for a buffer that is "size" bytes or larger
 	// if "wantID" != 0, we search for a buffer with this id
 	// if "*buffer" != NULL, we search for a buffer at this address
+	// if we found a buffer, we also need to mark it in all other groups as requested
+	// and also once need to release the reclaim_sem of the other groups
 	
 	status_t status;
 	int32 count;
@@ -132,7 +134,7 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 	if (timeout != B_INFINITE_TIMEOUT)	
 		timeout += system_time();
 		
-	// with each itaration we request one more buffer, sine we need to skip the buffers that don't fit the request
+	// with each itaration we request one more buffer, since we need to skip the buffers that don't fit the request
 	count = 1;
 	
 	do {
@@ -157,6 +159,9 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 					// if we requested more than one buffer, release the rest
 					if (count > 1)
 						release_sem_etc(group_reclaim_sem, count - 1, B_DO_NOT_RESCHEDULE);
+					
+					RequestBufferInOtherGroups(group_reclaim_sem, info[i].buffer->ID());
+
 					Unlock();
 					return B_OK;
 				}
@@ -173,32 +178,53 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 	return B_ERROR;
 }
 
+void 
+_shared_buffer_list::RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_buffer_id id)
+{
+	for (int32 i = 0; i < buffercount; i++) {
+		// find buffers belonging to other groups
+		if (info[i].reclaim_sem != group_reclaim_sem && info[i].id == id) {
+
+			// and mark them as requested
+			while (B_INTERRUPTED == acquire_sem(info[i].reclaim_sem))
+			;
+
+			if (info[i].reclaimed == false) {
+				TRACE("Error, BBuffer 0x%08x, id = 0x%08x not reclaimed while requesting\n",(int)info[i].buffer,(int)id);
+				continue;
+			}
+			
+			info[i].reclaimed = false;
+		}
+	}
+}
 
 void
 _shared_buffer_list::ReclaimBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 {
 	CALLED();
 	
-	bool debug_reclaim = false;
+	int debug_reclaim = 0;
+	
+	media_buffer_id id = buffer->ID();
 
 	Lock();
 	for (int32 i = 0; i < buffercount; i++) {
-		// find the buffer, and reclaim it
-		if (info[i].reclaim_sem == group_reclaim_sem && info[i].buffer == buffer) {
-			debug_reclaim = true;
+		// find the buffer id, and reclaim it in all groups it belongs to
+		if (info[i].id == id) {
+			debug_reclaim++;
 			if (info[i].reclaimed) {
-				TRACE("Error, BBuffer 0x%08x, id = 0x%08x already reclaimed\n",buffer,buffer->ID());
+				TRACE("Error, BBuffer 0x%08x, id = 0x%08x already reclaimed\n",(int)buffer,(int)id);
 				break;
 			}
 			info[i].reclaimed = true;
-			release_sem_etc(group_reclaim_sem, 0, B_DO_NOT_RESCHEDULE);
-			break;
+			release_sem_etc(info[i].reclaim_sem, 1, B_DO_NOT_RESCHEDULE);
 		}
 	}
 	Unlock();
 	
-	if (debug_reclaim)
-		TRACE("Error, BBuffer 0x%08x, id = 0x%08x NOT reclaimed\n",buffer,buffer->ID());
+	if (debug_reclaim == 0)
+		TRACE("Error, BBuffer 0x%08x, id = 0x%08x NOT reclaimed\n",(int)buffer,(int)buffer->ID());
 }
 
 

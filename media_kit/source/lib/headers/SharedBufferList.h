@@ -45,6 +45,9 @@ struct _shared_buffer_list
 
 	void 		Lock();
 	void 		Unlock();
+	
+	// call this one with the list locked
+	void 		RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_buffer_id id);
 };
 
 #endif

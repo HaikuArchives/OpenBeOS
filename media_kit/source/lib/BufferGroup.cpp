@@ -119,6 +119,8 @@ BBufferGroup::BBufferGroup(int32 count,
 	CALLED();
 	if (InitBufferGroup() != B_OK)
 		return;
+		
+	// XXX we need to make sure that a media_buffer_id is only added once to each group
 
 	// this one creates "BBuffer"s from "media_buffer_id"s passed 
 	// by the application.
@@ -166,6 +168,8 @@ BBufferGroup::AddBuffer(const buffer_clone_info &info,
 	CALLED();
 	if (fInitError != B_OK)
 		return B_NO_INIT;
+
+	// XXX we need to make sure that a media_buffer_id is only added once to each group
 
 	BBuffer *buffer;	
 	buffer = new BBuffer(fReclaimSem,info);
