@@ -5,6 +5,7 @@
 #include <syscalls.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 void (*disp_func)(const char *, struct file_stat *) = NULL;
 
@@ -41,16 +42,25 @@ int main(int argc, char *argv[])
 	int count = 0;
 	struct file_stat stat;
 	char *arg;
+	int ch;
+	
+	disp_func = display;
+	
+	while ((ch = getopt(argc, argv, "l")) != -1) {
+		switch (ch) {
+			case 'l':
+				disp_func = display_l;
+		}
+	}
+	argc -= optind;
+	argv += optind;
 
-	if(argc == 1) {
+	if(argv[argc] == NULL) {
 		arg = ".";
 	} else {
-		arg = argv[1];
+		arg = argv[argc];
 	}
-
-	// for now, use the '-l' version of the display func
-	disp_func = display_l;
-
+	
 	rc = sys_rstat(arg, &stat);
 	if(rc < 0) {
 		printf("sys_rstat() returned error: %s!\n", strerror(rc));
