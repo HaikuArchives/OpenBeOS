@@ -1,6 +1,6 @@
 SubDir OBOS_TOP sources os kits kernel drivers ;
 
-KernelStaticLibrary drivers : beos.c dev.c devs.c ;
+KernelStaticLibrary libdrivers : beos.c dev.c devs.c ;
 
 SubInclude OBOS_TOP sources os kits kernel drivers arch ;
 SubInclude OBOS_TOP sources os kits kernel drivers common ;
