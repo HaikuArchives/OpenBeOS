@@ -71,6 +71,10 @@
 #define SHUT_WR         2
 #define SHUT_RDWR       3
 
+struct linger {
+	int l_onoff;
+	int l_linger;
+};
 
 struct sockaddr {
 	uint8	sa_len;

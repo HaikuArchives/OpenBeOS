@@ -6,6 +6,9 @@
 #include "sys/socketvar.h" /* for struct socket */
 #include "net/route.h"
 
+#define PRCO_SETOPT    0
+#define PRCO_GETOPT    1
+
 /* every protocol module init's one of these and passes it into
  * the add_protocol() function, defined below */
 /* NB The pr_domain pointer will be filled in during the
@@ -32,6 +35,7 @@ struct protosw {
 					  struct mbuf *, 
 					  struct mbuf *);
 	int (*pr_sysctl)(int *, uint, void *, size_t *, void *, size_t);
+	int (*pr_ctloutput)(int, struct socket*, int, int, struct mbuf **);
 	
 	struct protosw *pr_next;	/* pointer to next proto structure */
 	struct protosw *dom_next;	/* next protosw pointed by the domain */

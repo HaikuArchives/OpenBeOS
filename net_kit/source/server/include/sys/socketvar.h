@@ -9,6 +9,11 @@
 #include "sys/net_uio.h"
 #include "sys/socket.h"
 
+struct selinfo {
+	void *sync;
+	uint32 ref;
+};
+
 struct  sockbuf {
 	uint32  sb_cc;			/* actual chars in buffer */
 	uint32  sb_hiwat;		/* max actual char count (high water mark) */
@@ -16,9 +21,9 @@ struct  sockbuf {
 	uint32  sb_mbmax;		/* max chars of mbufs to use */
 	int32   sb_lowat;		/* low water mark */
 	struct  mbuf *sb_mb;	/* the mbuf chain */
-	/* XXX - add info for select here ! */
+	struct  selinfo sb_sel;
 	int16   sb_flags;		/* flags, see below */
-	int16   sb_timeo;		/* timeout for read/write */
+	int32   sb_timeo;		/* timeout for read/write */
 	sem_id	sb_pop;			/* sem to wait on... */
 };
 
@@ -101,6 +106,17 @@ struct socket {
                 (sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
+#define soreadable(so) \
+	((so)->so_rcv.sb_cc >= (so)->so_rcv.sb_lowat || \
+	 ((so)->so_state & SS_CANTRCVMORE) || \
+	 (so)->so_qlen || (so)->so_error)
+
+#define sowriteable(so) \
+	((sbspace(&(so)->so_snd) >= (so)->so_snd.sb_lowat) && \
+	 (((so)->so_state & SS_ISCONNECTED) || \
+	  (((so)->so_proto->pr_flags & PR_CONNREQUIRED) == 0) || \
+	 ((so)->so_state & SS_CANTSENDMORE) || (so)->so_error))
+
 #define sorwakeup(so)   sowakeup((so), &(so)->so_rcv)
 /* we don't handle upcall for sockets */
 #define sowwakeup(so)   sowakeup((so), &(so)->so_snd)
@@ -124,6 +140,9 @@ int     recvit(void *, struct msghdr *, caddr_t, int *);
 
 int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, 
                struct mbuf *top, struct mbuf *control, int flags);
+int     soselect(void *, uint8, uint32, void *);
+int     sosetopt(void *, int, int, const void *, size_t);
+int     sogetopt(void *, int, int, void *, size_t *);
 
 void    sbrelease (struct sockbuf *sb);
 int     sbreserve (struct sockbuf *sb, uint32 cc);
