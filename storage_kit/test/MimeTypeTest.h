@@ -46,6 +46,9 @@ public:
 	void InitTest();
 	void StringTest();
 	void MonitoringTest();
+	void UpdateMimeInfoTest();
+	void CreateAppMetaMimeTest();
+	void GetDeviceIconTest();
 
 	//------------------------------------------------------------
 	// Helper functions

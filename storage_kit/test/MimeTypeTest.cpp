@@ -106,6 +106,12 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::StringTest) );
 	suite->addTest( new TC("BMimeType::MIME Monitoring Test",
 						   &MimeTypeTest::MonitoringTest) );
+	suite->addTest( new TC("BMimeType::update_mime_info() Test",
+						   &MimeTypeTest::UpdateMimeInfoTest) );
+	suite->addTest( new TC("BMimeType::create_app_meta_mime() Test",
+						   &MimeTypeTest::CreateAppMetaMimeTest) );
+//	suite->addTest( new TC("BMimeType::get_device_icon() Test",
+//						   &MimeTypeTest::GetDeviceIconTest) );
 
 	return suite;
 }		
@@ -329,6 +335,7 @@ void
 MimeTypeTest::setUp()
 {
 	BasicTest::setUp();
+	execCommand(string("mkdir ") + testDir);
 /*	// Better not to play with fire, so we'll make a copy of the
 	// local mime database which we'll use for certain OpenBeOS tests
 	execCommand(string("mkdir ") + testDir
@@ -348,7 +355,7 @@ MimeTypeTest::setUp()
 void
 MimeTypeTest::tearDown()
 {
-//	execCommand(string("rm -rf ") + testDir);
+	execCommand(string("rm -rf ") + testDir);
 
 	// Uninistall our test type
 	//! /todo Uncomment the following uninstall code when all is said and done.
@@ -2000,6 +2007,330 @@ MimeTypeTest::CheckNotificationMessages(const NotificationMessage *messages,
 	}
 }
 
+// helper class for update_mime_info() tests
+class MimeInfoTestFile {
+public:
+	MimeInfoTestFile(string name, string type, const void *data = NULL,
+					 int32 size = -1)
+		: name(name),
+		  type(type),
+		  data(NULL),
+		  size(0)
+	{
+		if (data) {
+			if (size == -1)
+				this->size = strlen((const char*)data) + 1;
+			this->data = new char[this->size];
+			memcpy(this->data, data, this->size);
+		}
+	}
+
+	~MimeInfoTestFile()
+	{
+		delete[] data;
+	}
+
+	status_t Create()
+	{
+		BFile file(name.c_str(), B_READ_WRITE | B_CREATE_FILE | B_ERASE_FILE);
+		status_t error = file.InitCheck();
+		if (error == B_OK && data) {
+			ssize_t written = file.Write(data, size);
+			if (written < 0)
+				error = written;
+			else if (written != size)
+				error = B_ERROR;
+		}
+		return error;
+	}
+
+	status_t Delete()
+	{
+		return BEntry(name.c_str()).Remove();
+	}
+
+	string	name;
+	string	type;
+	char	*data;
+	int32	size;
+};
+
+// UpdateMimeInfoTest
+void
+MimeTypeTest::UpdateMimeInfoTest()
+{
+	// tests:
+	// * update_mime_info()
+
+	// Note:
+	// * Only synchronous calls are tested.
+	// * Updating all files is not test as it takes too long.
+
+	// individual files
+	nextSubTest();
+	execCommand(string("mkdir ") + testDir + "/subdir1 "
+				+ testDir + "/subdir2 "
+				+ testDir + "/subdir2/subsubdir1");
+	MimeInfoTestFile files[] = {
+		MimeInfoTestFile(string(testDir) + "/file1.cpp", "text/x-source-code"),
+		MimeInfoTestFile(string(testDir) + "/subdir1/file1.gif", "image/gif"),
+		MimeInfoTestFile(string(testDir) + "/subdir2/subsubdir1/file1",
+						 "text/html", "<html>\n<body>\n</body></html>\n")
+	};
+	int fileCount = sizeof(files) / sizeof(MimeInfoTestFile);
+	for (int32 i = 0; i < fileCount; i++) {
+		MimeInfoTestFile &file = files[i];
+		// no recursion
+		CHK(file.Create() == B_OK);
+		CHK(update_mime_info(file.name.c_str(), false, true, false) == B_OK);
+		BNode node(file.name.c_str());
+		CHK(node.InitCheck() == B_OK);
+		BString type;
+		CHK(node.ReadAttrString("BEOS:TYPE", &type) == B_OK);
+		node.Unset();
+		CHK(type == file.type.c_str());
+		// recursion
+		CHK(update_mime_info(file.name.c_str(), true, true, false) == B_OK);
+		CHK(node.SetTo(file.name.c_str()) == B_OK);
+		type = "";
+		CHK(node.ReadAttrString("BEOS:TYPE", &type) == B_OK);
+		node.Unset();
+		CHK(type == file.type.c_str());
+		CHK(file.Delete() == B_OK);
+	}
+
+	// directory
+	nextSubTest();
+	// create
+	for (int32 i = 0; i < fileCount; i++) {
+		MimeInfoTestFile &file = files[i];
+		CHK(file.Create() == B_OK);
+	}
+	// update, not recursive
+	CHK(update_mime_info(testDir, false, true, false) == B_OK);
+	// check
+	for (int32 i = 0; i < fileCount; i++) {
+		MimeInfoTestFile &file = files[i];
+		BNode node(file.name.c_str());
+		CHK(node.InitCheck() == B_OK);
+		BString type;
+		CHK(node.ReadAttrString("BEOS:TYPE", &type) == B_ENTRY_NOT_FOUND);
+	}
+	// update, recursive
+	CHK(update_mime_info(testDir, true, true, false) == B_OK);
+	for (int32 i = 0; i < fileCount; i++) {
+		MimeInfoTestFile &file = files[i];
+		BNode node(file.name.c_str());
+		CHK(node.InitCheck() == B_OK);
+		BString type;
+		CHK(node.ReadAttrString("BEOS:TYPE", &type) == B_OK);
+		node.Unset();
+		CHK(type == file.type.c_str());
+		CHK(file.Delete() == B_OK);
+	}
+
+	// bad args: non-existing file
+	nextSubTest();
+	BEntry entry(files[0].name.c_str());
+	CHK(entry.InitCheck() == B_OK);
+	CHK(entry.Exists() == false);
+	CHK(update_mime_info(files[0].name.c_str(), false, true, false) == B_OK);
+}
+
+// helper class for create_app_meta_mime() tests
+class AppMimeTestFile {
+public:
+	AppMimeTestFile(string name, string type, string signature)
+		: name(name),
+		  type(type),
+		  signature(signature)
+	{
+	}
+
+	status_t Create(bool setAttributes, bool setResources)
+	{
+		BFile file(name.c_str(), B_READ_WRITE | B_CREATE_FILE | B_ERASE_FILE);
+		status_t error = file.InitCheck();
+		if (error == B_OK && setAttributes) {
+			if (type.length() > 0) {
+				ssize_t written;
+				written = file.WriteAttr("BEOS:TYPE", B_STRING_TYPE, 0,
+										 type.c_str(), type.length() + 1);
+				if (written < 0)
+					error = written;
+				else if (written != type.length() + 1)
+					error = B_ERROR;
+			}
+			if (error == B_OK) {
+				ssize_t written;
+				written = file.WriteAttr("BEOS:APP_SIG", B_STRING_TYPE, 0,
+										 signature.c_str(),
+										 signature.length() + 1);
+				if (written < 0)
+					error = written;
+				else if (written != signature.length() + 1)
+					error = B_ERROR;
+			}
+		}
+		if (error == B_OK && setResources) {
+			BResources resources;
+			error = resources.SetTo(&file, true);
+			if (error == B_OK && type.length() > 0) {
+				error = resources.AddResource(B_STRING_TYPE, 2, type.c_str(),
+											  type.length() + 1, "BEOS:TYPE");
+			}
+			if (error == B_OK) {
+				error = resources.AddResource(B_STRING_TYPE, 1,
+											  signature.c_str(),
+											  signature.length() + 1,
+											  "BEOS:APP_SIG");
+			}
+		}
+		return error;
+	}
+
+	status_t Delete(bool deleteMimeType)
+	{
+		status_t error = BEntry(name.c_str()).Remove();
+		if (error == B_OK && deleteMimeType) {
+			BMimeType type;
+			// the type need not necessarily exist
+			error = type.SetTo(signature.c_str());
+			if (error == B_OK && deleteMimeType && type.IsInstalled())
+				error = type.Delete();
+		}
+		return error;
+	}
+
+	string	name;
+	string	type;
+	string	signature;
+};
+
+// CreateAppMetaMimeTest
+void
+MimeTypeTest::CreateAppMetaMimeTest()
+{
+	// tests:
+	// * create_app_meta_mime()
+
+	// Note:
+	// * Only synchronous calls are tested.
+	// * Updating all apps is not test as it takes too long.
+
+	// attributes and resources
+	nextSubTest();
+	execCommand(string("mkdir ") + testDir + "/subdir1 "
+				+ testDir + "/subdir2 "
+				+ testDir + "/subdir2/subsubdir1");
+	AppMimeTestFile files[] = {
+		AppMimeTestFile(string(testDir) + "/file1", "",
+						"application/x-vnd.obos.mime.test.test1"),
+		AppMimeTestFile(string(testDir) + "/file2", "text/x-source-code",
+						"application/x-vnd.obos.mime.test.test2"),
+		AppMimeTestFile(string(testDir) + "/file3",
+						"application/x-vnd.Be-elfexecutable",
+						"application/x-vnd.obos.mime.test.test3"),
+	};
+	const int fileCount = sizeof(files) / sizeof(AppMimeTestFile);
+	for (int32 i = 0; i < fileCount; i++) {
+		// create file, create_app_meta_mime()
+		AppMimeTestFile &file = files[i];
+		CHK(file.Create(true, true) == B_OK);
+		CHK(create_app_meta_mime(file.name.c_str(), false, true, false)
+			== B_OK);
+		BMimeType type;
+		CHK(type.SetTo(file.signature.c_str()) == B_OK);
+		CHK(type.IsInstalled() == true);
+		// short description
+		char shortDescription[B_MIME_TYPE_LENGTH + 1];
+		CHK(type.GetShortDescription(shortDescription) == B_OK);
+		BPath path(file.name.c_str(), NULL, true);
+		CHK(string(path.Leaf()) == shortDescription);
+		// preferred app
+		char preferredApp[B_MIME_TYPE_LENGTH + 1];
+		CHK(type.GetPreferredApp(preferredApp) == B_OK);
+		CHK(file.signature == preferredApp);
+		// META:PPATH
+		BNode typeFile;
+		string typeFilename(string(mimeDatabaseDir) + "/" + file.signature);
+		CHK(typeFile.SetTo(typeFilename.c_str()) == B_OK);
+		char filePath[B_PATH_NAME_LENGTH + 1];
+		CHK(typeFile.ReadAttr("META:PPATH", B_STRING_TYPE, 0, filePath,
+							  B_PATH_NAME_LENGTH + 1) > 0);
+		CHK(path == filePath);
+		// clean up
+		typeFile.Unset();
+		CHK(file.Delete(true) == B_OK);
+	}
+
+	// attributes only
+	nextSubTest();
+	for (int32 i = 0; i < fileCount; i++) {
+		// create file, create_app_meta_mime()
+		AppMimeTestFile &file = files[i];
+		CHK(file.Create(true, false) == B_OK);
+		CHK(create_app_meta_mime(file.name.c_str(), false, true, false)
+			== B_OK);
+		BMimeType type;
+		CHK(type.SetTo(file.signature.c_str()) == B_OK);
+		CHK(type.IsInstalled() == true);
+		// short description
+		char shortDescription[B_MIME_TYPE_LENGTH + 1];
+		CHK(type.GetShortDescription(shortDescription) == B_OK);
+		BPath path(file.name.c_str(), NULL, true);
+		CHK(string(path.Leaf()) == shortDescription);
+		// preferred app
+		char preferredApp[B_MIME_TYPE_LENGTH + 1];
+		CHK(type.GetPreferredApp(preferredApp) == B_OK);
+		CHK(file.signature == preferredApp);
+		// META:PPATH
+		BNode typeFile;
+		string typeFilename(string(mimeDatabaseDir) + "/" + file.signature);
+		CHK(typeFile.SetTo(typeFilename.c_str()) == B_OK);
+		char filePath[B_PATH_NAME_LENGTH + 1];
+		CHK(typeFile.ReadAttr("META:PPATH", B_STRING_TYPE, 0, filePath,
+							  B_PATH_NAME_LENGTH + 1) > 0);
+		CHK(path == filePath);
+		// clean up
+		typeFile.Unset();
+		CHK(file.Delete(true) == B_OK);
+	}
+
+	// resources only
+	nextSubTest();
+	for (int32 i = 0; i < fileCount; i++) {
+		// create file, create_app_meta_mime()
+		AppMimeTestFile &file = files[i];
+		CHK(file.Create(false, true) == B_OK);
+		CHK(create_app_meta_mime(file.name.c_str(), false, true, false)
+			== B_OK);
+		BMimeType type;
+		CHK(type.SetTo(file.signature.c_str()) == B_OK);
+		CHK(type.IsInstalled() == false);
+		// clean up
+		CHK(file.Delete(false) == B_OK);
+	}
+
+	// bad args
+	nextSubTest();
+	// no signature
+	CHK(files[0].Create(false, false) == B_OK);
+	CHK(create_app_meta_mime(files[0].name.c_str(), false, true, false)
+		== B_OK);
+	CHK(files[0].Delete(false) == B_OK);
+	// non-existing file
+	CHK(create_app_meta_mime(files[0].name.c_str(), false, true, false)
+		== B_OK);
+}
+
+// GetDeviceIconTest
+void
+MimeTypeTest::GetDeviceIconTest()
+{
+	// tests:
+	// * get_device_icon()
+}
 
 
 /* Ingo's functions:
