@@ -15,6 +15,8 @@
 #include "pools.h"
 #include "net_misc.h"
 #include "net_timer.h"
+#include "ethernet/ethernet.h"
+#include "netinet/in_var.h"
 
 loaded_net_module *global_modules;
 int *prot_table;
@@ -40,8 +42,9 @@ static int32 arp_inuse = 0;	/* how many entries do we have? */
 static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 
 static net_timer_id arpq_timer;
+extern struct in_ifaddr *primary_addr;
 
-#if SHOW_DEBUG
+#if ARP_DEBUG
 void walk_arp_cache(void)
 {
 	arp_cache_entry *c = arpcache;
@@ -99,13 +102,14 @@ static void dump_arp(void *buffer)
 	print_ipv4_addr(&arp->target_ip);
 	printf("]\n");
 }
-#endif /* SHOW_DEBUG */
+#endif /* ARP_DEBUG */
 
 /* Returns 1 is new cache entry added, 0 if not */
 static int insert_cache_entry(void *link, int lf, void *addr, int af)
 {
 	arp_cache_entry *ace;
-	int alen = af == AF_LINK ? 6 : 4; /* ugh - fix me! */
+	int alen = 4; /* ugh - fix me! */
+
 	ace = (arp_cache_entry *)nhash_get(arphash, addr, alen);
 	if (ace) {
 		/* if we don't match the existing record, update it,
@@ -114,20 +118,21 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 		if (memcmp(&ace->ll_addr.sa_data, link, 6) != 0) {
 			/* oh, change of ll_addr... */
 			memcpy(&ace->ll_addr.sa_data, link, alen);
-			ace->expires = real_time_clock_usecs() + 
-					(arp_keep * USECS_PER_SEC);
+			ace->expires = real_time_clock() + arp_keep;
 		}	
 		return 0;
 	}
 	ace = (arp_cache_entry *)pool_get(arpp);
+	memset(ace, 0, sizeof(*ace));
+
 	ace->ip_addr.sa_family = af;
- 	ace->ip_addr.sa_len = alen;
+ 	ace->ip_addr.sa_len = sizeof(struct sockaddr_in);
 	memcpy(&ace->ip_addr.sa_data, addr, alen);
 	alen = lf == AF_LINK ? 6 : 4;
 	ace->ll_addr.sa_family = lf;
-	ace->ll_addr.sa_len = alen;
+	ace->ll_addr.sa_len = sizeof(struct sockaddr_dl);
 	memcpy(&ace->ll_addr.sa_data, link, alen);
-	ace->expires = real_time_clock_usecs() + (arp_keep * USECS_PER_SEC);
+	ace->expires = real_time_clock() + arp_keep;
 
 	acquire_sem(arpc_lock);
 	if (arpcache) {
@@ -141,7 +146,7 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 		arpcache->prev = ace;
 	}
 
-	nhash_set(arphash, &ace->ip_addr.sa_data, ace->ip_addr.sa_len, (void*)ace);
+	nhash_set(arphash, &ace->ip_addr.sa_data, 4, (void*)ace);
 	release_sem(arpc_lock);
 
 	/* these should be OK outside the sem locked area as we use atomic_add and
@@ -150,46 +155,75 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 	atomic_add(&arp_inuse, 1);
 	atomic_add(&arp_allocated, 1);
 
-#if SHOW_DEBUG
+#if ARP_DEBUG
 	walk_arp_cache();
 #endif
 	return 1;
 }
 
-int arp_input(struct mbuf *buf)
+int arp_input(struct mbuf *buf, int hdrlen)
 {
 	ether_arp *arp = mtod(buf, ether_arp*);
 	int rv = -1;
+	struct in_ifaddr *ia = primary_addr, *maybe_ia = NULL;
+	struct in_addr my_addr;
 
-#if SHOW_DEBUG
+#if ARP_DEBUG
 	dump_arp(arp);
 #endif
+	/* find out if it's for us... */
+	for (;ia ; ia = ia->ia_next)
+		if (ia->ia_ifp == buf->m_pkthdr.rcvif) {
+			maybe_ia = ia;
+			if ((ia->ia_addr.sin_addr.s_addr == arp->target_ip.s_addr) ||
+			    (ia->ia_addr.sin_addr.s_addr == arp->sender_ip.s_addr))
+				break;
+		}
+	if (!maybe_ia)
+		goto out;
+	my_addr = ia ? ia->ia_addr.sin_addr : maybe_ia->ia_addr.sin_addr;
 
 	switch (ntohs(arp->arp_op)) {
 		case ARP_RQST:
 			/* The RFC states we should send this back on the same interface it came 
 			 * in on, so we don't mess with the interface here...
 			 */  
-			if (is_address_local((char*)&arp->target_ip, 4)) {
+#if ARP_DEBUG
+			printf("ARP Request\n");
+#endif
+			if (arp->target_ip.s_addr == my_addr.s_addr) {
 				struct sockaddr sa;
-                                sa.sa_family = AF_LINK;
-                                sa.sa_len = 6;
+				/* paranoid... */
+				if (!buf->m_pkthdr.rcvif)
+					buf->m_pkthdr.rcvif = ia->ia_ifp;
+
+                                sa.sa_family = AF_UNSPEC;
+                                sa.sa_len = sizeof(sa);
+#if ARP_DEBUG
+				printf("Request was for one of our addresses!\n");
+#endif
 				insert_cache_entry((char*)&arp->sender, AF_LINK, &arp->sender_ip, AF_INET);
-				memcpy(&sa.sa_data, &arp->target_ip, 4);
 				arp->target_ip = arp->sender_ip;
 				arp->target = arp->sender;
-				memcpy(&arp->sender, &buf->m_pkthdr.rcvif->link_addr->sa_data, 6);
-				memcpy(&arp->sender_ip, &sa.sa_data, 4);
+				memcpy(&arp->sender, &((struct ether_device*)buf->m_pkthdr.rcvif)->e_addr, 6);
+				arp->sender_ip = my_addr;
 				memcpy(&sa.sa_data, &arp->target, 6);
 				arp->arp_op = htons(ARP_RPLY);
-				buf->m_pkthdr.rcvif->output(buf, NS_ARP, &sa);
-				return 1;
+				buf->m_pkthdr.rcvif->output(buf->m_pkthdr.rcvif, buf, &sa, NULL);
+				return 0;
 			}
+#if ARP_DEBUG
+			else 
+				printf("Not for us, ignoring...\n");
+#endif
 			/* not for us, just let it be discarded */
 			break;
 		case ARP_RPLY: 
-			/* we only accept our own replies... */
-			if (is_address_local(&arp->target_ip, 4)) {
+			/* we only accept replies aimed at us, others we discard... */
+#if ARP_DEBUG
+			printf("ARP Reply\n");
+#endif
+			if (arp->target_ip.s_addr == my_addr.s_addr) {
 				rv = insert_cache_entry(&arp->sender, AF_LINK, &arp->sender_ip, AF_INET);
 				if (rv == 1) {
 					arp_q_entry *aqe;
@@ -198,12 +232,14 @@ int arp_input(struct mbuf *buf)
 					acquire_sem(arpq_lock);
 					aqe = arp_lookup_q;
 					while (aqe && aqe->status == ARP_WAITING) {
-						if (memcmp(&aqe->tgt.sa_data, &arp->sender_ip, 4) == 0) {
+						if (((struct sockaddr_in *)&aqe->tgt)->sin_addr.s_addr 
+						    == arp->sender_ip.s_addr) {
 							/* woohoo - it's a match! */
 							res.sa_family = AF_LINK;
 							res.sa_len = 6;
-							memcpy(&res.sa_data, &arp->sender, 6);
-							aqe->callback(ARP_LOOKUP_OK, aqe->buf, &res);
+							memcpy(&aqe->ptr, &arp->sender, 6);
+							aqe->rt->rt_flags &= ~RTF_REJECT;
+							aqe->callback(ARP_LOOKUP_OK, aqe->buf);
 							/* Don't worry about removing it, just set the status
 							 * and let the next pass of arpq_run remove it
 							 * for us. Less overhead.
@@ -214,62 +250,76 @@ int arp_input(struct mbuf *buf)
 					}
 					release_sem(arpq_lock);
 				}
+			} else if (arp->sender_ip.s_addr == my_addr.s_addr) {
+				printf("Duplicate IP address detected!\n");
+				/* XXX - what now? */
 			}	
+		
 			break;
 		default:
 			printf("unknown ARP packet accepted (op_code was %d)\n", ntohs(arp->arp_op));
 	}
 
+
+out:
 	m_freem(buf);
 	return 0;
 }
 
+#define satosin(sa)     ((struct sockaddr_in *)(sa))
 static void arp_send_request(arp_q_entry *aqe)
 {
 	struct mbuf *buf = m_gethdr(MT_DATA);
-	ether_arp *arp;
-	struct sockaddr ether;
+	struct ethernetarp *arppkt = mtod(buf, struct ethernetarp *);
+	struct sockaddr_in *sin = (struct sockaddr_in*)&aqe->tgt;
 
-	if (!aqe->buf->m_pkthdr.rcvif)
+#if ARP_DEBUG
+	dump_ipv4_addr("arp_send_request: target ", &sin->sin_addr);
+#endif
+
+	/* if we have no interface structure, how do we send data??? */
+	if (!aqe->rt->rt_ifp)
 		return;
 
-	if (aqe->tgt.sa_family != AF_INET) {
+	if (sin->sin_family != AF_INET) {
 		m_freem(buf);
 		return;
 	}
 
-	m_reserve(buf, 16);
-	arp =  mtod(buf, ether_arp*);
+	arppkt->arp.arp_ht = htons(1);
+	arppkt->arp.arp_hsz = 6;
+	arppkt->arp.arp_pro = htons(ETHER_IPV4);
+	arppkt->arp.arp_psz = 4;
+	arppkt->arp.arp_op = htons(ARP_RQST);
 
-	arp->arp_ht = htons(1);
-	arp->arp_hsz = 6;
-	arp->arp_pro = htons(ETHER_IPV4);
-	arp->arp_psz = 4;
-	arp->arp_op = htons(ARP_RQST);
-	arp->sender_ip = *paddr(aqe->buf->m_pkthdr.rcvif, AF_INET, ipv4_addr*);
-	arp->target_ip = *(ipv4_addr*)&aqe->tgt.sa_data;
+	arppkt->arp.sender_ip = satosin(aqe->rt->rt_ifa->ifa_addr)->sin_addr;
+	arppkt->arp.target_ip = sin->sin_addr;
 
 	/* we send to the broadcast address, ff:ff:ff:ff:ff:ff */
-	memset(&ether.sa_data, 0xff, 6);
-	ether.sa_family = AF_LINK;
-	ether.sa_len = 6;
+	memset(&arppkt->eth.dest, 0xff, 6);
+	memcpy(&arppkt->eth.src, &((struct ether_device*)aqe->rt->rt_ifp)->e_addr, 6);
+	arppkt->eth.type = htons(ETHER_ARP);
 
-	memcpy(&arp->sender, &aqe->buf->m_pkthdr.rcvif->link_addr->sa_data, 6);
-	memset(&arp->target, 0, 6);
+	/* send request on same interface we'll send packet */
+	buf->m_pkthdr.rcvif = aqe->rt->rt_ifp;
+	buf->m_flags |= M_BCAST;
+	/* Now we've decided on the interface, add the link level address we'll be
+	 * advertising and set the ip address we want to use
+	 */
+	memcpy(&arppkt->arp.sender, &((struct ether_device*)aqe->rt->rt_ifp)->e_addr, 6);
+	memset(&arppkt->arp.target, 0, 6);
 
 	/* setup buf details... */
 	buf->m_flags |= M_BCAST;
-	buf->m_pkthdr.len = 28;
-
-	/* send request on same interface we'll send packet */
-	buf->m_pkthdr.rcvif = aqe->buf->m_pkthdr.rcvif;
+	buf->m_pkthdr.len = buf->m_len = sizeof(struct ethernetarp);
 
 	/* update the queue details... */
 	aqe->status = ARP_WAITING;
-	aqe->lasttx = real_time_clock_usecs();
+	aqe->lasttx = real_time_clock();
 	aqe->attempts++;
 
-	global_modules[prot_table[NS_ETHER]].mod->output(buf, NS_ARP, &ether);
+	aqe->rt->rt_flags |= RTF_REJECT; /* while we're waiting on a reply... */
+	IFQ_ENQUEUE(aqe->rt->rt_ifp->txq, buf);
 }
 
 static void arp_cleanse(void *data)
@@ -279,7 +329,7 @@ static void arp_cleanse(void *data)
 
 	acquire_sem(arpc_lock);
 	while (ace) {
-		if (ace->expires <= real_time_clock_usecs()) {
+		if (ace->expires <= real_time_clock()) {
 			/* we've expired... */
 			/* XXX - can this be tidied up??? */
 			if (ace->next != ace) {
@@ -307,7 +357,8 @@ static void arp_cleanse(void *data)
 			break;
 	}
 	release_sem(arpc_lock);
-#if SHOW_DEBUG
+
+#if ARP_DEBUG
 	printf("ARP: cache has been cleaned\n");
 	walk_arp_cache();
 #endif
@@ -334,10 +385,10 @@ static void arpq_run(void *data)
 		}
 		/* OK, so we're not yet done...*/
 		/* is it time to send again? */
-		if (aqe->lasttx < real_time_clock_usecs() - arp_noflood * USECS_PER_SEC) {
+		if (aqe->lasttx < real_time_clock() - arp_noflood) {
 			if (aqe->attempts++ > arp_maxtries) {
 				/* No! we've run out of tries. */
-				aqe->callback(ARP_LOOKUP_FAILED, aqe->buf, &aqe->tgt);
+				aqe->callback(ARP_LOOKUP_FAILED, aqe->buf);
 				temp = aqe;
 				aqe = aqe->next;
 				if (temp == arp_lookup_q)
@@ -357,8 +408,8 @@ static void arpq_run(void *data)
 
 	release_sem(arpq_lock);
 
-#if SHOW_DEBUG
-	printf("ARP: lookup queue was run (%d).\n", arpq_timer);
+#if ARP_DEBUG
+	printf("ARP: lookup queue was run (%ld)\n", arpq_timer);
 #endif
 }
 
@@ -388,24 +439,36 @@ int arp_init(loaded_net_module *ln, int *pt)
 	return 0;
 }
 
-int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
+static int arp_resolve(struct mbuf *buf, struct rtentry *rt, struct sockaddr *tgt, 
+		       void *dptr, void (*callback)(int, struct mbuf *))
 {
 	arp_cache_entry *ace = NULL;
 	arp_q_entry *aqe;
+	struct sockaddr_in *sin = (struct sockaddr_in *)tgt;
 
-	ace = (arp_cache_entry *)nhash_get(arphash, &tgt->sa_data, 
-			tgt->sa_len);
+#if ARP_DEBUG
+	dump_ipv4_addr("arp_resolve: ", &sin->sin_addr);
+#endif
+
+	ace = (arp_cache_entry *)nhash_get(arphash, &sin->sin_addr, 4);
 
 	if (ace) {
-		ace->expires = real_time_clock_usecs() + (arp_keep * USECS_PER_SEC);
-		*tgt = ace->ll_addr;
+		ace->expires = real_time_clock() + arp_keep;
+		memcpy(dptr, ace->ll_addr.sa_data, 6);
 		return ARP_LOOKUP_OK;
 	}
+
+#if ARP_DEBUG
+	printf("Queueing ARP request\n");
+#endif
+
 	/* ok, we didn't get one! */
-	acquire_sem(arpq_lock);
 	aqe = arp_lookup_q;
 	while (aqe) {
-		if (compare_sockaddr(&aqe->tgt, tgt))
+		if ((satosin(&aqe->tgt))->sin_addr.s_addr == sin->sin_addr.s_addr) 
+			/* XXX - need to add code to add this packet to
+			 * the list of waiting packets, or discard and reject...
+			 */
 			break;
 		aqe = aqe->next;
 	}
@@ -414,7 +477,11 @@ int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 		aqe = malloc(sizeof(struct arp_q_entry));
 		aqe->buf = buf;
 		aqe->tgt = *tgt;
+		aqe->ptr = dptr;
+		aqe->rt = rt;
 		aqe->callback = callback;
+		if (aqe->buf->m_pkthdr.rcvif == NULL)
+			aqe->buf->m_pkthdr.rcvif = rt->rt_ifp;
 
 		if (arp_lookup_q)
 			aqe->next = arp_lookup_q;
@@ -424,7 +491,6 @@ int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 		arp_lookup_q = aqe;
 		arp_send_request(aqe);
 	}
-	release_sem(arpq_lock);
 
 	arpq_timer = net_add_timer(&arpq_run, NULL, arp_noflood * USECS_PER_SEC);
 
@@ -443,7 +509,7 @@ net_module net_module_data = {
 	NULL,
 	&arp_input, 
 	NULL,
-	&arp_lookup,
+	&arp_resolve,
 	NULL
 };
 

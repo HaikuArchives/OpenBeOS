@@ -8,6 +8,7 @@
 #include "mbuf.h"
 #include "net_misc.h"
 #include "sys/socket.h"
+#include "ethernet/ethernet.h"
 
 /* arp codes */
 enum {
@@ -39,16 +40,22 @@ typedef struct arp_hdr {
 typedef struct ether_arp {
 	arp_hdr		arp;
 	ether_addr	sender;
-	ipv4_addr	sender_ip;
+	struct in_addr	sender_ip;
 	
 	ether_addr	target;
-	ipv4_addr	target_ip;
+	struct in_addr	target_ip;
 } _PACKED ether_arp;
 #define arp_ht		arp.hard_type
 #define arp_pro		arp.prot
 #define arp_hsz		arp.hard_size
 #define arp_psz		arp.prot_size
 #define arp_op		arp.op
+
+struct ethernetarp {
+	struct ethernet_header	eth;
+	struct ether_arp	arp;
+};
+
 
 typedef struct arp_cache_entry	arp_cache_entry;
 struct arp_cache_entry {
@@ -57,18 +64,20 @@ struct arp_cache_entry {
 	struct sockaddr	ip_addr; /* we use this so we can deal with other types of address */
 	struct sockaddr	ll_addr; /* link-level address */
 	int		status;
-	bigtime_t	expires; /* when does this expire? */
+	uint32		expires; /* when does this expire? */
 };
 
 typedef struct arp_q_entry	arp_q_entry;
 struct arp_q_entry {
-	arp_q_entry *next;
-	struct mbuf *buf;
+	arp_q_entry 	*next;
+	struct mbuf 	*buf;
+	struct rtentry 	*rt;
 	struct sockaddr tgt;
-	int attempts;
-	bigtime_t lasttx;
-	int status;
-	void (*callback)(int, struct mbuf *, struct sockaddr *);
+	int 		attempts;
+	uint32		lasttx;
+	int 		status;
+	void 		(*callback)(int, struct mbuf *);
+	void 		*ptr;
 };
 
 
