@@ -958,7 +958,14 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 			continue;
 		}
 
-		// check user permissions here!
+		// check user permissions here - but which one?!
+		// we could filter out all those where we don't have
+		// read access... (we should check for every parent
+		// directory if the X_OK is allowed)
+		// Although it's quite expensive to open all parents,
+		// it's likely that the application that runs the
+		// query will do something similar (and we don't have
+		// to do it for root, either).
 
 		// go up in the tree until a &&-operator is found, and check if the
 		// inode matches with the rest of the expression - we don't have to
@@ -973,13 +980,13 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 			Operator *parent = (Operator *)term->Parent();
 			if (parent == NULL)
 				break;
-	
+
 			if (parent->Op() == OP_AND) {
 				// choose the other child of the parent
 				Term *other = parent->Right();
 				if (other == term)
 					other = parent->Left();
-	
+
 				if (other == NULL) {
 					FATAL(("&&-operator has only one child... (parent = %p)\n",parent));
 					break;
@@ -992,7 +999,7 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 			}
 			term = (Term *)parent;
 		}
-		
+
 		if (status == MATCH_OK) {
 			dirent->d_dev = volume->ID();
 			dirent->d_ino = offset;
@@ -1001,9 +1008,9 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 			strcpy(dirent->d_name,inode->Name());
 			dirent->d_reclen = strlen(dirent->d_name);
 		}
-	
+
 		put_vnode(volume->ID(), inode->ID());
-		
+
 		if (status == MATCH_OK)
 			return B_OK;
 	}

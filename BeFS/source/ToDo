@@ -1,0 +1,49 @@
+BFS - ToDo, March 5th, 2002
+-----
+
+BlockAllocator
+
+ - the BlockAllocator is very unoptimized and slow, and it doesn't handle
+   low on-disk memory well; it just fails instead of providing the requested
+   minimum of disk space.
+ - the allocation policies are not yet done
+ - when they are done, the will have to stand against some real world tests
+ - the access to the block bitmap is currently unlocked
+ - the updated disk's super block is not written back yet
+
+
+Queries
+
+ - There shouldn't be any cases where you can speed up a query with reordering
+   the query expression - test it
+ - Check permissions of the parent directories
+
+
+Journal
+
+ - The transaction class currently does nothing else than writing the blocks
+   directly to disk.
+
+
+BPlusTree
+
+ - BPlusTree::Remove() currently does not free empty pages
+
+
+Indices
+
+ - are not yet updated
+
+
+Volume
+
+ - can't write super block yet (i.e. in bfs_write_fs_stat())
+ - needs a lock to protect the super block
+
+
+... much more stuff for full write capabilities ...
+
+
+-----
+Axel Dörfler
+axeld@pinc-software.de
