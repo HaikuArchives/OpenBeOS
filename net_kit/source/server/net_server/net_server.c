@@ -69,7 +69,7 @@ static int32 rx_thread(void *data)
 	ifnet *i = (ifnet *)data;
 	struct mbuf *m;
 
-	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
+	printf("%s%d: starting rx_thread...\n", i->name, i->if_unit);
 	while (1) {
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
@@ -82,9 +82,9 @@ static int32 rx_thread(void *data)
 		if (i->input)
 			i->input(m);
 		else
-			printf("%s%d: no input function!\n", i->name, i->unit);
+			printf("%s%d: no input function!\n", i->name, i->if_unit);
         }
-	printf("%s%d: terminating rx_thread\n", i->name, i->unit);
+	printf("%s%d: terminating rx_thread\n", i->name, i->if_unit);
 	return 0;
 }
 
@@ -96,11 +96,11 @@ static int32 tx_thread(void *data)
 	char buffer[2048];
 	size_t len = 0;
 	status_t status;
-#if SHOW_DEBUG
+//#if SHOW_DEBUG
 	int txc = 0;
-#endif
+//#endif
 
-	printf("%s%d: starting tx_thread...\n", i->name, i->unit);	
+	printf("%s%d: starting tx_thread...\n", i->name, i->if_unit);	
 	while (1) {
 		acquire_sem(i->txq->pop);
 		IFQ_DEQUEUE(i->txq, m);
@@ -111,16 +111,16 @@ static int32 tx_thread(void *data)
 			len = m->m_len;
 
 		if (len > i->if_mtu) {
-			printf("%s%d: tx_thread: packet was too big!\n", i->name, i->unit);
+			printf("%s%d: tx_thread: packet was too big!\n", i->name, i->if_unit);
 			m_freem(m);
 			continue;
 		}
 
 		m_copydata(m, 0, len, buffer);
 
-#if SHOW_DEBUG
-		printf("TXMIT %d: %ld bytes to dev %d\n", txc++, len ,i->devid);
-#endif
+//#if SHOW_DEBUG
+		printf("TXMIT %d: %ld bytes to dev  %s[%d]\n", txc++, len ,i->if_name, i->devid);
+//#endif
 		m_freem(m);
 #if SHOW_DEBUG
 		dump_buffer(buffer, len);
@@ -158,10 +158,12 @@ void net_server_add_device(ifnet *ifn)
 	if (!ifn)
 		return;
 
-	sprintf(dname, "%s%d", ifn->name, ifn->unit);
+	sprintf(dname, "%s%d", ifn->name, ifn->if_unit);
 	printf("adding device %s\n", dname);
 	ifn->if_name = strdup(dname);
 
+	acquire_sem(dev_lock);
+	
 	if (ifn->devid < 0) {
 		/* pseudo device... */
 		if (pdevices)
@@ -177,6 +179,8 @@ void net_server_add_device(ifnet *ifn)
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
+	release_sem(dev_lock);
+	
 	printf("add_device: added %s\n", ifn->if_name);	
 }
 
@@ -264,7 +268,7 @@ static void list_devices(void)
 		"=== ============ ==== ================= ===========================\n");
 	
 	while (d) {
-		printf("%2d  %s%d       %4ld ", i++, d->name, d->unit, d->if_mtu);
+		printf("%2d  %s%d       %4ld ", i++, d->name, d->if_unit, d->if_mtu);
 		printf("                 ");
 		if (d->if_flags & IFF_UP)
 			printf(" UP");
@@ -568,6 +572,11 @@ found:
 
 int start_stack(void)
 {
+	/* we use timers in TCP, so init our timer here...
+	 * kernel version uses kernel timer so doesn't need this!
+	 */
+	status_t rv = net_init_timer();
+	printf("init_timer = %ld\n", rv);
 	find_protocol_modules();
 	
 	domain_init();
@@ -646,8 +655,8 @@ void assign_addresses(void)
 	int rv;
 	struct ifreq ifr;
 	
-	printf("*** assign sockets test! ***\n"
-	       "Have you chnaged these to match your card and network?\n");
+	printf("\n*** assign socket addresses ***\n"
+	       "Have you changed these to match your card and network?\n");
 
 	rv = initsocket(&sp);
 	if (rv < 0) {
@@ -836,6 +845,68 @@ static void bind_test(void)
 out:
 	soclose(sp);
 	soclose(sq);
+
+	printf("Bind socket test completed.\n");
+}
+
+void tcp_test(void)
+{
+	void *sp;
+	struct sockaddr_in sa;
+	int rv;
+	char buffer[200];
+	struct iovec iov;
+	int flags = 0;
+	
+	printf("\n*** TCP Test ***\n\n");	
+	rv = initsocket(&sp);
+	if (rv < 0) {
+		err(rv, "Couldn't get a 2nd socket!");
+		return;
+	}
+	
+	rv = socreate(AF_INET, sp, SOCK_STREAM, 0);
+	if (rv < 0) {
+		err(rv, "Failed to create a socket to use...");
+		return;
+	}
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(7772);
+	sa.sin_addr.s_addr = INADDR_ANY;
+	sa.sin_len = sizeof(sa);
+	
+	rv = sobind(sp, (caddr_t)&sa, sizeof(sa));
+	if (rv < 0) {
+		err(rv, "Failed to bind!\n");
+	}
+
+	sa.sin_addr.s_addr = htonl(0xc0a80001);
+	sa.sin_port = htons(7);
+	
+	rv = soconnect(sp, (caddr_t)&sa, sizeof(sa));
+	if (rv < 0) {
+		err(rv, "Connect failed!!");
+	}
+
+	memset(&buffer, 0, 200);
+	strcpy(buffer, "Hello!\n");
+	iov.iov_base = &buffer;
+	iov.iov_len = 7;
+	rv = writeit(sp, &iov, flags);
+	if (rv < 0) {
+		err(rv, "writeit failed!!");
+	}
+	
+	memset(&buffer, 0, 200);
+	iov.iov_len = 200;
+	rv = readit(sp, &iov, &flags);
+	printf("readit: rv = %d\n", rv);	
+	printf("%s\n", buffer);
+	
+	soclose(sp);
+	printf("TCP socket test completed...\n");
 }
 
 int main(int argc, char **argv)
@@ -870,6 +941,7 @@ int main(int argc, char **argv)
 	wait_for_thread(t, &status);
 	
 	bind_test();
+	tcp_test();
 	big_socket_test();
 	
 	printf("\n\n Tests completed!\n");
@@ -878,7 +950,7 @@ int main(int argc, char **argv)
 	while (d) {
 		printf("device %s : rx_thread = %ld\n", d->if_name, d->rx_thread);
 		if (d->rx_thread > 0  && d->if_type == IFT_ETHER) {
-			printf("waiting on thread for %s%d\n", d->name, d->unit);
+			printf("waiting on thread for %s%d\n", d->name, d->if_unit);
 			wait_for_thread(d->rx_thread, &status);
 		}
 		d = d->if_next; 
