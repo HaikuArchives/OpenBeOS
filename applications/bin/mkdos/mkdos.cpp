@@ -451,22 +451,26 @@ status_t Initialize(int fatbits, const char *device, const char *label, bool nop
 
 	ssize_t written;
 
-	//zero everything first
-	//XXX this does on a 32GB harddisk about 10000 writes 
-	//XXX of only 512 bytes, and should be optimized
+	// initialize everything with zero first
+	// avoid doing 512 byte writes here, they are slow
 	printf("Writing FAT\n");
-	char emptysector[512];
-	memset(emptysector,0x00,512);
-	uint32 sectors = ReservedSectorCount + (NumFATs * FATSize) + RootDirSectors;
-	for (uint32 i = 0; i < sectors; i++) {
-		written = file.WriteAt(i * 512,emptysector,512);
-		if (written != 512) {
-			fprintf(stderr,"Error: write error at sector %ld\n",i);
+	char * zerobuffer = (char *)malloc(65536);
+	memset(zerobuffer,0,65536);
+	int64 bytes_to_write = 512LL * (ReservedSectorCount + (NumFATs * FATSize) + RootDirSectors);
+	int64 pos = 0;
+	while (bytes_to_write > 0) {
+		ssize_t writesize = min_c(bytes_to_write,65536);
+		written = file.WriteAt(pos,zerobuffer,writesize);
+		if (written != writesize) {
+			fprintf(stderr,"Error: write error near sector %Ld\n",pos / 512);
 			close(fd);
 			return B_ERROR;
 		}
+		bytes_to_write -= writesize;
+		pos += writesize;
 	}
-
+	free(zerobuffer);
+	
 	//write boot sector
 	printf("Writing boot block\n");
 	written = file.WriteAt(BOOT_SECTOR_NUM * 512,bootsector,512);
@@ -486,6 +490,7 @@ status_t Initialize(int fatbits, const char *device, const char *label, bool nop
 	}
 	
 	//write first fat sector
+	printf("Writing first FAT sector\n");
 	uint8 sec[512];
 	memset(sec,0,512);
 	if (fatbits == 12) {
