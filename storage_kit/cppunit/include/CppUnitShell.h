@@ -87,23 +87,23 @@ protected:
 	
 	    virtual void startTest( CppUnit::Test *test ) {
 	    	ok = true;
-	    	cout << test->getName() << flush;
+	    	cout << test->getName() << endl;
 	    }
 	    
 	    virtual void addError( CppUnit::Test *test, CppUnit::Exception *e ) {
 	    	ok = false;
-	    	cout << endl << "  - ERROR -- " << e->what() << flush;
+	    	cout << "  - ERROR -- " << e->what() << endl;
 	    }
 	
 	    virtual void addFailure( CppUnit::Test *test, CppUnit::Exception *e ) {
 	    	ok = false;
-	    	cout << endl <<  "  - FAILURE -- " << e->what() << flush;
+	    	cout <<  "  - FAILURE -- " << e->what() << endl;
 	    }
 	
 	    virtual void endTest( CppUnit::Test *test )  {
 	    	if (ok)
-	    		cout << endl << "  + PASSED";
-	    	cout << endl << endl;
+	    		cout << "  + PASSED" << endl;
+	    	cout << endl;
 	    }	 
 	
 	};
