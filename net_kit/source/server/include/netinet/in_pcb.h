@@ -17,7 +17,7 @@ enum {
 	INP_HDRINCL	= 0x01,
 	INP_RECVOPTS	= 0x02,
 	INP_RECVRETOPTS = 0x04,
-	INP_RECVSTADDR	= 0x08	/* receive IP destination as control inf. */
+	INP_RECVDSTADDR	= 0x08	/* receive IP destination as control inf. */
 };
 #define INP_CONTROLOPT (INP_RECVOPTS | INP_RECVRETOPTS | INP_RECVSTADDR)
 
