@@ -56,9 +56,12 @@ static int r5_select(int nbits, struct fd_set * rbits, struct fd_set * wbits,
 	memcpy(&w, rbits, sizeof(w));
 	memcpy(&e, rbits, sizeof(e));
 
-	FD_ZERO(rbits);
-	FD_ZERO(wbits);
-	FD_ZERO(ebits);
+	if (rbits)
+		FD_ZERO(rbits);
+	if (wbits)
+		FD_ZERO(wbits);
+	if (ebits)
+		FD_ZERO(ebits);
 
 	rss.lock = create_sem(1, "r5_select_lock");
 	rss.wait = create_sem(0, "r5_select_wait");
