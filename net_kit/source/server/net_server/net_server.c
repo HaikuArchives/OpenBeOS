@@ -26,6 +26,7 @@
 #include "net/route.h"
 #include "sys/domain.h"
 #include "sys/protosw.h"
+#include "sys/sockio.h"
 
 loaded_net_module *global_modules;
 int prot_table[255];
@@ -422,8 +423,6 @@ void add_domain(struct domain *dom, int fam)
 	struct domain *dm = domains;
 	struct domain *ndm;
 
-	printf("add_domain: %d\n", fam);
-
 	for(; dm; dm = dm->dom_next) {
 		if (dm->dom_family == fam)
 			/* already done */
@@ -445,7 +444,6 @@ void add_domain(struct domain *dom, int fam)
 					dm->dom_next = ndm;
 				else
 					domains = ndm;
-				printf("Added AF_INET domain\n");
 				return;
 			default:
 				printf("Don't know how to add domain %d\n", fam);
@@ -510,13 +508,27 @@ void add_protocol(struct protosw *pr, int fam)
 	return;
 }
 
+void add_protosw(struct protosw *prt[], int layer)
+{
+	struct protosw *p = protocols;
+	
+	for (p = protocols; p; p = p->pr_next) {
+		if (p->layer == layer)
+			prt[p->pr_protocol] = p;
+		if (layer == NET_LAYER3 && p->layer == NET_LAYER2)
+			prt[p->pr_protocol] = p;
+		if (layer == NET_LAYER1 && p->layer == NET_LAYER2)
+			prt[p->pr_protocol] = p;
+		if (layer == NET_LAYER2 && p->layer == NET_LAYER3)
+			prt[p->pr_protocol] = p;
+	}
+}
+
 static void domain_init(void)
 {
 	struct domain *d;
 	struct protosw *p;
 
-	printf("domain_init()\n");
-	
 	for (d = domains;d;d = d->dom_next) {
 		if (d->dom_init)
 			d->dom_init();
@@ -663,7 +675,41 @@ int32 create_sockets(void *data)
 	
 	return 0;
 }
+
+void assign_addresses(void)
+{
+	void *sp; /* socket pointer... */
+	int rv;
+	struct ifreq ifr;
 	
+	rv = initsocket(&sp);
+	if (rv < 0) {
+		printf("Couldn't get a socket!\n");
+		return;
+	}
+	
+	rv = socreate(AF_INET, sp, SOCK_DGRAM, 0);
+	if (rv < 0) {
+		printf("Failed to create a socket to use...\n");
+		return;
+	}
+	
+	strcpy(ifr.ifr_name, "tulip0");
+	
+	rv = soo_ioctl(sp, SIOCGIFFLAGS, (caddr_t)&ifr);
+	printf("soo_ioctl gave %d\n", rv);
+	printf("ifr.flags = %d\n", ifr.ifr_flags);
+
+	((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr = htonl(0xc0a80085);
+	((struct sockaddr_in*)&ifr.ifr_addr)->sin_family = AF_INET;
+	((struct sockaddr_in*)&ifr.ifr_addr)->sin_len = sizeof(struct sockaddr_in);
+	
+	rv = soo_ioctl(sp, SIOCSIFADDR, (caddr_t)&ifr);
+	printf("soo_ioctl gave %d\n", rv);	
+	if (rv < 0)
+		printf("error %d [%s]\n", rv, strerror(rv));
+}
+
 int main(int argc, char **argv)
 {
 	status_t status;
@@ -688,6 +734,9 @@ int main(int argc, char **argv)
 		B_NORMAL_PRIORITY, &qty);
 	if (t >= 0)
 		resume_thread(t);
+
+	assign_addresses();
+	list_devices();
 	
 	d = devices;
 	while (d) {
