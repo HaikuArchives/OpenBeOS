@@ -110,7 +110,7 @@ static int loop_init(void)
 {
 	me = (ifnet*)malloc(sizeof(ifnet));
 	if (!me)
-		return NULL;
+		return -1;
 		
 	memset(me, 0, sizeof(*me));
 
