@@ -36,23 +36,22 @@ if ! $(OBOS_BUILD_DESCRIPTION) {
 
 # Relative subdirs for distro dir (these are for *INTERNAL* use by the following rules only!)
 OBOS_PREFS_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/preferences ;
-OBOS_APPS_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/apps ;
 OBOS_SERVER_DIR ?= $(OBOS_DISTRO_TARGET)/beos/system/servers ;
 OBOS_ADDON_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/system/add-ons ;
 OBOS_SHLIB_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/system/lib ;
 
+OBOS_INCLUDES ?= add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
+
+for i in $(OBOS_INCLUDES)
+{
+	CCFLAGS += -isystem $(OBOS_TOP)/headers/os/public/$(i) ;
+}
+
+C++FLAGS ?= $(CCFLAGS) ;
+
 #-------------------------------------------------------------------------------
 # General High-level OBOS target rules
 #-------------------------------------------------------------------------------
-
-rule Application
-{
-	# Application <name> : <sources> ;
-	
-	SetupObjectsDir ;
-	Main $(<) : $(>) ;
-	MakeLocate $(<) : $(OBOS_APPS_DIR) ;
-}
 
 rule Preference
 {
@@ -65,7 +64,7 @@ rule Preference
 
 rule Server
 {
-	# Preference <name> : <sources> ;
+	# Server <name> : <sources> ;
 	
 	SetupObjectsDir ;
 	Main $(<) : $(>) ;
@@ -94,7 +93,7 @@ rule SharedLibrary
 	SetupObjectsDir ;
 	Main lib$(<).so : $(>) ;
 	MakeLocate lib$(<).so : $(OBOS_SHLIB_DIR) ;
-	LINKFLAGS on lib$(1).so = $(LINKFLAGS) -nostart -Xlinker -soname=\"lib$(<).so\" ;
+	#LINKFLAGS on lib$(<).so = $(LINKFLAGS) -nostart -Xlinker -soname=\"lib$(<).so\" ;
 }
 
 rule LinkSharedOSLibs
@@ -132,6 +131,20 @@ rule AddResources
 	}
 }
 
+rule UsePrivateHeaders
+{
+	local extras;
+
+	# UsePrivateHeaders <group list> ;
+	for i in $(<)
+	{
+		extras += -isystem $(OBOS_TOP)/headers/os/private/$(i) ;
+	}
+	
+	SubDirCcFlags $(extras) ;
+	SubDirC++Flags $(extras) ;
+}
+
 #-------------------------------------------------------------------------------
 # Low-level OBOS utility rules
 #-------------------------------------------------------------------------------
@@ -157,10 +170,10 @@ rule Link
 
 actions Link bind NEEDLIBS
 {
-	$(LINK) $(LINKFLAGS) -o "$(<)" $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS)
+	$(LINK) $(LINKFLAGS) -o "$(<)" $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) ;
 	xres -o "$(<)" $(RESFILES) ;
-	setversion "$(<)" -system $(OBOS_BUILD_VERSION) ;
-	chmod +x "$(<)"
-	settype -t $(OBOS_TARGET_TYPE) "$(<)"
-	mimeset -f "$(<)"
+	setversion "$(<)" -system $(OBOS_BUILD_VERSION) -short $(OBOS_BUILD_DESCRIPTION) ;
+	chmod +x "$(<)" ;
+	settype -t $(OBOS_TARGET_TYPE) "$(<)" ;
+	mimeset -f "$(<)" ;
 }
