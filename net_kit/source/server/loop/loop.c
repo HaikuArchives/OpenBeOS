@@ -89,7 +89,7 @@ static int loop_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 
 	switch(cmd) {
 		case SIOCSIFADDR:
-			ifp->if_flags |= IFF_UP;
+			ifp->if_flags |= (IFF_UP | IFF_RUNNING);
 			if (ifp->rx_thread < 0)
 				start_rx_thread(ifp);
 			if (ifp->tx_thread < 0)
@@ -119,7 +119,7 @@ static int loop_init(void)
 	me->tx_thread = -1;
 	me->if_addrlen = 0;
 	me->if_hdrlen = 0;
-	me->if_flags = IFF_LOOPBACK | IFF_MULTICAST | IFF_RUNNING;
+	me->if_flags = IFF_LOOPBACK | IFF_MULTICAST;
 	me->if_mtu = 16384; /* can be as large as we want */
 	me->input = &loop_input;
 	me->output = &loop_output;
