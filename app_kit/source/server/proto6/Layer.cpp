@@ -293,12 +293,17 @@ void Layer::PruneTree(void)
 	Layer *lay,*nextlay;
 
 	lay=topchild;
-
+	topchild=NULL;
+	
 	while(lay!=NULL)
 	{
 		if(lay->topchild!=NULL)
-			lay->topchild->PruneTree();
+		{
+//			lay->topchild->PruneTree();
+			lay->PruneTree();
+		}
 		nextlay=lay->lowersibling;
+		lay->lowersibling=NULL;
 		delete lay;
 		lay=nextlay;
 	}

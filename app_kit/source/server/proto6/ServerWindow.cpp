@@ -100,12 +100,16 @@ ServerWindow::~ServerWindow(void)
 printf("%s::~ServerWindow()\n",title->String());
 #endif
 	RemoveWindowFromDesktop(this);
-	if(applink!=NULL)
+	if(applink)
+	{
 		delete applink;
-	delete title;
-	delete winlink;
-	delete decorator;
-	delete winborder;
+		applink=NULL;
+
+		delete title;
+		delete winlink;
+		delete decorator;
+		delete winborder;
+	}
 	kill_thread(thread);
 }
 

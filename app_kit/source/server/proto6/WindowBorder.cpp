@@ -27,6 +27,8 @@ printf("WindowBorder()\n");
 #endif
 	mbuttons=0;
 	swin=win;
+	mousepos.Set(0,0);
+	update=false;
 
 	title=new BString(bordertitle);
 	hresizewin=false;
@@ -45,6 +47,7 @@ void WindowBorder::MouseDown(BPoint pt, uint32 buttons)
 {
 	mbuttons=buttons;
 	click_type click=decor->Clicked(pt, mbuttons);
+	mousepos=pt;
 
 	switch(click)
 	{
