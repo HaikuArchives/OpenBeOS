@@ -73,8 +73,11 @@ _EXPORT int select(int nbits, struct fd_set *rbits,
 	};
 	
 	rv = ioctl(tmpfd, NET_STACK_SELECT, &args, sizeof(args));
-
-	if (timeout) {
+	
+	/* We should never return EWOULDBLOCK, but other error
+	 * values are valid
+	 */
+	if (timeout && rv == EWOULDBLOCK) {
 		signal(SIGALRM, previous_sigalrm_handler);
 		if (when < system_time())
 			rv = 0;
