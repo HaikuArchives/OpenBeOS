@@ -98,6 +98,7 @@ struct mbuf {
 
 /* define a little macro that gives us the data pointer for an mbuf */
 #define mtod(m, t)		((t)((m)->m_data))
+#define dtom(x)         ((struct mbuf *)((int)(x) & ~(MSIZE-1)))
 
 /* mbuf flags */
 enum {
