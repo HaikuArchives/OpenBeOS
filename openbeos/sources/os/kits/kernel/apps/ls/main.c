@@ -61,7 +61,6 @@ int main(int argc, char *argv[])
 		case STREAM_TYPE_DIR: {
 			int fd;
 			char buf[1024];
-			int len;
 
 			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
