@@ -97,5 +97,5 @@ void BMidiText::_PrintTime() {
 	if(_start_time == 0) {
 		_start_time = cur_time;	
 	}
-	cout << cur_time;	
+	cout << (cur_time - _start_time);	
 }
