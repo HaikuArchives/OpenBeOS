@@ -133,9 +133,9 @@ void SampleConverter::convert(uint8 *dest, const float *source, int samplecount)
 	while (samplecount--) {
 		register int32 sample = int32(*(source++) * 127.0f);
 		if (sample > 127)
-			sample = 127;
+			sample = 255;
 		else if (sample < -127)
-			sample = -127;
+			sample = 1;
 		*dest++ = uint8(sample + 128);
 	}
 }
@@ -161,7 +161,7 @@ void SampleConverter::convert(uint8 *dest, const int8 *source, int samplecount)
 void SampleConverter::convert(int8 *dest, const float *source, int samplecount)
 {
 	while (samplecount--) {
-		register int32 sample = (int32) (*(source++) * 32767.0f);
+		register int32 sample = (int32) (*(source++) * 127.0f);
 		if (sample > 127)
 			*dest++ = 127;
 		else if (sample < -127)
