@@ -133,6 +133,7 @@ static void attach_device(int devid, char *driver, char *devno)
 	struct ifaddr *ifa;
 	struct sockaddr_dl *sdl;
 	status_t status;
+	int fsz = 0;
 		
 	ed = malloc(sizeof(struct ether_device));
 	if (!ed)
@@ -143,17 +144,24 @@ static void attach_device(int devid, char *driver, char *devno)
 	/* get the MAC address... */
 	status = ioctl(devid, IF_GETADDR, &ed->sc_addr, 6);
 	if (status < B_OK) {
-		printf("Failed to get a MAC address, ignoring %s/%s\n", driver, devno);
+		printf("%s/%s: ignored: Failed to get a MAC address\n", driver, devno);
 		close(devid);
 		free(ed);
 		return;
 	}
+	/* Try to detrmine the MTU to use */
+	status = ioctl(devid, IF_GETFRAMESIZE, &fsz, sizeof(fsz));
+	if (status < 0) {
+		printf("%s/%s: IF_GETFRAMESIZE not supported, defaulting to %d\n",
+		       driver, devno, ETHERMTU);
+		ifp->if_mtu = ETHERMTU;
+	} else
+		ifp->if_mtu = fsz;	
 	
 	ifp->devid = -1;
 	ifp->if_type = IFT_ETHER;
 	ifp->name = strdup(driver);
 	ifp->if_unit = atoi(devno);
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_hdrlen = 14;
 	ifp->if_addrlen = 6;
 	ifp->if_flags |= (IFF_BROADCAST|IFF_SIMPLEX|IFF_MULTICAST);
