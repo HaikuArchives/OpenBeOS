@@ -451,7 +451,11 @@ int
 bfs_select(void *ns, void *node, void *cookie, uint8 event, uint32 ref, selectsync *sync)
 {
 	FUNCTION_START(("event = %d, ref = %lu, sync = %p\n",event,ref,sync));
-	return B_ERROR;
+#ifndef USER
+	notify_select_event(sync, ref);
+#endif
+
+	return B_OK;
 }
 
 
@@ -459,7 +463,7 @@ int
 bfs_deselect(void *ns, void *node, void *cookie, uint8 event, selectsync *sync)
 {
 	FUNCTION();
-	return B_ERROR;
+	return B_OK;
 }
 
 
