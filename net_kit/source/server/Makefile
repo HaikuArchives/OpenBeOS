@@ -10,7 +10,7 @@ test: test_mbuf
 	@testread
 
 testread: $(OBJS) testread.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o testread $(OBJS) testread.o
+	$(CC) $(CFLAGS) $(INCLUDES) -o testread $(OBJS) ethernet/ethernet.o testread.o
 
 test_mbuf: $(OBJS) test_mbuf.o
 	$(CC) $(CFLAGS) $(INCLUDES) -o test_mbuf $(OBJS) test_mbuf.o

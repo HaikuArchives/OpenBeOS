@@ -6,6 +6,8 @@
 
 #include "if.h"
 #include "net_misc.h"
+#include "mbuf.h"
+#include "ethernet/ethernet.h"
 
 static void dump_buffer(char *buffer) {
 	/* just dump first 32 bytes... */
@@ -34,6 +36,12 @@ int main(int argc, char **argv)
 	int on = 1;
 	ether_addr ea;
 
+	/* This shouldn't really be here, but it needs to be here
+	 * or we'll not have any pools setup to work with. This should
+	 * eventually be called in the net_module init.
+	 */
+	mbinit();
+	
 	printf("Network Card Read Test\n");
 	printf("======================\n\n");
 	printf("Have you set the device path to point at your card?\n");
@@ -59,7 +67,14 @@ int main(int argc, char **argv)
 		printf("Unable to set promiscuous. %s\n", strerror(status));
 		
 	while ((status = read(dev, buffer, len)) >= B_OK) {
-		dump_buffer(buffer);
+		if (status <= MLEN) {
+			struct mbuf *mb = m_gethdr(MT_HEADER);
+			memcpy(mtod(mb, void *), buffer, len);
+			ethernet_input(mb);
+		} else {
+			printf("status = %d, MLEN = %d\n", status, MLEN);
+			dump_buffer(buffer);
+		}
 	}
 	
 	close (dev);

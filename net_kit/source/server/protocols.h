@@ -6,11 +6,11 @@
 #ifndef OBOS_PROTOCOLS_H
 #define OBOS_PROTOCOLS_H
 
-#define 	IPV4		0x0800
-#define		ARP		0x0806
-#define		RARP		0x8035
+#define 	PROT_IPV4		0x0800
+#define		PROT_ARP		0x0806
+#define		PROT_RARP		0x8035
 
-#define 	IPV6		0x86dd
+#define 	PROT_IPV6		0x86dd
 
 #endif /* OBOS_PROTOCOLS_H */
 
