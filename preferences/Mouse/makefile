@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= Calculator
+NAME= Mouse
 
 # specify the type of binary
 #	APP:	Application
@@ -30,11 +30,11 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= Keyboard.cpp KeyboardWindow.cpp KeyboardView.cpp KeyboardSettings.cpp
+SRCS= Mouse.cpp MouseWindow.cpp MouseView.cpp MouseSettings.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS= Keyboard.rsrc
+RSRCS= Mouse.rsrc
 
 # @<-src@ 
 #%}
@@ -51,7 +51,7 @@ RSRCS= Keyboard.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be root translation
+LIBS= be translation
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
