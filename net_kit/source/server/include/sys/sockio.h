@@ -24,6 +24,15 @@
 #define FIONBIO		_IOW('f', 126, int)		/* set/clear non-blocking i/o */
 #define FIONREAD	_IOR('f', 127, int)		/* get # bytes to read */
 
+#define SIOCSHIWAT      _IOW('s',  0, int)             /* set high watermark */
+#define SIOCGHIWAT      _IOR('s',  1, int)             /* get high watermark */
+#define SIOCSLOWAT      _IOW('s',  2, int)             /* set low watermark */
+#define SIOCGLOWAT      _IOR('s',  3, int)             /* get low watermark */
+#define SIOCATMARK      _IOR('s',  7, int)             /* at oob mark? */
+
+#define SIOCADDRT       _IOW('r', 10, struct ortentry) /* add route */
+#define SIOCDELRT       _IOW('r', 11, struct ortentry) /* delete route */
+
 #define SIOCSIFADDR     _IOW('i', 12, struct ifreq)    /* set ifnet address */
 #define OSIOCGIFADDR    _IOWR('i', 13, struct ifreq)    /* get ifnet address */
 #define SIOCGIFADDR     _IOWR('i', 33, struct ifreq)    /* get ifnet address */
@@ -48,6 +57,9 @@
 
 #define SIOCGIFMTU      _IOWR('i', 126, struct ifreq)   /* get ifnet MTU */
 #define SIOCSIFMTU      _IOW('i', 127, struct ifreq)    /* set ifnet MTU */
+
+#define SIOCADDMULTI    _IOW('i', 49, struct ifreq)    /* add m'cast addr */
+#define SIOCDELMULTI    _IOW('i', 50, struct ifreq)    /* del m'cast addr */
 
 #endif /* SYS_NET_IOCTL_H */
 
