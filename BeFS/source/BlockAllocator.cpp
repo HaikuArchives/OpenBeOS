@@ -477,6 +477,9 @@ BlockAllocator::Free(Transaction *transaction,block_run &run)
 		start = 0;
 	}
 
+	// ToDo: the super block has to be written back to disk!
+	fVolume->SuperBlock().used_blocks -= run.length;
+
 	return B_OK;
 }
 
