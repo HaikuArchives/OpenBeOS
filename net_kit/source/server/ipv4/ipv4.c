@@ -123,8 +123,10 @@ struct mbuf * ip_srcroute(void)
 
 printf("ip_srcroute\n");
 	
-	if (ip_nhops == 0)
+	if (ip_nhops == 0) {
+		printf("ipsrcroute: ip_nhops = 0\n");
 		return NULL;
+	}
 	m = m_get(MT_SOOPTS);
 	if (!m)
 		return NULL;
@@ -141,10 +143,11 @@ printf("ip_srcroute\n");
 #undef OPTSIZ
 
 	while (p >= ip_srcrt.route) {
-		*q++ = *q--;
+		*q++ = *p--;
 	}
 	
 	*q = ip_srcrt.dst;
+printf("ip_srcroute finished\n");
 	return m;
 }
 
