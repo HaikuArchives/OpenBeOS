@@ -29,7 +29,6 @@ int select(int nbits, struct fd_set *rbits,
 	int tmpfd;
 	struct select_args sa;
 	int rv;
-	int i;
 	
 	if (sf == NULL) {
 		// first time, try to figure if libroot.so have a (better) select() support
@@ -58,23 +57,8 @@ int select(int nbits, struct fd_set *rbits,
 	sa.ebits = ebits;
 	sa.tv = timeout;
 	
-	for (i=3; i < sa.mfd;i++) {
-		printf("socket %d: ", i);
-		if (rbits)
-			if (FD_ISSET(i, rbits))
-				printf(" read ");
-		if (wbits)
-			if (FD_ISSET(i, wbits))
-				printf(" write ");
-		if (ebits)
-			if (FD_ISSET(i, ebits))
-				printf(" except ");
-		printf("\n");
-	}
-	
 	sa.rv = B_OK;
 	rv = ioctl(tmpfd, NET_SOCKET_SELECT, &sa, sizeof(sa));
-	printf("error = %d\n", rv);
 
 	close(tmpfd);
 	
@@ -184,7 +168,7 @@ int sysctl (int *name, uint namelen, void *oldp, size_t *oldlenp,
 	int s;
 	struct sysctl_args sa;
 	int rv;
-	
+
 	s = socket(PF_ROUTE, SOCK_RAW, 0);
 	if (s < 0)
 		return s;
@@ -206,14 +190,24 @@ int sysctl (int *name, uint namelen, void *oldp, size_t *oldlenp,
 	
 int connect(int sock, const struct sockaddr *name, int namelen)
 {
-	printf("connect!\n");
-	return -1;
+	struct connect_args ca;
+	
+	ca.rv = 0;
+	ca.name = (caddr_t)name;
+	ca.namelen = namelen;
+	
+	ioctl(sock, NET_SOCKET_CONNECT, &ca, sizeof(ca));
+	return ca.rv;
 }
 
 int send(int sock, const caddr_t data, int buflen, int flags)
 {
-	printf("send!\n");
-	return -1;
+	int rv = 0;
+//	printf("send: %d bytes from %p (flags = %d)\n", buflen, data, flags);
+	/* flags gets ignored here... */
+	rv = write(sock, data, buflen);
+//	printf("send (write) gave %d\n", rv);
+	return rv;
 }
 
 int getsockopt(int sock, int level, int optnum, void * val, size_t *valsize)

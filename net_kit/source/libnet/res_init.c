@@ -145,6 +145,7 @@ res_init()
 	int haveenv = 0;
 	int havesearch = 0;
 	size_t len;
+	char lbuf[80];
 #ifdef RESOLVSORT
 	int nsort = 0;
 	char *net;
@@ -152,7 +153,6 @@ res_init()
 #ifndef RFC1535
 	int dots;
 #endif
-
 	/*
 	 * These three fields used to be statically initialized.  This made
 	 * it hard to use this code in a shared library.  It is necessary,
@@ -197,7 +197,6 @@ res_init()
 	strncpy(_res.lookups, "f", sizeof _res.lookups);
 
 	/* Allow user to override the local domain definition */
-//	if (issetugid() == 0 && (cp = getenv("LOCALDOMAIN")) != NULL) {
 	if ((cp = getenv("LOCALDOMAIN")) != NULL) {
 		strncpy(_res.defdname, cp, sizeof(_res.defdname));
 		haveenv++;
@@ -241,153 +240,151 @@ res_init()
 
 	    /* read the config file */
 	    buf[0] = '\0';
-	    while ((cp = fgets(buf, sizeof(buf), fp)) != NULL) {
-//	    while ((cp = fgetln(fp, &len)) != NULL) {
-		/* skip lines that are too long or zero length */
-		len = strlen(buf);
-//		if (len >= sizeof(buf) || len == 0)
-//		    continue;
-//		(void)memcpy(buf, cp, len);
-		buf[len] = '\0';
-		/* skip comments */
-		if ((cp = strpbrk(buf, ";#")) != NULL)
-			*cp = '\0';
-		if (buf[0] == '\0')
-			continue;
-		/* read default domain name */
-		if (MATCH(buf, "domain")) {
-		    if (haveenv)	/* skip if have from environ */
+	    while (fgets(lbuf, 80, fp) != NULL) {
+			/* skip lines that are too long or zero length */
+			len = strlen(lbuf);
+			cp = lbuf;
+			if (len >= sizeof(buf) || len == 0)
 			    continue;
-		    cp = buf + sizeof("domain") - 1;
-		    while (*cp == ' ' || *cp == '\t')
-			    cp++;
-		    if ((*cp == '\0') || (*cp == '\n'))
-			    continue;
-		    strncpy(_res.defdname, cp, sizeof(_res.defdname));
-		    if ((cp = strpbrk(_res.defdname, " \t\n")) != NULL)
-			    *cp = '\0';
-		    havesearch = 0;
-		    continue;
-		}
-		/* lookup types */
-		if (MATCH(buf, "lookup")) {
-		    char *sp = NULL;
+			memcpy(buf, cp, len);
+			buf[len] = '\0';
+			/* skip comments */
+			if ((cp = strpbrk(buf, ";#")) != NULL)
+				*cp = '\0';
+			if (buf[0] == '\0')
+				continue;
+			/* read default domain name */
+			if (MATCH(buf, "domain")) {
+			    if (haveenv)	/* skip if have from environ */
+				    continue;
+		    	cp = buf + sizeof("domain") - 1;
+			    while (*cp == ' ' || *cp == '\t')
+				    cp++;
+			    if ((*cp == '\0') || (*cp == '\n'))
+				    continue;
+			    strncpy(_res.defdname, cp, sizeof(_res.defdname));
+			    if ((cp = strpbrk(_res.defdname, " \t\n")) != NULL)
+				    *cp = '\0';
+		    	havesearch = 0;
+		    	continue;
+			}
+			/* lookup types */
+			if (MATCH(buf, "lookup")) {
+			    char *sp = NULL;
 
-		    memset(_res.lookups, 0, sizeof _res.lookups);
-		    cp = buf + sizeof("lookup") - 1;
-		    for (n = 0;; cp++) {
-		    	    if (n == MAXDNSLUS)
-				    break;
-			    if ((*cp == '\0') || (*cp == '\n')) {
-				    if (sp) {
-					    if (*sp=='y' || *sp=='b' || *sp=='f')
-						    _res.lookups[n++] = *sp;
-					    sp = NULL;
-				    }
-				    break;
-			    } else if ((*cp == ' ') || (*cp == '\t') || (*cp == ',')) {
-				    if (sp) {
-					    if (*sp=='y' || *sp=='b' || *sp=='f')
-						    _res.lookups[n++] = *sp;
-					    sp = NULL;
-				    }
-			    } else if (sp == NULL)
-				    sp = cp;
-		    }
-		    continue;
-		}
-		/* set search list */
-		if (MATCH(buf, "search")) {
-		    if (haveenv)	/* skip if have from environ */
-			    continue;
-		    cp = buf + sizeof("search") - 1;
-		    while (*cp == ' ' || *cp == '\t')
-			    cp++;
-		    if ((*cp == '\0') || (*cp == '\n'))
-			    continue;
-		    strncpy(_res.defdname, cp, sizeof(_res.defdname));
-		    if ((cp = strchr(_res.defdname, '\n')) != NULL)
-			    *cp = '\0';
-		    /*
-		     * Set search list to be blank-separated strings
-		     * on rest of line.
-		     */
-		    cp = _res.defdname;
-		    pp = _res.dnsrch;
-		    *pp++ = cp;
-		    for (n = 0; *cp && pp < _res.dnsrch + MAXDNSRCH; cp++) {
-			    if (*cp == ' ' || *cp == '\t') {
-				    *cp = 0;
-				    n = 1;
-			    } else if (n) {
-				    *pp++ = cp;
-				    n = 0;
+			    memset(_res.lookups, 0, sizeof _res.lookups);
+			    cp = buf + sizeof("lookup") - 1;
+			    for (n = 0;; cp++) {
+		    		    if (n == MAXDNSLUS)
+					    break;
+				    if ((*cp == '\0') || (*cp == '\n')) {
+					    if (sp) {
+						    if (*sp=='y' || *sp=='b' || *sp=='f')
+							    _res.lookups[n++] = *sp;
+						    sp = NULL;
+				    	}
+					    break;
+			    	} else if ((*cp == ' ') || (*cp == '\t') || (*cp == ',')) {
+				    	if (sp) {
+					    	if (*sp=='y' || *sp=='b' || *sp=='f')
+						    	_res.lookups[n++] = *sp;
+						    sp = NULL;
+					    }
+				    } else if (sp == NULL)
+					    sp = cp;
 			    }
-		    }
-		    /* null terminate last domain if there are excess */
-		    while (*cp != '\0' && *cp != ' ' && *cp != '\t')
-			    cp++;
-		    *cp = '\0';
-		    *pp++ = 0;
-		    havesearch = 1;
-		    continue;
-		}
-		/* read nameservers to query */
-		if (MATCH(buf, "nameserver") && nserv < MAXNS) {
+			    continue;
+			}
+			/* set search list */
+			if (MATCH(buf, "search")) {
+			    if (haveenv)	/* skip if have from environ */
+				    continue;
+			    cp = buf + sizeof("search") - 1;
+			    while (*cp == ' ' || *cp == '\t')
+				    cp++;
+			    if ((*cp == '\0') || (*cp == '\n'))
+				    continue;
+			    strncpy(_res.defdname, cp, sizeof(_res.defdname));
+			    if ((cp = strchr(_res.defdname, '\n')) != NULL)
+				    *cp = '\0';
+			    /*
+			     * Set search list to be blank-separated strings
+			     * on rest of line.
+			     */
+			    cp = _res.defdname;
+			    pp = _res.dnsrch;
+			    *pp++ = cp;
+			    for (n = 0; *cp && pp < _res.dnsrch + MAXDNSRCH; cp++) {
+				    if (*cp == ' ' || *cp == '\t') {
+					    *cp = 0;
+					    n = 1;
+				    } else if (n) {
+					    *pp++ = cp;
+					    n = 0;
+				    }
+			    }
+			    /* null terminate last domain if there are excess */
+			    while (*cp != '\0' && *cp != ' ' && *cp != '\t')
+				    cp++;
+			    *cp = '\0';
+			    *pp++ = 0;
+			    havesearch = 1;
+			    continue;
+			}
+			/* read nameservers to query */
+			if (MATCH(buf, "nameserver") && nserv < MAXNS) {
 #ifdef INET6
-		    char *q;
-		    struct addrinfo hints, *res;
-		    char pbuf[NI_MAXSERV];
+			    char *q;
+			    struct addrinfo hints, *res;
+			    char pbuf[NI_MAXSERV];
 #else
-		    struct in_addr a;
+			    struct in_addr a;
 #endif /* INET6 */
 
-		    cp = buf + sizeof("nameserver") - 1;
-		    while (*cp == ' ' || *cp == '\t')
-			cp++;
+			    cp = buf + sizeof("nameserver") - 1;
+			    while (*cp == ' ' || *cp == '\t')
+				cp++;
 #ifdef INET6
-		    if ((*cp == '\0') || (*cp == '\n'))
-			continue;
-		    for (q = cp; *q; q++) {
-			if (isspace(*q)) {
-			    *q = '\0';
-			    break;
-			}
-		    }
-		    memset(&hints, 0, sizeof(hints));
-		    hints.ai_flags = AI_NUMERICHOST;
-		    hints.ai_socktype = SOCK_DGRAM;
-		    snprintf(pbuf, sizeof(pbuf), "%d", NAMESERVER_PORT);
-		    res = NULL;
-		    if (getaddrinfo(cp, pbuf, &hints, &res) == 0 &&
-			    res->ai_next == NULL) {
-			if (res->ai_addrlen <= sizeof(_res_ext.nsaddr_list[nserv])) {
-			    memcpy(&_res_ext.nsaddr_list[nserv], res->ai_addr,
-				res->ai_addrlen);
-			} else {
-			    memset(&_res_ext.nsaddr_list[nserv], 0,
-				sizeof(_res_ext.nsaddr_list[nserv]));
-			}
-			if (res->ai_addrlen <= sizeof(_res.nsaddr_list[nserv])) {
-			    memcpy(&_res.nsaddr_list[nserv], res->ai_addr,
-				res->ai_addrlen);
-			} else {
-			    memset(&_res.nsaddr_list[nserv], 0,
-				sizeof(_res.nsaddr_list[nserv]));
-			}
-			nserv++;
+			    if ((*cp == '\0') || (*cp == '\n'))
+				continue;
+			    for (q = cp; *q; q++) {
+				if (isspace(*q)) {
+				    *q = '\0';
+				    break;
+				}
+			    }
+			    memset(&hints, 0, sizeof(hints));
+			    hints.ai_flags = AI_NUMERICHOST;
+			    hints.ai_socktype = SOCK_DGRAM;
+			    snprintf(pbuf, sizeof(pbuf), "%d", NAMESERVER_PORT);
+			    res = NULL;
+			    if (getaddrinfo(cp, pbuf, &hints, &res) == 0 &&
+				    res->ai_next == NULL) {
+				if (res->ai_addrlen <= sizeof(_res_ext.nsaddr_list[nserv])) {
+				    memcpy(&_res_ext.nsaddr_list[nserv], res->ai_addr,
+					res->ai_addrlen);
+				} else {
+				    memset(&_res_ext.nsaddr_list[nserv], 0,
+					sizeof(_res_ext.nsaddr_list[nserv]));
+				}
+				if (res->ai_addrlen <= sizeof(_res.nsaddr_list[nserv])) {
+				    memcpy(&_res.nsaddr_list[nserv], res->ai_addr,
+					res->ai_addrlen);
+				} else {
+				    memset(&_res.nsaddr_list[nserv], 0,
+					sizeof(_res.nsaddr_list[nserv]));
+				}
+				nserv++;
 		    }
 		    if (res)
-			freeaddrinfo(res);
+				freeaddrinfo(res);
 #else /* INET6 */
 		    if ((*cp != '\0') && (*cp != '\n') && inet_aton(cp, &a)) {
-			_res.nsaddr_list[nserv].sin_addr = a;
-			_res.nsaddr_list[nserv].sin_family = AF_INET;
-			_res.nsaddr_list[nserv].sin_port =
-				htons(NAMESERVER_PORT);
-			_res.nsaddr_list[nserv].sin_len =
-				sizeof(struct sockaddr_in);
-			nserv++;
+				_res.nsaddr_list[nserv].sin_addr = a;
+				_res.nsaddr_list[nserv].sin_family = AF_INET;
+				_res.nsaddr_list[nserv].sin_port = htons(NAMESERVER_PORT);
+				_res.nsaddr_list[nserv].sin_len = sizeof(struct sockaddr_in);
+				nserv++;
 		    }
 #endif /* INET6 */
 		    continue;

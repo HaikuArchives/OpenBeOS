@@ -666,15 +666,13 @@ struct hostent *gethostbyname2(const char *name, int af)
 	return (hp);
 }
 
-struct hostent *
-gethostbyaddr(addr, len, af)
-	const char *addr;	/* XXX should have been def'd as u_char! */
-	int len, af;
+
+struct hostent *gethostbyaddr(const char *addr, int len, int af)
 {
 	const u_char *uaddr = (const u_char *)addr;
 	int n, size, i;
 	querybuf buf;
-	register struct hostent *hp;
+	struct hostent *hp;
 	char qbuf[MAXDNAME+1], *qp;
 	extern struct hostent *_gethtbyaddr(), *_yp_gethtbyaddr();
 	char lookups[MAXDNSLUS];
@@ -682,6 +680,7 @@ gethostbyaddr(addr, len, af)
 	
 	acquire_sem(gethostnamadr);
 	if ((_res.options & RES_INIT) == 0 && res_init() == -1) {
+//printf("gethostbyaddr: calling _gethtbyaddr\n");
 		res = _gethtbyaddr(addr, len, af);
 		release_sem_etc(gethostnamadr,1, B_CAN_INTERRUPT);
 		return (res);
@@ -752,6 +751,7 @@ gethostbyaddr(addr, len, af)
 			break;
 #endif
 		case 'b':
+//printf("res_query for %s\n", qbuf);
 			n = res_query(qbuf, C_IN, T_PTR, (u_char *)buf.buf,
 			    sizeof buf.buf);
 			if (n < 0) {
@@ -788,10 +788,9 @@ gethostbyaddr(addr, len, af)
 	return (hp);
 }
 
-void
-_sethtent(f)
-	int f;
+void _sethtent(int f)
 {
+//printf("_sethtent\n");
 	if (hostf == NULL)
 		hostf = fopen(_PATH_HOSTS, "r" );
 	else
@@ -799,8 +798,7 @@ _sethtent(f)
 	stayopen = f;
 }
 
-void
-_endhtent()
+void _endhtent()
 {
 	if (hostf && !stayopen) {
 		(void) fclose(hostf);
@@ -808,32 +806,32 @@ _endhtent()
 	}
 }
 
-struct hostent *
-_gethtent()
+
+struct hostent *_gethtent()
 {
 	char *p;
 	register char *cp, **q;
 	int af = 0;
 	size_t len = 0;
-
+	char lbuf[80];
+//printf("_gethtent\n");
 	if (!hostf && !(hostf = fopen(_PATH_HOSTS, "r" ))) {
 		h_errno = NETDB_INTERNAL;
 		return (NULL);
 	}
  again:
  
- 	if (fgets(hostbuf, len, hostf) == NULL) {
-//	if ((p = fgetln(hostf, &len)) == NULL) {
+ 	if (fgets(lbuf, 80, hostf) == NULL) {
 		h_errno = HOST_NOT_FOUND;
 		return (NULL);
 	}
-	len = strlen(hostbuf);
-	p = hostbuf;
-//	if (p[len-1] == '\n')
-//		len--;
-//	if (len >= sizeof(hostbuf) || len == 0)
-//		goto again;
-//	p = memcpy(hostbuf, p, len);
+	len = strlen(lbuf);
+	p = lbuf;
+	if (p[len-1] == '\n')
+		len--;
+	if (len >= sizeof(hostbuf) || len == 0)
+		goto again;
+	p = memcpy(hostbuf, p, len);
 	hostbuf[len] = '\0';
 	if (*p == '#')
 		goto again;
@@ -897,9 +895,8 @@ _gethtent()
 	return (&host);
 }
 
-struct hostent *
-_gethtbyname(name)
-	const char *name;
+
+struct hostent *_gethtbyname(const char *name)
 {
 	extern struct hostent *_gethtbyname2();
 	struct hostent *hp;
@@ -912,13 +909,11 @@ _gethtbyname(name)
 	return (_gethtbyname2(name, AF_INET));
 }
 
-struct hostent *
-_gethtbyname2(name, af)
-	const char *name;
-	int af;
+
+struct hostent *_gethtbyname2(const char *name, int af)
 {
-	register struct hostent *p;
-	register char **cp;
+	struct hostent *p;
+	char **cp;
 	
 	_sethtent(0);
 	while ((p = _gethtent())) {
@@ -935,13 +930,11 @@ _gethtbyname2(name, af)
 	return (p);
 }
 
-struct hostent *
-_gethtbyaddr(addr, len, af)
-	const char *addr;
-	int len, af;
-{
-	register struct hostent *p;
 
+struct hostent *_gethtbyaddr(const char *addr, int len, int af)
+{
+	struct hostent *p;
+//printf("_gethtbyaddr\n");
 	host.h_length = len;
 	host.h_addrtype = af;
 
