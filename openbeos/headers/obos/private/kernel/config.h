@@ -62,7 +62,7 @@ enum { SUPERBLOCK_FULLNESS_GROUP = 9 };
 
 // CACHE_LINE = The number of bytes in a cache line.
 
-#if defined(i386) || defined(WIN32)
+#if defined(i386) || defined(WIN32) || defined(x86)
 #define CACHE_LINE 32
 #endif
 

@@ -5,6 +5,10 @@
 #ifndef _KERNEL_KTYPES_H
 #define _KERNEL_KTYPES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <types.h>
 
 typedef int thread_id;
@@ -59,5 +63,9 @@ typedef unsigned short     ulong;
 // Handled in arch_ktypes.h
 
 //typedef unsigned long addr;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

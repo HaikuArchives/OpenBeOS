@@ -10,11 +10,9 @@
 
 #include <ktypes.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 int	      atoi(char const *); 
 unsigned int  atoui(const char *num);

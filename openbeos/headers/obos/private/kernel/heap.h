@@ -512,7 +512,7 @@ superblock * hoardHeap::reuse (int sizeclass)
 	      sb->getNumBlocks() - sb->getNumAvailable(),
 	      sb->getNumBlocks());
 
-    sb = new ((char *) sb) superblock (numBlocks(sizeclass), sizeclass, this);
+    sb = new /*((char *) sb)*/ superblock (numBlocks(sizeclass), sizeclass, this);
 
     incStats (sizeclass,
 	      sb->getNumBlocks() - sb->getNumAvailable(),

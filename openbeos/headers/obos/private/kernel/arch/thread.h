@@ -19,9 +19,7 @@ struct thread *arch_thread_get_current_thread(void);
 void arch_thread_set_current_thread(struct thread *t);
 
 // for any inline overrides
-#ifdef ARCH_x86
-#include <arch/x86/thread.h>
-#endif
+#include <arch_thread.h>
 
 #endif
 
