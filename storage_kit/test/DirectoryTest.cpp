@@ -192,17 +192,14 @@ DirectoryTest::InitTest1()
 		// R5 returns B_BAD_VALUE instead of B_NOT_A_DIRECTORY.
 		CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	}
-/* BEntry doesn't seem to check the entry name length.
 	nextSubTest();
 	{
 		BEntry entry(tooLongEntryname);
 		// R5 returns E2BIG instead of B_NAME_TOO_LONG
-printf("entry.InitCheck(): %x\n", entry.InitCheck());
-		CPPUNIT_ASSERT( entry.InitCheck() == E2BIG );
+		CPPUNIT_ASSERT( equals(entry.InitCheck(), E2BIG, B_NAME_TOO_LONG) );
 		BDirectory dir(&entry);
 		CPPUNIT_ASSERT( equals(dir.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
 	}
-*/
 
 	// 4. BDirectory(const entry_ref*)
 	nextSubTest();
@@ -249,13 +246,14 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 		BDirectory dir(&nref);
 		CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 	}
-/*	R5: crashs, when passing a NULL node_ref.
+// R5: crashs, when passing a NULL node_ref.
+#if !SK_TEST_R5
 	nextSubTest();
 	{
 		BDirectory dir((node_ref *)NULL);
 		CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	}
-*/
+#endif
 	nextSubTest();
 	{
 		BNode node(existingFile);
@@ -323,16 +321,13 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 		// R5 returns B_BAD_VALUE instead of B_NOT_A_DIRECTORY.
 		CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	}
-/* BEntry doesn't seem to check the entry name length.
 	nextSubTest();
 	{
 		BDirectory pathDir(tooLongSuperEntryname);
 		CPPUNIT_ASSERT( pathDir.InitCheck() == B_OK );
 		BDirectory dir(&pathDir, tooLongRelEntryname);
-printf("dir.InitCheck(): %x\n", dir.InitCheck());
 		CPPUNIT_ASSERT( dir.InitCheck() == B_NAME_TOO_LONG );
 	}
-*/
 	nextSubTest();
 	{
 		BDirectory pathDir(fileSuperDirname);
@@ -430,15 +425,13 @@ DirectoryTest::InitTest2()
 	CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	dir.Unset();
 	//
-/* BEntry doesn't seem to check the entry name length.
 	nextSubTest();
 	entry.SetTo(tooLongEntryname);
 	// R5 returns E2BIG instead of B_NAME_TOO_LONG
-	CPPUNIT_ASSERT( entry.InitCheck() == E2BIG );
-	CPPUNIT_ASSERT( dir.SetTo(&entry) == B_BAD_ADDRESS );
-	CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_ADDRESS );
+	CPPUNIT_ASSERT( equals(entry.InitCheck(), E2BIG, B_NAME_TOO_LONG) );
+	CPPUNIT_ASSERT( equals(dir.SetTo(&entry), B_BAD_ADDRESS, B_BAD_VALUE) );
+	CPPUNIT_ASSERT( equals(dir.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
 	dir.Unset();
-*/
 
 	// 4. BDirectory(const entry_ref*)
 	nextSubTest();
@@ -482,12 +475,13 @@ DirectoryTest::InitTest2()
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
 	dir.Unset();
 	//
-/*	R5: crashs, when passing a NULL node_ref.
+// R5: crashs, when passing a NULL node_ref.
+#if !SK_TEST_R5
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo((node_ref *)NULL) == B_BAD_VALUE );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	dir.Unset();
-*/
+#endif
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( node.SetTo(existingFile) == B_OK );
@@ -553,14 +547,13 @@ DirectoryTest::InitTest2()
 	CPPUNIT_ASSERT( dir.InitCheck() == B_BAD_VALUE );
 	dir.Unset();
 	//
-/* BEntry doesn't seem to check the entry name length.
 	nextSubTest();
 	pathDir.SetTo(tooLongSuperEntryname);
 	CPPUNIT_ASSERT( pathDir.InitCheck() == B_OK );
-	CPPUNIT_ASSERT( dir.SetTo(&pathDir, tooLongRelEntryname) == B_NAME_TOO_LONG );
+	CPPUNIT_ASSERT( dir.SetTo(&pathDir, tooLongRelEntryname)
+					== B_NAME_TOO_LONG );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NAME_TOO_LONG );
 	dir.Unset();
-*/
 	//
 	nextSubTest();
 	pathDir.SetTo(fileSuperDirname);
@@ -593,16 +586,16 @@ DirectoryTest::GetEntryTest()
 	CPPUNIT_ASSERT( entry == BEntry(existing) );
 	dir.Unset();
 	entry.Unset();
-/*	R5 crashs, when passing a NULL BEntry.
 	//
+#if !SK_TEST_R5
+// R5: crashs, when passing a NULL BEntry.
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(existing) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
-	CPPUNIT_ASSERT( dir.GetEntry((BEntry *)NULL) == B_OK );
-	CPPUNIT_ASSERT( entry == BEntry(existing) );
+	CPPUNIT_ASSERT( dir.GetEntry((BEntry *)NULL) == B_BAD_VALUE );
 	dir.Unset();
 	entry.Unset();
-*/
+#endif
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(nonExisting) == B_ENTRY_NOT_FOUND );
@@ -710,16 +703,33 @@ DirectoryTest::FindEntryTest()
 	entry.Unset();
 	path.Unset();
 	chdir("/");
+	// abstract entry
+	nextSubTest();
+	CPPUNIT_ASSERT( dir.SetTo(nonExistingSuper) == B_OK );
+	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
+	chdir(existing);
+	CPPUNIT_ASSERT( entry.SetTo(existingFile) == B_OK );
+	CPPUNIT_ASSERT( dir.FindEntry(nonExistingRel, &entry) == B_ENTRY_NOT_FOUND );
+	CPPUNIT_ASSERT( entry.InitCheck() == B_NO_INIT );
+	dir.Unset();
+	entry.Unset();
+	path.Unset();
+	chdir("/");
 	// bad args
-	// R5 crashs, when passing a NULL BEntry.
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(existing) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
-//	CPPUNIT_ASSERT( dir.FindEntry(existingRelSub, NULL) == B_BAD_VALUE );
+// R5: crashs, when passing a NULL BEntry.
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( dir.FindEntry(existingRelSub, NULL) == B_BAD_VALUE );
+#endif
 	CPPUNIT_ASSERT( entry.SetTo(existingFile) == B_OK );
 	CPPUNIT_ASSERT( dir.FindEntry(NULL, &entry) == B_BAD_VALUE );
 	CPPUNIT_ASSERT( equals(entry.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
-//	CPPUNIT_ASSERT( dir.FindEntry(NULL, NULL) == B_BAD_VALUE );
+// R5: crashs, when passing a NULL BEntry.
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( dir.FindEntry(NULL, NULL) == B_BAD_VALUE );
+#endif
 	dir.Unset();
 	entry.Unset();
 	path.Unset();
@@ -771,17 +781,14 @@ DirectoryTest::FindEntryTest()
 	dir.Unset();
 	entry.Unset();
 	path.Unset();
-/* BEntry doesn't seem to check handle cyclic links correctly.
 	// traverse a cyclic link
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT );
-printf("dir.FindEntry(cyclicLink1, &entry, true): %x\n", dir.FindEntry(cyclicLink1, &entry, true));
 	CPPUNIT_ASSERT( dir.FindEntry(cyclicLink1, &entry, true) == B_LINK_LIMIT );
 	CPPUNIT_ASSERT( entry.InitCheck() == B_LINK_LIMIT );
 	dir.Unset();
 	entry.Unset();
 	path.Unset();
-*/
 }
 
 // ContainsTest
@@ -961,15 +968,15 @@ DirectoryTest::ContainsTest()
 	dir.Unset();
 	entry.Unset();
 	// initialized BDirectory, bad args
-/*	R5 crashs, when passing a NULL BEntry
+// R5 crashs, when passing a NULL BEntry
+#if !SK_TEST_R5
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(existing) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
-	CPPUNIT_ASSERT( dir.Contains((const BEntry*)NULL) == true );
+	CPPUNIT_ASSERT( dir.Contains((const BEntry*)NULL) == false );
 	dir.Unset();
-*/
-	// initialized BDirectory, bad args
-//	R5 crashs, when passing a NULL BEntry
+#endif
+	// uninitialized BDirectory, bad args
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT );
 	CPPUNIT_ASSERT( dir.Contains((const BEntry*)NULL) == false );
@@ -1259,7 +1266,6 @@ DirectoryTest::EntryIterationTest()
 				+ dirPathName + entryName);
 	testSet.add(entryName);
 	// GetNextEntry
-/* OBOS: BPath lacks Leaf() implementation
 	nextSubTest();
 	testSet.test(".");
 	testSet.test("..");
@@ -1268,7 +1274,6 @@ DirectoryTest::EntryIterationTest()
 		BPath path;
 		CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
 		CPPUNIT_ASSERT( entry.GetPath(&path) == B_OK );
-printf("  path: `%s'\n", path.Path());
 		CPPUNIT_ASSERT( testSet.test(path.Leaf()) == true );
 	}
 	CPPUNIT_ASSERT( testSet.testDone() == true );
@@ -1276,7 +1281,6 @@ printf("  path: `%s'\n", path.Path());
 	dir.Unset();
 	entry.Unset();
 	testSet.rewind();
-*/
 	// GetNextRef
 	nextSubTest();
 	testSet.test(".");
@@ -1308,7 +1312,6 @@ printf("  path: `%s'\n", path.Path());
 	dir.Unset();
 
 	// 3. interleaving use of the different methods
-/* OBOS: BPath lacks Leaf() implementation
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(testDir1) == B_OK );
 	while (dir.GetNextDirents(ents, bufSize, 1) == 1) {
@@ -1329,7 +1332,6 @@ printf("  path: `%s'\n", path.Path());
 	dir.Unset();
 	entry.Unset();
 	testSet.rewind();
-*/
 
 	// 4. uninitialized BDirectory
 	nextSubTest();
@@ -1354,14 +1356,16 @@ printf("  path: `%s'\n", path.Path());
 	dir.Unset();
 
 	// 6. bad args
-	// R5 crashs, when passing a NULL BEntry or entry_ref
+// R5 crashs, when passing a NULL BEntry or entry_ref
+#if !SK_TEST_R5
 	nextSubTest();
 	CPPUNIT_ASSERT( dir.SetTo(testDir1) == B_OK );
-//	CPPUNIT_ASSERT( dir.GetNextEntry(NULL) == B_BAD_VALUE );
-//	CPPUNIT_ASSERT( dir.GetNextRef(NULL) == B_BAD_VALUE );
+	CPPUNIT_ASSERT( dir.GetNextEntry(NULL) == B_BAD_VALUE );
+	CPPUNIT_ASSERT( dir.GetNextRef(NULL) == B_BAD_VALUE );
 	CPPUNIT_ASSERT( equals(dir.GetNextDirents(NULL, bufSize, 1),
 						   B_BAD_ADDRESS, B_BAD_VALUE) );
 	dir.Unset();
+#endif
 
 	// 7. link traversation
 	nextSubTest();

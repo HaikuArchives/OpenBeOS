@@ -1975,7 +1975,7 @@ compareEntries(const BEntry &entry, const BEntry &entry2,
 void
 EntryTest::ComparisonTest()
 {
-/*	// uninitialized
+	// uninitialized
 	nextSubTest();
 	{
 		BEntry entry;
@@ -2003,7 +2003,7 @@ EntryTest::ComparisonTest()
 		CPPUNIT_ASSERT( entry != entry2 );
 		CPPUNIT_ASSERT( entry2 != entry );
 	}
-*/	// initialized
+	// initialized
 	TestEntry *testEntries[] = {
 		&dir1, &dir2, &file1, &subDir1, &abstractEntry1, &badEntry1,
 		&absDirLink1, &absDirLink2, &absDirLink3, &absDirLink4,

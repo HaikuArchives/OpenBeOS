@@ -1086,12 +1086,7 @@ NodeTest::DupTest(BNode &node)
 {
 	int fd = node.Dup();
 	CPPUNIT_ASSERT( fd != -1 );
-//	if (node.IsDirectory()) {
-//		DIR *dir = new DIR;
-//		dir->fd = fd;
-//		::closedir(dir);
-//	} else
-		::close(fd);
+	::close(fd);
 }
 
 // DupTest	

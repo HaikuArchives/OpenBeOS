@@ -145,10 +145,12 @@ status_t
 BDirectory::SetTo(const entry_ref *ref)
 {
 	Unset();	
-	char path[B_PATH_NAME_LENGTH];
+	char path[B_PATH_NAME_LENGTH + 1];
 	status_t error = (ref ? B_OK : B_BAD_VALUE);
-	if (error == B_OK)
-		error = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
+	if (error == B_OK) {
+		error = StorageKit::entry_ref_to_path(ref, path,
+											  B_PATH_NAME_LENGTH + 1);
+	}
 	if (error == B_OK)
 		error = SetTo(path);
 	set_status(error);
@@ -241,15 +243,9 @@ BDirectory::SetTo(const char *path)
 	if (result == B_OK)
 		result = StorageKit::open_dir(path, fDirFd);
 	if (result == B_OK) {
-/*
-		// NOTE: We have to take care that BNode doesn't stick to a
-		// symbolic link. open_dir() does always traverse those.
-		char traversedPath[B_PATH_NAME_LENGTH + 1];
-		result = StorageKit::dir_to_path(fDirFd, traversedPath,
-										 sizeof(traversedPath));
-		if (result == B_OK)
-			result = BNode::SetTo(traversedPath);
-*/
+		// We have to take care that BNode doesn't stick to a symbolic link.
+		// open_dir() does always traverse those. Therefore we open the FD for
+		// BNode (without the O_NOTRAVERSE flag).
 		StorageKit::FileDescriptor fd = StorageKit::NullFd;
 		result = StorageKit::open(path, O_RDWR, fd);
 		if (result == B_OK) {
@@ -338,7 +334,7 @@ BDirectory::GetEntry(BEntry *entry) const
 }
 
 // IsRootDirectory
-/*!	\brief Returns whether the directory represented be this BDirectory is a
+/*!	\brief Returns whether the directory represented by this BDirectory is a
 	root directory of a volume.
 	\return
 	- \c true, if the BDirectory is properly initialized and represents a
@@ -389,6 +385,8 @@ status_t
 BDirectory::FindEntry(const char *path, BEntry *entry, bool traverse) const
 {
 	status_t error = (path && entry ? B_OK : B_BAD_VALUE);
+	if (entry)
+		entry->Unset();
 	if (error == B_OK) {
 		// init a potentially abstract entry
 		if (InitCheck() == B_OK)
@@ -396,12 +394,11 @@ BDirectory::FindEntry(const char *path, BEntry *entry, bool traverse) const
 		else
 			error = entry->SetTo(path, traverse);
 		// fail, if entry is abstract
-		if (error == B_OK && !entry->Exists())
+		if (error == B_OK && !entry->Exists()) {
 			error = B_ENTRY_NOT_FOUND;
+			entry->Unset();
+		}
 	}
-	// unset entry on error
-	if (error != B_OK && entry)
-		entry->Unset();
 	return error;
 }
 
@@ -489,16 +486,16 @@ BDirectory::Contains(const BEntry *entry, int32 nodeFlags) const
 	// If the directory is initialized, get the canonical paths of the dir and
 	// the entry and check, if the latter is a prefix of the first one.
 	if (result && InitCheck() == B_OK) {
-		char dirPath[B_PATH_NAME_LENGTH];
-		char entryPath[B_PATH_NAME_LENGTH];
+		char dirPath[B_PATH_NAME_LENGTH + 1];
+		char entryPath[B_PATH_NAME_LENGTH + 1];
 		result = (StorageKit::dir_to_path(fDirFd, dirPath,
-										  B_PATH_NAME_LENGTH) == B_OK);
+										  B_PATH_NAME_LENGTH + 1) == B_OK);
 		entry_ref ref;
 		if (result)
 			result = (entry->GetRef(&ref) == B_OK);
 		if (result) {
 			result = (StorageKit::entry_ref_to_path(&ref, entryPath,
-													B_PATH_NAME_LENGTH)
+													B_PATH_NAME_LENGTH + 1)
 					  == B_OK);
 		}
 		if (result)
@@ -554,7 +551,7 @@ BDirectory::GetStatFor(const char *path, struct stat *st) const
 	\param entry a pointer to a BEntry to be initialized with the found entry
 	\param traverse specifies whether to follow it, if the found entry
 		   is a symbolic link.
-	\note The iterator used be this method is the same one used by
+	\note The iterator used by this method is the same one used by
 		  GetNextRef(), GetNextDirents(), Rewind() and CountEntries().
 	\return
 	- \c B_OK: Everything went fine.
@@ -630,7 +627,7 @@ BDirectory::GetNextRef(entry_ref *ref)
 	\param buf a pointer to a buffer to be filled with dirent structures of
 		   the found entries
 	\param count the maximal number of entries to be returned.
-	\note The iterator used be this method is the same one used by
+	\note The iterator used by this method is the same one used by
 		  GetNextEntry(), GetNextRef(), Rewind() and CountEntries().
 	\return
 	- The number of dirent structures stored in the buffer, 0 when there are
@@ -767,8 +764,8 @@ BDirectory::CreateDirectory(const char *path, BDirectory *dir)
 		   directory or absolute.
 	\param file a pointer to a BFile to be initialized to the newly
 		   created file. May be NULL.
-	\param failIfExists \c true, if the method shall fail, if the file does
-		   already exist, \c false otherwise.
+	\param failIfExists \c true, if the method should fail when the file
+		   already exists, \c false otherwise
 	\return
 	- \c B_OK: Everything went fine.
 	- \c B_BAD_VALUE: NULL \a path.
