@@ -158,7 +158,7 @@ int cmd_pwd(int argc, char *argv[])
 	}
 	buf[256] = 0;
 
-	printf("pwd: cwd=\'%s\'\n", buf);
+	printf("%s\n", buf);
 
 	return 0;
 }
