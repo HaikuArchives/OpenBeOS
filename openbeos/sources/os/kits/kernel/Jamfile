@@ -135,6 +135,7 @@ KernelLd kernel
 	<$(SOURCE_GRIST)!core>debug.o 
 	<$(SOURCE_GRIST)!core>elf.o
 	<$(SOURCE_GRIST)!core>faults.o
+	<$(SOURCE_GRIST)!core>fd.o
 	<$(SOURCE_GRIST)!core>gdb.o
 	<$(SOURCE_GRIST)!core>heap.o
 	<$(SOURCE_GRIST)!core>int.o
@@ -156,7 +157,6 @@ KernelLd kernel
 	<$(SOURCE_GRIST)!core!net>nhash.o
 	<$(SOURCE_GRIST)!core!net>mbuf.o
 	<$(SOURCE_GRIST)!core!net>net.o
-
 	linkhack.so
 
 	libbus.a
@@ -182,6 +182,7 @@ KernelLd kernel.so
 	<$(SOURCE_GRIST)!core>debug.o 
 	<$(SOURCE_GRIST)!core>elf.o
 	<$(SOURCE_GRIST)!core>faults.o
+	<$(SOURCE_GRIST)!core>fd.o
 	<$(SOURCE_GRIST)!core>gdb.o
 	<$(SOURCE_GRIST)!core>heap.o
 	<$(SOURCE_GRIST)!core>int.o
@@ -203,7 +204,6 @@ KernelLd kernel.so
 	<$(SOURCE_GRIST)!core!net>nhash.o
 	<$(SOURCE_GRIST)!core!net>mbuf.o
 	<$(SOURCE_GRIST)!core!net>net.o
-
 	linkhack.so
 
 	libbus.a
