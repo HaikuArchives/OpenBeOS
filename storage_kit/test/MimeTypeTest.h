@@ -9,6 +9,8 @@
 #include "BasicTest.h"
 #include <Mime.h>
 
+class TestApp;
+
 // Function pointer types for test sharing between {Get,Set}{Short,Long}Description()
 typedef status_t (BMimeType::*GetDescriptionFunc)(char* description) const;
 typedef status_t (BMimeType::*SetDescriptionFunc)(const char* description);
@@ -36,8 +38,7 @@ public:
 	void DescriptionTest(GetDescriptionFunc getDescr, SetDescriptionFunc setDescr);
 
 private:
-	class MimeTypeApp;
-	MimeTypeApp	*fApplication;
+	TestApp	*fApplication;
 };
 
 

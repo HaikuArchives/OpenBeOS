@@ -11,6 +11,7 @@
 #include <MimeTypeTest.h>
 
 #include "Test.StorageKit.h"
+#include "TestApp.h"
 #include "TestUtils.h"
 
 static const char *testDir				= "/tmp/mimeTestDir";
@@ -50,59 +51,6 @@ MimeTypeTest::Suite() {
 	return suite;
 }		
 
-// MimeType App
-
-class MimeTypeTest::MimeTypeApp : public BApplication {
-public:
-	MimeTypeApp()
-		: BApplication(testSig),
-		  fAppThread(B_ERROR)
-	{
-		Unlock();
-	}
-
-	status_t Init()
-	{
-		status_t error = B_OK;
-		fAppThread = spawn_thread(&_AppThreadStart, "mime type app",
-								  B_NORMAL_PRIORITY, this);
-		if (fAppThread < 0)
-			error = fAppThread;
-		else {
-			error = resume_thread(fAppThread);
-			if (error != B_OK)
-				kill_thread(fAppThread);
-		}
-		if (error != B_OK)
-			fAppThread = B_ERROR;
-		return error;
-	}
-
-	void Terminate()
-	{
-		PostMessage(B_QUIT_REQUESTED, this);
-		int32 result;
-		wait_for_thread(fAppThread, &result);
-	}
-
-	virtual void ReadyToRun()
-	{
-	}
-
-private:
-	static int32 _AppThreadStart(void *data)
-	{
-		if (MimeTypeApp *app = (MimeTypeApp*)data) {
-			app->Lock();
-			app->Run();
-		}
-		return 0;
-	}
-
-private:
-	thread_id		fAppThread;
-};
-
 
 // setUp
 void
@@ -115,9 +63,9 @@ MimeTypeTest::setUp()
 				+ " ; copyattr -d -r -- " + mimeDatabaseDir + "/* " + testDir
 				); */	
 	// Setup our application
-	fApplication = new MimeTypeApp;
+	fApplication = new TestApp(testSig);
 	if (fApplication->Init() != B_OK) {
-		fprintf(stderr, "Failed to initialized application.\n");
+		fprintf(stderr, "Failed to initialize application.\n");
 		delete fApplication;
 		fApplication = NULL;
 	}

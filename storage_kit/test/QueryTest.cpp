@@ -19,93 +19,8 @@
 #include <String.h>
 #include <Volume.h>
 #include "Test.StorageKit.h"
+#include "TestApp.h"
 #include "TestUtils.h"
-
-
-// QueryHandler
-
-class QueryTest::QueryHandler : public BHandler {
-public:
-	virtual void MessageReceived(BMessage *message)
-	{
-		// clone and push it
-		BMessage *clone = new BMessage(*message);
-		fQueue.Lock();
-		fQueue.AddMessage(clone);
-		fQueue.Unlock();
-	}
-
-	BMessageQueue &Queue()
-	{
-		return fQueue;
-	}
-
-private:
-	BMessageQueue	fQueue;
-};
-
-
-// QueryApp
-
-class QueryTest::QueryApp : public BApplication {
-public:
-	QueryApp()
-		: BApplication("application/x-vnd.obos.query-test"),
-		  fAppThread(B_ERROR),
-		  fHandler()
-	{
-		AddHandler(&fHandler);
-		Unlock();
-	}
-
-	status_t Init()
-	{
-		status_t error = B_OK;
-		fAppThread = spawn_thread(&_AppThreadStart, "query app",
-								  B_NORMAL_PRIORITY, this);
-		if (fAppThread < 0)
-			error = fAppThread;
-		else {
-			error = resume_thread(fAppThread);
-			if (error != B_OK)
-				kill_thread(fAppThread);
-		}
-		if (error != B_OK)
-			fAppThread = B_ERROR;
-		return error;
-	}
-
-	void Terminate()
-	{
-		PostMessage(B_QUIT_REQUESTED, this);
-		int32 result;
-		wait_for_thread(fAppThread, &result);
-	}
-
-	virtual void ReadyToRun()
-	{
-	}
-
-	QueryHandler &Handler()
-	{
-		return fHandler;
-	}
-
-private:
-	static int32 _AppThreadStart(void *data)
-	{
-		if (QueryApp *app = (QueryApp*)data) {
-			app->Lock();
-			app->Run();
-		}
-		return 0;
-	}
-
-private:
-	thread_id		fAppThread;
-	QueryHandler	fHandler;
-};
-
 
 // Query
 
@@ -629,9 +544,9 @@ void
 QueryTest::setUp()
 {
 	BasicTest::setUp();
-	fApplication = new QueryApp;
+	fApplication = new TestApp("application/x-vnd.obos.query-test");
 	if (fApplication->Init() != B_OK) {
-		fprintf(stderr, "Failed to initialized application.\n");
+		fprintf(stderr, "Failed to initialize application.\n");
 		delete fApplication;
 		fApplication = NULL;
 	}

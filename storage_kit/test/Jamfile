@@ -6,7 +6,6 @@ SubDir TOP test ;
 HDRS += "$(TOP)/cppunit/include" ;
 
 SOURCE_FILES =
-	TestUtils.cpp
 	BasicTest.cpp
 	DirectoryTest.cpp
 	EntryTest.cpp
@@ -20,6 +19,8 @@ SOURCE_FILES =
 	ResourceStringsTest.cpp
 	StatableTest.cpp
 	SymLinkTest.cpp
+	TestApp.cpp
+	TestUtils.cpp
 ;
 
 # targets to shorted make time, when only one version should be made
