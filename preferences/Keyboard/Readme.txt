@@ -1,5 +1,11 @@
 OpenBeOS Keyboard Preferences
 
+15/02/2002 - Beta 2.0.1 Released.
+
+Fixed a problem if the program is being run and there isn't a /boot/home/config/settings/Keyboard_Settings file already in place.
+
+Bug #517797
+
 02/02/2002 - Beta 2 Released.
 
 This version:

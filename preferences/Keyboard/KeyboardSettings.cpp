@@ -27,13 +27,21 @@ KeyboardSettings::KeyboardSettings()
 	{
 		path.Append(kKeyboardSettingsFile);
 		BFile file(path.Path(), B_READ_ONLY);
-		if (file.InitCheck() != B_OK)
-			be_app->PostMessage(ERROR_DETECTED);
-		// Now read in the data
-		if (file.Read(&fsettings, sizeof(kb_settings)) != sizeof(kb_settings))
-			be_app->PostMessage(ERROR_DETECTED);
-		if (file.Read(&fcorner, sizeof(BPoint)) != sizeof(BPoint))
-			be_app->PostMessage(ERROR_DETECTED);
+		if (file.InitCheck() == B_OK) {
+			// Now read in the data
+			if (file.Read(&fsettings, sizeof(kb_settings)) != sizeof(kb_settings))
+				be_app->PostMessage(ERROR_DETECTED);
+			if (file.Read(&fcorner, sizeof(BPoint)) != sizeof(BPoint))
+				be_app->PostMessage(ERROR_DETECTED);
+		}
+		else {
+        		fsettings.key_repeat_delay=200;
+        		fsettings.key_repeat_rate=250000;
+				fcorner.x=30;
+				fcorner.y=30;
+			}
+
+			
 	}
 	
 	// Turn the BPoint into a usefull rectangle for the Keyboard Window.
