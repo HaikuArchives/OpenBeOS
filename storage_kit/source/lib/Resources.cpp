@@ -54,7 +54,7 @@ BResources::BResources()
 	\param file the file
 	\param clobber if \c true, the \a file is truncated to size 0
 */
-BResources::BResources(BFile *file, bool clobber)
+BResources::BResources(const BFile *file, bool clobber)
 		  : fFile(),
 			fContainer(NULL),
 			fResourceFile(NULL),
@@ -96,7 +96,7 @@ BResources::~BResources()
 	- \c B_ERROR: Failed to initialize the object (for whatever reason).
 */
 status_t
-BResources::SetTo(BFile *file, bool clobber)
+BResources::SetTo(const BFile *file, bool clobber)
 {
 	Unset();
 	status_t error = B_OK;

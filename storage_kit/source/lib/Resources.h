@@ -34,10 +34,10 @@ namespace StorageKit {
 class BResources {
 public:
 	BResources();
-	BResources(BFile *file, bool clobber = false);
+	BResources(const BFile *file, bool clobber = false);
 	virtual ~BResources();
 
-	status_t SetTo(BFile *file, bool clobber = false);
+	status_t SetTo(const BFile *file, bool clobber = false);
 	void Unset();
 
 	const BFile &File() const;
