@@ -97,28 +97,28 @@ BufferManager::UnregisterBuffer(team_id teamid, media_buffer_id bufferid)
 	BAutolock lock(fLocker);
 	TRACE("UnregisterBuffer team = 0x%08x bufferid = 0x%08x\n",(int)teamid,(int)bufferid);
 
-	_buffer_list *currentlist;
 	_buffer_list **nextlist;
-	_team_list *currentteam;
 	_team_list **nextteam;
 	
 	for (nextlist = &fBufferList; (*nextlist); nextlist = &((*nextlist)->next)) {
 		if ((*nextlist)->id == bufferid) {
-			currentlist = *nextlist;
-			for (nextteam = &(currentlist->teams); (*nextteam); nextteam = &((*nextteam)->next)) {
+			for (nextteam = &((*nextlist)->teams); (*nextteam); nextteam = &((*nextteam)->next)) {
 				if ((*nextteam)->team == teamid) {
-					currentteam = *nextteam;
+					_team_list *temp;
+					temp = *nextteam;
 					*nextteam = (*nextteam)->next;
-					delete currentteam;
+					delete temp;
 					TRACE("team = 0x%08x removed from bufferid = 0x%08x\n",(int)teamid,(int)bufferid);
 					PrintToStream();
 					break;
 				}
 			}
-			if (currentlist->teams == NULL) {
+			if ((*nextlist)->teams == NULL) {
+				_buffer_list *temp;
+				temp = *nextlist;
 				*nextlist = (*nextlist)->next;
-				delete_area(currentlist->area);
-				delete currentlist;
+				delete_area(temp->area);
+				delete temp;
 				TRACE("bufferid = 0x%08x removed\n",(int)bufferid);
 				PrintToStream();
 			}
