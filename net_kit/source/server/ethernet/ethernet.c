@@ -245,7 +245,8 @@ static void find_devices(void)
 		/* hmm, is it a driver? */
 		if (strcmp(de->d_name, ".") == 0 ||
 	    	strcmp(de->d_name, "..") == 0 ||
-	    	strcmp(de->d_name, "socket") == 0)
+	    	strcmp(de->d_name, "socket") == 0 ||
+	    	strcmp(de->d_name, "stack") == 0)
 			continue;
 
 		/* OK we assume it's a driver...but skip the ether driver
