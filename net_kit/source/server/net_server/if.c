@@ -5,15 +5,15 @@
 #include <string.h>
 
 #include "netinet/in.h"
+#include "sys/socketvar.h"
 #include "net/if.h"
 #include "net/if_dl.h"
-#include "sys/socketvar.h"
 #include "sys/sockio.h"
 #include "netinet/in_var.h"
 #include "net/route.h"
 #include "sys/protosw.h"
 
-extern ifnet *devices;
+extern struct ifnet *devices;
 extern int ndevs;
 
 /* global pointer to all interfaces list... */
@@ -32,10 +32,9 @@ int ifioctl(struct socket *so, int cmd, caddr_t data)
 {
 	struct ifnet *ifp;
 	struct ifreq *ifr;
-	int error;
 	
 	if (cmd == SIOCGIFCONF)
-		return 0;//(ifconf(cmd, data));
+		return (ifconf(cmd, data));
 
 	ifr = (struct ifreq*) data;
 	ifp = ifunit(ifr->ifr_name);
@@ -238,9 +237,7 @@ struct ifaddr *ifa_ifwithnet(struct sockaddr *addr)
 	if (af == AF_LINK) {
 		struct sockaddr_dl *sdl = (struct sockaddr_dl *)addr;
 		if (sdl->sdl_index && sdl->sdl_index <= ndevs)
-			/* XXX - hm, this is what we're supposed to do... */
-                	//return (ifnet_addrs[sdl->sdl_index]);
-			return NULL;
+                	return (ifnet_addrs[sdl->sdl_index]);
 	}
         for (ifp = devices; ifp != NULL; ifp = ifp->next)
                 for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
@@ -344,3 +341,66 @@ void if_attach(struct ifnet *ifp)
 	}
 }
 
+/* XXX - memcpy used as copyin / copyout not available. I did look
+ * for the source for them but was unable to find them in the
+ * code jungle that is OpenBSD and FreeBSD!
+ *
+ * copyin / copyout should maybe be added if they'd add a speed improvement as
+ * they're used in a lot of other places as well
+ */
+int ifconf(int cmd, caddr_t data)
+{
+	struct ifconf *ifc = (struct ifconf*)data;
+	struct ifnet *ifp = devices;
+	struct ifaddr *ifa = NULL;
+	char *cp, *ep;
+	struct ifreq ifr, *ifrp;
+	int space = ifc->ifc_len; /* how big the buffer is */
+	void *copyptr = NULL;
+	
+	ifrp = ifc->ifc_req;
+	ep = ifr.ifr_name + sizeof(ifr.ifr_name) - 2;
+	
+	printf("ifconf\n");
+	
+	for (; space > sizeof(ifr) && ifp; ifp = ifp->next) {
+		strncpy(ifr.ifr_name, ifp->if_name, sizeof(ifr.ifr_name) - 2);
+		for (cp = ifr.ifr_name;cp < ep && *cp; cp++)
+			continue;
+		*cp = '\0';
+printf("ifp->if_addrlist = %p\n", ifp->if_addrlist);
+		if ((ifa = ifp->if_addrlist) == NULL) {
+			memset((caddr_t)&ifr.ifr_addr, 0, sizeof(ifr.ifr_addr));
+			copyptr = memcpy((caddr_t) ifrp, (caddr_t) &ifr, sizeof(ifr));
+			if (copyptr == NULL)
+				break;
+			space -= sizeof(ifr), ifrp++;
+		} else {
+			for (; space > sizeof(ifr) && ifa; ifa = ifa->ifa_next) {
+				struct sockaddr *sa = ifa->ifa_addr;
+				if (sa->sa_len <= sizeof(*sa)) {
+					printf("sa->sa_len = %d compared to %ld, sa->sa_family = %d\n", 
+						sa->sa_len, sizeof(*sa), sa->sa_family);
+						
+					ifr.ifr_addr = *sa;
+					copyptr = memcpy((caddr_t)ifrp, (caddr_t)&ifr, sizeof(ifr));
+					ifrp++;
+				} else {
+					space -= sa->sa_len - sizeof(*sa);
+					if (space < sizeof(ifr))
+						break;
+					copyptr = memcpy((caddr_t)ifrp, (caddr_t)&ifr, sizeof(ifr.ifr_name));
+					if (copyptr != NULL)
+						copyptr = memcpy((caddr_t)&ifrp->ifr_addr, (caddr_t)sa, sa->sa_len);
+					ifrp = (struct ifreq*)(sa->sa_len + (caddr_t)&ifrp->ifr_addr);
+				}
+				if (copyptr == NULL)
+					break;
+				space -= sizeof(ifr);
+			}
+		}
+	}
+	ifc->ifc_len -= space;
+	/* Yuck! */
+	return (copyptr == NULL ? -1 : 0);
+}
