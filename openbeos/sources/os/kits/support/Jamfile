@@ -1,0 +1,32 @@
+SubDir OBOS_TOP sources os kits support ;
+
+UsePrivateHeaders app ;
+
+if ! $(LOCAL_SOURCE)
+{
+	include $(OBOS_TOP)/sources/os/kits/app/app.src ;
+	for i in $(APP_KIT_SOURCE)
+	{
+		LOCAL_SOURCE += $(i) ;
+	}
+
+	include $(OBOS_TOP)/sources/os/kits/support/support.src ;
+
+	for i in $(SUPPORT_KIT_SOURCE)
+	{
+		LOCAL_SOURCE += $(i) ;
+	}
+
+	include $(OBOS_TOP)/sources/os/kits/interface/interface.src ;
+	for i in $(INTERFACE_KIT_SOURCE)
+	{
+		LOCAL_SOURCE += $(i) ;
+	}
+# 	ECHO $(LOCAL_SOURCE) ;
+}
+
+SharedLibrary openbeos : $(LOCAL_SOURCE) ;
+
+LinkSharedOSLibs libopenbeos.so :
+	/boot/beos/system/lib/libbe.so
+	/boot/beos/system/lib/libstdc++.r4.so ;

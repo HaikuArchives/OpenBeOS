@@ -1,0 +1,8 @@
+if ! $(SUPPORT_KIT_SOURCE)
+{
+	SUPPORT_KIT_SOURCE ?= ../support/Archivable.cpp
+		../support/DataIO.cpp
+		../support/Locker.cpp
+		../support/StopWatch.cpp
+		../support/String.cpp ;
+}

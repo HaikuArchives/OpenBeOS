@@ -1,0 +1,10 @@
+if ! $(APP_KIT_SOURCE)
+{
+	APP_KIT_SOURCE ?= ../app/Cursor.cpp
+ 		../app/Handler.cpp
+ 		../app/Invoker.cpp
+ 		../app/Looper.cpp
+ 		../app/MessageFilter.cpp
+ 		../app/MessageQueue.cpp
+ 		../app/TokenSpace.cpp ;
+}
