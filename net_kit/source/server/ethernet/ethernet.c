@@ -78,9 +78,11 @@ static void arpinput(struct mbuf *m);
 uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 /* these are in seconds... */
-static int arpt_prune = 300; 	/* time interval we prune the arp cache? 5 minutes */
-static int arpt_keep  = 1200;	/* length of time we keep entries... (20 mins) */
+static int arpt_prune = (5 * 60); 	/* time interval we prune the arp cache? 5 minutes */
+static int arpt_keep  = (20 * 60);	/* length of time we keep entries... (20 mins) */
 static int arpt_down = 20;      /* seconds between arp flooding */																																																											
+
+
 static int arp_maxtries = 5;    /* max tries before a pause */
 
 /* stats */
@@ -118,6 +120,36 @@ static char *ether_sprintf(uint8 *ap)
 	*--cp = 0;
 	return (etherbuf);
 }
+
+#if ARP_DEBUG
+static void dump_arp(void *buffer)
+{
+	struct ether_arp *arp = (struct ether_arp *)buffer;
+
+	printf("arp request :\n");
+	printf("            : hardware type : %s\n",
+           ntohs(arp->arp_hrd) == ARPHRD_ETHER ? "ethernet" : "unknown");
+	printf("            : protocol type : %s\n",
+           ntohs(arp->arp_pro) == ETHERTYPE_IP ? "IPv4" : "unknown");
+	printf("            : hardware size : %d\n", arp->arp_hln);
+	printf("            : protocol size : %d\n", arp->arp_pln);
+	printf("            : op code       : ");
+	switch(ntohs(arp->arp_op)) {
+		case ARPOP_REPLY:
+			printf("ARP Reply\n");
+			break;
+		case ARPOP_REQUEST:
+			printf("ARP Request\n");
+			break;
+		default:
+			printf("Who knows? %04x\n", ntohs(arp->arp_op));
+	}
+	printf("            : sender        : %s", ether_sprintf(&arp->arp_sha));
+	printf(" [%08lx]\n", ntohl(*(uint32*)&arp->arp_spa));
+	printf("            : target        : %s", ether_sprintf(&arp->arp_tha));
+	printf(" [%08lx]\n", ntohl(*(uint32*)&arp->arp_tpa));
+}
+#endif /* ARP_DEBUG */
 
 /* We now actually attach the device to the system... */
 static void attach_device(int devid, char *driver, char *devno)
@@ -446,6 +478,7 @@ static struct llinfo_arp *arplookup(uint32 addr, int create, int proxy)
 			printf("arptnew failed on %08lx\n", ntohl(addr));
 		return NULL;
 	}
+
 	return ((struct llinfo_arp *)rt->rt_llinfo);
 }
 	
@@ -475,14 +508,14 @@ int arpresolve(struct arpcom *ac, struct rtentry *rt, struct mbuf *m,
 		return 0;
 	}
 	sdl = SDL(rt->rt_gateway);
-	
+
 	if ((rt->rt_expire == 0 || rt->rt_expire > real_time_clock()) &&
 	    sdl->sdl_family == AF_LINK && sdl->sdl_alen != 0) {
 		memcpy(desten, LLADDR(sdl), sdl->sdl_alen);
 		return 1;
 	}
+	
 	if (la->la_hold) {
-		printf("arpresolve - freeing la->la_hold\n");
 		m_freem(la->la_hold);
 	}
 
@@ -492,9 +525,9 @@ int arpresolve(struct arpcom *ac, struct rtentry *rt, struct mbuf *m,
 		rt->rt_flags &= ~RTF_REJECT;
 		if (la->la_asked == 0 || rt->rt_expire != real_time_clock()) {
 			rt->rt_expire = real_time_clock();
-			if (la->la_asked++ < arp_maxtries)
+			if (la->la_asked++ < arp_maxtries) {
 				arpwhohas(ac, &(SIN(dst)->sin_addr));
-			else {
+			} else {
 				rt->rt_flags |= RTF_REJECT;
 				rt->rt_expire += arpt_down;
 				la->la_asked = 0;
@@ -670,7 +703,7 @@ static void arpinput(struct mbuf *m)
 	struct sockaddr sa;
 
 #if ARP_DEBUG
-	dump_arp(arp);
+	dump_arp(mtod(m, void*));
 #endif
 
 	if (!primary_addr)
@@ -713,8 +746,9 @@ static void arpinput(struct mbuf *m)
 			printf("arp info overwritten for %08lx by %s\n",
 			       isaddr.s_addr, ether_sprintf(ea->arp_sha));
 		memcpy(LLADDR(sdl), ea->arp_sha, sdl->sdl_alen = sizeof(ea->arp_sha));
-		if (rt->rt_expire)
+		if (rt->rt_expire) {
 			rt->rt_expire = real_time_clock() + arpt_keep;
+		}
 		rt->rt_flags &= ~RTF_REJECT;
 		la->la_asked = 0;
 		if (la->la_hold) {

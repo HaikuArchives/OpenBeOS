@@ -4,6 +4,8 @@ TGT=../modules/interface/$(TARGET)
 LOBJS=../_APP_
 OBJS=ethernet.o
 
+CFLAGS += -D_NETWORK_STACK
+
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 KLOBJS=../net_server/misc.o #../net_server/area_malloc.o
