@@ -405,7 +405,7 @@ BBitmapStream::DetachBitmap(BBitmap **outBitmap)
 status_t
 BBitmapStream::ConvertBEndianToHost(TranslatorBitmap *pheader)
 {
-	if (!header)
+	if (!pheader)
 		return B_BAD_VALUE;
 		
 	return swap_data(B_UINT32_TYPE, pheader, sizeof(TranslatorBitmap),
