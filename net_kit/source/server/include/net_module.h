@@ -26,7 +26,8 @@ typedef struct net_module {
 	int 			(*dev_init) (ifnet *);
 	int 			(*input) (struct mbuf *);
 	int 			(*output) (struct mbuf *, int, struct sockaddr *); 
-	struct sockaddr* 	(*lookup) (struct sockaddr *, struct sockaddr *);
+	int			(*lookup) (struct mbuf *, struct sockaddr *,
+						void *callback);
 } net_module;
 
 struct loaded_net_module {

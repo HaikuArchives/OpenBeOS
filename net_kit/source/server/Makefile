@@ -1,5 +1,5 @@
 OBJS=
-SUBDIRS=util net_server ipv4 udp ethernet arp test 
+SUBDIRS=util net_server ipv4 udp ethernet arp icmp test 
 
 CFLAGS=-O0 -g -Wall -fPIC -DPIC
 INCLUDES=-I. -I./include
