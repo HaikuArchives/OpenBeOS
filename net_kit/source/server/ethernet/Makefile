@@ -3,6 +3,7 @@ TARGET=ethernet
 TGT=../modules/interface/$(TARGET)
 LOBJS=../net_server/net_timer.o
 OBJS=ethernet.o
+XMAP_DIR=/boot/home/config/add-ons/kernel/drivers/dev/net
 
 CFLAGS += -D_NETWORK_STACK
 
@@ -20,9 +21,14 @@ clean:
 kernel:
 	@$(CC) $(KCFLAGS) $(INCLUDES) -c ethernet.c
 	@$(CC) $(KLDFLAGS) $(KLOBJS) -o ethernet ethernet.o
+	@$(CC) $(KLDFLAGS) -Wl,-M=ethernet.xMAP *.o
 
 installkernel:  kernel
 	@cp ethernet /boot/home/config/add-ons/kernel/network/interface/ethernet
+	@if test -e $(XMAP_DIR)/ethernet.xMAP; then rm $(XMAP_DIR)/core.xMAP; fi
+	@if ! test -L $(XMAP_DIR)/ethernet.xMAP; then \
+		ln -s `pwd`/ethernet.xMAP $(XMAP_DIR); \
+	fi
 
 $(TARGET): $(OBJS)
 	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
