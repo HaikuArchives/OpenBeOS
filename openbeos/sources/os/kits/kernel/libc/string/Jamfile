@@ -25,4 +25,7 @@ KernelObjects
 	<$(SOURCE_GRIST)>strrchr.c 
 	<$(SOURCE_GRIST)>strspn.c 
 	<$(SOURCE_GRIST)>strstr.c 
-	<$(SOURCE_GRIST)>strtok.c  ;
+	<$(SOURCE_GRIST)>strtok.c
+	:
+	-fPIC -DPIC
+	;
