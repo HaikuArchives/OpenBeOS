@@ -8,42 +8,11 @@
 
 #include "net_stack_driver.h"
 
-typedef int (*select_function)(int, struct fd_set *, struct fd_set *,
-								struct fd_set *, struct timeval *);
-
-static int r5_select(int, struct fd_set *, struct fd_set *,
-                     struct fd_set *, struct timeval *);
-
-
+#ifndef BONE_VERSION
 _EXPORT int select(int nbits, struct fd_set * rbits, 
                       struct fd_set * wbits, 
                       struct fd_set * ebits, 
-                      struct timeval * timeout)
-{
-	static select_function sf = NULL;
-
-	if (sf == NULL) {
-		image_id iid;
-
-		// first time, try to figure if libroot.so have a (better) select() support
-		// TODO: search in LIBRARY_PATH environment variable, not in hardcoded place!
-		// NOTICE: we assert here that libnet.so is linked against libroot.so
-		iid = load_add_on("/boot/beos/system/lib/libroot.so");
-		if (iid > 0 ) {
-			if (get_image_symbol(iid, "select", B_SYMBOL_TYPE_TEXT, (void **) &sf) != B_OK)
-				// libroot.so don't export a select() function, so we use our
-				sf = r5_select;
-			unload_add_on(iid);
-		};
-		
-	};
-	
-	return sf(nbits, rbits, wbits, ebits, timeout);
-}
-
-	
-static int r5_select(int nbits, struct fd_set *rbits, struct fd_set *wbits,
-					  struct fd_set *ebits, struct timeval *tv)
+                      struct timeval * tv)
 {
 	int fd;
 	int n;
@@ -141,8 +110,6 @@ static int r5_select(int nbits, struct fd_set *rbits, struct fd_set *wbits,
     	return -1;
 	};
 
-  return rss.nfd;
+	return rss.nfd;
 }
-
-
-
+#endif
