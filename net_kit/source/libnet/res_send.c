@@ -697,8 +697,8 @@ read_len:
 				timeout.tv_sec = 1;
 			timeout.tv_usec = 0;
     wait:
-			dsmaskp = (fd_set *)calloc(howmany(s+1, NFDBITS),
-						   sizeof(fd_mask));
+			dsmaskp = (fd_set *)malloc(sizeof(fd_set));
+			memset((void*)dsmaskp, 0, sizeof(fd_set));
 			if (dsmaskp == NULL) {
 				res_close();
 				goto next_ns;
