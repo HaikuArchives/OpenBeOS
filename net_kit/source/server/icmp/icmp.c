@@ -164,6 +164,7 @@ static int icmp_protocol_init(void *cpp)
 static int icmp_protocol_stop(void)
 {
 	remove_protocol(&my_proto);
+	remove_domain(AF_INET);
 	return 0;
 }
 

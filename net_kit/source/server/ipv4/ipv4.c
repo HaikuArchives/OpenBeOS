@@ -747,6 +747,7 @@ static int ipv4_module_init(void *cpp)
 static int ipv4_module_stop(void)
 {
 	remove_protocol(&my_proto);
+	remove_domain(AF_INET);
 	return 0;
 }
 

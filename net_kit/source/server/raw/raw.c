@@ -334,6 +334,7 @@ static int raw_module_stop(void)
 #endif
 
 	remove_protocol(&my_protocol);
+	remove_domain(AF_INET);
 	
 	return 0;
 }

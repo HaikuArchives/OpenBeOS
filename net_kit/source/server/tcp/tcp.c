@@ -559,6 +559,7 @@ static int tcp_module_stop(void)
 #endif
 
 	remove_protocol(&my_proto);
+	remove_domain(AF_INET);
 	
 	return 0;
 }

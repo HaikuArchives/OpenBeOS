@@ -747,6 +747,7 @@ static int route_module_init(void *cpp)
 static int route_module_stop(void)
 {
 	remove_protocol(&my_protocol);
+	remove_domain(PF_ROUTE);
 	return 0;
 }
 
