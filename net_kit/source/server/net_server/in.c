@@ -454,4 +454,19 @@ int in_localaddr(struct in_addr in)
 	return (0);
 }
 
+int in_canforward(struct in_addr in)
+{
+	uint32 i = ntohl(in.s_addr);
+	uint32 net;
+	
+	if (IN_EXPERIMENTAL(i) || IN_MULTICAST(i))
+		return 0;
+	if (IN_CLASSA(i)) {
+		net = i & IN_CLASSA_NET;
+		if (net == 0 || net == (IN_LOOPBACKNET << IN_CLASSA_NSHIFT))
+			return 0;
+	}
+	return 1;
+}
+
 
