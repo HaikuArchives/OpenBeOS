@@ -130,6 +130,14 @@ BMimeType::IsSupertypeOnly() const
 }
 
 // IsInstalled
+//! Returns whether or not this type is currently installed in the MIME database
+/*! To add the MIME type to the database, call \c Install().
+	To remove the MIME type from the database, call \c Delete().
+
+	\return
+	- \c true: The MIME type is currently installed in the database
+	- \c false: The MIME type is not currently installed in the database
+*/
 bool
 BMimeType::IsInstalled() const
 {
@@ -193,6 +201,17 @@ BMimeType::Contains(const BMimeType *type) const
 }
 
 // Install
+//! Adds the MIME type to the MIME database
+/*! To check if the MIME type is already installed, call \c IsInstalled().
+	To remove the MIME type from the database, call \c Delete().
+	
+	\note The R5 implementation returns random values if the type is already
+	installed, so be sure to check \c IsInstalled() first.
+	
+	\return
+	- \c B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::Install()
 {
@@ -200,6 +219,18 @@ BMimeType::Install()
 }
 
 // Delete
+//! Removes the MIME type from the MIME database
+/*! To check if the MIME type is already installed, call \c IsInstalled().
+	To add the MIME type to the database, call \c Install().
+	
+	\note Calling \c BMimeType::Delete() does not uninitialize or otherwise
+	deallocate the \c BMimeType object; it simply removes the type from the
+	database.
+	
+	\return
+	- \c B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::Delete()
 {
@@ -217,8 +248,8 @@ BMimeType::Delete()
 	\param icon_size Value that specifies which icon to return. Currently \c B_LARGE_ICON
 					 and \c B_MINI_ICON are supported.
 	\return
-	- B_OK: Success
-	- B_ENTRY_NOT_FOUND: No icon of the given size exists for the given type
+	- \c B_OK: Success
+	- \c B_ENTRY_NOT_FOUND: No icon of the given size exists for the given type
 	- "error code": Failure	
 
 */
@@ -244,8 +275,8 @@ BMimeType::GetIcon(BBitmap *icon, icon_size) const
 	\param verb \c app_verb value that specifies the type of access for which you are requesting the preferred app.
 	            Currently, the only supported app verb is \c B_OPEN.
 	\return
-	- B_OK: Success
-	- B_ENTRY_NOT_FOUND: No preferred app exists for the given type and app_verb
+	- \c B_OK: Success
+	- \c B_ENTRY_NOT_FOUND: No preferred app exists for the given type and app_verb
 	- "error code": Failure
 */
 status_t
@@ -286,7 +317,7 @@ BMimeType::GetAttrInfo(BMessage *info) const
 	\param extensions Pointer to a pre-allocated BMessage into which the
 	                  MIME type's associated file extensions will be stored.
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure
 */
 status_t
@@ -304,8 +335,8 @@ BMimeType::GetFileExtensions(BMessage *extensions) const
 	\param description Pointer to a pre-allocated string into which the long description is copied. If
 	                   the function fails, the contents of the string are undefined.
 	\return
-	- B_OK: Success
-	- B_ENTRY_NOT_FOUND: No short description exists for the given type
+	- \c B_OK: Success
+	- \c B_ENTRY_NOT_FOUND: No short description exists for the given type
 	- "error code": Failure
 */
 status_t
@@ -323,8 +354,8 @@ BMimeType::GetShortDescription(char *description) const
 	\param description Pointer to a pre-allocated string into which the long description is copied. If
 	                   the function fails, the contents of the string are undefined.
 	\return
-	- B_OK: Success
-	- B_ENTRY_NOT_FOUND: No long description exists for the given type
+	- \c B_OK: Success
+	- \c B_ENTRY_NOT_FOUND: No long description exists for the given type
 	- "error code": Failure
 */
 status_t
@@ -353,7 +384,7 @@ BMimeType::GetSupportingApps(BMessage *signatures) const
 	\param icon_size Value that specifies which icon to update. Currently \c B_LARGE_ICON
 					 and \c B_MINI_ICON are supported.
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure	
 
 */
@@ -380,7 +411,7 @@ BMimeType::SetIcon(const BBitmap *icon, icon_size)
 	\param verb \c app_verb value that specifies the type of access for which you are setting the preferred app.
 	            Currently, the only supported app verb is \c B_OPEN.
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure
 */
 status_t
@@ -423,7 +454,7 @@ BMimeType::SetAttrInfo(const BMessage *info)
 	\param extensions Pointer to a pre-allocated, properly formatted BMessage containing
 	                  the new list of file extensions to associate with this MIME type.
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure
 */
 status_t
@@ -442,7 +473,7 @@ BMimeType::SetFileExtensions(const BMessage *extensions)
 
 	\param description Pointer to a pre-allocated string containing the new short description
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure
 */
 status_t
@@ -461,7 +492,7 @@ BMimeType::SetShortDescription(const char *description)
 
 	\param description Pointer to a pre-allocated string containing the new long description
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure
 */
 status_t
@@ -522,8 +553,8 @@ BMimeType::IsValid(const char *string)
 	\param ref Pointer to a pre-allocated \c entry_ref into which the location of the app hint is copied. If
 	                   the function fails, the contents of the \c entry_ref are undefined.
 	\return
-	- B_OK: Success
-	- B_ENTRY_NOT_FOUND: No app hint exists for the given type
+	- \c B_OK: Success
+	- \c B_ENTRY_NOT_FOUND: No app hint exists for the given type
 	- "error code": Failure
 */
 status_t
@@ -547,7 +578,7 @@ BMimeType::GetAppHint(entry_ref *ref) const
 
 	\param ref Pointer to a pre-allocated \c entry_ref containting the location of the new app hint
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure
 */
 status_t
@@ -580,8 +611,8 @@ BMimeType::SetAppHint(const entry_ref *ref)
 	\param icon_size Value that specifies which icon to return. Currently \c B_LARGE_ICON
 					 and \c B_MINI_ICON are supported.
 	\return
-	- B_OK: Success
-	- B_ENTRY_NOT_FOUND: No icon of the given size exists for the given type
+	- \c B_OK: Success
+	- \c B_ENTRY_NOT_FOUND: No icon of the given size exists for the given type
 	- "error code": Failure	
 
 */
@@ -618,7 +649,7 @@ BMimeType::GetIconForType(const char *type, BBitmap *icon, icon_size which) cons
 	\param icon_size Value that specifies which icon to update. Currently \c B_LARGE_ICON
 					 and \c B_MINI_ICON are supported.
 	\return
-	- B_OK: Success
+	- \c B_OK: Success
 	- "error code": Failure	
 
 */
