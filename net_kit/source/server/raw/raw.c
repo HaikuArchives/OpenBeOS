@@ -21,8 +21,9 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-
+static status_t raw_ops(int32 op, ...);
 #else	/* _KERNEL_MODE */
+#define raw_ops NULL
 static image_id ipid;
 #endif
 
@@ -287,13 +288,15 @@ static struct protosw my_protocol = {
 	NULL
 };
 
-#ifndef _KERNEL_MODE
-static void rip_protocol_init(struct core_module_info *cp)
+static int raw_module_init(void *cpp)
 {
-	core = cp;
+	if (cpp)
+		core = cpp;
+
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_protocol, AF_INET);
 
+#ifndef _KERNEL_MODE
 	if (!ipm) {
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
@@ -301,46 +304,59 @@ static void rip_protocol_init(struct core_module_info *cp)
 
 		ipid = load_add_on(path);
 		if (ipid > 0) {
-			status_t rv = get_image_symbol(ipid, "ipv4_module_info",
+			status_t rv = get_image_symbol(ipid, "protocol_info",
 								B_SYMBOL_TYPE_DATA, (void**)&ipm);
 			if (rv < 0) {
 				printf("Failed to get access to IPv4 information!\n");
-				return;
+				return -1;
 			}
+			ipm->set_core(cpp);
 		} else { 
 			printf("Failed to load the IPv4 module...%ld [%s]\n", 
 			       ipid, strerror(ipid));
-			return;
+			return -1;
 		}
 	}
-}
-
-struct protocol_info protocol_info = {
-	"Raw IP Module",
-	&rip_protocol_init
-};
-
-#else /* kernel setup */
-
-static status_t k_init(void)
-{
-	if (!core)
-		get_module(CORE_MODULE_PATH, (module_info**)&core);
-	
-	add_domain(NULL, AF_INET);
-	add_protocol(&my_protocol, AF_INET);
-	
+#else
 	if (!ipm)
 		get_module(IPV4_MODULE_PATH, (module_info**)&ipm);
-		
+#endif
+
+	return 0;	
+}
+
+static int raw_module_stop(void)
+{
+#ifndef _KERNEL_MODE
+	unload_add_on(ipid);
+#else
+	put_module(IPV4_MODULE_PATH);
+#endif
 	return 0;
 }
 
-static status_t rip_ops(int32 op, ...)
+_EXPORT struct raw_module_info protocol_info = {
+	{
+		{
+			RAW_MODULE_PATH,
+			0,
+			raw_ops
+		},
+		raw_module_init,
+		raw_module_stop
+	},
+	&rip_input
+};
+
+#ifdef _KERNEL_MODE
+static status_t raw_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
-			return k_init();
+			get_module(CORE_MODULE_PATH, (module_info**)&core);
+			if (!core)
+				return B_ERROR;
+			return B_OK;
 		case B_MODULE_UNINIT:
 			break;
 		default:
@@ -349,17 +365,8 @@ static status_t rip_ops(int32 op, ...)
 	return B_OK;
 }
 
-static struct raw_module_info my_module = {
-	{
-		RAW_MODULE_PATH,
-		B_KEEP_LOADED,
-		rip_ops
-	},
-	&rip_input
-};
-
 _EXPORT module_info *modules[] = {
-	(module_info*)&my_module,
+	(module_info*)&protocol_info,
 	NULL
 };
 

@@ -20,9 +20,10 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-
+static status_t icmp_ops(int32 op, ...);
 #define ICMP_MODULE_PATH	"network/protocol/icmp"
 #else
+#define icmp_ops NULL
 #define ICMP_MODULE_PATH	"modules/protocol/icmp"
 #endif
 
@@ -148,22 +149,28 @@ struct protosw my_proto = {
 	NULL
 };
 
-#ifndef _KERNEL_MODE
-
-static void icmp_protocol_init(struct core_module_info *cp)
+static int icmp_protocol_init(void *cpp)
 {
-	core = cp;
+	/* we will never call this with anything but NULL when in kernel,
+	 * so this should be safe.
+	 */
+	if (cpp)
+		core = (struct core_module_info *)cpp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 }
 
-struct protocol_info protocol_info = {
-	"ICMP (v4) Module",
-	&icmp_protocol_init
+struct kernel_net_module_info protocol_info = {
+	{
+		ICMP_MODULE_PATH,
+		0,
+		icmp_ops
+	},
+	icmp_protocol_init,
+	NULL
 };
 
-#else
-
+#ifdef _KERNEL_MODE
 static status_t icmp_ops(int32 op, ...)
 {
 	switch(op) {
@@ -172,10 +179,6 @@ static status_t icmp_ops(int32 op, ...)
 				get_module(CORE_MODULE_PATH, (module_info**)&core);
 			if (!core)
 				return B_ERROR;
-			
-			add_domain(NULL, AF_INET);
-			add_protocol(&my_proto, AF_INET);			
-
 			return B_OK;
 		case B_MODULE_UNINIT:
 			break;
@@ -185,16 +188,8 @@ static status_t icmp_ops(int32 op, ...)
 	return B_OK;
 }
 
-static module_info my_module = {
-	ICMP_MODULE_PATH,
-	B_KEEP_LOADED,
-	icmp_ops
-};
-
 _EXPORT module_info *modules[] = {
-	&my_module,
+	(module_info *)&protocol_info,
 	NULL
 };
-
 #endif
-

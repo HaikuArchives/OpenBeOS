@@ -27,6 +27,9 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
+static status_t ipv4_ops(int32 op, ...);
+#else
+#define ipv4_ops NULL
 #endif	/* _KERNEL_MODE */
 
 static struct core_module_info *core = NULL;
@@ -151,7 +154,7 @@ static void ip_forward(struct mbuf *m, int srcrt)
 {
 	struct ip *ip = mtod(m, struct ip*);
 	struct sockaddr_in *sin;
-	struct rtentry *rt;
+//	struct rtentry *rt;
 	n_long dest;
 	
 	dest = 0;
@@ -730,27 +733,39 @@ struct protosw my_proto = {
 	NULL
 };
 
-#ifndef _KERNEL_MODE
 
-static void ipv4_protocol_init(struct core_module_info *cm)
+static int ipv4_module_init(void *cpp)
 {
-	core = cm;
+	if (cpp)
+		core = cpp;
+
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
+	return 0;
 }
 
-struct protocol_info protocol_info = {
-	"IPv4 Module",
-	&ipv4_protocol_init
-};
-
+#ifndef _KERNEL_MODE
 void set_core(struct core_module_info *cp)
 {
 	core = cp;
 }
+#endif
 
-struct ipv4_module_info ipv4_module_info = {
+_EXPORT struct ipv4_module_info protocol_info = {
+	{
+		{
+			IPV4_MODULE_PATH,
+			0,
+			ipv4_ops
+		},
+		ipv4_module_init, 
+		NULL
+	},
+
+#ifndef _KERNEL_MODE
 	set_core,
+#endif
+	
 	ipv4_output,
 	get_ip_id,
 	ipv4_ctloutput,
@@ -758,51 +773,26 @@ struct ipv4_module_info ipv4_module_info = {
 	ip_stripoptions
 };
 
-#else /* kernel setup */
-
-static int k_init(void)
-{
-	if (!core)
-		get_module(CORE_MODULE_PATH, (module_info**)&core);
-
-	add_domain(NULL, AF_INET);
-	add_protocol(&my_proto, AF_INET);
-	
-	return 0;	
-}
-
-
+#ifdef _KERNEL_MODE
 static status_t ipv4_ops(int32 op, ...)
 {
 	switch (op) {
 		case B_MODULE_INIT:
-			k_init();
-			break;
+			get_module(CORE_MODULE_PATH, (module_info**)&core);
+			if (!core)
+				return B_ERROR;
+			return B_OK;
 		case B_MODULE_UNINIT:
-			break;
+			return B_OK;
 		default:
 			return B_ERROR;
 	}
 	return B_OK;
 }
 
-static struct ipv4_module_info my_module = {
-{
-	IPV4_MODULE_PATH,
-	B_KEEP_LOADED,
-	ipv4_ops
-	},
-
-	ipv4_output,
-	get_ip_id,
-	ipv4_ctloutput,
-	ip_srcroute,
-	ip_stripoptions
-};
 
 _EXPORT module_info *modules[] = {
-	(module_info*) &my_module,
+	(module_info*) &protocol_info,
 	NULL
-};
-			
-#endif		 
+};		
+#endif

@@ -19,10 +19,10 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-
-
 #define ROUTE_MODULE_PATH	"network/protocol/route"
+static status_t route_ops(int32 op, ...);
 #else	/* _KERNEL_MODE */
+#define route_ops NULL
 #define ROUTE_MODULE_PATH	"modules/protocol/route"
 #endif
 
@@ -733,38 +733,36 @@ static struct domain pf_route_domain = {
 	0
 };
 
-
-#ifndef _KERNEL_MODE
-static void route_protocol_init(struct core_module_info *cp)
+static int route_module_init(void *cpp)
 {
-	core = cp;
+	if (cpp)
+		core = cpp;
+
 	add_domain(&pf_route_domain, PF_ROUTE);
 	add_protocol(&my_protocol, PF_ROUTE);
-}
 
-struct protocol_info protocol_info = {
-	"Routing Module",
-	&route_protocol_init
-};
-
-#else /* kernel setup */
-
-static status_t k_init(void)
-{
-	if (!core)
-		get_module(CORE_MODULE_PATH, (module_info**)&core);
-	
-	add_domain(&pf_route_domain, PF_ROUTE);
-	add_protocol(&my_protocol, PF_ROUTE);
-	
 	return 0;
 }
 
+_EXPORT struct kernel_net_module_info protocol_info = {
+	{
+		ROUTE_MODULE_PATH,
+		0,
+		route_ops
+	},
+	route_module_init,
+	NULL
+};
+
+#ifdef _KERNEL_MODE
 static status_t route_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
-			return k_init();
+			get_module(CORE_MODULE_PATH, (module_info**)&core);
+			if (!core)
+				return B_ERROR;
+			return B_OK;
 		case B_MODULE_UNINIT:
 			break;
 		default:
@@ -773,15 +771,8 @@ static status_t route_ops(int32 op, ...)
 	return B_OK;
 }
 
-static module_info my_module = {
-	ROUTE_MODULE_PATH,
-	B_KEEP_LOADED,
-	route_ops
-};
-
 _EXPORT module_info *modules[] = {
-	&my_module,
+	(module_info *)&protocol_info,
 	NULL
 };
-
 #endif

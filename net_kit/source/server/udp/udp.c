@@ -21,10 +21,10 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-
+static status_t udp_ops(int32 op, ...);
 #define UDP_MODULE_PATH		"network/protocol/udp"
-
 #else	/* _KERNEL_MODE */
+#define udp_ops NULL
 #define UDP_MODULE_PATH	    "modules/protocol/udp"
 #endif
 
@@ -292,12 +292,11 @@ void udp_input(struct mbuf *buf, int hdrlen)
 	buf->m_len -= hdrlen;
 	buf->m_pkthdr.len -= hdrlen;
 	buf->m_data += hdrlen;
-
+	
 	if (sbappendaddr(&inp->inp_socket->so_rcv, (struct sockaddr*)&udp_in,
 			buf, opts) == 0) {
 		goto bad;
 	}
-
 	sorwakeup(inp->inp_socket);
 	return;
 
@@ -305,7 +304,6 @@ bad:
 	if (opts)
 		m_freem(opts);
 	m_freem(buf);
-
 	return;
 }
 
@@ -341,37 +339,34 @@ static struct protosw my_proto = {
 	NULL
 };
 
-#ifndef _KERNEL_MODE
-static void udp_protocol_init(struct core_module_info *cp)
+static int udp_module_init(void *cpp)
 {
-	core = cp;
+	if (cpp)
+		core = cpp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
-}
-
-struct protocol_info protocol_info = {
-	"UDP Module",
-	&udp_protocol_init
-};
-
-#else /* kernel setup */
-
-static status_t k_init(void)
-{
-	if (!core)
-		get_module(CORE_MODULE_PATH, (module_info**)&core);
-	
-	add_domain(NULL, AF_INET);
-	add_protocol(&my_proto, AF_INET);
-	
 	return 0;
 }
 
+_EXPORT struct kernel_net_module_info protocol_info = {
+	{
+		UDP_MODULE_PATH,
+		B_KEEP_LOADED,
+		udp_ops
+	},
+	udp_module_init,
+	NULL
+};
+
+#ifdef _KERNEL_MODE
 static status_t udp_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
-			return k_init();
+			get_module(CORE_MODULE_PATH, (module_info**)&core);
+			if (!core)
+				return B_ERROR; 
+			return B_OK;
 		case B_MODULE_UNINIT:
 			break;
 		default:
@@ -380,15 +375,8 @@ static status_t udp_ops(int32 op, ...)
 	return B_OK;
 }
 
-static module_info my_module = {
-	UDP_MODULE_PATH,
-	B_KEEP_LOADED,
-	udp_ops
-};
-
 _EXPORT module_info *modules[] = {
-	&my_module,
+	(module_info *)&protocol_info,
 	NULL
 };
-
 #endif

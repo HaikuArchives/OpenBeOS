@@ -31,11 +31,10 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-
-
 #define TCP_MODULE_PATH		"network/protocol/tcp"
-
+static status_t tcp_ops(int32 op, ...);
 #else	/* _KERNEL_MODE */
+#define tcp_ops NULL
 #define TCP_MODULE_PATH	    "modules/protocol/tcp"
 static image_id ipid = -1;
 #endif
@@ -511,13 +510,16 @@ static struct protosw my_proto = {
 	NULL
 };
 
-#ifndef _KERNEL_MODE
-static void tcp_protocol_init(struct core_module_info *cp)
+
+static int tcp_module_init(void *cpp)
 {
-	core = cp;
+	if (cpp)
+		core = cpp;
+
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 
+#ifndef _KERNEL_MODE
 	if (!ipm) {
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
@@ -525,45 +527,55 @@ static void tcp_protocol_init(struct core_module_info *cp)
 
 		ipid = load_add_on(path);
 		if (ipid > 0) {
-			status_t rv = get_image_symbol(ipid, "ipv4_module_info",
+			status_t rv = get_image_symbol(ipid, "protocol_info",
 								B_SYMBOL_TYPE_DATA, (void**)&ipm);
 			if (rv < 0) {
 				printf("Failed to get access to IPv4 information!\n");
-				return;
+				return -1;
 			}
 		} else { 
 			printf("Failed to load the IPv4 module...\n");
-			return;
+			return -1;
 		}
-		ipm->set_core(cp);
+		ipm->set_core(cpp);
 	}
-}
-
-struct protocol_info protocol_info = {
-	"TCP Module",
-	&tcp_protocol_init
-};
-
-#else /* kernel setup */
-
-static status_t k_init(void)
-{
-	if (!core)
-		get_module(CORE_MODULE_PATH, (module_info**)&core);
+#else
 	if (!ipm)
 		get_module(IPV4_MODULE_PATH, (module_info**)&ipm);
-	
-	add_domain(NULL, AF_INET);
-	add_protocol(&my_proto, AF_INET);
-	
+#endif
+
 	return 0;
 }
 
+static int tcp_module_stop(void)
+{
+#ifndef _KERNEL_MODE
+	unload_add_on(ipid);
+#else
+	put_module(IPV4_MODULE_PATH);
+#endif
+	return 0;
+}
+	
+_EXPORT struct kernel_net_module_info protocol_info = {
+	{
+		TCP_MODULE_PATH,
+		0,
+		tcp_ops
+	},
+	tcp_module_init,
+	tcp_module_stop
+};
+
+#ifdef _KERNEL_MODE
 static status_t tcp_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
-			return k_init();
+			get_module(CORE_MODULE_PATH, (module_info**)&core);
+			if (!core)
+				return B_ERROR;
+			return B_OK;
 		case B_MODULE_UNINIT:
 			break;
 		default:
@@ -572,14 +584,8 @@ static status_t tcp_ops(int32 op, ...)
 	return B_OK;
 }
 
-static module_info my_module = {
-	TCP_MODULE_PATH,
-	B_KEEP_LOADED,
-	tcp_ops
-};
-
 _EXPORT module_info *modules[] = {
-	&my_module,
+	(module_info*)&protocol_info,
 	NULL
 };
 

@@ -37,6 +37,10 @@
 /* forward prototypes */
 int ether_dev_start(ifnet *dev);
 int ether_dev_stop (ifnet *dev);
+static int32 ether_ops(int32 op, ...);
+#else
+#define ether_ops NULL
+#define ETHERNET_MODULE_PATH "interface/ethernet"
 #endif
 
 static struct core_module_info *core = NULL;
@@ -856,11 +860,11 @@ int ether_dev_stop(ifnet *dev)
 	return 0;
 }
 
-#ifndef _KERNEL_MODE
-
-static int ether_init(struct core_module_info *cp)
+static int ether_init(void *cpp)
 {
-	core = cp;
+	if (cpp)
+		core = cpp;
+	
 	find_devices();
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
@@ -870,66 +874,37 @@ static int ether_init(struct core_module_info *cp)
 	return 0;
 }
 
-struct device_info device_info = {
-	"ethernet mdoule",
-	&ether_init
+_EXPORT struct kernel_net_module_info device_info = {
+	{
+		ETHERNET_MODULE_PATH,
+		0,
+		ether_ops
+	},
+
+	ether_init,
+	NULL
 };
 
-#else
-
-static int k_init(void)
-{
-	if (!core)
-		get_module(CORE_MODULE_PATH,
-			(module_info**)&core);
-
-	find_devices();
-
-	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
-	add_protosw(proto, NET_LAYER2);
-	arp_init();
-
-	return 0;
-}
-
-static int k_uninit(void)
-{
-	/* we should really stop all cards etc here! */
-	return 0;
-}
-
+#ifdef _KERNEL_MODE
 
 static int32 ether_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
-			if (get_module(CORE_MODULE_PATH,
-				(module_info**)&core) != B_OK) {
-				printf("Failed to get core pointer, declining!\n");
+			get_module(CORE_MODULE_PATH, (module_info**)&core);
+			if (!core)
 				return B_ERROR;
-			}
-			break;
+			return B_OK;
 		case B_MODULE_UNINIT:
-			return k_uninit();
+			return B_OK;
 		default:
 			return B_ERROR;
 	}
 	return B_OK;
-}
-			
-static struct device_module_info my_module = {
-	{
-		ETHERNET_MODULE_PATH,
-		B_KEEP_LOADED,
-		ether_ops
-	},
-
-	k_init
-};
+}		
 
 _EXPORT module_info * modules[] = {
-	(module_info *)&my_module,
+	(module_info *)&device_info,
 	NULL
 };
-
 #endif

@@ -5,21 +5,18 @@
 #ifndef IPV4_MODULE_H
 #define IPV4_MODULE_H
 
+#include "net_module.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include <module.h>
 #define IPV4_MODULE_PATH	"network/protocol/ipv4"
-
 #else /* _KERNEL_MODE */
-
 #define IPV4_MODULE_PATH	"modules/protocol/ipv4"
-
 #endif /* _KERNEL_MODE */
 
 struct ipv4_module_info {
-#ifdef _KERNEL_MODE
-	module_info info;
-#else
+	struct kernel_net_module_info info;
+#ifndef _KERNEL_MODE
 	void (*set_core)(struct core_module_info *);
 #endif
 
