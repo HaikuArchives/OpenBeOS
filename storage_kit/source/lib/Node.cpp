@@ -7,6 +7,7 @@
 
 #include <Node.h>
 #include <errno.h>
+#include <fs_attr.h> // for struct attr_info
 #include "kernel_interface.h"
 #include "Error.h"
 
@@ -43,7 +44,10 @@ BNode::InitCheck() const {
 
 status_t
 BNode::GetStat(struct stat *st) const {
-	return B_ERROR;
+	if (fCStatus != B_OK)
+		return fCStatus;
+	else
+		return StorageKit::get_stat(fFd, st);
 }
 
 status_t
@@ -139,15 +143,42 @@ BNode::RemoveAttr(const char *name) {
 }
 
 
+
 status_t
 BNode::RenameAttr(const char *oldname, const char *newname) {
-	return B_ERROR;
+
+	attr_info info;
+	status_t result;
+	ssize_t size;
+	
+	// Figure out how much data there is
+	result = GetAttrInfo(oldname, &info);
+	if (result != B_OK)
+		return result;
+		
+	// Alloc a buffer
+	void *data = new char[info.size];
+	if (data == NULL)
+		return B_NO_MEMORY;
+		
+	// Read in the data
+	size = ReadAttr(oldname, B_STRING_TYPE, 0, data, info.size);
+	if (size != info.size)
+		return size;
+		
+	// Write it to the new attribute
+	size = WriteAttr(newname, B_STRING_TYPE, 0, data, size);
+	if (size != info.size)
+		return size;
+	
+	// Remove the old attribute
+	return RemoveAttr(oldname);
 }
 
 
 status_t
 BNode::GetAttrInfo(const char *name, struct attr_info *info) {
-	return B_ERROR;
+	return (fCStatus == B_NO_INIT) ? B_FILE_ERROR : StorageKit::stat_attr(fFd, name, info) ;
 }
 
 status_t
@@ -254,7 +285,10 @@ BNode::clear() {
 
 status_t
 BNode::set_stat(struct stat &st, uint32 what) {
-	return B_ERROR;
+	if (fCStatus != B_OK)
+		return B_FILE_ERROR;
+
+	return StorageKit::set_stat(fFd, st, what);
 }
 
 status_t
