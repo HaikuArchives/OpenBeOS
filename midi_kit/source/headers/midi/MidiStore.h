@@ -52,13 +52,14 @@ virtual ~BMidiStore();
 private:
 	virtual void Run();
 	void _RunThread();
+	uint8* _DecodeTrack(uint8 *);
 	void _DecodeFormat0Tracks(uint8 *, uint16, uint32);
 	void _DecodeFormat1Tracks(uint8 *, uint16, uint32);
 	void _DecodeFormat2Tracks(uint8 *, uint16, uint32);
 	void _EncodeFormat0Tracks(uint8 *);
 	void _EncodeFormat1Tracks(uint8 *);
 	void _EncodeFormat2Tracks(uint8 *);
-	void _ReadEvent(uint8 **, uint8 *, BMidiEvent *);
+	void _ReadEvent(uint8, uint8 **, uint8 *, BMidiEvent *);
 	void _WriteEvent(BMidiEvent *);
 	uint32 _ReadVarLength(uint8 **, uint8 *);
 	void _WriteVarLength(uint32);
