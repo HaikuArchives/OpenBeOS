@@ -23,7 +23,7 @@ int main()
 {
 	setup_io();
 
-	printf("init: Welcome to OpenBeOS!\n");
+	printf("Welcome to OpenBeOS!\n");
 
 	if(1) {
 		proc_id pid;

@@ -9,11 +9,12 @@
 #include <stdlib.h>
 
 #define TEST_FILE "/boot/etc/fortunes"
+#define RD_BUFFER 100
 
 int main(int argc, char **argv)
 {
 	FILE *f;
-	char buffer[100];
+	char buffer[RD_BUFFER];
 	int rv;
 
 	f = fopen(TEST_FILE, "r");
@@ -22,9 +23,10 @@ int main(int argc, char **argv)
                        strerror(errno));
 		return -1;
 	}
-	
-	rv = fread(buffer, 100, 1, f);
-	printf("fread() gave %d\n%s\n", rv, buffer);
+
+	memset(buffer, 0, RD_BUFFER);	
+	rv = fread(buffer, RD_BUFFER, 1, f);
+	printf("fread() returned %d elements\n%s\n", rv, buffer);
 	fclose(f);
 	
 	printf("File opened and closed\n");
