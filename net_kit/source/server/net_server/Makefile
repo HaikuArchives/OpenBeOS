@@ -30,7 +30,8 @@ kernel:
 		$(CC) $(KCFLAGS) $(INCLUDES) -c $$obj || exit 1;  \
 	done
 	@$(CC) $(KLDFLAGS) -o core $(CORE_OBJS) core.o
-	
+	$(CC) $(KLDFLAGS) -Wl,-M=core.xMAP *.o
+
 installkernel: kernel
 	@cp core /boot/home/config/add-ons/kernel/network/core
 
