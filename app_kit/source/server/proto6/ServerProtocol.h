@@ -16,6 +16,11 @@
 #define SERVER_PORT_NAME "OBappserver"
 #define SERVER_INPUT_PORT "OBinputport"
 
+#define SET_UI_COLORS 'suic'
+#define GET_UI_COLOR 'guic'
+#define SET_DECORATOR 'sdec'
+#define GET_DECORATOR 'gdec'
+
 #define SET_CURSOR_DATA 'sscd'
 #define SET_CURSOR_BCURSOR 'sscb'
 #define SET_CURSOR_BBITMAP 'sscB'
