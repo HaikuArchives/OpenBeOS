@@ -27,6 +27,7 @@ KernelObjects
  	<$(SOURCE_GRIST)>makebuf.c
 	<$(SOURCE_GRIST)>printf.c
 	<$(SOURCE_GRIST)>putc.c
+	<$(SOURCE_GRIST)>putchar.c
 	<$(SOURCE_GRIST)>puts.c
 	<$(SOURCE_GRIST)>putw.c
 	<$(SOURCE_GRIST)>refill.c
