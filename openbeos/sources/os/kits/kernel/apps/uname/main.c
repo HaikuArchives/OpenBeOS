@@ -52,13 +52,6 @@ main(argc, argv)
 	char *argv[];
 {
 
-// These need taking out once they are in the correct place - Andrew
-#define KERN_VERSION	0
-#define CTL_HW		0
-#define HW_MACHINE	0
-#define HW_MACHINE_ARCH	0
-//
-
 #define	MFLAG	0x01
 #define	NFLAG	0x02
 #define	PFLAG	0x04
@@ -115,8 +108,11 @@ main(argc, argv)
 		mib[0] = CTL_KERN;
 		mib[1] = KERN_OSTYPE;
 		len = sizeof(buf);
-		//if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1)
+		if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1) {
 		//	err(1, "sysctl");
+			printf("An error occured\n");
+			return -1;
+		}
 		(void)printf("%s%.*s", prefix, (int)len, buf);
 		prefix = " ";
 	}
@@ -124,8 +120,11 @@ main(argc, argv)
 		mib[0] = CTL_KERN;
 		mib[1] = KERN_HOSTNAME;
 		len = sizeof(buf);
-		//if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1)
+		if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1) {
 		//	err(1, "sysctl");
+                        printf("An error occured\n");
+			return -1;
+                }		
 		(void)printf("%s%.*s", prefix, (int)len, buf);
 		prefix = " ";
 	}
@@ -133,8 +132,11 @@ main(argc, argv)
 		mib[0] = CTL_KERN;
 		mib[1] = KERN_OSRELEASE;
 		len = sizeof(buf);
-		//if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1)
+		if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1) {
 		//	err(1, "sysctl");
+                        printf("An error occured\n");
+			return -1;
+                }
 		(void)printf("%s%.*s", prefix, (int)len, buf);
 		prefix = " ";
 	}
@@ -142,8 +144,11 @@ main(argc, argv)
 		mib[0] = CTL_KERN;
 		mib[1] = KERN_VERSION;
 		len = sizeof(buf);
-		//if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1)
+		if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1){
 		//	err(1, "sysctl");
+			printf("An error occured\n");
+			return -1;
+		}
 		for (p = buf, tlen = len; tlen--; ++p)
 			if (*p == '\n' || *p == '\t')
 				*p = ' ';
@@ -154,17 +159,23 @@ main(argc, argv)
 		mib[0] = CTL_HW;
 		mib[1] = HW_MACHINE;
 		len = sizeof(buf);
-		//if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1)
+		if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1) {
 		//	err(1, "sysctl");
+                        printf("An error occured\n");
+			return -1;
+                }
 		(void)printf("%s%.*s", prefix, (int)len, buf);
 		prefix = " ";
 	}
 	if (flags & PFLAG) {
 		mib[0] = CTL_HW;
-		mib[1] = HW_MACHINE_ARCH;
+		mib[1] = HW_MODEL;
 		len = sizeof(buf);
-		//if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1)
+		if (sysctl(mib, 2, &buf, &len, NULL, 0) == -1) {
 		//	err(1, "sysctl");
+                        printf("An error occured\n");
+			return -1;
+                }
 		(void)printf("%s%.*s", prefix, (int)len, buf);
 		prefix = " ";
 	}
