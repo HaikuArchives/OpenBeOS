@@ -145,20 +145,6 @@ void YMakDecorator::SetFocus(bool bfocused){
 /*******************************************************
 *   @description
 *******************************************************/
-void YMakDecorator::SetCloseButton(bool down){
-	closestate=down;
-}
-
-/*******************************************************
-*   @description
-*******************************************************/
-void YMakDecorator::SetZoomButton(bool down){
-	zoomstate=down;
-}
-
-/*******************************************************
-*   @description
-*******************************************************/
 void YMakDecorator::Draw(BRect update){
    BRect b = frame;
    BRect cOBounds = frame;

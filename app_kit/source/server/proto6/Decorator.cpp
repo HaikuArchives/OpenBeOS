@@ -87,14 +87,17 @@ void Decorator::SetFocus(bool focused)
 
 void Decorator::SetCloseButton(bool down)
 {
+	closestate=down;
 }
 
 void Decorator::SetZoomButton(bool down)
 {
+	zoomstate=down;
 }
 
 void Decorator::SetMinimizeButton(bool down)
 {
+	minstate=down;
 }
 
 bool Decorator::GetCloseButton(void) const

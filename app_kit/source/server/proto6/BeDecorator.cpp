@@ -62,7 +62,14 @@ printf("~BeDecorator()\n");
 
 click_type BeDecorator::Clicked(BPoint pt, uint32 buttons)
 {
+	// Clicked is a hit-testing function which is called by each
+	// decorator object's respective WindowBorder. When a click or
+	// mouse message is received, we must return to the WindowBorder
+	// what the click meant to us and the appropriate action for it
+	// to take.
+
 	// the case order is important - we go from smallest to largest
+	// for efficiency's sake.
 	if(closerect.Contains(pt))
 	{
 
@@ -125,6 +132,12 @@ printf("BeDecorator():Clicked()\n");
 
 void BeDecorator::Resize(BRect rect)
 {
+	// Here we determine the size of every rectangle that we use
+	// internally when we are given the size of the client rectangle.
+	
+	// Current version simply makes everything fit inside the rect
+	// instead of building around it. This will change.
+	
 #ifdef DEBUG_DECOR
 printf("BeDecorator()::Resize()"); rect.PrintToStream();
 #endif
@@ -165,6 +178,7 @@ printf("BeDecorator()::Resize()"); rect.PrintToStream();
 
 void BeDecorator::MoveBy(BPoint pt)
 {
+	// Move all internal rectangles the appropriate amount
 	frame.OffsetBy(pt);
 	closerect.OffsetBy(pt);
 	tabrect.OffsetBy(pt);
@@ -175,6 +189,10 @@ void BeDecorator::MoveBy(BPoint pt)
 
 BRegion *BeDecorator::GetBorderSize(void)
 {
+	// Decorators basically paint pretty pictures around a client's
+	// rectangle and can (theoretically) be any size, so we need
+	// to create a region which will encompass all visible regions of
+	// the decorator
 	BRegion *r=new BRegion(borderrect);
 	r->Include(tabrect);
 	return r;
@@ -182,6 +200,8 @@ BRegion *BeDecorator::GetBorderSize(void)
 
 BPoint BeDecorator::GetMinimumSize(void)
 {
+	// This is currently unused, but minsize is the minimum size the
+	// window may take.
 	return minsize;
 }
 
@@ -192,10 +212,13 @@ void BeDecorator::SetFlags(uint32 wflags)
 
 void BeDecorator::UpdateFont(void)
 {
+	// This will be updated once font capability is implemented
 }
 
 void BeDecorator::UpdateTitle(const char *string)
 {
+	// Designed simply to redraw the title when it has changed on
+	// the client side.
 	if(string)
 	{
 		driver->SetDrawingMode(B_OP_OVER);
@@ -211,6 +234,9 @@ void BeDecorator::UpdateTitle(const char *string)
 
 void BeDecorator::SetFocus(bool bfocused)
 {
+	// SetFocus() performs necessary duties for color swapping and
+	// other things when a window is deactivated or activated.
+	
 	focused=bfocused;
 
 	if(focused)
@@ -226,16 +252,6 @@ void BeDecorator::SetFocus(bool bfocused)
 
 	button_highcol=tab_highcol;
 	button_lowcol=tab_lowcol;
-}
-
-void BeDecorator::SetCloseButton(bool down)
-{
-	closestate=down;
-}
-
-void BeDecorator::SetZoomButton(bool down)
-{
-	zoomstate=down;
 }
 
 void BeDecorator::Draw(BRect update)

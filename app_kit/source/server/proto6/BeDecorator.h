@@ -20,8 +20,6 @@ public:
 	void UpdateFont(void);
 	void UpdateTitle(const char *string);
 	void SetFocus(bool focused);
-	void SetCloseButton(bool down);
-	void SetZoomButton(bool down);
 	void Draw(void);
 	void Draw(BRect update);
 	void DrawZoom(BRect r);
