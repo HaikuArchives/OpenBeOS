@@ -10,8 +10,16 @@
 
 #else
 
-#include <KernelExport.h>
+#include <OS.h>
 #include <Drivers.h>
+#include <KernelExport.h>
+
+// these are missing from KernelExport.h ...
+#define  B_SELECT_READ       1 
+#define  B_SELECT_WRITE      2 
+#define  B_SELECT_EXCEPTION  3 
+extern void notify_select_event(selectsync * sync, uint32 ref); 
+
 #include <driver_settings.h>
 
 #include "netinet/in_var.h"
@@ -20,19 +28,73 @@
 #include "net_structures.h"
 #include "sys/select.h"
 
+// Local definitions
+// -----------------
+
+// the cookie we attach to each file descriptor opened on our driver entry
+typedef struct {
+	void *		socket;		// NULL before ioctl(fd, NET_SOCKET_SOCKET/ACCEPT)
+	uint32		open_flags;	// the open() flags (mostly for storing O_NONBLOCK mode)
+	struct {
+		selectsync *	sync;
+		uint32			ref;
+	} selectinfo[3];
+} net_socket_cookie;
+
 #define SHOW_INSANE_DEBUGGING	0
 #define SERIAL_DEBUGGING	1
 
-_EXPORT int32 api_version = B_CUR_DRIVER_API_VERSION;
+// Prototypes of device hooks functions
+static status_t net_socket_open(const char * name, uint32 flags, void ** cookie);
+static status_t net_socket_close(void * cookie);
+static status_t net_socket_free(void * cookie);
+static status_t net_socket_control(void * cookie, uint32 msg,void * buf, size_t len);
+static status_t net_socket_read(void * cookie, off_t pos, void * buf, size_t * len);
+// static status_t net_socket_readv(void * cookie, off_t pos, const iovec * vec, size_t count, size_t * len);
+static status_t net_socket_write(void * cookie, off_t pos, const void * buf, size_t * len);
+// static status_t net_socket_writev(void * cookie, off_t pos, const iovec * vec, size_t count, size_t * len);
+static status_t net_socket_select(void *cookie, uint8 event, uint32 ref, selectsync *sync);
+static status_t net_socket_deselect(void *cookie, uint8 event, selectsync *sync);
 
-/* static variables... */
-struct core_module_info *core = NULL;
+// Privates prototypes
+static void on_socket_event(void * socket, uint32 event, void * cookie);
 
-const char *PublishedDeviceNames [] =
-{
+// Global variables
+// ----------------
+
+const char * device_name_list[] = {
         "net/socket",
         NULL
 };
+
+device_hooks net_socket_driver_hooks =
+{
+        net_socket_open,
+        net_socket_close,
+        net_socket_free,
+        net_socket_control,
+        net_socket_read,
+        net_socket_write,
+		net_socket_select,
+		net_socket_deselect,
+        NULL, /* Don't implement the scattered buffer read and write. */
+        NULL
+};
+
+struct core_module_info * core = NULL;
+
+// OKAY, NOW IMPLEMENTATION PLEASE!
+// --------------------------------
+
+#ifdef CODEWARRIOR
+	#pragma mark [Driver API calls]
+#endif
+
+// Driver API calls
+// ----------------
+
+_EXPORT int32 api_version = B_CUR_DRIVER_API_VERSION;
+
 
 /* Do we init ourselves? If we're in safe mode we'll decline so if things
  * screw up we can boot and delete the broken driver!
@@ -41,7 +103,7 @@ const char *PublishedDeviceNames [] =
  * Also we'll turn on the serial debugger to aid in our debugging
  * experience.
  */
-status_t init_hardware (void)
+_EXPORT status_t init_hardware (void)
 {
         bool safemode = false;
         void *sfmptr;
@@ -66,17 +128,18 @@ status_t init_hardware (void)
 #if SERIAL_DEBUGGING	
 	/* XXX - switch on/off at top of file... */
         set_dprintf_enabled(true);
-		rv = load_driver_symbols("net/socket");
+		rv = load_driver_symbols("socket");
 		dprintf("load-driver_symbols gave %d\n", rv);
 #endif
 
         return B_OK;
 }
 
+
 /* init_driver()
  * called every time we're loaded.
  */
-status_t init_driver (void)
+_EXPORT status_t init_driver (void)
 {
 	int rv = 0;
 
@@ -98,32 +161,43 @@ status_t init_driver (void)
 		return B_ERROR;
 	}
 
-	/* now we've got it opened and installed in memory, ask it
-	 * to start the rest of the stack...
-	 */
-	core->start();
-
 	return B_OK;
 }
 
 /* uninit_driver()
  * called every time the driver is unloaded
  */
-void uninit_driver (void)
+_EXPORT void uninit_driver (void)
 {
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: uninit_driver\n");
 #endif
+
 	/* shutdown core server */
+	put_module(CORE_MODULE_PATH);
 }
 
 /* publish_devices()
  * called to publish our device.
  */
-const char** publish_devices()
+_EXPORT const char ** publish_devices()
 {
-        return PublishedDeviceNames;
+        return device_name_list;
 }
+
+
+_EXPORT device_hooks * find_device (const char* DeviceName)
+{
+        return &net_socket_driver_hooks;
+}
+
+
+#ifdef CODEWARRIOR
+	#pragma mark [Device hooks]
+#endif
+
+// Device hooks
+// ------------
 
 /* the network stack functions - mainly just pass throughs... */
 
@@ -133,39 +207,44 @@ const char** publish_devices()
  * memory, so repeated calls to get_module just change the reference count, which
  * shouldn't be a big drain on resources/performance.
  */
-static status_t net_socket_open(const char *devName,
+static status_t net_socket_open(const char * name,
                                 uint32 flags,
-                                void **cpp)
+                                void ** cookie)
 {
-	int rv;
+	net_socket_cookie *	nsc;
+
+	nsc = (net_socket_cookie *) malloc(sizeof(*nsc));
+	if (!nsc)
+		return B_NO_MEMORY;
+	
+	memset(nsc, 0, sizeof(*nsc));
+	nsc->socket = NULL; // the socket will be allocated in NET_SOCKET_SOCKET ioctl
+	nsc->open_flags = flags;
+
+  	// attach this new net_socket_cookie to file descriptor
+	*cookie = nsc; 
 
 #if SHOW_INSANE_DEBUGGING
-	dprintf("socket_driver: net_socket_open!\n");
+	dprintf("socket_driver: net_socket_open(%s, %s%s) return this cookie: %p\n", name,
+						( ((flags & O_RWMASK) == O_RDONLY) ? "O_RDONLY" :
+						  ((flags & O_RWMASK) == O_WRONLY) ? "O_WRONLY" : "O_RDWR"),
+						(flags & O_NONBLOCK) ? " O_NONBLOCK" : "",
+						*cookie);
 #endif
-
-	if (!core) {
-		rv = get_module(CORE_MODULE_PATH, (module_info **)&core);	
-		if (rv < 0) {
-			dprintf("net_socket_open: core module not found! %d\n", rv);
-			return B_ERROR;
-		}
-	}
-
-	rv = core->initsocket(cpp);
-	if (rv != 0)
-		return rv;
 
 	return B_OK;
 }
 
 static status_t net_socket_close(void *cookie)
 {
-	int rv = core->soclose(cookie);
-#if SHOW_INSANE_DEBUGGING
-	dprintf("socket_driver: net_socket_close\n");
-#endif
+	net_socket_cookie * nsc = (net_socket_cookie *) cookie;
 
-	return rv;
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: net_socket_close(%p)\n", nsc);
+#endif
+	if (nsc->socket)
+		return core->soclose(nsc->socket);
+	return B_OK;
 }
 
 /* Resources are freed on the stack when we close... */
@@ -182,6 +261,8 @@ static status_t net_socket_control(void *cookie,
                                 void *data,
                                 size_t len)
 {
+	net_socket_cookie *	nsc = (net_socket_cookie *) cookie;
+
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: net_socket_control: \n");
 #endif
@@ -189,22 +270,27 @@ static status_t net_socket_control(void *cookie,
 	switch (op) {
 		case NET_SOCKET_CREATE: {
 			struct socket_args *sa = (struct socket_args*)data;
-			sa->rv = core->socreate(sa->dom, cookie, sa->type, sa->prot);
+			
+			sa->rv = core->initsocket(&nsc->socket);
+			if (sa->rv != 0)
+				return B_OK;
+
+			sa->rv = core->socreate(sa->dom, nsc->socket, sa->type, sa->prot);
 			return B_OK;
 		}
 		case NET_SOCKET_BIND: {
 			struct bind_args *ba = (struct bind_args*)data;
-			ba->rv = core->sobind(cookie, ba->data, ba->dlen);
+			ba->rv = core->sobind(nsc->socket, ba->data, ba->dlen);
 			return B_OK;
 		}
 		case NET_SOCKET_LISTEN: {
 			struct listen_args *la = (struct listen_args*)data;
-			la->rv = core->solisten(cookie, la->backlog);
+			la->rv = core->solisten(nsc->socket, la->backlog);
 			return B_OK;
 		}
 		case NET_SOCKET_CONNECT: {
 			struct connect_args *ca = (struct connect_args*)data;
-			ca->rv = core->soconnect(cookie, ca->name, ca->namelen);
+			ca->rv = core->soconnect(nsc->socket, ca->name, ca->namelen);
 			return B_OK;
 		}
 		case NET_SOCKET_SELECT: {
@@ -212,7 +298,7 @@ static status_t net_socket_control(void *cookie,
 			int i;
 			struct timeval tv;
 			
-		dprintf("NET_SOCKET_SELECT, mfd = %d\n", sa->mfd);	
+			dprintf("NET_SOCKET_SELECT, mfd = %d\n", sa->mfd);	
 			for (i=2; i < sa->mfd;i++) {
 				dprintf("socket %d: ", i);
 				if (sa->rbits && FD_ISSET(i, sa->rbits))
@@ -237,7 +323,7 @@ static status_t net_socket_control(void *cookie,
 			struct msghdr *mh = (struct msghdr *)data;
 			int retsize, error;
 
-			error = core->recvit(cookie, mh, (caddr_t)&mh->msg_namelen, 
+			error = core->recvit(nsc->socket, mh, (caddr_t)&mh->msg_namelen, 
 			                     &retsize);
 			if (error == 0)
 				return retsize;
@@ -248,7 +334,7 @@ static status_t net_socket_control(void *cookie,
 			struct msghdr *mh = (struct msghdr *)data;
 			int retsize, error;
 
-			error = core->sendit(cookie, mh, mh->msg_flags, 
+			error = core->sendit(nsc->socket, mh, mh->msg_flags, 
 			                     &retsize);
 			if (error == 0)
 				return retsize;
@@ -266,19 +352,33 @@ static status_t net_socket_control(void *cookie,
 		case NET_SOCKET_GETSOCKOPT: {
 			struct getopt_args *ga = (struct getopt_args*)data;
 			
-			ga->rv = core->sogetopt(cookie, ga->level, ga->optnum,
+			ga->rv = core->sogetopt(nsc->socket, ga->level, ga->optnum,
 			                        ga->val, ga->valsize);
 			return ga->rv;
 		}
 		case NET_SOCKET_SETSOCKOPT: {
 			struct setopt_args *sa = (struct setopt_args*)data;
 			
-			sa->rv = core->sosetopt(cookie, sa->level, sa->optnum,
+			sa->rv = core->sosetopt(nsc->socket, sa->level, sa->optnum,
 			                        sa->val, sa->valsize);
 			return sa->rv;
 		}		
+
+/*
+		case NET_STACK_RESTART:
+			core->stop();
+			return B_OK;
+*/
+		case B_SET_BLOCKING_IO:
+			nsc->open_flags &= ~O_NONBLOCK;
+			return B_OK;
+
+		case B_SET_NONBLOCKING_IO:
+			nsc->open_flags |= O_NONBLOCK;
+			return B_OK;
+
 		default:
-			return core->soo_ioctl(cookie, op, data);
+			return core->soo_ioctl(nsc->socket, op, data);
 	}
 }
 
@@ -287,14 +387,20 @@ static status_t net_socket_read(void *cookie,
                                 void *buffer,
                                 size_t *readlen)
 {
+	net_socket_cookie *	nsc = (net_socket_cookie *) cookie;
 	struct iovec iov;
 	int error;
 	int flags;
+
+	if (! nsc->socket)
+		return B_BAD_VALUE;
+	
+	// TODO: support the O_NONBLOCK open_flags...
 	
 	iov.iov_base = buffer;
 	iov.iov_len = *readlen;
 	
-	error = core->readit(cookie, &iov, &flags);
+	error = core->readit(nsc->socket, &iov, &flags);
 	if (error < 0)
 		return error;
 	*readlen = error;
@@ -307,69 +413,90 @@ static status_t net_socket_write(void *cookie,
                                  const void *buffer,
                                  size_t *writelen)
 {
+	net_socket_cookie *	nsc = (net_socket_cookie *) cookie;
 	struct iovec iov;
 	int error;
+	
+	if (! nsc->socket)
+		return B_BAD_VALUE;
+	
+	// TODO: support the O_NONBLOCK open_flags...
 	
 	iov.iov_base = (void*)buffer;
 	iov.iov_len = *writelen;
 	
-	error = core->writeit(cookie, &iov, 0);
+	error = core->writeit(nsc->socket, &iov, 0);
 	if (error < 0)
 		return error;
 	*writelen = error;
 	return B_OK;	
 }
 
-static status_t net_socket_select(void *cookie, 
+static status_t net_socket_select(void * cookie, 
                                   uint8 event, 
                                   uint32 ref,
-                                  selectsync *sync)
+                                  selectsync * sync)
 {
-	int rv = 0;
+	net_socket_cookie *	nsc = (net_socket_cookie *) cookie;
+
 	dprintf("net_socket_select!\n");
 	
-	rv = core->soselect(cookie, event, ref, sync);
-	dprintf("soselect gave %d\n", rv);
-	return rv;
+	nsc->selectinfo[event - 1].sync = sync;
+	nsc->selectinfo[event - 1].ref = ref;
+
+	if (! nsc->socket)
+		return B_BAD_VALUE;
+	
+	// start (or continue) to monitor for socket event
+	return core->set_socket_event_callback(nsc->socket, on_socket_event, nsc);
 }
 
-static status_t net_socket_deselect(void *cookie, 
+static status_t net_socket_deselect(void * cookie, 
                                     uint8 event,
-                                    selectsync *sync)
+                                    selectsync * sync)
 {
+	net_socket_cookie *	nsc = (net_socket_cookie *) cookie;
+	int i;
+
 	dprintf("net_socket_deselect!\n");
 
-	return core->sodeselect(cookie, event, sync);
-	return B_OK;
+	nsc->selectinfo[event - 1].sync = NULL;
+	nsc->selectinfo[event - 1].ref = 0;
+	
+	if (! nsc->socket)
+		return B_BAD_VALUE;
+	
+	for (i = 0; i < 3; i++) {
+		if (nsc->selectinfo[i].sync)
+			return B_OK;	// still one (or more) socket's event to monitor
+	};
+
+	// no need to monitor socket events anymore
+	return core->set_socket_event_callback(nsc->socket, NULL, NULL);
 }
 
-device_hooks openbeos_net_server_hooks =
+#ifdef CODEWARRIOR
+	#pragma mark [Privates routines]
+#endif
+
+// Privates routines
+// -----------------
+
+static void on_socket_event
+	(
+	void * 		socket,
+	uint32 		event,
+	void * 		cookie
+	)
 {
-        net_socket_open,
-        net_socket_close,
-        net_socket_free,
-        net_socket_control,
-        net_socket_read,
-        net_socket_write,
-		net_socket_select,
-		net_socket_deselect,
-        NULL, /* Don't implement the scattered buffer read and write. */
-        NULL
-};
+	net_socket_cookie * nsc = (net_socket_cookie *) cookie;
+	if (! nsc)
+		return;
 
-
-device_hooks* find_device (const char* DeviceName)
-{
-        int rv;
-
-        if (DeviceName == NULL)
-                return NULL;
-
-        if ((rv = strcmp(DeviceName, PublishedDeviceNames[0])) != 0) {
-                return NULL;
-        }
-
-        return &openbeos_net_server_hooks;
+	// BEWARE: We assert there that socket 'event' values are
+	// in fact 'B_SELECT_XXXX' ones
+	if (nsc->selectinfo[event-1].sync)
+		notify_select_event(nsc->selectinfo[event-1].sync, nsc->selectinfo[event-1].ref);
 }
 
 #endif /* _KERNEL_MODE */
