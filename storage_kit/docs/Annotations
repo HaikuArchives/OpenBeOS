@@ -343,3 +343,30 @@ Location:    get_device_icon()
 Description: KDL when passing a NULL buffer!
 
 
+OS:          BeOS R5
+Module:      BMimeType
+Location:    CheckSnifferRule()
+Description: Crashes when passing a NULL rule.
+
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    GetSnifferRule()
+Description: Crashes when passing a NULL BString.
+
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    Check/Get/SetSnifferRule()
+Description: The sniffer rules description in the BeBook deviates considerably
+             from the actual implementation:
+             - + masks
+             - + top level ORs: (patterns...) | (patterns...) | ...
+             - - range overriding: [range1] ([range2]pattern)
+             - either no or complete ranges: (pattern1 | pattern2)
+               or ([range1]pattern1 | [range2]pattern2), but not
+               ([range1]pattern1 | pattern2)
+             - CheckSnifferRule() doesn't check some of the values, e.g.
+               ranges (negative values, or begin > end) or 0 <= priority <= 1.
+
+
