@@ -49,7 +49,7 @@ struct _event_queue_imp
 					bool inclusive,
 					int32 eventType);
 
-#if DEBUG
+#if DEBUG > 1
 	void		Dump() const;
 #endif
 					
@@ -64,7 +64,7 @@ private:
 	void RemoveEntry(event_queue_entry *entry);
 	void CleanupEvent(media_timed_event *event);
 	
-	event_queue_entry *GetStart_BeforeTime(bigtime_t eventTime, bool inclusive);
+	event_queue_entry *GetEnd_BeforeTime(bigtime_t eventTime, bool inclusive);
 	event_queue_entry *GetStart_AfterTime(bigtime_t eventTime, bool inclusive);
 
 	BLocker				fLock;

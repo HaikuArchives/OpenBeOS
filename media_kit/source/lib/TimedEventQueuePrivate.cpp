@@ -9,6 +9,7 @@
 #include <TimedEventQueue.h>
 #include <Autolock.h>
 #include <Buffer.h>
+#include <InterfaceDefs.h> //defines B_DELETE
 #include "TimedEventQueuePrivate.h"
 #include "Debug.h"
 #include "debug.h"
@@ -48,7 +49,6 @@ _event_queue_imp::AddEvent(const media_timed_event &event)
 
 	//create a new queue
 	if (fFirstEntry == NULL) {
-		TRACE("insert 0\n");
 		ASSERT(fEventCount == 0);
 		ASSERT(fLastEntry == NULL);
 		fFirstEntry = fLastEntry = new event_queue_entry;
@@ -61,7 +61,6 @@ _event_queue_imp::AddEvent(const media_timed_event &event)
 	
 	//insert at queue begin
 	if (fFirstEntry->event.event_time >= event.event_time) {
-		TRACE("insert 1\n");
 		event_queue_entry *newentry = new event_queue_entry;
 		memcpy(&newentry->event,&event,sizeof(media_timed_event));
 		newentry->prev = NULL;
@@ -74,7 +73,6 @@ _event_queue_imp::AddEvent(const media_timed_event &event)
 
 	//insert at queue end
 	if (fLastEntry->event.event_time <= event.event_time) {
-		TRACE("insert 2\n");
 		event_queue_entry *newentry = new event_queue_entry;
 		memcpy(&newentry->event,&event,sizeof(media_timed_event));
 		newentry->prev = fLastEntry;
@@ -88,7 +86,6 @@ _event_queue_imp::AddEvent(const media_timed_event &event)
 	//insert into the queue
 	for (event_queue_entry *entry = fLastEntry; entry; entry = entry->prev) {
 		if (entry->event.event_time <= event.event_time) {
-			TRACE("insert 3\n");
 			//insert after entry
 			event_queue_entry *newentry = new event_queue_entry;
 			memcpy(&newentry->event,&event,sizeof(media_timed_event));
@@ -101,7 +98,7 @@ _event_queue_imp::AddEvent(const media_timed_event &event)
 		}
 	}
 	
-	debugger("_event_queue_imp::AddEvent failed\n");
+	debugger("_event_queue_imp::AddEvent failed, should not be here\n");
 	return B_OK;
 }
 
@@ -151,7 +148,7 @@ _event_queue_imp::HasEvents() const
 int32
 _event_queue_imp::EventCount() const
 {
-	#if DEBUG
+	#if DEBUG > 1
 		Dump();
 	#endif
 	return fEventCount;
@@ -192,6 +189,7 @@ _event_queue_imp::FindFirstMatch(bigtime_t eventTime,
 								 bool inclusive,
 								 int32 eventType)
 {
+	event_queue_entry *end;
 	event_queue_entry *entry;
 
 	BAutolock lock(fLock);
@@ -205,8 +203,16 @@ _event_queue_imp::FindFirstMatch(bigtime_t eventTime,
 			return NULL;
 
 		case BTimedEventQueue::B_BEFORE_TIME:
-			entry = GetStart_BeforeTime(eventTime, inclusive);
-			return entry ? &entry->event : NULL;
+			end = GetEnd_BeforeTime(eventTime, inclusive);
+			if (end == NULL)
+				return NULL;
+			end = end->next;
+			for (entry = fFirstEntry; entry != end; entry = entry->next) {
+				if (eventType == BTimedEventQueue::B_ANY_EVENT || eventType == entry->event.type) {
+					return &entry->event;
+				}
+			}
+			return NULL;
 
 		case BTimedEventQueue::B_AT_TIME:
 			{
@@ -223,8 +229,12 @@ _event_queue_imp::FindFirstMatch(bigtime_t eventTime,
 			}
 
 		case BTimedEventQueue::B_AFTER_TIME:
-			entry = GetStart_AfterTime(eventTime, inclusive);
-			return entry ? &entry->event : NULL;
+			for (entry = GetStart_AfterTime(eventTime, inclusive); entry; entry = entry->next) {
+				if (eventType == BTimedEventQueue::B_ANY_EVENT || eventType == entry->event.type) {
+					return &entry->event;
+				}
+			}
+			return NULL;
 	}
 
 	return NULL;
@@ -239,6 +249,7 @@ _event_queue_imp::DoForEach(BTimedEventQueue::for_each_hook hook,
 							bool inclusive,
 							int32 eventType)
 {
+	event_queue_entry *end;
 	event_queue_entry *entry;
 	event_queue_entry *remove;
 	BTimedEventQueue::queue_action action;
@@ -272,7 +283,11 @@ _event_queue_imp::DoForEach(BTimedEventQueue::for_each_hook hook,
 			return B_OK;
 
 		case BTimedEventQueue::B_BEFORE_TIME:
-			for (entry = GetStart_BeforeTime(eventTime, inclusive); entry; ) {
+			end = GetEnd_BeforeTime(eventTime, inclusive);
+			if (end == NULL)
+				return B_OK;
+			end = end->next;
+			for (entry = fFirstEntry; entry != end; ) {
 				if (eventType == BTimedEventQueue::B_ANY_EVENT || eventType == entry->event.type) {
 					action = (*hook)(&entry->event, context);
 					switch (action) {
@@ -281,17 +296,17 @@ _event_queue_imp::DoForEach(BTimedEventQueue::for_each_hook hook,
 						case BTimedEventQueue::B_REMOVE_EVENT:
 							CleanupEvent(&entry->event);
 							remove = entry;
-							entry = entry->prev;
+							entry = entry->next;
 							RemoveEntry(remove);
 							break;
 						case BTimedEventQueue::B_NO_ACTION:
 						case BTimedEventQueue::B_RESORT_QUEUE:
 						default:
-							entry = entry->prev;
+							entry = entry->next;
 							break;
 					}
 				} else {
-					entry = entry->prev;
+					entry = entry->next;
 				}
 			}
 			return B_OK;
@@ -367,6 +382,7 @@ _event_queue_imp::FlushEvents(bigtime_t eventTime,
 							  bool inclusive,
 							  int32 eventType)
 {
+	event_queue_entry *end;
 	event_queue_entry *entry;
 	event_queue_entry *remove;
 
@@ -387,14 +403,18 @@ _event_queue_imp::FlushEvents(bigtime_t eventTime,
 			return B_OK;
 
 		case BTimedEventQueue::B_BEFORE_TIME:
-			for (entry = GetStart_BeforeTime(eventTime, inclusive); entry; ) {
+			end = GetEnd_BeforeTime(eventTime, inclusive);
+			if (end == NULL)
+				return B_OK;
+			end = end->next;
+			for (entry = fFirstEntry; entry != end; ) {
 				if (eventType == BTimedEventQueue::B_ANY_EVENT || eventType == entry->event.type) {
 					CleanupEvent(&entry->event);
 					remove = entry;
-					entry = entry->prev;
+					entry = entry->next;
 					RemoveEntry(remove);
 				} else {
-					entry = entry->prev;
+					entry = entry->next;
 				}
 			}
 			return B_OK;
@@ -499,7 +519,6 @@ _event_queue_imp::CleanupEvent(media_timed_event *event)
 	//  the cleanup hook function is called when the event is removed. 
 	//Problems:
 	//  B_DELETE is a keyboard code!
-	//  B_HANDLE_BUFFER not defined?
 	//
 	//  exiting cleanup flags are:
 	//		B_NO_CLEANUP = 0,
@@ -510,12 +529,12 @@ _event_queue_imp::CleanupEvent(media_timed_event *event)
 	
 	if (event->cleanup == BTimedEventQueue::B_NO_CLEANUP) {
 		// do nothing
-	} else if (/*event->type == B_HANDLE_BUFFER && */ event->cleanup == BTimedEventQueue::B_RECYCLE_BUFFER) {
+	} else if (event->type == BTimedEventQueue::B_HANDLE_BUFFER && event->cleanup == BTimedEventQueue::B_RECYCLE_BUFFER) {
 		((BBuffer *)event->pointer)->Recycle();
 	} else if (event->cleanup == BTimedEventQueue::B_EXPIRE_TIMER) {
 		// call TimerExpired() on the event->data
-		debugger("BTimedEventQueue cleanup: TimerExpired() should be called here\n");
-	} else if (/* event->cleanup == B_DELETE || */ event->cleanup >= BTimedEventQueue::B_USER_CLEANUP) {
+		debugger("BTimedEventQueue cleanup: calling TimerExpired() should be implemented here\n");
+	} else if (event->cleanup == B_DELETE || event->cleanup >= BTimedEventQueue::B_USER_CLEANUP) {
 		if (fCleanupHook)
 			(*fCleanupHook)(event,fCleanupHookContext);
 	} else {
@@ -525,7 +544,7 @@ _event_queue_imp::CleanupEvent(media_timed_event *event)
 
 
 _event_queue_imp::event_queue_entry *
-_event_queue_imp::GetStart_BeforeTime(bigtime_t eventTime, bool inclusive)
+_event_queue_imp::GetEnd_BeforeTime(bigtime_t eventTime, bool inclusive)
 {
 	event_queue_entry *entry;
 	
@@ -556,7 +575,7 @@ _event_queue_imp::GetStart_AfterTime(bigtime_t eventTime, bool inclusive)
 }
 
 
-#if DEBUG
+#if DEBUG > 1
 void
 _event_queue_imp::Dump() const
 {

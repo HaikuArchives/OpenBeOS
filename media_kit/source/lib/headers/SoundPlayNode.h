@@ -79,10 +79,6 @@ public:
 	void Stop();
 				
 private:
-	bool fChangeSampleformat;
-	bool fChangeSamplingrate;
-	bool fChangeChannelcount;
-
 	int fFramesPerBuffer;
 	thread_id fThreadId;
 	volatile bool fStopThread;
