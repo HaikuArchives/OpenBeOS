@@ -25,6 +25,10 @@ void wait()
 
 void out(const char *format,...)
 {
+	static bigtime_t start = 0;
+	if (start == 0)
+		start = system_time();
+	printf("%3.4f ",(system_time()-start) / 1E6);
 	va_list ap;
 	va_start(ap,format);
 	vfprintf(stdout,format,ap);

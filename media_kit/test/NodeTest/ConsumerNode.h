@@ -6,8 +6,12 @@ class ConsumerNode : public virtual BBufferConsumer, BMediaEventLooper
 {
 public:
 	ConsumerNode();
+	~ConsumerNode();
 
 protected:
+	/* functionality of BMediaNode */
+virtual		void NodeRegistered();
+	/* BBufferConsumer */
 virtual	status_t AcceptFormat(
 				const media_destination & dest,
 				media_format * format);
@@ -43,6 +47,14 @@ virtual	status_t FormatChanged(
 virtual status_t HandleMessage(int32 message,
 				const void *data, size_t size);
 
+virtual status_t SeekTagRequested(
+				const media_destination& destination,
+				bigtime_t in_target_time,
+				uint32 in_flags,
+				media_seek_tag* out_seek_tag,
+				bigtime_t* out_tagged_time,
+				uint32* out_flags);
+				
 /* from BMediaNode */
 virtual	BMediaAddOn* AddOn(
 				int32 * internal_id) const;
@@ -51,6 +63,9 @@ virtual	BMediaAddOn* AddOn(
 virtual void HandleEvent(const media_timed_event *event,
 						 bigtime_t lateness,
 						 bool realTimeEvent = false);
+
+/* our own functionality */
+void InitializeInput();
 
 	media_input mInput;
 	media_format mPreferredFormat;

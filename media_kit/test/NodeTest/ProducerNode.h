@@ -5,8 +5,16 @@ class ProducerNode : public virtual BBufferProducer, BMediaEventLooper
 {
 public:
 	ProducerNode();
+	~ProducerNode();
 
 protected:
+
+	/* functionality of BMediaNode */
+virtual	BMediaAddOn* AddOn(
+				int32 * internal_id) const;
+
+virtual		void NodeRegistered();
+
 	/* functionality of BBufferProducer */
 virtual	status_t FormatSuggestionRequested(
 				media_type type,
@@ -28,7 +36,14 @@ virtual	status_t DisposeOutputCookie(
 virtual	status_t SetBufferGroup(
 				const media_source & for_source,
 				BBufferGroup * group);
-	/* Iterates over all outputs and maxes the latency found */
+virtual	status_t VideoClippingChanged(
+				const media_source & for_source,
+				int16 num_shorts,
+				int16 * clip_data,
+				const media_video_display_info & display,
+				int32 * _deprecated_);
+virtual	status_t GetLatency(
+				bigtime_t * out_lantency);
 virtual	status_t PrepareToConnect(
 				const media_source & what,
 				const media_destination & where,
@@ -56,16 +71,34 @@ virtual	void EnableOutput(
 virtual status_t HandleMessage(int32 message,
 				const void *data, size_t size);
 
-/* from BMediaNode */
-virtual	BMediaAddOn* AddOn(
-				int32 * internal_id) const;
+virtual	void AdditionalBufferRequested(	
+				const media_source & source,
+				media_buffer_id prev_buffer,
+				bigtime_t prev_time,
+				const media_seek_tag * prev_tag);
 
-/* from BMediaEventLooper */
+virtual	void LatencyChanged(
+				const media_source & source,
+				const media_destination & destination,
+				bigtime_t new_latency,
+				uint32 flags);
+				
+	/* functionality of BMediaEventLooper */
 virtual void HandleEvent(const media_timed_event *event,
 						 bigtime_t lateness,
 						 bool realTimeEvent = false);
 
+	/* our own functionality */
+void InitializeOutput();
+
+static int32 _bufferproducer(void *arg);
+void BufferProducer();
+
+	BBufferGroup *mBufferGroup;
+	sem_id		mBufferProducerSem;
+	thread_id	mBufferProducer;
+
+	bool 		 mOutputEnabled;
 	media_output mOutput;
-	media_format mPreferredFormat;
 };
 
