@@ -103,7 +103,8 @@ kAbout =
 "\tPhilippe Houdoin - Project Leader\n"
 "\tSimon Gauvin - GUI Design\n"
 "\tMichael Pfeiffer - PDF Generation\n"
-"\tCelerick Stephens - Documentation\n";
+//"\tCelerick Stephens - Documentation\n"
+;
 
 void
 HWindow::AboutRequested()
