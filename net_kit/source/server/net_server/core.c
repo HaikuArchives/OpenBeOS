@@ -173,16 +173,15 @@ static int32 if_thread(void *data)
 	status_t status;
 	char buffer[ETHER_MAX_LEN];
 	size_t len = ETHER_MAX_LEN;
-	int count = 0;
 
 	while ((status = read(i->devid, buffer, len)) >= B_OK) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
 
-		if (i->input)
-			i->input(mb);
-		
-		atomic_add(&i->if_ipackets, 1);
-		count++;
+		if (mb) {
+			if (i->input)
+				i->input(mb);
+			atomic_add(&i->if_ipackets, 1);
+		}
 		len = ETHER_MAX_LEN;
 	}
 	printf("%s: terminating if_thread\n", i->if_name);
@@ -205,7 +204,7 @@ static int32 rx_thread(void *data)
 		if (i->input)
 			i->input(m);
 		else
-			printf("%s%d: no input function!\n", i->name, i->if_unit);
+			printf("%s: no input function!\n", i->if_name);
 	}
 	printf("%s: terminating rx_thread\n", i->if_name);
 	return 0;
