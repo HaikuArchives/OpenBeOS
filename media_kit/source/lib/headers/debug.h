@@ -12,14 +12,15 @@
 	#define CALLED() \
 		printf("libmedia.so: CALLED %s\n",__PRETTY_FUNCTION__)
 		
-	#define TRACE(a) \
-		printf ## a
+	#define TRACE \
+		printf
 
 #else
 
 	#define UNIMPLEMENTED() 	((void)0)
 	#define BROKEN()			((void)0)
 	#define CALLED()			((void)0)
-	#define TRACE(a)			((void)0)
+	#define TRACE \
+		if (1) {} else printf
 
 #endif

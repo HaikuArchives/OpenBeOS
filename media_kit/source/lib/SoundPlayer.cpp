@@ -4,7 +4,9 @@
  *  DESCR: 
  ***********************************************************************/
 #include <SoundPlayer.h>
+#include <MediaRoster.h>
 #include "debug.h"
+#include "SoundPlayNode.h"
 
 /*************************************************************
  * public sound_error
@@ -89,10 +91,14 @@ BSoundPlayer::InitCheck()
 media_raw_audio_format
 BSoundPlayer::Format() const
 {
-	UNIMPLEMENTED();
-	media_raw_audio_format dummy;
+	CALLED();
 
-	return dummy;
+	media_raw_audio_format temp = media_raw_audio_format::wildcard;
+	
+	if (_m_node)
+		memcpy(&temp,&_m_node->Format(),sizeof(temp));
+
+	return temp;
 }
 
 
@@ -410,12 +416,12 @@ BSoundPlayer::Init(
 	_m_volumeSlider = NULL;
 	_m_gotVolume = 0;
 
-	_m_node = new _SoundPlayNode();
+	_m_node = new _SoundPlayNode(name,format);
 	
 	status_t status; 
 	BMediaRoster *roster;
 	media_node outnode;
-	roster = BMediaRoster::Roster();	
+	roster = BMediaRoster::Roster();
 	if (!roster) {
 		TRACE("BSoundPlayer::Init: Couldn't get BMediaRoster\n");
 		return;
@@ -433,6 +439,7 @@ BSoundPlayer::Init(
 		node = &outnode;
 	}
 
+/*
 	m_input = ;
 	m_output = ;
 
@@ -450,7 +457,7 @@ tryFormat = fileAudioOutput.format;
    err = roster->StartNode(codecNode, startTime); 
    err = roster->StartNode(videoNode, startTime); 
 
-	
+*/	
 	
 	SetInitError(B_OK);
 }
