@@ -14,10 +14,12 @@
 #include "netinet/ip_var.h"
 #include "netinet/udp.h"
 #include "netinet/udp_var.h"
+#include "netinet/ip_icmp.h"
 
 #include "core_module.h"
 #include "net_module.h"
 #include "core_funcs.h"
+#include "../icmp/icmp_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -28,17 +30,22 @@ static status_t udp_ops(int32 op, ...);
 #define UDP_MODULE_PATH	    "modules/protocol/udp"
 #endif
 
+/* Private variables */
 static struct core_module_info *core = NULL;
-
-struct protosw *proto[IPPROTO_MAX];
+static struct protosw *proto[IPPROTO_MAX];
 static struct inpcb udb;	/* head of the UDP PCB list! */
-static struct inpcb *udp_last_inpcb = NULL;
-static struct sockaddr_in udp_in;
 static int udpcksum = 1;	/* do we calculate the UDP checksum? */
 static struct udpstat udpstat;
-
 static uint32 udp_sendspace;	/* size of send buffer */
 static uint32 udp_recvspace;	/* size of recieve buffer */
+static struct icmp_module_info *icmp = NULL;
+#ifndef _KERNEL_MODE
+static image_id icmpid = -1;
+#endif
+
+/* Private but used globally, need to make thread safe... tls??? */
+static struct inpcb *udp_last_inpcb = NULL;
+static struct sockaddr_in udp_in;
 
 #if SHOW_DEBUG
 static void dump_udp(struct mbuf *buf)
@@ -275,8 +282,7 @@ void udp_input(struct mbuf *buf, int hdrlen)
 		}
 		*ip = saved_ip;
 		ip->ip_len += hdrlen;
-		printf("UDP: we'd send an ICMP reply...\n");
-		/* XXX - send ICMP reply... */
+		icmp->error(buf, ICMP_UNREACH, ICMP_UNREACH_PORT, 0, 0);
 		return;
 	}
 
@@ -345,6 +351,32 @@ static int udp_module_init(void *cpp)
 		core = cpp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
+
+#ifndef _KERNEL_MODE
+	if (!icmp) {
+		char path[PATH_MAX];
+		getcwd(path, PATH_MAX);
+		strcat(path, "/" ICMP_MODULE_PATH);
+
+		icmpid = load_add_on(path);
+		if (icmpid > 0) {
+			status_t rv = get_image_symbol(icmpid, "protocol_info",
+								B_SYMBOL_TYPE_DATA, (void**)&icmp);
+			if (rv < 0) {
+				printf("Failed to get access to IPv4 information!\n");
+				return -1;
+			}
+		} else { 
+			printf("Failed to load the IPv4 module...\n");
+			return -1;
+		}
+		icmp->set_core(cpp);
+	}
+#else
+	if (!icmp)
+		get_module(ICMP_MODULE_PATH, (module_info**)&icmp);
+#endif
+
 	return 0;
 }
 
