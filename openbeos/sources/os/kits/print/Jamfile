@@ -1,0 +1,6 @@
+SubInclude OBOS_TOP sources os kits print addons ;
+SubInclude OBOS_TOP sources os kits print docs ;
+SubInclude OBOS_TOP sources os kits print lib ;
+SubInclude OBOS_TOP sources os kits print prefs ;
+SubInclude OBOS_TOP sources os kits print servers ;
+SubInclude OBOS_TOP sources os kits print tests ;
