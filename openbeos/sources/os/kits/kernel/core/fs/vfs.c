@@ -22,6 +22,7 @@
 #include <devfs.h>
 #include <errors.h>
 #include <atomic.h>
+#include <fd.h>
 
 #include <rootfs.h>
 
@@ -49,20 +50,6 @@ struct vnode {
 struct vnode_hash_key {
 	fs_id    fsid;
 	vnode_id vnid;
-};
-
-struct file_descriptor {
-	struct vnode *vnode;
-	file_cookie cookie;
-	int ref_count;
-};
-
-struct ioctx {
-	struct vnode *cwd;
-	mutex io_mutex;
-	int table_size;
-	int num_used_fds;
-	struct file_descriptor **fds;
 };
 
 struct fs_container {
@@ -96,12 +83,23 @@ static int vfs_mount(char *path, const char *device, const char *fs_name, void *
 static int vfs_unmount(char *path, bool kernel);
 static int vfs_open(char *path, stream_type st, int omode, bool kernel);
 static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
-static ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel);
-static ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel);
-static int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel);
-static int vfs_close(int fd, bool kernel);
+
+static ssize_t vfs_read(struct file_descriptor *, void *, off_t, ssize_t);
+static ssize_t vfs_write(struct file_descriptor *, const void *, off_t, ssize_t);
+static int vfs_ioctl(struct file_descriptor *, int, void *buf, size_t len);
+static int vfs_close(struct file_descriptor *, int, struct ioctx *);
+
 static int vfs_create(char *path, stream_type stream_type, void *args, bool kernel);
 static int vfs_rstat(char *path, struct file_stat *stat, bool kernel);
+
+/* the vfs fd_ops structure */
+struct fd_ops vfsops = {
+	"vfs",
+	vfs_read,
+	vfs_write,
+	vfs_ioctl,
+	vfs_close
+};
 
 #define VNODE_HASH_TABLE_SIZE 1024
 static void *vnode_table;
@@ -453,99 +451,12 @@ int vfs_set_cache_ptr(void *vnode, void *cache)
 		return -1;
 }
 
-static struct file_descriptor *alloc_fd(void)
-{
-	struct file_descriptor *f;
-
-	f = kmalloc(sizeof(struct file_descriptor));
-	if(f) {
-		f->vnode = NULL;
-		f->cookie = NULL;
-		f->ref_count = 1;
-	}
-	return f;
-}
-
-static struct file_descriptor *get_fd(struct ioctx *ioctx, int fd)
-{
-	struct file_descriptor *f;
-
-	mutex_lock(&ioctx->io_mutex);
-
-	if(fd >= 0 && fd < ioctx->table_size && ioctx->fds[fd]) {
-		// valid fd
-		f = ioctx->fds[fd];
-		atomic_add(&f->ref_count, 1);
- 	} else {
-		f = NULL;
-	}
-
-	mutex_unlock(&ioctx->io_mutex);
-	return f;
-}
-
-static void free_fd(struct file_descriptor *f)
+void free_fd(struct file_descriptor *f)
 {
 	f->vnode->mount->fs->calls->fs_close(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
 	f->vnode->mount->fs->calls->fs_freecookie(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
 	dec_vnode_ref_count(f->vnode, true, false);
 	kfree(f);
-}
-
-static void put_fd(struct file_descriptor *f)
-{
-	if(atomic_add(&f->ref_count, -1) == 1) {
-		free_fd(f);
-	}
-}
-
-static void remove_fd(struct ioctx *ioctx, int fd)
-{
-	struct file_descriptor *f;
-
-	mutex_lock(&ioctx->io_mutex);
-
-	if(fd >= 0 && fd < ioctx->table_size && ioctx->fds[fd]) {
-		// valid fd
-		f = ioctx->fds[fd];
-		ioctx->fds[fd] = NULL;
-		ioctx->num_used_fds--;
-	} else {
-		f = NULL;
-	}
-
-	mutex_unlock(&ioctx->io_mutex);
-
-	if(f)
-		put_fd(f);
-}
-
-static int new_fd(struct ioctx *ioctx, struct file_descriptor *f)
-{
-	int fd;
-	int i;
-
-	mutex_lock(&ioctx->io_mutex);
-
-	fd = -1;
-	for(i=0; i<ioctx->table_size; i++) {
-		if(!ioctx->fds[i]) {
-			fd = i;
-			break;
-		}
-	}
-	if(fd < 0) {
-		fd = ERR_NO_MORE_HANDLES;
-		goto err;
-	}
-
-	ioctx->fds[fd] = f;
-	ioctx->num_used_fds++;
-
-err:
-	mutex_unlock(&ioctx->io_mutex);
-
-	return fd;
 }
 
 static struct vnode *get_vnode_from_fd(struct ioctx *ioctx, int fd)
@@ -579,18 +490,6 @@ static struct fs_container *find_fs(const char *fs_name)
 		fs = fs->next;
 	}
 	return NULL;
-}
-
-static struct ioctx *get_current_ioctx(bool kernel)
-{
-	struct ioctx *ioctx;
-
-	if(kernel) {
-		ioctx = proc_get_kernel_proc()->ioctx;
-	} else {
-		ioctx = thread_get_current_thread()->proc->ioctx;
-	}
-	return ioctx;
 }
 
 static int path_to_vnode(char *path, struct vnode **v, bool kernel)
@@ -1237,7 +1136,9 @@ static int vfs_open(char *path, stream_type st, int omode, bool kernel)
 	}
 	f->vnode = v;
 	f->cookie = cookie;
-
+	f->ops = &vfsops;
+	f->fd_type = DTYPE_VNODE;
+	
 	fd = new_fd(get_current_ioctx(kernel), f);
 	if(fd < 0) {
 		err = ERR_VFS_FD_TABLE_FULL;
@@ -1253,22 +1154,9 @@ err:
 	return err;
 }
 
-static int vfs_close(int fd, bool kernel)
+static int vfs_close(struct file_descriptor *f, int fd, struct ioctx *io)
 {
-	struct file_descriptor *f;
-	struct ioctx *ioctx;
-
-#if MAKE_NOIZE
-	dprintf("vfs_close: entry. fd %d, kernel %d\n", fd, kernel);
-#endif
-
-	ioctx = get_current_ioctx(kernel);
-
-	f = get_fd(ioctx, fd);
-	if(!f)
-		return ERR_INVALID_HANDLE;
-
-	remove_fd(ioctx, fd);
+	remove_fd(io, fd);
 	put_fd(f);
 
 	return 0;
@@ -1296,21 +1184,14 @@ static int vfs_fsync(int fd, bool kernel)
 	return err;
 }
 
-static ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel)
+static ssize_t vfs_read(struct file_descriptor *f, void *buf, off_t pos, ssize_t len)
 {
 	struct vnode *v;
-	struct file_descriptor *f;
 	int err;
 
 #if MAKE_NOIZE
 	dprintf("vfs_read: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x, kernel %d\n", fd, buf, pos, len, kernel);
 #endif
-
-	f = get_fd(get_current_ioctx(kernel), fd);
-	if(!f) {
-		err = ERR_INVALID_HANDLE;
-		goto err;
-	}
 
 	v = f->vnode;
 	err = v->mount->fs->calls->fs_read(v->mount->fscookie, v->priv_vnode, f->cookie, buf, pos, len);
@@ -1321,21 +1202,14 @@ err:
 	return err;
 }
 
-static ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel)
+static ssize_t vfs_write(struct file_descriptor *f, const void *buf, off_t pos, ssize_t len)
 {
 	struct vnode *v;
-	struct file_descriptor *f;
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("vfs_write: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x, kernel %d\n", fd, buf, pos, len, kernel);
+	dprintf("vfs_write: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x\n", fd, buf, pos, len);
 #endif
-
-	f = get_fd(get_current_ioctx(kernel), fd);
-	if(!f) {
-		err = ERR_INVALID_HANDLE;
-		goto err;
-	}
 
 	v = f->vnode;
 	err = v->mount->fs->calls->fs_write(v->mount->fscookie, v->priv_vnode, f->cookie, buf, pos, len);
@@ -1372,21 +1246,14 @@ err:
 
 }
 
-static int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel)
+static int vfs_ioctl(struct file_descriptor *f, int op, void *buf, size_t len)
 {
 	struct vnode *v;
-	struct file_descriptor *f;
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("vfs_ioctl: fd = %d, op 0x%x, buf 0x%x, len 0x%x, kernel %d\n", fd, op, buf, len, kernel);
+	dprintf("vfs_ioctl: fd = %d, op 0x%x, buf 0x%x, len 0x%x\n", fd, op, buf, len);
 #endif
-
-	f = get_fd(get_current_ioctx(kernel), fd);
-	if(!f) {
-		err = ERR_INVALID_HANDLE;
-		goto err;
-	}
 
 	v = f->vnode;
 	err = v->mount->fs->calls->fs_ioctl(v->mount->fscookie, v->priv_vnode, f->cookie, op, buf, len);
@@ -1796,34 +1663,14 @@ int sys_open(const char *path, stream_type st, int omode)
 	return vfs_open(buf, st, omode, true);
 }
 
-int sys_close(int fd)
-{
-	return vfs_close(fd, true);
-}
-
 int sys_fsync(int fd)
 {
 	return vfs_fsync(fd, true);
 }
 
-ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len)
-{
-	return vfs_read(fd, buf, pos, len, true);
-}
-
-ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len)
-{
-	return vfs_write(fd, buf, pos, len, true);
-}
-
 int sys_seek(int fd, off_t pos, seek_type seek_type)
 {
 	return vfs_seek(fd, pos, seek_type, true);
-}
-
-int sys_ioctl(int fd, int op, void *buf, size_t len)
-{
-	return vfs_ioctl(fd, op, buf, len, true);
 }
 
 int sys_create(const char *path, stream_type stream_type)
@@ -2000,42 +1847,14 @@ int user_open(const char *upath, stream_type st, int omode)
 	return vfs_open(path, st, omode, false);
 }
 
-int user_close(int fd)
-{
-	return vfs_close(fd, false);
-}
-
 int user_fsync(int fd)
 {
 	return vfs_fsync(fd, false);
 }
 
-ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len)
-{
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
-		return ERR_VM_BAD_USER_MEMORY;
-
-	return vfs_read(fd, buf, pos, len, false);
-}
-
-ssize_t user_write(int fd, const void *buf, off_t pos, ssize_t len)
-{
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
-		return ERR_VM_BAD_USER_MEMORY;
-
-	return vfs_write(fd, buf, pos, len, false);
-}
-
 int user_seek(int fd, off_t pos, seek_type seek_type)
 {
 	return vfs_seek(fd, pos, seek_type, false);
-}
-
-int user_ioctl(int fd, int op, void *buf, size_t len)
-{
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
-		return ERR_VM_BAD_USER_MEMORY;
-	return vfs_ioctl(fd, op, buf, len, false);
 }
 
 int user_create(const char *upath, stream_type stream_type)
