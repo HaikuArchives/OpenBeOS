@@ -58,4 +58,6 @@ typedef uint32 n_time;/* ms since 00:00 GMT, byte rev */
 n_time   iptime (void);
 #endif /* _NETWORK_STACK */
 
-#endif /* NETINET_IN_SYSTM_H */ 
+#endif /* NETINET_IN_SYSTM_H */
+ 
+
