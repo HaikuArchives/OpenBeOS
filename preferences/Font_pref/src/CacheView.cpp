@@ -26,11 +26,12 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
 	screenFCS = new BSlider(*(new BRect(viewSize.left, viewSize.top, viewSize.right, viewSize.top + 25.0)),
 							"screenFontCache",
 							"Screen font cache size: ",
-							NULL,
+							new BMessage(SCREEN_FCS_UPDATE_MSG),
 							minVal,
 							maxVal,
 							B_TRIANGLE_THUMB
 						   );
+	screenFCS->SetModificationMessage(new BMessage(SCREEN_FCS_MODIFICATION_MSG));
 	
 	sprintf(sliderMinLabel, "%d kB", minVal);
 	sprintf(sliderMaxLabel, "%d kB", maxVal);
@@ -43,11 +44,12 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
 	printFCS = new BSlider(*(new BRect(viewSize.left, viewSize.top, viewSize.right, viewSize.top + 25.0)),
 							"printFontCache",
 							"Printing font cache size: ",
-							NULL,
+							new BMessage(PRINT_FCS_UPDATE_MSG),
 							minVal,
 							maxVal,
 							B_TRIANGLE_THUMB
 						   );
+	printFCS->SetModificationMessage(new BMessage(PRINT_FCS_MODIFICATION_MSG));
 	
 	printFCS->SetLimitLabels(sliderMinLabel, sliderMaxLabel);
 	printFCS->UseFillColor(TRUE, &fillColor);

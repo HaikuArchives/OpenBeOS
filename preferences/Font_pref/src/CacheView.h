@@ -3,6 +3,11 @@
 
 	#define CACHE_VIEW_H
 	
+	#define PRINT_FCS_UPDATE_MSG 'pfum'
+	#define SCREEN_FCS_UPDATE_MSG 'sfum'
+	#define PRINT_FCS_MODIFICATION_MSG 'pfmm'
+	#define SCREEN_FCS_MODIFICATION_MSG 'sfmm'
+	
 	#ifndef _VIEW_H
 		
 		#include <View.h>

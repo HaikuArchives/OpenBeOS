@@ -101,17 +101,37 @@ void MainWindow::MessageReceived(BMessage *message){
 		
 		case RESCAN_FONTS_MSG:
 		
-			//Recan fonts
+			printf("rescan fonts message\n");
 			break;
 			
 		case RESET_FONTS_MSG:
 		
-			//reset fonts to defaults
+			printf("reset fonts message\n");
 			break;
 			
 		case REVERT_MSG:
 		
-			//revert fonts to original
+			printf("revert message\n");
+			break;
+			
+		case PRINT_FCS_UPDATE_MSG:
+		
+			printf("print update message\n");
+			break;
+			
+		case PRINT_FCS_MODIFICATION_MSG:
+		
+			printf("print mod msg\n");
+			break;
+		
+		case SCREEN_FCS_UPDATE_MSG:
+		
+			printf("screen update message\n");
+			break;
+				
+		case SCREEN_FCS_MODIFICATION_MSG:
+		
+			printf("screen mod msg\n");
 			break;
 		
 		default:
