@@ -14,6 +14,8 @@
 #include <Drivers.h>
 #include <driver_settings.h>
 
+#include "netinet/in_var.h"
+#include "sys/protosw.h"
 #include "net_server/core_module.h"
 #include "net_structures.h"
 
@@ -177,13 +179,70 @@ static status_t net_socket_control(void *cookie,
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: net_socket_control: \n");
 #endif
+	switch (op) {
+		case NET_SOCKET_CREATE: {
+			struct socket_args *sa = (struct socket_args*)data;
+			return core->socreate(sa->dom, cookie, sa->type, sa->prot);
+		}
+		case NET_SOCKET_BIND: {
+			struct bind_args *ba = (struct bind_args*)data;
+			return core->sobind(cookie, ba->data, ba->dlen);
+		}
+		case NET_SOCKET_LISTEN: {
+			struct listen_args *la = (struct listen_args*)data;
+			return core->solisten(cookie, la->backlog);
+		}
+		case NET_SOCKET_CONNECT: {
+			struct connect_args *ca = (struct connect_args*)data;
+			return core->soconnect(cookie, ca->name, ca->namelen);
+		}
+		case NET_SOCKET_SELECT: {
+			struct select_args *sa = (struct select_args *)data;
+			int i;
+		dprintf("NET_SOCKET_SELECT, mfd = %d\n", sa->mfd);	
+			for (i=2; i < sa->mfd;i++) {
+				dprintf("socket %d: ", i);
+				if (sa->rbits && FD_ISSET(i, sa->rbits))
+					dprintf(" read bit ", i);
+				if (sa->wbits && FD_ISSET(i, sa->wbits))
+					dprintf(" write bit ", i);
+				if (sa->ebits && FD_ISSET(i, sa->ebits))
+					dprintf(" except bit ", i);
+					
+				dprintf("\n");
+			}
+			
+			i = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, sa->tv);
+			dprintf("kernel select returned %d\n", i);
+			return i;
+		}
+		case NET_SOCKET_RECVFROM:
+		{
+			struct msghdr *mh = (struct msghdr *)data;
+			int retsize, error;
 
-	if (op == NET_SOCKET_CREATE) {
-		struct socket_args *sa = (struct socket_args*)data;
-		return core->socreate(sa->dom, cookie, sa->type, sa->prot);
+			error = core->recvit(cookie, mh, (caddr_t)&mh->msg_namelen, 
+			                     &retsize);
+			if (error == 0)
+				return retsize;
+			return error;
+		}
+		case NET_SOCKET_SENDTO: 
+		{
+			struct msghdr *mh = (struct msghdr *)data;
+			int retsize, error;
+			printf("NET_SOCKET_SENDTO\n");
+
+			error = core->sendit(cookie, mh, mh->msg_flags, 
+			                     &retsize);
+			if (error == 0)
+				return retsize;
+			return error;
+		}	
+		default:
+			dprintf("unknown opcode %d\n", op);
+			return core->soo_ioctl(cookie, op, data);
 	}
-
-	return core->soo_ioctl(cookie, op, data);
 }
 
 static status_t net_socket_read(void *cookie,
@@ -204,6 +263,30 @@ static status_t net_socket_write(void *cookie,
         return B_OK;
 }
 
+static status_t net_socket_select(void *cookie, 
+                                  uint8 event, 
+                                  uint32 ref,
+                                  selectsync *sync)
+{
+	dprintf("net_socket_select!\n");
+	dprintf("\tevent = %d\n", event);
+	dprintf("\tref = %d\n", ref);;
+	dprintf("\tsync = %p\n", sync);
+	
+	return B_OK;
+}
+
+static status_t net_socket_deselect(void *cookie, 
+                                    uint8 event,
+                                    selectsync *sync)
+{
+	dprintf("net_socket_select!\n");
+	dprintf("event = %d\n", event);
+	dprintf("sync = %p\n", sync);
+
+	return B_OK;
+}
+
 device_hooks openbeos_net_server_hooks =
 {
         net_socket_open,
@@ -212,11 +295,12 @@ device_hooks openbeos_net_server_hooks =
         net_socket_control,
         net_socket_read,
         net_socket_write,
-        NULL, /* We don't implement the select hooks. */
-        NULL,
+		net_socket_select,
+		net_socket_deselect,
         NULL, /* Don't implement the scattered buffer read and write. */
         NULL
 };
+
 
 device_hooks* find_device (const char* DeviceName)
 {
