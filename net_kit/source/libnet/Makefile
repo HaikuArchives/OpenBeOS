@@ -15,6 +15,7 @@ OBJS=	socket.o \
 	arc4random.o \
 	base64.o \
 	ethers.o \
+	freeaddrinfo.o \
 	inet_addr.o \
 	inet_ntoa.o \
 	inet_neta.o \
@@ -23,6 +24,7 @@ OBJS=	socket.o \
 	inet_network.o \
 	inet_pton.o \
 	inet_ntop.o \
+	getaddrinfo.o \
 	gethostnamadr.o \
 	getnameinfo.o \
 	getnetbyaddr.o \
