@@ -8,14 +8,70 @@
 */
 #include <Query.h>
 
+#include <fs_query.h>
+#include <new.h>
+#include <parsedate.h>
+#include <time.h>
+
+#include <Entry.h>
+#include <Volume.h>
+
+#include "kernel_interface.h"
+#include "QueryPredicate.h"
+
+using namespace StorageKit;
+
 enum {
 	NOT_IMPLEMENTED	= B_ERROR,
 };
+
+
+// ===========================================================================
+// Evil hack to get a BMessenger's port and token.
+
+struct messenger_port_token {
+	port_id	port;
+	int32	token;
+};
+
+// _set_message_reply_
+inline
+void
+_set_message_reply_(BMessage *_mpt, BMessenger messenger)
+{
+	messenger_port_token* mpt = (messenger_port_token*)_mpt;
+	mpt->port = messenger.fPort;
+	mpt->token = messenger.fHandlerToken;
+}
+
+// get_messenger_port_token
+inline
+void
+get_messenger_port_token(const BMessenger &messenger, port_id &port,
+						 int32 &token)
+{
+	messenger_port_token mpt;
+	_set_message_reply_((BMessage*)&mpt, messenger);
+	port = mpt.port;
+	token = mpt.token;
+}
+// ===========================================================================
+
+
+// BQuery
 
 // constructor
 /*!	\brief Creates an uninitialized BQuery.
 */
 BQuery::BQuery()
+	  : BEntryList(),
+		fStack(NULL),
+		fPredicate(NULL),
+		fDevice(B_ERROR),
+		fLive(false),
+		fPort(B_ERROR),
+		fToken(0),
+		fQueryFd(NullFd)
 {
 }
 
@@ -24,6 +80,7 @@ BQuery::BQuery()
 */
 BQuery::~BQuery()
 {
+	Clear();
 }
 
 // Clear
@@ -33,7 +90,23 @@ BQuery::~BQuery()
 status_t
 BQuery::Clear()
 {
-	return NOT_IMPLEMENTED;
+	// close the currently open query
+	status_t error = B_OK;
+	if (fQueryFd != NullFd) {
+		error = close_query(fQueryFd);
+		fQueryFd = NullFd;
+	}
+	// delete the predicate stack and the predicate
+	delete fStack;
+	fStack = NULL;
+	delete[] fPredicate;
+	fPredicate = NULL;
+	// reset the other parameters
+	fDevice = B_ERROR;
+	fLive = false;
+	fPort = B_ERROR;
+	fToken = 0;
+	return error;
 }
 
 // PushAttr
@@ -54,7 +127,7 @@ BQuery::Clear()
 status_t
 BQuery::PushAttr(const char *attrName)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) AttributeNode(attrName), true);
 }
 
 // PushOp
@@ -75,7 +148,29 @@ BQuery::PushAttr(const char *attrName)
 status_t
 BQuery::PushOp(query_op op)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = B_OK;
+	switch (op) {
+		case B_EQ:
+		case B_GT:
+		case B_GE:
+		case B_LT:
+		case B_LE:
+		case B_NE:
+		case B_CONTAINS:
+		case B_BEGINS_WITH:
+		case B_ENDS_WITH:
+		case B_AND:
+		case B_OR:
+			error = _PushNode(new(nothrow) BinaryOpNode(op), true);
+			break;
+		case B_NOT:
+			error = _PushNode(new(nothrow) UnaryOpNode(op), true);
+			break;
+		default:
+			error = _PushNode(new(nothrow) SpecialOpNode(op), true);
+			break;
+	}
+	return error;
 }
 
 // PushUInt32
@@ -96,7 +191,7 @@ BQuery::PushOp(query_op op)
 status_t
 BQuery::PushUInt32(uint32 value)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) UInt32ValueNode(value), true);
 }
 
 // PushInt32
@@ -117,7 +212,7 @@ BQuery::PushUInt32(uint32 value)
 status_t
 BQuery::PushInt32(int32 value)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) Int32ValueNode(value), true);
 }
 
 // PushUInt64
@@ -138,7 +233,7 @@ BQuery::PushInt32(int32 value)
 status_t
 BQuery::PushUInt64(uint64 value)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) UInt64ValueNode(value), true);
 }
 
 // PushInt64
@@ -159,7 +254,7 @@ BQuery::PushUInt64(uint64 value)
 status_t
 BQuery::PushInt64(int64 value)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) Int64ValueNode(value), true);
 }
 
 // PushFloat
@@ -180,7 +275,7 @@ BQuery::PushInt64(int64 value)
 status_t
 BQuery::PushFloat(float value)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) FloatValueNode(value), true);
 }
 
 // PushDouble
@@ -201,7 +296,7 @@ BQuery::PushFloat(float value)
 status_t
 BQuery::PushDouble(double value)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) DoubleValueNode(value), true);
 }
 
 // PushString
@@ -224,7 +319,7 @@ BQuery::PushDouble(double value)
 status_t
 BQuery::PushString(const char *value, bool caseInsensitive)
 {
-	return NOT_IMPLEMENTED;
+	return _PushNode(new(nothrow) StringNode(value, caseInsensitive), true);
 }
 
 // PushDate
@@ -245,7 +340,19 @@ BQuery::PushString(const char *value, bool caseInsensitive)
 status_t
 BQuery::PushDate(const char *date)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (date ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		time_t t;
+		time(&t);
+		t = parsedate(date, t);
+		if (t < 0) {
+//			error = t;
+			error = B_BAD_VALUE;
+		}
+	}
+	if (error == B_OK)
+		error =  _PushNode(new(nothrow) DateNode(date), true);
+	return error;
 }
 
 // SetVolume
@@ -261,7 +368,16 @@ BQuery::PushDate(const char *date)
 status_t
 BQuery::SetVolume(const BVolume *volume)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (volume ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && _HasFetched())
+		error = B_NOT_ALLOWED;
+	if (error == B_OK) {
+		if (volume->InitCheck() == B_OK)
+			fDevice = volume->Device();
+		else
+			fDevice = B_ERROR;
+	}
+	return error;
 }
 
 // SetPredicate
@@ -280,7 +396,12 @@ BQuery::SetVolume(const BVolume *volume)
 status_t
 BQuery::SetPredicate(const char *expression)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (expression ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && _HasFetched())
+		error = B_NOT_ALLOWED;
+	if (error == B_OK)
+		error = _SetPredicate(expression);
+	return error;
 }
 
 // SetTarget
@@ -297,7 +418,14 @@ BQuery::SetPredicate(const char *expression)
 status_t
 BQuery::SetTarget(BMessenger messenger)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (messenger.IsValid() ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && _HasFetched())
+		error = B_NOT_ALLOWED;
+	if (error == B_OK) {
+		get_messenger_port_token(messenger, fPort, fToken);
+		fLive = true;
+	}
+	return error;
 }
 
 // IsLive
@@ -307,7 +435,7 @@ BQuery::SetTarget(BMessenger messenger)
 bool
 BQuery::IsLive() const
 {
-	return false;	// not implemented
+	return fLive;
 }
 
 // GetPredicate
@@ -328,7 +456,17 @@ BQuery::IsLive() const
 status_t
 BQuery::GetPredicate(char *buffer, size_t length)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (buffer ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+//		error = _EvaluateStack();
+		_EvaluateStack();
+	if (error == B_OK && !fPredicate)
+		error = B_NO_INIT;
+	if (error == B_OK && length <= strlen(fPredicate))
+		error = B_BAD_VALUE;
+	if (error == B_OK)
+		strcpy(buffer, fPredicate);
+	return error;
 }
 
 // GetPredicate
@@ -348,16 +486,24 @@ BQuery::GetPredicate(char *buffer, size_t length)
 status_t
 BQuery::GetPredicate(BString *predicate)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (predicate ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+//		error = _EvaluateStack();
+		_EvaluateStack();
+	if (error == B_OK && !fPredicate)
+		error = B_NO_INIT;
+	if (error == B_OK)
+		predicate->SetTo(fPredicate);
+	return error;
 }
 
 // PredicateLength
 /*!	\brief Returns the length of the BQuery's predicate string.
 	Regardless of whether the predicate has been constructed using the
 	predicate stack or set via SetPredicate(), this method returns the length
-	of its string representation.
+	of its string representation (counting the terminating null).
 	\return
-	- the length of the predicate string or
+	- the length of the predicate string (counting the terminating null) or
 	- 0, if an error occured
 	\note This method causes the predicate stack to be evaluated and cleared.
 		  You can't interleave Push*() and PredicateLength() calls.
@@ -365,7 +511,13 @@ BQuery::GetPredicate(BString *predicate)
 size_t
 BQuery::PredicateLength()
 {
-	return 0;	// not implemented
+	status_t error = _EvaluateStack();
+	if (error == B_OK && !fPredicate)
+		error = B_NO_INIT;
+	size_t size = 0;
+	if (error == B_OK)
+		size = strlen(fPredicate) + 1;
+	return size;
 }
 
 // TargetDevice
@@ -377,7 +529,7 @@ BQuery::PredicateLength()
 dev_t
 BQuery::TargetDevice() const
 {
-	return NOT_IMPLEMENTED;
+	return fDevice;
 }
 
 // Fetch
@@ -396,7 +548,20 @@ BQuery::TargetDevice() const
 status_t
 BQuery::Fetch()
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (_HasFetched() ? B_NOT_ALLOWED : B_OK);
+	if (error == B_OK)
+//		error = _EvaluateStack();
+		_EvaluateStack();
+	if (error == B_OK && (!fPredicate || fDevice < 0))
+		error = B_NO_INIT;
+	if (error == B_OK) {
+		if (fLive) {
+			error = open_live_query(fDevice, fPredicate, B_LIVE_QUERY, fPort,
+									fToken, fQueryFd);
+		} else
+			error = open_query(fDevice, fPredicate, 0, fQueryFd);
+	}
+	return error;
 }
 
 
@@ -420,7 +585,14 @@ BQuery::Fetch()
 status_t
 BQuery::GetNextEntry(BEntry *entry, bool traverse)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (entry ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		entry_ref ref;
+		error = GetNextRef(&ref);
+		if (error == B_OK)
+			error = entry->SetTo(&ref, traverse);
+	}
+	return error;
 }
 
 // GetNextRef
@@ -439,7 +611,17 @@ BQuery::GetNextEntry(BEntry *entry, bool traverse)
 status_t
 BQuery::GetNextRef(entry_ref *ref)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (ref ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && !_HasFetched())
+		error = B_FILE_ERROR;
+	if (error == B_OK) {
+		StorageKit::LongDirEntry entry;
+		if (StorageKit::read_query(fQueryFd, &entry, sizeof(entry), 1) != 1)
+			error = B_ENTRY_NOT_FOUND;
+		if (error == B_OK)
+			*ref = entry_ref(entry.d_pdev, entry.d_pino, entry.d_name);
+	}
+	return error;
 }
 
 // GetNextDirents
@@ -462,7 +644,12 @@ BQuery::GetNextRef(entry_ref *ref)
 int32
 BQuery::GetNextDirents(struct dirent *buf, size_t length, int32 count)
 {
-	return 0;	// not implemented
+	int32 result = (buf ? B_OK : B_BAD_VALUE);
+	if (result == B_OK && !_HasFetched())
+		result = B_FILE_ERROR;
+	if (result == B_OK)
+		result = read_query(fQueryFd, buf, length, count);
+	return result;
 }
 
 // Rewind
@@ -472,7 +659,7 @@ BQuery::GetNextDirents(struct dirent *buf, size_t length, int32 count)
 status_t
 BQuery::Rewind()
 {
-	return NOT_IMPLEMENTED;
+	return B_ERROR;
 }
 
 // CountEntries
@@ -482,7 +669,114 @@ BQuery::Rewind()
 int32
 BQuery::CountEntries()
 {
-	return 0;	// not implemented
+	return B_ERROR;
+}
+
+// _HasFetched
+/*!	Returns whether Fetch() has already been called on this object.
+	\return \c true, if Fetch() has successfully been invoked, \c false
+			otherwise.
+*/
+bool
+BQuery::_HasFetched() const
+{
+	return (fQueryFd != NullFd);
+}
+
+// _PushNode
+/*!	\brief Pushs a node onto the predicate stack.
+	If the stack has not been allocate until this time, this method does
+	allocate it.
+	If the supplied node is \c NULL, it is assumed that there was not enough
+	memory to allocate the node and thus \c B_NO_MEMORY is returned.
+	In case the method fails, the caller retains the ownership of the supplied
+	node and thus is responsible for deleting it, if \a deleteOnError is
+	\c false. If it is \c true, the node is deleted, if an error occurs.
+	\param node the node to be pushed
+	\param deleteOnError 
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_NO_MEMORY: \c NULL \a node or insuffient memory to allocate the
+	  predicate stack or push the node.
+	- \c B_NOT_ALLOWED: _PushNode() was called after Fetch().
+*/
+status_t
+BQuery::_PushNode(QueryNode *node, bool deleteOnError)
+{
+	status_t error = (node ? B_OK : B_NO_MEMORY);
+	if (error == B_OK && _HasFetched())
+		error = B_NOT_ALLOWED;
+	// allocate the stack, if necessary
+	if (error == B_OK && !fStack) {
+		fStack = new(nothrow) QueryStack;
+		if (!fStack)
+			error = B_NO_MEMORY;
+	}
+	if (error == B_OK)
+		error = fStack->PushNode(node);
+	if (error != B_OK && deleteOnError)
+		delete node;
+	return error;
+}
+
+// _SetPredicate
+/*!	\brief Helper method to set the BQuery's predicate.
+	It is not checked whether Fetch() has already been invoked.
+	\param predicate the predicate string
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_NO_MEMORY: Insufficient memory to store the predicate.
+*/
+status_t
+BQuery::_SetPredicate(const char *expression)
+{
+	status_t error = B_OK;
+	// unset the old predicate
+	delete[] fPredicate;
+	fPredicate = NULL;
+	// set the new one
+	if (expression) {
+		fPredicate = new(nothrow) char[strlen(expression) + 1];
+		if (fPredicate)
+			strcpy(fPredicate, expression);
+		else
+			error = B_NO_MEMORY;
+	}
+	return error;
+}
+
+// _EvaluateStack
+/*!	Evaluates the query's predicate stack.
+	The method does nothing (and returns \c B_OK), if the stack is \c NULL.
+	If the stack is non-null and Fetch() has already been called, the method
+	fails.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_NO_MEMORY: Insufficient memory.
+	- \c B_NOT_ALLOWED: _EvaluateStack() was called after Fetch().
+	- another error code
+*/
+status_t
+BQuery::_EvaluateStack()
+{
+	status_t error = B_OK;
+	if (fStack) {
+		_SetPredicate(NULL);
+		if (_HasFetched())
+			error = B_NOT_ALLOWED;
+		// convert the stack to a tree and evaluate it
+		QueryNode *node = NULL;
+		if (error == B_OK)
+			error = fStack->ConvertToTree(node);
+		BString predicate;
+		if (error == B_OK)
+			error = node->GetString(predicate);
+		if (error == B_OK)
+			error = _SetPredicate(predicate.String());
+		delete fStack;
+		fStack = NULL;
+	}
+	return error;
 }
 
 

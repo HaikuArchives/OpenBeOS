@@ -21,6 +21,7 @@ SharedFromSources $(TOP)/source/lib/libstorage.so :
 	OffsetFile.cpp
 	Path.cpp
 	Query.cpp
+	QueryPredicate.cpp
 	ResourcesContainer.cpp
 	ResourceFile.cpp
 	ResourceItem.cpp

@@ -15,9 +15,16 @@
 #include <OS.h>
 #include <SupportDefs.h>
 
-class BQueryStack;
+#include <StorageDefs.Private.h>
+
 class BVolume;
 struct entry_ref;
+
+namespace StorageKit {
+	class QueryNode;
+	class QueryStack;
+	class QueryTree;
+};
 
 typedef enum {
 	B_INVALID_OP	= 0,
@@ -89,6 +96,11 @@ public:
 	virtual int32 CountEntries();
 
 private:
+	bool _HasFetched() const;
+	status_t _PushNode(StorageKit::QueryNode *node, bool deleteOnError);
+	status_t _SetPredicate(const char *expression);
+	status_t _EvaluateStack();
+
 	// FBC
 	virtual void _ReservedQuery1();
 	virtual void _ReservedQuery2();
@@ -99,13 +111,13 @@ private:
 
 private:
 	int32		_reservedData[4];	// FBC
-	BQueryStack *fStack;
+	StorageKit::QueryStack *fStack;
 	char		*fPredicate;
-	dev_t		fDev;
+	dev_t		fDevice;
 	bool		fLive;
 	port_id		fPort;
 	long		fToken;
-	int			fQueryFd;
+	StorageKit::FileDescriptor fQueryFd;
 };
 
 #endif	// _sk_query_h_
