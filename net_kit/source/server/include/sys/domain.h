@@ -21,5 +21,6 @@ struct domain {
 
 struct domain *domains;
 void add_domain(struct domain *dom, int fam);
+void remove_domain(int fam);
 
 #endif /* DOMAIN_H */

@@ -9,6 +9,7 @@
 
 #	define add_protosw         core->add_protosw
 #   define add_domain          core->add_domain
+#   define remove_domain       core->remove_domain
 #   define add_protocol        core->add_protocol
 #   define remove_protocol     core->remove_protocol
 #	define start_rx_thread	   core->start_rx_thread
