@@ -1,5 +1,37 @@
 SubDir OBOS_TOP sources os kits kernel libc stdio ;
 
 KernelObjects 
-	<$(SOURCE_GRIST)>stdio.c
- 	<$(SOURCE_GRIST)>vsprintf.c ;
+	<$(SOURCE_GRIST)>fclose.c
+	<$(SOURCE_GRIST)>feof.c
+ 	<$(SOURCE_GRIST)>fflush.c
+	<$(SOURCE_GRIST)>findfp.c
+	<$(SOURCE_GRIST)>flags.c
+	<$(SOURCE_GRIST)>flockfile.c
+ 	<$(SOURCE_GRIST)>fopen.c
+ 	<$(SOURCE_GRIST)>fprintf.c
+	<$(SOURCE_GRIST)>fread.c
+	<$(SOURCE_GRIST)>fwrite.c
+ 	<$(SOURCE_GRIST)>fvwrite.c
+	<$(SOURCE_GRIST)>fwalk.c
+	<$(SOURCE_GRIST)>getc.c
+	<$(SOURCE_GRIST)>getchar.c
+	<$(SOURCE_GRIST)>kvsprintf.c
+ 	<$(SOURCE_GRIST)>makebuf.c
+	<$(SOURCE_GRIST)>printf.c
+	<$(SOURCE_GRIST)>refill.c
+	<$(SOURCE_GRIST)>rget.c
+	<$(SOURCE_GRIST)>sscanf.c
+ 	<$(SOURCE_GRIST)>sprintf.c
+ 	<$(SOURCE_GRIST)>stdio.c
+	<$(SOURCE_GRIST)>ungetc.c
+	<$(SOURCE_GRIST)>vfprintf.c
+	<$(SOURCE_GRIST)>vfscanf.c
+	<$(SOURCE_GRIST)>vscanf.c
+ 	<$(SOURCE_GRIST)>vsprintf.c
+	<$(SOURCE_GRIST)>wbuf.c
+	<$(SOURCE_GRIST)>wsetup.c
+
+
+	:
+	-fPIC -DPIC
+	;
