@@ -1,3 +1,23 @@
+# ToDo
+# ====
+#
+# This file lists items that have to be worked on.
+# An entry for an item has the following tags:
+# * Module: the concerned class or file
+# * Location: a more precise location, e.g. a function
+# * Description: a description of the item
+# * Priority: the priority of the item, may be
+#   very low:  of no/little relevance for OBOS R1 (to be future compatible:
+#              the next release)
+#   low:       of relevance for the next release, but not necessary for the
+#              near future
+#   medium:    of relevance for the next release, needed in the near future
+#   high:      of relevance for the next release, needed in the very near
+#              future/now
+#   very high: of relevance for the next release, needed yesterday
+#
+# * Requires: a list of prerequisites needed for the item to be worked on
+
 Module:      BEntry
 Location:    Entry.cpp
 Description: Definition of SYMLINK_MAX belongs to some header file. Remove it.
@@ -11,14 +31,14 @@ Description: Reimplement! Concatenating dir and leaf to an absolute path
              prevents the user from accessing entries with longer absolute
              path. R5 handles this without problems.
 Priority:    medium
-Requires:    
+Requires:    - OBOS kernel?
 
 
 Module:      BEntry
 Location:    SetTo(const BDirectory *, const char *, bool)
-Description: Reimplement! Implemented using entry_ref_to_path().
+Description: Reimplement! Implemented using StorageKit::entry_ref_to_path().
 Priority:    low
-Requires:    
+Requires:    - OBOS kernel
 
 
 Module:      EntryTest
@@ -76,6 +96,118 @@ Location:
 Description: Remove the work-around introduced because of the missing FD
              version of readlink().
 Priority:    medium
+Requires:    - OBOS kernel
+
+
+Module:      BNode
+Location:    SetTo(const entry_ref *)
+Description: Reimplement! Implemented using StorageKit::entry_ref_to_path().
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BNode
+Location:    SetTo(const BEntry *)
+Description: Check if necessary to reimplement! Implemented using
+             SetTo(const entry_ref*).
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BNode
+Location:    SetTo(const BDirectory*, const char*)
+Description: Check if necessary to reimplement! Implemented using
+             SetTo(const BEntry*).
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BNode
+Location:    Lock(), Unlock()
+Description: Implement when kernel support is available.
+Priority:    medium
+Requires:    - OBOS kernel
+
+
+Module:      NodeTest
+Location:    SyncTest()
+Description: Add more thorough tests.
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      NodeTest
+Location:    LockTest()
+Description: Implement when kernel support is available.
+Priority:    medium
+Requires:    - OBOS kernel
+
+
+Module:      BFile
+Location:    SetTo(const entry_ref *, uint32)
+Description: Reimplement! Implemented using StorageKit::entry_ref_to_path().
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BFile
+Location:    SetTo(const BEntry *, uint32)
+Description: Check if necessary to reimplement! Implemented using
+             SetTo(const entry_ref*, uint32).
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BFile
+Location:    SetTo(const BDirectory*, const char*, uint32)
+Description: Check if necessary to reimplement! Implemented using
+             SetTo(const BEntry*, uint32).
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BFile
+Location:    Read/Write[At]()
+Description: Verify behavior of B_OPEN_AT_END.
+Priority:    medium
+Requires:    
+
+
+Module:      FileTest
+Location:    PositionTest()
+Description: Uncomment test, when B_OPEN_AT_END behavior is understood.
+Priority:    medium
+Requires:    - verification of B_OPEN_AT_END behavior
+
+
+Module:      BDirectory
+Location:    SetTo(const entry_ref *)
+Description: Reimplement! Implemented using StorageKit::entry_ref_to_path().
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BDirectory
+Location:    SetTo(const BEntry *)
+Description: Check if necessary to reimplement! Implemented using
+             SetTo(const entry_ref*).
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BDirectory
+Location:    SetTo(const BDirectory*, const char*)
+Description: Check if necessary to reimplement! Implemented using
+             SetTo(const BEntry*).
+Priority:    low
+Requires:    - OBOS kernel
+
+
+Module:      BDirectory
+Location:    GetEntry()
+Description: Check if necessary to reimplement! Implemented using
+             StorageKit::dir_to_self_entry_ref().
+Priority:    low
 Requires:    - OBOS kernel
 
 

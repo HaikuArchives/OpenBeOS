@@ -1,3 +1,13 @@
+# Annotations
+# ===========
+#
+# This file contains a list of miscellaneous annotations.
+# An entry has the following tags:
+# * OS: the concerned "operating system" (BeOS R5, OBOS POSIX)
+# * Module: the concerned class or file
+# * Location: a more precise location, e.g. a function
+# * Description: a description of the item
+
 OS:          BeOS R5
 Module:      BEntry
 Location:    BEntry(const BDirectory*, const char*),
@@ -114,5 +124,70 @@ OS:          BeOS R5
 Module:      BSymLink
 Location:    MakeLinkedPath()
 Description: Crashs when passing a NULL const char* or BDirectory.
+
+
+OS:          BeOS R5
+Module:      BNode
+Location:    GetNextAttrName()
+Description: Crashs when passing a NULL buffer.
+
+
+OS:          BeOS R5
+Module:      BNode
+Location:    Read/WriteAttrString()
+Description: Crash when passing a NULL BString.
+
+
+OS:          BeOS R5
+Module:      BNode
+Location:    Lock()
+Description: Given two BNode objects initialized to the same node, it is
+             possible to Lock() one of them, although the BeBook says it isn't.
+
+
+OS:          BeOS R5
+Module:      BDirectory
+Location:    BDirectory(const node_ref*), SetTo(const node_ref*)
+Description: Crash when passing a NULL node_ref.
+
+
+OS:          BeOS R5
+Module:      BDirectory
+Location:    GetEntry()
+Description: Crashs when passing a NULL BEntry.
+
+
+OS:          BeOS R5
+Module:      BDirectory
+Location:    FindEntry()
+Description: Crashs when passing a NULL BEntry.
+
+
+OS:          BeOS R5
+Module:      BDirectory
+Location:    Contains()
+Description: If the BDirectory is uninitialized, the const char* version
+             returns true for existing entries, whereas the const BEntry*
+             version returns false.
+
+
+OS:          BeOS R5
+Module:      BDirectory
+Location:    Contains(const BEntry*, bool)
+Description: Crashs when passing a NULL BEntry.
+
+
+OS:          BeOS R5
+Module:      BDirectory
+Location:    Contains(const BEntry*, bool)
+Description: Bug: Tests with a directory, contained file/dir/symlink and
+             the respective node kind (B_FILE_NODE/B_DIRECTORY_NODE/
+             B_SYMLINK_NODE) result false.
+
+
+OS:          BeOS R5
+Module:      BDirectory
+Location:    GetNextDirents()
+Description: Crashs when passing a NULL buffer.
 
 
