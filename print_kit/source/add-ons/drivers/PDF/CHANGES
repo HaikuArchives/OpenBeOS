@@ -1,6 +1,13 @@
 CHANGES
 
-From version 1.0b1 to 1.5b1:
+From version 1.5b1 to 1.5b2 (7/5/2002):
+
+- fixed bug in install script
+- better position detection of bookmarks on a page
+- updated to PDFlib 4.0.3 (both x86 and PPC!)
+
+
+From version 1.0b1 to 1.5b1 (5/30/2002):
 
 - Added interactive pdf features (Web links, cross references, bookmarks)
 - Added advanced settings for configuration of interactive features 
