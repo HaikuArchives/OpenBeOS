@@ -14,14 +14,6 @@
 #include <Drivers.h>
 #include <KernelExport.h>
 #include <string.h>
-
-// these are missing from KernelExport.h ...
-#define  B_SELECT_READ       1 
-#define  B_SELECT_WRITE      2 
-#define  B_SELECT_EXCEPTION  3 
-
-extern void notify_select_event(selectsync * sync, uint32 ref); 
-
 #include <driver_settings.h>
 
 #include "netinet/in_var.h"
@@ -30,13 +22,19 @@ extern void notify_select_event(selectsync * sync, uint32 ref);
 #include "net_stack_driver.h"
 #include "sys/select.h"
 
+/* these are missing from KernelExport.h ... */
+#define  B_SELECT_READ       1 
+#define  B_SELECT_WRITE      2 
+#define  B_SELECT_EXCEPTION  3 
+
+extern void notify_select_event(selectsync * sync, uint32 ref); 
+
+
+
 #define SHOW_INSANE_DEBUGGING	(1)
 #define SERIAL_DEBUGGING		(0)
-#define STAY_LOADED				(1)	// Force the driver to stay loaded in memory
-
-#ifdef CODEWARRIOR
-	#pragma mark [Local definitions]
-#endif
+/* Force the driver to stay loaded in memory */
+#define STAY_LOADED				(1)	
 
 /*
  * Local definitions
@@ -44,17 +42,22 @@ extern void notify_select_event(selectsync * sync, uint32 ref);
  */
 
 #ifndef DRIVER_NAME
-	#define DRIVER_NAME 		"net_stack_driver"
+#define DRIVER_NAME 		"net_stack_driver"
 #endif
 
+/* What we really need is a better way of logging errors... 
+ * We should look at adding syslog support
+ */
 #ifndef LOGID
-	#define LOGID DRIVER_NAME ": "
+#define LOGID DRIVER_NAME ": "
 #endif
+
 #ifndef WARN
-	#define WARN "Warning: "
+#define WARN "Warning: "
 #endif
+
 #ifndef ERR
-	#define ERR "ERROR: "
+#define ERR "ERROR: "
 #endif
 
 /* the cookie we attach to each file descriptor opened on our driver entry */
@@ -67,15 +70,12 @@ typedef struct {
 	} selectinfo[3];
 } net_stack_cookie;
 
-#ifdef CODEWARRIOR
-	#pragma mark [Local prototypes]
-#endif
-
 #if STAY_LOADED
-	// to unload the driver, simply write UNLOAD_CMD to him:
-	// $ echo stop > /dev/net/stack
-	// As soon as last app, via libnet.so, stop using it, it will unload,
-	// and in turn stop the stack and unload all kernel modules...
+	/* to unload the driver, simply write UNLOAD_CMD to him:
+	 * $ echo stop > /dev/net/stack
+	 * As soon as last app, via libnet.so, stop using it, it will unload,
+	 * and in turn stop the stack and unload all kernel modules...
+	 */
 	#define UNLOAD_CMD	"stop"
 #endif
 
@@ -95,22 +95,15 @@ static status_t net_stack_deselect(void *cookie, uint8 event, selectsync *sync);
 static void on_socket_event(void * socket, uint32 event, void * cookie);
 
 #if STAY_LOADED
-	static status_t	keep_driver_loaded();
-	static status_t	unload_driver();
-#endif
-
-#ifdef CODEWARRIOR
-	#pragma mark [Global variables]
+static status_t	keep_driver_loaded();
+static status_t	unload_driver();
+int	g_stay_loaded_fd = -1;
 #endif
 
 /*
  * Global variables
  * ----------------
  */
-
-#if STAY_LOADED
-	int	g_stay_loaded_fd = -1;
-#endif
 
 const char * g_device_name_list[] = {
         NET_STACK_DRIVER_PATH,
@@ -134,10 +127,6 @@ device_hooks g_net_stack_driver_hooks =
 };
 
 struct core_module_info * core = NULL;
-
-#ifdef CODEWARRIOR
-	#pragma mark [Driver API calls]
-#endif
 
 /*
  * Driver API calls
@@ -248,10 +237,6 @@ _EXPORT device_hooks * find_device (const char* DeviceName)
 }
 
 
-#ifdef CODEWARRIOR
-	#pragma mark [Device hooks]
-#endif
-
 /*
  * Device hooks
  * ------------
@@ -340,35 +325,37 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 		}
 		case NET_STACK_CONNECT: {
 			struct sockaddr_args * args = (struct sockaddr_args *) data;
-			// args->addr == sockaddr to connect to...
+			/* args->addr == sockaddr to connect to */
 			args->rv = core->soconnect(nsc->socket, (caddr_t) args->addr, args->addrlen);
 			/* restore original settings... */
 			return B_OK;
 		}
 		case NET_STACK_BIND: {
 			struct sockaddr_args * args = (struct sockaddr_args *) data;
-			// args->addr == sockaddr to bind
+			/* args->addr == sockaddr to try and bind to */
 			args->rv = core->sobind(nsc->socket, (caddr_t) args->addr, args->addrlen);
 			return B_OK;
 		}
 		case NET_STACK_LISTEN: {
 			struct int_args * args = (struct int_args *) data;
-			// args->value == backlog
+			/* args->value == backlog to set */
 			args->rv = core->solisten(nsc->socket, args->value);
 			return B_OK;
 		}
 		case NET_STACK_GET_COOKIE: {
-			// this is needed by accept() call, to be able to pass back
-			// in NET_STACK_ACCEPT opcode the cookie of the filedescriptor to 
-			// use for the new accepted socket
+			/* this is needed by accept() call, to be able to pass back
+			 * in NET_STACK_ACCEPT opcode the cookie of the filedescriptor to 
+			 * use for the new accepted socket
+			 */
 			*((void **) data) = cookie;
 			return B_OK;
 		}
 		case NET_STACK_ACCEPT: {
 			struct accept_args * args = (struct accept_args *) data;
 			net_stack_cookie * ansc = (net_stack_cookie *) args->cookie;
-			// args->cookie == net_stack_cookie * of the already opened fd to use to the 
-			// newly accepted socket
+			/* args->cookie == net_stack_cookie * of the already opened fd to use to the 
+			 * newly accepted socket
+			 */
 			args->rv = core->soaccept(nsc->socket, &ansc->socket, args->addr, &args->addrlen);
 			return B_OK;
 		}
@@ -428,13 +415,13 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 
 		case NET_STACK_GETSOCKNAME: {
 			struct sockaddr_args * args = (struct sockaddr_args *) data;
-			// args->addr == sockaddr to copy into sockname
+			/* args->addr == sockaddr to accept the sockname */
 			args->rv = core->sogetsockname(nsc->socket, args->addr, &args->addrlen);
 			return B_OK;
 		}
 		case NET_STACK_GETPEERNAME: {
 			struct sockaddr_args * args = (struct sockaddr_args *) data;
-			// args->addr == sockaddr to copy into peername
+			/* args->addr == sockaddr to accept the peername */
 			args->rv = core->sogetpeername(nsc->socket, args->addr, &args->addrlen);
 			return B_OK;
 		}
@@ -474,7 +461,7 @@ static status_t net_stack_read(void *cookie,
 	net_stack_cookie *	nsc = (net_stack_cookie *) cookie;
 	struct iovec iov;
 	int error;
-	int flags;
+	int flags = 0;
 
 #if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "net_stack_read(%p, %Ld, %p, %ld)\n", cookie, position, buffer, *readlen);
@@ -505,7 +492,7 @@ static status_t net_stack_write(void *cookie,
 	net_stack_cookie *	nsc = (net_stack_cookie *) cookie;
 	struct iovec iov;
 	int error;
-
+	int flags = 0;
 #if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "net_stack_write(%p, %Ld, %p, %ld)\n", cookie, position, buffer, *writelen);
 #endif
@@ -526,8 +513,7 @@ static status_t net_stack_write(void *cookie,
 	iov.iov_base = (void*)buffer;
 	iov.iov_len = *writelen;
 	
-	error = core->writeit(nsc->socket, &iov, 0);
-	dprintf("writeit gave %d\n", error);
+	error = core->writeit(nsc->socket, &iov, flags);
 	*writelen = error;
 	return error;	
 }
@@ -576,10 +562,6 @@ static status_t net_stack_deselect(void * cookie, uint8 event, selectsync * sync
 	return core->set_socket_event_callback(nsc->socket, NULL, NULL);
 }
 
-#ifdef CODEWARRIOR
-	#pragma mark [Private routines]
-#endif
-
 /* 
  * Private routines
  * ----------------
@@ -607,9 +589,9 @@ static void on_socket_event(void *socket, uint32 event, void *cookie)
 static status_t	keep_driver_loaded()
 {
 	if ( g_stay_loaded_fd != -1 )
-		return B_OK;	// already did
+		return B_OK;
 		
-	// force the driver to stay loaded by opening himself
+	/* force the driver to stay loaded by opening himself */
 #if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "keep_driver_loaded: internaly opening /dev/" NET_STACK_DRIVER_PATH " to stay loaded in memory...\n");
 #endif
@@ -631,8 +613,9 @@ static status_t unload_driver()
 		{
 		int tmp_fd;
 			
-		// we need to set g_stay_loaded_fd to < 0 if we don't want
-		// the next close enter again in this case, and so on...
+		/* we need to set g_stay_loaded_fd to < 0 if we don't want
+		 * the next close enter again in this case, and so on...
+		 */
 #if SHOW_INSANE_DEBUGGING
 		dprintf(LOGID "unload_driver: unload requested.\n");
 #endif
@@ -644,8 +627,6 @@ static status_t unload_driver()
 			
 	return B_OK;
 }
-#endif // #if STAY_LOADED
-
+#endif /* STAY_LOADED */
 
 #endif /* _KERNEL_MODE */
-
