@@ -120,10 +120,11 @@ KernelLd stage2
 	$(SUBDIR)/boot/arch/$(OBOS_ARCH)/stage2.ld 
 	:
 	-dN
+	:
+	:
+	bootstrap
 	;
 
-KernelConfigSection config.$(OBOS_ARCH).ini : bootstrap : stage2 ;
-	
 KernelLd kernel 
 	:
 	<$(SOURCE_GRIST)!core>cbuf.o 
@@ -155,17 +156,15 @@ KernelLd kernel
 	libvm.a
 	lib$(OBOS_ARCH).a
 	libdrivers.a
-	libide.a
-	libkeyboard.a
-	libps2mouse.a
 	libc.a
 	:
 	$(SUBDIR)/core/arch/$(OBOS_ARCH)/kernel.ld 
 	:
 	-Bdynamic -export-dynamic -dynamic-linker /foo/bar
+	:
+	:
+	kernel
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : kernel : kernel ;
 
 KernelLd kernel.so
 	:
@@ -198,9 +197,6 @@ KernelLd kernel.so
 	libvm.a
 	lib$(OBOS_ARCH).a
 	libdrivers.a
-	libide.a
-	libkeyboard.a
-	libps2mouse.a
 	libc.a
 	:
 	$(SUBDIR)/core/arch/$(OBOS_ARCH)/kernel.ld 
@@ -216,21 +212,26 @@ KernelLd iso9660
 	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
 	:
 	-Bdynamic -shared
+	:
+	:
+	addons/fs/iso9660
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : addons/fs/iso9660 : iso9660 ;
 
 KernelLd zfs
 	:
 	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs.o
+	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs_dir.o
+	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs_file.o
+	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs_vnode.o
 	kernel.so
 	:
 	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
 	:
 	-Bdynamic -shared
+	:
+	:
+	addons/fs/zfs
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : addons/fs/zfs : zfs ;
 
 KernelLd isa
 	:
@@ -240,10 +241,10 @@ KernelLd isa
 	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
 	:
 	-Bdynamic -shared
+	:
+	:
+	addons/bus_managers/isa user-addons/bus_managers/isa
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : addons/bus_managers/isa : isa ;
-KernelConfigSection config.$(OBOS_ARCH).ini : user-addons/bus_managers/isa : isa ;
 
 KernelLd libglue.o :
 	<$(SOURCE_GRIST)!glue>lib0.o
@@ -300,9 +301,9 @@ KernelLd libm.so
 	-shared -soname libm.so 
 	:
 	no_gcc
+	:
+	lib/libm.so
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : lib/libm.so : libm.so ;
 
 KernelLd libc.so :
 	libglue.o
@@ -379,9 +380,9 @@ KernelLd libc.so :
 	-shared -soname libc.so
 	:
 	no_gcc
+	:
+	lib/libc.so
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : lib/libc.so : libc.so ;
 
 KernelLd libglue2.o :
 	<$(SOURCE_GRIST)!glue>crt0.o
@@ -400,9 +401,10 @@ KernelLd init :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/init
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/init : init ;
 
 KernelLd false :
 	libglue2.o
@@ -412,9 +414,10 @@ KernelLd false :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/false
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/false : false ;
 
 KernelLd true :
 	libglue2.o
@@ -424,9 +427,10 @@ KernelLd true :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/true
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/true : true ;
 
 KernelLd fibo :
 	libglue2.o
@@ -436,9 +440,10 @@ KernelLd fibo :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/fibo
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/fibo : fibo ;
 
 KernelLd fortune :
 	libglue2.o
@@ -448,9 +453,12 @@ KernelLd fortune :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/fortune
 	;
 
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/fortune : fortune ;
+KernelConfigSection etc/fortunes : data : $(SUBDIR)/apps/fortune/fortunes ;
 
 KernelLd ls :
 	libglue2.o
@@ -460,14 +468,13 @@ KernelLd ls :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/ls
 	;
 
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/ls : ls ;
-
-
-
 # Note: shell is a built in target, thus we need the grist.
-KernelLd <$(SOURCE_GRIST)>shell :
+KernelLd obos_shell :
 	libglue2.o
 	<$(SOURCE_GRIST)!apps!shell>main.o
 	<$(SOURCE_GRIST)!apps!shell>args.o
@@ -482,9 +489,27 @@ KernelLd <$(SOURCE_GRIST)>shell :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/shell
 	;
 
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/shell : shell ;
+KernelLd rld.so :
+	<$(SOURCE_GRIST)!apps!rld>rld0.o
+	<$(SOURCE_GRIST)!apps!rld>rld.o
+	<$(SOURCE_GRIST)!apps!rld>rldelf.o
+	<$(SOURCE_GRIST)!apps!rld>rldunix.o
+	<$(SOURCE_GRIST)!apps!rld>rldbeos.o
+	<$(SOURCE_GRIST)!apps!rld>rldheap.o
+	<$(SOURCE_GRIST)!apps!rld>rldaux.o
+	libc.a
+	:
+	$(SUBDIR)/apps/rld/arch/$(OBOS_ARCH)/rld.ld
+	:
+	:
+	:
+	libexec/rld.so
+	;
 
 KernelLd mount :
 	libglue2.o
@@ -494,9 +519,9 @@ KernelLd mount :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	bin/mount
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/mount : mount ;
 
 KernelLd unmount :
 	libglue2.o
@@ -506,9 +531,10 @@ KernelLd unmount :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/unmount
 	;
-
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/unmount : unmount ;
 
 KernelLd testapp :
 	libglue2.o
@@ -518,11 +544,16 @@ KernelLd testapp :
 	:
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
+	:
+	:
+	bin/testapp
 	;
 
-KernelConfigSection config.$(OBOS_ARCH).ini : bin/testapp : testapp ;
+WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
-WriteKernelConfig config.$(OBOS_ARCH).ini : stage2 ;
+BuildKernel $(OBOS_KERNEL) : $(OBOS_KERNEL_CONFIG) ;
+
+KernelFloppyImage $(OBOS_FLOPPY) : $(OBOS_KERNEL) : $(SUBDIR)/boot/arch/$(OBOS_ARCH)/bootblock.bin ;
 
 SubInclude OBOS_TOP sources os kits kernel boot ;
 SubInclude OBOS_TOP sources os kits kernel core ;
