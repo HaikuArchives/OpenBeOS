@@ -21,7 +21,7 @@ void dump_freelist(void)
 void mbinit(void)
 {
 	if (!mbpool)
-		pool_init(&mbpool, 256);
+		pool_init(&mbpool, sizeof(struct mbuf));
 	if (!clpool)
 		pool_init(&clpool, MCLBYTES);
         
