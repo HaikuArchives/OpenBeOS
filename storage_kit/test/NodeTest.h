@@ -27,6 +27,7 @@ public:
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Read/Write/Remove Test", &NodeTest::AttrTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Rename Test (this fails with R5 libraries)", &NodeTest::AttrRenameTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Info Test", &NodeTest::AttrInfoTest) );
+//		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute BString Test", &NodeTest::AttrBStringTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Stat Test", &NodeTest::StatTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Sync Test", &NodeTest::SyncTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Dup Test", &NodeTest::DupTest) );
@@ -145,6 +146,30 @@ public:
 		node.RemoveAttr(attr);
 	}
 	
+	// We need an OpenBeOS implementation of BString to test these
+	void AttrBStringTest() {
+/*		const char attr[] = "StorageKit::SomeAttribute";
+		const char str[] = "This string is abso-friggin-lutely amazing.";
+		const int len = strlen(str) + 1;
+		
+		BNode node("./");
+		node.RemoveAttr(attr);
+		BString bstr1(str), bstr2;
+		
+		// Failures
+		CPPUNIT_ASSERT( DecodeResult(node.ReadAttrString(attr, &bstr2)) != B_OK );
+		CPPUNIT_ASSERT( node.WriteAttrString(attr, NULL) == B_BAD_VALUE );		
+		CPPUNIT_ASSERT( node.ReadAttrString(attr, NULL) == B_BAD_VALUE );
+
+		// Successes		
+		CPPUNIT_ASSERT( node.WriteAttrString(attr, &bstr1) == B_OK );
+		CPPUNIT_ASSERT( bstr1 != bstr2 );
+		CPPUNIT_ASSERT( node.ReadAttrString(attr, &bstr2) == B_OK );
+		CPPUNIT_ASSERT(	bstr1 == bstr2 );
+		
+		node.RemoveAttr(attr); */
+	}
+
 	// Doesn't do very thorough testing yet (I'll leave that to Mike :-)
 	void StatTest() {
 		StorageKit::Stat s;
