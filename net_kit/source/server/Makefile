@@ -1,11 +1,10 @@
-SUBDIRS=net_server ipv4 udp ethernet icmp loop route raw tcp
-KERNELDIRS=net_server ethernet icmp ipv4 loop udp route raw tcp
+SUBDIRS=net_server ipv4 udp ethernet icmp loop route raw tcp ppp
 MODULE_DIRS=interface misc protocol
 
 CORE_MODULES=core
 PROTO_MODULES=ipv4 icmp route raw tcp udp
 MISC_MODULES=
-INTERFACE_MODULES=ethernet loop
+INTERFACE_MODULES=ethernet loop ppp
 
 # decides whether to build a kernel or a userland stack
 ifeq ($(USERLAND), true)
@@ -50,6 +49,7 @@ subdirs: $(OBJS)
 	done;
 
 installuser:
+	@(cd ppp && $(MAKE) install) || exit 1
 	@echo "Nothing to be installed :)"
 
 installkernel: subdirs
@@ -91,10 +91,7 @@ buildclean:
 			for i in $(SUBDIRS); do \
 				(cd $$i && $(MAKE) clean) || exit 1; \
 			done; \
-			rm userland_server *.o; \
-			if test -e net_srv; then \
-				rm net_srv; \
-			fi; \
+			rm -f userland_server net_srv *.o *.dbg; \
 		fi; \
 	fi
 
@@ -102,12 +99,7 @@ clean:
 	@for i in $(SUBDIRS); do \
 		(cd $$i && $(MAKE) clean) || exit 1; \
 	done
-	@if test -e userland_server; then \
-		rm *.o userland_server; \
-	fi;
-	@if test -e net_srv; then \
-		rm net_srv; \
-	fi
+	@rm -f userland_server net_srv *.o *.dbg
 
 cleankernel:
 	@for c in $(CORE_MODULES); do \
@@ -115,18 +107,8 @@ cleankernel:
 			rm $(INSTALL_PATH)/$$c; \
 		fi; \
 	done;
-	@for p in $(PROTO_MODULES); do \
-		if test -e $(INSTALL_PATH)/protocol/$$p; then \
-			rm  $(INSTALL_PATH)/protocol/$$p; \
-		fi; \
-	done;
-#	@for m in $(MISC_MODULES); do \
-#		cp $$m/$$m $(INSTALL_PATH)/misc/$$m; \
-#	done;
-	@for i in $(INTERFACE_MODULES); do \
-		if test -e $(INSTALL_PATH)/interface/$$i; then \
-			rm $(INSTALL_PATH)/interface/$$i; \
-		fi; \
+	@for d in $(MODULE_DIRS); do \
+		rm  -f $(INSTALL_PATH)/protocol/*; \
 	done;
 
 directories:
