@@ -1374,6 +1374,9 @@ Inode::FreeStreamArray(Transaction *transaction,block_run *array,uint32 arrayLen
 			array[i].length = run.start - array[i].start;
 			run.length -= array[i].length;
 
+			if (run.length == 0)
+				continue;
+
 			// update maximum range
 			max = offset + ((off_t)array[i].length << fVolume->BlockShift());
 		} else {
