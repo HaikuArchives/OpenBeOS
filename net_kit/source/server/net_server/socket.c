@@ -36,7 +36,7 @@ int sockets_init(void)
 
 	if (!spool)
 		return ENOMEM;
-
+	
 	INIT_BENAPHORE(sockets_lock, "sockets_lock");
 	return CHECK_BENAPHORE(sockets_lock);
 }
@@ -83,7 +83,6 @@ int uiomove(caddr_t cp, int n, struct uio *uio)
 				break;
 
 			case UIO_SYSSPACE:
-				printf("Duh??? We don't mess with system space!! \n");
 				if (uio->uio_rw == UIO_READ)
 					ptr = memcpy(cp, iov->iov_base, cnt);
 				else
@@ -182,7 +181,6 @@ int sobind(void *sp, caddr_t data, int len)
 	struct mbuf *nam = m_get(MT_DATA);
 	struct socket *so = (struct socket*)sp;
 
-printf("sobind: data = %p, len = %d, nam = %p\n", data, len, nam);	
 	if (!nam)
 		return ENOMEM;
 
@@ -435,7 +433,6 @@ int recvit(void *sp, struct msghdr *mp, caddr_t namelenp, int *retsize)
 	struct mbuf *from = NULL;
 	int error = 0, i, len = 0;
 
-	printf("recvit!\n");
 	auio.uio_iov = mp->msg_iov;
 	auio.uio_iovcnt = mp->msg_iovlen;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -466,9 +463,10 @@ int recvit(void *sp, struct msghdr *mp, caddr_t namelenp, int *retsize)
 
 	if (mp->msg_name) {
 		len = mp->msg_namelen;
-		if (len <= 0 || !from)
+		
+		if (len <= 0 || !from) {
 			len = 0;
-		else {
+		} else {
 			if (len > from->m_len)
 				len = from->m_len;
 			memcpy((caddr_t)mp->msg_name, mtod(from, caddr_t), len);
@@ -515,7 +513,7 @@ int soreceive(struct socket *so, struct mbuf **paddr, struct uio *uio, struct mb
 restart:
 	/* XXX - locking */
 	m = so->so_rcv.sb_mb;
-	
+
 	/* if we don't want to wait for incoming packets, let's check the
 	 * the current buffer state if it does fit our requirements
 	 */ 

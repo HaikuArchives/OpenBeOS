@@ -207,17 +207,18 @@ struct ifaddr *ifa_ifwithaddr(struct sockaddr *addr)
 	struct ifnet *ifp;
 	struct ifaddr *ifa;
 
-        for (ifp = devices; ifp != NULL; ifp = ifp->next)
+        for (ifp = devices; ifp != NULL; ifp = ifp->next) {
             for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                 if (ifa->ifa_addr->sa_family != addr->sa_family)
                         continue;
                 if (equal(addr, ifa->ifa_addr))
                         return (ifa);
                 if ((ifp->flags & IFF_BROADCAST) && ifa->ifa_broadaddr &&
-                    /* IP6 doesn't have broadcast */
+                    /* IPv6 doesn't have broadcast */
                     ifa->ifa_broadaddr->sa_len != 0 &&
                     equal(ifa->ifa_broadaddr, addr))
                         return (ifa);
+        	}
         }
         return (NULL);
 }

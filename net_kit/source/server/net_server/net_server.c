@@ -180,38 +180,6 @@ void net_server_add_device(ifnet *ifn)
 	printf("add_device: added %s\n", ifn->if_name);	
 }
 
-static void merge_devices(void)
-{
-	struct ifnet *d = NULL;
-
-	if (!devices && !pdevices) {
-		printf("No devices!\n");
-		return;
-	}
-
-	acquire_sem(dev_lock);
-	if (devices) {
-		/* Now append the pseudo devices and then start them. */
-		for (d = devices; d->next != NULL; d = d->next) {
-			continue;
-		}
-	}
-	if (pdevices) {
-		if (d) {
-			d->next = pdevices;
-			d = d->next;
-		} else {
-			devices = pdevices;
-			d = devices;
-		}
-		while (d) {
-			d->id = ndevs++;
-			d = d->next;
-		}
-	}
-	release_sem(dev_lock);
-}
-
 /* This calls the start function for each device, which should
  * finish the required init (if any) and set the flags such
  * that the device is "up", i.e. IFF_UP should be set when the device
@@ -287,50 +255,6 @@ void start_tx_thread(ifnet *dev)
 	resume_thread(dev->tx_thread);
 }
 	
-static void start_device_threads(void)
-{
-	ifnet *d = devices;
-	char tname[32];
-	int priority = B_NORMAL_PRIORITY;
-
-	acquire_sem(dev_lock);
-
-	while (d) {
-		sprintf(tname, "%s%d_rx_thread", d->name, d->unit);
-		if (d->if_type == IFT_ETHER) {
-			d->rx_thread = spawn_thread(if_thread, tname, priority,
-							d);
-		} else {
-			d->rxq = start_ifq();
-			d->rx_thread = spawn_thread(rx_thread, tname, priority,
-							d);
-		}
-		if (d->rx_thread < 0) {
-			printf("Failed to start the rx_thread for %s%d\n", d->name, d->unit);
-			continue;
-		} else {
-			resume_thread(d->rx_thread);
-		}
-		d->txq = start_ifq();
-		if (!d->txq) {
-			kill_thread(d->rx_thread);
-			continue;
-		}
-
-		d->tx_thread = spawn_thread(tx_thread, "net_tx_thread", priority,
-						d);
-                if (d->tx_thread < 0) {
-                        printf("Failed to start the tx_thread for %s%d\n", d->name, d->unit);
-			kill_thread(d->tx_thread);
-                        continue;
-                } else {
-                        resume_thread(d->tx_thread);
-                }
-		d = d->next; 
-	}
-	release_sem(dev_lock);
-}
-
 static void list_devices(void)
 {
 	ifnet *d = devices;
@@ -735,6 +659,8 @@ void assign_addresses(void)
 	
 	strcpy(ifr.ifr_name, "tulip0");
 	
+	memset(&ifr.ifr_addr, 0, sizeof(ifr.ifr_addr));
+	
 	rv = soo_ioctl(sp, SIOCGIFFLAGS, (caddr_t)&ifr);
 	printf("soo_ioctl gave %d\n", rv);
 	printf("ifr.flags = %d\n", ifr.ifr_flags);
@@ -747,6 +673,109 @@ void assign_addresses(void)
 	printf("soo_ioctl gave %d\n", rv);	
 	if (rv < 0)
 		printf("error %d [%s]\n", rv, strerror(rv));
+
+	strcpy(ifr.ifr_name,"loop0");
+	((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr = htonl(0x7f000001);
+	rv = soo_ioctl(sp, SIOCSIFADDR, (caddr_t)&ifr);
+	printf("soo_ioctl gave %d\n", rv);	
+	if (rv < 0)
+		printf("error %d [%s]\n", rv, strerror(rv));
+	
+	soclose(sp);
+}
+
+#define TEST_DATA "Hello World"
+
+static void err(int code, char *msg)
+{
+	printf("Error: %s: %d [%s]\n", msg, code, strerror(code));
+}
+
+static void bind_test(void)
+{
+	void *sp = NULL, *sq = NULL; /* socket pointer... */
+	int rv, rw;
+	struct sockaddr_in sa;
+	struct msghdr mh;
+	struct iovec iov;
+	char msg[20];
+		
+	rv = initsocket(&sp);
+	if (rv < 0) {
+		err(rv, "Couldn't get a socket!");
+		return;
+	}
+	rv = initsocket(&sq);
+	if (rv < 0) {
+		err(rv, "Couldn't get a 2nd socket!");
+		return;
+	}
+	
+	rv = socreate(AF_INET, sp, SOCK_DGRAM, 0);
+	if (rv < 0) {
+		err(rv, "Failed to create a socket to use...");
+		return;
+	}
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(7772);
+	sa.sin_addr.s_addr = INADDR_ANY;
+	sa.sin_len = sizeof(sa);
+	
+	rv = sobind(sp, (caddr_t)&sa, sizeof(sa));
+	if (rv < 0) {
+		err(rv, "Failed to bind!\n");
+	}
+
+	rv = socreate(AF_INET, sq, SOCK_DGRAM, 0);
+	if (rv < 0) {
+		err(rv, "Failed to create a socket to use...");
+		return;
+	}
+	sa.sin_addr.s_addr = INADDR_LOOPBACK;
+	sa.sin_port = htons(7773);
+	
+	rv = sobind(sq, (caddr_t)&sa, sizeof(sa));
+	if (rv < 0) {
+		err(rv, "Failed to bind!");
+		return;
+	}
+	memcpy(msg, TEST_DATA, strlen(TEST_DATA));
+	
+	mh.msg_name = (caddr_t)&sa;
+	mh.msg_namelen = sizeof(sa);
+	mh.msg_flags = 0;
+	mh.msg_control = NULL;
+	mh.msg_controllen = 0;
+	iov.iov_base = &msg;
+	iov.iov_len = strlen(TEST_DATA);
+	mh.msg_iov = &iov;
+	mh.msg_iovlen = 1;
+	sa.sin_len = sizeof(sa);
+	
+	printf("Trying to send %ld bytes data\n", strlen(TEST_DATA));
+	
+	rv = sendit(sp, &mh, 0, &rw);
+	printf("sendit gave %d, rw = %d\n", rv, rw);
+	
+	iov.iov_base = &msg;
+	iov.iov_len = 20;
+	mh.msg_namelen = sizeof(sa);
+	mh.msg_name = (caddr_t)&sa;
+	memset(&msg, 0, 20);
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_len = sizeof(sa);
+	
+	rv = recvit(sq, &mh, (caddr_t)&mh.msg_namelen, &rw);
+	printf("recvit gave %d, rw = %d\n", rv, rw);
+	if (rw > 0) {
+		printf("got %d bytes\n[%s]\n", rw, msg);
+		printf("Came from %08lx:%d\n", ntohl(sa.sin_addr.s_addr), 
+			ntohs(sa.sin_port));
+	}
+	soclose(sp);
+	soclose(sq);
 }
 
 int main(int argc, char **argv)
@@ -775,6 +804,7 @@ int main(int argc, char **argv)
 		resume_thread(t);
 
 	assign_addresses();
+	bind_test();
 	list_devices();
 	
 	d = devices;
@@ -786,8 +816,6 @@ int main(int argc, char **argv)
 		}
 		d = d->next; 
 	}
-	wait_for_thread(t, &status);
-	printf("socket creation test complete\n");
 
 	return 0;
 }

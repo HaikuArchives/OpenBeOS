@@ -168,7 +168,7 @@ int sbappendaddr(struct sockbuf *sb, struct sockaddr *asa,
 	if (asa->sa_len > MLEN)
 		return (0);
 	MGET(m, MT_SONAME);
-	if (m == 0)
+	if (m == NULL)
 		return (0);
 	m->m_len = asa->sa_len;
 	memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
@@ -185,6 +185,7 @@ int sbappendaddr(struct sockbuf *sb, struct sockaddr *asa,
 		n->m_nextpkt = m;
 	} else
 		sb->sb_mb = m;
+
 	return (1);
 }
 

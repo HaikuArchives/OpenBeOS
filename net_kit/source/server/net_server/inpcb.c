@@ -18,6 +18,17 @@
 static struct pool_ctl *pcbpool;
 static struct in_addr zeroin_addr;
 
+static void walk_inp(struct inpcb *head)
+{
+	struct inpcb *n;
+printf("head = %p\n", head);	
+	for (n = head->inp_next; n; n = n->inp_next) {
+		printf("%p <- %p -> %p\n", n->inp_prev, n, n->inp_next);
+		if (n == head)
+			break;
+	}
+}
+
 int inpcb_init(void)
 {
 	in_ifaddr = NULL;
@@ -47,8 +58,9 @@ int in_pcballoc(struct socket *so, struct inpcb *head)
 
 	inp->inp_head = head;
 	/* insert new pcb at head of queue */
-	inp->inp_prev = head;
+	inp->inp_prev = head->inp_next->inp_prev;
 	inp->inp_next = head->inp_next;
+	head->inp_next->inp_prev = inp;
 	head->inp_next = inp;
 
 	/* associate ourselves with the socket */
@@ -62,11 +74,22 @@ void in_pcbdetach(struct inpcb *inp)
 	struct socket *so = inp->inp_socket;
 
 	so->so_pcb = NULL;
+	/* BSD sockets would call sofree here - we can't.
+	 * The first thing that sofree does in BSD is check whether
+	 * there are still file system references to the socket
+	 * (SS_NOFDREF) and if there are it doesn't free. We don't have
+	 * the same relationship to our sockets, as we use the socket for
+	 * the kernel cookie, and freeing it here would lead to real problems,
+	 * so we leave the socket until we call soclose()
+	 * This may need to be reviewed and an extra layer of abstraction
+	 * added at some point if we find it's using too much system resource.
+	 */
+
+	if (inp->inp_options)
+		m_free(inp->inp_options);
 	if (inp->inp_route.ro_rt)
 		rtfree(inp->inp_route.ro_rt);
-
-	/* free socket! */
-
+	
 	inp->inp_prev->inp_next = inp->inp_next;
 	inp->inp_next->inp_prev = inp->inp_prev;
 
@@ -96,9 +119,11 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 
 	if (nam) {
 		sin = mtod(nam, struct sockaddr_in *);
-		if (nam->m_len != sizeof(*sin))
+		if (nam->m_len != sizeof(*sin)) {
+			printf("in_pcbind: EINVAL! (m_len = %ld)\n", nam->m_len);
 			/* whoops, too much data! */
 			return EINVAL;
+		}
 
 		/* Apparently this may not be correctly 
 		 * in older programs, so this may need
@@ -122,8 +147,10 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 				reuseport = SO_REUSEADDR | SO_REUSEPORT;
 		} else if (sin->sin_addr.s_addr != INADDR_ANY) {
 			sin->sin_port = 0; /* must be zero for next step */
-			if (ifa_ifwithaddr((struct sockaddr*)sin) == NULL)
+			if (ifa_ifwithaddr((struct sockaddr*)sin) == NULL) {
+				printf("ifa_ifwithaddr == NULL\n");
 				return EADDRNOTAVAIL;
+			}
 
 		}
 		if (lport) {
@@ -156,7 +183,7 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 	 * the sockaddr structure, so this is the onyl way we have of 
 	 * checking that we're assigning correctly...
 	 */
-	printf("bound to port %d for ", htons(lport));
+	printf("bound to port %d for ", ntohs(lport));
 	dump_ipv4_addr("address ", &inp->laddr);
 #endif
 
@@ -177,7 +204,7 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 
 	for (inp = head->inp_next; inp != head; inp = inp->inp_next) {
 		if (inp->lport != lport)
-			continue; /* local portsdon't match */
+			continue; /* local ports don't match */
 		wildcard = 0;
 		/* Here we try to find the best match. wildcard is set to 0
 		 * and bumped by one every time we find something that doesn't match
@@ -203,9 +230,10 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 			if (faddr.s_addr != INADDR_ANY)
 				wildcard++;
 		}
- 		if (wildcard && ((flags & INPLOOKUP_WILDCARD) == 0))
+ 		if (wildcard && ((flags & INPLOOKUP_WILDCARD) == 0)) {
 			continue; /* wildcard match is not allowed!! */
-
+		}
+		
 		if (wildcard < matchwild) {
 			match = inp;
 			matchwild = wildcard;
@@ -302,11 +330,13 @@ int in_pcbdisconnect(struct inpcb *inp)
 {
 	inp->faddr.s_addr = INADDR_ANY;
 	inp->fport = 0;
-	/* XXX - this directly from BSD. Basiaclly if we don't have a 
-	 * reference to an FD we release the PCB... Not sure what our
-	 * equivalent is
+
+	/* BSD sockets are fd's and as such their lifetimes are
+	 * controlled by the system. On traditional BSD systems we'd
+	 * check to see if we still had references to the socket in the
+	 * fd table, but we can't do that. As the socket is the kernel cookie
+	 * the fact we're here implies there is still a reference.
 	 */
-	if (inp->inp_socket->so_state & SS_NOFDREF)
-		in_pcbdetach(inp);
+	in_pcbdetach(inp);
 }
 

@@ -103,8 +103,6 @@ int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
 	int error;
 	int flags = RTF_UP;
 
-printf("in_ifaddr\n");
-
 	oldsin = ia->ia_addr;
 	ia->ia_addr = *sin;
 
@@ -183,11 +181,9 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 	long i;
 
 	if (ifp) /* we need to find the in_ifaddr */
-		for (ia = in_ifaddr;ia; ia = ia->ia_next) {
-			printf("ia = %p, ia->ifp = %p\n", ia, ia->ia_ifp);
+		for (ia = in_ifaddr;ia; ia = ia->ia_next)
 			if (ia->ia_ifp == ifp)
 				break;
-		}
 		
 	switch (cmd) {
 		case SIOCAIFADDR:
@@ -281,7 +277,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			*((struct sockaddr_in*) &ifr->ifr_addr) = ia->ia_sockmask;
 			break;
 		case SIOCSIFADDR:
-			printf("SIOCSIFADDR\n");	
+			printf("SIOCSIFADDR\n");
 			return in_ifinit(ifp, ia, (struct sockaddr_in*)&ifr->ifr_addr, 1);
 		case SIOCSIFNETMASK:
 			printf("SIOCSIFNETMASK\n");
