@@ -5,6 +5,7 @@
 #include <vm.h>
 #include <debug.h>
 #include <memheap.h>
+#include <Errors.h>
 
 #define _KERNEL_
 #include <sysctl.h>
@@ -49,7 +50,7 @@ int sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 	}
 	error = (fn)(name + 1, namelen - 1, oldp, oldlenp, newp, newlen);
 	
-
+	return B_NO_ERROR;
 
 }
 
@@ -170,7 +171,7 @@ int user_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 {
 	void *a1 = NULL, *a2 = NULL;
 	int *nam = NULL, rc;
-	size_t olen = *oldlenp, *ov;
+	size_t olen = *oldlenp, *ov=NULL;
 
 	if (namelen < 2 || namelen > CTL_MAXNAME)
 		return EINVAL;

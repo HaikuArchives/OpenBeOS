@@ -961,8 +961,9 @@ int put_module(const char *path)
 	}
 	DEC_MOD_REF_COUNT(m);
 
-	if (m->ref_cnt == 0 && m->keep_loaded == false) {
+	if ((m->ref_cnt == 0) && (m->keep_loaded == false)) {
 		uninit_module(m);
 		unload_module_file(m->file);
 	}
+	return B_NO_ERROR;
 }
