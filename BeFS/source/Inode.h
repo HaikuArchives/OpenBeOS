@@ -94,7 +94,7 @@ class Inode : public CachedBlock
 		~Inode();
 
 		bfs_inode *Node() const { return (bfs_inode *)fBlock; }
-		vnode_id VnodeID() const { return fVolume->ToVnode(fBlockNumber); }
+		vnode_id ID() const { return fVolume->ToVnode(fBlockNumber); }
 
 		mode_t Mode() const { return Node()->mode; }
 		bool IsDirectory() const { return S_ISDIR(Node()->mode); }
@@ -108,6 +108,9 @@ class Inode : public CachedBlock
 
 		status_t GetNextSmallData(small_data **smallData) const;
 		small_data *FindSmallData(const char *name) const;
+
+		Inode *GetAttribute(const char *name);
+		void ReleaseAttribute(Inode *attribute);
 
 		// for directories only:
 		status_t GetTree(BPlusTree **);
@@ -130,7 +133,7 @@ class AttributeIterator
 		~AttributeIterator();
 		
 		status_t Rewind();
-		status_t GetNext(char *name,size_t *length,uint32 *type);
+		status_t GetNext(char *name,size_t *length,uint32 *type,vnode_id *id);
 
 	private:
 		small_data	*fCurrentSmallData;

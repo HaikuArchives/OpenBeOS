@@ -49,6 +49,8 @@ CachedNode::SetTo(off_t offset,bool check)
 {
 	Unset();
 
+	// You can only ask for nodes at valid positions - the b+tree
+	// header (at offset 0) can't be read using that function
 	if (offset > fTree->fHeader->maximum_size - fTree->fNodeSize
 		|| offset <= 0
 		|| (offset % fTree->fNodeSize) != 0)
@@ -509,8 +511,6 @@ BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 	if (SeekDown(stack,key,keyLength) != B_OK)
 		return B_ERROR;
 
-	//fCurrentNodeOffset = BPLUSTREE_NULL;
-
 	node_and_key nodeAndKey;
 	bplustree_node *node;
 
@@ -524,7 +524,6 @@ BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 		if (status == B_OK && node->overflow_link == BPLUSTREE_NULL)
 		{
 			*value = node->Values()[nodeAndKey.keyIndex];
-			//SetCurrentNode(node,nodeAndKey.nodeOffset);
 			return B_OK;
 		}
 	}

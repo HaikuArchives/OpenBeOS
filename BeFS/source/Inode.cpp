@@ -98,6 +98,42 @@ Inode::FindSmallData(const char *name) const
 }
 
 
+Inode *
+Inode::GetAttribute(const char *name)
+{
+	Inode *attributes;
+	if (get_vnode(fVolume->ID(),fVolume->ToVnode(Attributes()),(void **)&attributes) != 0
+		|| attributes == NULL) {
+		dprintf("bfs: get_vnode() failed in Inode::GetAttribute(name = \"%s\")\n",name);
+		return NULL;
+	}
+
+	BPlusTree *tree;
+	if (attributes->GetTree(&tree) == B_OK) {
+		vnode_id id;
+		if (tree->Find((uint8 *)name,(uint16)strlen(name),&id) == B_OK) {
+			Inode *attribute;
+			if (get_vnode(fVolume->ID(),id,(void **)&attribute) == B_OK)
+				return attribute;
+		}
+	}
+	
+	put_vnode(fVolume->ID(),attributes->ID());
+	return NULL;
+}
+
+
+void
+Inode::ReleaseAttribute(Inode *attribute)
+{
+	if (attribute == NULL)
+		return;
+	
+	put_vnode(fVolume->ID(),attribute->ID());
+	put_vnode(fVolume->ID(),fVolume->ToVnode(Attributes()));
+}
+
+
 /**	Gives the caller direct access to the b+tree for a given directory.
  *	The tree is created on demand, but lasts until the inode is
  *	deleted.
@@ -226,7 +262,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 
 	if (pos < 0)
 		pos = 0;
-	else if (pos > Node()->data.size) {
+	else if (pos >= Node()->data.size) {
 		*_length = 0;
 		return B_NO_ERROR;
 	}
@@ -366,7 +402,7 @@ AttributeIterator::AttributeIterator(Inode *inode)
 AttributeIterator::~AttributeIterator()
 {
 	if (fAttributes)
-		put_vnode(fAttributes->GetVolume()->ID(),fAttributes->VnodeID());
+		put_vnode(fAttributes->GetVolume()->ID(),fAttributes->ID());
 
 	delete fIterator;
 }
@@ -385,7 +421,7 @@ AttributeIterator::Rewind()
 
 
 status_t 
-AttributeIterator::GetNext(char *name, size_t *length, uint32 *type)
+AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id *_id)
 {
 	// read attributes out of the small data section
 
@@ -403,10 +439,10 @@ AttributeIterator::GetNext(char *name, size_t *length, uint32 *type)
 
 		if (!fCurrentSmallData->IsLast(fInode->Node())) {
 			strncpy(name,fCurrentSmallData->Name(),B_FILE_NAME_LENGTH);
-			*type = fCurrentSmallData->type;
-			*length = fCurrentSmallData->name_size;
-			//*data = fCurrentSmallData->Data();
-			
+			*_type = fCurrentSmallData->type;
+			*_length = fCurrentSmallData->name_size;
+			*_id = (vnode_id)((uint8 *)fCurrentSmallData - (uint8 *)fInode->Node()->small_data_start);
+
 			return B_OK;
 		}
 	}
@@ -416,51 +452,43 @@ AttributeIterator::GetNext(char *name, size_t *length, uint32 *type)
 	if (fInode->Attributes().IsZero())
 		return B_ENTRY_NOT_FOUND;
 
+	Volume *volume = fInode->GetVolume();
+
 	if (fAttributes == NULL) {
-		Volume *volume = fInode->GetVolume();
 		if (get_vnode(volume->ID(),volume->ToVnode(fInode->Attributes()),(void **)&fAttributes) != 0
 			|| fAttributes == NULL) {
-			dprintf("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->VnodeID(),name);
+			dprintf("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name);
 			return B_ENTRY_NOT_FOUND;
 		}
 		
 		BPlusTree *tree;
 		if (fAttributes->GetTree(&tree) < B_OK
 			|| (fIterator = new TreeIterator(tree)) == NULL) {
-			dprintf("bfs: could not get tree in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->VnodeID(),name);
+			dprintf("bfs: could not get tree in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name);
 			return B_ENTRY_NOT_FOUND;
 		}
 	}
 
-//	block_run run;
-//	status = fAttributes->GetNextEntry(name,&run);
-//	if (status < B_OK)
-//	{
-//		free(fAttributeBuffer);  fAttributeBuffer = NULL;
-//		return status;
-//	}
-//	
-//	Attribute *attribute = (Attribute *)Inode::Factory(fDisk,run);
-//	if (attribute == NULL || attribute->InitCheck() < B_OK)
-//		return B_IO_ERROR;
-//	
-//	*type = attribute->Type();
-//
-//	void *buffer = realloc(fAttributeBuffer,attribute->Size());
-//	if (buffer == NULL)
-//	{
-//		free(fAttributeBuffer);  fAttributeBuffer = NULL;
-//		delete attribute;
-//		return B_NO_MEMORY;
-//	}
-//	fAttributeBuffer = buffer;
-//	
-//	ssize_t size =  attribute->Read(fAttributeBuffer,attribute->Size());
-//	delete attribute;
-//	
-//	*length = size;
-//	*data = fAttributeBuffer;
-//
-//	return size < B_OK ? size : B_OK;
+	block_run run;
+	uint16 length;
+	vnode_id id;
+	status_t status = fIterator->GetNextEntry(name,&length,B_FILE_NAME_LENGTH,&id);
+	if (status < B_OK)
+		return status;
+
+	Inode *attribute;
+	status = get_vnode(volume->ID(),id,(void **)&attribute);
+	if (status == B_OK && attribute != NULL) {
+		*_type = attribute->Node()->type;
+		*_length = attribute->Node()->data.size;
+		*_id = id;
+	} else if (status == B_OK) {
+		dprintf("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name);
+		status = B_ERROR;
+	}
+
+	put_vnode(volume->ID(),id);
+	
+	return status;
 }
 

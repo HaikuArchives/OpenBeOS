@@ -125,9 +125,9 @@ vnode_ops fs_entry =  {
 	&bfs_access,				// access
 	NULL, 						// create
 	NULL, 						// mkdir
-	NULL,
-	NULL,
-	NULL,
+	NULL,						// symlink
+	NULL,						// link
+	NULL,						// rename
 	NULL, 						// unlink
 	NULL, 						// rmdir
 	&bfs_read_link,				// readlink
@@ -284,7 +284,7 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id
 	if (get_vnode(volume->ID(),*vnid,(void **)&inode) != 0)
 		return B_ENTRY_NOT_FOUND;
 
-	// if "found" is a symlink, we have to do some more stuff here...
+	// if "inode" is a symlink, we have to do some more stuff here...
 
 	return B_OK;
 }
@@ -335,7 +335,7 @@ bfs_rstat(void *_ns, void *_node, struct stat *st)
 	bfs_inode *node = inode->Node();
 
 	st->st_dev = volume->ID();
-	st->st_ino = inode->VnodeID();
+	st->st_ino = inode->ID();
 	st->st_nlink = 1;
 	st->st_blksize = BFS_IO_SIZE;
 
@@ -588,7 +588,7 @@ bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent 
 
 	uint32 type;
 	size_t length;
-	status_t status = iterator->GetNext(dirent->d_name,&length,&type);
+	status_t status = iterator->GetNext(dirent->d_name,&length,&type,&dirent->d_ino);
 	if (status == B_ENTRY_NOT_FOUND) {
 		*num = 0;
 		return B_OK;
@@ -598,7 +598,6 @@ bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent 
 	Volume *volume = (Volume *)_ns;
 
 	dirent->d_dev = volume->ID();
-	dirent->d_ino = 0;
 	dirent->d_reclen = length;
 
 	*num = 1;
@@ -638,6 +637,15 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 
 		return B_OK;
 	}
+	// search in the attribute directory
+	Inode *attribute = inode->GetAttribute(name);
+	if (attribute != NULL) {
+		attrInfo->type = attribute->Node()->type;
+		attrInfo->size = attribute->Node()->data.size;
+
+		inode->ReleaseAttribute(attribute);
+		return B_OK;
+	}
 
 	return B_ENTRY_NOT_FOUND;
 }
@@ -652,30 +660,39 @@ bfs_write_attr(void *ns, void *node, const char *name, int type,const void *buf,
 
 
 int
-bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buf, size_t *_length, off_t pos)
+bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, size_t *_length, off_t pos)
 {
 	Inode *inode = (Inode *)_node;
-	dprintf("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->VnodeID(),name,*_length);
+	dprintf("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->ID(),name,*_length);
 	
 	if (inode == NULL || inode->Node() == NULL)
 		return B_ERROR;
 
-	small_data *smallData = inode->FindSmallData((const char *)name);
+	if (pos < 0)
+		pos = 0;
+
+	// search in the small_data section
+	small_data *smallData = inode->FindSmallData(name);
 	if (smallData != NULL) {
-		// writing to a specific position is not supported
-		// for the small_data section right now
-		if (pos != 0)
-			return B_ERROR;
-
 		size_t length = *_length;
-		if (length > smallData->data_size)
-			length = smallData->data_size;
+		if (pos > smallData->data_size) {
+			*_length = 0;
+			return B_OK;
+		}
+		if (length + pos > smallData->data_size)
+			length = smallData->data_size - pos;
 
-		memcpy(buf,smallData->Data(),length);
+		memcpy(buffer,smallData->Data() + pos,length);
 		*_length = length;
 		return B_OK;
 	}
 	// search in the attribute directory
+	Inode *attribute = inode->GetAttribute(name);
+	if (attribute != NULL) {
+		status_t status = attribute->ReadAt(pos,buffer,_length);
+		inode->ReleaseAttribute(attribute);
+		return status;
+	}
 
 	return B_ENTRY_NOT_FOUND;
 }
