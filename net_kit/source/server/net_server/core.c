@@ -143,10 +143,8 @@ ifq *start_ifq(void)
 	ifq *nifq = NULL;
 	
 	nifq = (ifq*)malloc(sizeof(*nifq));
-
-printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
-	nifq, (char*)nifq + sizeof(*nifq));
-
+	memset(nifq, 0, sizeof(*ifq));
+	
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
 	set_sem_owner(nifq->lock, B_SYSTEM_TEAM);
@@ -371,10 +369,6 @@ void add_domain(struct domain *dom, int fam)
 			case AF_INET:
 				/* ok, add it... */
 				ndm = (struct domain*)malloc(sizeof(*ndm));
-
-printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
-	ndm, (char*)ndm + sizeof(*ndm));
-
 				*ndm = af_inet_domain;
 				if (dm)
 					dm->dom_next = ndm;
@@ -645,6 +639,7 @@ static status_t core_std_ops(int32 op, ...)
 	 */
 	switch(op) {
 		case B_MODULE_INIT:
+			load_driver_symbols(CORE_MODULE_PATH);
 			break;
 		case B_MODULE_UNINIT:
 			break;
