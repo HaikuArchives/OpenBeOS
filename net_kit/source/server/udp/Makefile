@@ -11,8 +11,9 @@ KLOBJS=../net_server/cksum.o
 all:	$(TARGET)
 
 clean:
-	@if test -e $(TGT); then rm $(TGT) *.o; fi
-	@if test -e $(TARGET); then rm $(TARGET) *.o; fi
+	@if test -e $(TGT); then rm $(TGT); fi
+	@if test -e $(OBJS); then rm $(OBJS); fi
+	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
 	$(CC) $(KCFLAGS) $(INCLUDES) -c udp.c

@@ -18,12 +18,11 @@
 #include "net_server/core_module.h"
 
 static struct core_module_info *core = NULL;
-#define UDP_MODULE_PATH		"network/protocol/udp"
-#define m_freem	core->m_freem
-#define m_adj	core->m_adj
-#define m_prepend	core->m_prepend
-#define in_pcballoc	core->in_pcballoc
-#define in_pcbconnect	core->in_pcbconnect
+#define m_freem             core->m_freem
+#define m_adj               core->m_adj
+#define m_prepend           core->m_prepend
+#define in_pcballoc         core->in_pcballoc
+#define in_pcbconnect       core->in_pcbconnect
 #define in_pcbdisconnect	core->in_pcbdisconnect
 #define in_pcbbind			core->in_pcbbind
 #define soreserve			core->soreserve
@@ -31,8 +30,12 @@ static struct core_module_info *core = NULL;
 #define in_pcblookup		core->in_pcblookup
 #define sowakeup			core->sowakeup
 #define in_pcbdetach		core->in_pcbdetach
+#define in_control          core->in_control
+
+#define UDP_MODULE_PATH		"network/protocol/udp"
+
 #else
-#define UDP_MODULE_PATH	"modules/protocol/udp"
+#define UDP_MODULE_PATH	    "modules/protocol/udp"
 #endif
 
 int *prot_table;
@@ -138,6 +141,9 @@ int udp_userreq(struct socket *so, int req,
 {
 	struct inpcb *inp = sotoinpcb(so);
 	int error = 0;
+
+	if (req == PRU_CONTROL)
+		return in_control(so, (int)m, (caddr_t)addr, (struct ifnet *)ctrl);
 
 	if (inp == NULL && req != PRU_ATTACH) {
 		error = EINVAL;
@@ -299,7 +305,7 @@ static struct protosw my_proto = {
 	NULL,
 	IPPROTO_UDP,
 	PR_ATOMIC | PR_ADDR,
-	NET_LAYER4,
+	NET_LAYER3,
 	
 	&udp_init,
 	&udp_input,

@@ -40,7 +40,9 @@ struct core_module_info {
 	int (*in_pcbconnect)(struct inpcb *, struct mbuf *);
 	int (*in_pcbdisconnect)(struct inpcb *);
 	struct inpcb * (*in_pcblookup)(struct inpcb *, 
-		struct in_addr, uint16, struct in_addr, uint16, int);	
+	    struct in_addr, uint16, struct in_addr, uint16, int);
+	int (*in_control)(struct socket *, int, caddr_t,
+	    struct ifnet *);
 	
 	/* mbuf routines... */
 	struct mbuf * (*m_free)(struct mbuf *);

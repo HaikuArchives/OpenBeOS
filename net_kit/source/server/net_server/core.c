@@ -733,6 +733,7 @@ static struct core_module_info core_info = {
 	in_pcbconnect,
 	in_pcbdisconnect,
 	in_pcblookup,
+	in_control,
 
 	m_free,
 	m_freem,
