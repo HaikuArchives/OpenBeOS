@@ -26,7 +26,7 @@ int32 test_thread(void *data)
 
 	sa.sin_len = sizeof(sa);
 	sa.sin_port = 0;
-	sa.sin_addr.s_addr = INADDR_LOOPBACK;
+	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	sa.sin_family = AF_INET;
 	memset(&sa.sin_zero, 0, sizeof(sa.sin_zero));
 	
@@ -40,7 +40,7 @@ int32 test_thread(void *data)
 			err(sock, "Socket couldn't be created");
 		rv = bind(sock, (struct sockaddr *)&sa, sizeof(sa));
 		if (rv < 0)
-			err(rv, "Socket could not be boundto an ephemereal port");
+			err(rv, "Socket could not be bound to an ephemereal port");
 		closesocket(sock);
 		num++;
 	}

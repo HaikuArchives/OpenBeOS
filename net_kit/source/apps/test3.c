@@ -10,7 +10,7 @@
 
 #include "ufunc.h"
 
-#define THREADS	1
+#define THREADS	2
 #define MIN_SOCK	10
 #define MAX_SOCK	100
 #define TIME	10
@@ -22,11 +22,10 @@ int32 test_thread(void *data)
 	int qty = MIN_SOCK;
 	struct sockaddr_in sa;
 	int i, rv;
-	uint32 num = 0;
 
 	sa.sin_family = AF_INET;
 	sa.sin_port = 0;
-	sa.sin_addr.s_addr = INADDR_LOOPBACK;
+	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	sa.sin_len = sizeof(sa);
 	memset(&sa.sin_zero, 0, sizeof(sa.sin_zero));
 	
@@ -34,7 +33,6 @@ int32 test_thread(void *data)
 
 	while (qty <= MAX_SOCK) {
 		for (i=0;i < qty;i++) {
-			printf("Trying socket %d\n", i);
 			if (i >= MAX_SOCK)
 				break;
 			sock[i] = socket(AF_INET, SOCK_DGRAM , 0);
@@ -43,7 +41,6 @@ int32 test_thread(void *data)
 		}
 		printf("Thread %d: completed creating %d sockets...\n", tnum+1, qty);
 		for (i=0;i < qty;i++) {
-			printf("binding socket %d\n", i);
 			if (i >= MAX_SOCK)
 				break;
 			rv = bind(sock[i],	(struct sockaddr*)&sa, sizeof(sa));
@@ -51,7 +48,6 @@ int32 test_thread(void *data)
 				err(rv, "Failed to bind!");
 		}	
 		for (i=0;i < qty;i++) {
-			printf("freeing socket %d\n", i);
 			if (i >= MAX_SOCK)
 				break;
 			closesocket(sock[i]);
@@ -59,9 +55,7 @@ int32 test_thread(void *data)
 		qty += (MAX_SOCK - MIN_SOCK) / 10;
 	}
 
-	printf( "Thread %d:\n"
-		"       sockets created : %5ld\n",
-		tnum + 1, num);
+	printf( "Thread %d complete\n", tnum);
 }
 	
 int main(int argc, char **argv)
