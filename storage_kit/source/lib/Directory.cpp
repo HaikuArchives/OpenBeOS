@@ -7,6 +7,7 @@
 	BDirectory implementation.	
 */
 
+#include <fs_info.h>
 #include <string.h>
 #include <Directory.h>
 #include <Entry.h>
@@ -343,30 +344,16 @@ BDirectory::GetEntry(BEntry *entry) const
 	- \c true, if the BDirectory is properly initialized and represents a
 	  root directory of some volume,
 	- \c false, otherwise.
-	\todo Implemented using StorageKit::dir_to_self_entry_ref(). Check, if
-		  there is a better alternative.
 */
 bool
 BDirectory::IsRootDirectory() const
 {
-	// check first, if we are "/"
-	BEntry entry;
-	bool result = (GetEntry(&entry) == B_OK);
-	bool isRootRoot = false;
-	entry_ref ref;
-	if (result)
-		result = (entry.GetRef(&ref) == B_OK);
-	if (result)
-		isRootRoot = StorageKit::entry_ref_is_root_dir(ref);
-	if (result && !isRootRoot) {
-		// Get our own and out parent's stat and compare the device IDs.
-		StorageKit::Stat ourStat, parentStat;
-		result = (GetStat(&ourStat) == B_OK);
-		if (result) {
-			result = (GetStatFor("..", &parentStat) == B_OK);
-			result &= (ourStat.st_dev != parentStat.st_dev);
-		}
-	}
+	// compare the directory's node ID with the ID of the root node of the FS
+	bool result = false;
+	node_ref ref;
+	fs_info info;
+	if (GetNodeRef(&ref) == B_OK && fs_stat_dev(ref.device, &info) == 0)
+		result = (ref.node == info.root);
 	return result;
 }
 
@@ -926,17 +913,6 @@ StorageKit::FileDescriptor
 BDirectory::get_fd() const
 {
 	return fDirFd;
-}
-
-//! Sets the BNode's status.
-/*! To be used instead of accessing the BNode's private \c fCStatus member
-	directly.
-	\param newStatus the new status to be set.
-*/
-void
-BDirectory::set_status(status_t newStatus)
-{
-	fCStatus = newStatus;
 }
 
 

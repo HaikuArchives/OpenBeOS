@@ -94,7 +94,6 @@ private:
 	virtual void close_fd();
 	status_t set_fd(StorageKit::FileDescriptor fd);
 	StorageKit::FileDescriptor get_fd() const;
-	void set_status(status_t newStatus);
 
 	friend class BEntry;
 };
