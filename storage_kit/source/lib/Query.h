@@ -54,16 +54,16 @@ public:
 
 	status_t Clear();
 
-	void PushAttr(const char *attrName);
-	void PushOp(query_op op);
+	status_t PushAttr(const char *attrName);
+	status_t PushOp(query_op op);
 
-	void PushUInt32(uint32 value);
-	void PushInt32(int32 value);
-	void PushUInt64(uint64 value);
-	void PushInt64(int64 value);
-	void PushFloat(float value);
-	void PushDouble(double value);
-	void PushString(const char *value, bool caseInsensitive = false);
+	status_t PushUInt32(uint32 value);
+	status_t PushInt32(int32 value);
+	status_t PushUInt64(uint64 value);
+	status_t PushInt64(int64 value);
+	status_t PushFloat(float value);
+	status_t PushDouble(double value);
+	status_t PushString(const char *value, bool caseInsensitive = false);
 	status_t PushDate(const char *date);
 
 	status_t SetVolume(const BVolume *volume);
