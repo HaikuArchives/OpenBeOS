@@ -5,12 +5,19 @@
 #include <cppunit/TestCase.h>
 #include <StorageDefs.h>
 
+class BPath;
+
 namespace StorageKit {
 
 class TestShell : public CppUnitShell {
 public:
-	TestShell();	
+	TestShell();
+	~TestShell();
+	int Run(int argc, char *argv[]);
 	virtual void PrintDescription(int argc, char *argv[]);
+	const char* TestDir() const;
+private:
+	BPath *fTestDir;
 };
 
 class TestCase : public CppUnit::TestCase {

@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include "TestUtils.h"
 
+#include <Path.h>
+
 // ##### Include your test headers here #####
 #include "DirectoryTest.h"
 #include "EntryTest.h"
@@ -27,15 +29,39 @@ int main(int argc, char *argv[]) {
 	return shell.Run(argc, argv);
 }
 
+namespace StorageKit {
+
 //-------------------------------------------------------------------------------
 // StorageKit::TestShell
 //-------------------------------------------------------------------------------
 
-StorageKit::TestShell::TestShell() : CppUnitShell() {
+TestShell::TestShell()
+		  : CppUnitShell(),
+		    fTestDir(NULL)
+{
+}
+
+TestShell::~TestShell()
+{
+	delete fTestDir;
+}
+
+int
+TestShell::Run(int argc, char *argv[])
+{
+	// Let's hope BPath does work. ;-)
+	BPath path(argv[0]);
+	if (path.InitCheck() == B_OK) {
+		fTestDir = new BPath();
+		if (path.GetParent(fTestDir) != B_OK)
+			printf("Couldn't get test dir.\n");
+	} else
+		printf("Couldn't find the path to the test app.\n");
+	CppUnitShell::Run(argc, argv);
 }
 
 void
-StorageKit::TestShell::PrintDescription(int argc, char *argv[]) {
+TestShell::PrintDescription(int argc, char *argv[]) {
 	std::string AppName = argv[0];
 	cout << endl;
 	cout << "This program is the central testing framework for the purpose" << endl;
@@ -56,17 +82,23 @@ StorageKit::TestShell::PrintDescription(int argc, char *argv[]) {
 	}
 }
 
+const char*
+TestShell::TestDir() const
+{
+	return (fTestDir ? fTestDir->Path() : NULL);
+}
+
 //-------------------------------------------------------------------------------
-// StorageKit::TestCase
+// TestCase
 //-------------------------------------------------------------------------------
 
-StorageKit::TestCase::TestCase() : fValidCWD(false) {
+TestCase::TestCase() : fValidCWD(false) {
 }
 
 // Saves the location of the current working directory. To return to the
 // last saved working directory, all \ref RestorCWD().
 void
-StorageKit::TestCase::SaveCWD() {
+TestCase::SaveCWD() {
 	fValidCWD = getcwd(fCurrentWorkingDir, B_PATH_NAME_LENGTH);
 }
 
@@ -77,9 +109,11 @@ StorageKit::TestCase::SaveCWD() {
 	is not modified.
 */
 void
-StorageKit::TestCase::RestoreCWD(const char *alternate) {
+TestCase::RestoreCWD(const char *alternate) {
 	if (fValidCWD)
 		chdir(fCurrentWorkingDir);
 	else if (alternate != NULL)
 		chdir(alternate);
+}
+
 }
