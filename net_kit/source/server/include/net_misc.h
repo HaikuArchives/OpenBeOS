@@ -15,8 +15,6 @@
 
 #ifdef _KERNEL_MODE
 #define printf  dprintf
-#define show_exit(a)	dprintf("%d\n", a)
-#define exit    show_exit
 #endif  
 
 /* Not really sure if this is safe... */
@@ -28,10 +26,10 @@
  * Having a single option is sort of lame so I'm going to start adding more here...
  *
  */
-#define SHOW_DEBUG 	1	/* general debugging stuff (verbose!) */
-#define SHOW_ROUTE	1	/* show routing information */
-#define ARP_DEBUG	1	/* show ARP debug info */
-#define	SHOW_MALLOC_USAGE	1	/* show instances of malloc */
+#define SHOW_DEBUG 	0	/* general debugging stuff (verbose!) */
+#define SHOW_ROUTE	0	/* show routing information */
+#define ARP_DEBUG	0	/* show ARP debug info */
+#define	SHOW_MALLOC_USAGE	0	/* show instances of malloc */
 
 typedef struct ifnet	ifnet;
 
@@ -86,6 +84,12 @@ struct sock_fd {
 struct sock_fd *make_sock_fd(void);
 void release_sock_fd(struct sock_fd *sfd);
 
+#ifdef USE_DEBUG_MALLOC
+void *net_malloc(int size);
+void free(void *ptr);
+#endif
+
 #endif /* OBOS_NET_MISC_H */
 
 #endif /* _NETWORK_STACK */
+
