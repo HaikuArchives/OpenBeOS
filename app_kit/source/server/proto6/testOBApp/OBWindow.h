@@ -113,6 +113,11 @@ virtual thread_id		Run();
 protected:
 friend OBView;
 
+uint32			WindowLookToInteger(window_look wl);
+uint32			WindowFeelToInteger(window_feel wf);
+window_look		WindowLookFromType(window_type t);
+window_feel		WindowFeelFromType(window_type t);
+
 BString	*wtitle;
 int32 ID;
 int32 topview_ID;

@@ -16,6 +16,10 @@ OBTestApp::OBTestApp(void) : OBApplication("application/OBTestApp")
 	win=new OBWindow(BRect(100,100,200,200), "OBWindow1",B_BORDERED_WINDOW_LOOK,
 		B_NORMAL_WINDOW_FEEL,0);
 	win->Show();
+
+	win=new OBWindow(BRect(200,200,300,300), "OBWindow2",B_DOCUMENT_WINDOW_LOOK,
+		B_NORMAL_WINDOW_FEEL,0);
+	win->Show();
 }
 
 OBTestApp::~OBTestApp(void)

@@ -62,6 +62,8 @@ printf("OBWindow(%s)\n",title);
 		// Notify server of window's existence
 		serverlink->SetOpCode(CREATE_WINDOW);
 		serverlink->Attach(wframe);
+		serverlink->Attach((int32)WindowLookToInteger(wlook));
+		serverlink->Attach((int32)WindowFeelToInteger(wfeel));
 		serverlink->Attach((int32)wflags);
 		serverlink->Attach(&inport,sizeof(port_id));
 		serverlink->Attach((int32)wkspace);
@@ -441,3 +443,81 @@ thread_id OBWindow::Run()
 	return 0;
 }
 
+uint32 OBWindow::WindowLookToInteger(window_look wl)
+{
+	switch(wl)
+	{
+		case B_BORDERED_WINDOW_LOOK:
+			return 1;
+		case B_TITLED_WINDOW_LOOK:
+			return 2;
+		case B_DOCUMENT_WINDOW_LOOK:
+			return 3;
+		case B_MODAL_WINDOW_LOOK:
+			return 4;
+		case B_FLOATING_WINDOW_LOOK:
+			return 5;
+		case B_NO_BORDER_WINDOW_LOOK:
+		default:
+			return 0;
+	}
+}
+
+uint32 OBWindow::WindowFeelToInteger(window_feel wf)
+{
+	switch(wf)
+	{
+		case B_MODAL_SUBSET_WINDOW_FEEL:
+			return 1;
+		case B_MODAL_APP_WINDOW_FEEL:
+			return 2;
+		case B_MODAL_ALL_WINDOW_FEEL:
+			return 3;
+		case B_FLOATING_SUBSET_WINDOW_FEEL:
+			return 4;
+		case B_FLOATING_APP_WINDOW_FEEL:
+			return 5;
+		case B_FLOATING_ALL_WINDOW_FEEL:
+			return 6;
+
+		case B_NORMAL_WINDOW_FEEL:
+		default:
+			return 0;
+	}
+}
+
+window_look OBWindow::WindowLookFromType(window_type t)
+{
+	switch(t)
+	{
+		case B_TITLED_WINDOW:
+			return B_TITLED_WINDOW_LOOK;
+		case B_DOCUMENT_WINDOW:
+			return B_DOCUMENT_WINDOW_LOOK;
+		case B_MODAL_WINDOW:
+			return B_MODAL_WINDOW_LOOK;
+		case B_FLOATING_WINDOW:
+			return B_FLOATING_WINDOW_LOOK;
+		case B_BORDERED_WINDOW:
+			return B_BORDERED_WINDOW_LOOK;
+		case B_UNTYPED_WINDOW:
+		default:
+			return B_NO_BORDER_WINDOW_LOOK;
+	}
+}
+
+window_feel OBWindow::WindowFeelFromType(window_type t)
+{
+	switch(t)
+	{
+		case B_MODAL_WINDOW:
+			return B_MODAL_APP_WINDOW_FEEL;
+		case B_FLOATING_WINDOW:
+			return B_FLOATING_APP_WINDOW_FEEL;
+
+		// includes B_UNTYPED_WINDOW, B_BORDERED_WINDOW, B_DOCUMENT_WINDOW,
+		// and B_TITLED_WINDOW
+		default:
+			return B_NORMAL_WINDOW_FEEL;
+	}
+}

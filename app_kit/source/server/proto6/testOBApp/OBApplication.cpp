@@ -1,6 +1,6 @@
 /*
 	OBApplication.cpp:
-		Beginning framework for a *real* BApplication replacement for prototype #5
+		Beginning framework for a *real* BApplication replacement for the prototypes
 
 */
 
@@ -169,26 +169,6 @@ printf("%s::MainLoop()\n",signature->String());
 					serverlink->Flush();
 					break;
 				}
-/*				case SET_SERVER_PORT:
-				{
-					// This message is received when the server has created
-					// the ServerApp object to monitor our application. It is
-					// sending us the port to which we send future messages
-
-					// Attached data:
-					// port_id - id of the port of the corresponding ServerApp
-					if(buffersize<1)
-					{
-						printf("%s: Set Server Port has no attached data\n",signature->String());
-						break;
-					}
-//					printf("%s: Set Server Port to %ld\n",signature,*((port_id *)msgbuffer));
-					serverport=*((port_id *)msgbuffer);
-					serverlink->SetPort(serverport);
-					ReadyToRun();
-					break;
-				}
-*/
 				case ADDWINDOW:
 				{
 					// This message is received by a window's constructor so that it
