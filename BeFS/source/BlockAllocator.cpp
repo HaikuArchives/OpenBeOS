@@ -218,7 +218,7 @@ BlockAllocator::initialize(BlockAllocator *allocator)
 
 	Volume *volume = allocator->fVolume;
 	uint32 blocks = allocator->fBlocksPerGroup;
-	uint32 numBits =  8 * blocks * volume->BlockSize();
+	uint32 numBits = 8 * blocks * volume->BlockSize();
 
 	uint32 *buffer = (uint32 *)malloc(numBits >> 3);
 	if (buffer == NULL)
@@ -305,7 +305,7 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 		// we iterate through it to find a place for the allocation.
 		// (one allocation can't exceed one allocation group)
 
-		uint32 block = start / fGroups[group].fNumBits;
+		uint32 block = start / (fVolume->BlockSize() << 3);
 		int32 range = 0, rangeStart = 0,rangeBlock = 0;
 
 		for (;block < fBlocksPerGroup;block++) {
@@ -442,17 +442,18 @@ BlockAllocator::Allocate(Transaction *transaction,const Inode *inode, off_t numB
 status_t 
 BlockAllocator::Free(Transaction *transaction,block_run &run)
 {
-	if (run.allocation_group >= fNumGroups)
-		return B_ENTRY_NOT_FOUND;
-	if (run.length == 0)
+	Locker lock(fLock);
+
+	int32 group = run.allocation_group;
+	if (group < 0 || group >= fNumGroups
+		|| run.start > fGroups[group].fNumBits
+		|| run.length == 0)
 		return B_BAD_VALUE;
 
 	AllocationBlock cached(fVolume);
-	Locker lock(fLock);
 
-	uint16 group = run.allocation_group;
 	uint16 start = run.start;
-	uint32 block = run.start / fGroups[group].fNumBits;
+	uint32 block = run.start / (fVolume->BlockSize() << 3);
 	uint16 length = run.length;
 
 	if (fGroups[group].fFirstFree > start)
