@@ -2,6 +2,7 @@
 
 #include <kernel/OS.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "netinet/in.h"
 #include "if.h"
@@ -14,6 +15,18 @@
 extern ifnet *devices;
 extern int ndevs;
 #define IFA_ROUTE	RTF_UP
+
+/* global pointer to all interfaces list... */
+struct ifaddr **ifnet_addrs;
+static int if_index;
+static int if_indexlim;
+
+void if_init(void)
+{
+	ifnet_addrs = NULL;
+	if_index = 0;
+	if_indexlim = 8; /* initial value */
+}
 
 int ifioctl(struct socket *so, int cmd, caddr_t data)
 {
@@ -253,3 +266,80 @@ struct ifaddr *ifa_ifwithnet(struct sockaddr *addr)
         return (ifa_maybe);
 }
 
+void if_attach(struct ifnet *ifp)
+{
+	uint socksize, ifasize;
+	int namelen, masklen;
+	struct ifnet **p = &devices;
+	struct sockaddr_dl *sdl;
+	struct ifaddr *ifa;
+	char dname[IFNAMSIZ];
+	
+	if (!ifp)
+		return;
+
+	sprintf(dname, "%s%d", ifp->name, ifp->unit);
+	printf("adding device %s\n", dname);
+	ifp->if_name = strdup(dname);
+	
+	while (*p)
+		p = &((*p)->next);
+	
+	*p = ifp;
+	ifp->if_index = ++if_index; /* atomic add ? */
+
+	/* allocate memory for ifnet_addrs if required... */
+	if (ifnet_addrs == NULL || if_index >= if_indexlim) {
+		uint n = (if_indexlim <<= 1) * sizeof(*ifa);
+		struct ifaddr **q = (struct ifaddr**)malloc(n);
+		if (ifnet_addrs) {
+			memcpy((caddr_t)q, (caddr_t)ifnet_addrs, n / 2);
+			free(ifnet_addrs);
+		}
+		ifnet_addrs = q;
+	}
+
+	/* get the unit # as a string */
+	namelen = strlen(ifp->if_name);
+
+	/* memory: we need to allocate enough memory for the following...
+	 * struct ifaddr
+	 * struct sockaddr_dl that will hold the link level address and name
+	 * struct sockaddr_dl that will hold the mask
+	 */
+
+#define _offsetof(t, m) ((int)((caddr_t)&((t *)0)->m))
+	masklen = _offsetof(struct sockaddr_dl, sdl_data[0]) + namelen;
+	socksize = masklen + ifp->if_addrlen;
+#define ROUNDUP(a) (1 + (((a) - 1) | (sizeof(int32) -1)))
+	socksize = ROUNDUP(socksize);
+
+	if (socksize < sizeof(*sdl))
+		socksize = sizeof(*sdl);
+	ifasize = sizeof(*ifa) + 2 * socksize;
+
+	if ((ifa = (struct ifaddr*)malloc(ifasize))) {
+		memset(ifa, 0, ifasize);
+
+		sdl = (struct sockaddr_dl *)(ifa + 1);
+		sdl->sdl_len = socksize;
+		sdl->sdl_family = AF_LINK;
+		memcpy(&sdl->sdl_data, ifp->if_name, namelen);
+		sdl->sdl_nlen = namelen;
+		sdl->sdl_index = ifp->if_index;
+		sdl->sdl_type = ifp->if_type;
+		ifnet_addrs[if_index - 1] = ifa;
+		ifa->ifn = ifp;
+		ifa->ifa_next = ifp->if_addrlist;
+		ifp->if_addrlist = ifa;
+		ifa->ifa_addr = (struct sockaddr*)sdl;
+
+		/* now do mask... */
+		sdl = (struct sockaddr_dl *)(socksize + (caddr_t)sdl);
+		ifa->ifa_netmask = (struct sockaddr*)sdl;
+		sdl->sdl_len = masklen;
+		/* build the mask */
+		while (namelen != 0)
+			sdl->sdl_data[--namelen] = 0xff;
+	}
+}
