@@ -5,6 +5,7 @@
 #include <MediaFormats.h>
 #include <Autolock.h>
 #include "ServerInterface.h"
+#include "BufferManager.h"
 
 /*
  *
@@ -80,6 +81,9 @@ public:
 	CServerApp();
 	~CServerApp();
 
+	void GetSharedBufferArea(BMessage *msg);
+	void RegisterBuffer(BMessage *msg);
+	void UnregisterBuffer(BMessage *msg);
 
 	void LibInterface_GetNodeID(BMessage *);
 	void LibInterface_FindRunningInstances(BMessage *);
@@ -98,7 +102,6 @@ public:
 	void LibInterface_UnregisterApp(BMessage *);
 	void LibInterface_RegisterNode(BMessage *);
 	void LibInterface_UnregisterNode(BMessage *);
-	void LibInterface_RegisterBuffer(BMessage *);
 	void LibInterface_SetDefault(BMessage *);
 	void LibInterface_AcquireNodeReference(BMessage *);
 	void LibInterface_RequestNotifications(BMessage *);
@@ -141,6 +144,7 @@ public:
 */
 
 private:
+	BufferManager *fBufferManager;
 	CAppManager *mAppManager;
 	CNodeManager *mNodeManager;
 	BLocker *mLocker;
@@ -154,6 +158,7 @@ private:
 
 CServerApp::CServerApp()
  	: BApplication(NEW_MEDIA_SERVER_SIGNATURE),
+ 	fBufferManager(new BufferManager),
 	mAppManager(new CAppManager),
 	mNodeManager(new CNodeManager),
 	mLocker(new BLocker),
@@ -167,9 +172,25 @@ CServerApp::CServerApp()
 
 CServerApp::~CServerApp()
 {
+	delete fBufferManager;
 	delete mAppManager;
 	delete mNodeManager;
 	delete mLocker;
+}
+
+void
+CServerApp::GetSharedBufferArea(BMessage *msg)
+{
+}
+
+void
+CServerApp::RegisterBuffer(BMessage *msg)
+{
+}
+
+void
+CServerApp::UnregisterBuffer(BMessage *msg)
+{
 }
 
 
@@ -266,11 +287,6 @@ void CServerApp::LibInterface_RegisterNode(BMessage *msg)
 
 
 void CServerApp::LibInterface_UnregisterNode(BMessage *msg)
-{
-}
-
-
-void CServerApp::LibInterface_RegisterBuffer(BMessage *msg)
 {
 }
 
@@ -390,6 +406,11 @@ void CServerApp::LibInterface_GetVolume(BMessage *msg)
 void CServerApp::MessageReceived(BMessage *msg)
 {
 	switch (msg->what) {
+		case MEDIA_SERVER_GET_SHARED_BUFFER_AREA: GetSharedBufferArea(msg);
+		case MEDIA_SERVER_REGISTER_BUFFER: RegisterBuffer(msg);
+		case MEDIA_SERVER_UNREGISTER_BUFFER: UnregisterBuffer(msg);
+	
+	
 		case MEDIA_SERVER_GET_NODE_ID: LibInterface_GetNodeID(msg); break;
 		case MEDIA_SERVER_FIND_RUNNING_INSTANCES: LibInterface_FindRunningInstances(msg); break;
 		case MEDIA_SERVER_BUFFER_GROUP_REG: LibInterface_BufferGroupReg(msg); break;
@@ -407,7 +428,6 @@ void CServerApp::MessageReceived(BMessage *msg)
 		case MEDIA_SERVER_UNREGISTER_APP: LibInterface_UnregisterApp(msg); break;
 		case MEDIA_SERVER_REGISTER_NODE: LibInterface_RegisterNode(msg); break;
 		case MEDIA_SERVER_UNREGISTER_NODE: LibInterface_UnregisterNode(msg); break;
-		case MEDIA_SERVER_REGISTER_BUFFER: LibInterface_RegisterBuffer(msg); break;
 		case MEDIA_SERVER_SET_DEFAULT: LibInterface_SetDefault(msg); break;
 		case MEDIA_SERVER_ACQUIRE_NODE_REFERENCE: LibInterface_AcquireNodeReference(msg); break;
 		case MEDIA_SERVER_REQUEST_NOTIFICATIONS: LibInterface_RequestNotifications(msg); break;
