@@ -1,0 +1,4 @@
+SubDir OBOS_TOP sources os kits kernel apps tests ;
+
+KernelObjects <$(SOURCE_GRIST)>thread_test.c 
+	: -fpic -Wno-unused ;
