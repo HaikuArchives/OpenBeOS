@@ -9,7 +9,7 @@
 APPKITROOT=../../../..
 
 # specify the name of the binary
-NAME=BMessageQueueTest
+NAME=BMessageQueueTests
 
 # specify the type of binary
 #	APP:	Application

@@ -16,12 +16,6 @@
 #include "TestSuite.h"
 
 
-// The addonTestName is used to select the test to run or to prompt
-// the user which test suite is currently being run.
-
-const char *addonTestName = "BAutolockTests";
-
-
 /*
  *  Function:  addonTestFunc()
  *     Descr:  This function is called by the test application to

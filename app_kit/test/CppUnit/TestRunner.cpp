@@ -156,18 +156,15 @@ void addTests(TestRunner *runner)
 	BPath addonPath;
 	BEntry addonEntry;
 	image_id addonImage;
-	const char **testName;
 	suiteFunc addonFunc;
 
 	while (theAddonDir.GetNextEntry(&addonEntry, true) == B_OK) {
 		addonEntry.GetPath(&addonPath);
 		addonImage = load_add_on(addonPath.Path());
 		if ((addonImage > 0) &&
-		    (get_image_symbol(addonImage, "addonTestName", B_SYMBOL_TYPE_DATA,
-		    	(void **)&testName) == B_OK) &&
 		    (get_image_symbol(addonImage, "addonTestFunc", B_SYMBOL_TYPE_TEXT,
 		    	reinterpret_cast<void **>(&addonFunc)) == B_OK)) {
-		    runner->addTest(*testName, addonFunc());
+		    runner->addTest(addonPath.Leaf(), addonFunc());
 		}
 	}
 }

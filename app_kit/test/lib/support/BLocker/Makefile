@@ -9,7 +9,7 @@ APPKITROOT=../../../..
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME=BLockerTest
+NAME=BLockerTests
 
 # specify the type of binary
 #	APP:	Application

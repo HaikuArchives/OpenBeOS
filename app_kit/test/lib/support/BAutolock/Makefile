@@ -9,7 +9,7 @@ APPKITROOT=../../../..
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME=BAutolockTest
+NAME=BAutolockTests
 
 # specify the type of binary
 #	APP:	Application
