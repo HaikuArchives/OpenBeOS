@@ -59,7 +59,9 @@ typedef struct rw_lock rw_lock;
 	delete_sem((lock).sem);
 
 #define ACQUIRE_BENAPHORE(lock) \
-	(atomic_add(&((lock).count), -1) <= 0 ? acquire_sem((lock).sem) : B_OK)
+	(atomic_add(&((lock).count), -1) <= 0 ? \
+		acquire_sem_etc((lock).sem, 1, B_CAN_INTERRUPT, 0) \
+		: B_OK)
 
 #define RELEASE_BENAPHORE(lock) \
 	{ \
@@ -120,7 +122,7 @@ typedef struct rw_lock rw_lock;
 	{ \
 		int32 readers = atomic_add(&(lock).count,MAX_READERS); \
 		if (readers < 0) \
-			release_sem_etc((lock).sem,readers <= -MAX_READERS ? 1 : -readers,0); \
+			release_sem_etc((lock).sem,readers <= -MAX_READERS ? 1 : -readers,B_CAN_INTERRUPT); \
 	}
 
 #endif	/* LOCK_H */

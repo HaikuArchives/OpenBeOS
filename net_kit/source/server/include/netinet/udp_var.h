@@ -10,7 +10,7 @@ struct udpiphdr {
 	struct udphdr ui_u;
 };
 
-#define ui_x1           ui_i.ih_x1 /* NB x1 (one) */
+#define ui_x1           ui_i.ih_x1 /* NB _x1 (one) */
 #define ui_pr           ui_i.ih_pr
 #define ui_len          ui_i.ih_len
 #define ui_src          ui_i.ih_src
