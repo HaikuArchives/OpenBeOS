@@ -832,30 +832,83 @@ extern int notify_select_event(void *sync, uint32 ref);
 int soselect(void *sp, uint8 which, uint32 ref, void *sync)
 {
 	struct socket *so = (struct socket*)sp;
-
-printf("soselect: %d, %p\n", which, sync);
+	struct selinfo *si, *sj;
 	
+	/* we presently don't set the SB_SEL flag... */	
 	switch(which) {
 		case B_SELECT_READ:
 			if (soreadable(so))
 				goto event;
+			sj = so->so_rcv.sb_sel;
 			break;
 		case B_SELECT_WRITE:
 			if (sowriteable(so))
 				goto event;
+			sj = so->so_snd.sb_sel;
 			break;
 		case B_SELECT_EXCEPTION:
 		/* just in case, we'll treat anything strange as an exception... */
 		default:
 			if (so->so_oobmark || (so->so_state & SS_RCVATMARK))
 				goto event;
+			sj = so->so_rcv.sb_sel;
+			break;
 	}
+	/* OK, we'll add ourselves to the end of the list... */
+	si = (struct selinfo *)malloc(sizeof(*si));
+	si->event = which;
+	si->sync = sync;
+	si->ref = ref;
+	si->sel_next = NULL;
+	/* This currently has NO locking!!! */
+	if (sj) {
+		for (; sj->sel_next; sj = sj->sel_next)
+			continue;
+		sj->sel_next = si;
+	} else {
+		if (which == B_SELECT_WRITE)
+			so->so_snd.sb_sel = si;
+		else
+			so->so_rcv.sb_sel = si;
+	}
+	
 	return 0;
 
 event:
 	notify_select_event(sync, ref);
 	return 1;
 }
+
+int sodeselect(void *sp, uint8 which, void *sync)
+{
+	struct selinfo *si, *last;
+	struct socket *so = (struct socket*)sp;
+	
+	switch(which) {
+		case B_SELECT_READ:
+			si = so->so_rcv.sb_sel;
+			break;
+		case B_SELECT_WRITE:
+			si = so->so_snd.sb_sel;
+			break;
+		case B_SELECT_EXCEPTION:
+			si = so->so_rcv.sb_sel;
+			break;
+	}
+	for (; si; si = si->sel_next) {
+		if (si->sync == sync && si->event == which) {
+			if (last)
+				last->sel_next = si->sel_next;
+			else
+				(which == B_SELECT_WRITE ? so->so_snd.sb_sel : so->so_rcv.sb_sel) = si->sel_next;
+			free(si);
+		} else
+			last = si;
+	}
+	return 0;
+}
+		
+				
 
 int soclose(void *sp)
 {
@@ -1128,8 +1181,60 @@ int sogetopt(void *sp, int level, int optnum, void *data, size_t *datalen)
 	}
 }
 
+static int checkselect(struct socket *so, struct selinfo *si)
+{
+	switch(si->event) {
+		case B_SELECT_READ:
+			if (soreadable(so))
+				goto event;
+			break;
+		case B_SELECT_WRITE:
+			if (sowriteable(so))
+				goto event;
+			break;
+		case B_SELECT_EXCEPTION:
+			if (so->so_oobmark || (so->so_state & SS_RCVATMARK))
+				goto event;
+			break;
+	}
+	return 0;
+event:
+	notify_select_event(si->sync, si->ref);
+	return 1;
+}
+
 void sowakeup(struct socket *so, struct sockbuf *sb)
 {
+	struct selinfo *si, *last;
+	void *sync;
+
+	/* Yuck! This is not good... */	
+	if ((si = sb->sb_sel)) {
+		/* OK...start looking through list... */
+		for (;si;si = si->sel_next) {
+			if (checkselect(so, si) == 1) {
+				sync = si->sync;
+				/* remove ourselves from the list... */
+				if (last)
+					last->sel_next = si->sel_next;
+				else
+					sb->sb_sel = si->sel_next;
+				/* remove all other references... */
+				last = NULL;
+				for (si = sb->sb_sel; si; si = si->sel_next) {
+					if (si->sync == sync) {
+						if (last)
+							last->sel_next = si->sel_next;
+						else
+							sb->sb_sel = si->sel_next;
+					}
+					last = si;
+				}
+				break;
+			}
+			last = si;
+		}	
+	}
 	sb->sb_flags &= ~SB_SEL;
 	if (sb->sb_flags & SB_WAIT) {
 		sb->sb_flags &= ~SB_WAIT;
