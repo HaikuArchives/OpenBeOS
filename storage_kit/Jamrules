@@ -9,3 +9,7 @@ rule LinkSharedOSLibs
         } 
 }
 
+rule AddDebugInfo {
+#	C++FLAGS on $(<) += "-g -O0" ;
+	C++FLAGS += "-g -O0" ;
+}
