@@ -33,17 +33,28 @@ enum {
 	IFF_BROADCAST	= 0x0020
 };
 
-typedef struct ifnet {
-	int dev;	/* device handle */
-	int id;		/* id within the stack's device list */
-	char *name;	/* name of driver */
-	int type;
-	ether_addr mac;	/* The ethernet address if there is one... */
-	int flags;	/* flags */
-	int mtu;	/* mtu */
+typedef struct ifaadr   ifaddr;
+typedef struct ifnet	ifnet;
+
+struct ifaddr {
+        struct ifaddr *next;
+        ifnet *ifn;
+
+        netaddr if_addr;
+};
+
+struct ifnet {
+	ifaddr *if_addrlist;	/* linked list of addresses */
+	int dev;		/* device handle */
+	int id;			/* id within the stack's device list */
+	char *name;		/* name of driver */
+	int type;		/* what type of interface are we? */
+	ether_addr mac;		/* The ethernet address if there is one... */
+	int flags;		/* flags */
+	int mtu;		/* mtu */
 
 	thread_id rx_thread;	
 	thread_id tx_thread;
-} ifnet;
+};
 
 #endif /* OBOS_IF_H */
