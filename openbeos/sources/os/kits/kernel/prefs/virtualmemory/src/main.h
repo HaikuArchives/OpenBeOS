@@ -33,6 +33,16 @@
 		#include "VMSettings.h"
 		
 	#endif
+	#ifndef _OS_H
+	
+		#include <OS.h>
+		
+	#endif
+	#ifndef _ENTRY_H
+	
+		#include <Entry.h>
+		
+	#endif
 	
 	/**
 	 * Main class.

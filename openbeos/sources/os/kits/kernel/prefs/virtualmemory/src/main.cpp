@@ -6,16 +6,8 @@
  *
 */
 
-#ifndef MAIN_WINDOW_H
-
-	#include "MainWindow.h"
-	
-#endif
-#ifndef MAIN_H
-
-	#include "main.h"
-	
-#endif
+#include "MainWindow.h"
+#include "main.h"
 
 /**
  * Main method.
@@ -67,6 +59,11 @@ VM_pref::VM_pref()
 	int currSwap;
 	
 	/*
+	 * The set size of the swap file.
+	 */
+	int setSwap;
+	
+	/*
 	 * The minimum size the swap file can be.
 	 */
 	int minSwap;
@@ -76,29 +73,39 @@ VM_pref::VM_pref()
 	 */
 	int maxSwap;
 	
-	/* There's got to be a better way to get the amount of
-	 * installed memory.
+	/*
+	 * System info
 	 */
-	if((ptr = popen("sysinfo -mem", "r")) != NULL){
+	system_info info;
 	
-		fscanf(ptr, "%d bytes free      (used/max %d / %d)", &physMem, &physMem, &physMem);
+	/*
+	 * Swap file
+	 */
+	const char *swap_file;
 	
-	}//if
-	pclose(ptr);
+	bool changeMsg = false;
 	
-	physMem = physMem / 1048576;
+	swap_file = "/boot/var/swap";
+	BEntry swap(swap_file);
+	off_t swapsize;
+	swap.GetSize(&swapsize);
+	currSwap = swapsize / 1048576;
+	
+	get_system_info(&info);
+	physMem = (info.max_pages * 4096) / 1048576; 
+	
 	minSwap = physMem + (int)(physMem / 3.0);
 	
 	if(settingsFile != NULL){
 	
 		fscanf(settingsFile, "%s %s\n", dummy, dummy);
-		fscanf(settingsFile, "%s %d\n", dummy, &currSwap);
-		currSwap = currSwap / 1048576;
+		fscanf(settingsFile, "%s %d\n", dummy, &setSwap);
+		setSwap = setSwap / 1048576;
 	
 	}//if
 	else{
 	
-		currSwap = minSwap;
+		setSwap = minSwap;
 		
 	}//else
 	fclose(settingsFile);
@@ -110,7 +117,20 @@ VM_pref::VM_pref()
 	 */
 	maxSwap = (bootVol.FreeBytes() / 1048576) + currSwap - 16;
 	
+	if(currSwap != setSwap){
+	
+		currSwap = setSwap;
+		changeMsg = true;
+				
+	}//if
+	
 	Main = new MainWindow(fSettings->WindowPosition(), physMem, currSwap, minSwap, maxSwap, fSettings);
+		
+	if(changeMsg){
+	
+		Main->toggleChangedMessage(true);
+		
+	}//if
 	
 	Main->Show();
 

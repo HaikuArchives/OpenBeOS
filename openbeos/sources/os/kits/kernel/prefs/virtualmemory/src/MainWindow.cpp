@@ -5,11 +5,7 @@
  *
 */
 
-#ifndef MAIN_WINDOW_H
-
-	#include "MainWindow.h"
-	
-#endif
+#include "MainWindow.h"
 
 /**
  * Constructor.
@@ -113,6 +109,28 @@ MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal,
 }
 
 /**
+ * Displays the "Changes will take effect on restart" message.
+ * @param setTo If true, displays the message  If false, un-displays it.
+ */	
+void MainWindow::toggleChangedMessage(bool setTo){
+
+	char msg[100];
+	if(setTo){
+	
+		revertButton->SetEnabled(true);
+		sprintf(msg, "Changes will take effect on restart.");
+		restart->SetText(msg);
+	
+	}//if
+	else{
+	
+		restart->SetText("");
+		
+	}//else
+
+}//toggleChangedMessage
+
+/**
  * Handles messages.
  * @param message The message recieved by the window.
  */	
@@ -135,15 +153,13 @@ void MainWindow::MessageReceived(BMessage *message){
 			
 			if(currVal != origMemSize){
 			
-				revertButton->SetEnabled(true);
-				sprintf(msg, "Changes will take effect on restart.");
-				restart->SetText(msg);
+				toggleChangedMessage(true);
 				
 			}//if
 			else{
 				
 				revertButton->SetEnabled(false);
-				restart->SetText("");
+				toggleChangedMessage(false);
 				
 			}//else
 			
@@ -161,15 +177,13 @@ void MainWindow::MessageReceived(BMessage *message){
 			
 			if(currVal != origMemSize){
 			
-				revertButton->SetEnabled(true);
-				sprintf(msg, "Changes will take effect on restart.");
-				restart->SetText(msg);
+				toggleChangedMessage(true);
 				
 			}//if
 			else{
 				
 				revertButton->SetEnabled(false);
-				restart->SetText("");
+				toggleChangedMessage(false);
 				
 			}//else
 			
@@ -188,15 +202,13 @@ void MainWindow::MessageReceived(BMessage *message){
 			reqSwap->SetText(msg);
 			if(minSwapVal != origMemSize){
 			
-				revertButton->SetEnabled(true);
-				sprintf(msg, "You must reboot to apply changes.");
-				restart->SetText(msg);
+				toggleChangedMessage(true);
 				
 			}//if
 			else{
 				
 				revertButton->SetEnabled(false);
-				restart->SetText("");
+				toggleChangedMessage(false);
 				
 			}//else
 			break;
@@ -212,7 +224,7 @@ void MainWindow::MessageReceived(BMessage *message){
 			sprintf(msg, "Requested Swap File Size: %d MB", origMemSize);
 			reqSwap->SetText(msg);
 			reqSizeSlider->SetValue(origMemSize);
-			restart->SetText("");
+			toggleChangedMessage(false);
 			break;
 			
 		/**

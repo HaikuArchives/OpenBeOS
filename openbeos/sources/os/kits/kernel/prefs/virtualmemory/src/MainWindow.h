@@ -120,6 +120,7 @@
 			virtual bool QuitRequested();
 			virtual void MessageReceived(BMessage *message);
 			virtual void FrameMoved(BPoint origin);
+			virtual void toggleChangedMessage(bool setTo);
 						
 	};
 	
