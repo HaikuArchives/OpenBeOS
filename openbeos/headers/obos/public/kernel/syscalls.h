@@ -52,29 +52,34 @@ int sys_getrlimit(int resource, struct rlimit * rlp);
 int sys_setrlimit(int resource, const struct rlimit * rlp);
 
 /* sem functions */
-sem_id sys_sem_create(int count, const char *name);
-int sys_sem_delete(sem_id id);
-int sys_sem_acquire(sem_id id, int count);
-int sys_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout);
-int sys_sem_release(sem_id id, int count);
-int sys_sem_release_etc(sem_id id, int count, int flags);
+sem_id kern_create_sem(int count, const char *name);
+int    kern_delete_sem(sem_id id);
+int    kern_acquire_sem(sem_id id);
+int    kern_acquire_sem_etc(sem_id id, int count, int flags, bigtime_t timeout);
+int    kern_release_sem(sem_id id);
+int    kern_release_sem_etc(sem_id id, int count, int flags);
 int sys_sem_get_count(sem_id id, int32* thread_count);
 int sys_sem_get_sem_info(sem_id id, struct sem_info *info);
 int sys_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
 int sys_set_sem_owner(sem_id id, proc_id proc);
 
+
 int sys_proc_get_table(struct proc_info *pi, size_t len);
-thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
-thread_id sys_thread_create_thread(const char *name, int (*func)(void *args), void *args);
+
+thread_id kern_spawn_thread(int (*func)(void*), const char *, int, void *);
+thread_id kern_get_current_thread_id(void);
+int       kern_suspend_thread(thread_id tid);
+int       kern_resume_thread(thread_id tid);
+int       kern_kill_thread(thread_id tid);
+
 int sys_thread_wait_on_thread(thread_id tid, int *retcode);
-int sys_thread_suspend_thread(thread_id tid);
-int sys_thread_resume_thread(thread_id tid);
-int sys_thread_kill_thread(thread_id tid);
 int sys_proc_kill_proc(proc_id pid);
+
 proc_id sys_get_current_proc_id();
 int sys_proc_wait_on_proc(proc_id pid, int *retcode);
+
 region_id sys_vm_create_anonymous_region(const char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);
 region_id sys_vm_clone_region(const char *name, void **address, int addr_type,
