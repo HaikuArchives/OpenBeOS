@@ -27,7 +27,6 @@ SharedFromSources $(TOP)/source/lib/libstorage.so :
 	Resources.cpp
 	ResourceStrings.cpp
 	Statable.cpp
-	String.cpp
 	SymLink.cpp
 	Volume.cpp
 	kernel_interface.POSIX.cpp
