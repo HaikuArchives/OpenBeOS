@@ -250,7 +250,7 @@ _shared_buffer_list::ReclaimBuffer(BBuffer *buffer)
 			reclaimed_count++;
 			if (info[i].reclaimed) {
 				TRACE("Error, BBuffer 0x%08x, id = 0x%08x already reclaimed\n",(int)buffer,(int)id);
-				break;
+				continue;
 			}
 			info[i].reclaimed = true;
 			release_sem_etc(info[i].reclaim_sem, 1, B_DO_NOT_RESCHEDULE);
@@ -260,7 +260,7 @@ _shared_buffer_list::ReclaimBuffer(BBuffer *buffer)
 		return B_ERROR;
 	
 	if (reclaimed_count == 0) {
-		TRACE("Error, BBuffer 0x%08x, id = 0x%08x NOT reclaimed\n",(int)buffer,(int)buffer->ID());
+		TRACE("Error, BBuffer 0x%08x, id = 0x%08x NOT reclaimed\n",(int)buffer,(int)id);
 		return B_ERROR;
 	}
 
