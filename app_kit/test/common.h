@@ -8,6 +8,7 @@
 
 // Standard Includes -----------------------------------------------------------
 #include <posix/string.h>
+#include <errno.h>
 
 // System Includes -------------------------------------------------------------
 
@@ -32,7 +33,11 @@
 
 #define CHECK_ERRNO														\
 	cout << endl << "errno == \"" << strerror(errno) << "\" (" << errno	\
-		 << ") " << "in " << __PRETTY_FUNCTION__ << endl
+		 << ") in " << __PRETTY_FUNCTION__ << endl
+
+#define CHECK_STATUS(status__)											\
+	cout << endl << "status_t == \"" << strerror((status__)) << "\" ("	\
+		 << (status__) << ") in " << __PRETTY_FUNCTION__ << endl
 
 // Globals ---------------------------------------------------------------------
 
