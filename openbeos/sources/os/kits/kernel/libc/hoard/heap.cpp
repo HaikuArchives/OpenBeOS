@@ -18,7 +18,7 @@
 //////////////////////////////////////////////////////////////////////////////
 #include "config.h"
 
-#include "memheap.h"
+#include "heap.h"
 #include "processheap.h"
 #include "superblock.h"
 

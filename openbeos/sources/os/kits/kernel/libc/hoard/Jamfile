@@ -7,5 +7,7 @@ KernelObjects
 	<$(SOURCE_GRIST)>superblock.cpp 
 	<$(SOURCE_GRIST)>threadheap.cpp 
 	<$(SOURCE_GRIST)>wrapper.cpp 
+	:
+	-DNEWOS=1
 	;
 

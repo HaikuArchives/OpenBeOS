@@ -49,7 +49,7 @@
 
 inline static processHeap * getAllocator (void) {
   static char * buf = (char *) hoardSbrk (sizeof(processHeap));
-  static processHeap * theAllocator = new /*(buf)*/ processHeap;
+  static processHeap * theAllocator = new (buf) processHeap;
   return theAllocator;
 }
 

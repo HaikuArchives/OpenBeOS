@@ -74,7 +74,7 @@ superblock::superblock (int numBlocks,	// The number of blocks in the sb.
   for (int i = 0; i < _numBlocks; i++) {
     // Make sure the block is on a double-word boundary.
     assert (((unsigned int) b & hoardHeap::ALIGNMENT_MASK) == 0);
-    new /*(b)*/ block (this);
+    new (b) block (this);
     assert (b->getSuperblock() == this);
     b->setNext (_freeList);
     _freeList = b;
@@ -126,7 +126,7 @@ superblock * superblock::makeSuperblock (int sizeclass,
   assert ((((unsigned long) buf) & hoardHeap::ALIGNMENT_MASK) == 0);
 
   // Instantiate the new superblock in the buffer.
-  superblock * sb = new /*(buf)*/ superblock (numBlocks, sizeclass, NULL);
+  superblock * sb = new (buf) superblock (numBlocks, sizeclass, NULL);
 
   return sb;
 }

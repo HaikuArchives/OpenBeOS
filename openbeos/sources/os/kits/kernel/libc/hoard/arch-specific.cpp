@@ -29,7 +29,7 @@ enum { UNLOCKED = 0, LOCKED = 1 };
 
 extern "C" {
 
-#if  1
+#ifdef NEWOS
 
 #include <stdio.h>
 #include <syscalls.h>
@@ -205,7 +205,7 @@ int hoardGetNumProcessors (void)
   return numProcessors;
 }
 
-#elif defined(__BEOS1__)
+#elif defined(__BEOS__)
 
 #include <OS.h>
 #include <unistd.h>
@@ -498,11 +498,11 @@ void hoardYield (void)
 }
 
 #if 1 // !(defined(__sgi))
-//#include <ktypes.h>
-#include <stat.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <mman.h>
+#include <sys/mman.h>
 #endif
 
 
