@@ -56,7 +56,7 @@ Index::SetTo(const char *name)
 		return B_ENTRY_NOT_FOUND;
 
 	if (fNode == NULL) {
-		FATAL(("bfs: fatal error at Index::InitCheck(), get_vnode() returned NULL pointer\n"));
+		FATAL(("fatal error at Index::InitCheck(), get_vnode() returned NULL pointer\n"));
 		put_vnode(fVolume->ID(),id);
 		return B_ERROR;
 	}
@@ -88,7 +88,7 @@ Index::Type()
 		case S_STR_INDEX:
 			return B_STRING_TYPE;
 	}
-	FATAL(("bfs: index has unknown type!\n"));
+	FATAL(("index has unknown type!\n"));
 	return 0;
 }
 

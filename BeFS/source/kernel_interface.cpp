@@ -220,11 +220,14 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 	if ((status = volume->Mount(device,flags)) == B_OK) {
 		*data = volume;
 		*rootID = volume->ToVnode(volume->Root());
-		INFORM(("bfs: mounted \"%s\" (root node at %Ld, device = %s)\n",volume->Name(),*rootID,device));
+		INFORM(("mounted \"%s\" (root node at %Ld, device = %s)\n",volume->Name(),*rootID,device));
 	}
 	else
 		delete volume;
 
+	D(if (status < B_OK)
+		RETURN_ERROR(status);
+	);
 	return status;
 }
 
@@ -291,16 +294,18 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id
 	Inode *directory = (Inode *)_directory;
 	BPlusTree *tree;
 	if (directory->GetTree(&tree) != B_OK)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	//off_t offset;
 	status_t status = tree->Find((uint8 *)file,(uint16)strlen(file),vnid);
 	if (status != B_OK)
-		return status;
+		RETURN_ERROR(status);
 
 	Inode *inode;
-	if (get_vnode(volume->ID(),*vnid,(void **)&inode) != 0)
+	if ((status = get_vnode(volume->ID(),*vnid,(void **)&inode)) != B_OK) {
+		REPORT_ERROR(status);
 		return B_ENTRY_NOT_FOUND;
+	}
 
 	// if "inode" is a symlink, we have to do some more stuff here...
 
@@ -325,7 +330,7 @@ bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
 	}
 
 	delete inode;
-	return B_ERROR;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -398,7 +403,7 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 	
 	if (inode->IsSymLink()) {
 		*_length = 0;
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 	}
 	
 	return inode->ReadAt(pos,buffer,_length);
@@ -411,14 +416,14 @@ static int
 bfs_close(void * /*ns*/, void * /*node*/, void * /*cookie*/)
 {
 	FUNCTION();
-	return 0;
+	return B_OK;
 }
 
 
 static int
 bfs_free_cookie(void * /*ns*/, void * /*node*/, void * /*cookie*/)
 {
-	return 0;
+	return B_OK;
 }
 
 // bfs_access - checks permissions for access.
@@ -427,7 +432,7 @@ static int
 bfs_access(void *ns, void *node, int mode)
 {
 	FUNCTION();
-	return 0;
+	return B_OK;
 }
 
 
@@ -435,7 +440,7 @@ static int
 bfs_read_link(void *_ns, void *_node, char *buf, size_t *bufsize)
 {
 	FUNCTION();
-	return 0;
+	return B_OK;
 }
 
 
@@ -450,20 +455,20 @@ bfs_open_dir(void *_ns, void *_node, void **_cookie)
 	FUNCTION();
 	
 	if (_ns == NULL || _node == NULL || _cookie == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 	
 	Inode *inode = (Inode *)_node;
 	
 	if (!inode->IsDirectory())
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	BPlusTree *tree;
 	if (inode->GetTree(&tree) != B_OK)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	TreeIterator *iterator = new TreeIterator(tree);
 	if (iterator == NULL)
-		return B_NO_MEMORY;
+		RETURN_ERROR(B_NO_MEMORY);
 
 	*_cookie = iterator;
 	return B_OK;
@@ -480,7 +485,7 @@ bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num,
 
 	TreeIterator *iterator = (TreeIterator *)_cookie;
 	if (iterator == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	uint16 length;
 	vnode_id id;
@@ -489,7 +494,7 @@ bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num,
 		*num = 0;
 		return B_OK;
 	} else if (status != B_OK)
-		return status;
+		RETURN_ERROR(status);
 
 	Volume *volume = (Volume *)_ns;
 
@@ -511,7 +516,7 @@ bfs_rewind_dir(void * /*ns*/, void * /*node*/, void *_cookie)
 	TreeIterator *iterator = (TreeIterator *)_cookie;
 
 	if (iterator == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 	
 	return iterator->Rewind();
 }
@@ -534,7 +539,7 @@ bfs_free_dir_cookie(void *ns, void *node, void *_cookie)
 	TreeIterator *iterator = (TreeIterator *)_cookie;
 	
 	if (iterator == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	delete iterator;
 	return B_OK;
@@ -551,11 +556,11 @@ bfs_open_attrdir(void *_ns, void *_node, void **cookie)
 	
 	Inode *inode = (Inode *)_node;
 	if (inode == NULL || inode->Node() == NULL)
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 
 	AttributeIterator *iterator = new AttributeIterator(inode);
 	if (iterator == NULL)
-		return B_NO_MEMORY;
+		RETURN_ERROR(B_NO_MEMORY);
 
 	*cookie = iterator;
 	return B_OK;
@@ -577,7 +582,7 @@ bfs_free_attrdir_cookie(void *ns, void *node, void *_cookie)
 	AttributeIterator *iterator = (AttributeIterator *)_cookie;
 
 	if (iterator == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	delete iterator;
 	return B_OK;
@@ -591,9 +596,9 @@ bfs_rewind_attrdir(void *_ns, void *_node, void *_cookie)
 	
 	AttributeIterator *iterator = (AttributeIterator *)_cookie;
 	if (iterator == NULL)
-		return B_BAD_VALUE;
-	
-	return iterator->Rewind();
+		RETURN_ERROR(B_BAD_VALUE);
+
+	RETURN_ERROR(iterator->Rewind());
 }
 
 
@@ -604,7 +609,7 @@ bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent 
 	AttributeIterator *iterator = (AttributeIterator *)_cookie;
 
 	if (iterator == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	uint32 type;
 	size_t length;
@@ -613,7 +618,7 @@ bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent 
 		*num = 0;
 		return B_OK;
 	} else if (status != B_OK)
-		return status;
+		RETURN_ERROR(status);
 
 	Volume *volume = (Volume *)_ns;
 
@@ -629,7 +634,7 @@ int
 bfs_remove_attr(void *ns, void *node, const char *name)
 {
 	FUNCTION_START(("bfs_remove_attr(name = \"%s\")\n",name));
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
 
@@ -637,7 +642,7 @@ int
 bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 {
 	FUNCTION_START(("bfs_rename_attr(name = \"%s\",to = \"%s\"\n)",oldname,newname));
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
 
@@ -648,7 +653,7 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 
 	Inode *inode = (Inode *)_node;
 	if (inode == NULL || inode->Node() == NULL)
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 	
 	small_data *smallData = inode->FindSmallData((const char *)name);
 	if (smallData != NULL) {
@@ -667,7 +672,7 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 		return B_OK;
 	}
 
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
 
@@ -675,7 +680,7 @@ int
 bfs_write_attr(void *ns, void *node, const char *name, int type,const void *buf, size_t *len, off_t pos)
 {
 	FUNCTION_START(("bfs_write_attr(name = \"%s\")\n",name));
-	return B_ERROR;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -686,7 +691,7 @@ bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, si
 	FUNCTION_START(("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->ID(),name,*_length));
 	
 	if (inode == NULL || inode->Node() == NULL)
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 
 	if (pos < 0)
 		pos = 0;
@@ -711,10 +716,10 @@ bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, si
 	if (attribute != NULL) {
 		status_t status = attribute->ReadAt(pos,buffer,_length);
 		inode->ReleaseAttribute(attribute);
-		return status;
+		RETURN_ERROR(status);
 	}
 
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
 
@@ -728,18 +733,18 @@ bfs_open_indexdir(void *_ns, void **_cookie)
 	FUNCTION();
 
 	if (_ns == NULL || _cookie == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
 	
 	if (volume->IndicesNode() == NULL)
-		return B_ENTRY_NOT_FOUND;
+		RETURN_ERROR(B_ENTRY_NOT_FOUND);
 
 	// since we are storing the indices root node in our Volume object,
 	// we can just use the directory traversal functions (since it is
 	// just a directory)
 
-	return bfs_open_dir(_ns,volume->IndicesNode(),_cookie);
+	RETURN_ERROR(bfs_open_dir(_ns,volume->IndicesNode(),_cookie));
 }
 
 
@@ -748,10 +753,10 @@ bfs_close_indexdir(void *_ns, void *_cookie)
 {
 	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
-	return bfs_close_dir(_ns,volume->IndicesNode(),_cookie);
+	RETURN_ERROR(bfs_close_dir(_ns,volume->IndicesNode(),_cookie));
 }
 
 
@@ -760,10 +765,10 @@ bfs_free_indexdir_cookie(void *_ns, void *_node, void *_cookie)
 {
 	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
-	return bfs_free_dir_cookie(_ns,volume->IndicesNode(),_cookie);
+	RETURN_ERROR(bfs_free_dir_cookie(_ns,volume->IndicesNode(),_cookie));
 }
 
 
@@ -772,10 +777,10 @@ bfs_rewind_indexdir(void *_ns, void *_cookie)
 {
 	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
-	return bfs_rewind_dir(_ns,volume->IndicesNode(),_cookie);
+	RETURN_ERROR(bfs_rewind_dir(_ns,volume->IndicesNode(),_cookie));
 }
 
 
@@ -784,10 +789,10 @@ bfs_read_indexdir(void *_ns, void *_cookie, long *num, struct dirent *dirent, si
 {
 	FUNCTION();
 	if (_ns == NULL || _cookie == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
-	return bfs_read_dir(_ns,volume->IndicesNode(),_cookie,num,dirent,bufferSize);
+	RETURN_ERROR(bfs_read_dir(_ns,volume->IndicesNode(),_cookie,num,dirent,bufferSize));
 }
 
 
@@ -795,7 +800,7 @@ int
 bfs_create_index(void *ns, const char *name, int type, int flags)
 {
 	FUNCTION();
-	return B_ERROR;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -803,7 +808,7 @@ int
 bfs_remove_index(void *ns, const char *name)
 {
 	FUNCTION();
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
 
@@ -811,7 +816,7 @@ int
 bfs_rename_index(void *ns, const char *oldname, const char *newname)
 {
 	FUNCTION_START(("bfs_rename_index(from = %s,to = %s)\n",oldname,newname));
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
 
@@ -820,13 +825,13 @@ bfs_stat_index(void *_ns, const char *name, struct index_info *indexInfo)
 {
 	FUNCTION_START(("bfs_stat_index(name = %s)\n",name));
 	if (_ns == NULL || name == NULL || indexInfo == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
 	Index index(volume);
 	status_t status = index.SetTo(name);
 	if (status < B_OK)
-		return status;
+		RETURN_ERROR(status);
 
 	bfs_inode *node = index.Node()->Node();
 

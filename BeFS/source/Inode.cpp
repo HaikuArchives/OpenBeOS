@@ -30,7 +30,7 @@ status_t
 Inode::InitCheck()
 {
 	if (!Node())
-		return B_IO_ERROR;
+		RETURN_ERROR(B_IO_ERROR);
 
 	// test inode magic and flags
 	if (Node()->magic1 != INODE_MAGIC1
@@ -47,8 +47,8 @@ Inode::InitCheck()
 		|| Node()->attributes.allocation_group > fVolume->AllocationGroups()
 		|| Node()->attributes.allocation_group < 0
 		|| Node()->attributes.start > (1L << fVolume->AllocationGroupShift())) {
-		FATAL(("bfs: inode at block %Ld corrupt!\n",fBlockNumber));
-		return B_ERROR;
+		FATAL(("inode at block %Ld corrupt!\n",fBlockNumber));
+		RETURN_ERROR(B_ERROR);
 	}
 	return B_OK;
 }
@@ -68,7 +68,7 @@ status_t
 Inode::GetNextSmallData(small_data **smallData) const
 {
 	if (!Node())
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 
 	small_data *data = *smallData;
 
@@ -110,7 +110,7 @@ Inode::GetAttribute(const char *name)
 	Inode *attributes;
 	if (get_vnode(fVolume->ID(),fVolume->ToVnode(Attributes()),(void **)&attributes) != 0
 		|| attributes == NULL) {
-		FATAL(("bfs: get_vnode() failed in Inode::GetAttribute(name = \"%s\")\n",name));
+		FATAL(("get_vnode() failed in Inode::GetAttribute(name = \"%s\")\n",name));
 		return NULL;
 	}
 
@@ -156,12 +156,12 @@ Inode::GetTree(BPlusTree **tree)
 	if (IsDirectory()) {
 		fTree = new BPlusTree(this);
 		if (!fTree)
-			return B_NO_MEMORY;
+			RETURN_ERROR(B_NO_MEMORY);
 
 		*tree = fTree;
-		return fTree->InitCheck();
+		RETURN_ERROR(fTree->InitCheck());
 	}
-	return B_BAD_VALUE;
+	RETURN_ERROR(B_BAD_VALUE);
 }
 
 
@@ -190,7 +190,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 			CachedBlock cached(fVolume,Node()->data.indirect);
 			block_run *indirect = (block_run *)cached.Block();
 			if (indirect == NULL)
-				return B_ERROR;
+				RETURN_ERROR(B_ERROR);
 
 			off_t start = pos - Node()->data.max_indirect_range;
 			int32 indirectSize = (16 << fVolume->BlockShift()) * (fVolume->BlockSize() / sizeof(block_run));
@@ -202,7 +202,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 
 			indirect = (block_run *)cached.SetTo(indirect[index]);
 			if (indirect == NULL)
-				return B_ERROR;
+				RETURN_ERROR(B_ERROR);
 			
 			int32 current = (start % indirectSize) / directSize;
 
@@ -215,7 +215,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 			CachedBlock cached(fVolume,Node()->data.indirect);
 			block_run *indirect = (block_run *)cached.Block();
 			if (indirect == NULL)
-				return B_ERROR;
+				RETURN_ERROR(B_ERROR);
 
 			int32 indirectRuns = (Node()->data.indirect.length << fVolume->BlockShift()) / sizeof(block_run);
 
@@ -235,7 +235,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 					return B_OK;
 				}
 			}
-			return B_ERROR;
+			RETURN_ERROR(B_ERROR);
 		}
 	} else {
 		// access from direct blocks
@@ -255,7 +255,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 				return B_OK;
 			}
 		}
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 	}	
 	return B_OK;
 }
@@ -282,7 +282,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 	off_t offset;
 	if (FindBlockRun(pos,run,offset) < B_OK) {
 		*_length = 0;
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 	}
 	
 	uint32 bytesRead = 0;
@@ -301,7 +301,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 		CachedBlock cached(fVolume,run);
 		if ((block = cached.Block()) == NULL) {
 			*_length = 0;
-			return B_BAD_VALUE;
+			RETURN_ERROR(B_BAD_VALUE);
 		}
 		
 		bytesRead = block_size - (pos % block_size);
@@ -319,7 +319,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 		
 		if (FindBlockRun(pos,run,offset) < B_OK) {
 			*_length = bytesRead;
-			return B_BAD_VALUE;
+			RETURN_ERROR(B_BAD_VALUE);
 		}
 	}
 	
@@ -339,7 +339,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 				CachedBlock cached(fVolume,run);
 				if ((block = cached.Block()) == NULL) {
 					*_length = bytesRead;
-					return B_BAD_VALUE;
+					RETURN_ERROR(B_BAD_VALUE);
 				}
 				memcpy((uint8 *)buffer + bytesRead,block,length);
 				bytesRead += length;
@@ -352,7 +352,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 		if (cached_read(fVolume->Device(),fVolume->ToBlock(run),(uint8 *)buffer + bytesRead,
 						run.length,block_size) != B_OK) {
 			*_length = bytesRead;
-			return B_BAD_VALUE;
+			RETURN_ERROR(B_BAD_VALUE);
 		}
 
 		int32 bytes = run.length << block_shift;
@@ -371,7 +371,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 			offset = pos;
 		} else if (FindBlockRun(pos,run,offset) < B_OK) {
 			*_length = bytesRead;
-			return B_BAD_VALUE;
+			RETURN_ERROR(B_BAD_VALUE);
 		}
 	}
 	
@@ -387,7 +387,7 @@ Inode::WriteAt(off_t pos,void *buffer,size_t *length)
 	// should be pretty similar to ReadAt(), as long as the space is
 	// already reserved in the inode's data_stream
 
-	return B_ERROR;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -463,14 +463,14 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 	if (fAttributes == NULL) {
 		if (get_vnode(volume->ID(),volume->ToVnode(fInode->Attributes()),(void **)&fAttributes) != 0
 			|| fAttributes == NULL) {
-			FATAL(("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
+			FATAL(("get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 			return B_ENTRY_NOT_FOUND;
 		}
 		
 		BPlusTree *tree;
 		if (fAttributes->GetTree(&tree) < B_OK
 			|| (fIterator = new TreeIterator(tree)) == NULL) {
-			FATAL(("bfs: could not get tree in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
+			FATAL(("could not get tree in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 			return B_ENTRY_NOT_FOUND;
 		}
 	}
@@ -489,7 +489,7 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 		*_length = attribute->Node()->data.size;
 		*_id = id;
 	} else if (status == B_OK) {
-		FATAL(("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
+		FATAL(("get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 		status = B_ERROR;
 	}
 

@@ -81,7 +81,7 @@ CachedNode::SetTo(off_t offset,bool check)
 					|| !header->IsValidLink(fNode->overflow_link)
 					|| (int8 *)fNode->Values() + fNode->all_key_count * sizeof(off_t) >
 							(int8 *)fNode + fTree->fNodeSize) {
-					FATAL(("bfs: invalid node read from offset %Ld, inode at %Ld\n",
+					FATAL(("invalid node read from offset %Ld, inode at %Ld\n",
 							offset,fTree->fStream->ID()));
 					return NULL;
 				}
@@ -140,7 +140,7 @@ BPlusTree::Initialize(int32 nodeSize)
 	if (fHeader == NULL) {
 		fHeader = (bplustree_header *)malloc(fNodeSize);
 		if (fHeader == NULL) {
-			FATAL(("bfs: no memory for the b+tree header! Prepare to die...\n"));
+			FATAL(("no memory for the b+tree header! Prepare to die...\n"));
 			return B_NO_MEMORY;
 		}
 	}
@@ -156,7 +156,7 @@ BPlusTree::SetTo(int32 keyType,int32 nodeSize,bool allowDuplicates)
 	// initializes in-memory B+Tree
 
 	if (Initialize(nodeSize) < B_OK)
-		return B_NO_MEMORY;
+		RETURN_ERROR(B_NO_MEMORY);
 
 	fAllowDuplicates = allowDuplicates;
 
@@ -182,7 +182,7 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 	
 	size_t read = sizeof(bplustree_header);
 	if (stream->ReadAt(0,&header,&read) < B_OK || read < sizeof(bplustree_header))
-		return fStatus = read;
+		RETURN_ERROR(fStatus = read);
 
 	// is header valid?
 
@@ -191,7 +191,7 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 		|| (header.root_node_pointer % header.node_size) != 0
 		|| !header.IsValidLink(header.root_node_pointer)
 		|| !header.IsValidLink(header.free_node_pointer))
-		return fStatus = B_BAD_DATA;
+		RETURN_ERROR(fStatus = B_BAD_DATA);
 
 	fAllowDuplicates = allowDuplicates;
 
@@ -202,29 +202,38 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 						   | S_ULONG_LONG_INDEX | S_FLOAT_INDEX | S_DOUBLE_INDEX);
 	
 		if (header.data_type > BPLUSTREE_DOUBLE_TYPE
-			|| toMode[header.data_type] != mode)
-			return fStatus = B_BAD_TYPE;
+			|| (stream->Mode() & S_INDEX_DIR) && toMode[header.data_type] != mode
+			|| !stream->IsDirectory()) {
+			D(	dump_bplustree_header(&header);
+				dump_inode(stream->Node());
+			);
+			RETURN_ERROR(fStatus = B_BAD_TYPE);
+		}
 
 		 // although it's in stat.h, the S_ALLOW_DUPS flag is obviously unused
 		fAllowDuplicates = (stream->Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR;
 	}
 
 	if (Initialize(header.node_size) < B_OK)
-		return B_NO_MEMORY;
+		RETURN_ERROR(B_NO_MEMORY);
 
 	fStream = stream;
 
 	memcpy(fHeader,&header,sizeof(bplustree_header));
 
 	CachedNode cached(this,header.root_node_pointer);
-	return fStatus = cached.Node() ? B_OK : B_BAD_DATA;
+	RETURN_ERROR(fStatus = cached.Node() ? B_OK : B_BAD_DATA);
 }
 
 
 status_t 
 BPlusTree::SetStream(Inode *stream)
 {
+	if (stream && !stream->IsDirectory())
+		RETURN_ERROR(B_BAD_TYPE);
+ 
 	fStream = stream;
+	return B_OK;
 }
 
 
@@ -385,12 +394,12 @@ BPlusTree::SeekDown(Stack<node_and_key> &stack,uint8 *key,uint16 keyLength)
 		status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex,&nextOffset);
 		
 		if (status == B_ENTRY_NOT_FOUND && nextOffset == nodeAndKey.nodeOffset)
-			return B_ERROR;
+			RETURN_ERROR(B_ERROR);
 		
 		nodeAndKey.nodeOffset = nextOffset;
 		nodeAndKey.keyIndex = 0;
 	}
-	return B_ERROR;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -447,13 +456,13 @@ status_t
 BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Stack<node_and_key> stack;
 	if (SeekDown(stack,key,keyLength) != B_OK)
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 
-	FATAL(("bfs: BPlusTree::Insert() - shouldn't be here, not yet implemented!!\n"));
+	FATAL(("BPlusTree::Insert() - shouldn't be here, not yet implemented!!\n"));
 
 //	CachedNode freeNode(this,BPLUSTREE_NULL);
 //	uint8 *key1 = (uint8 *)freeNode.Node();
@@ -485,7 +494,7 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 				if (fAllowDuplicates)
 					return InsertDuplicate(node,nodeAndKey.keyIndex);
 				else
-					return B_NAME_IN_USE;
+					RETURN_ERROR(B_NAME_IN_USE);
 			}
 		}
 
@@ -503,7 +512,7 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 		}
 	}
 
-	return B_ERROR;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -511,11 +520,11 @@ status_t
 BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Stack<node_and_key> stack;
 	if (SeekDown(stack,key,keyLength) != B_OK)
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 
 	node_and_key nodeAndKey;
 	bplustree_node *node;
@@ -566,7 +575,7 @@ status_t
 TreeIterator::Goto(int8 to)
 {
 	if (fTree == NULL || fTree->fHeader == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Stack<off_t> stack;
 	stack.Push(fTree->fHeader->root_node_pointer);
@@ -588,8 +597,8 @@ TreeIterator::Goto(int8 to)
 				node->overflow_link : *node->Values()) < B_OK)
 			break;
 	}
-	FATAL(("bfs: %s fails\n",__PRETTY_FUNCTION__));
-	return B_ERROR;
+	FATAL(("%s fails\n",__PRETTY_FUNCTION__));
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -598,7 +607,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 {
 	if (fCurrentNodeOffset == BPLUSTREE_NULL
 		&& Goto(direction == BPLUSTREE_FORWARD ? BPLUSTREE_BEGIN : BPLUSTREE_END) < B_OK) 
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 
 	CachedNode cached(fTree);
 	bplustree_node *node;
@@ -634,7 +643,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 
 	off_t savedNodeOffset = fCurrentNodeOffset;
 	if ((node = cached.SetTo(fCurrentNodeOffset)) == NULL)
-		return B_ERROR;
+		RETURN_ERROR(B_ERROR);
 
 	fDuplicateNode = 0LL;
 
@@ -651,7 +660,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 		{
 			node = cached.SetTo(fCurrentNodeOffset);
 			if (!node)
-				return B_ERROR;
+				RETURN_ERROR(B_ERROR);
 
 			// reset current key
 			fCurrentKey = direction == BPLUSTREE_FORWARD ? 0 : node->all_key_count;
@@ -667,7 +676,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 	}
 
 	if (node->all_key_count == 0)
-		return B_ERROR; //B_ENTRY_NOT_FOUND;
+		RETURN_ERROR(B_ERROR);	// B_ENTRY_NOT_FOUND ?
 
 	uint16 length;
 	uint8 *keyStart = node->KeyAt(fCurrentKey,&length);
@@ -693,7 +702,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 
 		node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode),false);
 		if (node == NULL)
-			return B_ERROR;
+			RETURN_ERROR(B_ERROR);
 
 		fIsFragment = type == BPLUSTREE_DUPLICATE_FRAGMENT;
 
