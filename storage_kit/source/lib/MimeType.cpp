@@ -501,6 +501,34 @@ BMimeType::SetAppHint(const entry_ref *ref)
 }
 
 // GetIconForType
+/*! \brief Fetches the large or mini icon used by an application of this type for files of the
+	given type.
+	
+	This can be confusing, so here's how this function is intended to be used:
+	- The actual \c BMimeType object should be set to the MIME signature of an
+	  application for whom you want to look up custom icons for custom MIME types.
+	- The \c type parameter specifies the file type whose custom icon you are fetching.
+	
+	The type of the \c BMimeType object is not required to actually be a subtype of
+	\c "application/"; that is the intended use however, and calling \c GetIconForType()
+	on a non-application type will likely return \c B_ENTRY_NOT_FOUND.
+	
+	The icon is copied into the \c BBitmap pointed to by \c icon. The bitmap must
+	be the proper size: \c 32x32 for the large icon, \c 16x16 for the mini icon.	
+	Additionally, the bitmap must be in the \c B_CMAP8 color space (8-bit color).
+	
+	\param type Pointer to a pre-allocated string containing the MIME type whose
+	            custom icon you wish to fetch.
+	\param icon Pointer to a pre-allocated \c BBitmap of proper size and colorspace into
+				which the icon is copied.
+	\param icon_size Value that specifies which icon to return. Currently \c B_LARGE_ICON
+					 and \c B_MINI_ICON are supported.
+	\return
+	- B_OK: Success
+	- B_ENTRY_NOT_FOUND: No icon of the given size exists for the given type
+	- "error code": Failure	
+
+*/
 status_t
 BMimeType::GetIconForType(const char *type, BBitmap *icon, icon_size which) const
 {
@@ -508,6 +536,36 @@ BMimeType::GetIconForType(const char *type, BBitmap *icon, icon_size which) cons
 }
 
 // SetIconForType
+/*! \brief Sets the large or mini icon used by an application of this type for
+	files of the given type.
+
+	This can be confusing, so here's how this function is intended to be used:
+	- The actual \c BMimeType object should be set to the MIME signature of an
+	  application to whom you want to assign custom icons for custom MIME types.
+	- The \c type parameter specifies the file type whose custom icon you are
+	  setting.
+	
+	The type of the \c BMimeType object is not required to actually be a subtype of
+	\c "application/"; that is the intended use however, and application-specific
+	icons are not expected to be present for non-application types.
+		
+	The icon is copied from the \c BBitmap pointed to by \c icon. The bitmap must
+	be the proper size: \c 32x32 for the large icon, \c 16x16 for the mini icon.	
+	Additionally, the bitmap must be in the \c B_CMAP8 color space (8-bit color).
+	
+	If you want to erase the current icon, pass \c NULL as the \c icon argument.
+	
+	\param type Pointer to a pre-allocated string containing the MIME type whose
+	            custom icon you wish to set.
+	\param icon Pointer to a pre-allocated \c BBitmap of proper size and colorspace
+				containing the new icon, or \c NULL to clear the current icon.
+	\param icon_size Value that specifies which icon to update. Currently \c B_LARGE_ICON
+					 and \c B_MINI_ICON are supported.
+	\return
+	- B_OK: Success
+	- "error code": Failure	
+
+*/
 status_t
 BMimeType::SetIconForType(const char *type, const BBitmap *icon, icon_size which)
 {
