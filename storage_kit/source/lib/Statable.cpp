@@ -1,29 +1,53 @@
 #include <Statable.h>
 
 #include "kernel_interface.h"
+#include <posix/sys/stat.h>
+#include <Node.h>
 
 bool
 BStatable::IsFile() const
 {
-	return false;
+	struct stat statData;
+	if ( GetStat(&statData) == B_OK )
+		return S_ISREG(statData.st_mode);
+	else 
+		return false;
 }
 
 bool
 BStatable::IsDirectory() const
 {
-	return false;
+	struct stat statData;
+	if ( GetStat(&statData) == B_OK )
+		return S_ISDIR(statData.st_mode);
+	else 
+		return false;
 }
 
 bool
 BStatable::IsSymLink() const
 {
-	return false;
+	struct stat statData;
+	if ( GetStat(&statData) == B_OK )
+		return S_ISLNK(statData.st_mode);
+	else 
+		return false;
 }
 	
 status_t 
 BStatable::GetNodeRef(node_ref *ref) const
 {
-	return B_BAD_VALUE;
+	struct stat statData;
+	status_t error;
+
+	error = GetStat(&statData);
+	
+	if(error == B_OK) {
+		ref->device  = statData.st_dev;
+		ref->node = statData.st_ino;
+	}
+
+	return error;
 }
 	
 status_t 
