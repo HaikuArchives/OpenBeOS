@@ -54,6 +54,11 @@
 		#include "PosSettings.h"
 
 	#endif
+	#ifndef STRUCTS_H
+	
+		#include "structs.h"
+		
+	#endif
 	
 	/**
 	 * The main window of the app.
@@ -73,6 +78,7 @@
 			virtual bool QuitRequested();
 			virtual void MessageReceived(BMessage *message);
 			virtual void FrameMoved(BPoint origin);
+			void MainWindow::AddDeviceInfo(dev_info d);
 						
 	};
 	

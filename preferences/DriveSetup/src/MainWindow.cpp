@@ -73,7 +73,68 @@ MainWindow::MainWindow(BRect frame, PosSettings *Settings)
  */	
 void MainWindow::MessageReceived(BMessage *message){
 
-	BWindow::MessageReceived(message);
+	switch(message->what){
+	
+		case MOUNT_MOUNT_ALL_MSG:
+		
+			printf("MOUNT_MOUNT_ALL_MSG\n");
+			break;
+			
+		case MOUNT_MOUNT_SELECTED_MSG:
+		
+			printf("MOUNT_MOUNT_SELECTED_MSG\n");
+			break;
+			
+		case UNMOUNT_UNMOUNT_SELECTED_MSG:
+		
+			printf("UNMOUNT_UNMOUNT_SELECTED_MSG\n");
+			break;
+		
+		case SETUP_FORMAT_MSG:
+		
+			printf("SETUP_FORMAT_MSG\n");
+			break;
+			
+		case SETUP_PARTITION_APPLE_MSG:
+		
+			printf("SETUP_PARTITION_APPLE_MSG\n");
+			break;
+			
+		case SETUP_PARTITION_INTEL_MSG:
+		
+			printf("SETUP_PARTITION_INTEL_MSG\n");
+			break;
+			
+		case SETUP_INITIALIZE_MSG:
+		
+			printf("SETUP_INITIALIZE_MSG\n");
+			break;
+			
+		case OPTIONS_EJECT_MSG:
+		
+			printf("OPTIONS_EJECT_MSG\n");
+			break;
+			
+		case OPTIONS_SURFACE_TEST_MSG:
+		
+			printf("OPTIONS_SURFACE_TEST_MSG\n");
+			break;
+			
+		case RESCAN_IDE_MSG:
+		
+			printf("RESCAN_IDE_MSG\n");
+			break;
+			
+		case RESCAN_SCSI_MSG:
+		
+			printf("RESCAN_SCSI_MSG\n");
+			break;
+			
+		default:
+		
+			BWindow::MessageReceived(message);
+			
+	}//switch
 	
 }
 
@@ -94,3 +155,9 @@ void MainWindow::FrameMoved(BPoint origin)
 	fSettings->SetWindowPosition(Frame());
 }//MainWindow::FrameMoved
 
+void MainWindow::AddDeviceInfo(dev_info d){
+
+	printf("Got %s\n", d.device);
+	//refresh the devices view
+
+}//SetDeviceInfo

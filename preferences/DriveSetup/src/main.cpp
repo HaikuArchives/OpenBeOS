@@ -49,13 +49,18 @@ DriveSetup::DriveSetup()
 	 * The main interface window.
 	 */		
 	MainWindow *Main;
+	dev_info devs;
 	
 	Main = new MainWindow(fSettings->WindowPosition(), fSettings);
+	
+	//This section is to set up defaults that I can use for testing.
+	//set up floppy drive
+	devs.device = "/dev/disk/floppy";
+	Main->AddDeviceInfo(devs);
 	
 	Main->Show();
 
 }
-
 
 DriveSetup::~DriveSetup()
 {
