@@ -662,9 +662,9 @@ KernelLd loop :
 	-Bdynamic -shared
 	:
 	:
-	addons/net/loop
+	addons/network/interface/loop
 	;
-	
+
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
 BuildKernel $(OBOS_KERNEL) : $(OBOS_KERNEL_CONFIG) ;
