@@ -1,74 +1,69 @@
 /*
  * MouseSettings.cpp
- * Open BeOS version alpha 1 by Andrew Edward McCall mccall@digitalparadise.co.uk
+ * Mouse mccall@digitalparadise.co.uk
  *
- * Thanks go to François Revol revol@free.fr
  */
  
 #include <Application.h>
 #include <FindDirectory.h>
 #include <File.h>
 #include <Path.h>
+#include <String.h>
+#include <stdio.h>
 
 #include "MouseSettings.h"
 #include "MouseMessages.h"
-
-#include <stdio.h>
 
 const char MouseSettings::kMouseSettingsFile[] = "Mouse_settings";
 
 MouseSettings::MouseSettings()
 {
 	BPath path;
-	
+
 	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path) == B_OK) {
 		path.Append(kMouseSettingsFile);
 		BFile file(path.Path(), B_READ_ONLY);
-		if (file.InitCheck() != B_OK)
-			be_app->PostMessage(ERROR_DETECTED);
-		// Now read in the data
-		if (file.Read(&fsettings, sizeof(mouse_settings)) != sizeof(mouse_settings))
-			be_app->PostMessage(ERROR_DETECTED);
-		if (file.Read(&fcorner, sizeof(BPoint)) != sizeof(BPoint))
-			be_app->PostMessage(ERROR_DETECTED);
+		if (file.InitCheck() == B_OK) {
+			// Now read in the data
+			if (file.Read(&fSettings, sizeof(mouse_settings)) != sizeof(mouse_settings)) {
+				if (get_mouse_type((int32*)&fSettings.type) != B_OK)
+					be_app->PostMessage(ERROR_DETECTED);
+				if (get_mouse_map(&fSettings.map) != B_OK)
+					be_app->PostMessage(ERROR_DETECTED);
+				if (get_mouse_speed((int32 *)&fSettings.accel.speed) != B_OK)
+					be_app->PostMessage(ERROR_DETECTED);
+				if (get_click_speed(&fSettings.click_speed) != B_OK)
+					be_app->PostMessage(ERROR_DETECTED);
+			}
+
+			if (file.Read(&fCorner, sizeof(BPoint)) != sizeof(BPoint)) {
+					fCorner.x=50;
+					fCorner.y=50;
+				}
+		}
+		else {
+			if (get_mouse_type((int32*)&fSettings.type) != B_OK)
+				be_app->PostMessage(ERROR_DETECTED);
+			if (get_mouse_map(&fSettings.map) != B_OK)
+				be_app->PostMessage(ERROR_DETECTED);
+
+			if (get_click_speed(&fSettings.click_speed) != B_OK)
+				be_app->PostMessage(ERROR_DETECTED);
+			fCorner.x=50;
+			fCorner.y=50;
+		}
 	}
-	printf("Mouse settings file read.\n");
-	printf("=========================\n");
-	printf("fsettings.type is %d\n",(int)fsettings.type);
-	printf("fsettings.map.left is %d\n",(int)fsettings.map.left);
-	printf("fsettings.map.middle is %d\n",(int)fsettings.map.middle);
-	printf("fsettings.map.right is %d\n",(int)fsettings.map.right);
-	printf("fsettings.accel.enabled is ");
-	if (fsettings.accel.enabled) {printf ("true\n");} else {printf ("false\n");}
-	printf("fsettings.accel.accel_factor is %ld\n",fsettings.accel.accel_factor);
-	printf("fsettings.accel.speed is %ld\n",fsettings.accel.speed);
-	printf("fsettings.click_speed is %ld\n",(long)fsettings.click_speed);
-	printf("fcorner read in as ");
-	fcorner.PrintToStream();
-
-	fWindowFrame.left=fcorner.x;
-	fWindowFrame.top=fcorner.y;
-	fWindowFrame.right=fWindowFrame.left+397;
-	fWindowFrame.bottom=fWindowFrame.top+293;
+	else
+		be_app->PostMessage(ERROR_DETECTED);
 	
-	//Check to see if the co-ords of the window are in the range of the Screen
-	BScreen screen;
-		if (screen.Frame().right >= fWindowFrame.right
-			&& screen.Frame().bottom >= fWindowFrame.bottom)
-		return;
-	// If they are not, lets just stick the window in the middle
-	// of the screen.
-	fWindowFrame = screen.Frame();
-	fWindowFrame.left = (fWindowFrame.right-397)/2;
-	fWindowFrame.right = fWindowFrame.left + 397;
-	fWindowFrame.top = (fWindowFrame.bottom-293)/2;
-	fWindowFrame.bottom = fWindowFrame.top + 293;
-
+	printf("Size is : %ld\n",sizeof(mouse_settings)+sizeof(BPoint));
+		
 }
 
 MouseSettings::~MouseSettings()
-{
+{	
 	BPath path;
+
 	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path) < B_OK)
 		return;
 
@@ -76,14 +71,31 @@ MouseSettings::~MouseSettings()
 
 	BFile file(path.Path(), B_WRITE_ONLY | B_CREATE_FILE);
 	if (file.InitCheck() == B_OK) {
-		file.Write(&fsettings, sizeof(mouse_settings));
-		file.Write(&fcorner, sizeof(BPoint));
+		file.Write(&fSettings, sizeof(mouse_settings));
+		file.Write(&fCorner, sizeof(BPoint));
 	}
 }
 
 void
-MouseSettings::SetWindowPosition(BRect f)
+MouseSettings::SetWindowCorner(BPoint corner)
 {
-	fcorner.x=f.left;
-	fcorner.y=f.top;
+	fCorner=corner;
+}
+
+void
+MouseSettings::SetMouseType(mouse_type type)
+{
+	fSettings.type=type;
+}
+
+void
+MouseSettings::SetClickSpeed(bigtime_t click_speed)
+{
+	fSettings.click_speed=-(click_speed-1000000);
+}
+
+void
+MouseSettings::SetMouseSpeed(int32 accel)
+{
+	fSettings.accel.speed=accel;
 }

@@ -12,12 +12,24 @@ public:
 	MouseApplication();
 	virtual ~MouseApplication();
 	
-	virtual void MessageReceived(BMessage *message);
+	void MessageReceived(BMessage *message);
+	BPoint WindowCorner() const {return fSettings->WindowCorner(); }
+	void SetWindowCorner(BPoint corner);
+	int32 MouseType() const {return fSettings->MouseType(); }
+	void SetMouseType(mouse_type type);
+	bigtime_t ClickSpeed() const {return fSettings->ClickSpeed(); }
+	void SetClickSpeed(bigtime_t click_speed);
+	int32 MouseSpeed() const {return fSettings->MouseSpeed(); }
+	void SetMouseSpeed(int32 speed);
+
+	void AboutRequested(void);
 	
 private:
+	
+	static const char kMouseApplicationSig[];
 
-	MouseSettings	*fSettings;
-	MouseWindow		*fWindow;
+	MouseSettings		*fSettings;
+
 };
 
 #endif

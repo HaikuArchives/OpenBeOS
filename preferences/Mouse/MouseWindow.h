@@ -3,22 +3,22 @@
 
 #include <Window.h>
 
-#include "MouseView.h"
 #include "MouseSettings.h"
+#include "MouseView.h"
 
 class MouseWindow : public BWindow 
 {
 public:
-	MouseWindow(MouseSettings *settings);
-	virtual	~MouseWindow();
+	MouseWindow();
+	~MouseWindow();
 	
-	virtual	bool QuitRequested();
-	virtual void MessageReceived(BMessage *message);
-	virtual void FrameMoved(BPoint origin);
+	bool QuitRequested();
+	void MessageReceived(BMessage *message);
+	void BuildView();
 	
 private:
-	MouseSettings	*fSettings;
-	MouseView		*fView;
+	MouseView	*fView;
+
 };
 
 #endif

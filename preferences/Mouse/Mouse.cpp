@@ -1,15 +1,18 @@
 /*
  * Mouse.cpp
- * Open BeOS version alpha 1 by Andrew Edward McCall mccall@digitalparadise.co.uk
+ * Mouse mccall@digitalparadise.co.uk
  *
  */
 
 #include <Alert.h>
+#include <Screen.h>
 
 #include "Mouse.h"
 #include "MouseWindow.h"
 #include "MouseSettings.h"
 #include "MouseMessages.h"
+
+const char MouseApplication::kMouseApplicationSig[] = "application/x-vnd.OpenBeOS-MOUS";
 
 int main(int, char**)
 {
@@ -21,13 +24,15 @@ int main(int, char**)
 }
 
 MouseApplication::MouseApplication()
-					:BApplication("application/x-vnd.OpenBeOS-MOUS")
+					:BApplication(kMouseApplicationSig)
 {
-	fSettings = new MouseSettings();
+
+	MouseWindow		*window;
 	
-	fWindow = new MouseWindow(fSettings);
-			
-	fWindow->Show();
+	fSettings = new MouseSettings();
+		
+	window = new MouseWindow();
+
 }
 
 void
@@ -40,11 +45,41 @@ MouseApplication::MessageReceived(BMessage *message)
 				errorAlert->Go();
 				be_app->PostMessage(B_QUIT_REQUESTED);
 			}
-			break;
+			break;			
 		default:
 			BApplication::MessageReceived(message);
 			break;
 	}
+}
+
+void
+MouseApplication::SetWindowCorner(BPoint corner)
+{
+	fSettings->SetWindowCorner(corner);
+}
+
+void
+MouseApplication::SetMouseType(mouse_type type)
+{
+	fSettings->SetMouseType(type);
+}
+
+void
+MouseApplication::SetClickSpeed(bigtime_t click_speed)
+{
+	fSettings->SetClickSpeed(click_speed);
+}
+
+void
+MouseApplication::SetMouseSpeed(int32 speed)
+{
+	fSettings->SetMouseSpeed(speed);
+}
+
+void
+MouseApplication::AboutRequested(void)
+{
+	(new BAlert("about", "...by Andrew Edward McCall", "Dig Deal"))->Go();
 }
 
 MouseApplication::~MouseApplication()

@@ -2,7 +2,7 @@
 #define MOUSE_SETTINGS_H_
 
 #include <SupportDefs.h>
-#include <Screen.h>
+#include <InterfaceDefs.h>
 
 typedef enum {
         MOUSE_1_BUTTON = 1,
@@ -10,11 +10,6 @@ typedef enum {
         MOUSE_3_BUTTON
 } mouse_type;
 
-typedef struct {
-        int32           left;
-        int32           right;
-        int32           middle;
-} map_mouse;
 
 typedef struct {
         bool    enabled;        // Acceleration on / off
@@ -24,7 +19,7 @@ typedef struct {
 
 typedef struct {
         mouse_type      type;
-        map_mouse       map;
+        mouse_map       map;
         mouse_accel     accel;
         bigtime_t       click_speed;
 } mouse_settings;
@@ -32,16 +27,21 @@ typedef struct {
 class MouseSettings{
 public :
 	MouseSettings();
-	virtual ~MouseSettings();
+	~MouseSettings();
 	
-	BRect WindowPosition() const { return fWindowFrame; }
-	void SetWindowPosition(BRect);
+	BPoint WindowCorner() const { return fCorner; }
+	void SetWindowCorner(BPoint corner);
+	mouse_type MouseType() const { return fSettings.type; }
+	void SetMouseType(mouse_type type);
+	bigtime_t ClickSpeed() const { return -(fSettings.click_speed-1000000); } // -1000000 to correct the Sliders 0-100000 scale
+	void SetClickSpeed(bigtime_t click_speed);
+	int32 MouseSpeed() const { return fSettings.accel.speed; }
+	void SetMouseSpeed(int32 speed);
 	
 private:
 	static const char 	kMouseSettingsFile[];
-	BRect				fWindowFrame;
-	BPoint				fcorner;
-	mouse_settings		fsettings;
+	BPoint				fCorner;
+	mouse_settings		fSettings;
 };
 
 #endif

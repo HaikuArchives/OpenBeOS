@@ -1,38 +1,29 @@
+/*
+	
+	MouseView.h
+	
+*/
+
 #ifndef MOUSE_VIEW_H
 #define MOUSE_VIEW_H
 
-#include <View.h>
-#include <Menu.h>
-#include <Slider.h>
-#include <SupportDefs.h>
-#include <Application.h>
-#include <InterfaceDefs.h>
+#include <Box.h>
+#include <Bitmap.h>
 
-class MouseView : public BView 
+class MouseView : public BBox
 {
 public:
+		typedef BBox	inherited;
+
 		MouseView(BRect frame);
-		virtual void Draw(BRect updateframe);
+		virtual void Draw(BRect frame);
+
 private:
-		BButton		*fRevertButton;
-		bigtime_t	fDoubleClickSpeed;
-		int32		fMouseSpeed;
-		
-		BSlider		*fClickSlider;
-		BSlider		*fSpeedSlider;
-		BSlider		*fAccelerationSlider;
+		BBox	*fBox;
 		
 		BBitmap 	*fDoubleClickBitmap;
 		BBitmap 	*fSpeedBitmap;
 		BBitmap 	*fAccelerationBitmap;
-		BBitmap		*fMouseBodyBitmap;
-		BBitmap		*fOneButtonNormal;
-		
-		BBox		*fBox;
-		BMenu		*fMouseTypeMenu;
-		BMenuField	*fMouseTypeSelector;
-		BMenu		*fFocusMenu;
-		BMenuField	*fFocusTypeSelector;	
 };
 
 #endif
