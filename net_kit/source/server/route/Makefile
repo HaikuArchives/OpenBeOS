@@ -1,7 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=route
 TGT=../modules/protocol/$(TARGET)
-LOBJS=../_APP_
+LOBJS=
 OBJS=$(TARGET).o
 
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
@@ -23,7 +23,7 @@ installkernel:	kernel
 	@cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)
 
 $(TARGET): $(OBJS)
-	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

@@ -5,28 +5,28 @@
 
 #include "net_malloc.h"
 
-#include "net_module.h"
 #include "net/route.h" /* includes net/radix.h */
 #include "protocols.h"
 #include "net/if.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
-#include "sys/socket.h"
 #include "net/raw_cb.h"
 #include "sys/socketvar.h"
 
+#include "core_module.h"
+#include "net_module.h"
+#include "core_funcs.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
 
-static struct core_module_info *core = NULL;
 
 #define ROUTE_MODULE_PATH	"network/protocol/route"
 #else	/* _KERNEL_MODE */
 #define ROUTE_MODULE_PATH	"modules/protocol/route"
 #endif
 
+static struct core_module_info *core = NULL;
 static struct rawcb rawcb;
 static struct route_cb route_cb;
 static struct pool_ctl *rawcbpool = NULL;
@@ -601,17 +601,14 @@ int raw_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *nam,
 	int error = 0;
 	
 	if (req == PRU_CONTROL) {
-		printf("raw_userreq: EINVAL (EOPNOTSUPP) (PRU_CONTROL)\n");
 		return EINVAL;//EOPNOTSUPP;
 	}
 	if (control && control->m_len) {
 		error = EINVAL;//EOPNOTSUPP;
-		printf("raw_userreq: EINVAL (EOPNOTSUPP) (control)\n");		
 		goto release;
 	}
 	if (rp == NULL) {
 		error = EINVAL;
-		printf("raw_userreq: EINVAL\n");
 		goto release;
 	}
 	
@@ -748,8 +745,9 @@ static struct domain pf_route_domain = {
 
 
 #ifndef _KERNEL_MODE
-static void route_protocol_init(void)
+static void route_protocol_init(struct core_module_info *cp)
 {
+	core = cp;
 	add_domain(&pf_route_domain, PF_ROUTE);
 	add_protocol(&my_protocol, PF_ROUTE);
 }
@@ -766,8 +764,8 @@ static status_t k_init(void)
 	if (!core)
 		get_module(CORE_MODULE_PATH, (module_info**)&core);
 	
-	core->add_domain(&pf_route_domain, PF_ROUTE);
-	core->add_protocol(&my_protocol, PF_ROUTE);
+	add_domain(&pf_route_domain, PF_ROUTE);
+	add_protocol(&my_protocol, PF_ROUTE);
 	
 	return 0;
 }
