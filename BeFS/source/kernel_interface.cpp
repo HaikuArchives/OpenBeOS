@@ -299,11 +299,10 @@ bfs_rfsstat(void *_ns, struct fs_info *info)
 //				it for the kernel.
 
 static int
-bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id *vnid)
+bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vnode_id *vnid)
 {
 	FUNCTION_START(("file = %s\n",file));
 	Volume *volume = (Volume *)_ns;
-	char * np;
 	
 	Inode *directory = (Inode *)_directory;
 	BPlusTree *tree;
@@ -321,34 +320,40 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id
 		return B_ENTRY_NOT_FOUND;
 	}
 
-	// is inode a symlink?
-	if (inode->IsSymLink() && newpath) {
+	// Is inode a symlink? Then resolve it, if we should
+
+	if (inode->IsSymLink() && _resolvedPath != NULL) {
+		status_t status = B_OK;
+		char *newPath = NULL;
+		
+		// Symbolic links can store their target in the data stream (for links
+		// that take more than 144 bytes of storage [the size of the data_stream
+		// structure]), or directly instead of the data_stream class
+		// So we have to deal with both cases here.
+		
+		// Note: we would naturally call bfs_read_link() here, but the API of the
+		// vnode layer would require us to always reserve a large chunk of memory
+		// for the path, so we're not going to do that
+
 		if (inode->Flags() & INODE_LONG_SYMLINK) {
 			size_t readBytes = inode->Node()->data.size;
 			char *data = (char *)malloc(readBytes);
-			if (data == NULL) {
-				put_vnode(volume->ID(), inode->ID());
-				RETURN_ERROR(B_NO_MEMORY);
-			} else {
+			if (data != NULL) {
 				status = inode->ReadAt(0, data, &readBytes);
-				if ((status == B_OK) && (readBytes == inode->Node()->data.size)) {
-					status = new_path(data, &np);
-				} else {
-					free(data);
-					put_vnode(volume->ID(), inode->ID());
-					RETURN_ERROR(status);
-				}
-				free(data);		
-			}
-		} else {
-			status = new_path((char *)&inode->Node()->data, &np);
-			if (status != B_OK) {
-				put_vnode(volume->ID(), inode->ID());
-				RETURN_ERROR(status);
-			}
-		}
+				if (status == B_OK && readBytes == inode->Node()->data.size)
+					status = new_path(data, &newPath);
+
+				free(data);
+			} else
+				status = B_NO_MEMORY;
+		} else
+			status = new_path((char *)&inode->Node()->short_symlink, &newPath);
+
 		put_vnode(volume->ID(), inode->ID());
-		*newpath = np;
+		if (status == B_OK)
+			*_resolvedPath = newPath;
+
+		RETURN_ERROR(status);
 	}
 
 	return B_OK;

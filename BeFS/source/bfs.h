@@ -140,6 +140,7 @@ struct bfs_inode
 
 #define INODE_MAGIC1			0x3bbe0ad9
 #define INODE_TIME_SHIFT		16
+#define INODE_FILE_NAME_LENGTH	256
 
 enum inode_flags
 {

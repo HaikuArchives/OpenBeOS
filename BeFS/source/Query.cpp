@@ -5,6 +5,8 @@
 */
 
 
+#include "bfs.h"
+
 #include <SupportDefs.h>
 
 #include <malloc.h>
@@ -15,15 +17,13 @@
 //		gcc -g Query.cpp
 // to compile it.
 //
-// Currently, it just understands || and &&, and brackets, etc., e.g.
-// something like "(a||b)&&c||d" will fit - whitespace is currently regarded
-// either as part of the equation or filtered out in ParseEquation().
+// It now parses the whole query string correctly. The only thing that should
+// be fixed is that poor error handling - this should definitely be improved,
+// especially if this is going to live in user-space (where we could report
+// detailed error messages).
 //
 // It puts out the infix notation of the parsed tree - including brackets
 // to make clear how the operator precedence was handled.
-// The whole equation is currently left unparsed in Equation::fAttribute.
-// Error checking is not done right now either, so it may loose some
-// memory on errors (especially in cases when malloc() fails).
 //
 // It's a very static design, but it will do what is required - if we'd have
 // that functionality in user-land, we could solve it a bit nicer (e.g. no hard-
@@ -35,7 +35,11 @@
 // Apparently, the "!" (not) can only be used with brackets.
 
 
+// this will be moved to the header, when it's ready:
+
 enum ops {
+	OP_NONE,
+
 	OP_AND,
 	OP_OR,
 	OP_NOT,
@@ -55,34 +59,175 @@ class Equation {
 		Equation(char **expr);
 		~Equation();
 
-		void PrintToStream();
+		status_t	InitCheck();
+		status_t	ParseQuotedString(char **_start,char **_end);
+		char		*CopyString(char *start, char *end);
+
+		void		PrintToStream();
 
 	private:
-		int8	fOp;
-		char	*fAttribute;
-		char	*fValue;
-		bool	fIsRegExp;
+		int8		fOp;
+		char		*fAttribute;
+		char		*fValue;
+		bool		fIsRegExp;
+};	
+
+class Term {
+	public:
+		Term(Equation *);
+		Term(Term *,int8,Term *);
+		~Term();
+	
+		void		PrintToStream();
+
+	private:
+		int8		fOp;
+		Term		*fLeft,*fRight;
+		Equation	*fEquation;
+};
+
+class Expression {
+	public:
+		Expression(char *expr);
+		~Expression();
+		
+	//private:
+		Term *ParseOr(char **expr);
+		Term *ParseAnd(char **expr);
+		Term *ParseEquation(char **expr);
+
+		bool IsOr(char **expr);
+		bool IsAnd(char **expr);
+
+		Term *fTerm;
 };
 
 
-Equation::Equation(char **expr)
+void 
+skipWhitespace(char **expr)
 {
 	char *string = *expr;
+	while (*string == ' ' || *string == '\t') string++;
+	*expr = string;
+}
 
-	while (*string && *string != '&' && *string != '|' && *string != ')')
+
+void 
+skipWhitespaceReverse(char **expr,char *stop)
+{
+	char *string = *expr;
+	while (string > stop && (*string == ' ' || *string == '\t')) string--;
+	*expr = string;
+}
+
+
+//	#pragma mark -
+
+
+Equation::Equation(char **expr)
+	:
+	fOp(OP_NONE),
+	fAttribute(NULL),
+	fValue(NULL)
+{
+	char *string = *expr;
+	char *start = string;
+	char *end = NULL;
+
+	// Since the equation is the integral part of any query, we're just parsing
+	// the whole thing here.
+	// The whitespace at the start is already removed in Expression::ParseEquation()
+
+	if (*start == '"' || *start == '\'') {
+		// string is quoted (start has to be on the beginning of a string)
+		if (ParseQuotedString(&start,&end) < B_OK)
+			return;
+
+		// set string to a valid start of the equation symbol
+		string = end + 2;
+		skipWhitespace(&string);
+		if (*string != '=' && *string != '<' && *string != '>' && *string != '!')
+			return;
+	} else {
+		// search the (in)equation for the actual equation symbol
+		while (*string && *string != '=' && *string != '<' && *string != '>' && *string != '!')
+			string++;
+
+		// get the attribute string	(and trim whitespace), in case
+		// the string was not quoted
+		end = string - 1;
+		skipWhitespaceReverse(&end,start);
+	}
+
+	// attribute string is empty (which is not allowed)
+	if (start == end)
+		return;
+		
+	// at this point, "start" points to the beginning of the string, "end" points
+	// to the last character of the string, and "string" points to the first
+	// character of the equation symbol
+
+	// test for the right symbol (as this doesn't need any memory)
+	switch (*string) {
+		case '=':
+			fOp = OP_EQUAL;
+			break;
+		case '>':
+			fOp = *(string + 1) == '=' ? OP_GREATER_OR_EQUAL : OP_GREATER;
+			break;
+		case '<':
+			fOp = *(string + 1) == '=' ? OP_LESSER_OR_EQUAL : OP_LESSER;
+			break;
+		case '!':
+			if (*(string + 1) != '=')
+				return;
+			fOp = OP_UNEQUAL;
+			break;
+		
+		// any invalid characters will be rejected
+		default:
+			return;
+	}
+	// lets change "start" to point to the first character after the symbol
+	if (*(string + 1) == '=')
 		string++;
+	string++;
+	skipWhitespace(&string);
+
+	// allocate & copy the attribute string
+
+	fAttribute = CopyString(start,end);
+	if (fAttribute == NULL)
+		return;
+
+	start = string;
+	if (*start == '"' || *start == '\'') {
+		// string is quoted (start has to be on the beginning of a string)
+		if (ParseQuotedString(&start,&end) < B_OK)
+			return;
+		
+		string = end + 2;
+		skipWhitespace(&string);
+	} else {
+		while (*string && *string != '&' && *string != '|' && *string != ')')
+			string++;
+
+		end = string - 1;
+		skipWhitespaceReverse(&end,start);
+	}
 	
-	int32 length = string - *expr + 1;
-	fAttribute = (char *)malloc(length);
-	memcpy(fAttribute,*expr,length);
-	fAttribute[length - 1] = '\0';
-	
-	fValue = NULL;
+	// at this point, "start" will point to the first character of the value,
+	// "end" will point to its last character, and "start" to the first non-
+	// whitespace character after the value string
+
+	fValue = CopyString(start,end);
+	if (fValue == NULL)
+		return;
+
+	// this isn't checked for yet
+	fIsRegExp = false;
 
 	*expr = string;
-	
-	fOp = OP_EQUAL;
-	fIsRegExp = false;
 }
 
 
@@ -95,26 +240,78 @@ Equation::~Equation()
 }
 
 
-void 
-Equation::PrintToStream()
+status_t 
+Equation::InitCheck()
 {
-	printf("\"%s\"",fAttribute);
+	if (fAttribute == NULL
+		|| fValue == NULL
+		|| fOp == OP_NONE)
+		return B_BAD_VALUE;
+
+	return B_OK;
 }
 
 
-class Term {
-	public:
-		Term(Equation *);
-		Term(Term *,int8,Term *);
-		~Term();
+status_t 
+Equation::ParseQuotedString(char **_start, char **_end)
+{
+	char *start = *_start;
+	char quote = *start++;
+	char *end = start;
 	
-		void PrintToStream();
+	for (;*end && *end != quote;end++) {
+		if (*end == '\\')
+			end++;
+	}
+	if (*end == '\0')
+		return B_BAD_VALUE;
 
-	private:
-		int8	fOp;
-		Term	*fLeft,*fRight;
-		Equation *fEquation;
-};
+	*_start = start;
+	*_end = end - 1;
+
+	return B_OK;
+}
+
+
+char *
+Equation::CopyString(char *start,char *end)
+{
+	// end points to the last character of the string - and the length
+	// also has to include the null-termination
+	int32 length = end + 2 - start;
+	// just to make sure; since that's the max. attribute name length and
+	// the max. string in an index, it make sense to have it that way
+	if (length > INODE_FILE_NAME_LENGTH || length <= 0)
+		return NULL;
+
+	char *copy = (char *)malloc(length);
+	if (copy == NULL)
+		return NULL;
+
+	memcpy(copy,start,length - 1);
+	copy[length - 1] = '\0';
+
+	return copy;
+}
+
+
+void 
+Equation::PrintToStream()
+{
+	char *symbol = "???";
+	switch (fOp) {
+		case OP_EQUAL: symbol = "=="; break;
+		case OP_UNEQUAL: symbol = "!="; break;
+		case OP_GREATER: symbol = ">"; break;
+		case OP_GREATER_OR_EQUAL: symbol = ">="; break;
+		case OP_LESSER: symbol = "<"; break;
+		case OP_LESSER_OR_EQUAL: symbol = "<="; break;
+	}
+	printf("[\"%s\" %s \"%s\"]",fAttribute,symbol,fValue);
+}
+
+
+//	#pragma mark -
 
 
 Term::Term(Equation *eq)
@@ -172,23 +369,7 @@ Term::PrintToStream()
 }
 
 
-class Expression {
-	public:
-		Expression(char *expr);
-		~Expression();
-		
-	//private:
-		Term *ParseOr(char **expr);
-		Term *ParseAnd(char **expr);
-		Term *ParseEquation(char **expr);
-
-		bool IsOr(char **expr);
-		bool IsAnd(char **expr);
-
-		void SkipWhitespace(char **expr);
-
-		Term *fTerm;
-};
+//	#pragma mark -
 
 
 Expression::Expression(char *expr)
@@ -209,18 +390,18 @@ Expression::~Expression()
 Term *
 Expression::ParseEquation(char **expr)
 {
-	SkipWhitespace(expr);
+	skipWhitespace(expr);
 
 	if (**expr == ')') {
 		// shouldn't be handled here
 		return NULL;
 	} else if (**expr == '(') {
 		(*expr)++;
-		SkipWhitespace(expr);
+		skipWhitespace(expr);
 		
 		Term *term = ParseOr(expr);
 		
-		SkipWhitespace(expr);
+		skipWhitespace(expr);
 		
 		if (**expr != ')') {
 			delete term;
@@ -228,14 +409,17 @@ Expression::ParseEquation(char **expr)
 		}
 		(*expr)++;
 		
-		SkipWhitespace(expr);
+		skipWhitespace(expr);
 
 		return term;
 	}
-	// skip whitespace	
-	// handle brackets and "!" (not) here 
 
-	return new Term(new Equation(expr));
+	Equation *equation = new Equation(expr);
+	if (equation == NULL || equation->InitCheck() < B_OK) {
+		delete equation;
+		return NULL;
+	}
+	return new Term(equation);
 }
 
 
@@ -248,14 +432,14 @@ Expression::ParseAnd(char **expr)
 		Term *right = ParseAnd(expr);
 
 		if (right != NULL) {
-			Term *parent = new Term(left,OP_AND,right);
-			if (parent == NULL) {
+			Term *newParent = new Term(left,OP_AND,right);
+			if (newParent == NULL) {
 				delete left;
 				delete right;
 
 				return NULL;
 			}
-			left = parent;
+			left = newParent;
 		}
 	}
 
@@ -267,20 +451,19 @@ Term *
 Expression::ParseOr(char **expr)
 {
 	Term *left = ParseAnd(expr);
-	Term *right = NULL;
 
 	while (IsOr(expr)) {
-		right = ParseAnd(expr);
+		Term *right = ParseAnd(expr);
 
 		if (right != NULL) {
-			Term *parent = new Term(left,OP_OR,right);
-			if (parent == NULL) {
+			Term *newParent = new Term(left,OP_OR,right);
+			if (newParent == NULL) {
 				delete left;
 				delete right;
 
 				return NULL;
 			}
-			left = parent;
+			left = newParent;
 		}
 	}
 
@@ -314,13 +497,7 @@ Expression::IsAnd(char **expr)
 }
 
 
-void 
-Expression::SkipWhitespace(char **expr)
-{
-	char *string = *expr;
-	while (*string == ' ' || *string == '\t') string++;
-	*expr = string;
-}
+//	#pragma mark -
 
 
 int main(int argc,char **argv)
