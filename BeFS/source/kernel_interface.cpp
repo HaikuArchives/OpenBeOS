@@ -272,7 +272,7 @@ bfs_read_fs_stat(void *_ns, struct fs_info *info)
 	info->total_blocks = volume->NumBlocks();
 
 	// Free blocks = 0, read only
-	info->free_blocks = 0;
+	info->free_blocks = (volume->NumBlocks() - volume->UsedBlocks());
 	
 	// Volume name
 	strncpy(info->volume_name, volume->Name(), sizeof(info->volume_name) - 1);

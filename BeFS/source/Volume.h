@@ -49,6 +49,7 @@ class Volume
 
 		off_t				NumBlocks() const { return fSuperBlock.num_blocks; }
 		uint32				BlockSize() const { return fSuperBlock.block_size; }
+		uint32				UsedBlocks() const { return fSuperBlock.used_blocks; }
 		uint32				BlockShift() const { return fSuperBlock.block_shift; }
 		uint32				InodeSize() const { return fSuperBlock.inode_size; }
 		uint32				AllocationGroups() const { return fSuperBlock.num_ags; }
