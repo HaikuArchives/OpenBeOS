@@ -22,6 +22,7 @@
 #ifndef KEYBOARD_MESSAGES_H
 #include "KeyboardMessages.h"
 #endif
+#include <stdio.h>
 
 KeyboardView::KeyboardView(BRect rect)
 	   	   : BView(rect, "keyboard_view", B_FOLLOW_ALL, B_WILL_DRAW)
@@ -29,9 +30,7 @@ KeyboardView::KeyboardView(BRect rect)
 	BRect 		aRect;
 	BBox  		*aBox;
 	BButton 	*aButton;
-	BSlider		*aSlider;
 	BTextControl *aTextControl;
-	
 	
 	// Set the color to grey...
 	SetViewColor(216,216,216,0);
@@ -63,21 +62,21 @@ KeyboardView::KeyboardView(BRect rect)
 	  	}
 	// Create the "Key repeat rate" slider...
 	aRect.Set(10,10,200,50);
-	aSlider = new BSlider(aRect,"key_repeat_rate","Key repeat rate", new BMessage(SLIDER_REPEAT_RATE),20,300,B_BLOCK_THUMB,B_FOLLOW_LEFT,B_WILL_DRAW);
-	aSlider->SetHashMarks(B_HASH_MARKS_BOTTOM);
-	aSlider->SetHashMarkCount(5);
-	aSlider->SetLimitLabels("Slow","Fast");
-	aSlider->SetValue(rrate);
-	aBox->AddChild(aSlider);
+	rateSlider = new BSlider(aRect,"key_repeat_rate","Key repeat rate", new BMessage(SLIDER_REPEAT_RATE),20,300,B_BLOCK_THUMB,B_FOLLOW_LEFT,B_WILL_DRAW);
+	rateSlider->SetHashMarks(B_HASH_MARKS_BOTTOM);
+	rateSlider->SetHashMarkCount(5);
+	rateSlider->SetLimitLabels("Slow","Fast");
+	rateSlider->SetValue(rrate);
+	aBox->AddChild(rateSlider);
 	// Create the "Delay until key repeat" slider...
 	aRect.Set(10,65,200,115);
-	aSlider = new BSlider(aRect,"delay_until_key_repeat","Delay until key repeat", new BMessage(SLIDER_DELAY_RATE),250000,1000000,B_BLOCK_THUMB,B_FOLLOW_LEFT,B_WILL_DRAW);
-	aSlider->SetHashMarks(B_HASH_MARKS_BOTTOM);
-	aSlider->SetHashMarkCount(4);
-	aSlider->SetValue(drate);
-	aSlider->SetKeyIncrementValue(250000);
-	aSlider->SetLimitLabels("Short","Long");
-	aBox->AddChild(aSlider);
+	delaySlider = new BSlider(aRect,"delay_until_key_repeat","Delay until key repeat", new BMessage(SLIDER_DELAY_RATE),250000,1000000,B_BLOCK_THUMB,B_FOLLOW_LEFT,B_WILL_DRAW);
+	delaySlider->SetHashMarks(B_HASH_MARKS_BOTTOM);
+	delaySlider->SetHashMarkCount(4);
+	delaySlider->SetValue(drate);
+	delaySlider->SetKeyIncrementValue(250000);
+	delaySlider->SetLimitLabels("Short","Long");
+	aBox->AddChild(delaySlider);
 	// Create the "Typing test area" text box...
 	aRect=Bounds();
 	aRect.left=aRect.left+10;

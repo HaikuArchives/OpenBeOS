@@ -5,7 +5,6 @@ To Do:
 Add Icons of the key and clock.
 Deal with preference file.
 Font sensitivity (Delayed till R2)
-Notify input_server of any updates.
 Change to make or Jam
 ...Probably loads of other stuff too!
 

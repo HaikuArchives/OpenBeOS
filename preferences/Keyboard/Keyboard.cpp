@@ -18,18 +18,16 @@
 #endif
 
 int main(int, char**)
-{	
+{//main	
 	KeyboardApplication	myApplication;
 
 	myApplication.Run();
 
 	return(0);
-}
+}//main
 
-KeyboardApplication::KeyboardApplication()
-		  		  : BApplication("application/x-vnd.OpenBeOS-KYBD")
-{
-	KeyboardWindow		*aWindow;
+KeyboardApplication::KeyboardApplication():BApplication("application/x-vnd.OpenBeOS-KYBD")
+{//KeyboardApplication::KeyboardApplication()
 	BRect				aRect;
 
 	// set up a rectangle and instantiate a new window
@@ -38,7 +36,7 @@ KeyboardApplication::KeyboardApplication()
 			
 	// make window visible
 	aWindow->Show();
-}
+}//KeyboardApplication::KeyboardApplication()
 
 void KeyboardApplication::MessageReceived(BMessage *message)
 {//KeyboardApplication::MessageReceived
@@ -46,6 +44,7 @@ void KeyboardApplication::MessageReceived(BMessage *message)
 	{//Switch
 		case ERROR_DETECTED:
 			{
+				aWindow->Close();
 				BAlert *errorAlert = new BAlert("Error", "Something has gone wrong!","OK",NULL,NULL,B_WIDTH_AS_USUAL, B_OFFSET_SPACING, B_WARNING_ALERT);
 				errorAlert->Go();
 				be_app->PostMessage(B_QUIT_REQUESTED);

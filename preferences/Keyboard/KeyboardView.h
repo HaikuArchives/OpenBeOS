@@ -27,7 +27,9 @@
 class KeyboardView : public BView 
 {
 public:
-	KeyboardView(BRect frame);
+		KeyboardView(BRect frame);
+		BSlider		*rateSlider;
+		BSlider		*delaySlider;
 private:
         int32            rrate;
 		bigtime_t        drate; 
