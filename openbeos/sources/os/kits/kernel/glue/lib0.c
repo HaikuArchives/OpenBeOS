@@ -18,8 +18,8 @@ static void _call_ctors(void);
 int
 _start(unsigned imid, struct uspace_prog_args_t *uspa)
 {
-	int i;
-	int retcode;
+//	int i;
+//	int retcode;
 	void *ibc;
 	void *iac;
 
