@@ -42,3 +42,13 @@ rule LibraryFromPOSIXSources
 	LibraryFromObjects $(<) : $(>:S=.POSIX$(SUFOBJ)) ;
 }
 
+rule LinkShared
+{
+	DEPENDS lib : $(<) ;
+	DEPENDS $(<) : $(>) ;
+}
+
+actions LinkShared
+{
+	g++ -nostart -Xlinker -soname=$(<) $(LINKFLAGS) $(LINKLIBS) -o $(<) $(>) ;
+}
