@@ -9,7 +9,7 @@ APPKITROOT=../../../..
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME=BLockerTest
+NAME=BAutolockTest
 
 # specify the type of binary
 #	APP:	Application
@@ -32,14 +32,9 @@ TYPE=SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS=LockerTestAddon.cpp LockerTestCase.cpp \
-	ConstructionTest1.cpp \
-	ConcurrencyTest1.cpp \
-	ConcurrencyTest2.cpp \
-	DestructionTest1.cpp \
-	DestructionTest2.cpp \
-	BenaphoreLockCountTest1.cpp \
-	SemaphoreLockCountTest1.cpp
+SRCS=AutolockTestAddon.cpp \
+	AutolockLockerTest.cpp \
+	AutolockLooperTest.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -81,7 +76,7 @@ SYSTEM_INCLUDE_PATHS =
 LOCAL_INCLUDE_PATHS = $(APPKITROOT)/test/CppUnit \
 	$(APPKITROOT)/test/CppUnit/lib \
 	$(APPKITROOT)/test/CppUnit/lib/extensions \
-	$(APPKITROOT)//source/lib/support/headers
+	$(APPKITROOT)/source/lib/support/headers
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
@@ -131,7 +126,7 @@ DRIVER_PATH =
 
 all:	depend default
 	rm -f $(APPKITROOT)/test/add-ons/$(NAME)
-	ln -s ../lib/support/BLocker/$(OBJ_DIR)/$(NAME) \
+	ln -s ../lib/support/BAutolock/$(OBJ_DIR)/$(NAME) \
 		$(APPKITROOT)/test/add-ons/$(NAME)
 
 clean::	FORCE cleandepend

@@ -128,13 +128,13 @@ APP_VERSION =
 DRIVER_PATH = 
 
 all:	depend default
-	rm -f $(APPKITROOT)/test/add-ons/BMessageQueueTest
-	ln -s ../lib/application/BMessageQueue/$(OBJ_DIR)/BMessageQueueTest \
-		$(APPKITROOT)/test/add-ons/BMessageQueueTest
+	rm -f $(APPKITROOT)/test/add-ons/$(NAME)
+	ln -s ../lib/application/BMessageQueue/$(OBJ_DIR)/$(NAME) \
+		$(APPKITROOT)/test/add-ons/$(NAME)
 
 clean::	FORCE cleandepend
 	rm -rf $(OBJ_DIR)
-	rm -f $(APPKITROOT)/test/add-ons/BMessageQueueTest
+	rm -f $(APPKITROOT)/test/add-ons/$(NAME)
 
 ## include the makefile-engine
 include $(BUILDHOME)/etc/makefile-engine
