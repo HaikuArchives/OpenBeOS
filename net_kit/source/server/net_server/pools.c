@@ -16,6 +16,8 @@
 #define AREA_FLAGS      B_CONTIGUOUS|B_FULL_LOCK
 #endif
 
+static sem_id init_sem = -1;
+
 #define ROUND_TO_PAGE_SIZE(x) (((x) + (B_PAGE_SIZE) - 1) & ~((B_PAGE_SIZE) - 1))
 
 #ifdef WALK_POOL_LIST
@@ -127,10 +129,15 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 {
 	struct pool_ctl *pool = NULL;
 
+	if (init_sem == -1)
+		create_sem(1, "pool_init_sem");
+
 	/* minimum block size is sizeof the free_blk structure */
 	if (size < sizeof(struct free_blk)) 
 		return B_BAD_VALUE;
 
+//	acquire_sem_etc(init_sem, 1, B_CAN_INTERRUPT, 0);
+	
 	pool = (struct pool_ctl*)malloc(sizeof(struct pool_ctl));
 	if (pool == NULL)
 		return B_NO_MEMORY;
@@ -170,7 +177,8 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 	}
 
 	*_newPool = pool;
-	
+
+//	release_sem_etc(init_sem, 1, B_CAN_INTERRUPT);	
 	return B_OK;
 }
 
@@ -204,7 +212,8 @@ char *pool_get(struct pool_ctl *p)
 		#else
 			RELEASE_WRITE_LOCK(p->lock);
 		#endif
-
+		
+		memset(rv, 0, p->alloc_size);
 		return rv;
 	}		
 	#if !POOL_USES_BENAPHORES
@@ -235,8 +244,10 @@ char *pool_get(struct pool_ctl *p)
 		RELEASE_READ_LOCK(p->lock);
 	#endif
 
-	if (rv)
+	if (rv) {
+		memset(rv, 0, p->alloc_size);
 		return rv;
+	}
 
 	mp = get_mem_block(p);
 	if (mp == NULL)
@@ -251,6 +262,7 @@ char *pool_get(struct pool_ctl *p)
 	}
 	RELEASE_BENAPHORE(mp->lock);
 
+	memset(rv, 0, p->alloc_size);
 	return rv;
 }
 
@@ -262,7 +274,8 @@ void pool_put(struct pool_ctl *p, void *ptr)
 	#else
 		ACQUIRE_WRITE_LOCK(p->lock);
 	#endif
-
+	
+	memset(ptr, 0, p->alloc_size);
 	((struct free_blk*)ptr)->next = p->freelist;
 
 	if (p->debug) {
