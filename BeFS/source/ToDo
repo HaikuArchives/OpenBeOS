@@ -1,4 +1,4 @@
-BFS - ToDo, April 24th, 2002
+BFS - ToDo, May 26th, 2002
 -----
 
 BlockAllocator
@@ -27,6 +27,12 @@ Queries
 Journal
 
  - The transaction class currently does nothing else than writing the blocks directly to disk.
+ - Check if there are any standard and often-happening cases for a transaction to fail, and if so, start the transaction only when necessary
+ - make sure that bfs_remove_vnode() gets the right transaction
+ - if the system crashes between bfs_unlink() and bfs_remove_vnode(), the inode can be removed from the tree, but its memory is still allocated - this can happen if the inode is still in use by someone (and that's what the "chkbfs" utility is for, mainly).
+ - add delayed index updating (+ delete actions to solve the issue above)
+ - multiple log files, parallel transactions?
+ - variable sized log file
 
 
 BPlusTree

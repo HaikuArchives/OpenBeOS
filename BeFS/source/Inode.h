@@ -28,6 +28,7 @@ extern "C" {
 #include "Journal.h"
 #include "Lock.h"
 #include "Chain.h"
+#include "Debug.h"
 
 
 class BPlusTree;

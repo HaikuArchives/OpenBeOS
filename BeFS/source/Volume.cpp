@@ -8,6 +8,7 @@
 #include "Debug.h"
 #include "cpp.h"
 #include "Volume.h"
+#include "Journal.h"
 #include "Inode.h"
 
 #include <KernelExport.h>
@@ -112,13 +113,14 @@ Volume::Mount(const char *deviceName,uint32 flags)
 
 	if (IsValidSuperBlock()) {
 		if (init_cache_for_device(fDevice, NumBlocks()) == B_OK) {
-			if (fBlockAllocator.Initialize() == B_OK) {
+			fJournal = new Journal(this);
+			if (fJournal && fBlockAllocator.Initialize() == B_OK) {
 				fRootNode = new Inode(this,ToVnode(Root()));
-	
+
 				if (fRootNode && fRootNode->InitCheck() == B_OK) {
 					if (new_vnode(fID,ToVnode(Root()),(void *)fRootNode) == B_OK) {
 						// try to get indices root dir
-						
+
 						// question: why doesn't get_vnode() work here??
 						// answer: we have not yet backpropagated the pointer to the
 						// volume in bfs_mount(), so bfs_read_vnode() can't get it.
@@ -129,7 +131,7 @@ Volume::Mount(const char *deviceName,uint32 flags)
 							|| fIndicesNode->InitCheck() < B_OK
 							|| !fIndicesNode->IsDirectory()) {
 							INFORM(("bfs: volume doesn't have indices!\n"));
-	
+
 							if (fIndicesNode) {
 								// if this is the case, the index root node is gone bad, and
 								// BFS switch to read-only mode
@@ -137,14 +139,14 @@ Volume::Mount(const char *deviceName,uint32 flags)
 								fIndicesNode = NULL;
 							}
 						}
-	
+
 						// all went fine
 						return B_OK;
 					} else
 						status = B_NO_MEMORY;
 				} else
 					status = B_BAD_VALUE;
-	
+
 				FATAL(("could not create root node: new_vnode() failed!\n"));
 			} else {
 				status = B_NO_MEMORY;
@@ -173,6 +175,10 @@ Volume::Unmount()
 	delete fIndicesNode;
 
 	remove_cached_device_blocks(fDevice,ALLOW_WRITES);
+
+	delete fJournal;
+	fJournal = NULL;
+
 	close(fDevice);
 
 	return B_OK;

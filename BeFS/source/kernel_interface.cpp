@@ -392,12 +392,24 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
-	Transaction transaction(volume,inode->BlockNumber());
+	// ToDo: if we have more than one log file, the following code
+	// may return another transaction as the one we want to have;
+	// bfs_unlink() starts the transaction using the directory's
+	// address
+	// Furthermore, we need to make sure that we got the right
+	// transaction, because otherwise it's not guaranteed that
+	// this transaction survives the whole action
+	Transaction localTransaction,*transaction = &localTransaction;
+	Journal *journal = volume->GetJournal(inode->BlockNumber());
+	if (journal != NULL && journal->CurrentTransaction() != NULL)
+		transaction = journal->CurrentTransaction();
+	else
+		localTransaction.Start(volume,inode->BlockNumber());
 
 	// Perhaps there should be an implementation of Inode::ShrinkStream() that
 	// just frees the data_stream, but doesn't change the inode (since it is
 	// freed anyway) - that would make an undelete command possible
-	status_t status = inode->SetFileSize(&transaction,0);
+	status_t status = inode->SetFileSize(transaction,0);
 	if (status < B_OK)
 		return status;
 
@@ -412,11 +424,13 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 		size_t length;
 		vnode_id id;
 		while ((status = iterator.GetNext(name,&length,&type,&id)) == B_OK)
-			inode->RemoveAttribute(&transaction,name);
+			inode->RemoveAttribute(transaction,name);
 	}
 
-	if ((status = volume->Free(&transaction,inode->BlockRun())) == B_OK) {
-		transaction.Done();
+	if ((status = volume->Free(transaction,inode->BlockRun())) == B_OK) {
+		if (transaction == &localTransaction)
+			localTransaction.Done();
+
 		delete inode;
 	}
 
@@ -775,7 +789,7 @@ bfs_symlink(void *_ns, void *_directory, const char *name, const char *path)
 		strcpy(link->Node()->short_symlink,path);
 		status = link->WriteBack(&transaction);
 	} else {
-		link->Node()->flags |= INODE_LONG_SYMLINK;
+		link->Node()->flags |= INODE_LONG_SYMLINK | INODE_LOGGED;
 		// The following call will have to write the inode back, so
 		// we don't have to do that here...
 		status = link->WriteAt(&transaction,0,(const uint8 *)path,&length);
@@ -1096,7 +1110,9 @@ bfs_write(void *_ns, void *_node, void *_cookie, off_t pos, const void *buffer, 
 	if (locked.IsLocked() < B_OK)
 		RETURN_ERROR(B_ERROR);
 
-	Transaction transaction(volume,inode->BlockNumber());
+	Transaction transaction;
+		// We are not starting the transaction here, since
+		// it might not be needed at all
 
 	status_t status = inode->WriteAt(&transaction,pos,(const uint8 *)buffer,_length);
 	

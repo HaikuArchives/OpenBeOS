@@ -6,6 +6,8 @@
 ** This file may be used under the terms of the OpenBeOS License.
 */
 
+
+#include <KernelExport.h>
 #ifdef USER
 #	include <stdio.h>
 #	define __out printf

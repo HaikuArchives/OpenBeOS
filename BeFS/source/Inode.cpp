@@ -42,14 +42,14 @@ InodeAllocator::~InodeAllocator()
 	delete fInode;
 	
 	if (fTransaction)
-		fTransaction->fVolume->Free(fTransaction,fRun);
+		fTransaction->GetVolume()->Free(fTransaction,fRun);
 }
 
 
 status_t 
 InodeAllocator::New(block_run *parentRun, mode_t mode, block_run &run, Inode **inode)
 {
-	Volume *volume = fTransaction->fVolume;
+	Volume *volume = fTransaction->GetVolume();
 
 	status_t status = volume->AllocateForInode(fTransaction,parentRun,mode,fRun);
 	if (status < B_OK) {
@@ -1064,6 +1064,10 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 	else if (pos + length > Node()->data.size) {
 		off_t oldSize = Size();
 
+		// the transaction doesn't have to be started already
+		if ((Flags() & INODE_NO_TRANSACTION) == 0)
+			transaction->Start(fVolume,BlockNumber());
+
 		// let's grow the data stream to the size needed
 		status_t status = SetFileSize(transaction,pos + length);
 		if (status < B_OK) {
@@ -1084,6 +1088,9 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 	}
 
 	bool logStream = (Flags() & INODE_LOGGED) == INODE_LOGGED;
+	if (logStream)
+		transaction->Start(fVolume,BlockNumber());
+
 	uint32 bytesWritten = 0;
 	uint32 blockSize = fVolume->BlockSize();
 	uint32 blockShift = fVolume->BlockShift();
@@ -1654,7 +1661,7 @@ status_t
 Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mode, int omode, uint32 type, off_t *_id, Inode **_inode)
 {
 	block_run parentRun = parent ? parent->BlockRun() : block_run::Run(0,0,0);
-	Volume *volume = transaction->fVolume;
+	Volume *volume = transaction->GetVolume();
 	BPlusTree *tree = NULL;
 
 	if (parent && (mode & S_ATTR_DIR) == 0 && parent->IsDirectory()) {

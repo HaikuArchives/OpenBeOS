@@ -19,6 +19,7 @@ extern "C" {
 #include "bfs.h"
 #include "BlockAllocator.h"
 
+class Journal;
 class Inode;
 
 enum volume_flags {
@@ -43,6 +44,7 @@ class Volume {
 		Inode				*RootNode() const { return fRootNode; }
 		block_run			Indices() const { return fSuperBlock.indices; }
 		Inode				*IndicesNode() const { return fIndicesNode; }
+		block_run			Log() const { return fSuperBlock.log_blocks; }
 		int					Device() const { return fDevice; }
 
 		nspace_id			ID() const { return fID; }
@@ -78,6 +80,7 @@ class Volume {
 #ifdef DEBUG
 		BlockAllocator		&Allocator() { return fBlockAllocator; }
 #endif
+		Journal				*GetJournal(off_t /*refBlock*/) const { return fJournal; }
 
 		uint32				GetUniqueID() { return atomic_add(&fUniqueID,1); }
 
@@ -87,6 +90,7 @@ class Volume {
 		disk_super_block	fSuperBlock;
 		BlockAllocator		fBlockAllocator;
 		Benaphore			fLock;
+		Journal				*fJournal;
 
 		Inode				*fRootNode;
 		Inode				*fIndicesNode;

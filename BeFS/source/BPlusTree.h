@@ -47,7 +47,8 @@ enum bplustree_types {
 	BPLUSTREE_DOUBLE_TYPE	= 6
 };
 
-struct duplicate_array;
+struct sorted_array;
+typedef sorted_array duplicate_array;
 
 struct bplustree_node {
 	off_t	left_link;
@@ -84,15 +85,6 @@ struct bplustree_node {
 
 #define NUM_FRAGMENT_VALUES 7
 #define NUM_DUPLICATE_VALUES 125
-
-struct duplicate_array {
-	off_t	value_count;
-	off_t	values[0];
-	
-	int32 Find(off_t value);
-	void Insert(off_t value);
-	bool Remove(off_t value);
-};
 
 //**************************************
 
