@@ -17,13 +17,20 @@ struct _shared_buffer_list
 
 buffer_clone_info::buffer_clone_info()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	buffer = -1;
+	area = B_ERROR;
+	buffer = 0;
+	area = 0;
+	offset = 0;
+	size = 0;
+	flags = 0;
 }
 
 
 buffer_clone_info::~buffer_clone_info()
 {
-	UNIMPLEMENTED();
+	CALLED();
 }
 
 /*************************************************************
