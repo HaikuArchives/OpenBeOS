@@ -6,8 +6,9 @@
 //  Description: An absolute pathname wrapper class
 //---------------------------------------------------------------------
 #include <Path.h>
-
 #include <Entry.h>
+#include <StorageDefs.h>
+#include "kernel_interface.h"
 
 #ifdef USE_OPENBEOS_NAMESPACE
 using namespace OpenBeOS;
@@ -17,10 +18,8 @@ using namespace OpenBeOS;
 
 bool BPath::MustNormalize(const char *path) {
 	// Check for useless input
-	if (path == NULL)
-		throw new EBadPathInput("NULL path input");
-	else if (path[0] == 0)
-		throw new EBadPathInput("Empty path input");
+	if (path == NULL || path[0] == 0)
+		throw BPath::EBadInput();
 		
 	int len = strlen(path);	
 		
@@ -32,6 +31,8 @@ bool BPath::MustNormalize(const char *path) {
 	*/;
 	if (path[0] != '/')
 		return true;	//	"/*"
+	else if (len == 1)
+		return false;	//	"/"
 	else if (len >= 2 && path[0] == '.' && path[1] == '/')
 		return true;	//	"./*"
 	else if (len >= 3 && path[0] == '.' && path[1] == '.' && path[2] == '/')
@@ -128,8 +129,16 @@ status_t BPath::SetTo(const char *path, const char *leaf = NULL, bool normalize 
 
 	if (path == NULL)
 		return B_BAD_VALUE;
+		
+	// Deduce whether we'll be normalizing or not
+	try {		
+		normalize = normalize || MustNormalize(path);
+	} catch (BPath::EBadInput) {
+		return B_BAD_VALUE;
+	}
 	
 	if (normalize) {
+		
 		// I'll deal with this later :-)
 		return B_FILE_ERROR;
 	} else {
@@ -200,8 +209,8 @@ bool BPath::operator==(const BPath &item) const {
 }
 
 bool BPath::operator==(const char *path) const {
-	printf("==() fName == '%s'\n", fName);
-	printf("==() path  == '%s'\n", path);
+//	printf("==() fName == '%s'\n", fName);
+//	printf("==() path  == '%s'\n", path);
 	return (strcmp(fName, path) == 0);
 }
 

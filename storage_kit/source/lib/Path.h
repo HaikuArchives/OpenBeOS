@@ -11,8 +11,6 @@
 #include <sys/types.h>
 #include <SupportDefs.h>
 
-#include "Error.h"
-
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
@@ -124,10 +122,9 @@ public:
 		The type code must be B_REF_TYPE.*/
 	virtual status_t Unflatten(type_code c, const void *buf, ssize_t size);
 
-	/*! Checks a path string to see if normalization is required. */
-	bool MustNormalize(const char *path);
-	
 private:
+	friend class PathTest;
+
 	/*! Currently unused. */
 	virtual void _WarPath1();
 
@@ -150,12 +147,11 @@ private:
 	/*! (I'm not sure what this is yet) */ 
 	status_t fCStatus;
 
-	class EBadPathInput : public StorageKit::Error {
-	public:
-		EBadPathInput(const char *message) : StorageKit::Error(0, message) { }
-	};
-
-
+	/*! Internal exception class thrown by MustNormalize when given invalid input. */
+	class EBadInput { };
+	
+	/*! Checks a path string to see if normalization is required. */
+	static bool MustNormalize(const char *path);
 	
 };
 
