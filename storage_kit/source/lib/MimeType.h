@@ -132,7 +132,7 @@ public:
 
 	/* calls to ask the sniffer to identify the MIME type of a file or data in
 	   memory */
-	status_t GuessMimeType(const entry_ref *file, BMimeType *result);
+	static status_t GuessMimeType(const entry_ref *file, BMimeType *result);
 	static status_t GuessMimeType(const void *buffer, int32 length,
 								  BMimeType *result);
 	static status_t GuessMimeType(const char *filename, BMimeType *result);
