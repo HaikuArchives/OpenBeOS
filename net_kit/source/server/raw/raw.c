@@ -1,6 +1,6 @@
 /* raw.c */
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 #include <stdio.h>
 #include <string.h>
 #endif
@@ -19,10 +19,10 @@
 #include "raw/raw_module.h"
 #include "ipv4/ipv4_module.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 static status_t raw_ops(int32 op, ...);
-#else	/* _KERNEL_MODE */
+#else	/* _KERNEL_ */
 #define raw_ops NULL
 static image_id ipid;
 #endif
@@ -260,7 +260,7 @@ int rip_ctloutput(int op, struct socket *so, int level,
 			break;
 		/* XXX - Add other options here */
 	}
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 	return ipm->ctloutput(op, so, level, optnum, m);
 #else
 /* XXX - get this working for app...? */
@@ -297,7 +297,7 @@ static int raw_module_init(void *cpp)
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_protocol, AF_INET);
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 	if (!ipm) {
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
@@ -328,7 +328,7 @@ static int raw_module_init(void *cpp)
 
 static int raw_module_stop(void)
 {
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 	unload_add_on(ipid);
 #else
 	put_module(IPV4_MODULE_PATH);
@@ -353,7 +353,7 @@ _EXPORT struct raw_module_info protocol_info = {
 	&rip_input
 };
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 static status_t raw_ops(int32 op, ...)
 {
 	switch(op) {

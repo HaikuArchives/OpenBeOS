@@ -24,10 +24,6 @@ CORE_C:=	$(CORE_OBJS:.o=.c)
 
 CFLAGS+=-D_NETWORK_STACK
 
-KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
-KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-
-
 all:	$(TARGET)
 
 kernel:
@@ -49,11 +45,11 @@ clean:
 	@rm -f $(TARGET)
 	@rm -f *.o
 
-$(TARGET): $(CORE_OBJS) net_timer.o core.o
-	@$(CC) -nostart $(CFLAGS) $(INCLUDES) -o $(TARGET) $(CORE_OBJS)
+$(TARGET): $(CORE_OBJS)
+	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o $(TARGET) $(CORE_OBJS)
 
 .SUFFIXES: .c .o
 
 .c.o:
-	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 

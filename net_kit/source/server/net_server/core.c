@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <Drivers.h>
 #include <module.h>
 #include <KernelExport.h>
@@ -58,7 +58,7 @@ static int init_done = 0;
 
 /* Forward prototypes... */
 /* Private for this file */
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 static status_t core_std_ops(int32 op, ...);
 #else
 #define core_std_ops NULL
@@ -652,7 +652,7 @@ static void domain_init(void)
  * NB these don't have any additional functions so we just use the
  * system defined module_info structures
  */
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 static void find_protocol_modules(void)
 {
 	void *ml = open_module_list(NETWORK_PROTOCOLS);
@@ -938,7 +938,7 @@ printf("start_stack!\n");
 	if (dom_lock == -1)
 		dom_lock =   create_sem(1, "domain_lock");
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 	set_sem_owner(dev_lock,   B_SYSTEM_TEAM);
 	set_sem_owner(proto_lock, B_SYSTEM_TEAM);
 	set_sem_owner(dom_lock,   B_SYSTEM_TEAM);
@@ -969,7 +969,7 @@ static int stop_stack(void)
 	printf("trying to unload modules\n");
 	nm = module_list;
 	do {
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 		put_module(nm->name);
 #else
 		unload_add_on(nm->iid);
@@ -996,7 +996,7 @@ static int stop_stack(void)
 	return 0;
 }
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 static status_t core_std_ops(int32 op, ...) 
 {
 	switch(op) {

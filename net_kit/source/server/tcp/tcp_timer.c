@@ -1,6 +1,6 @@
 /* tcp_timer.c */
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 #include <stdio.h>
 #endif
 
@@ -15,7 +15,7 @@
 #include "core_module.h"
 #include "core_funcs.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #endif
 

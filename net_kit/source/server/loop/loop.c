@@ -19,7 +19,7 @@
 #include "net_module.h"
 #include "core_funcs.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 static status_t loop_ops(int32 op, ...);
 #define LOOP_MODULE_PATH "network/interface/loop"
@@ -153,7 +153,7 @@ _EXPORT struct kernel_net_module_info device_info = {
 	NULL,
 };
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 static status_t loop_ops(int32 op, ...)
 {
 	switch(op) {

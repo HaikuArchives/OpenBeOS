@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <kernel/OS.h>
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #endif
 

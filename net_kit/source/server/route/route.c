@@ -17,11 +17,11 @@
 #include "net_module.h"
 #include "core_funcs.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #define ROUTE_MODULE_PATH	"network/protocol/route"
 static status_t route_ops(int32 op, ...);
-#else	/* _KERNEL_MODE */
+#else	/* _KERNEL_ */
 #define route_ops NULL
 #define ROUTE_MODULE_PATH	"modules/protocol/route"
 #endif
@@ -762,7 +762,7 @@ _EXPORT struct kernel_net_module_info protocol_info = {
 	route_module_stop
 };
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 static status_t route_ops(int32 op, ...)
 {
 	switch(op) {

@@ -7,7 +7,7 @@
 #include "net_misc.h"
 #include "net_malloc.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #define AREA_ADDR_FLAG  B_ANY_KERNEL_ADDRESS
 #define AREA_FLAGS      B_NO_LOCK

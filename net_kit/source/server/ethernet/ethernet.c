@@ -18,17 +18,15 @@
 #include "net/if_arp.h"
 #include "net/if_dl.h"
 #include "netinet/if_ether.h"
-#include "arp/arp_module.h"
 #include "sys/socket.h"
 #include "sys/sockio.h"
 #include "net/route.h"
 
 #include "core_module.h"
-#include "net_module.h"
 #include "core_funcs.h"
 #include "net_timer.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #define spawn_thread spawn_kernel_thread
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
@@ -417,9 +415,6 @@ lookup:
  * directly causes segafults. Bear in mind we want ALL allocation/free actions
  * to take place in the core to keep as small a memory footprint as possible.
  */
-#ifndef _KERNEL_MODE
-	M_PREPEND(buf, sizeof(struct ether_header));
-#else
 #define M_LEADINGSPACE(m) \
         ((m)->m_flags & M_EXT ? (m)->m_data - (m)->m_ext.ext_buf : \
          (m)->m_flags & M_PKTHDR ? (m)->m_data - (m)->m_pktdat : \
@@ -432,7 +427,6 @@ lookup:
                 buf = m_prepend(buf, sizeof(struct ether_header));
         if (buf && buf->m_flags & M_PKTHDR)
                 buf->m_pkthdr.len += sizeof(struct ether_header);
-#endif
 
 	if (buf == NULL)
 		senderr(ENOMEM);
@@ -913,7 +907,7 @@ _EXPORT struct kernel_net_module_info device_info = {
 	ether_stop
 };
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 
 static int32 ether_ops(int32 op, ...)
 {

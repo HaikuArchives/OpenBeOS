@@ -145,7 +145,7 @@ struct core_module_info {
 	int (*soaccept)(void *, void **, void *, int *);
 };
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #define CORE_MODULE_PATH	"network/core"
 #else
 #define CORE_MODULE_PATH    "modules/core"

@@ -2,7 +2,7 @@
  * network buffer implementation
  */
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 #include <stdio.h>
 #endif
 
@@ -13,7 +13,7 @@
 #include "net_misc.h"
 #include "pools.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #endif
 

@@ -13,7 +13,7 @@
 #ifndef OBOS_NET_MISC_H
 #define OBOS_NET_MISC_H
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #define printf  dprintf
 #endif  

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #endif
 

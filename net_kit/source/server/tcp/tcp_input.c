@@ -69,7 +69,7 @@
  * Research Laboratory (NRL).
  */
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 #include <stdio.h>
 #endif
 
@@ -100,7 +100,7 @@
 #include "core_funcs.h"
 #include "ipv4/ipv4_module.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #endif
 

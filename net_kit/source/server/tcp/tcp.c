@@ -1,7 +1,7 @@
 /* udp.c
  */
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 #include <stdio.h>
 #include <string.h>
 #endif
@@ -29,11 +29,11 @@
 #include "ipv4/ipv4_module.h"
 #include "net_timer.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #define TCP_MODULE_PATH		"network/protocol/tcp"
 static status_t tcp_ops(int32 op, ...);
-#else	/* _KERNEL_MODE */
+#else	/* _KERNEL_ */
 #define tcp_ops NULL
 #define TCP_MODULE_PATH	    "modules/protocol/tcp"
 static image_id ipid = -1;
@@ -520,7 +520,7 @@ static int tcp_module_init(void *cpp)
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 	if (!ipm) {
 		char path[PATH_MAX];
 		getcwd(path, PATH_MAX);
@@ -553,7 +553,7 @@ static int tcp_module_stop(void)
 	net_remove_timer(slowtim);
 	net_remove_timer(fasttim);
 
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 	unload_add_on(ipid);
 #else
 	put_module(IPV4_MODULE_PATH);
@@ -575,7 +575,7 @@ _EXPORT struct kernel_net_module_info protocol_info = {
 	tcp_module_stop
 };
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 static status_t tcp_ops(int32 op, ...)
 {
 	switch(op) {

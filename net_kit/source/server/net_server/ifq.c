@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <strings.h>
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #endif
 
@@ -20,7 +20,7 @@ struct ifq *start_ifq(void)
 	
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 	set_sem_owner(nifq->lock, B_SYSTEM_TEAM);
 	set_sem_owner(nifq->pop, B_SYSTEM_TEAM);
 #endif

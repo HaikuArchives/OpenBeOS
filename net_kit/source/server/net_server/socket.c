@@ -18,7 +18,7 @@
 #include "net_misc.h"
 #include "protocols.h"
 #include "sys/net_uio.h"
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #include "core_module.h"
 #endif
@@ -165,7 +165,7 @@ int socreate(int dom, void *sp, int type, int proto)
 	    so->so_timeo < 0)
 		return ENOMEM;
 	    
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 	set_sem_owner(so->so_rcv.sb_pop,   B_SYSTEM_TEAM);
 	set_sem_owner(so->so_snd.sb_pop,   B_SYSTEM_TEAM);
 	set_sem_owner(so->so_timeo,        B_SYSTEM_TEAM);
@@ -1271,7 +1271,7 @@ int sogetopt(void *sp, int level, int optnum, void *data, size_t *datalen)
 int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie, int event)
 {
 	struct socket *so = (struct socket *) sp;
-
+printf("set_socket_event_callback -> event = %d\n", event);
 	so->event_callback = cb;
 	so->event_callback_cookie = cookie;
 	if (cb) {

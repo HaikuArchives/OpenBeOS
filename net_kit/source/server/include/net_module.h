@@ -15,7 +15,7 @@
 #include "net/if.h"
 #include "net/route.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <module.h>
 #else
 typedef struct module_info {
@@ -39,7 +39,7 @@ struct net_module {
 	struct net_module *next;
 	char *name;
 	struct kernel_net_module_info *ptr;
-#ifndef _KERNEL_MODE
+#ifndef _KERNEL_
 	image_id iid;
 #endif
 	int status;

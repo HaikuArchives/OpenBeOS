@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #endif
 
@@ -198,8 +198,10 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 		
 	switch (cmd) {
 		case SIOCAIFADDR:
+			printf("SIOCAIFADDR\n");
 			/* add an address */
 		case SIOCDIFADDR:
+			printf("SIODIFADDR\n");
 			/* delete an address */
 			if (ifra->ifra_addr.sin_family == AF_INET)
 				for (oia = ia; ia; ia = ia->ia_next) {
@@ -210,9 +212,10 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			if (cmd == SIOCDIFADDR && ia == NULL)
 				return EADDRNOTAVAIL;
 		case SIOCSIFADDR:
+			printf("SIOCSIFADDR\n");
 			/* set an address */
 		case SIOCSIFNETMASK:
-			printf("SIOCSIFNETMASK\n");
+			printf("SIOCSIFNETMASK #1 (%d)\n", cmd);
 			/* set a net mask */
 		case SIOCSIFDSTADDR:
 			/* set the destination address of a point to point link */
@@ -263,6 +266,8 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 				
 	}
 	
+	printf("loop #2 : %d [%ld]\n", cmd, SIOCSIFNETMASK);
+	
 	switch(cmd) {
 		case SIOCGIFADDR:
 			/* get interface address */
@@ -287,15 +292,16 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			*((struct sockaddr_in*) &ifr->ifr_addr) = ia->ia_sockmask;
 			break;
 		case SIOCSIFADDR:
+			printf("SIOCSIFADDR #2\n");
 			return in_ifinit(ifp, ia, (struct sockaddr_in*)&ifr->ifr_addr, 1);
 		case SIOCSIFNETMASK:
+			printf("Setting netmask\n");
 			/* set the netmask for the interface... */
 			/* set i to the network netmask (network host order) */
 			i = ifra->ifra_addr.sin_addr.s_addr;
-			/* set the sockmask to the netmask */
-			ia->ia_sockmask.sin_addr.s_addr = i;
 			/* set the host byte order netmask into ia_subnetmask */
-			ia->ia_subnetmask = ntohl(i);
+			ia->ia_subnetmask = ntohl((ia->ia_sockmask.sin_addr.s_addr = i));
+printf("ia->ia_subnetmask: %08lx\n", ia->ia_subnetmask);
 			break;
 		case SIOCSIFDSTADDR:
 			if ((ifp->if_flags & IFF_POINTOPOINT) == 0)
@@ -358,6 +364,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 				ia->ia_broadaddr = ifra->ifra_broadaddr;
 			return error;
 		default:
+		printf("2nd iteration: default (%d)\n", cmd);
 			/* if we don't have enough to do the default, return */
 			if (ifp == NULL || ifp->ioctl == NULL)
 				return EINVAL; /* XXX - should be EOPNOTSUPP */
