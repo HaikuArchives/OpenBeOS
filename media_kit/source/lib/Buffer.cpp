@@ -180,7 +180,7 @@ BBuffer::BBuffer(const buffer_clone_info & info) :
 	if (MediaKitPrivate::QueryServer(&request, &reply) != B_OK)
 		return;
 
-	id = reply.FindInt32("shared buffer area");
+	id = reply.FindInt32("area");
 
 	fBufferList = _shared_buffer_list::Clone(id);
 	if (fBufferList == NULL)

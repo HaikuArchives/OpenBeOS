@@ -46,7 +46,7 @@ BBufferProducer::ProducerType()
 
 /* explicit */
 BBufferProducer::BBufferProducer(media_type producer_type)
-	: BMediaNode("XXX fixme")
+	: BMediaNode("called by BBufferProducer")
 {
 	UNIMPLEMENTED();
 

@@ -8,6 +8,9 @@
 #include <scheduler.h>
 #include "debug.h"
 
+// XXX The bebook says that the latency is always calculated in realtime
+// XXX This is not currently done in this code
+
 /*************************************************************
  * protected BMediaEventLooper
  *************************************************************/

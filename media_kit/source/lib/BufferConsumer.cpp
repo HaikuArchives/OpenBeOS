@@ -49,7 +49,7 @@ BBufferConsumer::RegionToClipData(const BRegion *region,
 
 /* explicit */
 BBufferConsumer::BBufferConsumer(media_type consumer_type)
-	: BMediaNode("XXX fixme")
+	: BMediaNode("called by BBufferConsumer")
 {
 	UNIMPLEMENTED();
 	
