@@ -125,11 +125,14 @@ static void dump_arp(void *buffer)
 }
 #endif /* ARP_DEBUG */
 
-/* Returns 1 is new cache entry added, 0 if not */
+/* Returns 1 if new cache entry added, 0 if not */
 static int insert_cache_entry(void *link, int lf, void *addr, int af)
 {
 	arp_cache_entry *ace;
 	int alen = 4; /* ugh - fix me! */
+
+	if (!arphash)
+		return 0;
 
 	ace = (arp_cache_entry *)nhash_get(arphash, addr, alen);
 	if (ace) {
