@@ -37,6 +37,9 @@ ssize_t pwrite(int, void const*, size_t, off_t);
 unsigned sleep(unsigned);
 int      usleep(unsigned);
 
+#define STDIN_FILENO     0
+#define STDOUT_FILENO    1
+#define STDERR_FILENO    2
 
 #ifdef __cplusplus
 } /* extern "C" */
