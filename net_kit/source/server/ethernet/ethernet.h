@@ -53,6 +53,7 @@ struct ether_device {
 #define ed_devid	ifn.devid
 #define ed_hdrlen	ifn.if_hdrlen
 #define ed_addrlen	ifn.if_addrlen
+#define ed_start	ifn.start
 
 #define ETHERMTU 1500
 

@@ -15,10 +15,29 @@
 
 #include "ethernet/ethernet.h"
 
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#include "net_device.h"
+#include "net_server/core_module.h"
+#include "arp/arp_module.h"
+
+#define ETHERNET_MODULE_PATH	"network/interface/ethernet"
+
+static struct core_module_info *core = NULL;
+static struct arp_module_info *arp = NULL;
+
+/* forward prototypes */
+int ether_dev_start(ifnet *dev);
+int ether_dev_stop(ifnet *dev);
+#endif
+
 static loaded_net_module *net_modules;
 static int *prot_table;
 static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices */
+
+#ifndef _KERNEL_MODE
 static net_module *arp = NULL; /* shortcut to arp module */
+#endif
 
 #define DRIVER_DIRECTORY "/dev/net"
 
@@ -38,19 +57,22 @@ static int convert_proto(uint16 p)
 
 static void open_device(char *driver, char *devno)
 {
-	struct ether_device  *ed = malloc(sizeof(struct ether_device));
-        char path[PATH_MAX];
-        int dev;
+	struct ether_device *ed = malloc(sizeof(struct ether_device));
+	char path[PATH_MAX];
+	int dev;
 	status_t status;
 
 	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
+printf("open_device: %s\n", path);
 	dev = open(path, O_RDWR);
 	if (dev < B_OK)
 		goto badcard;
 
 	status = ioctl(dev, IF_INIT, NULL, 0);
-	if (status < B_OK) 
+	if (status < B_OK) {
+		close(dev);
 		goto badcard;
+	}
 
 	/* Hmm, this should probably actually be done by the device drivers
 	 * but we're not changing the device drivers so we'll do it here.
@@ -68,15 +90,20 @@ static void open_device(char *driver, char *devno)
 	ed->ed_if_addrlist = NULL;
 	ed->ed_hdrlen = 14;
 	ed->ed_addrlen = 6;
-	
+
+#ifdef _KERNEL_MODE
+	ed->ed_start = ether_dev_start;
+#endif
+
 	ed->next = NULL; /* we get added at the end of the list */
 	/* we maintain our own list of devices as well as the global list */
 	if (!ether_devices) {
 		ether_devices = ed;
 	} else {
 		struct ether_device *dptr = ether_devices;
-		while (dptr)
+		while (dptr->next)
 			dptr = dptr->next;
+
 		dptr->next = ed;
 	}
 
@@ -84,8 +111,12 @@ static void open_device(char *driver, char *devno)
 	printf("added ethernet device %s%d\n", ed->ed_name, ed->ed_unit);
 #endif
 
+#ifndef _KERNEL_MODE
 	net_server_add_device(&ed->ifn);
 	atomic_add(&net_modules[prot_table[NS_ETHER]].ref_count, 1);
+#else
+	core->add_device(&ed->ifn);
+#endif
 
 	return;
 
@@ -96,45 +127,59 @@ badcard:
 
 static void find_devices(void)
 {
-        DIR *dir;
-        DIR *driv_dir;
-        struct dirent *de;
-        struct dirent *dre;
-        char path[PATH_MAX];
+	DIR *dir, *driv_dir;
+	struct dirent *de, *dre;
+	char path[PATH_MAX];
 
-        dir = opendir(DRIVER_DIRECTORY);
-        if (!dir) {
-                printf("Couldn't open the directory %s\n", DRIVER_DIRECTORY);
-                return;
-        }
+	dir = opendir(DRIVER_DIRECTORY);
+	if (!dir) {
+		printf("Couldn't open the directory %s\n", DRIVER_DIRECTORY);
+		return;
+	}
 
-        while ((de = readdir(dir)) != NULL) {
-                /* hmm, is it a driver? */
-                if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0
-		    || strcmp(de->d_name, "socket") == 0)
-                        continue;
+	while ((de = readdir(dir)) != NULL) {
+		/* hmm, is it a driver? */
+		if (strcmp(de->d_name, ".") == 0 ||
+	    	strcmp(de->d_name, "..") == 0 ||
+	    	strcmp(de->d_name, "socket") == 0)
+			continue;
 
-                /* OK we assume it's a driver...but skip the ether driver
-                 * as I don't really know what it is!
-                 */
-                if (strcmp(de->d_name, "ether") == 0)
-                        continue;
+		/* OK we assume it's a driver...but skip the ether driver
+		 * as I don't really know what it is!
+		 */
+		if (strcmp(de->d_name, "ether") == 0)
+			continue;
+                        
+		/* XXX - This is a really horrible hack :)
+		 * Basically if you have a 3Com card remove these 
+		 * next 2 lines or you won't get a card detected.
+		 * I've done it so I can continue remote working :)
+		 */	   
+		if (strcmp(de->d_name, "ec9xx") == 0) {
+			printf("find_devices: skipping ec9xx directory...\n");
+			continue;
+		}
 
-                sprintf(path, "%s/%s", DRIVER_DIRECTORY, de->d_name);
-                driv_dir = opendir(path);
-                if (!driv_dir) {
-                        printf("I coudln't find any drivers in the %s driver directory\n",
-                                de->d_name);
-                } else {
-                        while ((dre = readdir(driv_dir)) != NULL) {
+		sprintf(path, "%s/%s", DRIVER_DIRECTORY, de->d_name);
+		driv_dir = opendir(path);
+		if (!driv_dir) {
+			printf("I couldn't find any drivers in the %s driver directory\n",
+			       de->d_name);
+		} else {
+			while ((dre = readdir(driv_dir)) != NULL) {
+				/* skip . and .. */
+				if (strcmp(dre->d_name, ".") == 0 ||
+					strcmp(dre->d_name, "..") == 0)
+					continue;
+                        		    
 				open_device(de->d_name, dre->d_name);
-                        }
-                        closedir(driv_dir);
-                }
-        }
-        closedir(dir);
+			}
+			closedir(driv_dir);
+		}
+	}
+	closedir(dir);
 
-        return;
+	return;
 }
 
 #if SHOW_DEBUG
@@ -179,6 +224,10 @@ int ether_input(struct mbuf *buf, int hdrlen)
 	int len = sizeof(ethernet_header);
 	int fproto = convert_proto(plen);
 
+#ifdef _KERNEL_MODE
+	dprintf("ether_input!!!\n");
+#endif
+
 	if (memcmp((void*)&eth->dest, (void*)&ether_bcast, 6) == 0)
 		buf->m_flags |= M_BCAST;
 		
@@ -192,8 +241,11 @@ int ether_input(struct mbuf *buf, int hdrlen)
 #if SHOW_DEBUG	
 	dump_ether_details(buf);
 #endif
-
+#ifndef _KERNEL_MODE
 	m_adj(buf, len);
+#else
+	core->m_adj(buf, len);
+#endif
 	
 	if (fproto >= 0 && net_modules[prot_table[fproto]].mod->input) {
 		return net_modules[prot_table[fproto]].mod->input(buf, 0);
@@ -201,14 +253,23 @@ int ether_input(struct mbuf *buf, int hdrlen)
 		printf("Failed to determine a valid protocol fproto = %d\n", fproto);
 	}
 
+#ifndef _KERNEL_MODE
 	m_freem(buf);
+#else
+	core->m_freem(buf);
+#endif
+
 	return 0;	
 }
 
 static void arp_callback(int result, struct mbuf *buf)
 {
 	if (result == ARP_LOOKUP_FAILED) {
+#ifndef _KERNEL_MODE
 		m_freem(buf);
+#else
+		core->m_freem(buf);
+#endif
 		return;
 	}
 
@@ -232,7 +293,12 @@ int ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
 
 	if ((rt = rt0) != NULL) {
 		if ((rt->rt_flags & RTF_UP) == 0) {
-			if ((rt0 = rt = rtalloc1(dst, 1)) != NULL)
+#ifndef _KERNEL_MODE
+			rt = rtalloc1(dst, 1);
+#else
+			rt = core->rtalloc1(dst, 1);
+#endif
+			if ((rt0 = rt) != NULL)
 				rt->rt_refcnt--;
 			else
 				senderr(EHOSTUNREACH);
@@ -241,9 +307,18 @@ int ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
 			if (!rt->rt_gwroute)
 				goto lookup;
 			if (((rt = rt->rt_gwroute)->rt_flags & RTF_UP) == 0) {
+#ifndef _KERNEL_MODE
 				rtfree(rt0);
+#else
+				core->rtfree(rt0);
+#endif
 				rt = rt0;
-lookup:				rt->rt_gwroute = rtalloc1(rt->rt_gateway, 1);
+lookup:	
+#ifndef _KERNEL_MODE
+				rt->rt_gwroute = rtalloc1(rt->rt_gateway, 1);
+#else
+				rt->rt_gwroute = core->rtalloc1(rt->rt_gateway, 1);
+#endif
 			
 				if ((rt = rt->rt_gwroute) == NULL)
 					senderr(EHOSTUNREACH);
@@ -255,7 +330,23 @@ printf("flags & RTF_REJECT\n");
 		}
 	}
 
+#ifndef _KERNEL_MODE
 	M_PREPEND(buf, sizeof(ethernet_header));
+#else
+#define M_LEADINGSPACE(m) \
+        ((m)->m_flags & M_EXT ? (m)->m_data - (m)->m_ext.ext_buf : \
+         (m)->m_flags & M_PKTHDR ? (m)->m_data - (m)->m_pktdat : \
+         (m)->m_data - (m)->m_dat)
+
+        if (M_LEADINGSPACE(buf) >= sizeof(ethernet_header)) {
+                buf->m_data -= sizeof(ethernet_header);
+                buf->m_len += sizeof(ethernet_header);
+        } else 
+                buf = core->m_prepend(buf, sizeof(ethernet_header));
+        if (buf && buf->m_flags & M_PKTHDR)
+                buf->m_pkthdr.len += sizeof(ethernet_header);
+#endif
+
 	eth = mtod(buf, ethernet_header*);
 	memcpy(&eth->src, &d->e_addr, 6); /* copy in outgoing MAC address */
 
@@ -287,7 +378,11 @@ printf("flags & RTF_REJECT\n");
 bad:
 	printf("bad! %s\n", strerror(error));
 	if (buf)
+#ifndef _KERNEL_MODE	
 		m_free(buf);
+#else
+		core->m_free(buf);
+#endif
 	return error;
 }
 
@@ -326,7 +421,11 @@ int ether_init(loaded_net_module *ln, int *pt)
 	return 0;
 }
 
+#ifndef _KERNEL_MODE
 int ether_dev_init(ifnet *dev)
+#else
+int ether_dev_start(ifnet *dev)
+#endif
 {
 	status_t status;
 	int on = 1;
@@ -338,21 +437,25 @@ int ether_dev_init(ifnet *dev)
 	size_t masklen; /* smaller of the 2 */
 	size_t socklen; /* the sockaddr_dl with link level address */ 
 
+	printf("ether_dev_start: %s%d\n", dev->name, dev->unit);
+
 	if (!ed || dev->if_type != IFT_ETHER)
 		return -1;
 
+#ifndef _KERNEL_MODE
 	if (!arp && net_modules[prot_table[NS_ARP]].mod)
 		arp = net_modules[prot_table[NS_ARP]].mod;
+#endif
 
 	sprintf(tname, "%s%d", dev->name, dev->unit); /* make name */
 	namelen = strlen(tname);
 
-        /* try to get the MAC address */
-        status = ioctl(dev->devid, IF_GETADDR, &ed->e_addr, 6);
-        if (status < B_OK) {
-                printf("Failed to get a MAC address, ignoring %s%d\n", dev->name, dev->unit);
-                return 0;
-        }
+	/* try to get the MAC address */
+	status = ioctl(dev->devid, IF_GETADDR, &ed->e_addr, 6);
+	if (status < B_OK) {
+		printf("Failed to get a MAC address, ignoring %s%d\n", dev->name, dev->unit);
+		return -1;
+	}
 
 	/* memory: we need to allocate enough memory for the following...
 	 * struct ifaddr
@@ -372,6 +475,7 @@ int ether_dev_init(ifnet *dev)
 
 	ifa = (struct ifaddr*)malloc(mem_sz);
 	memset(ifa, 0, mem_sz);
+
 	sdl = (struct sockaddr_dl *)(ifa + 1);
 	sdl->sdl_len = socklen;
 	sdl->sdl_family = AF_LINK;
@@ -394,24 +498,30 @@ int ether_dev_init(ifnet *dev)
 	while (socklen != 0)
 		sdl->sdl_data[socklen--] = 0xff;
 
-        dev->input = &ether_input;
-        dev->output = &ether_output;
-	dev->ioctl = NULL;//&ether_ioctl;
-
-        status = ioctl(dev->devid, IF_SETPROMISC, &on, 1);
-        if (status == B_OK) {
+	dev->input = &ether_input;
+	dev->output = &ether_output;
+#ifdef _KERNEL_MODE
+	dev->stop = ether_dev_stop;
+#endif
+	/* XXX - ioctl needs to be added back in... */
+	
+	status = ioctl(dev->devid, IF_SETPROMISC, &on, 1);
+	if (status == B_OK) {
 		dev->flags |= IFF_PROMISC;
 	} else {
 		/* not a hanging offence */
-                printf("Failed to set %s%d into promiscuous mode\n", dev->name, dev->unit);
-        }
+		printf("Failed to set %s%d into promiscuous mode\n", dev->name, dev->unit);
+	}
 
 	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_BROADCAST|IFF_MULTICAST);
 	dev->if_mtu = ETHERMTU;
+
+	dprintf("device %s has been setup!\n", dev->if_name);
 		
-	return 1;
+	return 0;
 }
 
+#ifndef _KERNEL_MODE
 net_module net_module_data = {
 	"Ethernet/802.x module",
 	NS_ETHER,
@@ -428,3 +538,68 @@ net_module net_module_data = {
 	NULL,
 };
 
+#else
+
+static int k_init(void)
+{
+	if (!core)
+		get_module(CORE_MODULE_PATH,
+			(module_info**)&core);
+	get_module(ARP_MODULE_PATH, (module_info **)&arp);
+
+	find_devices();
+
+	return 0;
+}
+
+static int k_uninit(void)
+{
+	/* we should really stop all cards etc here! */
+	return 0;
+}
+
+int ether_dev_stop(ifnet *dev)
+{
+	dev->flags &= ~IFF_UP;
+
+	/* should find better ways of doing this... */
+	kill_thread(dev->rx_thread);
+	kill_thread(dev->tx_thread);
+	
+	return 0;
+}
+
+static int32 ether_ops(int32 op, ...)
+{
+	switch(op) {
+		case B_MODULE_INIT:
+			if (get_module(CORE_MODULE_PATH,
+				(module_info**)&core) != B_OK) {
+				dprintf("Failed to get core pointer, declining!\n");
+				return B_ERROR;
+			}
+			break;
+		case B_MODULE_UNINIT:
+			return k_uninit();
+		default:
+			return B_ERROR;
+	}
+	return B_OK;
+}
+			
+static struct device_module_info my_module = {
+	{
+		ETHERNET_MODULE_PATH,
+		B_KEEP_LOADED,
+		ether_ops
+	},
+
+	k_init
+};
+
+_EXPORT module_info * modules[] = {
+	(module_info *)&my_module,
+	NULL
+};
+
+#endif
