@@ -79,7 +79,8 @@ Volume::Mount(const char *deviceName,uint32 flags)
 					// try to get indices root dir
 					
 					// question: why doesn't get_vnode() work here??
-					// it returns an error, and bfs_read_vnode is never called...
+					// answer: we have not yet backpropagated the pointer to the
+					// volume in bfs_mount(), so bfs_read_vnode() can't get it - axeld.
 					fIndicesNode = new Inode(this,ToVnode(Indices()));
 					if (fIndicesNode == NULL
 						|| fIndicesNode->InitCheck() < B_OK
