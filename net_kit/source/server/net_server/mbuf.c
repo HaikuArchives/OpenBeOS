@@ -201,6 +201,23 @@ void m_reserve(struct mbuf *mp, int len)
 		mp->m_pkthdr.len -= len;
 }
 
+void m_cat(struct mbuf *m, struct mbuf *n)
+{
+	while (m->m_next)
+		m = m->m_next;
+	while (n) {
+		if (m->m_flags & M_EXT || 
+		    m->m_data + m->m_len + n->m_len >= &m->m_dat[MLEN]) {
+			/* just join them :) */
+			m->m_next = n;
+			return;
+		}
+		memcpy(mtod(m, void*) + m->m_len, mtod(n, void*), n->m_len);
+		m->m_len += n->m_len;
+		n = m_free(n);
+	}
+}
+
 void m_adj(struct mbuf *mp, int req_len)
 {
 	struct mbuf *m;

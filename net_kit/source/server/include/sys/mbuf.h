@@ -286,6 +286,7 @@ struct mbuf *m_free(struct mbuf *mfree);
 void m_freem(struct mbuf *m);
 
 void m_reserve(struct mbuf *mp, int len);
+void m_cat(struct mbuf *m, struct mbuf *n);
 void m_adj(struct mbuf *mp, int req_len);
 void m_copydata(struct mbuf *m, int off, int len, caddr_t cp);
 struct mbuf *m_copym(struct mbuf *m, int off0, int len);
