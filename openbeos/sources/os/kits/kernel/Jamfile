@@ -153,6 +153,9 @@ KernelLd kernel
 	<$(SOURCE_GRIST)!core>timer.o
 
 	<$(SOURCE_GRIST)!core!net>pools.o
+	<$(SOURCE_GRIST)!core!net>nhash.o
+	<$(SOURCE_GRIST)!core!net>mbuf.o
+	<$(SOURCE_GRIST)!core!net>net.o
 
 	linkhack.so
 
@@ -197,6 +200,9 @@ KernelLd kernel.so
 	<$(SOURCE_GRIST)!core>timer.o
 
 	<$(SOURCE_GRIST)!core!net>pools.o
+	<$(SOURCE_GRIST)!core!net>nhash.o
+	<$(SOURCE_GRIST)!core!net>mbuf.o
+	<$(SOURCE_GRIST)!core!net>net.o
 
 	linkhack.so
 
@@ -586,6 +592,18 @@ KernelLd filetest :
 	bin/filetest
 	;
 
+KernelLd loop :
+	<$(SOURCE_GRIST)!add-ons!net!loopback>loop.o
+	kernel.so
+	:
+	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
+	:
+	-Bdynamic -shared
+	:
+	:
+	addons/net/loop
+	;
+	
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
 BuildKernel $(OBOS_KERNEL) : $(OBOS_KERNEL_CONFIG) ;
@@ -600,3 +618,4 @@ SubInclude OBOS_TOP sources os kits kernel glue ;
 SubInclude OBOS_TOP sources os kits kernel libc ;
 SubInclude OBOS_TOP sources os kits kernel libm ;
 SubInclude OBOS_TOP sources os kits kernel apps ;
+SubInclude OBOS_TOP sources os kits kernel add-ons ;
