@@ -1,3 +1,3 @@
 SubDir OBOS_TOP sources os kits kernel core arch x86 ;
 
-KernelStaticLibrary x86 : arch_cpu.c arch_dbg_console.c arch_debug.c arch_faults.c arch_int.c arch_smp.c arch_thread.c arch_timer.c arch_vm.c arch_vm_translation_map.c ;
+KernelStaticLibrary libx86 : arch_cpu.c arch_dbg_console.c arch_debug.c arch_faults.c arch_int.c arch_smp.c arch_thread.c arch_timer.c arch_vm.c arch_vm_translation_map.c ;

@@ -1,3 +1,3 @@
 SubDir OBOS_TOP sources os kits kernel core vm ;
 
-KernelStaticLibrary vm : vm.c vm_cache.c vm_daemons.c vm_page.c vm_store_anonymous_noswap.c vm_store_device.c vm_store_null.c vm_store_vnode.c vm_tests.c ;
+KernelStaticLibrary libvm : vm.c vm_cache.c vm_daemons.c vm_page.c vm_store_anonymous_noswap.c vm_store_device.c vm_store_null.c vm_store_vnode.c vm_tests.c ;
