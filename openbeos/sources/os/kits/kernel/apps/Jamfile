@@ -1,3 +1,7 @@
 SubDir OBOS_TOP sources os kits kernel apps ;
 
-KernelObjects false_main.c ;
+KernelObjects false_main.c fibo_main.c init.c : -fpic ;
+
+SubInclude OBOS_TOP sources os kits kernel apps fortune ;
+SubInclude OBOS_TOP sources os kits kernel apps ls ;
+SubInclude OBOS_TOP sources os kits kernel apps shell ;
