@@ -1,4 +1,6 @@
 #include "Test.StorageKit.h"
+#include <unistd.h>
+#include "TestUtils.h"
 
 // ##### Include your test headers here #####
 #include "DirectoryTest.h"
@@ -8,7 +10,8 @@
 #include "PathTest.h"
 #include "SymLinkTest.h"
 
-StorageKitShell shell;
+
+StorageKit::TestShell shell;
 
 int main(int argc, char *argv[]) {
 	// ##### Add your test suites here #####
@@ -22,10 +25,15 @@ int main(int argc, char *argv[]) {
 	return shell.Run(argc, argv);
 }
 
-StorageKitShell::StorageKitShell() : CppUnitShell() {
+//-------------------------------------------------------------------------------
+// StorageKit::TestShell
+//-------------------------------------------------------------------------------
+
+StorageKit::TestShell::TestShell() : CppUnitShell() {
 }
 
-void StorageKitShell::PrintDescription(int argc, char *argv[]) {
+void
+StorageKit::TestShell::PrintDescription(int argc, char *argv[]) {
 	std::string AppName = argv[0];
 	cout << endl;
 	cout << "This program is the central testing framework for the purpose" << endl;
@@ -45,4 +53,31 @@ void StorageKitShell::PrintDescription(int argc, char *argv[]) {
 		cout << "the Storage Kit." << endl;
 	}
 }
-	
+
+//-------------------------------------------------------------------------------
+// StorageKit::TestCase
+//-------------------------------------------------------------------------------
+
+StorageKit::TestCase::TestCase() : fValidCWD(false) {
+}
+
+// Saves the location of the current working directory. To return to the
+// last saved working directory, all \ref RestorCWD().
+void
+StorageKit::TestCase::SaveCWD() {
+	fValidCWD = getcwd(fCurrentWorkingDir, B_PATH_NAME_LENGTH);
+}
+
+/*	Restores the current working directory to last directory saved by a
+	call to SaveCWD(). If SaveCWD() has not been called and an alternate
+	directory is specified by alternate, the current working directory is
+	changed to alternate. If alternate is null, the current working directory
+	is not modified.
+*/
+void
+StorageKit::TestCase::RestoreCWD(const char *alternate) {
+	if (fValidCWD)
+		chdir(fCurrentWorkingDir);
+	else if (alternate != NULL)
+		chdir(alternate);
+}
