@@ -24,8 +24,8 @@ BMidi::~BMidi() {
 	status_t ret;
 	status_t exit_value;
 	write_port(_inflow_port,MSG_CODE_TERMINATE_THREAD,NULL,0);
-	delete_port(_inflow_port);
 	wait_for_thread(_inflow_thread_id,&exit_value);
+	delete_port(_inflow_port);
 	delete _con_list;
 }
 
@@ -124,6 +124,7 @@ void BMidi::Run() {
 void BMidi::_SprayEvent(BMidiEvent * e) const {
 	int32 num_connections = _con_list->CountItems();
 	BMidi * m;
+	cerr << "SprayEvent time = " << e->time << " cur_time " << B_NOW << endl;
 	for(int32 i = 0; i < num_connections; i++) {
 		m = (BMidi *)_con_list->ItemAt(i);
 		write_port(m->_inflow_port,MSG_CODE_PROCESS_EVENT,e,sizeof(*e));
@@ -249,15 +250,16 @@ void BMidi::_Inflow() {
 	thread_id sender_id;
 	BMidiEvent e;
 	int32 code;
-	status_t ret;
+	size_t len;
 	while(true) {
-		ret = read_port(_inflow_port,&code,&e,sizeof(e));
-		if(ret != B_OK) {
+		len = read_port(_inflow_port,&code,&e,sizeof(e));
+		if (len < 0 || len != sizeof(e)) {
 			continue;
 		}
 		if(code == MSG_CODE_TERMINATE_THREAD) {
 			return;
 		}
+		
 		// Otherwise we process an event.
 		switch(e.opcode) {
 		case BMidiEvent::OP_NONE:
