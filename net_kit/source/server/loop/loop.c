@@ -3,6 +3,15 @@
 
 #include <stdio.h>
 #include <malloc.h>
+#include <kernel/OS.h>
+
+#include "sys/socket.h"
+#include "protocols.h"
+#include "netinet/in.h"
+#include "ipv4/ipv4.h"
+#include "sys/socketvar.h"
+#include "sys/protosw.h"
+#include "sys/domain.h"
 
 #ifdef _KERNEL_MODE
 #include <module.h>
@@ -10,16 +19,13 @@
 #include "net_device.h"
 #include "loop_module.h"
 
+#define start_rx_thread	core->start_rx_thread
+#define start_tx_thread	core->start_tx_thread
+
 struct core_module_info *core = NULL;
 #endif
 
 #include "net_module.h"
-#include "sys/socket.h"
-#include "protocols.h"
-#include "netinet/in.h"
-#include "ipv4/ipv4.h"
-#include "sys/protosw.h"
-#include "sys/domain.h"
 
 #ifdef USE_DEBUG_MALLOC
 #define malloc dbg_malloc
