@@ -124,7 +124,7 @@ dropit:
 	return (tp);
 }
 
-int32 tcp_slowtimer(timer *t)
+void tcp_slowtimer(void *data)
 {
 	struct inpcb *ip, *ipnxt;
 	struct tcpcb *tp;
@@ -134,7 +134,7 @@ int32 tcp_slowtimer(timer *t)
 	
 	ip = tcb.inp_next;
 	if (!ip)
-		return -1;
+		return;
 	for (; ip != &tcb; ip = ipnxt) {
 		ipnxt = ip->inp_next;
 		tp = intotcpcb(ip);
@@ -143,7 +143,7 @@ int32 tcp_slowtimer(timer *t)
 		for (i=0;i < TCPT_NTIMERS;i++) {
 			if (tp->t_timer[i] && --tp->t_timer[i] == 0) {
 				tcp_userreq(tp->t_inpcb->inp_socket, PRU_SLOWTIMO, NULL,
-				            (struct mbuf *)i, NULL);
+			                (struct mbuf *)i, NULL);
 				if (ipnxt->inp_prev != ip)
 					goto tpgone;
 			}
@@ -155,10 +155,11 @@ tpgone:
 	}
 	tcp_iss += TCP_ISSINCR / PR_SLOWHZ;
 	tcp_now++;
-	return 0;
+		
+	return;
 }
 
-int32 tcp_fasttimer(timer *t)
+void tcp_fasttimer(void *data)
 {
 	struct inpcb *inp;
 	struct tcpcb *tp;
@@ -167,7 +168,7 @@ int32 tcp_fasttimer(timer *t)
 	if (inp) {
 		for (; inp != &tcb; inp = inp->inp_next) {
 			if ((tp = (struct tcpcb*)inp->inp_ppcb) &&
-			    (tp->t_flags & TF_DELACK)) {
+		    	(tp->t_flags & TF_DELACK)) {
 				tp->t_flags &= ~TF_DELACK;
 				tp->t_flags |= TF_ACKNOW;
 				tcpstat.tcps_delack++;
@@ -175,5 +176,6 @@ int32 tcp_fasttimer(timer *t)
 			}
 		}
 	}
-	return 0;
+
+	return;
 }

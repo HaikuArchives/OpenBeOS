@@ -27,6 +27,7 @@
 #include "net_module.h"
 #include "core_funcs.h"
 #include "ipv4/ipv4_module.h"
+#include "net_timer.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -34,11 +35,7 @@
 
 #define TCP_MODULE_PATH		"network/protocol/tcp"
 
-static timer slowtim;
-static timer fasttim;
-
 #else	/* _KERNEL_MODE */
-#include "net_timer.h"
 #define TCP_MODULE_PATH	    "modules/protocol/tcp"
 static image_id ipid = -1;
 #endif
@@ -55,6 +52,8 @@ struct pool_ctl *tcppool = NULL;
 /* patchable/settable parameters for tcp */
 int	tcp_mssdflt = TCP_MSS;
 int	tcp_rttdflt = TCPTV_SRTTDFLT / PR_SLOWHZ;
+static net_timer_id slowtim;
+static net_timer_id fasttim;
 
 struct inpcb *tcp_last_inpcb = NULL;
 
@@ -81,13 +80,8 @@ void tcp_init(void)
 	/* Assuming we're using usecs, then we call PR_SLOWHZ per sec
 	 * which is 1,000,000 / PR_SLOWHZ
 	 */
-#ifndef _KERNEL_MODE
-	net_add_timer(&tcp_slowtimer, NULL, 1000000 / PR_SLOWHZ);
-	net_add_timer(&tcp_fasttimer, NULL, 1000000 / PR_FASTHZ);
-#else
-	add_timer(&slowtim, tcp_slowtimer, 1000000 / PR_SLOWHZ, B_PERIODIC_TIMER);
-	add_timer(&fasttim, tcp_fasttimer, 1000000 / PR_FASTHZ, B_PERIODIC_TIMER);
-#endif
+	slowtim = net_add_timer(&tcp_slowtimer, NULL, 1000000 / PR_SLOWHZ);
+	fasttim = net_add_timer(&tcp_fasttimer, NULL, 1000000 / PR_FASTHZ);
 }
 
 struct tcpiphdr *tcp_template(struct tcpcb *tp)
