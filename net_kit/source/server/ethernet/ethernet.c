@@ -58,7 +58,7 @@ static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 int32 ether_input(void *data);
 int  ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
 		 struct rtentry *rt0);
-int  ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data);
+static int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data);
 int  ether_dev_attach(ifnet *dev);
 int  ether_dev_stop(ifnet *dev);
 void arp_rtrequest(int req, struct rtentry *rt, struct sockaddr *sa);
@@ -788,7 +788,7 @@ void arp_init(void)
 
 }
 
-int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
+static int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 {
 	struct arpcom *ac = (struct arpcom *)ifp;
 	struct ifaddr *ifa = (struct ifaddr*)data;
