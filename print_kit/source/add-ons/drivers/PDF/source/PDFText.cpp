@@ -265,6 +265,9 @@ PDFWriter::ToUnicode(const char *string, BString &unicode)
 	int32 srcStart = 0;
 	int i = 0;
 
+	unicode = "";	
+	if (len == 0) return;
+
 	do {
 		convert_from_utf8(B_UNICODE_CONVERSION, &string[srcStart], &srcLen, buffer, &destLen, &state); 
 		srcStart += srcLen;

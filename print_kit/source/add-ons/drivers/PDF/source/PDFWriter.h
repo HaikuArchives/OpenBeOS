@@ -317,6 +317,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		inline bool IsDrawing() const  { return fMode == kDrawingMode; }
 		inline bool IsClipping() const { return fMode == kClippingMode; }
 
+		inline float PenSize() const { return fState->penSize; }
+
 		bool StoreTranslatorBitmap(BBitmap *bitmap, const char *filename, uint32 type);
 
 		void GetFontName(BFont *font, char *fontname, bool &embed, font_encoding encoding);
@@ -332,6 +334,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		void SetPattern();
 		
 		void CreateLinePath(BPoint start, BPoint end, float width);		
+		void CreateBezierPath(BPoint *curve, float width);
+		void CreateBezierPath(BPoint start, BPoint *curve, float width);
 		void StrokeOrClip();
 		void FillOrClip();
 		void Paint(bool stroke);
@@ -346,6 +350,7 @@ class DrawShape : public BShapeIterator
 	PDFWriter *fWriter;
 	bool       fStroke;
 	bool       fDrawn;
+	BPoint     fCurrentPoint;
 	
 	inline FILE *Log()			{ return fWriter->fLog; }
 	inline PDF *Pdf()			{ return fWriter->fPdf; }
@@ -354,6 +359,12 @@ class DrawShape : public BShapeIterator
 
 	inline bool IsDrawing() const  { return fWriter->IsDrawing(); }
 	inline bool IsClipping() const { return fWriter->IsClipping(); }
+
+	inline bool IsStroking() const { return fStroke; }
+	inline bool IsFilling() const  { return !fStroke; }
+
+	inline float PenSize() const { return fWriter->PenSize(); }
+	inline bool TransformPath() const { return IsStroking() && IsClipping(); }
 	
 public:
 	DrawShape(PDFWriter *writer, bool stroke);

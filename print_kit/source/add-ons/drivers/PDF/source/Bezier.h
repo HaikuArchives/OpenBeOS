@@ -29,53 +29,23 @@ THE SOFTWARE.
 
 */
 
-#ifndef DOCINFOWINDOW_H
-#define DOCINFOWINDOW_H
+#ifndef BEZIER_H
+#define BEZIER_H
 
-#include <InterfaceKit.h>
-#include <Message.h>
-#include <Messenger.h>
-#include <File.h>
-#include <FindDirectory.h>
-#include <Path.h>
-#include <String.h>
-#include "Utils.h"
+#include <Point.h>
 
-class DocInfoWindow : public HWindow 
+class Bezier  
 {
+	BPoint *fPoints;
+	int     fNoOfPoints;
+	double *fBernsteinWeights;
+	
+	double Fact(int n);
+	
 public:
-	// Constructors, destructors, operators...
-
-							DocInfoWindow(BMessage *doc_info);
-
-	typedef HWindow 		inherited;
-
-	// public constantes
-	enum {
-		OK_MSG				= 'ok__',
-		CANCEL_MSG			= 'cncl',
-		ADD_KEY_MSG         = 'add_',
-		REMOVE_KEY_MSG      = 'rmov'
-	};
-			
-	// Virtual function overrides
-public:	
-	virtual void 			MessageReceived(BMessage *msg);
-	virtual bool 			QuitRequested();
-	virtual void            Quit();
-
-private:
-	BMessage               *fDocInfo;
-	BView                  *fTable;
-	BScrollView            *fTableScrollView;
-	BMenu                  *fKeyList;
-
-	void                    BuildTable(BMessage *fromDocInfo);
-	void                    ReadFieldsFromTable(BMessage *toDocInfo);
-	void                    EmptyKeyList();
-	bool                    IsValidKey(const char *key);
-	void                    AddKey(BMessage* msg);
-	void                    RemoveKey(BMessage* msg);
+	Bezier(BPoint *points, int n);
+	~Bezier();
+	BPoint PointAt(float t);
 };
 
 #endif

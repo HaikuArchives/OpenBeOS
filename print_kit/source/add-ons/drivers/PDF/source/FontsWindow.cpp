@@ -128,7 +128,7 @@ class EmbedFont
 	Fonts*       fFonts;
 	bool         fEmbed;
 	
-	bool DoIt(BListItem* item);
+	bool DoItem(BListItem* item);
 public:
 	EmbedFont(FontsWindow* window, BListView* list, Fonts* fonts, bool embed);
 	static bool DoIt(BListItem* item, void* data);
@@ -147,13 +147,13 @@ EmbedFont::DoIt(BListItem* item, void* data)
 {
 	if (item->IsSelected()) {
 		EmbedFont* e = (EmbedFont*)data;
-		return e->DoIt(item);
+		return e->DoItem(item);
 	}
 	return false;
 }
 
 bool
-EmbedFont::DoIt(BListItem* item)
+EmbedFont::DoItem(BListItem* item)
 {
 	int32 i = fList->IndexOf(item);
 	if (0 <= i && i < fFonts->Length()) {

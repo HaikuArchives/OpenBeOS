@@ -43,6 +43,7 @@ THE SOFTWARE.
 #include <support/UTF8.h>
 
 #include "PDFWriter.h"
+#include "Bezier.h"
 #include "pdflib.h"
 
 // Constructor & destructor
@@ -209,6 +210,8 @@ PDFWriter::InitWriter()
 
 	// set document info
 	BMessage doc;
+	bool setTitle = true;
+	bool setCreator = true;
 	if (JobMsg()->FindMessage("doc_info", &doc) == B_OK) {
 		char *name;
 		uint32 type;
@@ -216,22 +219,25 @@ PDFWriter::InitWriter()
 		for (int32 i = 0; doc.GetInfo(B_STRING_TYPE, i, &name, &type, &count) != B_BAD_INDEX; i++) {
 			if (type == B_STRING_TYPE) {
 				BString value;
-				if (doc.FindString(name, &value) == B_OK) {
+				if (doc.FindString(name, &value) == B_OK && value != "") {
 					BString s;
 					ToPDFUnicode(value.String(), s);
 					PDF_set_info(fPdf, name, s.String());
 				}
 			}
 		}
+		BString s;
+		if (doc.FindString("Title", &s) == B_OK && s != "") setTitle = false;
+		if (doc.FindString("Creator", &s) == B_OK && s != "") setCreator = false;
 	}
 		
 	// find job title 
-	if (JobFile()->ReadAttr("_spool/Description", B_STRING_TYPE, 0, buffer, sizeof(buffer))) {
+	if (setTitle && JobFile()->ReadAttr("_spool/Description", B_STRING_TYPE, 0, buffer, sizeof(buffer))) {
 	    ToPDFUnicode(buffer, s); PDF_set_info(fPdf, "Title", s.String());
 	}
 				
 	// find job creator
-	if (JobFile()->ReadAttr("_spool/MimeType", B_STRING_TYPE, 0, buffer, sizeof(buffer))) {
+	if (setCreator && JobFile()->ReadAttr("_spool/MimeType", B_STRING_TYPE, 0, buffer, sizeof(buffer))) {
 	    ToPDFUnicode(buffer, s); PDF_set_info(fPdf, "Creator", s.String());
 	}
 	
@@ -279,7 +285,7 @@ PDFWriter::DeclareFonts()
 
 	for (int i = 0; i < fFonts->Length(); i++) {
 		FontFile* f = fFonts->At(i);
-		fprintf(fLog, "path= %s\n", f->Path());		
+//		fprintf(fLog, "path= %s\n", f->Path());		
 		if (f->Type() == true_type_type) {
 			parameter_name = "FontOutline";
 		} else { // f->Type() == type1_type
@@ -295,10 +301,11 @@ PDFWriter::DeclareFonts()
 #else
 		sprintf(buffer, "%s==%s", f->Name(), f->Path());
 #endif
-		fprintf(fLog, "%s: %s\n", parameter_name, buffer);
+//		fprintf(fLog, "%s: %s\n", parameter_name, buffer);
 	
 		PDF_set_parameter(fPdf, parameter_name, buffer);
 	}
+	return B_OK;
 }
 
 
@@ -531,6 +538,36 @@ PDFWriter::CreateLinePath(BPoint start, BPoint end, float width) {
 	PDF_lineto(fPdf, tx(end.x - r.x),   ty(end.y - r.y));
 	PDF_lineto(fPdf, tx(end.x + r.x),   ty(end.y + r.y));
 	PDF_closepath(fPdf);
+	
+	fprintf(fLog, "LinePath: ");
+	fprintf(fLog, "[%f, %f] ", tx(start.x + r.x), ty(start.y + r.y));
+	fprintf(fLog, "[%f, %f] ", tx(start.x - r.x), ty(start.y - r.y));
+	fprintf(fLog, "[%f, %f] ", tx(end.x - r.x),   ty(end.y - r.y));
+	fprintf(fLog, "[%f, %f]\n", tx(end.x + r.x),   ty(end.y + r.y));
+}
+
+
+// --------------------------------------------------
+// curve contains 4 points
+void
+PDFWriter::CreateBezierPath(BPoint *curve, float width) {
+	Bezier bezier(curve, 4);
+	BPoint start = bezier.PointAt(0);
+	const int n = 10; // XXX find a heuristic to calculate this value
+	for (int i = 1; i <= n; i ++) {
+		BPoint end = bezier.PointAt(i / (float) n);
+		CreateLinePath(start, end, width);
+		start = end;
+	}
+}
+
+
+// --------------------------------------------------
+// curve contains 3 points
+void
+PDFWriter::CreateBezierPath(BPoint start, BPoint *curve, float width) {
+	BPoint curve1[4] = { start, curve[0], curve[1], curve[2] };
+	CreateBezierPath(curve1, width);
 }
 
 
@@ -541,6 +578,7 @@ PDFWriter::StrokeOrClip()
 	if (IsDrawing()) {
 		PDF_stroke(fPdf);
 	} else {
+		fprintf(fLog, "Warning: Clipping not implemented for this primitive!!!\n");
 		PDF_closepath(fPdf);
 	}
 }
@@ -1200,6 +1238,7 @@ DrawShape::DrawShape(PDFWriter *writer, bool stroke)
 	: fWriter(writer)
 	, fStroke(stroke)
 	, fDrawn(false)
+	, fCurrentPoint(0, 0)
 {
 }
 
@@ -1217,14 +1256,19 @@ DrawShape::IterateBezierTo(int32 bezierCount, BPoint *control)
 {
 	fprintf(Log(), "IterateBezierTo %d\n", (int)bezierCount);
 	for (int32 i = 0; i < bezierCount; i++, control += 3) {
-		PDF_curveto(Pdf(), 
-			tx(control[0].x), ty(control[0].y),
-			tx(control[1].x), ty(control[1].y),
-	    	tx(control[2].x), ty(control[2].y));
+		if (TransformPath()) {
+			fWriter->CreateBezierPath(fCurrentPoint, control, PenSize());
+		} else {
+			PDF_curveto(Pdf(), 
+				tx(control[0].x), ty(control[0].y),
+				tx(control[1].x), ty(control[1].y),
+	    		tx(control[2].x), ty(control[2].y));
+	    }
 		fprintf(Log(), "(%f %f), (%f %f), (%f %f)\n", 
 			control[0].x, control[0].y,
 			control[1].x, control[1].y,
 	    	control[2].x, control[2].y);
+		fCurrentPoint = control[2];
 	}
 	return B_OK;
 }
@@ -1270,7 +1314,12 @@ DrawShape::IterateLineTo(int32 lineCount, BPoint *linePoints)
 	for (int32 i = 0; i < lineCount; i++) {
 		fprintf(Log(), "(%f, %f) ", p->x, p->y);
 
-		PDF_lineto(Pdf(), tx(p->x), ty(p->y));
+		if (TransformPath()) {
+			fWriter->CreateLinePath(fCurrentPoint, *p, PenSize());
+		} else {
+			PDF_lineto(Pdf(), tx(p->x), ty(p->y));
+		}
+		fCurrentPoint = *p;
 		p++;
 	}
 	fprintf(Log(), "\n");
@@ -1283,8 +1332,11 @@ status_t
 DrawShape::IterateMoveTo(BPoint *point)
 {
 	fprintf(Log(), "IterateMoveTo ");
-	PDF_moveto(Pdf(), tx(point->x), ty(point->y)); 
+	if (!TransformPath()) {
+		PDF_moveto(Pdf(), tx(point->x), ty(point->y)); 
+	}
 	fprintf(Log(), "(%f, %f)\n", point->x, point->y);
+	fCurrentPoint = *point;
 	return B_OK;
 }
 
@@ -1339,8 +1391,15 @@ PDFWriter::StrokeRect(BRect rect)
 
 	SetColor();			
 	if (!MakesPDF()) return;
-	PDF_rect(fPdf, tx(rect.left), ty(rect.bottom), scale(rect.Width()), scale(rect.Height()));
-	StrokeOrClip();
+	if (IsClipping()) {
+		CreateLinePath(BPoint(rect.left, rect.top), BPoint(rect.right, rect.top), fState->penSize);
+		CreateLinePath(BPoint(rect.right, rect.top), BPoint(rect.right, rect.bottom), fState->penSize);
+		CreateLinePath(BPoint(rect.right, rect.bottom), BPoint(rect.left, rect.bottom), fState->penSize);
+		CreateLinePath(BPoint(rect.left, rect.bottom), BPoint(rect.left, rect.top), fState->penSize);
+	} else {
+		PDF_rect(fPdf, tx(rect.left), ty(rect.bottom), scale(rect.Width()), scale(rect.Height()));
+		StrokeOrClip();
+	}
 }
 
 
@@ -1440,11 +1499,15 @@ PDFWriter::StrokeBezier(BPoint	*control)
 	fprintf(fLog, "StrokeBezier\n");
 	SetColor();
 	if (!MakesPDF()) return;
-	PDF_moveto(fPdf, tx(control[0].x), ty(control[0].y));
-	PDF_curveto(fPdf, tx(control[1].x), ty(control[1].y),
-	            tx(control[2].x), ty(control[2].y),
-	            tx(control[3].x), ty(control[3].y));
-	StrokeOrClip();
+	if (IsClipping()) {
+		CreateBezierPath(control, fState->penSize);
+	} else {
+		PDF_moveto(fPdf, tx(control[0].x), ty(control[0].y));
+		PDF_curveto(fPdf, tx(control[1].x), ty(control[1].y),
+		            tx(control[2].x), ty(control[2].y),
+		            tx(control[3].x), ty(control[3].y));
+		StrokeOrClip();
+	}
 }
 
 
@@ -1581,19 +1644,34 @@ PDFWriter::StrokePolygon(int32 numPoints, BPoint *points, bool isClosed)
 	SetColor();		
 	if (!MakesPDF()) return;
 
-	for ( i = 0; i < numPoints; i++, points++ ) {
+	if (IsClipping()) {
+		fprintf(fLog, " clipping");
 		fprintf(fLog, " [%f, %f]", points->x, points->y);
-		if (i != 0) {
-			PDF_lineto(fPdf, tx(points->x), ty(points->y));
-		} else {
-			x0 = tx(points->x);
-			y0 = ty(points->y);
-			PDF_moveto(fPdf, x0, y0);
+		x0 = points->x;
+		y0 = points->y;
+		BPoint p(x0, y0);
+		for (i = 1, points++; i < numPoints; i++, points++ ) {
+			fprintf(fLog, " [%f, %f]", points->x, points->y);
+			CreateLinePath(p, *points, fState->penSize);
+			p = *points;
 		}
+		if (isClosed)
+			CreateLinePath(p, BPoint(x0, y0), fState->penSize);
+	} else {
+		for ( i = 0; i < numPoints; i++, points++ ) {
+			fprintf(fLog, " [%f, %f]", points->x, points->y);
+			if (i != 0) {
+				PDF_lineto(fPdf, tx(points->x), ty(points->y));
+			} else {
+				x0 = tx(points->x);
+				y0 = ty(points->y);
+				PDF_moveto(fPdf, x0, y0);
+			}
+		}
+		if (isClosed) 
+			PDF_lineto(fPdf, x0, y0);
+		StrokeOrClip();
 	}
-	if (isClosed) 
-		PDF_lineto(fPdf, x0, y0);
-	StrokeOrClip();
 	fprintf(fLog, "\n");
 }
 
@@ -1668,7 +1746,7 @@ PDFWriter::ClipToPicture(BPicture *picture, BPoint point, bool clip_to_inverse_p
 		fMode = kDrawingMode;
 		// and clip to it/them
 		PDF_clip(fPdf);
-		
+				
 		if (set_origin) {
 			PopInternalState(); PopInternalState();
 		}
@@ -1696,7 +1774,7 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 					width, height, bytesPerRow, pixelFormat, flags, data);
 
 	if (!MakesPDF()) return;
-
+	
 	if (IsClipping()) {
 		fprintf(fLog, "DrawPixels for clipping not implemented yet!");
 		return;
@@ -1781,6 +1859,7 @@ PDFWriter::SetClippingRects(BRect *rects, uint32 numRects)
 void
 PDFWriter::PushState()
 {
+	fprintf(fLog, "PushState\n");
 	PushInternalState();
 	fprintf(fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0);
 	if (!MakesPDF()) return;
@@ -1792,6 +1871,7 @@ PDFWriter::PushState()
 void
 PDFWriter::PopState()
 {
+	fprintf(fLog, "PopState\n");
 	if (PopInternalState()) {
 		if (!MakesPDF()) return;
 		PDF_restore(fPdf);
@@ -1959,9 +2039,6 @@ PDFWriter::SetStipplePattern(pattern pat)
 {
 	fprintf(fLog, "SetStipplePattern\n");
 	fState->pattern = pat;
-	// MP: PDF 1.2 and later supports patterns
-	// We need to map the Be pattern to PDF pattern.
-	// I don't know if xpdf and BePDF support them.
 }
 
 

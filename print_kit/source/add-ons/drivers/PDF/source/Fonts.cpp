@@ -28,7 +28,7 @@ THE SOFTWARE.
 */
 
 #include <stdio.h>
-#include <alloc.h>
+#include <malloc.h>
 #include <StorageKit.h>
 #include "Fonts.h"
 
@@ -66,7 +66,7 @@ BArchivable *FontFile::Instantiate(BMessage *archive)
 
 
 // --------------------------------------------------
-status_t FontFile::Archive(BMessage *archive, bool deep = true) const
+status_t FontFile::Archive(BMessage *archive, bool deep) const
 {
 	archive->AddString("class", "FontFile");
 	archive->AddString("name", fName);
@@ -141,7 +141,7 @@ BArchivable *Fonts::Instantiate(BMessage *archive)
 
 
 // --------------------------------------------------
-status_t Fonts::Archive(BMessage *archive, bool deep = true) const
+status_t Fonts::Archive(BMessage *archive, bool deep) const
 {
 	archive->AddString("class", "Fonts");
 	const int n = Length();

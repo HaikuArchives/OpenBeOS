@@ -36,8 +36,10 @@ SRCS= Driver.cpp \
 	  Fonts.cpp \
 	  FontsWindow.cpp \
 	  MarginView.cpp \
-	  PrinterSettings \
-	  PrinterPrefs \
+	  PrinterSettings.cpp \
+	  PrinterPrefs.cpp \
+	  Fonts.cpp \
+	  FontsWindow.cpp \
 	  PictureIterator.cpp \
 	  PDFText.cpp \
 	  PDFWriter.cpp
