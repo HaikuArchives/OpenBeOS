@@ -53,15 +53,11 @@ typedef	uint32	ipv4_addr;
 void net_server_add_device(ifnet *ifn);
 uint16 in_cksum(struct mbuf *m, int len, int off);
 void local_init(void);
-ifnet *interface_for_address(void *data, int len);
 
 /* sockets and in_pcb init */
 int sockets_init(void);
 void sockets_shutdown(void);
 int inpcb_init(void);
-
-void *protocol_address(ifnet *ifa, int family);
-#define paddr(if, fam, t)	((t)(protocol_address(if, fam)))
 
 void start_tx_thread(ifnet *dev);
 void start_rx_thread(ifnet *dev);
@@ -73,11 +69,6 @@ void dump_ether_addr(char *msg, void *ma);
 void print_ether_addr(void *ea);
 void dump_buffer(char *buffer, int len);
 void dump_sockaddr(void *ptr);
-
-#ifdef USE_DEBUG_MALLOC
-void *net_malloc(int size);
-void free(void *ptr);
-#endif
 
 #endif /* OBOS_NET_MISC_H */
 
