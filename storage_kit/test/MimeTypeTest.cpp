@@ -47,6 +47,12 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::ShortDescriptionTest) );
 	suite->addTest( new TC("BMimeType::Preferred App Test",
 						   &MimeTypeTest::PreferredAppTest) );
+	suite->addTest( new TC("BMimeType::Initialization Test",
+						   &MimeTypeTest::InitTest) );
+//	suite->addTest( new TC("BMimeType::Validity Test",
+//						   &MimeTypeTest::ValidityTest) );
+//	suite->addTest( new TC("BMimeType::MIME String Test",
+//						   &MimeTypeTest::StringTest) );
 
 	return suite;
 }		
@@ -311,3 +317,306 @@ MimeTypeTest::PreferredAppTest() {
 	}
 
 }
+
+// InitTest
+void
+MimeTypeTest::InitTest()
+{
+	// tests:
+	// * constructors
+	// * SetTo(), SetType()
+	// * Unset()
+	// * InitCheck()
+	// (* Type())
+
+	// We test only a few types here. Exhausting testing is done in
+	// ValidityTest().
+	const int notTooLongLength = B_MIME_TYPE_LENGTH;
+	const int tooLongLength = notTooLongLength + 1;
+	const char *validType	= "image/gif";
+	const char *validType2	= "application/octet-stream";
+	const char *invalidType	= "invalid type";
+	char notTooLongType[notTooLongLength + 1];
+	char tooLongType[tooLongLength + 1];
+	strcpy(notTooLongType, "image/");
+	memset(notTooLongType + strlen(notTooLongType), 'a',
+		   notTooLongLength - strlen(notTooLongType));
+	notTooLongType[notTooLongLength] = '\0';
+	strcpy(tooLongType, "image/");
+	memset(tooLongType + strlen(tooLongType), 'a',
+		   tooLongLength - strlen(tooLongType));
+	tooLongType[tooLongLength] = '\0';
+
+	// default constructor
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+
+	// BMimeType(const char *)
+	// valid type
+	nextSubTest();
+	{
+		BMimeType type(validType);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == validType);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// invalid type
+	nextSubTest();
+	{
+		BMimeType type(invalidType);
+		CHK(type.InitCheck() == B_BAD_VALUE);
+		CHK(type.Type() == NULL);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// long, but not too long type
+	nextSubTest();
+	{
+		BMimeType type(notTooLongType);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == notTooLongType);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// too long type
+	nextSubTest();
+	{
+		BMimeType type(tooLongType);
+		CHK(type.InitCheck() == B_BAD_VALUE);
+		CHK(type.Type() == NULL);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	
+	// SetTo()
+	// valid type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetTo(validType) == B_OK);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == validType);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// invalid type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetTo(invalidType) == B_BAD_VALUE);
+		CHK(type.InitCheck() == B_BAD_VALUE);
+		CHK(type.Type() == NULL);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// long, but not too long type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetTo(notTooLongType) == B_OK);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == notTooLongType);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// too long type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetTo(tooLongType) == B_BAD_VALUE);
+		CHK(type.InitCheck() == B_BAD_VALUE);
+		CHK(type.Type() == NULL);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+
+	// SetType()
+	// valid type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetType(validType) == B_OK);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == validType);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// invalid type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetType(invalidType) == B_BAD_VALUE);
+		CHK(type.InitCheck() == B_BAD_VALUE);
+		CHK(type.Type() == NULL);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// long, but not too long type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetType(notTooLongType) == B_OK);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == notTooLongType);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	// too long type
+	nextSubTest();
+	{
+		BMimeType type;
+		CHK(type.SetType(tooLongType) == B_BAD_VALUE);
+		CHK(type.InitCheck() == B_BAD_VALUE);
+		CHK(type.Type() == NULL);
+		type.Unset();
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+	
+	// reinitialization
+	nextSubTest();
+	{
+		BMimeType type(validType);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == validType);
+		CHK(type.SetTo(validType2) == B_OK);
+		CHK(type.InitCheck() == B_OK);
+		CHK(string(type.Type()) == validType2);
+	}
+	// bad args
+	nextSubTest();
+	{
+		BMimeType type(NULL);
+		CHK(type.Type() == NULL);
+		CHK(type.InitCheck() == B_NO_INIT);
+		CHK(type.Type() == NULL);
+		CHK(type.SetTo(NULL) == B_NO_INIT);
+		CHK(type.Type() == NULL);
+		CHK(type.SetType(NULL) == B_NO_INIT);
+		CHK(type.Type() == NULL);
+	}
+}
+
+// ValidityTest
+void
+MimeTypeTest::ValidityTest()
+{
+	// tests:
+	// * IsValid() (static/non static)
+}
+
+// StringTest
+void
+MimeTypeTest::StringTest()
+{
+	// tests:
+	// * Type()
+	// * IsSupertypeOnly()
+	// * GetSupertype()
+	// * Contains()
+	// * operator==()
+}
+
+/* Ingo's functions:
+
+	// initialization
++	BMimeType();
++	BMimeType(const char *mimeType);
+(	virtual ~BMimeType();)
+
++	status_t SetTo(const char *mimeType);
++	status_t SetType(const char *mimeType);
++	void Unset();
++	status_t InitCheck() const;
+
+	// string access
+	const char *Type() const;
+	bool IsValid() const;
+	static bool IsValid(const char *mimeType);
+	bool IsSupertypeOnly() const;
+	status_t GetSupertype(BMimeType *superType) const;
+	bool Contains(const BMimeType *type) const;
+	bool operator==(const BMimeType &type) const;
+	bool operator==(const char *type) const;
+
+	// MIME database monitoring
+	static status_t StartWatching(BMessenger target);
+	static status_t StopWatching(BMessenger target);
+
+	// C functions
+	int update_mime_info(const char *path, int recursive, int synchronous,
+						 int force);
+	status_t create_app_meta_mime(const char *path, int recursive,
+								  int synchronous, int force);
+	status_t get_device_icon(const char *dev, void *icon, int32 size);
+*/
+
+
+/* Tyler's functions:
+
+	// MIME database access
+	status_t Install();
+	status_t Delete();
+	status_t GetIcon(BBitmap *icon, icon_size size) const;
++	status_t GetPreferredApp(char *signature, app_verb verb = B_OPEN) const;
+	status_t GetAttrInfo(BMessage *info) const;
+	status_t GetFileExtensions(BMessage *extensions) const;
++	status_t GetShortDescription(char *description) const;
++	status_t GetLongDescription(char *description) const;
+	status_t GetSupportingApps(BMessage *signatures) const;
+
+	status_t SetIcon(const BBitmap *icon, icon_size size);
++	status_t SetPreferredApp(const char *signature, app_verb verb = B_OPEN);
+	status_t SetAttrInfo(const BMessage *info);
+	status_t SetFileExtensions(const BMessage *extensions);
++	status_t SetShortDescription(const char *description);
++	status_t SetLongDescription(const char *description);
+
+	static status_t GetInstalledSupertypes(BMessage *super_types);
+	static status_t GetInstalledTypes(BMessage *types);
+	static status_t GetInstalledTypes(const char *super_type,
+									  BMessage *subtypes);
+	static status_t GetWildcardApps(BMessage *wild_ones);
+
+	status_t GetAppHint(entry_ref *ref) const;
+	status_t SetAppHint(const entry_ref *ref);
+
+	status_t GetIconForType(const char *type, BBitmap *icon,
+							icon_size which) const;
+	status_t SetIconForType(const char *type, const BBitmap *icon,
+							icon_size which);
+*/
+
+
+/* unassigned functions:
+
+	// sniffer rule manipulation
+	status_t GetSnifferRule(BString *result) const;
+	status_t SetSnifferRule(const char *);
+	static status_t CheckSnifferRule(const char *rule, BString *parseError);
+
+	// sniffing
+	status_t GuessMimeType(const entry_ref *file, BMimeType *result);
+	static status_t GuessMimeType(const void *buffer, int32 length,
+								  BMimeType *result);
+	static status_t GuessMimeType(const char *filename, BMimeType *result);
+*/

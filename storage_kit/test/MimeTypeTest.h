@@ -32,6 +32,10 @@ public:
 	void ShortDescriptionTest();
 	void PreferredAppTest();
 
+	void InitTest();
+	void ValidityTest();
+	void StringTest();
+
 	//------------------------------------------------------------
 	// Helper functions
 	//------------------------------------------------------------
