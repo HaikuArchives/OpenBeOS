@@ -105,14 +105,25 @@ char* WebLink::fURLPrefix[] = {
 };
 
 
-// TODO: check for valid characters in url
+// Superset of xpalphas rule in BNF for specific URL schemes 
+// See: http://www.w3.org/Addressing/URL/5_BNF.html
 bool
 WebLink::IsValidCodePoint(const char* cp, int cps) {
 	if (cps == 1) {
 		char c = *cp;
 		switch (c) {
+			// safe
 			case '$': case '-': case '_': case '@': 
-			case '.': case '&': case '+': case '/':
+			case '.': case '&': case '+': 
+			// extra
+			case '!': case '*': case '"': case '\'':
+			case '(': case ')': case ',': 
+			// hex (prefix only)
+			case '%':
+			// reserved (subset)
+			case '/': case '?': case '=':
+			// national (subset)
+			case '~':
 				return true;
 			default:
 				return isalpha(c) || isdigit(c);		
@@ -185,7 +196,7 @@ WebLink::IsValidStart(const char* cp)
 bool
 WebLink::IsValidChar(const char* cp)
 {
-	return IsValidCodePoint(cp, 1); // !isspace(*cp); // isalnum(*cp) || *cp == '-' || *cp == '.' || *cp == '@';
+	return IsValidCodePoint(cp, 1); 
 }
 
 // TODO: add better url detection (ie. "e.g." is detected as "http://e.g")
