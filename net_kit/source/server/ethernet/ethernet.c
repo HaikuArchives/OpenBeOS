@@ -26,6 +26,7 @@
 #include "core_module.h"
 #include "net_module.h"
 #include "core_funcs.h"
+#include "net_timer.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -33,17 +34,13 @@
 
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
-static timer arp_timer;
-
 /* forward prototypes */
 int ether_dev_start(ifnet *dev);
 int ether_dev_stop (ifnet *dev);
-#else	/* _KERNEL_MODE */
-#include "net_timer.h"
 #endif
 
 static struct core_module_info *core = NULL;
-
+static net_timer_id arptimer_id;
 struct protosw *proto[IPPROTO_MAX];
 static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices */
 
@@ -543,21 +540,16 @@ static void arptfree(struct llinfo_arp *la)
 	rtrequest(RTM_DELETE, rt_key(rt), NULL, rt_mask(rt), 0, NULL);
 }
 
-#ifndef _KERNEL_MODE
-typedef void timer;
-#endif
-static int32 arptimer(timer *t)
+static void arptimer(void *data)
 {
 	struct llinfo_arp *la = llinfo_arp.la_next;
-printf("--> arptimer\n");	
 	while (la != &llinfo_arp) {
 		struct rtentry *rt = la->la_rt;
 		la = la->la_next;
 		if (rt->rt_expire && rt->rt_expire <= real_time_clock())
 			arptfree(la->la_prev);
 	}
-printf("<-- arptimer\n");
-	return 0;
+	return;
 }
 
 static void arprequest(struct arpcom *ac, uint32 *sip, uint32 *tip, uint8 *enaddr)
@@ -784,15 +776,7 @@ void arp_init(void)
 {
 	llinfo_arp.la_next = llinfo_arp.la_prev = &llinfo_arp;
 	
-
-#ifdef _KERNEL_MODE
-	printf("adding arp timer\n");
-	add_timer(&arp_timer, arptimer, 
-	          arpt_prune * 1000000,
-			  B_PERIODIC_TIMER);
-#else
-	net_add_timer(&arptimer, NULL, arpt_prune * 1000000);
-#endif
+	arptimer_id = net_add_timer(&arptimer, NULL, arpt_prune * 1000000);
 
 }
 
