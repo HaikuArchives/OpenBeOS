@@ -80,8 +80,6 @@ KernelLd stage2
 	$(SUBDIR)/boot/arch/$(OBOS_ARCH)/stage2.ld 
 	:
 	-dN
-	:
-	yes
 	;
 	
 KernelLd kernel 
@@ -123,8 +121,6 @@ KernelLd kernel
 	$(SUBDIR)/core/arch/$(OBOS_ARCH)/kernel.ld 
 	:
 	-Bdynamic -export-dynamic -dynamic-linker /foo/bar
-	:
-	yes
 	;
 
 KernelLd kernel.so
@@ -166,8 +162,6 @@ KernelLd kernel.so
 	$(SUBDIR)/core/arch/$(OBOS_ARCH)/kernel.ld 
 	:
 	-Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar
-	:
-	yes
 	;
 
 KernelLd iso9660
@@ -178,8 +172,6 @@ KernelLd iso9660
 	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
 	:
 	-Bdynamic -shared
-	:
-	yes
 	;
 
 KernelLd zfs
@@ -190,8 +182,6 @@ KernelLd zfs
 	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
 	:
 	-Bdynamic -shared
-	:
-	yes
 	;
 
 KernelLd isa
@@ -202,8 +192,6 @@ KernelLd isa
 	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
 	:
 	-Bdynamic -shared
-	:
-	yes
 	;
 
 
@@ -251,6 +239,8 @@ KernelLd libm.so
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/library.ld
 	:
 	-shared -soname libm.so 
+	:
+	no_gcc
 	;
 
 KernelLd libc.so :
@@ -326,11 +316,13 @@ KernelLd libc.so :
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/library.ld
 	:
 	-shared -soname libc.so
+	:
+	no_gcc
 	;
 
 KernelLd false :
-	<$(SOURCE_GRIST)!apps>false_main.o
 	<$(SOURCE_GRIST)!glue>crt0.o
+	<$(SOURCE_GRIST)!apps>false_main.o
 	libc.so
 	libm.so
 	:
@@ -346,5 +338,3 @@ SubInclude OBOS_TOP sources os kits kernel glue ;
 SubInclude OBOS_TOP sources os kits kernel libc ;
 SubInclude OBOS_TOP sources os kits kernel libm ;
 SubInclude OBOS_TOP sources os kits kernel apps ;
-
-#SubInclude OBOS_TOP sources os kits kernel prefs ;
