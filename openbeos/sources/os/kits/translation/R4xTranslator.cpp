@@ -291,7 +291,7 @@ status_t BR4xTranslator::MakeConfigurationView(BMessage *ioExtension,
 	if (fpData->MakeConfig)
 		return fpData->MakeConfig(ioExtension, outView, outExtent);
 	else
-		return B_NO_TRANSLATOR;
+		return B_ERROR;
 }
 
 // ---------------------------------------------------------------
@@ -315,6 +315,6 @@ status_t BR4xTranslator::GetConfigurationMessage(BMessage *ioExtension)
 	if (fpData->GetConfigMessage)
 		return fpData->GetConfigMessage(ioExtension);
 	else
-		return B_NO_TRANSLATOR;	
+		return B_ERROR;	
 }
 
