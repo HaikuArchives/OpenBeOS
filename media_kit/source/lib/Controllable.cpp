@@ -51,6 +51,8 @@ BControllable::BControllable()
 	: BMediaNode("XXX fixme")
 {
 	UNIMPLEMENTED();
+
+	AddNodeKind(B_CONTROLLABLE);
 }
 
 

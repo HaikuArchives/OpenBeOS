@@ -49,6 +49,8 @@ BBufferProducer::BBufferProducer(media_type producer_type)
 	: BMediaNode("XXX fixme")
 {
 	UNIMPLEMENTED();
+
+	AddNodeKind(B_BUFFER_PRODUCER);
 }
 
 

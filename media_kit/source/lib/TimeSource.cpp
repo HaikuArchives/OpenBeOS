@@ -112,6 +112,8 @@ BTimeSource::BTimeSource()
 	: BMediaNode("XXX fixme")
 {
 	UNIMPLEMENTED();
+
+	AddNodeKind(B_TIME_SOURCE);
 }
 
 

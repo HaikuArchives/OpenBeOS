@@ -29,6 +29,8 @@ BFileInterface::BFileInterface()
 	: BMediaNode("XXX fixme")
 {
 	UNIMPLEMENTED();
+
+	AddNodeKind(B_FILE_INTERFACE);
 }
 
 

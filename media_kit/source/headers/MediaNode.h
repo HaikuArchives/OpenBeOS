@@ -308,26 +308,26 @@ virtual		status_t _Reserved_MediaNode_15(void *);
 				media_node_id id,
 				uint32 kinds);
 
-		media_node_id _mNodeID;
-		BTimeSource * _mTimeSource;
-		int32 _mRefCount;
-		char _mName[B_MEDIA_NAME_LENGTH];
-		run_mode _mRunMode;
+		media_node_id fNodeID;
+		BTimeSource * fTimeSource;
+		int32 fRefCount;
+		char fName[B_MEDIA_NAME_LENGTH];
+		run_mode fRunMode;
 		int32 _mChangeCount;			//	deprecated
 		int32 _mChangeCountReserved;	//	deprecated
-		uint64 _mKinds;
-		media_node_id _mTimeSourceID;
+		uint64 fKinds;
+		media_node_id fTimeSourceID;
 		bool _mUnregisterWhenDone;
 		bool _mReservedBool[3];
 
-mutable	port_id _m_controlPort;
+mutable	port_id fControlPort;
 
 		void _inspect_classes();
-		BBufferProducer * _m_producerThis;
-		BBufferConsumer * _m_consumerThis;
-		BFileInterface * _m_fileInterfaceThis;
-		BControllable * _m_controllableThis;
-		BTimeSource * _m_timeSourceThis;
+		BBufferProducer	*fProducerThis;
+		BBufferConsumer	*fConsumerThis;
+		BFileInterface	*fFileInterfaceThis;
+		BControllable	*fControllableThis;
+		BTimeSource		*fTimeSourceThis;
 
 		uint32 _reserved_media_node_[8];
 

@@ -52,6 +52,8 @@ BBufferConsumer::BBufferConsumer(media_type consumer_type)
 	: BMediaNode("XXX fixme")
 {
 	UNIMPLEMENTED();
+	
+	AddNodeKind(B_BUFFER_CONSUMER);
 }
 
 

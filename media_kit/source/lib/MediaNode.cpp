@@ -5,7 +5,14 @@
  ***********************************************************************/
 #include <MediaNode.h>
 #include <TimeSource.h>
+#include <BufferConsumer.h>
+#include <BufferProducer.h>
+#include <Controllable.h>
+#include <FileInterface.h>
+#include <string.h>
 #include "debug.h"
+
+static int32 NextChangeTag = 1000;
 
 /*************************************************************
  * media_node 
@@ -92,7 +99,11 @@ live_node_info::~live_node_info()
 /* virtual */
 BMediaNode::~BMediaNode()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	if (fControlPort != -1)
+		delete_port(fControlPort);
+	if (fTimeSource)
+		fTimeSource->Release();
 }
 
 /*************************************************************
@@ -102,64 +113,68 @@ BMediaNode::~BMediaNode()
 BMediaNode *
 BMediaNode::Acquire()
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	atomic_add(&fRefCount,1);
+	return this;
 }
 
 
 BMediaNode *
 BMediaNode::Release()
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	if (atomic_add(&fRefCount,-1) == 1) {
+		if (DeleteHook(this) != B_OK) {
+			TRACE("BMediaNode::Release(): DeleteHook failed\n");
+			return Acquire();
+		}
+		return NULL;
+	}
+	return this;
 }
 
 
 const char *
 BMediaNode::Name() const
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return fName;
 }
 
 
 media_node_id
 BMediaNode::ID() const
 {
-	UNIMPLEMENTED();
-	media_node_id dummy;
-
-	return dummy;
+	CALLED();
+	return fNodeID;
 }
 
 
 uint64
 BMediaNode::Kinds() const
 {
-	UNIMPLEMENTED();
-	uint64 dummy;
-
-	return dummy;
+	CALLED();
+	return fKinds;
 }
 
 
 media_node
 BMediaNode::Node() const
 {
-	UNIMPLEMENTED();
-	media_node dummy;
-
-	return dummy;
+	CALLED();
+	media_node temp;
+	temp.node = ID();
+	temp.port = ControlPort();
+	temp.kind = Kinds();
+	return temp;
 }
 
 
 BMediaNode::run_mode
 BMediaNode::RunMode() const
 {
-	UNIMPLEMENTED();
-	run_mode dummy;
-
-	return dummy;
+	CALLED();
+	return fRunMode;
 }
 
 
@@ -167,17 +182,15 @@ BTimeSource *
 BMediaNode::TimeSource() const
 {
 	CALLED();
-	return _mTimeSource;
+	return fTimeSource;
 }
 
 
 /* virtual */ port_id
 BMediaNode::ControlPort() const
 {
-	UNIMPLEMENTED();
-	port_id dummy;
-
-	return dummy;
+	CALLED();
+	return fControlPort;
 }
 
 
@@ -214,10 +227,16 @@ BMediaNode::TimerExpired(bigtime_t notifyPoint,
 	UNIMPLEMENTED();
 }
 
+
+// terrible hack to call the other constructor
+// BMediaNode::BMediaNode(const char *name, media_node_id id, uint32 kinds)
+extern "C" void __10BMediaNodePCclUl(BMediaNode *self, const char *name, media_node_id id, uint32 kinds);
+
 /* explicit */
 BMediaNode::BMediaNode(const char *name)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	__10BMediaNodePCclUl(this,name,0,0);
 }
 
 
@@ -259,7 +278,9 @@ BMediaNode::Seek(bigtime_t media_time,
 /* virtual */ void
 BMediaNode::SetRunMode(run_mode mode)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	fRunMode = mode;
+	// TODO something else here?
 }
 
 
@@ -281,7 +302,13 @@ BMediaNode::Preroll()
 /* virtual */ void
 BMediaNode::SetTimeSource(BTimeSource *time_source)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	if (time_source == NULL)
+		return;
+	if (fTimeSource)
+		fTimeSource->Release();
+	fTimeSource = dynamic_cast<BTimeSource *>(time_source->Acquire());
+	fTimeSourceID = fTimeSource->ID();
 }
 
 /*************************************************************
@@ -312,7 +339,20 @@ BMediaNode::HandleBadMessage(int32 code,
 void
 BMediaNode::AddNodeKind(uint64 kind)
 {
-	UNIMPLEMENTED();
+	CALLED();
+
+	fKinds |= kind;
+
+	if (kind & B_BUFFER_CONSUMER)
+		fConsumerThis = dynamic_cast<BBufferConsumer *>(this);
+	if (kind & B_BUFFER_PRODUCER)
+		fProducerThis = dynamic_cast<BBufferProducer *>(this);
+	if (kind & B_CONTROLLABLE)
+		fControllableThis = dynamic_cast<BControllable *>(this);
+	if (kind & B_FILE_INTERFACE)
+		fFileInterfaceThis = dynamic_cast<BFileInterface *>(this);
+	if (kind & B_TIME_SOURCE)
+		fTimeSourceThis = dynamic_cast<BTimeSource *>(this);
 }
 
 
@@ -367,9 +407,8 @@ int32
 BMediaNode::IncrementChangeTag()
 {
 	UNIMPLEMENTED();
-	int32 dummy;
-
-	return dummy;
+	// TODO: look into R4 documentation
+	return 0;
 }
 
 
@@ -377,9 +416,8 @@ int32
 BMediaNode::ChangeTag()
 {
 	UNIMPLEMENTED();
-	int32 dummy;
-
-	return dummy;
+	// TODO: look into R4 documentation
+	return 0;
 }
 
 
@@ -387,9 +425,8 @@ int32
 BMediaNode::MintChangeTag()
 {
 	UNIMPLEMENTED();
-	int32 dummy;
-
-	return dummy;
+	// TODO: look into R4 documentation
+	return 0;
 }
 
 
@@ -397,9 +434,8 @@ status_t
 BMediaNode::ApplyChangeTag(int32 previously_reserved)
 {
 	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	// TODO: look into R4 documentation
+	return B_OK;
 }
 
 /*************************************************************
@@ -409,10 +445,9 @@ BMediaNode::ApplyChangeTag(int32 previously_reserved)
 /* virtual */ status_t
 BMediaNode::DeleteHook(BMediaNode *node)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	delete this; // delete "this" or "node" ???
+	return B_OK;
 }
 
 
@@ -474,9 +509,40 @@ BMediaNode &BMediaNode::operator=(const BMediaNode &clone)
 
 BMediaNode::BMediaNode(const char *name,
 					   media_node_id id,
-					   uint32 kinds)
+					   uint32 kinds) :
+	fNodeID(id),
+	fTimeSource(0),
+	fRefCount(1),
+	fRunMode(B_INCREASE_LATENCY),
+	fKinds(kinds),
+	fTimeSourceID(0),
+	fControlPort(-1)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	
+	// initialize node name
+	fName[0] = 0;
+	if (name) {
+		strncpy(fName,name,B_MEDIA_NAME_LENGTH - 1);
+		fName[B_MEDIA_NAME_LENGTH - 1] = 0;
+	}
+
+	// create control port
+	fControlPort = create_port(20,fName);
+
+	if (fNodeID == 0) {
+		// register at media server and get a new fNodeID
+		fNodeID = 1;
+	}
+	
+	// if the node has been registered, call hook function
+	if (fNodeID)
+		NodeRegistered();
+	
+	// somehow get a timesource object for
+	// this media node, and set it.
+	SetTimeSource(0);
+	
 }
 
 
@@ -546,10 +612,10 @@ BMediaNode::PSetTimeSource(BTimeSource *time_source)
 /* static */ int32
 BMediaNode::NewChangeTag()
 {
-	UNIMPLEMENTED();
-	int32 dummy;
-
-	return dummy;
+	CALLED();
+	// query server for new change tag?
+	// TODO get documentation
+	return NextChangeTag++;
 }
 
 
