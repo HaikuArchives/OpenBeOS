@@ -224,3 +224,14 @@ Priority:    low
 Requires:    - respective function(s) to be provided by the IK team
 
 
+Module:      BMimeType/MimeTypeTest
+Location:    update_mime_info(), create_app_meta_mime()
+Description: Find out, what is the meaning of the force parameter. It does
+             obviously not mean, that calling the function twice, the second
+             time with force, has the same effect as calling it only at the
+             second time. At least the tests indicate, that the second call,
+             though with force, does not have any effect at all.
+Priority:    medium
+Requires:    
+
+
