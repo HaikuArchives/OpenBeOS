@@ -110,6 +110,13 @@
 			Obviously, I can't be entirely sure this is how R5 does it, but it
 			seems like a reasonable design to follow for our purposes.
  */
+/**
+	@note	Thought on "pseudo-atomic" operations in Lock(), LockWithTimeout(),
+			and Unlock().  Seems like avoiding the possibility of a looper
+			change during these functions would be the way to go, and having a
+			semaphore that protects SetLooper() would do the job very nicely.
+			Maybe that's too heavy-weight a solution, though.
+ */
 
 // Standard Includes -----------------------------------------------------------
 #include <algorithm>
@@ -423,17 +430,19 @@ void BHandler::AddFilter(BMessageFilter* filter)
 	// We may want to investigate enforcing these rules; it would be interesting
 	// to see how many apps out there have violated the dictates of the docs.
 	// For now, though, we'll play nicely.
-//	if (!fLooper)
-//	{
-//		// TODO: error handling
-//		return false;
-//	}
-//
-//	if (!fLooper->IsLocked())
-//	{
-//		// TODO: error handling
-//		return false;
-//	}
+#if 0
+	if (!fLooper)
+	{
+		// TODO: error handling
+		return false;
+	}
+
+	if (!fLooper->IsLocked())
+	{
+		// TODO: error handling
+		return false;
+	}
+#endif
 
 	if (!fFilters)
 	{
@@ -451,17 +460,19 @@ bool BHandler::RemoveFilter(BMessageFilter* filter)
 	// We may want to investigate enforcing these rules; it would be interesting
 	// to see how many apps out there have violated the dictates of the docs.
 	// For now, though, we'll play nicely.
-//	if (!fLooper)
-//	{
-//		// TODO: error handling
-//		return false;
-//	}
-//
-//	if (!fLooper->IsLocked())
-//	{
-//		// TODO: error handling
-//		return false;
-//	}
+#if 0
+	if (!fLooper)
+	{
+		// TODO: error handling
+		return false;
+	}
+
+	if (!fLooper->IsLocked())
+	{
+		// TODO: error handling
+		return false;
+	}
+#endif
 
 	if (fFilters)
 	{
@@ -477,24 +488,33 @@ bool BHandler::RemoveFilter(BMessageFilter* filter)
 //------------------------------------------------------------------------------
 void BHandler::SetFilterList(BList* filters)
 {
+/**
+	@note	Although the documentation states that the handler must belong to
+			a looper and the looper must be locked in order to use this method,
+			testing shows that this is not the case in the original implementation.
+ */
+#if 0
 	if (!fLooper)
 	{
 		// TODO: error handling
 		return;
 	}
+#endif
 
-	if (!fLooper->IsLocked())
+	if (fLooper && !fLooper->IsLocked())
 	{
-		// TODO: error handling
+		debugger("Owning Looper must be locked before calling SetFilterList");
 		return;
 	}
 
-	// NOTE: I would like to use BObjectList internally, but this function is
-	// spec'd such that fFilters would get deleted and then assigned 'filters',
-	// which would obviously mess this up.  Wondering if anyone ever assigns
-	// a list of filters and then checks against FilterList() to see if they
-	// are the same.
-	// TODO: Explore isses with using BObjectList
+/**
+	@note	I would like to use BObjectList internally, but this function is
+			spec'd such that fFilters would get deleted and then assigned
+			'filters', which would obviously mess this up.  Wondering if
+			anyone ever assigns a list of filters and then checks against
+			FilterList() to see if they are the same.
+ */
+	// TODO: Explore issues with using BObjectList
 	if (fFilters)
 	{
 		fFilters->DoForEach(FilterDeleter);
@@ -529,11 +549,27 @@ bool BHandler::LockLooper()
 			condition."  How "pseudo-atomic" would look completely escapes me,
 			so we'll go with the dumb version for now.  Maybe I should use a
 			benaphore?
+
+			BeBook mentions handling the case where the handler's looper
+			changes during this call.  I've attempted a "pseudo-atomic"
+			operation to check that.
  */
-	// TODO: implement correctly
-	if (fLooper)
+	BLooper* Looper = fLooper;
+	if (Looper)
 	{
-		return fLooper->Lock();
+		bool result = Looper->Lock();
+
+		// Are we still assigned to the same looper?
+		if (fLooper == Looper)
+		{
+			return result;
+		}
+		else if (result)
+		{
+			// Our looper is different, and the lock was successful on the old
+			// one; undo the lock
+			Looper->Unlock();
+		}
 	}
 
 	return false;
@@ -547,11 +583,32 @@ status_t BHandler::LockLooperWithTimeout(bigtime_t timeout)
 			condition."  How "pseudo-atomic" would look completely escapes me,
 			so we'll go with the dumb version for now.  Maybe I should use a
 			benaphore?
+
+			BeBook mentions handling the case where the handler's looper
+			changes during this call.  I've attempted a "pseudo-atomic"
+			operation to check for that.
  */
-	// TODO: implement correctly
-	if (fLooper)
+	BLooper* Looper = fLooper;
+	if (Looper)
 	{
-		return fLooper->LockWithTimeout(timeout);
+		status_t result = Looper->LockWithTimeout(timeout);
+
+		// Are we still assigned to the same looper?
+		if (fLooper == Looper)
+		{
+			return result;
+		}
+		else
+		{
+			// Our looper changed during the lock attempt
+			if (result == B_OK)
+			{
+				// The lock was successful on the old looper; undo the lock
+				Looper->Unlock();
+			}
+
+			return B_MISMATCHED_VALUES;
+		}
 	}
 
 	return B_BAD_VALUE;
@@ -565,6 +622,10 @@ void BHandler::UnlockLooper()
 			condition."  How "pseudo-atomic" would look completely escapes me,
 			so we'll go with the dumb version for now.  Maybe I should use a
 			benaphore?
+
+			The solution I used for Lock() and LockWithTimeout() seems out of
+			place here; if our looper does change while attempting to unlock it,
+			re-Lock()ing the original looper just doesn't seem right.
  */
 	// TODO: implement correctly
 	if (fLooper)
