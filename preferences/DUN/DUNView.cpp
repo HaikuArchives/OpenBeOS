@@ -1,8 +1,8 @@
 /*
 
-DUNView by Sikosis for OpenBeOS
+DUNView by Sikosis (beos@gravity24hr.com)
 
-(C) 2002
+(C) 2002 OpenBeOS under MIT license
 
 */
 
@@ -23,8 +23,8 @@ DUNView::DUNView (BRect frame) : BView (frame, "DUNView", B_FOLLOW_ALL_SIDES, B_
 
 void DUNView::Draw (BRect updateRect) {
    // display all the information on the form
-   MovePenTo(BPoint(40,54));
-   DrawString ("<Create a connection profile to continue.>");
+   //MovePenTo(BPoint(40,54));
+   //DrawString ("<Create a connection profile to continue.>");
    
    MovePenTo(BPoint(40,124));
    DrawString ("Call waiting may be enabled.");
