@@ -393,7 +393,8 @@ static int _create_kernel_thread_kentry(void)
 	return func(t->args);
 }
 
-static thread_id _create_thread(const char *name, proc_id pid, addr entry, void *args, bool kernel)
+static thread_id _create_thread(const char *name, proc_id pid, addr entry, void *args, 
+                                int priority, bool kernel)
 {
 	struct thread *t;
 	struct proc *p;
@@ -405,7 +406,7 @@ static thread_id _create_thread(const char *name, proc_id pid, addr entry, void 
 	if(t == NULL)
 		return ERR_NO_MEMORY;
 
-	t->priority = THREAD_MEDIUM_PRIORITY;
+	t->priority = priority == -1 ? THREAD_MEDIUM_PRIORITY : priority;
 	t->state = THREAD_STATE_BIRTH;
 	t->next_state = THREAD_STATE_SUSPENDED;
 
@@ -480,7 +481,8 @@ static thread_id _create_thread(const char *name, proc_id pid, addr entry, void 
 	return t->id;
 }
 
-thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args)
+thread_id user_thread_create_user_thread(addr entry, proc_id pid, const char *uname, int priority,
+                                         void *args)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	int rc;
@@ -495,22 +497,22 @@ thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, v
 		return rc;
 	name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-	return thread_create_user_thread(name, pid, entry, args);
+	return _create_thread(name, pid, entry, args, priority, false);
 }
 
 thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *args)
 {
-	return _create_thread(name, pid, entry, args, false);
+	return _create_thread(name, pid, entry, args, -1, false);
 }
 
 thread_id thread_create_kernel_thread(const char *name, int (*func)(void *), void *args)
 {
-	return _create_thread(name, proc_get_kernel_proc()->id, (addr)func, args, true);
+	return _create_thread(name, proc_get_kernel_proc()->id, (addr)func, args, -1, true);
 }
 
 static thread_id thread_create_kernel_thread_etc(const char *name, int (*func)(void *), void *args, struct proc *p)
 {
-	return _create_thread(name, p->id, (addr)func, args, true);
+	return _create_thread(name, p->id, (addr)func, args, -1, true);
 }
 
 int thread_suspend_thread(thread_id id)

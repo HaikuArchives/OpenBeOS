@@ -159,16 +159,17 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_VM_GET_REGION_INFO:
 			*call_ret = user_vm_get_region_info((region_id)arg0, (vm_region_info *)arg1);
 			break;
-		case SYSCALL_THREAD_CREATE_THREAD:
-			*call_ret = user_thread_create_user_thread((char *)arg0, thread_get_current_thread()->proc->id, (addr)arg1, (void *)arg2);
+		case SYSCALL_SPAWN_THREAD:
+			*call_ret = user_thread_create_user_thread((addr)arg0, thread_get_current_thread()->proc->id, 
+			                                           (const char*)arg1, (int)arg2, (void *)arg3);
 			break;
-		case SYSCALL_THREAD_KILL_THREAD:
+		case SYSCALL_KILL_THREAD:
 			*call_ret = thread_kill_thread((thread_id)arg0);
 			break;
-		case SYSCALL_THREAD_SUSPEND_THREAD:
+		case SYSCALL_SUSPEND_THREAD:
 			*call_ret = thread_suspend_thread((thread_id)arg0);
 			break;
-		case SYSCALL_THREAD_RESUME_THREAD:
+		case SYSCALL_RESUME_THREAD:
 			*call_ret = thread_resume_thread((thread_id)arg0);
 			break;
 		case SYSCALL_PROC_KILL_PROC:
