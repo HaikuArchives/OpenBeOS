@@ -993,7 +993,7 @@ TreeIterator::Goto(int8 to)
 		if (node->overflow_link == BPLUSTREE_NULL) {
 			fCurrentNodeOffset = nodeOffset;
 			fCurrentKey = to == BPLUSTREE_BEGIN ? -1 : node->all_key_count;
-			fDuplicateNode = 0;
+			fDuplicateNode = BPLUSTREE_NULL;
 
 			return B_OK;
 		}
@@ -1012,8 +1012,20 @@ TreeIterator::Goto(int8 to)
 }
 
 
+/**	Iterates through the tree in the specified direction.
+ *	When it iterates through duplicates, the "key" is only updated for the
+ *	first entry - if you need to know when this happens, use the "duplicate"
+ *	parameter which is 0 for no duplicate, 1 for the first, and 2 for all
+ *	the other duplicates.
+ *	That's not too nice, but saves the 256 bytes that would be needed to
+ *	store the last key - if this will ever become an issue, it will be
+ *	easy to change.
+ *	The other advantage of this is, that the queries can skip all duplicates
+ *	at once when they are not relevant to them.
+ */
+
 status_t
-TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLength,off_t *value)
+TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate)
 {
 	if (fCurrentNodeOffset == BPLUSTREE_NULL
 		&& Goto(direction == BPLUSTREE_FORWARD ? BPLUSTREE_BEGIN : BPLUSTREE_END) < B_OK) 
@@ -1025,40 +1037,47 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 	CachedNode cached(fTree);
 	bplustree_node *node;
 
-	if (fDuplicateNode)
+	if (fDuplicateNode != BPLUSTREE_NULL)
 	{
 		// regardless of traverse direction the duplicates are always presented in
 		// the same order; since they are all considered as equal, this shouldn't
 		// cause any problems
 
-		if (fDuplicate < fNumDuplicates
-			&& (node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode),false)) != NULL)
+		if (!fIsFragment || fDuplicate < fNumDuplicates)
+			node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode),false);
+		else
+			node = NULL;
+
+		if (node != NULL)
 		{
-			*value = node->DuplicateAt(fDuplicateNode,fIsFragment,fDuplicate++);
-			if (!fIsFragment && fDuplicate == fNumDuplicates)
+			if (!fIsFragment && fDuplicate >= fNumDuplicates)
 			{
-				if (node->right_link != BPLUSTREE_NULL)
+				// if the node is out of duplicates, we go directly to the next one
+				fDuplicateNode = node->right_link;
+				if (fDuplicateNode != BPLUSTREE_NULL
+					&& (node = cached.SetTo(fDuplicateNode,false)) != NULL)
 				{
-					fDuplicateNode = node->right_link;
-					if ((node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode),false)) != NULL)
-					{
-						fNumDuplicates = node->CountDuplicates(fDuplicateNode,false);
-						fDuplicate = 0;
-					}
-//					dump_bplustree_node(node);
+					fNumDuplicates = node->CountDuplicates(fDuplicateNode,false);
+					fDuplicate = 0;
 				}
 			}
-			return B_OK;
+			if (fDuplicate < fNumDuplicates)
+			{
+				*value = node->DuplicateAt(fDuplicateNode,fIsFragment,fDuplicate++);
+				if (duplicate)
+					*duplicate = 2;
+				return B_OK;
+			}
 		}
-		else
-			fDuplicateNode = 0;
+		fDuplicateNode = BPLUSTREE_NULL;
 	}
 
 	off_t savedNodeOffset = fCurrentNodeOffset;
 	if ((node = cached.SetTo(fCurrentNodeOffset)) == NULL)
 		RETURN_ERROR(B_ERROR);
 
-	fDuplicateNode = 0LL;
+	if (duplicate)
+		*duplicate = 0;
 
 	fCurrentKey += direction;
 	
@@ -1106,7 +1125,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 	*keyLength = length;
 
 	off_t offset = node->Values()[fCurrentKey];
-	
+
 	// duplicate fragments?
 	uint8 type = bplustree_node::LinkType(offset);
 	if (type == BPLUSTREE_DUPLICATE_FRAGMENT || type == BPLUSTREE_DUPLICATE_NODE)
@@ -1122,13 +1141,15 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 		fNumDuplicates = node->CountDuplicates(offset,fIsFragment);
 		if (fNumDuplicates)
 		{
-			fDuplicate = 0;
-			offset = node->DuplicateAt(offset,fIsFragment,fDuplicate++);
+			offset = node->DuplicateAt(offset,fIsFragment,0);
+			fDuplicate = 1;
+			if (duplicate)
+				*duplicate = 1;
 		}
 		else
 		{
 			// shouldn't happen, but we're dealing here with potentially corrupt disks...
-			fDuplicateNode = 0;
+			fDuplicateNode = BPLUSTREE_NULL;
 			offset = 0;
 		}
 	}
@@ -1165,7 +1186,7 @@ TreeIterator::Find(uint8 *key, uint16 keyLength)
 		if (node->overflow_link == BPLUSTREE_NULL) {
 			fCurrentNodeOffset = nodeOffset;
 			fCurrentKey = keyIndex - 1;
-			fDuplicateNode = 0;
+			fDuplicateNode = BPLUSTREE_NULL;
 
 			return status;
 		} else if (nextOffset == nodeOffset)
@@ -1174,6 +1195,13 @@ TreeIterator::Find(uint8 *key, uint16 keyLength)
 		nodeOffset = nextOffset;
 	}
 	RETURN_ERROR(B_ERROR);
+}
+
+
+void 
+TreeIterator::SkipDuplicates()
+{
+	fDuplicateNode = BPLUSTREE_NULL;
 }
 
 
@@ -1238,7 +1266,8 @@ compareKeys(type_code type,const void *key1, int keyLength1, const void *key2, i
 			int len = min_c(keyLength1,keyLength2);
 			int result = strncmp((const char *)key1,(const char *)key2,len);
 			
-			if (result == 0)
+			if (result == 0
+				&& !(((const char *)key1)[len] == '\0' && ((const char *)key2)[len] == '\0'))
 				result = keyLength1 - keyLength2;
 
 			return result;

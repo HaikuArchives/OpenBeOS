@@ -927,15 +927,16 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 	while (true) {
 		union value indexValue;
 		uint16 keyLength;
+		uint16 duplicate;
 		off_t offset;
 
-		status_t status = iterator->GetNextEntry(&indexValue,&keyLength,(uint16)sizeof(indexValue),&offset);
+		status_t status = iterator->GetNextEntry(&indexValue,&keyLength,(uint16)sizeof(indexValue),&offset,&duplicate);
 		if (status < B_OK)
 			return status;
 
 		// only compare against the index entry when this is the correct
 		// index for the equation
-		if (fHasIndex && !CompareTo((uint8 *)&indexValue,keyLength)) {
+		if (fHasIndex && duplicate < 2 && !CompareTo((uint8 *)&indexValue,keyLength)) {
 			// They aren't equal? let the operation decide what to do
 			// Since we always start at the beginning of the index (or the correct
 			// position), only some needs to be stopped if the entry doesn't fit.
@@ -943,6 +944,9 @@ Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
 				|| fOp == OP_LESS_THAN_OR_EQUAL
 				|| (fOp == OP_EQUAL && !fIsPattern))
 				return B_ENTRY_NOT_FOUND;
+
+			if (duplicate > 0)
+				iterator->SkipDuplicates();
 			continue;
 		}
 

@@ -275,7 +275,7 @@ bfs_read_fs_stat(void *_ns, struct fs_info *info)
 
 	// Volume name
 	strncpy(info->volume_name, volume->Name(), sizeof(info->volume_name) - 1);
-	*(info->volume_name + sizeof(info->volume_name) - 1) = '\0';
+	info->volume_name[sizeof(info->volume_name) - 1] = '\0';
 	
 	// File system name
 	strcpy(info->fsh_name,"obfs");
@@ -289,6 +289,15 @@ bfs_write_fs_stat(void *_ns, struct fs_info *info, long mask)
 {
 	FUNCTION_START(("mask = %ld\n",mask));
 	Volume *volume = (Volume *)_ns;
+	disk_super_block &superBlock = volume->SuperBlock();
+	
+	// ToDo: we need a lock for the super_block here...
+
+	if (mask & WFSSTAT_NAME) {
+		strncpy(superBlock.name,info->volume_name,sizeof(superBlock.name) - 1);
+		superBlock.name[sizeof(superBlock.name) - 1] = '\0';
+		// ToDo: write the super block back!
+	}
 	return B_ERROR;
 }
 
@@ -480,9 +489,7 @@ int
 bfs_select(void *ns, void *node, void *cookie, uint8 event, uint32 ref, selectsync *sync)
 {
 	FUNCTION_START(("event = %d, ref = %lu, sync = %p\n",event,ref,sync));
-#ifndef USER
 	notify_select_event(sync, ref);
-#endif
 
 	return B_OK;
 }
@@ -535,10 +542,63 @@ bfs_read_stat(void *_ns, void *_node, struct stat *st)
 
 
 int 
-bfs_write_stat(void *ns, void *node, struct stat *st, long mask)
+bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 {
 	FUNCTION();
-	return B_ERROR;
+
+	if (_ns == NULL || _node == NULL || stat == NULL)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	Volume *volume = (Volume *)_ns;
+	Inode *inode = (Inode *)_node;
+
+	// that may be incorrect here - I don't think we need write access to
+	// change most of the stat...
+	// we should definitely check a bit more if the new stats are correct and valid...
+	if (!inode->CheckPermissions(W_OK))
+		RETURN_ERROR(B_NOT_ALLOWED);
+
+	WriteLocked locked(inode->Lock());
+	if (!locked.IsLocked())
+		RETURN_ERROR(B_ERROR);
+
+	Transaction transaction(volume,volume->ToBlock(inode->BlockRun()));
+
+	bfs_inode *node = inode->Node();
+	
+	if (mask & WSTAT_MODE) {
+		PRINT(("original mode = %ld, stat->st_mode = %ld\n",node->mode,stat->st_mode));
+	}
+
+	if (mask & WSTAT_UID)
+		node->uid = stat->st_uid;
+	if (mask & WSTAT_GID)
+		node->gid = stat->st_gid;
+
+	if (mask & WSTAT_SIZE) {
+		if (inode->IsDirectory())
+			return B_IS_A_DIRECTORY;
+		else {
+			// not yet implemented
+			// update "size" index
+		}
+	}
+
+	if (mask & WSTAT_MTIME) {
+		node->last_modified_time = (bigtime_t)stat->st_mtime << INODE_TIME_SHIFT;
+		// update "last_modified" index
+	}
+	if (mask & WSTAT_CRTIME) {
+		node->create_time = (bigtime_t)stat->st_crtime << INODE_TIME_SHIFT;
+	}
+
+	status_t status = inode->WriteBack(&transaction);
+	if (status == B_OK)
+		transaction.Done();
+
+	notify_listener(B_STAT_CHANGED,volume->ID(),0,0,inode->ID(),NULL);
+
+	return status;
 }
 
 
@@ -591,7 +651,7 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	FUNCTION();
 
 	if (_ns == NULL || _node == NULL || _cookie == NULL)
-		return B_BAD_VALUE;
+		RETURN_ERROR(B_BAD_VALUE);
 
 	Inode *inode = (Inode *)_node;
 	if (!inode->CheckPermissions(oModeToAccess(omode)))
@@ -604,6 +664,7 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	//
 	// This could greatly speed up continuous reads of big files, especially
 	// in the indirect block section.
+	// It might also be necessary to safe the open mode in the cookie
 
 	return B_OK;
 }
@@ -1021,7 +1082,7 @@ bfs_open_indexdir(void *_ns, void **_cookie)
 		RETURN_ERROR(B_ENTRY_NOT_FOUND);
 
 	// since we are storing the indices root node in our Volume object,
-	// we can just use the directory traversal functions (since it is
+	// we can just use the directory traversal functions (and since it is
 	// just a directory)
 
 	RETURN_ERROR(bfs_open_dir(_ns,volume->IndicesNode(),_cookie));

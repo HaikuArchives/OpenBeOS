@@ -211,12 +211,13 @@ class TreeIterator {
 		~TreeIterator();
 
 		status_t	Goto(int8 to);
-		status_t	Traverse(int8 direction, void *key, uint16 *keyLength, uint16 maxLength, off_t *value);
+		status_t	Traverse(int8 direction, void *key, uint16 *keyLength, uint16 maxLength, off_t *value,uint16 *duplicate = NULL);
 		status_t	Find(uint8 *key, uint16 keyLength);
 
 		status_t	Rewind();
-		status_t	GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value);
-		status_t	GetPreviousEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value);
+		status_t	GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate = NULL);
+		status_t	GetPreviousEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate = NULL);
+		void		SkipDuplicates();
 
 	private:
 		BPlusTree	*fTree;
@@ -297,15 +298,15 @@ TreeIterator::Rewind()
 }
 
 inline status_t
-TreeIterator::GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value)
+TreeIterator::GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate)
 {
-	return Traverse(BPLUSTREE_FORWARD,key,keyLength,maxLength,value);
+	return Traverse(BPLUSTREE_FORWARD,key,keyLength,maxLength,value,duplicate);
 }
 
 inline status_t
-TreeIterator::GetPreviousEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value)
+TreeIterator::GetPreviousEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate)
 {
-	return Traverse(BPLUSTREE_BACKWARD,key,keyLength,maxLength,value);
+	return Traverse(BPLUSTREE_BACKWARD,key,keyLength,maxLength,value,duplicate);
 }
 
 /************************ bplustree_header inline functions ************************/
