@@ -520,6 +520,7 @@ KernelLd mount :
 	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
 	:
 	:
+	:
 	bin/mount
 	;
 
