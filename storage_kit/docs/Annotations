@@ -191,6 +191,44 @@ Location:    GetNextDirents()
 Description: Crashs when passing a NULL buffer.
 
 
+OS:          OBOS
+Module:      BQuery
+Location:    Push*()
+Description: Return status_t instead of void. Fail, if Fetch() has already
+             been called.
+
+
+OS:          BeOS R5
+Module:      BQuery
+Location:    PushOp()
+Description: Crashs when pushing B_CONTAINS/B_BEGINS/ENDS_WITH on an empty
+             stack.
+
+
+OS:          BeOS R5
+Module:      BQuery
+Location:    PushUInt64()
+Description: Doesn't work. Predicates constructed using it are invalid.
+
+
+OS:          BeOS R5
+Module:      BQuery
+Location:    Get/SetPredicate()
+Description: Crash when passing a NULL BString/char*.
+
+
+OS:          BeOS R5
+Module:      BQuery
+Location:    SetVolume()
+Description: Crashs when passing a NULL BVolume.
+
+
+OS:          BeOS R5
+Module:      BQuery
+Location:    GetNextEntry/Ref()
+Description: Crash when passing a NULL BEntry/entry_ref.
+
+
 OS:          BeOS R5
 Module:      BMimeType
 Location:    {Get,Set}LongDescription()
