@@ -1,4 +1,5 @@
 	#include "MenuApp.h"
+	#include <stdlib.h>
 	
 	MenuBar::MenuBar()
 		:BMenuBar(BRect(40,10,10,10), "menu", B_FOLLOW_TOP|B_FRAME_EVENTS, B_ITEMS_IN_COLUMN, true)
@@ -75,6 +76,10 @@
 	void
 	MenuBar::set_menu()
 	{
+		key_map *keys;
+		char *chars;
+		bool altAsShortcut;
+		
 		// get up-to-date menu info
 		get_menu_info(&info);
 		
@@ -82,8 +87,15 @@
 
 		clickToOpenItem->SetMarked(info.click_to_open);
 		alwaysShowTriggersItem->SetEnabled(!info.click_to_open);
-
-		set_menu_info(&info);
+		
+		get_key_map(&keys, &chars);
+	
+		altAsShortcut = (keys->left_command_key == 0x5d) && (keys->right_command_key == 0x5f);
+		altAsShortcutItem->SetMarked(altAsShortcut);
+		ctlAsShortcutItem->SetMarked(!altAsShortcut);
+		
+		free(chars);
+		free(keys);		 
 	}
 	
 	void
