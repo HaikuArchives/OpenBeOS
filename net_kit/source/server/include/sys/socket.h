@@ -12,7 +12,7 @@
  * to agree with the Be versions...
  */
 #define	AF_UNSPEC		0
-#define AF_INET			2
+#define AF_INET			1 /* for R5 compatibility... */
 #define AF_ROUTE		3
 #define AF_IMPLINK      4
 #define AF_LINK			18
@@ -188,15 +188,23 @@ struct cmsghdr {
 /* Function declarations */
 /* These should probably return ssize_t */
 int     socket (int, int, int);
-int     closesocket(int);
 int     bind(int, const struct sockaddr *, int);
 int     connect(int, const struct sockaddr *, int);
+
+int     send(int, caddr_t, int, int);
+int     recv(int, caddr_t, int, int);
 int     sendto(int, caddr_t, size_t, int, const struct sockaddr*, size_t);
 int     recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t*);
-int     sysctl (int *, uint, void *, size_t *, void *, size_t);
+
+int     closesocket(int);
 int     shutdown(int sock, int how);
-int     send(int, caddr_t, int, int);
+
+int     sysctl (int *, uint, void *, size_t *, void *, size_t);
+
 int     getsockopt(int, int, int, void *, size_t *);
+int     getpeername(int, struct sockaddr *, uint32 *);
+int     getsockname(int, struct sockaddr *, uint32 *);
+
 int     setsockopt(int, int, int, const void *, size_t);
 
 #endif /* OBOS_SYS_SOCKET_H */

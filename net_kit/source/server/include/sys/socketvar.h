@@ -129,6 +129,8 @@ uint32 sb_max;
 /* Function prototypes */
 int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
 
+/* These are the ones we export to libnet.so */
+
 int     initsocket(void **spp);
 int     socreate(int dom, void *aso, int type, int proto);
 
@@ -143,10 +145,19 @@ int     readit(void *, struct iovec *, int *);
 int     sendit(void *, struct msghdr *, int, int *);
 int     recvit(void *, struct msghdr *, caddr_t, int *);
 
-int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, 
-               struct mbuf *top, struct mbuf *control, int flags);
 int     sosetopt(void *, int, int, const void *, size_t);
 int     sogetopt(void *, int, int, void *, size_t *);
+
+int     sogetpeername(void *, struct sockaddr *, uint32 *);
+int     sogetsockname(void *, struct sockaddr *, uint32 *);
+
+
+/* these are all private to the stack...although may be shared with 
+ * other network modules.
+ */
+
+int     sosend(struct socket *so, struct mbuf *addr, struct uio *uio, 
+               struct mbuf *top, struct mbuf *control, int flags);
 
 struct socket *sonewconn(struct socket *head, int connstatus);
 int 	set_socket_event_callback(void *, socket_event_callback, void *);
