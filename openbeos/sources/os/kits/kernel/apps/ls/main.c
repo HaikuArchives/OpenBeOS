@@ -7,6 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <errno.h>
 
 extern char *__progname;
 
@@ -97,16 +99,15 @@ int main(int argc, char *argv[])
 	}
 
 	if (S_ISDIR(st.st_mode)) {
-		int fd;
 		char buf[1024];
-
-		fd = sys_open(arg, STREAM_TYPE_DIR, 0);
-		if(fd < 0) {
-			printf("ls: %s: %s\n", arg, strerror(fd));
+		DIR *thedir = opendir(arg);
+		
+		if (!thedir) {
+			printf("ls: %s: %s\n", arg, strerror(errno));
 		} else {
 			if (show_all) {
 				/* process the '.' entry */
-				rc = fstat(fd, &st);
+				rc = stat(arg, &st);
 				if (rc == 0) {
 					(*disp_func)(".", &st);
 					totbytes += st.st_size;
@@ -115,27 +116,26 @@ int main(int argc, char *argv[])
 			
 			for(;;) {
 				char buf2[1024];
+				struct dirent *de = readdir(thedir);
 
-				rc = sys_read(fd, buf, -1, sizeof(buf));
-				if(rc <= 0)
+				if (!de)
 					break;
 
-				buf2[0] = 0;
-
-				if(strcmp(arg, ".") != 0) {
+				memset(buf2, 0, sizeof(buf2));
+				if (strcmp(arg, ".") != 0) {
 					strlcpy(buf2, arg, sizeof(buf2));
 					strlcat(buf2, "/", sizeof(buf2));
 				}
-				strlcat(buf2, buf, sizeof(buf2));
-	
+				strlcat(buf2, de->d_name, sizeof(buf2));
+
 				rc2 = stat(buf2, &st);
-				if(rc2 >= 0) {
-					(*disp_func)(buf, &st);
+				if (rc2 == 0) {
+					(*disp_func)(de->d_name, &st);
 					totbytes += st.st_size;
 				}
 				count++;
 			}
-			sys_close(fd);
+			closedir(thedir);
 		}
 
 		printf("%lld bytes in %d files\n", totbytes, count);
