@@ -7,7 +7,7 @@ KERNELDIRS=net_server ethernet icmp ipv4 loop udp route raw tcp
 
 # for a normal build use these 2 lines
 CFLAGS=-O2 -g -Wall -D_NETWORK_STACK
-LDFLAGS=-nostdlib -L/boot/beos/system/lib -L/boot/develop/lib/x86 -lroot -lbe /boot/develop/lib/x86/start_dyn.o
+LDFLAGS=-nostdlib -L/boot/beos/system/lib -L/boot/develop/lib/x86 -lroot
 
 # Uncomment these to build a device driver!
 #CFLAGS=-nostart -no-fpic -D_KERNEL_MODE
@@ -17,21 +17,19 @@ CFLAGS+=-D_NETWORK_STACK
 
 INCLUDES=-I. -I./include
 
-all: subdirs
+all: subdirs net_srv
 
 test: 
 	@net_srv
 
+net_srv: net_srv.o
+	$(CC) $(LDFLAGS) -o net_srv /boot/develop/lib/x86/start_dyn.o net_srv.o
+
 subdirs: clean $(OBJS)
-	@if test -e _APP_; then rm _APP_; fi
 	@for i in $(SUBDIRS); do \
-		if ! test -e _APP_; then \
-			if test -e net_srv; then ln -s net_srv _APP_; fi; \
-		fi; \
 		echo "Making $$i module"; \
 		(cd $$i && CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(MAKE)) || exit 1; \
 	done;
-	@if test -e _APP_; then rm _APP_; fi
 
 kernel:
 	@for i in $(KERNELDIRS); do \

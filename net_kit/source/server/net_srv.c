@@ -277,6 +277,8 @@ static int32 accept_test_server(void *data)
 	
 	soclose(nsp);
 	soclose(sp);
+
+	printf("Server completed OK\n");
 }
 
 static int32 accept_test_client(void *data)
@@ -288,7 +290,9 @@ static int32 accept_test_client(void *data)
 	char buffer[50];
 	int flags = 0;
 	struct iovec iov;
+	int on = 1;
 	
+	printf("Client starting:\n");	
 	rv = initsocket(&sp);
 	if (rv < 0) {
 		err(rv, "initsocket");
@@ -301,6 +305,8 @@ static int32 accept_test_client(void *data)
 		return -1;
 	}
 
+	soo_ioctl(sp, FIONBIO, (caddr_t)&on);
+	
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_len = sizeof(sin);
 	sin.sin_family = AF_INET;
@@ -316,10 +322,13 @@ static int32 accept_test_client(void *data)
 	sin.sin_port = htons(7777);
 
 	printf("client about to try and connect\n");	
-	rv = soconnect(sp, (caddr_t)&sin, salen);	
-	if (rv < 0) {
-		err(rv, "soconnect");
-		return -1;
+	while ((rv = soconnect(sp, (caddr_t)&sin, salen)) < 0) {
+		if (rv == EISCONN)
+			break;
+		if (rv != EINPROGRESS && rv != EALREADY) {
+			err(rv, "soconnect");
+			return -1;
+		}
 	}
 	printf("client has connected!!!\n");
 
@@ -327,11 +336,15 @@ static int32 accept_test_client(void *data)
 	iov.iov_base = &buffer;
 	iov.iov_len = 50;
 	
-	rv = readit(sp, &iov, &flags);	
+	do {
+		rv = readit(sp, &iov, &flags);	
+	} while (rv < 0 && rv == EWOULDBLOCK);
+
 	if (rv < 0) {
 		err(rv, "readit");
 		return -1;
 	}
+
 	printf("Got a greeting...%s\n", buffer);
 
 	memset(&buffer, 0, 50);
@@ -339,7 +352,11 @@ static int32 accept_test_client(void *data)
 	iov.iov_base = &buffer;
 	iov.iov_len = strlen(RESPONSE);
 	flags = 0;
-	rv = writeit(sp, &iov, flags);	
+	
+	do {
+		rv = writeit(sp, &iov, flags);	
+	} while (rv < 0 && rv == EWOULDBLOCK);
+	
 	if (rv < 0) {
 		err(rv, "writeit");
 		return -1;
@@ -375,7 +392,7 @@ static void tcp_test(uint32 srv)
 	memset(&sa, 0, sizeof(sa));
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons((real_time_clock() & 0xffff));
-	sa.sin_addr.s_addr = INADDR_ANY;
+	sa.sin_addr.s_addr = INADDR_LOOPBACK;
 	sa.sin_len = sizeof(sa);
 	
 	rv = sobind(sp, (caddr_t)&sa, sizeof(sa));
