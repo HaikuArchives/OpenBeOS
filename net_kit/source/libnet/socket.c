@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "sys/socket.h"
+#include "sys/sockio.h"
 #include "netinet/in.h"
 #include "net_structures.h"
 
@@ -18,16 +19,19 @@ const char * g_socket_driver_path = "/dev/net/socket";
 // global libraries data are per team
 bool g_beos_r5_compatibility = false;
 
+// local definition
+struct beosr5_sockaddr_in {
+	uint16 sin_family;
+	uint16 sin_port;
+	uint32 sin_addr;
+	char sin_zero[4];
+};
+
 // static prototypes
-static void convert_from_beos_r5_sockaddr(struct sockaddr * addr, int addrlen);
-static void convert_to_beos_r5_sockaddr(struct sockaddr * addr);
+static void convert_from_beos_r5_sockaddr(struct sockaddr *to, const struct sockaddr *from);
+static void convert_to_beos_r5_sockaddr(struct sockaddr *to, const struct sockaddr *from);
 static void	convert_from_beos_r5_sockopt(int * level, int * optnum);
 
-// local definition
-struct beos_r5_sockaddr { 
-	unsigned short  sa_family; 
-	char sa_data[10]; 
-};
 
 #ifdef CODEWARRIOR
 	#pragma mark [BSD sockets API]
@@ -87,11 +91,15 @@ int closesocket(int sock)
 
 int bind(int sock, const struct sockaddr * sa, int len)
 {
+	struct sockaddr temp;
 	struct bind_args ba;
 	int rv;
 	
-	if (g_beos_r5_compatibility)
-		convert_from_beos_r5_sockaddr((struct sockaddr *) sa, len);
+	if (g_beos_r5_compatibility) {
+		convert_from_beos_r5_sockaddr(&temp, sa);
+		sa = &temp;
+		len = sizeof(struct sockaddr_in);
+	}
 	
 	ba.data = (caddr_t)sa;
 	ba.dlen = len;
@@ -104,13 +112,14 @@ int bind(int sock, const struct sockaddr * sa, int len)
 int recvfrom(int sock, void * buffer, size_t buflen, int flags,
              struct sockaddr *addr, size_t *addrlen)
 {
+	struct sockaddr temp;
 	struct msghdr mh;
 	struct iovec iov;
 	int rv;
 
 	/* XXX - would this be better done as scatter gather? */	
-	mh.msg_name = (caddr_t)addr;
-	mh.msg_namelen = *addrlen;
+	mh.msg_name = g_beos_r5_compatibility ?  (caddr_t)&temp : (caddr_t)addr;
+	mh.msg_namelen = g_beos_r5_compatibility ? sizeof(temp) : addrlen ? *addrlen : 0;
 	mh.msg_flags = flags;
 	mh.msg_control = NULL;
 	mh.msg_controllen = 0;
@@ -123,9 +132,15 @@ int recvfrom(int sock, void * buffer, size_t buflen, int flags,
 	if (rv < 0)
 		return rv;
 		
-	if (g_beos_r5_compatibility)
-		convert_to_beos_r5_sockaddr(addr);
-	*addrlen = mh.msg_namelen;
+	if (g_beos_r5_compatibility && addr)
+		convert_to_beos_r5_sockaddr(addr, &temp);
+	
+	if (addrlen) {
+		if (g_beos_r5_compatibility)
+			*addrlen = sizeof(struct beosr5_sockaddr_in);
+		else
+			*addrlen = mh.msg_namelen;
+	}
 		
 	return rv;
 }
@@ -133,11 +148,15 @@ int recvfrom(int sock, void * buffer, size_t buflen, int flags,
 int sendto(int sock, const void * buffer, size_t buflen, int flags,
            const struct sockaddr *addr, size_t addrlen)
 {
+	struct sockaddr temp;
 	struct msghdr mh;
 	struct iovec iov;
 
-	if (g_beos_r5_compatibility)
-		convert_from_beos_r5_sockaddr((struct sockaddr *) addr, addrlen);
+	if (g_beos_r5_compatibility) {
+		convert_from_beos_r5_sockaddr(&temp, addr);
+		addr = &temp;
+		addrlen = sizeof(struct sockaddr_in);
+	}
 
 	/* XXX - would this be better done as scatter gather? */	
 	mh.msg_name = (caddr_t)addr;
@@ -193,11 +212,15 @@ int sysctl (int *name, uint namelen, void *oldp, size_t *oldlenp,
 	
 int connect(int sock, const struct sockaddr * addr, int addrlen)
 {
+	struct sockaddr temp;
 	struct connect_args ca;
 	int rv;
 	
-	if (g_beos_r5_compatibility)
-		convert_from_beos_r5_sockaddr((struct sockaddr *) addr, addrlen);
+	if (g_beos_r5_compatibility) {
+		convert_from_beos_r5_sockaddr(&temp, addr);
+		addr = &temp;
+		addrlen = sizeof(struct sockaddr_in);
+	}
 
 	ca.name = (caddr_t)addr;
 	ca.namelen = addrlen;
@@ -226,6 +249,14 @@ int getsockopt(int sock, int level, int optnum, void * val, size_t *valsize)
 	struct getopt_args ga;
 	int rv;
 
+	if (g_beos_r5_compatibility && optnum == 5) { // BeOS R5 SO_FIONREAD
+		status_t rv;
+		int temp;
+		rv = ioctl(sock,FIONREAD,&temp);
+		*(int*)val = temp;
+		return rv;
+	}
+
 	if (g_beos_r5_compatibility)
 		convert_from_beos_r5_sockopt(&level, &optnum);
 
@@ -243,6 +274,12 @@ int setsockopt(int sock, int level, int optnum, const void *val, size_t valsize)
 {
 	struct setopt_args sa;
 	int rv;
+	
+	if (g_beos_r5_compatibility && optnum == 3) { // BeOS R5 SO_NONBLOCK
+		int temp;
+		temp = (*(int*)val) ? 1 : 0;
+		return ioctl(sock,FIONBIO,&temp);
+	}
 
 	if (g_beos_r5_compatibility)
 		convert_from_beos_r5_sockopt(&level, &optnum);
@@ -259,10 +296,14 @@ int setsockopt(int sock, int level, int optnum, const void *val, size_t valsize)
 
 int getpeername(int sock, struct sockaddr * addr, int * addrlen)
 {
+	struct sockaddr temp;
 	struct getname_args ga;
 	int rv;
 	
-	ga.name = addr;
+	if (g_beos_r5_compatibility)
+		*addrlen = sizeof(temp);
+	
+	ga.name = g_beos_r5_compatibility ? &temp : addr;
 	ga.namelen = addrlen;
 	
 	ga.rv = B_ERROR;
@@ -270,18 +311,24 @@ int getpeername(int sock, struct sockaddr * addr, int * addrlen)
 	if (rv < 0)
 		return rv;
 		
-	if (g_beos_r5_compatibility)
-		convert_to_beos_r5_sockaddr(addr);
+	if (g_beos_r5_compatibility) {
+		convert_to_beos_r5_sockaddr(addr, &temp);
+		*addrlen = sizeof(struct beosr5_sockaddr_in);
+	}
 
 	return ga.rv;
 }
 
 int getsockname(int sock, struct sockaddr * addr, int * addrlen)
 {
+	struct sockaddr temp;
 	struct getname_args ga;
 	int rv;
 	
-	ga.name = addr;
+	if (g_beos_r5_compatibility)
+		*addrlen = sizeof(temp);
+	
+	ga.name = g_beos_r5_compatibility ? &temp : addr;
 	ga.namelen = addrlen;
 	
 	ga.rv = B_ERROR;
@@ -289,8 +336,10 @@ int getsockname(int sock, struct sockaddr * addr, int * addrlen)
 	if (rv < 0)
 		return rv;
 		
-	if (g_beos_r5_compatibility)
-		convert_to_beos_r5_sockaddr(addr);
+	if (g_beos_r5_compatibility) {
+		convert_to_beos_r5_sockaddr(addr, &temp);
+		*addrlen = sizeof(struct beosr5_sockaddr_in);
+	}
 
 	return ga.rv;
 }
@@ -309,6 +358,7 @@ int listen(int sock, int backlog)
 
 int accept(int sock, struct sockaddr * addr, int * addrlen)
 {
+	struct sockaddr temp;
 	struct accept_args aa;
 	int	rv;
 	int	new_sock;
@@ -330,8 +380,8 @@ int accept(int sock, struct sockaddr * addr, int * addrlen)
 
 	aa.cookie	= cookie; // this way driver can use the right fd/cookie for the new_sock!
 
-	aa.name		= addr;
-	aa.namelen	= *addrlen;
+	aa.name		= g_beos_r5_compatibility ? &temp : addr;
+	aa.namelen	= g_beos_r5_compatibility ? sizeof(temp) : *addrlen;
 	
 	aa.rv = B_ERROR;
 	rv = ioctl(sock, NET_SOCKET_ACCEPT, &aa, sizeof(aa));
@@ -342,10 +392,12 @@ int accept(int sock, struct sockaddr * addr, int * addrlen)
 		close(new_sock);
 		return rv;
 	};
-	
-	if (g_beos_r5_compatibility)
-		convert_to_beos_r5_sockaddr(addr);
-	*addrlen = aa.namelen;
+
+	if (g_beos_r5_compatibility) {
+		convert_to_beos_r5_sockaddr(addr, &temp);
+		*addrlen = sizeof(struct beosr5_sockaddr_in);
+	} else
+		*addrlen = aa.namelen;
 
 	return new_sock;
 }
@@ -380,24 +432,25 @@ int _netconfig_find()
  * ----------------
  */
 
-static void convert_from_beos_r5_sockaddr(struct sockaddr * sa, int len)
+static void convert_from_beos_r5_sockaddr(struct sockaddr *_to, const struct sockaddr *_from)
 {
-	struct beos_r5_sockaddr * bsa;
-	int	family;
-	
-	bsa = (struct beos_r5_sockaddr *) sa;
-	family = bsa->sa_family;
-	
-	sa->sa_len = len;
-	sa->sa_family = family;
+	const struct beosr5_sockaddr_in *from = (struct beosr5_sockaddr_in *)_from;
+	struct sockaddr_in *to = (struct sockaddr_in *)_to;
+	memset(to, 0, sizeof(*to));
+	to->sin_len = sizeof(*to);
+	to->sin_family = from->sin_family;
+	to->sin_port = from->sin_port;
+	to->sin_addr.s_addr = from->sin_addr;
 }
 
-static void convert_to_beos_r5_sockaddr(struct sockaddr * sa)
+static void convert_to_beos_r5_sockaddr(struct sockaddr *_to, const struct sockaddr *_from)
 {
-	struct beos_r5_sockaddr * bsa;
-
-	bsa = (struct beos_r5_sockaddr *) sa;
-	bsa->sa_family = sa->sa_family;
+	const struct sockaddr_in *from = (struct sockaddr_in *)_from;
+	struct beosr5_sockaddr_in *to = (struct beosr5_sockaddr_in *)_to;
+	memset(to, 0, sizeof(*to));
+	to->sin_family = from->sin_family;
+	to->sin_port = from->sin_port;
+	to->sin_addr = from->sin_addr.s_addr;
 }
 
 static void	convert_from_beos_r5_sockopt(int * level, int * optnum)
