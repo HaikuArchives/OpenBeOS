@@ -306,8 +306,9 @@ net_module net_module_data = {
 	"Ethernet/802.x module",
 	NS_ETHER,
 	NET_LAYER1,
-        0,      /* users can't create sockets in this module! */
-        0,
+	0,	/* users can't create sockets in this module! */
+	0,
+	0,
 
 	&ether_init,
 	&ether_dev_init,
