@@ -4,6 +4,7 @@
 #define _SYS_SELECT_H
 
 #include <sys/time.h> /* for struct timeval */
+typedef long int32;
 /*
  * You can define your own FDSETSIZE if you want more bits
  */
