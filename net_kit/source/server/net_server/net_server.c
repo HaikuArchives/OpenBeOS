@@ -58,7 +58,6 @@ static int32 rx_thread(void *data)
 	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
         while ((status = read(i->dev, buffer, len)) >= B_OK && count < 10) {
                 struct mbuf *mb = m_devget(buffer, len, 0, i, NULL);
-printf("rx: mbuf %p\n", mb);
                 global_modules[prot_table[NS_ETHER]].mod->input(mb);
 		count++;
 		len = 2048;
@@ -94,9 +93,9 @@ static int32 tx_thread(void *data)
 		m_copydata(m, 0, len, buffer);
 
 printf("TXMIT: %ld bytes to dev %d\n",len ,i->dev);
-printf("tx: freeing mbuf %p\n", m);
 		m_freem(m);
-
+		/* this is soooooooo useful, but not currently needed */
+		//dump_buffer(buffer, len);
 		status = write(i->dev, buffer, len);
 		if (status < B_OK) {
 			printf("Error sending data [%s]!\n", strerror(status));
@@ -309,11 +308,21 @@ void insert_local_address(struct sockaddr *sa, ifnet *dev)
         }
 }
 
-ifnet *interface_for_address(struct sockaddr *sa)
+int is_address_local(void *ptr, int len)
+{
+	struct local_address *la;
+
+	la = (struct local_address*)nhash_get(localhash, ptr, len);
+	if (la)
+		return 1;
+	return 0;
+}
+
+ifnet *interface_for_address(void *data, int len)
 {
         struct local_address *la;
 
-        la = (struct local_address*)nhash_get(localhash, sa->sa_data, sa->sa_len);
+        la = (struct local_address*)nhash_get(localhash, data, len);
         if (!la)
                 return NULL;
         return la->ifn;
@@ -361,12 +370,12 @@ printf("\n");
 	sa.sa_data[2] = 0;
 	sa.sa_data[3] = 1;
 
-        sb.sa_family = AF_INET;
-        sb.sa_len = 4;
-        sb.sa_data[0] = 192;
-        sb.sa_data[1] = 168;
-        sb.sa_data[2] = 0;
-        sb.sa_data[3] = 133;
+	sb.sa_family = AF_INET;
+	sb.sa_len = 4;
+	sb.sa_data[0] = 192;
+	sb.sa_data[1] = 168;
+	sb.sa_data[2] = 0;
+	sb.sa_data[3] = 133;
 
 	/* dirst hack to get us sending a request! */
 	global_modules[prot_table[NS_ARP]].mod->lookup(&sb, &sa);

@@ -175,21 +175,27 @@ int ethernet_input(struct mbuf *buf)
 	return 0;	
 }
 
-int ether_output(struct mbuf *buf, int prot, ifnet *ifa, struct sockaddr *tgt)
+int ether_output(struct mbuf *buf, int prot, struct sockaddr *tgt)
 {
 	ethernet_header *eth;
 
 	M_PREPEND(buf, sizeof(ethernet_header));
 	eth = mtod(buf, ethernet_header*);
 
-	memcpy(&eth->src, &ifa->link_addr->sa_data, ifa->link_addr->sa_len);
-	if (buf->m_flags & M_BCAST) {
-		memset(&eth->dest, 0xff, 6);
-	}
-	if (prot == NS_ARP)
-		eth->type = htons(ETHER_ARP);
+	memcpy(&eth->src, &buf->m_pkthdr.rcvif->link_addr->sa_data,
+		buf->m_pkthdr.rcvif->link_addr->sa_len);
 
-	IFQ_ENQUEUE(ifa->txq, buf);
+	if (prot == NS_ARP) {
+		eth->type = htons(ETHER_ARP);
+		/* hack - we assume the sockaddr has a valid link address */
+		memcpy(&eth->dest, &tgt->sa_data, 6);
+	}
+	if (prot == NS_IPV4) {
+		eth->type = htons(ETHER_IPV4);
+		/* we assume the tgt is an ip address, so we must resolve it first. */
+	}	
+
+	IFQ_ENQUEUE(buf->m_pkthdr.rcvif->txq, buf);
 
 	return 0;
 }
