@@ -1,7 +1,7 @@
 /*****************************************************************************/
 //               File: TranslatorRoster.cpp
 //              Class: BTranslatorRoster
-//             Author: Michael Wilber, Translation Kit Team
+//   Reimplimented by: Michael Wilber, Translation Kit Team
 //   Reimplimentation: 2002-06-11
 //
 // Description: This class is the guts of the translation kit, it makes the
@@ -38,28 +38,81 @@
 // Initialize static member variable
 BTranslatorRoster *BTranslatorRoster::fspDefaultTranslators = NULL;
 
-// private unimplemented
+// ---------------------------------------------------------------
+// Constructor
+//
+// Private, unimplimented constructor that no one should use.
+// I don't think there would be much of a need for this function.
+//
+// Preconditions:
+//
+// Parameters: tr, not used
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 BTranslatorRoster::BTranslatorRoster(const BTranslatorRoster &tr)
 	: BArchivable()
 {
 	Initialize();
 }
 
-// private unimplemented
+// ---------------------------------------------------------------
+// operator=
+//
+// Private, unimplimented function that no one should use.
+// I don't know that there is a need for this function anyway.
+//
+// Preconditions:
+//
+// Parameters: tr, not used
+//
+// Postconditions:
+//
+// Returns: refernce to this object
+// ---------------------------------------------------------------
 BTranslatorRoster &
 BTranslatorRoster::operator=(const BTranslatorRoster &tr)
 {
 	return *this;
 }
 
-// Constructor that loads no translators
+// ---------------------------------------------------------------
+// Constructor
+//
+// Initilizes the BTranslatorRoster to the empty state, it loads
+// no translators.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 BTranslatorRoster::BTranslatorRoster() : BArchivable()
 {
 	Initialize();
 }
 
-// Loads all the translators from the directories
-// specified in the "be:translator_path" named fields in model
+// ---------------------------------------------------------------
+// Constructor
+//
+// This constructor initilizes the BTranslatorRoster, then
+// loads all of the translators specified in the
+// "be:translator_path" field of the supplied BMessage.
+//
+// Preconditions:
+//
+// Parameters: model, the BMessage where the translator paths are
+//                    found.
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 BTranslatorRoster::BTranslatorRoster(BMessage *model) : BArchivable()
 {
 	Initialize();
@@ -74,15 +127,41 @@ BTranslatorRoster::BTranslatorRoster(BMessage *model) : BArchivable()
 	}		
 }
 
-// initialization code that all constructors use
+// ---------------------------------------------------------------
+// Initialize()
+//
+// This function initializes this object to the empty state. It
+// is used by all constructors.
+//
+// Preconditions: Object must be in initial uninitialized state
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 void BTranslatorRoster::Initialize()
 {
 	fpTranslators = NULL;
 	fSem = create_sem(1, "BTranslatorRoster Lock");
 }
 
-// Unloads any translators that were loaded and frees 
-// all memory allocated by the BTranslatorRoster 
+// ---------------------------------------------------------------
+// Destructor
+//
+// Unloads any translators that were loaded and frees all memory
+// allocated by the BTranslatorRoster, except for the static
+// member data.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 BTranslatorRoster::~BTranslatorRoster()
 {
 	if (fSem > 0 && acquire_sem(fSem) == B_NO_ERROR) {
@@ -119,16 +198,29 @@ BTranslatorRoster::~BTranslatorRoster()
 	delete_sem(fSem);
 }
 
-// Archives the BTranslatorRoster by recording its 
-// loaded add-ons in the BMessage into.
-// When deep == true, more data is archived from BTranslatorRoster
-// than if deep == false.
+// ---------------------------------------------------------------
+// Archive
 //
-// For More Info: See "Deep and Shallow Archives" in the
-// BArchivable BeBook documentation
+// Archives the BTranslatorRoster by recording its loaded add-ons
+// in the BMessage into. The deep variable appeared to have no
+// impact in Be's version of this function, so I went the same
+// route.
 //
-// NOTE: The deep variable appears to have no impact on
-//       the data that is written to the BMessage
+// Preconditions:
+//
+// Parameters: into, the BMessage that this object is written to
+//             deep, if true, more data is written, if false,
+//                   less data is written
+//
+// Postconditions:
+//
+// Returns: B_OK, if everything went well
+//          B_BAD_VALUE, if into is NULL
+//          B_NOT_INITIALIZED, if the constructor couldn't create
+//                             a semaphore
+//          other errors that BMessage::AddString() and
+//          BArchivable::Archive() return
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::Archive(BMessage *into, bool deep) const
 {
@@ -156,18 +248,24 @@ BTranslatorRoster::Archive(BMessage *into, bool deep) const
 	return result;
 }
 
-// Returns a new BTranslatorRoster object, allocated by 
-// new and created with the version of the constructor that 
-// takes a BMessage archive. However, if the archive doesn't 
-// contain data for a BTranslatorRoster object, Instantiate() 
-// returns NULL.
+// ---------------------------------------------------------------
+// Instantiate
 //
-// The BeBook incorrectly states that this function returns
-// a BTranslatorRoster. In the BArchivable BeBook documentation,
-// it states that all Instantiate functions must return a
-// BArchiveable *object.
+// This static member function returns a new BTranslatorRosters
+// object, allocated by new and created with the version of the
+// constructor that takes a BMessage archive. However if the
+// archive doesn't contain data for a BTranslatorRoster object,
+// Instantiate() returns NULL.
 //
-// NOTE: static member function
+// Preconditions:
+//
+// Parameters: from, the BMessage to create the new object from
+//
+// Postconditions:
+//
+// Returns: returns NULL if the BMessage was no good
+//          returns a BArchivable * to a BTranslatorRoster
+// ---------------------------------------------------------------
 BArchivable *
 BTranslatorRoster::Instantiate(BMessage *from)
 {
@@ -177,21 +275,32 @@ BTranslatorRoster::Instantiate(BMessage *from)
 		return new BTranslatorRoster(from);
 }
 
-// Sets outCurVersion to the Translation Kit protocol 
-// version number and outMinVersion to the minimum 
-// protocol version number supported. Returns a human-
-// readable string containing version information. 
-// Currently, inAppVersion must be 
-// B_TRANSLATION_CURRENT_VERSION
+// ---------------------------------------------------------------
+// Version
 //
-// NOTE: static
-// NOTE: inAppVersion appears to be completely ignored
-//       in Be's implementation of this function.
-// NOTE: The constants used in this function come
-//       from <TranslationDefs.h>
+// Sets outCurVersion to the Translation Kit protocol version
+// number and outMinVersion to the minimum  protocol version number
+// supported. Returns a string containing verbose version
+// information.  Currently, inAppVersion must be 
+// B_TRANSLATION_CURRENT_VERSION, but as far as I can tell, its
+// completely ignored.
+//
+// Preconditions:
+//
+// Parameters: outCurVersion, the current version is stored here
+//             outMinVersion, the minimum supported version is
+//                            stored here
+//             inAppVersion, is ignored as far as I know
+//
+// Postconditions:
+//
+// Returns: string of verbose translation kit version
+//          information or an empty string if either of the
+//          out variables is NULL.
+// ---------------------------------------------------------------
 const char *
-BTranslatorRoster::Version(int32 *outCurVersion,
-	int32 *outMinVersion, int32 inAppVersion)
+BTranslatorRoster::Version(int32 *outCurVersion, int32 *outMinVersion,
+	int32 inAppVersion)
 {
 	if (!outCurVersion || !outMinVersion)
 		return "";
@@ -210,30 +319,29 @@ BTranslatorRoster::Version(int32 *outCurVersion,
 	return vString;
 }
 
-///////////////// Notes from Header File /////////////////////
-// This call will return the "default" set of translators.
-// If there is not yet a deafult set of translators, it will
-// instantiate one and load translator add-ons from the
-// default location (~/config/add-ons/Datatypes, and is
-// modifiable with the DATATYPES environment variable)
+// ---------------------------------------------------------------
+// Default
 //
-///////////////// Notes from BeBook ///////////////////////////
-// This returns a BTranslatorRoster loaded with the default 
-// set of translators, loaded from the colon-deliminated list 
-// of files and directories found in the environment variable 
-// TRANSLATORS. If no such variable exists, the 
-// translators are loaded from the default locations
-// /boot/home/config/add-ons/Translators,
-// /boot/home/config/add-ons/Datatypes, and 
-// /system/add-ons/Translators. 
-// The instance of BTranslatorRoster returned by this 
-// function is global to the application and should not be 
-// deleted. 
+// This static member function returns a pointer to the default
+// BTranslatorRoster that has the default translators stored in 
+// it. The paths for the default translators are loaded from
+// the TRANSLATORS environment variable. If it does not exist,
+// the paths used are /boot/home/config/add-ons/Translators,
+// /boot/home/config/add-ons/Datatypes, and
+// /system/add-ons/Translators. The BTranslatorRoster returned
+// by this function is global to the application and should
+// not be deleted.
 //
-// NOTE: static
+// This code probably isn't thread safe (yet).
 //
-// IS THIS CODE THREAD SAFE? -- its probably ok after fsp... is
-//                              created and assigned, but not on first call
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns: pointer to the default BTranslatorRoster
+// ---------------------------------------------------------------
 BTranslatorRoster *
 BTranslatorRoster::Default()
 {
@@ -247,27 +355,31 @@ BTranslatorRoster::Default()
 	return fspDefaultTranslators;
 }
 
-// ///////////////// Header Documentation //////////////////////
-// You can pass a folder (which will be scanned for loadable translators)
-// or a specific translator (which will just be loaded)
-// When load_path is NULL the default translators are loaded
+// ---------------------------------------------------------------
+// AddTranslators
 //
-// ////////////////// BeBook Documentation ///////////////////////
-// Loads all the translators located in the colon-deliminated 
-// list of files and directories found in load_path. All 
-// specified paths must be absolute. If load_path is NULL, it 
-// loads the translators from the locations specified in the 
-// TRANSLATORS environment variable. If the 
-// environment variable is not defined, then it loads all the 
-// files in the default directories /boot/home/config/add-ons/
-// Translators, /boot/home/config/add-ons/Datatypes, and /
-// system/add-ons/Translators. 
+// This function takes a string of colon delimited paths, 
+// (folders or specific files) and adds the translators from
+// those paths to this BTranslatorRoster.
 //
-// RETURN CODES 
+// If load_path is NULL, it parses the environment variable
+// TRANSLATORS. If that does not exist, it uses the paths:
+// /boot/home/config/add-ons/Translators,
+// /boot/home/config/add-ons/Datatypes and
+// /system/add-ons/Translators.
 //
-// B_OK. Identification of inSource was successful. 
-// B_BAD_VALUE. Error parsing load_path. 
-// Anything else. Error loading add-ons
+// Preconditions:
+//
+// Parameters: load_path, colon delimited list of paths
+//                        to load translators from
+//
+// Postconditions:
+//
+// Returns: B_OK on success,
+//          B_BAD_VALUE if there was something wrong with
+//                      load_path
+//          other errors for problems with loading add-ons
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::AddTranslators(const char *load_path)
 {
@@ -328,28 +440,26 @@ BTranslatorRoster::AddTranslators(const char *load_path)
 	return loadErr;
 }
 
-// You can add a BTranslator object you create yourself, too.
-// ///////////////// Notes from BTranslator ////////////////
-// When you add a BTranslator to a BTranslatorRoster, the BTranslator
-// is automatically Acquire()'d. When the BTranslatorRoster is 
-// deleted, its BTranslators are Release()'d. Thus, when you
-// instantiate a BTranslator and add it to a BTranslatorRoster,
-// you and the Roster maintain joint ownership of the object.
-// To give up ownership (such that the BTranslatorRoster will
-// destroy the object when the Roster itself is destroyed),
-// call Release() after adding the BTranslator to the Roster. 
+// ---------------------------------------------------------------
+// AddTranslator
 //
-// //////////////// MY NOTES: /////////////////////////////
+// Adds a BTranslator based object to the BTranslatorRoster.
+// When you add a BTranslator roster, it is Acquire()'d by
+// BTranslatorRoster; it is Release()'d when the
+// BTranslatorRoster is deleted.
 //
-// I may have to implement BTranslator before I can
-// figure this function out.
+// Preconditions:
 //
-// This function is only listed in the header file for 
-// some reason, does it even work?
+// Parameters: translator, the translator to be added to the
+//                         BTranslatorRoster
 //
-// Is there an example of this function being used or 
-// is there any mention of this function outside the 
-// header?
+// Postconditions:
+//
+// Returns: B_BAD_VALUE, if translator is NULL,
+//          B_NOT_INITIALIZED, if the constructor couldn't
+//                             create a semaphore
+//          B_OK if all went well 
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::AddTranslator(BTranslator *translator)
 {
@@ -381,33 +491,38 @@ BTranslatorRoster::AddTranslator(BTranslator *translator)
 	return result;
 }
 
-////////// Notes from Header ///////////////////////////////////
-// these functions call through to the translators
-// when wantType is not 0, will only take into consideration
-// translators that can read input data and produce output data
+// ---------------------------------------------------------------
+// Identify
 //
-///////////////// Notes from BeBook //////////////////////////
-// Identifies the media in inSource, returning a best guess of 
-// the format and the translator best equipped to handle it 
-// in outInfo. If inHintType or inHintMIME is specified, 
-// only those translators that can accept data of the 
-// specified type are searched. If inWantType is specified, 
-// only those translators that can output data of that type 
-// are searched. ioExtension offers an opportunity for the 
-// application to specify additional configuration 
-// information to the add-ons. If more than one translator 
-// can identify inSource, then the one with the highest 
-// quality*capability is returned. 
+// This function determines which translator is best suited
+// to convert the data from inSource. 
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Identification of inSource was successful. 
-// B_NO_TRANSLATOR. No suitable translator found. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. inSource or outInfo is NULL. 
-// Anything else. Error operating on inSource.
+// Parameters: inSource, the data to be translated,
+//             ioExtension, the configuration data for the
+//                          translator
+//             outInfo, the information about the chosen
+//                      translator is put here
+//             inHintType, a hint about the type of data
+//                         that is in inSource, can be
+//                         zero if type is not known
+//             inHintMIME, a hint about the MIME type of
+//                         data that is in inSource, 
+//                         can be NULL
+//             inWantType, the desired output type for
+//                         inSource, if zero, any type
+//                         is ok.
 //
-// NOTE: virtual
+// Postconditions:
+//
+// Returns: B_OK, identification of inSource was successful,
+//          B_NO_TRANSLATOR, no appropriate translator found
+//          B_NOT_INITIALIZED, the constructor failed to 
+//                             create a semaphore
+//          B_BAD_VALUE, inSource or outInfo is NULL
+//          other values, error using inSource
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::Identify(BPositionIO *inSource,
 	BMessage *ioExtension, translator_info *outInfo,
@@ -477,44 +592,70 @@ BTranslatorRoster::Identify(BPositionIO *inSource,
 	return result;
 }
 
-// /////////////// Notes from Header ///////////////////
-// Finds all translators for a type
-// call delete[] on *outInfo when done
+// ---------------------------------------------------------------
+// compare_data
 //
-// //////////////// Note from BeBook ///////////////////////
-// Identifies the media in inSource, returning an array of 
-// valid formats and translators equipped to handle them in 
-// outInfo. outNumInfo holds the number of elements in the 
-// array. If inHintType or inHintMIME is specified, only 
-// those translators that can accept data of the specified 
-// type are searched. If inWantType is specified, only those 
-// translators that can output data of that type are searched. 
-// ioExtension offers an opportunity for the application to 
-// specify additional configuration information to the add-
-// ons. The application assumes responsibility for 
-// deallocating the array. 
+// This function is not a member of BTranslatorRoster, but it is
+// used by the GetTranslators() member function as the function
+// passed to qsort to sort the translators from best to worst.
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Identification of inSource was successful. 
-// B_NO_TRANSLATOR. No suitable translators found. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. inSource, outInfo, or outNumInfo is 
-// NULL. 
-// Anything else. Error operating on inSource  
+// Parameters: a, pointer to translator_info structure to be
+//                compared to b
+//             b, pointer to translator_info structure to be
+//                compared to a
 //
-// NOTE: virtual
+// Postconditions:
+//
+// Returns: < 0 if a is less desirable than b, 
+//          0 if a as good as b,
+//          > 0 if a is more desirable than b
+// ---------------------------------------------------------------
+static int
+compare_data(const void *a, const void *b)
+{
+	register translator_info *ai = (translator_info *)a;
+	register translator_info *bi = (translator_info *)b;
+	return (int) (- ai->quality * ai->capability +
+		bi->quality * bi->capability);
+}
 
-	static int
-	compare_data(
-		const void *a,
-		const void *b)
-	{
-		register translator_info *ai = (translator_info *)a;
-		register translator_info *bi = (translator_info *)b;
-		return (int) (- ai->quality*ai->capability + bi->quality*bi->capability);
-	}
-	
+// ---------------------------------------------------------------
+// GetTranslators
+//
+// Finds all translators capable of handling the data in inSource
+// and puts them into the outInfo array (which you must delete
+// yourself when you are done with it). Specifying a value for
+// inHintType, inHintMIME and/or inWantType causes only the
+// translators that satisfy them to be included in the outInfo.
+//
+// Preconditions:
+//
+// Parameters: inSource, the data that wants to be translated
+//             ioExtension, configuration data for the translator
+//             outInfo, the array of acceptable translators is
+//                      stored here if the function succeeds
+//             outNumInfo, number of entries in outInfo
+//             inHintType, hint for the type of data in 
+//                         inSource, can be zero if the
+//                         type is not known
+//             inHintMIME, hint MIME type of the data
+//                         in inSource, can be NULL if
+//                         the MIME type is not known
+//             inWantType, the desired output type for
+//                         the data in inSource, can be zero
+//                         for any type.
+//
+// Postconditions:
+//
+// Returns: B_OK, successfully indentified the data in inSource
+//          B_NO_TRANSLATOR, no translator could handle inSource
+//          B_NOT_INITIALIZED, the constructore failed to create
+//                              a semaphore
+//          B_BAD_VALUE, inSource, outInfo, or outNumInfo is NULL
+//          other errors, problems using inSource
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::GetTranslators(BPositionIO *inSource,
 	BMessage *ioExtension, translator_info **outInfo,
@@ -556,12 +697,12 @@ BTranslatorRoster::GetTranslators(BPositionIO *inSource,
 				
 				if (CheckFormats(inputFormats, inputFormatsCount, inHintType,
 					inHintMIME, &format)) {
-					if (format && !pTranNode->translator->Identify(inSource, format,
-						ioExtension, &tmpInfo, inWantType))
+					if (format && !pTranNode->translator->Identify(inSource,
+						format, ioExtension, &tmpInfo, inWantType))
 						addmatch = true;
 					
-				} else if (!pTranNode->translator->Identify(inSource, NULL, ioExtension, &tmpInfo,
-					inWantType))
+				} else if (!pTranNode->translator->Identify(inSource, NULL,
+					ioExtension, &tmpInfo, inWantType))
 					addmatch = true;
 
 				if (addmatch) {
@@ -577,7 +718,8 @@ BTranslatorRoster::GetTranslators(BPositionIO *inSource,
 						*outInfo = nOut;
 					}
 
-					 // XOR to discourage taking advantage of undocumented features
+					 // XOR to discourage taking advantage of undocumented
+					 // features
 					tmpInfo.translator = pTranNode->id;
 					(*outInfo)[(*outNumInfo)++] = tmpInfo;
 				}
@@ -603,23 +745,27 @@ BTranslatorRoster::GetTranslators(BPositionIO *inSource,
 	return result;
 }
 
-// ////////////// Notes from Header ///////////////
-// Find all translator IDs
-// call delete[] on *outList when done
-// 
-// /////////////////// Notes from BeBook //////////////
-// Returns, in outList, an array of all the translators loaded 
-// by the BTranslationRoster. The number of elements in 
-// the array is placed in outCount. The application assumes 
-// responsibility for deallocating the array. 
+// ---------------------------------------------------------------
+// GetAllTranslators
 //
-// RETURN CODES 
+// Returns a list of all of the translators stored by this object.
+// You must delete the list, outList, yourself when you are done
+// with it.
 //
-// B_OK. Success. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. outList or outCount is NULL. 
+// Preconditions:
 //
-// NOTE: virtual
+// Parameters: outList, where the list is stored,
+//                      (you must delete the list yourself)
+//             outCount, where the count of the items in
+//                       the list is stored
+//
+// Postconditions:
+//
+// Returns: B_BAD_VALUE, if outList or outCount is NULL
+//          B_NOT_INITIALIZED, if the constructor couldn't
+//                             create a semaphore
+//          B_NO_ERROR, if successful
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::GetAllTranslators(
 	translator_id **outList, int32 *outCount)
@@ -633,7 +779,7 @@ BTranslatorRoster::GetAllTranslators(
 	*outCount = 0;
 
 	if (fSem > 0 && acquire_sem(fSem) == B_OK) {
-		//	count handlers
+		// count handlers
 		translator_node *pTranNode = NULL;
 		for (pTranNode = fpTranslators; pTranNode; pTranNode = pTranNode->next)
 			(*outCount)++;
@@ -649,23 +795,32 @@ BTranslatorRoster::GetAllTranslators(
 	return result;
 }
 
-// /////////////// Notes from Header ////////////
-// Given a translator, get user-visible info
+// ---------------------------------------------------------------
+// GetTranslatorInfo
 //
-// ///////////// Notes from BeBook ////////////////
-// Returns public information about translator 
-// forTranslator. Sets outName with a short description of 
-// the translator, outInfo with a longer description, and 
-// outVersion with the translator's version number. 
+// Returns information about the translator with translator_id
+// forTranslator. outName is the short name of the translator,
+// outInfo is the verbose name / description of the translator,
+// and outVersion is the integer representation of the translator
+// version.
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Success. 
-// B_NO_TRANSLATOR. forTranslator not a valid 
-// translator_id. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
+// Parameters: forTranslator, identifies which translator
+//                            you want info for
+//             outName, the translator name is put here
+//             outInfo, the translator info is put here
+//             outVersion, the translation version is put here
 //
-// NOTE: virtual
+// Postconditions:
+//
+// Returns: B_NO_ERROR, if successful,
+//          B_BAD_VALUE, if any parameter is NULL
+//          B_NOT_INITIALIZED, if the constructor couldn't
+//                             create a semaphore
+//          B_NO_TRANSLATOR, if forTranslator is not a valid
+//                           translator id
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::GetTranslatorInfo(
 	translator_id forTranslator, const char **outName,
@@ -677,7 +832,7 @@ BTranslatorRoster::GetTranslatorInfo(
 	status_t result = B_NOT_INITIALIZED;
 	
 	if (fSem > 0 && acquire_sem(fSem) == B_OK) {
-		//	find the translator we've requested
+		// find the translator we've requested
 		translator_node *pTranNode = FindTranslatorNode(forTranslator);
 		if (!pTranNode)
 			result = B_NO_TRANSLATOR;
@@ -694,30 +849,30 @@ BTranslatorRoster::GetTranslatorInfo(
 	return result;
 }
 
-// /////////// Notes from Header /////////////////////
-// Find all input formats for translator
-// note that translators may choose to be "invisible" to
-// the public formats, and just kick in when they
-// recognize a file format by its data.
+// ---------------------------------------------------------------
+// GetInputFormats
 //
-// ///////////////// Notes from BeBook /////////////////
-// Returns an array of the published accepted input or 
-// output formats for translator forTranslator. 
-// outNumFormats is filled with the number of elements in 
-// the array. 
+// Returns all of the input formats for the translator
+// forTranslator. Not all translators publish the input formats
+// that they accept.
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Success. 
-// B_NO_TRANSLATOR. forTranslator not a valid 
-// translator_id. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. outFormats or outNumFormats is 
-// NULL
+// Parameters: forTranslator, identifies which translator
+//                            you want info for
+//              outFormats, array of input formats
+//              outNumFormats, number of items in outFormats
 //
-// NOTE: virtual
+// Postconditions:
+//
+// Returns: B_NO_ERROR, if successful
+//          B_BAD_VALUE, if either pointer is NULL
+//          B_NOT_INITIALIZED, if the constructor couldn't
+//                             create a semaphore
+//          B_NO_TRANSLATOR, if forTranslator is a bad id
+// ---------------------------------------------------------------
 status_t
-BTranslatorRoster::GetInputFormats( translator_id forTranslator,
+BTranslatorRoster::GetInputFormats(translator_id forTranslator,
 	const translation_format **outFormats, int32 *outNumFormats)
 {
 	if (!outFormats || !outNumFormats)
@@ -743,30 +898,31 @@ BTranslatorRoster::GetInputFormats( translator_id forTranslator,
 	return result;
 }
 
-// ////////////// Notes from Header ///////////////
-// Find all output formats for translator
-// 
-// ///////////////// Notes from BeBook //////////////////
-// Returns an array of the published accepted input or 
-// output formats for translator forTranslator. 
-// outNumFormats is filled with the number of elements in 
-// the array. 
+// ---------------------------------------------------------------
+// GetOutputFormats
 //
-// RETURN CODES 
+// Returns all of the output formats for the translator
+// forTranslator. Not all translators publish the output formats
+// that they accept.
 //
-// B_OK. Success. 
-// B_NO_TRANSLATOR. forTranslator not a valid 
-// translator_id. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. outFormats or outNumFormats is 
-// NULL
+// Preconditions:
 //
-// NOTE: virtual
+// Parameters: forTranslator, identifies which translator
+//                            you want info for
+//              outFormats, array of output formats
+//              outNumFormats, number of items in outFormats
+//
+// Postconditions:
+//
+// Returns: B_NO_ERROR, if successful
+//          B_BAD_VALUE, if either pointer is NULL
+//          B_NOT_INITIALIZED, if the constructor couldn't
+//                             create a semaphore
+//          B_NO_TRANSLATOR, if forTranslator is a bad id
+// ---------------------------------------------------------------
 status_t
-BTranslatorRoster::GetOutputFormats(
-	translator_id forTranslator,
-	const translation_format **outFormats,
-	int32 *outNumFormats)
+BTranslatorRoster::GetOutputFormats(translator_id forTranslator,
+	const translation_format **outFormats, int32 *outNumFormats)
 {
 	if (!outFormats || !outNumFormats)
 		return B_BAD_VALUE;
@@ -791,45 +947,40 @@ BTranslatorRoster::GetOutputFormats(
 	return result;
 }
 
-// ///////////// Notes from Header ///////////////
-// Morph data into form we want
-// actually do some work
-// -- Translate() and Identify() are thread safe (can be re-entered)
-// as long as you don't call AddTranslators() or delete the object
-// at the same time. Making sure you don't is up to you; there is
-// no explicit lock provided. --
+// ---------------------------------------------------------------
+// Translate
 //
-// /////////////// Notes from BeBook //////////////////
-// These two translate functions carry out data conversion, 
-// converting the data in inSource to type inWantoutType 
-// and placing the resulting output in outDestination. inInfo 
-// should always contain either the output of an Identify() 
-// call or NULL. The translation uses the translator 
-// identified by inInfo->infoTranslator or inTranslator as 
-// appropriate. If inInfo is NULL, Translate() will call first 
-// Identify() to discover the format of the input stream. 
-// ioExtension, if it is not NULL, provides a 
-// communication path between the translator and the 
-// application. inHintType and inHintMIME, if provided, 
-// are passed as hints to the translator. 
+// This function is the whole point of the Translation Kit.
+// This is for translating the data in inSource to outDestination
+// using the format inWantOutType.
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Success. 
-// B_NO_TRANSLATOR. No suitable translators found. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. inSource or outSource is NULL. 
-// Anything else. Error passed on from add-on. 
+// Parameters: inSource, the data that wants to be translated
+//             ioExtension, configuration data for the translator
+//             inInfo, identifies the translator to use, can be
+//                     NULL, calls Identify() if NULL
+//             inHintType, hint for the type of data in 
+//                         inSource, can be zero if the
+//                         type is not known
+//             inHintMIME, hint MIME type of the data
+//                         in inSource, can be NULL if
+//                         the MIME type is not known
+//             inWantOutType, the desired output type for
+//                            the data in inSource.
+//             outDestination,  where inSource is translated to
 //
-// Translate() and Identify() are thread safe (can be re-
-// entered) as long as you don't call AddTranslators() 
-// or delete the object at the same time. Making sure 
-// you don't is up to you; there is no explicit lock 
-// provided. 
+// Postconditions:
 //
-// NOTE: virtual
+// Returns: B_OK, translation successful,
+//          B_NO_TRANSLATOR, no appropriate translator found
+//          B_NOT_INITIALIZED, the constructor failed to 
+//                             create a semaphore
+//          B_BAD_VALUE, inSource or outDestination is NULL
+//          other values, error using inSource
+// ---------------------------------------------------------------
 status_t
-BTranslatorRoster::Translate(BPositionIO * inSource,
+BTranslatorRoster::Translate(BPositionIO *inSource,
 	const translator_info *inInfo, BMessage *ioExtension,
 	BPositionIO *outDestination, uint32 inWantOutType,
 	uint32 inHintType, const char *inHintMIME)
@@ -869,38 +1020,32 @@ BTranslatorRoster::Translate(BPositionIO * inSource,
 	return result;
 }
 
-// /////////////// Notes from Header ///////////////
-// Make it easy to use a specific translator
+// ---------------------------------------------------------------
+// Translate
 //
-// //////////////// Notes from BeBook ////////////////
-// These two translate functions carry out data conversion, 
-// converting the data in inSource to type inWantoutType 
-// and placing the resulting output in outDestination. inInfo 
-// should always contain either the output of an Identify() 
-// call or NULL. The translation uses the translator 
-// identified by inInfo->infoTranslator or inTranslator as 
-// appropriate. If inInfo is NULL, Translate() will call first 
-// Identify() to discover the format of the input stream. 
-// ioExtension, if it is not NULL, provides a 
-// communication path between the translator and the 
-// application. inHintType and inHintMIME, if provided, 
-// are passed as hints to the translator. 
+// This function is the whole point of the Translation Kit.
+// This is for translating the data in inSource to outDestination
+// using the format inWantOutType.
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Success. 
-// B_NO_TRANSLATOR. No suitable translators found. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. inSource or outSource is NULL. 
-// Anything else. Error passed on from add-on. 
+// Parameters: inSource, the data that wants to be translated
+//             ioExtension, configuration data for the translator
+//             inTranslator, the translator to use for the 
+//                           translation
+//             inWantOutType, the desired output type for
+//                            the data in inSource.
+//             outDestination,  where inSource is translated to
 //
-// Translate() and Identify() are thread safe (can be re-
-// entered) as long as you don't call AddTranslators() 
-// or delete the object at the same time. Making sure 
-// you don't is up to you; there is no explicit lock 
-// provided. 
-// 
-// NOTE: virtual
+// Postconditions:
+//
+// Returns: B_OK, translation successful,
+//          B_NO_TRANSLATOR, inTranslator is an invalid id
+//          B_NOT_INITIALIZED, the constructor failed to 
+//                             create a semaphore
+//          B_BAD_VALUE, inSource or outDestination is NULL
+//          other values, error using inSource
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::Translate(translator_id inTranslator,
 	BPositionIO *inSource, BMessage *ioExtension,
@@ -937,30 +1082,31 @@ BTranslatorRoster::Translate(translator_id inTranslator,
 	return result;
 }
 
-// ////////////////// Notes from Header /////////////////
-// For configuring options of the translator, a translator can support
-// creating a view to cofigure the translator. The translator can save
-// its preferences in the database or settings file as it sees fit.
-// As a convention, the translator should always save whatever
-// settings are changed when the view is deleted or hidden.
+// ---------------------------------------------------------------
+// MakeConfigurationView
 //
-// ///////////////////// Notes from BeBook //////////////////
-// Returns, in outView, a BView containing controls to 
-// configure translator forTranslator. It is the application's 
-// responsibility to attach the BView to a BWindow. The 
-// initial size of the BView is given in outExtent but may be 
-// resized by the application. 
+// Returns outView, a BView for configuring the translator
+// forTranslator. Not all translators support this.
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Success. 
-// B_NO_TRANSLATOR. forTranslator not a valid 
-// translator_id. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. outView or outExtent is NULL. 
-// Anything else. Error passed on from add-on.
+// Parameters: forTranslator, the translator the view is for
+//             ioExtension, the configuration data for
+//                          the translator
+//             outView, the view for configuring the
+//                      translator
+//             outExtent, the bounds for the view, the view
+//                        can be resized
 //
-// NOTE: virtual
+// Postconditions:
+//
+// Returns: B_OK, success,
+//          B_NO_TRANSLATOR, inTranslator is an invalid id
+//          B_NOT_INITIALIZED, the constructor failed to 
+//                             create a semaphore
+//          B_BAD_VALUE, inSource or outDestination is NULL
+//          other values, error using inSource
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::MakeConfigurationView(
 	translator_id forTranslator, BMessage *ioExtension,
@@ -985,29 +1131,28 @@ BTranslatorRoster::MakeConfigurationView(
 	return result;
 }
 
-// ///////////////// Notes from Header ////////////////
-// For saving settings and using them later, your app can get the
-// current settings from a translator into a BMessage that you create
-// and pass in empty. Pass this message (or a copy thereof) to the 
-// translator later in a call to Translate() to translate using
-// those settings.
+// ---------------------------------------------------------------
+// GetConfigurationMessage
 //
-// ///////////////////// Notes from BeBook ////////////////////
-// Saves the current configuration information for translator 
-// forTranslator in ioExtension. This information may be 
-// flattened, unflattened, and passed to Translate() to 
-// configure it. 
+// Gets the configuration setttings for the translator
+// forTranslator and puts the settings into ioExtension.
 //
-// RETURN CODES 
+// Preconditions:
 //
-// B_OK. Success. 
-// B_NO_TRANSLATOR. forTranslator not a valid 
-// translator_id. 
-// B_NOT_INITIALIZED. Internal Translation Kit error. 
-// B_BAD_VALUE. ioExtension is NULL. 
-// Anything else. Error passed on from add-on
+// Parameters: forTranslator, the translator the info
+//                            is for
+//             ioExtension, the configuration data for
+//                          the translator is stored here
 //
-// NOTE: virtual
+// Postconditions:
+//
+// Returns: B_OK, success,
+//          B_NO_TRANSLATOR, inTranslator is an invalid id
+//          B_NOT_INITIALIZED, the constructor failed to 
+//                             create a semaphore
+//          B_BAD_VALUE, inSource or outDestination is NULL
+//          other values, error using inSource
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::GetConfigurationMessage(
 	translator_id forTranslator, BMessage *ioExtension)
@@ -1022,7 +1167,8 @@ BTranslatorRoster::GetConfigurationMessage(
 		if (!pTranNode)
 			result = B_NO_TRANSLATOR;
 		else
-			result = pTranNode->translator->GetConfigurationMessage(ioExtension);
+			result =
+				pTranNode->translator->GetConfigurationMessage(ioExtension);
 		
 		release_sem(fSem);
 	}
@@ -1030,7 +1176,26 @@ BTranslatorRoster::GetConfigurationMessage(
 	return result;
 }
 
-// Maybe this gets the entry_ref for the file that is the actual translator
+// ---------------------------------------------------------------
+// GetRefFor
+//
+// Gets the entry_ref for the given translator.
+//
+// Preconditions:
+//
+// Parameters: forTranslator, the translator the info
+//                            is for
+//             entry_ref, where the entry ref is stored
+//
+// Postconditions:
+//
+// Returns: B_OK, success,
+//          B_NO_TRANSLATOR, translator is an invalid id
+//          B_NOT_INITIALIZED, the constructor failed to 
+//                             create a semaphore
+//          B_BAD_VALUE, inSource or outDestination is NULL
+//          other values, error using inSource
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::GetRefFor(translator_id translator,
 	entry_ref *out_ref)
@@ -1056,14 +1221,23 @@ BTranslatorRoster::GetRefFor(translator_id translator,
 	return result;
 }
 
-////////////////////////////////////////////////////
-////////////////////////////////////////////////////
-/// PRIVATE
-/// FUNCTIONS
-////////////////////////////////////////////////////
-////////////////////////////////////////////////////
 
-// NOTE: SHOULD ONLY BE CALLED FROM INSIDE LOCKED CODE
+// ---------------------------------------------------------------
+// FindTranslatorNode
+//
+// Finds the translator_node that holds the translator with
+// the translator_id id.
+//
+// Preconditions:
+//
+// Parameters: id, the translator you want a translator_node for
+//
+// Postconditions:
+//
+// Returns: NULL if id is not a valid translator_id,
+//          pointer to the translator_node that holds the 
+//          translator id
+// ---------------------------------------------------------------
 translator_node *
 BTranslatorRoster::FindTranslatorNode(translator_id id)
 {
@@ -1075,18 +1249,23 @@ BTranslatorRoster::FindTranslatorNode(translator_id id)
 	return pTranNode;
 }
 
-// I imagine it returns error codes in the same 
-// manner as the other functions
+// ---------------------------------------------------------------
+// LoadTranslator
 //
-// I bet this function does the real work behind 
-// AddTranslators
+// Loads the translator from path into memory and adds it to
+// the BTranslatorRoster.
 //
-// The code for this must be in Datatypes somewhere
+// Preconditions: This should only be called inside of locked 
+//                code.
 //
-// I bet if you send this a directory, it will include all 
-// of the translators from the dir rather than failing
+// Parameters: path, the path for the translator to be loaded
 //
-// NOTE: SHOULD ONLY BE CALLED FROM INSIDE LOCKED CODE
+// Postconditions:
+//
+// Returns: B_BAD_VALUE, if path is NULL,
+//          B_NO_ERROR, if all is well,
+//          other values if error loading add ons
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::LoadTranslator(const char *path)
 {
@@ -1125,10 +1304,8 @@ BTranslatorRoster::LoadTranslator(const char *path)
 		// BTranslators from MakeNth... begin at 1!!!
 		// I NEED TO WRITE CODE TO TEST WHAT THE REF COUNT FOR 
 		// THESE BTRANSLATORS START AS!!!!
-		for (int32 n = 0; (ptran = pMakeNthTranslator(n, image, 0)); n++) {
-/* DEBUG */	printf("ADD R5: %s\n", name);
+		for (int32 n = 0; (ptran = pMakeNthTranslator(n, image, 0)); n++)
 			AddTranslatorToList(ptran, path, image, false);
-		}
 		
 		return B_NO_ERROR;
 		
@@ -1173,7 +1350,6 @@ BTranslatorRoster::LoadTranslator(const char *path)
 
 		// add this translator to the list
 		BR4xTranslator *pR4xTran = new BR4xTranslator(&trandata);
-/*DEBUG*/ printf("ADD R4x: %s\n", name);
 		AddTranslatorToList(pR4xTran, path, image, false);
 			// do not call Acquire() on ptran because I want it to be
 			// deleted the first time Release() is called on it.
@@ -1182,8 +1358,22 @@ BTranslatorRoster::LoadTranslator(const char *path)
 	}
 }
 
-// This loads all translators in a directory
-// NOTE: SHOULD ONLY BE CALLED FROM INSIDE LOCKED CODE
+// ---------------------------------------------------------------
+// LoadDir
+//
+// Loads all of the translators in the directory path
+//
+// Preconditions: should only be called inside locked code
+//
+// Parameters: path, the directory of translators to load
+//             loadErr, the return code
+//             nLoaded, number of translators loaded
+//
+// Postconditions:
+//
+// Returns: B_FILE_NOT_FOUND, if the path is NULL or invalid
+//          other errors if LoadTranslator failed
+// ---------------------------------------------------------------
 void
 BTranslatorRoster::LoadDir(const char *path, int32 &loadErr, int32 &nLoaded)
 {
@@ -1220,13 +1410,30 @@ BTranslatorRoster::LoadDir(const char *path, int32 &loadErr, int32 &nLoaded)
 	closedir(dir);
 }
 
-// /////////////// From DataTypes Source Code /////////////////
-//	CheckFormats is a utility function that returns true if the 
-//	data provided and translator info can be used to make a 
-//	determination (even if that termination is negative) and 
-//	false if content identification has to be done.
+// ---------------------------------------------------------------
+// CheckFormats
 //
-// NOTE: SHOULD ONLY BE CALLED FROM INSIDE LOCKED CODE
+// Function used to determine if hintType and hintMIME can be
+// used to find the desired translation_format.
+//
+// Preconditions: Should only be called from inside locked code
+//
+// Parameters: inputFormats, the formats check against the hints
+//             inputFormatsCount, number of items in inputFormats
+//             hintType, the type this function is looking for
+//             hintMIME, the MIME type this function is looking
+//                       for
+//             outFormat, NULL if no suitable translation_format
+//                        from inputFormats was found, not NULL
+//                        if a translation_format matching the
+//                        hints was found
+//           
+//
+// Postconditions:
+//
+// Returns: true, if a determination could be made
+//          false, if indentification must be done
+// ---------------------------------------------------------------
 bool
 BTranslatorRoster::CheckFormats(const translation_format *inputFormats,
 	int32 inputFormatsCount, uint32 hintType, const char *hintMIME,
@@ -1237,19 +1444,17 @@ BTranslatorRoster::CheckFormats(const translation_format *inputFormats,
 
 	*outFormat = NULL;
 
-	//	return false if we can't use hints for this module
-	//
+	// return false if we can't use hints for this module
 	if (!hintType && !hintMIME)
 		return false;
 
-	//	check for the length of the MIME string, since it may be just a prefix
-	//	so we use strncmp().
+	// check for the length of the MIME string, since it may be just a prefix
+	// so we use strncmp().
 	int mlen = 0;
 	if (hintMIME)
 		mlen = strlen(hintMIME);
 
-	//	scan for suitable format
-	//
+	// scan for suitable format
 	const translation_format *fmt = inputFormats;
 	for (int32 i = 0; i < inputFormatsCount && fmt->type; i++, fmt++) {
 		if ((fmt->type == hintType) ||
@@ -1258,20 +1463,26 @@ BTranslatorRoster::CheckFormats(const translation_format *inputFormats,
 			return true;
 		}
 	}
-	//	the module did export formats, but none matched.
-	//	we return true (uses formats) but set outFormat to NULL
+	// the module did export formats, but none matched.
+	// we return true (uses formats) but set outFormat to NULL
 	return true;
 }
 
-// Assumes the object is already locked!
-// If bool acquire is true, BTranslator::Acquire() is called,
-// if false, it is not called.
+// ---------------------------------------------------------------
+// AddTranslatorToList
 //
-// I don't want to call BTranslator::Acquire() on BTranslators that
-// I create inside of this class, only on BTranslators that the user
-// adds to this class themselves.
+// Adds a BTranslator based object to the list of translators
+// stored by the BTranslatorRoster.
 //
-// NOTE: SHOULD ONLY BE CALLED FROM INSIDE LOCKED CODE
+// Preconditions: Should only be called inside locked code
+//
+// Parameters: translator, the translator to add to this object
+//
+// Postconditions:
+//
+// Returns: B_BAD_VALUE, if translator is NULL
+//          B_OK, if not
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::AddTranslatorToList(BTranslator *translator)
 {
@@ -1280,7 +1491,25 @@ BTranslatorRoster::AddTranslatorToList(BTranslator *translator)
 		// and call Acquire() on it
 }
 
-// NOTE: Should only be called from inside locked code
+// ---------------------------------------------------------------
+// AddTranslatorToList
+//
+// Adds a BTranslator based object to the list of translators
+// stored by the BTranslatorRoster.
+//
+// Preconditions: Should only be called inside locked code
+//
+// Parameters: translator, the translator to add to this object
+//             path, the path the translator was loaded from
+//             image, the image the translator was loaded from
+//             acquire, if true Acquire() is called on the
+//                      translator
+//
+// Postconditions:
+//
+// Returns: B_BAD_VALUE, if translator is NULL
+//          B_OK, if not
+// ---------------------------------------------------------------
 status_t
 BTranslatorRoster::AddTranslatorToList(BTranslator *translator,
 	const char *path, image_id image, bool acquire)
@@ -1309,41 +1538,115 @@ BTranslatorRoster::AddTranslatorToList(BTranslator *translator,
 	return B_OK;
 }
 
-////////////////////////////////////////////////////////
-/// Private/Reserved Virtual Functions
-////////////////////////////////////////////////////////
-
-// NOTE: virtual
+// ---------------------------------------------------------------
+// ReservedTranslatorRoster1
+//
+// It does nothing! :) Its here only for past/future binary
+// compatibility.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 void
 BTranslatorRoster::ReservedTranslatorRoster1()
 {
 }
 
-// NOTE: virtual
+// ---------------------------------------------------------------
+// ReservedTranslatorRoster2
+//
+// It does nothing! :) Its here only for past/future binary
+// compatibility.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 void
 BTranslatorRoster::ReservedTranslatorRoster2()
 {
 }
 
-// NOTE: virtual
+// ---------------------------------------------------------------
+// ReservedTranslatorRoster3
+//
+// It does nothing! :) Its here only for past/future binary
+// compatibility.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 void
 BTranslatorRoster::ReservedTranslatorRoster3()
 {
 }
 
-// NOTE: virtual
+// ---------------------------------------------------------------
+// ReservedTranslatorRoster4
+//
+// It does nothing! :) Its here only for past/future binary
+// compatibility.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 void
 BTranslatorRoster::ReservedTranslatorRoster4()
 {
 }
 
-// NOTE: virtual
+// ---------------------------------------------------------------
+// ReservedTranslatorRoster5
+//
+// It does nothing! :) Its here only for past/future binary
+// compatibility.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 void
 BTranslatorRoster::ReservedTranslatorRoster5()
 {
 }
 
-// NOTE: virtual
+// ---------------------------------------------------------------
+// ReservedTranslatorRoster6
+//
+// It does nothing! :) Its here only for past/future binary
+// compatibility.
+//
+// Preconditions:
+//
+// Parameters:
+//
+// Postconditions:
+//
+// Returns:
+// ---------------------------------------------------------------
 void
 BTranslatorRoster::ReservedTranslatorRoster6()
 {
