@@ -9,7 +9,8 @@
 #include <File.h>
 #include <Path.h>
 #include <SymLink.h>
-#include <storage_support.h>
+#include "storage_support.h"
+#include "kernel_interface.h"
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {

@@ -10,6 +10,7 @@
 
 #include <DataIO.h>
 #include <Node.h>
+#include <StorageDefs.Private.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
@@ -129,7 +130,7 @@ private:
 	virtual void close_fd();
 
 	//! Returns the file descriptor.
-	int get_fd() const;
+	StorageKit::FileDescriptor get_fd() const;
 
 	//! Sets the BNode's status.
 	void set_status(status_t newStatus);

@@ -10,7 +10,7 @@
 #include <Node.h>
 #include <EntryList.h>
 #include <StorageDefs.h>
-#include "kernel_interface.h"
+#include <StorageDefs.Private.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {

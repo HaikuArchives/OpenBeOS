@@ -10,6 +10,7 @@
 
 #include <Entry.h>
 #include <File.h>
+#include "kernel_interface.h"
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
