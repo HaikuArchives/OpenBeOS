@@ -1016,10 +1016,30 @@ bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent 
 
 
 int
-bfs_remove_attr(void *ns, void *node, const char *name)
+bfs_remove_attr(void *_ns, void *_node, const char *name)
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
-	RETURN_ERROR(B_ENTRY_NOT_FOUND);
+
+	if (_ns == NULL || _node == NULL || name == NULL)
+		return B_BAD_VALUE;
+
+	Volume *volume = (Volume *)_ns;
+	Inode *inode = (Inode *)_node;
+
+	Transaction transaction(volume,inode->BlockNumber());
+
+	status_t status = inode->RemoveSmallData(&transaction,name);
+	if (status == B_OK) {
+		status = inode->WriteBack(&transaction);
+	} else if (status == B_ENTRY_NOT_FOUND) {
+		// remove attribute file if it exists
+		// ToDo: implement me!
+		RETURN_ERROR(B_ENTRY_NOT_FOUND);
+	}
+	if (status == B_OK)
+		transaction.Done();
+
+	RETURN_ERROR(status);
 }
 
 
@@ -1062,10 +1082,30 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 
 
 int
-bfs_write_attr(void *ns, void *node, const char *name, int type,const void *buf, size_t *len, off_t pos)
+bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *buffer, size_t *length, off_t pos)
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
-	RETURN_ERROR(B_ERROR);
+
+	// writing the name attribute using this function is not allowed
+	if (_ns == NULL || _node == NULL || name == NULL || *name == '\0'
+		|| (name[0] == FILE_NAME_NAME && name[1] == '\0'))
+		RETURN_ERROR(B_BAD_VALUE);
+
+	Volume *volume = (Volume *)_ns;
+	Inode *inode = (Inode *)_node;
+
+	Transaction transaction(volume,inode->BlockNumber());
+
+	status_t status = inode->AddSmallData(&transaction,name,type,(const uint8 *)buffer,*length);
+	if (status == B_DEVICE_FULL) {
+		// try to put it into a real attribute file
+		FATAL(("writing to attribute files not yet implemented!\n"));
+		return B_ERROR;
+	}
+	if ((status = inode->WriteBack(&transaction)) == B_OK)
+		transaction.Done();
+
+	return status;
 }
 
 

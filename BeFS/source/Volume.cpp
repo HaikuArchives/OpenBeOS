@@ -153,7 +153,7 @@ Volume::Unmount()
 {
 	delete fIndicesNode;
 
-	remove_cached_device_blocks(fDevice,NO_WRITES);
+	remove_cached_device_blocks(fDevice,ALLOW_WRITES);
 	close(fDevice);
 
 	return 0;

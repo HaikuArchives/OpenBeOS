@@ -18,6 +18,7 @@ Inode::Inode(Volume *volume,vnode_id id,uint8 reenter)
 	fTree(NULL),
 	fLock("bfs inode")
 {
+	Node()->flags &= INODE_PERMANENT_FLAGS;
 }
 
 
@@ -118,7 +119,7 @@ Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,uint32 by
 		// ToDo: implement me!
 		// -> move the attribute to a real attribute file
 
-		RemoveSmallData(NULL,max);
+		RemoveSmallData(transaction,NULL,max);
 	}
 	return B_OK;
 }
@@ -130,7 +131,7 @@ Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,uint32 by
  */
 
 status_t
-Inode::RemoveSmallData(const char *name,small_data *item)
+Inode::RemoveSmallData(Transaction *transaction,const char *name,small_data *item)
 {
 	if (item == NULL) {
 		if (name == NULL)
@@ -180,7 +181,7 @@ Inode::RemoveSmallData(const char *name,small_data *item)
  */
 
 status_t
-Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const uint8 *data,uint32 length,bool force)
+Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const uint8 *data,size_t length,bool force)
 {
 	if (name == NULL || data == NULL || type == 0)
 		return B_BAD_VALUE;
@@ -230,7 +231,7 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 		}
 
 		// could not replace the old attribute, so remove it!
-		if (RemoveSmallData(name,item) < B_OK)
+		if (RemoveSmallData(transaction,name,item) < B_OK)
 			return B_ERROR;
 
 		return B_DEVICE_FULL;
@@ -322,7 +323,7 @@ Inode::Name() const
 {
 	small_data *smallData = NULL;
 	while (GetNextSmallData(&smallData) == B_OK) {
-		if (*smallData->Name() == FILE_NAME_NAME)
+		if (*smallData->Name() == FILE_NAME_NAME && smallData->name_size == FILE_NAME_NAME_LENGTH)
 			return (const char *)smallData->Data();
 	}
 	return NULL;
@@ -390,6 +391,17 @@ Inode::ReleaseAttribute(Inode *attribute)
 	// probably not... perhaps we should better move that right into GetAttribute().
 	put_vnode(fVolume->ID(),attribute->ID());
 	put_vnode(fVolume->ID(),fVolume->ToVnode(Attributes()));
+}
+
+
+status_t
+Inode::CreateAttribute(Transaction *transaction,char *name,uint32 type)
+{
+	// do we need to create the attribute directory first?
+	if (Attributes().IsZero()) {
+		status_t status = Inode::Create(NULL,NULL,S_ATTR_DIR,0,NULL);
+	}
+	return B_ERROR;
 }
 
 
@@ -826,12 +838,15 @@ Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *
 	node->uid = geteuid();
 	node->gid = getegid();
 	node->mode = mode;
-	node->flags = 0;
+	node->flags = INODE_IN_USE;
 
-	node->create_time = time(NULL) << INODE_TIME_SHIFT;
+	node->create_time = (bigtime_t)time(NULL) << INODE_TIME_SHIFT;
 	node->last_modified_time = node->create_time;
 
 	node->inode_size = volume->InodeSize();
+
+	if (inode->SetName(&transaction,name) < B_OK)
+		return B_ERROR;
 
 	// initialize b+tree if it's a directory (and add "." & ".." if it's
 	// a standard directory for files - not attributes or indices)
