@@ -1,0 +1,44 @@
+Just some general thoughts that have occurred to me as I've started
+looking at stuff related to designing a network stack...
+
+These are in no particular order.
+
+General Jottings
+----------------
+
+- zero-copy is a laudible aim, but in reality single copy is probably
+  as good as we're going to get to.  Basically this means that we copy data
+  into the stack at some point.
+- we should use a version of the mbuff's that the BSD stack uses with changes
+  so we use them more efficiently for our stack.
+- probably need an rx and tx queue for frames.
+- we should reallt be dealing with frames as soon as we can in the stack,
+  though we don't want to fragment earlier than we need to - what a quandry!
+- it should be possible to stack/reorder modules as needed. This would be cool
+  if we could deal with input from other sources, e.g. data from a USB port
+  to be fed into a ppp stack, onto an atm/ethernet frame module and upwards.
+
+
+Userland vs Kernel Land
+-----------------------
+
+- stack lives in kernel land. apps live in userland.
+- do we need to copy data from top level of stack into userland?
+  Probably to keep memory in correct "area".
+
+Initial Protocols
+-----------------
+
+- ethernet
+- ipv4
+- udp
+- arp
+- icmpv4
+
+Extra's
+-------
+
+- ipv6
+- icmpv6
+- ipv6 discovery (arp for v6)
+
