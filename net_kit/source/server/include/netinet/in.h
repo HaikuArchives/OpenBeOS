@@ -10,7 +10,9 @@
 #include "net/if.h"
 
 /* XXX - This really doesn't belong in here... */
+/* XXX - move these to sys/param.h */
 typedef uint32	in_addr_t; 
+typedef uint16  in_port_t;
 
 /* Protocol definitions - add to as required... */
 
@@ -125,6 +127,9 @@ struct sockaddr_in {
 #define IN_CLASSD_HOST          __IPADDR(0x0fffffff)
 
 #define IN_MULTICAST(i)	        IN_CLASSD(i)
+
+#define IN_EXPERIMENTAL(i)      (((uint32)(i) & 0xf0000000) == 0xf0000000)
+#define IN_BADCLASS(i)          (((uint32)(i) & 0xf0000000) == 0xf0000000)
 
 #define IP_MAX_MEMBERSHIPS      20
 
