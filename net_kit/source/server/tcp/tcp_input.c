@@ -160,31 +160,19 @@ extern uint32 sb_max;
 	if ((ti)->ti_seq == (tp)->rcv_nxt && \
 	    (tp)->seg_next == (struct tcpiphdr*)(tp) && \
 	    (tp)->t_state == TCPS_ESTABLISHED) { \
+	    \
 		(tp)->t_flags |= TF_DELACK; \
 		(tp)->rcv_nxt += (ti)->ti_len; \
 		(flags) = (ti)->ti_flags & TH_FIN; \
 		tcpstat.tcps_rcvpack++; \
 		tcpstat.tcps_rcvbyte += (ti)->ti_len; \
 		sbappend(&(so)->so_rcv, (m)); \
+		sorwakeup(so); \
 	} else { \
 		(flags) = tcp_reass((tp), (ti), (m)); \
 		(tp)->t_flags |= TF_ACKNOW; \
 	}\
 }
-
-#define INTCPQ(ti, head) do { \
-	(ti)->ti_prev = ((struct tcpiphdr*)(head)->ti_next)->ti_prev; \
-	(ti)->ti_next = (head)->ti_next; \
-	((struct tcpiphdr*)(head)->ti_next)->ti_prev = (caddr_t)(ti); \
-	(head)->ti_next = (caddr_t)(ti); \
-} while (0)
-
-#define REMTCPQ(ti) do { \
-	((struct tcpiphdr*)(ti)->ti_prev)->ti_next = (ti)->ti_next; \
-	((struct tcpiphdr*)(ti)->ti_next)->ti_prev = (ti)->ti_prev; \
-} while (0)
-
-
 
 /*
  * Insert segment ti into reassembly queue of tcp with
@@ -204,7 +192,7 @@ int tcp_reass(struct tcpcb *tp, struct tcpiphdr *ti, struct mbuf *m)
 	int flags;
 
 	/*
-	 * Call with ti==0 after become established to
+	 * Call with ti==NULL after become established to
 	 * force pre-ESTABLISHED data up to user socket.
 	 */
 	if (ti == NULL)
@@ -216,7 +204,6 @@ int tcp_reass(struct tcpcb *tp, struct tcpiphdr *ti, struct mbuf *m)
 	for (q = tp->seg_next; q != (struct tcpiphdr*)tp; q = (struct tcpiphdr*)q->ti_next)
 		if (SEQ_GT(q->ti_seq, ti->ti_seq))
 			break;
-
 	/*
 	 * If there is a preceding segment, it may provide some of
 	 * our data already.  If so, drop the data from the incoming
@@ -224,22 +211,21 @@ int tcp_reass(struct tcpcb *tp, struct tcpiphdr *ti, struct mbuf *m)
 	 */
 	if ((struct tcpiphdr *)q->ti_prev != (struct tcpiphdr*)tp) {
 		int i;
-		q = (struct tcpiphdr*)ti->ti_prev;
-		
+		q = (struct tcpiphdr*)q->ti_prev;
 		/* conversion to int (in i) handles seq wraparound */
-		i = q->ti_seq + q->ti_len - ti->ti_seq;
+		i = (q->ti_seq + q->ti_len) - ti->ti_seq;
 		if (i > 0) {
 			if (i >= ti->ti_len) {
 				tcpstat.tcps_rcvduppack++;
 				tcpstat.tcps_rcvdupbyte += ti->ti_len;
-				m_freem(m);
+				//m_freem(m);
 				return (0);
 			}
 			m_adj(m, i);
 			ti->ti_len -= i;
 			ti->ti_seq += i;
 		}
-		q = (struct tcpiphdr*)q->ti_next;
+		q = (struct tcpiphdr*)(q->ti_next);
 	}
 	tcpstat.tcps_rcvoopack++;
 	tcpstat.tcps_rcvoobyte += ti->ti_len;
@@ -262,39 +248,100 @@ int tcp_reass(struct tcpcb *tp, struct tcpiphdr *ti, struct mbuf *m)
 		}
 		q = (struct tcpiphdr*)q->ti_next;
 		m = REASS_MBUF((struct tcpiphdr*)q->ti_prev);
-		REMTCPQ((struct tcpiphdr*)q->ti_prev);
-		m_freem(m);
+		remque(q->ti_prev);
+		//m_freem(m);
 	}
 
-	INTCPQ(ti, (struct tcpiphdr*)ti->ti_prev);
+	insque(ti, q->ti_prev);
 
 present:
 	/*
 	 * Present data to user, advancing rcv_nxt through
 	 * completed sequence space.
 	 */
-	if (TCPS_HAVEESTABLISHED(tp->t_state) == 0)
+	if (TCPS_HAVERCVDSYN(tp->t_state) == 0) {
 		return 0;
+	}
 	ti = tp->seg_next;
-	if (ti == (struct tcpiphdr*)tp || ti->ti_seq != tp->rcv_nxt)
+	if (ti == (struct tcpiphdr*)tp || ti->ti_seq != tp->rcv_nxt) {
 		return 0;
-	if (tp->t_state == TCPS_SYN_RECEIVED && ti->ti_len)
+	}
+	if (tp->t_state == TCPS_SYN_RECEIVED && ti->ti_len) {
 		return 0;
+	}
 	do {
 		tp->rcv_nxt += ti->ti_len;
 		flags = ti->ti_flags & TH_FIN;
-		REMTCPQ(ti);
+		remque(ti);
 		
 		m = REASS_MBUF(ti);
 		ti = (struct tcpiphdr*) ti->ti_next;
-		if (so->so_state & SS_CANTRCVMORE)
-			m_freem(m);
-		else
+		/* XXX - Change
+		 * BSD sockets would call m_freem(m) if this was true, but if we
+		 * do that we have trouble...
+		 * So, reverse the logic and only append data if we can.
+		 */
+		if ((so->so_state & SS_CANTRCVMORE) == 0)
 			sbappend(&so->so_rcv, m);
 	} while (ti != (struct tcpiphdr*)tp && ti->ti_seq == tp->rcv_nxt);
 	sorwakeup(so);
 	return (flags);
 }
+
+#ifdef TCP_DEBUG
+static void show_ti(struct tcpiphdr *ti, char *msg)
+{
+	printf("TCP/IP Header: %s\n", msg);
+	printf("             : src port : %d\n", ntohs(ti->ti_sport));
+	printf("             : dst port : %d\n", ntohs(ti->ti_dport));
+	printf("             : seq num  : %lu\n", ti->ti_seq);
+	printf("             : ack num  : %lu\n", ti->ti_ack);
+	printf("             : hdr len  : %d\n", ti->ti_len);
+	printf("             : flags    : ");
+	if (ti->ti_flags & TH_SYN)
+		printf(" SYN ");
+	if (ti->ti_flags & TH_ACK)
+		printf(" ACK ");
+	if (ti->ti_flags & TH_RST)
+		printf(" RST ");
+	if (ti->ti_flags & TH_PUSH)
+		printf(" PSH ");
+	if (ti->ti_flags & TH_URG)
+		printf(" URG ");
+	if (ti->ti_flags & TH_FIN)
+		printf(" FIN ");
+	printf("\n");
+	printf("             : win      : %d\n", ti->ti_win);
+
+}
+
+static void show_tp(struct tcpcb *tp)
+{
+	printf("TCP Control Block:\n");
+	printf("                 : snd_una       : %lu\n", tp->snd_una);
+	printf("                 : snd_nxt       : %lu\n", tp->snd_nxt);
+	printf("                 : snd_up        : %lu\n", tp->snd_up);
+	printf("                 : snd_wl1       : %lu\n", tp->snd_wl1);
+	printf("                 : snd_wl2       : %lu\n", tp->snd_wl2);
+	printf("                 : iss           : %lu\n", tp->iss);
+	printf("                 : rcv_wnd       : %lu\n", tp->rcv_wnd);
+	printf("                 : rcv_nxt       : %lu\n", tp->rcv_nxt);
+	printf("                 : rcv_up        : %lu\n", tp->rcv_up);
+	printf("                 : last_ack_sent : %lu\n", tp->last_ack_sent);
+	printf("                 : flags         : ");
+	if (tp->t_flags & TF_ACKNOW)
+		printf(" ACKNOW ");
+	if (tp->t_flags & TF_DELACK)
+		printf(" DELACK ");
+	if (tp->t_flags & TF_SENTFIN)
+		printf(" SENTFIN ");
+	if (tp->t_flags & TF_NODELAY)
+		printf(" NODELAY ");
+	if (tp->t_flags & TF_NOOPT)
+		printf(" NOOPT ");
+	printf("\n");
+}
+#endif /* TCP_DEBUG */
 
 /*
  * TCP input routine, follows pages 65-76 of the
@@ -302,13 +349,14 @@ present:
  */
 int tcp_input(struct mbuf *m, int iphlen)
 {
-	struct ip *ip = NULL;
 	struct inpcb *inp;
 	caddr_t optp = NULL;
 	int optlen = 0;
-	int len, tlen, off = 0;
-	struct tcpcb *tp = 0;
-	int tiflags;
+	int len = 0;
+	uint16 tlen = 0;
+	int off = 0;
+	struct tcpcb *tp = NULL;
+	int tiflags = 0;
 	struct socket *so = NULL;
 	int todrop, acked, ourfinisacked, needoutput = 0;
 	short ostate = 0;
@@ -319,14 +367,21 @@ int tcp_input(struct mbuf *m, int iphlen)
 	uint32 ts_val, ts_ecr;
 	int ts_present = 0;
 	struct tcpiphdr *ti;
-printf("tcp_input\n");
+
 	tcpstat.tcps_rcvtotal++;
+	/* Get the IP and TCP header together (the tcpiphdr struct)
+	 * together in the first mbuf.
+	 * NB IP layer should leave IP header in first mbuf
+	 */
 	ti = mtod(m, struct tcpiphdr*);
+
 	if (iphlen > sizeof(struct ip))
 		ipm->ip_stripoptions(m, NULL);
+
 	if (m->m_len < sizeof(struct tcpiphdr)) {
 		if ((m = m_pullup(m, sizeof(struct tcpiphdr))) == NULL) {
 			tcpstat.tcps_rcvshort++;
+			printf("tcp_input: ENOBUFS\n");
 			return ENOBUFS;
 		}
 		ti = mtod(m, struct tcpiphdr*);
@@ -335,30 +390,41 @@ printf("tcp_input\n");
 	/*
 	 * Checksum extended TCP header and data.
 	 */
-	tlen = ((struct ip*)ti)->ip_len;
+	tlen = ((struct ip *) ti)->ip_len;
 	len = sizeof(struct ip) + tlen;
+
 	ti->ti_next = ti->ti_prev = NULL;
 	ti->ti_x1 = 0;
-	ti->ti_len = (uint16)tlen;
-	htons(ti->ti_len);
+	ti->ti_len = htons(tlen);
+
 	if ((ti->ti_sum = in_cksum(m, len, 0))) {
 		tcpstat.tcps_rcvbadsum++;
+		printf("invalid checksum %d over %d bytes!\n", ti->ti_sum, len);
+		goto drop;
+	}
+	
+	off = ti->ti_off << 2;
+	if (off < sizeof(struct tcphdr) || off > tlen) {
+		tcpstat.tcps_rcvbadoff++;
 		goto drop;
 	}
 	
 	tlen -=off;
 	ti->ti_len = tlen;
+
 		
 	if (off > sizeof(struct tcphdr)) {
 		if (m->m_len < sizeof(struct ip) + off) {
 			if ((m = m_pullup(m, sizeof(struct ip) + off)) == NULL) {
 				tcpstat.tcps_rcvshort++;
+				printf("tcp_input: ENOBUFS (2)\n");
 				return ENOBUFS;
 			}
 			ti = mtod(m, struct tcpiphdr*);
 		}
 		optlen = off - sizeof(struct tcphdr);
 		optp = mtod(m, caddr_t) + sizeof(struct tcphdr);
+
 		/* 
 		 * Do quick retrieval of timestamp options ("options
 		 * prediction?").  If timestamp is the only option and it's
@@ -382,17 +448,18 @@ printf("tcp_input\n");
 	/*
 	 * Convert TCP protocol specific fields to host format.
 	 */
-	ntohl(ti->ti_seq);
-	ntohl(ti->ti_ack);
-	ntohs(ti->ti_win);
-	ntohs(ti->ti_urp);
+	ti->ti_seq = ntohl(ti->ti_seq);
+	ti->ti_ack = ntohl(ti->ti_ack);
+	ti->ti_win = ntohs(ti->ti_win);
+	ti->ti_urp = ntohs(ti->ti_urp);
 
 	/*
 	 * Locate pcb for segment.
 	 */
 findpcb:
+
 	inp = tcp_last_inpcb;
-	if (inp->lport != ti->ti_dport ||
+	if (!inp || inp->lport != ti->ti_dport ||
 	    inp->fport != ti->ti_sport ||
 	    inp->faddr.s_addr != ti->ti_src.s_addr ||
 	    inp->laddr.s_addr != ti->ti_dst.s_addr) {
@@ -400,17 +467,20 @@ findpcb:
 		                   ti->ti_dport, INPLOOKUP_WILDCARD);
 		if (inp)
 			tcp_last_inpcb = inp;
-//		++tcpstat.tcps_pcbcachemiss;
+		++tcpstat.tcps_pcbhashmiss;
 	}
-	if (inp == NULL)
+	if (inp == NULL) {
 		goto dropwithreset;
-
+	}
+	
 	tp = intotcpcb(inp);
-	if (tp == NULL)
+	if (tp == NULL) {
 		goto dropwithreset;
+	}
+
 	if (tp->t_state == TCPS_CLOSED)
 		goto drop;
-	
+
 	/* Unscale the window into a 32-bit value. */
 	if ((tiflags & TH_SYN) == 0)
 		tiwin = ti->ti_win << tp->snd_scale;
@@ -459,8 +529,6 @@ findpcb:
 	 * Reset idle time and keep-alive timer.
 	 */
 	tp->t_idle = 0;
-// ??	if (tp->t_state != TCPS_SYN_RECEIVED)
-
 	tp->t_timer[TCPT_KEEP] = tcp_keepidle;
 	
 	/*
@@ -468,8 +536,7 @@ findpcb:
 	 * else do it below (after getting remote address).
 	 */
 	if (optp && tp->t_state != TCPS_LISTEN)
-		tcp_dooptions(tp, optp, optlen, ti,
-			&ts_present, &ts_val, &ts_ecr);
+		tcp_dooptions(tp, optp, optlen, ti,	&ts_present, &ts_val, &ts_ecr);
 
 	/* 
 	 * Header prediction: check for the two common cases
@@ -512,8 +579,7 @@ findpcb:
 				++tcpstat.tcps_predack;
 				if (ts_present)
 					tcp_xmit_timer(tp, tcp_now - ts_ecr + 1);
-				else if (tp->t_rtt &&
-					    SEQ_GT(ti->ti_ack, tp->t_rtseq))
+				else if (tp->t_rtt && SEQ_GT(ti->ti_ack, tp->t_rtseq))
 					tcp_xmit_timer(tp, tp->t_rtt);
 				acked = ti->ti_ack - tp->snd_una;
 				tcpstat.tcps_rcvackpack++;
@@ -538,8 +604,9 @@ findpcb:
 
 				if (so->so_snd.sb_flags & SB_NOTIFY)
 					sowwakeup(so);
-				if (so->so_snd.sb_cc)
+				if (so->so_snd.sb_cc) {
 					(void) tcp_output(tp);
+				}
 				return -1;
 			}
 		} else if (ti->ti_ack == tp->snd_una &&
@@ -605,8 +672,9 @@ findpcb:
 
 			if (tiflags & TH_RST)
 				goto drop;
-			if (tiflags & TH_ACK)
+			if (tiflags & TH_ACK) {
 				goto dropwithreset;
+			}
 			if ((tiflags & TH_SYN) == 0)
 				goto drop;
 			/*
@@ -634,6 +702,7 @@ findpcb:
 			laddr = inp->laddr;
 			if (inp->laddr.s_addr == INADDR_ANY)
 				inp->laddr = ti->ti_dst;
+
 			if (in_pcbconnect(inp, am)) {
 				inp->laddr = laddr;
 				(void) m_free(am);
@@ -679,8 +748,9 @@ findpcb:
 					goto dropwithreset;
 				}
 				if (SEQ_LEQ(ti->ti_ack, tp->snd_una) ||
-				    SEQ_GT(ti->ti_ack, tp->snd_max))
+				    SEQ_GT(ti->ti_ack, tp->snd_max)) {
 					goto dropwithreset;
+				}
 			}
 			break;
 
@@ -699,8 +769,9 @@ findpcb:
 		case TCPS_SYN_SENT:
 			if ((tiflags & TH_ACK) &&
 		    	(SEQ_LEQ(ti->ti_ack, tp->iss) ||
-		     	SEQ_GT(ti->ti_ack, tp->snd_max)))
+		     	SEQ_GT(ti->ti_ack, tp->snd_max))) {
 				goto dropwithreset;
+			}
 			if (tiflags & TH_RST) {
 				if (tiflags & TH_ACK)
 					tp = tcp_drop(tp, ECONNREFUSED);
@@ -710,8 +781,8 @@ findpcb:
 				goto drop;
 			if (tiflags & TH_ACK) {
 				tp->snd_una = ti->ti_ack;
-			if (SEQ_LT(tp->snd_nxt, tp->snd_una))
-				tp->snd_nxt = tp->snd_una;
+				if (SEQ_LT(tp->snd_nxt, tp->snd_una))
+					tp->snd_nxt = tp->snd_una;
 			}
 			tp->t_timer[TCPT_REXMT] = 0;
 			tp->irs = ti->ti_seq;
@@ -739,7 +810,7 @@ findpcb:
 
 trimthenstep6:
 			/*
-			 * Advance th->th_seq to correspond to first data byte.
+			 * Advance ti->ti_seq to correspond to first data byte.
 			 * If data, trim to stay within window,
 			 * dropping FIN if necessary.
 			 */
@@ -817,7 +888,7 @@ trimthenstep6:
 			 * but keep on processing for RST or ACK.
 			 */
 			tp->t_flags |= TF_ACKNOW;
-		    
+			todrop = ti->ti_len;		    
 			tcpstat.tcps_rcvduppack++;
 			tcpstat.tcps_rcvdupbyte += todrop;
 		} else {
@@ -865,7 +936,7 @@ trimthenstep6:
 			if (tiflags & TH_SYN &&
 			    tp->t_state == TCPS_TIME_WAIT &&
 			    SEQ_GT(ti->ti_seq, tp->rcv_nxt)) {
-				iss = tp->snd_nxt + TCP_ISSINCR;
+				iss = tp->rcv_nxt + TCP_ISSINCR;
 				tp = tcp_close(tp);
 				goto findpcb;
 			}
@@ -948,7 +1019,7 @@ close:
 	 */
 	if ((tiflags & TH_ACK) == 0)
 		goto drop;
-	
+
 	/*
 	 * Ack processing.
 	 */
@@ -1027,23 +1098,23 @@ close:
 						if (win < 2)
 							win = 2;
 						tp->snd_ssthresh = win * tp->t_maxseg;
-					tp->t_timer[TCPT_REXMT] = 0;
-					tp->t_rtt = 0;
-					tp->snd_nxt = ti->ti_ack;
-					tp->snd_cwnd = tp->t_maxseg;		
-					(void) tcp_output(tp);
-					tp->snd_cwnd = tp->snd_ssthresh + tp->t_maxseg * tp->t_dupacks;
-					if (SEQ_GT(onxt, tp->snd_nxt))
-						tp->snd_nxt = onxt;
-					goto drop;
-				} else if (tp->t_dupacks > tcprexmtthresh) {
-					tp->snd_cwnd += tp->t_maxseg;
-					(void) tcp_output(tp);
-					goto drop;
-				}
-			} else 
-				tp->t_dupacks = 0;
-			break;
+						tp->t_timer[TCPT_REXMT] = 0;
+						tp->t_rtt = 0;
+						tp->snd_nxt = ti->ti_ack;
+						tp->snd_cwnd = tp->t_maxseg;
+						(void) tcp_output(tp);
+						tp->snd_cwnd = tp->snd_ssthresh + tp->t_maxseg * tp->t_dupacks;
+						if (SEQ_GT(onxt, tp->snd_nxt))
+							tp->snd_nxt = onxt;
+						goto drop;
+					} else if (tp->t_dupacks > tcprexmtthresh) {
+						tp->snd_cwnd += tp->t_maxseg;
+						(void) tcp_output(tp);
+						goto drop;
+					}
+				} else 
+					tp->t_dupacks = 0;
+				break;
 		}
 		/*
 		 * If the congestion window was inflated to account
@@ -1185,8 +1256,9 @@ step6:
 	 * Update window information.
 	 * Don't look at window if no ACK: TAC's send garbage on first SYN.
 	 */
-	if ((tiflags & TH_ACK) && (SEQ_LT(tp->snd_wl1, ti->ti_seq) ||
-	    (tp->snd_wl1 == ti->ti_seq && SEQ_LT(tp->snd_wl2, ti->ti_ack)) ||
+	if ((tiflags & TH_ACK) && 
+	    (SEQ_LT(tp->snd_wl1, ti->ti_seq) || tp->snd_wl1 == ti->ti_seq) && 
+	    (SEQ_LT(tp->snd_wl2, ti->ti_ack) ||
 	    (tp->snd_wl2 == ti->ti_ack && tiwin > tp->snd_wnd))) {
 		/* keep track of pure window updates */
 		if (ti->ti_len == 0 &&
@@ -1199,7 +1271,6 @@ step6:
 			tp->max_sndwnd = tp->snd_wnd;
 		needoutput = 1;
 	}
-
 	/*
 	 * Process segments with URG.
 	 */
@@ -1230,7 +1301,7 @@ step6:
 		 * of data past the urgent section as the original 
 		 * spec states (in one of two places).
 		 */
-		if (SEQ_GT(ti->ti_seq+ti->ti_urp, tp->rcv_up)) {
+		if (SEQ_GT(ti->ti_seq + ti->ti_urp, tp->rcv_up)) {
 			tp->rcv_up = ti->ti_seq + ti->ti_urp;
 			so->so_oobmark = so->so_rcv.sb_cc +
 			    (tp->rcv_up - tp->rcv_nxt) - 1;
@@ -1251,7 +1322,7 @@ step6:
 #endif
 		     )
 		        tcp_pulloutofband(so, ti, m);
-	} else
+	} else {
 		/*
 		 * If no out of band data is expected,
 		 * pull receive urgent pointer along
@@ -1259,6 +1330,7 @@ step6:
 		 */
 		if (SEQ_GT(tp->rcv_nxt, tp->rcv_up))
 			tp->rcv_up = tp->rcv_nxt;
+	}
 dodata:							/* XXX */
 
 	/*
@@ -1269,6 +1341,7 @@ dodata:							/* XXX */
 	 * case PRU_RCVD).  If a FIN has already been received on this
 	 * connection then we just ignore the text.
 	 */
+
 	if ((ti->ti_len || (tiflags & TH_FIN)) &&
 	    TCPS_HAVERCVDFIN(tp->t_state) == 0) {
 		TCP_REASS(tp, ti, m, so, tiflags);
@@ -1293,6 +1366,7 @@ dodata:							/* XXX */
 			/*
 			 * In ESTABLISHED STATE enter the CLOSE_WAIT state.
 			 */
+			case TCPS_SYN_RECEIVED:
 			case TCPS_ESTABLISHED:
 				tp->t_state = TCPS_CLOSE_WAIT;
 				break;
@@ -1340,6 +1414,8 @@ dodata:							/* XXX */
 	return 0;
 
 dropafterack:
+//	printf("tcp_input: dropafterack\n");
+
 	/*
 	 * Generate an ACK dropping incoming segment if it occupies
 	 * sequence space, where the ACK reflects our state.
@@ -1352,37 +1428,39 @@ dropafterack:
 	return 0;
 
 dropwithreset:
+//	printf("tcp_input: dropwithreset\n");
 	/*
 	 * Generate a RST, dropping incoming segment.
 	 * Make ACK acceptable to originator of segment.
 	 * Don't bother to respond if destination was broadcast/multicast.
 	 */
 	if ((tiflags & TH_RST) || m->m_flags & (M_BCAST|M_MCAST) ||
-		IN_MULTICAST(ip->ip_dst.s_addr))
+		IN_MULTICAST(ti->ti_dst.s_addr))
 			goto drop;
 	if (tiflags & TH_ACK) {
 		tcp_respond(tp, ti, m, 0, ti->ti_ack, TH_RST);
 	} else {
 		if (tiflags & TH_SYN)
 			ti->ti_len++;
-		tcp_respond(tp, ti, m, ti->ti_seq + ti->ti_len, 0, TH_RST|TH_ACK);
+		tcp_respond(tp, ti, m, ti->ti_seq + ti->ti_len, 0, TH_RST|TH_ACK);		
 	}
 	/* destroy temporarily created socket */
 	if (dropsocket)
-		return (*so->so_proto->pr_userreq)(so, PRU_ABORT, 
-		                                  NULL, NULL, NULL);
+		(*so->so_proto->pr_userreq)(so, PRU_ABORT, NULL, NULL, NULL);
+	return 0;
 
 drop:
 	/*
 	 * Drop space held by incoming segment and return.
 	 */
-	if (tp && (tp->t_inpcb->inp_socket->so_options & SO_DEBUG)) {
+//	if (tp && (tp->t_inpcb->inp_socket->so_options & SO_DEBUG)) {
 //		tcp_trace(TA_DROP, ostate, tp, (caddr_t) &tcp_saveti,
 //		          0, tlen);
-	}
+//	}
 
 	m_freem(m);
 	/* destroy temporarily created socket */
+
 	if (dropsocket)
 		return (*so->so_proto->pr_userreq)(so, PRU_ABORT, 
 		                                   NULL, NULL, NULL);
@@ -1394,7 +1472,7 @@ void tcp_dooptions(struct tcpcb *tp, u_char *cp, int cnt, struct tcpiphdr *ti,
 {
 	uint16 mss = 0;
 	int opt, optlen;
-
+	
 	for (; cnt > 0; cnt -= optlen, cp += optlen) {
 		opt = cp[0];
 		if (opt == TCPOPT_EOL)
@@ -1474,7 +1552,6 @@ void tcp_pulloutofband(struct socket *so, struct tcpiphdr *ti, struct mbuf *m)
 		if (m == NULL)
 			break;
 	}
-	printf("tcp_pulloutofband - reached end of function!");
 }
 
 /*

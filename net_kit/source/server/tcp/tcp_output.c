@@ -134,7 +134,7 @@ else
 		mss = min(mss, offer);
 	
 	mss = max(mss, 32);
-	if (mss < tp->t_maxseg || offer == 0) {
+	if (mss < tp->t_maxseg || offer != 0) {
 		if ((bufsize = rt->rt_rmx.rmx_sendpipe) == 0)
 			bufsize = so->so_snd.sb_hiwat;
 		if (bufsize < mss)
@@ -181,7 +181,7 @@ int tcp_output(struct tcpcb *tp)
 	u_char opt[MAX_TCPOPTLEN];
 	uint optlen, hdrlen;
 	int idle, sendalot;
-printf("tcp_output\n");	
+
 	idle = (tp->snd_max == tp->snd_una);
 
 	if (idle && tp->t_idle >= tp->t_rxtcur)
@@ -252,7 +252,7 @@ again:
 			goto send;
 	}
 	if (win > 0) {
-		int32 adv = min(win, (int32)TCP_MAXWIN || tp->rcv_scale) - 
+		int32 adv = min(win, (int32)TCP_MAXWIN << tp->rcv_scale) - 
 		            (tp->rcv_adv - tp->rcv_nxt);
 		if (adv >= (int32)(2 * tp->t_maxseg))
 			goto send;
@@ -283,7 +283,7 @@ send:
 	optlen = 0;
 	hdrlen = sizeof(struct tcpiphdr);
 	if (flags & TH_SYN) {
-		tp->snd_nxt = tcp_iss;
+		tp->snd_nxt = tp->iss;
 		if ((tp->t_flags & TF_NOOPT) == 0) {
 			uint16 mss;
 			
@@ -381,6 +381,8 @@ send:
 		ti->ti_seq = htonl(tp->snd_nxt);
 	else
 		ti->ti_seq = htonl(tp->snd_max);
+
+	ti->ti_ack = htonl(tp->rcv_nxt);
 	
 	if (optlen) {
 		memcpy((caddr_t)(ti + 1), (caddr_t)opt, optlen);
@@ -441,7 +443,7 @@ send:
 	((struct ip*)ti)->ip_len = m->m_pkthdr.len;
 	((struct ip*)ti)->ip_ttl = tp->t_inpcb->inp_ip.ip_ttl;
 	((struct ip*)ti)->ip_tos = tp->t_inpcb->inp_ip.ip_tos;
-printf("tcp_output: calling ip_output\n");
+//printf("tcp_output: calling ip_output\n");
 	error = ipm->output(m, tp->t_inpcb->inp_options, &tp->t_inpcb->inp_route,
 	                    so->so_options & SO_DONTROUTE, NULL);
 	
@@ -460,7 +462,12 @@ out:
 	}
 	
 	tcpstat.tcps_sndtotal++;
-		
+	
+	if (win > 0 && SEQ_GT(tp->rcv_nxt + win, tp->rcv_adv))
+		tp->rcv_adv = tp->rcv_nxt + win;
+	tp->last_ack_sent = tp->rcv_nxt;
+	tp->t_flags &= ~(TF_ACKNOW | TF_DELACK);
+	
 	if (sendalot)
 		goto again;
 	

@@ -160,6 +160,8 @@ struct tcpcb *tcp_close(struct tcpcb *tp)
 	struct socket *so = inp->inp_socket;
 	struct mbuf *m;
 	struct rtentry *rt;
+
+printf("tcp_close\n");
 	
 	/* did we send enough data to get some meaningful iformation?
 	 * If we did save it in the routing entry.
@@ -175,7 +177,7 @@ struct tcpcb *tcp_close(struct tcpcb *tp)
 	if (SEQ_LT(tp->iss + so->so_snd.sb_hiwat * 16, tp->snd_max) &&
 	    (rt = inp->inp_route.ro_rt) &&
 	    ((struct sockaddr_in*)rt_key(rt))->sin_addr.s_addr != INADDR_ANY) {
-		unsigned long i;
+		uint32 i;
 		
 		if ((rt->rt_rmx.rmx_locks & RTV_RTT) == 0) {
 			i = tp->t_srtt * (RTM_RTTUNIT / (PR_SLOWHZ * TCP_RTT_SCALE));
@@ -217,7 +219,7 @@ struct tcpcb *tcp_close(struct tcpcb *tp)
 	while (t != (struct tcpiphdr*)tp) {
 		t = (struct tcpiphdr*)t->ti_next;
 		m = REASS_MBUF((struct tcpiphdr*)t->ti_prev);
-		/* remque */
+		remque(t->ti_prev);
 		m_freem(m);
 	}
 	if (tp->t_template)
@@ -235,6 +237,8 @@ struct tcpcb *tcp_close(struct tcpcb *tp)
 struct tcpcb *tcp_drop(struct tcpcb *tp, int errno)
 {
 	struct socket *so = tp->t_inpcb->inp_socket;
+
+printf("tcp_drop\n");
 	
 	if (TCPS_HAVERCVDSYN(tp->t_state)) {
 		tp->t_state = TCPS_CLOSED;
@@ -255,7 +259,7 @@ void tcp_respond(struct tcpcb *tp, struct tcpiphdr *ti, struct mbuf *m,
 	int tlen;
 	int win = 0;
 	struct route *ro = NULL;
-	
+printf("tcp_respond\n");	
 	if (tp) {
 		win = sbspace(&tp->t_inpcb->inp_socket->so_rcv);
 		ro = &tp->t_inpcb->inp_route;
@@ -289,6 +293,7 @@ void tcp_respond(struct tcpcb *tp, struct tcpiphdr *ti, struct mbuf *m,
 	ti->ti_x1 = 0;
 	ti->ti_seq = htonl(seq);
 	ti->ti_ack = htonl(ack);
+	ti->ti_x2 = 0;
 	ti->ti_off = sizeof(struct tcphdr) >> 2;
 	ti->ti_flags = flags;
 	if (tp)
@@ -297,6 +302,7 @@ void tcp_respond(struct tcpcb *tp, struct tcpiphdr *ti, struct mbuf *m,
 		ti->ti_win = htons((uint16)win);
 	ti->ti_urp = 0;
 	ti->ti_sum = 0;
+	ti->ti_sum = in_cksum(m, tlen, 0);
 	((struct ip*)ti)->ip_len = tlen;
 	((struct ip*)ti)->ip_ttl = 64;/* XXX - ip_defttl; */
 	ipm->output(m, NULL, ro, 0, NULL);
@@ -444,14 +450,15 @@ int tcp_userreq(struct socket *so, int req, struct mbuf *m,
 			if (inp->lport == 0)
 				error = in_pcbbind(inp, NULL);
 			if (error == 0)
-				tp->t_state |= TCPS_LISTEN;
+				tp->t_state = TCPS_LISTEN;
 			break;
 		case PRU_CONNECT:
 			if (inp->lport == 0) {
 				error = in_pcbbind(inp, NULL);
 				if (error)
 					break;
-			}							
+			}
+										
 			error = in_pcbconnect(inp, nam);
 			if (error)
 				break;
@@ -472,7 +479,6 @@ int tcp_userreq(struct socket *so, int req, struct mbuf *m,
 			tp->iss = tcp_iss;
 			tcp_iss += TCP_ISSINCR / 2;
 			tcp_sendseqinit(tp);
-			printf("tp->iss = %ld, tcp_iss = %ld\n", tp->iss, tcp_iss);
 			error = tcp_output(tp);
 			break;
 		case PRU_CONNECT2:
@@ -489,7 +495,6 @@ int tcp_userreq(struct socket *so, int req, struct mbuf *m,
 			req |= (int)nam << 8;
 			break;
 		case PRU_SEND:
-			printf("tcp_output: PRU_SEND\n");
 			sbappend(&so->so_snd, m);
 			error = tcp_output(tp);
 			break;
