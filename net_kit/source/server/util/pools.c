@@ -6,15 +6,18 @@
 
 void pool_debug_walk(struct pool_ctl *p)
 {
-	char *ptr = p->freelist;
+	char *ptr;
 	int i = 1;	
 	
 	printf("%ld byte blocks allocated, but now free:\n\n", p->alloc_size);
-	
+
+	acquire_sem(p->lock);
+	ptr = p->freelist;	
 	while (ptr) {
 		printf("  %02d: %p\n", i++, ptr);
 		ptr = ((struct free_blk*)ptr)->next;
 	}
+	release_sem(p->lock);
 }
 
 static void get_mem_block(size_t size, struct pool_ctl *p)
@@ -141,3 +144,4 @@ void pool_destroy(struct pool_ctl *p)
 	delete_sem(p->lock);
 	free(p);
 }
+
