@@ -66,7 +66,7 @@ getEntry(int32 num)
 }
 
 
-void
+status_t
 waitForMessage(port_id port,const char *string,int32 op,char *name)
 {
 	puts(string);
@@ -76,18 +76,18 @@ waitForMessage(port_id port,const char *string,int32 op,char *name)
 	ssize_t bytes = read_port_etc(port,&msg,buffer,sizeof(buffer),B_TIMEOUT,1000000);
 	if (op == B_TIMED_OUT && bytes == B_TIMED_OUT) {
 		puts("  passed, timed out!\n");
-		return;
+		return bytes;
 	}
 	if (bytes < B_OK) {
 		printf("-> %s\n\n",strerror(bytes));
-		return;
+		return bytes;
 	}
 
 	BMessage message;
 	if (message.Unflatten(buffer) < B_OK) {
 		printf("could not unflatten message:\n");
 		dumpBlock(buffer,bytes);
-		return;
+		return B_BAD_DATA;
 	}
 
 	if (message.what != B_QUERY_UPDATE
@@ -95,10 +95,10 @@ waitForMessage(port_id port,const char *string,int32 op,char *name)
 		printf("Expected what = %lx, opcode = %ld, got:",B_QUERY_UPDATE,op);
 		message.PrintToStream();
 		putchar('\n');
-		return;
+		return message.FindInt32("opcode");
 	}
 	puts("  passed!\n");
-	return;
+	return op;
 }
 
 
@@ -133,6 +133,11 @@ main(int argc,char **argv)
 	entry->Rename("_query_test_2");
 	waitForMessage(port,"File 2 renamed back (should be added to query):",B_ENTRY_CREATED,"_query_test_2");
 
+	entry->Rename("_query_test_2_and_more");
+	status_t status = waitForMessage(port,"File 2 renamed (should stay in query, time out):",B_TIMED_OUT,"_query_test_2_and_more");
+	if (status == B_ENTRY_REMOVED)
+		waitForMessage(port,"Received B_ENTRY_REMOVED, now expecting file 2 to be added again:",B_ENTRY_CREATED,NULL);
+
 	entry->Remove();
 	delete entry;
 	waitForMessage(port,"File 2 removed:",B_ENTRY_REMOVED,NULL);
@@ -146,7 +151,7 @@ main(int argc,char **argv)
 
 	entry->Rename("_some_other_name_");
 	waitForMessage(port,"File 1 renamed (should fall out of query):",B_ENTRY_REMOVED,NULL);
-
+		
 	entry->Remove();
 	delete entry;
 	waitForMessage(port,"File 1 removed (should time out):",B_TIMED_OUT,NULL);
