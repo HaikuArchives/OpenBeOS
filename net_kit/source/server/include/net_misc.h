@@ -29,14 +29,15 @@ void net_server_add_device(ifnet *ifn);
 int in_cksum(struct mbuf *m, int len);
 void local_init(void);
 void insert_local_address(struct sockaddr *sa, ifnet *dev);
-ifnet *interface_for_address(struct sockaddr *sa);
+int is_address_local(void *ptr, int len);
+ifnet *interface_for_address(void *data, int len);
 int compare_sockaddr(struct sockaddr *a, struct sockaddr *b);
 
 /* Useful debugging functions */
-void dump_ipv4_addr(char *msg, ipv4_addr *ad);
-void print_ipv4_addr(ipv4_addr *ad);
-void dump_ether_addr(char *msg, ether_addr *ma);
-void print_ether_addr(ether_addr *ea);
+void dump_ipv4_addr(char *msg, void *ad);
+void print_ipv4_addr(void *ad);
+void dump_ether_addr(char *msg, void *ma);
+void print_ether_addr(void *ea);
 void dump_buffer(char *buffer, int len);
 
 #endif /* OBOS_NET_MISC_H */
