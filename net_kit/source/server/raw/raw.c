@@ -10,22 +10,23 @@
 #include "sys/socket.h"
 #include "netinet/in_pcb.h"
 #include "netinet/in.h"
-#include "net_module.h"
 #include "netinet/in_var.h"
 #include "netinet/ip_var.h"
 
 #include "ipv4/ipv4_module.h"
 #include "raw/raw_module.h"
+#include "core_module.h"
+#include "net_module.h"
+#include "core_funcs.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
 
-static struct core_module_info *core = NULL;
 #else	/* _KERNEL_MODE */
 static image_id ipid;
 #endif
+
+static struct core_module_info *core = NULL;
 
 static struct ipv4_module_info *ipm = NULL;
 
@@ -292,8 +293,9 @@ static struct protosw my_protocol = {
 };
 
 #ifndef _KERNEL_MODE
-static void rip_protocol_init(void)
+static void rip_protocol_init(struct core_module_info *cp)
 {
+	core = cp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_protocol, AF_INET);
 
@@ -330,8 +332,8 @@ static status_t k_init(void)
 	if (!core)
 		get_module(CORE_MODULE_PATH, (module_info**)&core);
 	
-	core->add_domain(NULL, AF_INET);
-	core->add_protocol(&my_protocol, AF_INET);
+	add_domain(NULL, AF_INET);
+	add_protocol(&my_protocol, AF_INET);
 	
 	if (!ipm)
 		get_module(IPV4_MODULE_PATH, (module_info**)&ipm);
