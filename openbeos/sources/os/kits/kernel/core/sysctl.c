@@ -30,7 +30,11 @@ int  domainnamelen;
  
 char ostype[] = "OpenBeOS";
 char osrelease[] = "0.01";
-char osversion[] = "0.01 pre-alpha";
+char osversion[] = "alpha";
+char version[] = "0.0.1";
+
+char machine[] = "Intel";
+char model[] =	"MODEL";
 
 int sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
            void *newp, size_t newlen)
@@ -41,6 +45,9 @@ int sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 	switch (name[0]) {
 		case CTL_KERN:
 			fn = kern_sysctl;
+			break;
+		case CTL_HW:
+			fn = hw_sysctl;
 			break;
 		default:
 			dprintf("sysctl: no suppport added yet for %d\n", name[0]);
@@ -58,7 +65,7 @@ int kern_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 	int error = 0;
 /* This will need to be uncommented when the definitions above have been removed and
  * we have these defined elsewhere...
-	extern char ostype[], osrelease[], osversion[];
+	extern char ostype[], osrelease[], osversion[], version[];
  */	
 	switch (name[0]) {
 		case KERN_OSTYPE:
@@ -79,8 +86,29 @@ int kern_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 			if (newp && !error)
 				domainnamelen = newlen;
 			return (error);
+		case KERN_VERSION:
+			return sysctl_rdstring(oldp, oldlenp, newp, version);
 		default:
 			return EOPNOTSUPP;
+	}
+	/* If we get here we're in trouble... */
+}
+
+int hw_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
+           void *newp, size_t newlen)
+{
+/* This will need to be uncommented when the definitions above have been removed and
+ * we have these defined elsewhere...
+        extern char machine[], model[];
+ */
+
+        switch (name[0]) {
+		case HW_MACHINE:
+			return  sysctl_rdstring(oldp, oldlenp, newp, machine);
+		case HW_MODEL:
+			return  sysctl_rdstring(oldp, oldlenp, newp, model);
+		default:
+			return  EOPNOTSUPP;
 	}
 	/* If we get here we're in trouble... */
 }
