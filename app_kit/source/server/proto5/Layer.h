@@ -1,6 +1,7 @@
 #ifndef _LAYER_H_
 #define _LAYER_H_
 
+#include <GraphicsDefs.h>
 #include <Rect.h>
 #include <Region.h>
 #include <List.h>
@@ -23,6 +24,7 @@ public:
 	void AddChild(Layer *child);
 	void RemoveChild(Layer *child);
 	void RemoveSelf(void);
+	uint32 CountChildren(void);
 	Layer *GetChildAt(BPoint pt, bool recursive=false);
 
 	void RebuildRegions(bool include_children=true);
@@ -30,7 +32,7 @@ public:
 	void PruneTree(void);
 	void SetLevel(int32 value);
 	void Invalidate(BRect rect);
-	void RequestDraw(void);
+	virtual void RequestDraw(void);
 
 	BRect ConvertToParent(BRect rect);
 	BPoint ConvertToParent(BPoint point);
@@ -61,6 +63,20 @@ public:
 	uint8 hidecount;
 	bool is_dirty;		// true if we need to redraw
 	bool is_updating;
+};
+
+class RootLayer : public Layer
+{
+public:
+	RootLayer(BRect rect, const char *layername, ServerWindow *srvwin,
+		int32 viewflags, int32 token);
+	RootLayer(BRect rect, const char *layername);
+	virtual void RequestDraw(void);
+	
+	void SetColor(rgb_color col);
+	rgb_color GetColor(void) const;
+private:
+	rgb_color bgcolor;
 };
 
 extern BLocker *layerlock;

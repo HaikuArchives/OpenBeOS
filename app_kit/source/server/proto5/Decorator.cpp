@@ -29,6 +29,10 @@ void Decorator::Resize(BRect rect)
 {
 }
 
+void Decorator::MoveBy(BPoint pt)
+{
+}
+
 BRect Decorator::GetBorderSize(void)
 {
 	return BRect(0,0,0,0);

@@ -5,6 +5,8 @@
 */
 #include "Layer.h"
 #include "ServerWindow.h"
+#include "Desktop.h"
+#include "DisplayDriver.h"
 #include <iostream.h>
 #include <string.h>
 #include <stdio.h>
@@ -248,14 +250,6 @@ void Layer::PruneTree(void)
 	// Man, this thing is short. Elegant, ain't it? :P
 }
 
-void Layer::PrintToStream(void)
-{
-	cout << "Layer " << name->String() << endl;
-	cout << "Frame: "; frame.PrintToStream();
-	printf("Level %ld\n",level);
-	//cout << endl << "Level %ld" << level << endl;
-}
-
 Layer *Layer::FindLayer(int32 token)
 {
 	// recursive search for a layer based on its view token
@@ -343,4 +337,80 @@ void Layer::HideLayer(void)
 	Layer *child;
 	for(child=topchild; child!=NULL; child=child->lowersibling)
 		child->HideLayer();
+}
+
+uint32 Layer::CountChildren(void)
+{
+	uint32 i=0;
+	Layer *lay=topchild;
+	while(topchild!=NULL)
+	{
+		lay=lay->lowersibling;
+		i++;
+	}
+	return i;
+}
+
+void Layer::PrintToStream(void)
+{
+	printf("-----------\nLayer %s\n",name->String());
+	if(parent)
+		printf("Parent: %s (%p)\n",parent->name->String(), parent);
+	else
+		printf("Parent: NULL\n");
+	if(uppersibling)
+		printf("Upper sibling: %s (%p)\n",uppersibling->name->String(), uppersibling);
+	else
+		printf("Upper sibling: NULL\n");
+	if(lowersibling)
+		printf("Lower sibling: %s (%p)\n",lowersibling->name->String(), lowersibling);
+	else
+		printf("Lower sibling: NULL\n");
+	if(topchild)
+		printf("Top child: %s (%p)\n",topchild->name->String(), topchild);
+	else
+		printf("Top child: NULL\n");
+	if(bottomchild)
+		printf("Bottom child: %s (%p)\n",bottomchild->name->String(), bottomchild);
+	else
+		printf("Bottom child: NULL\n");
+	printf("Token: %ld\nLevel: %ld\n",view_token, level);
+	printf("Hide count: %u\n",hidecount);
+	printf("Has invalid areas = %s\n",(is_dirty)?"yes":"no");
+	printf("Is updating = %s\n",(is_updating)?"yes":"no");
+}
+
+RootLayer::RootLayer(BRect rect, const char *layername, ServerWindow *srvwin, 
+	int32 viewflags, int32 token)
+	: Layer(rect,layername,srvwin,viewflags,token)
+{
+}
+
+RootLayer::RootLayer(BRect rect, const char *layername)
+	: Layer(rect,layername)
+{
+}
+
+void RootLayer::RequestDraw(void)
+{
+	if(!invalid)
+		return;
+	
+	DisplayDriver *driver=get_gfxdriver();
+	for(int32 i=0; invalid->CountRects();i++)
+	{
+		driver->FillRect(invalid->RectAt(i),bgcolor);
+	}
+	delete invalid;
+	invalid=NULL;
+}
+
+void RootLayer::SetColor(rgb_color col)
+{
+	bgcolor=col;
+}
+
+rgb_color RootLayer::GetColor(void) const
+{	
+	return bgcolor;
 }

@@ -27,9 +27,10 @@ public:
 	int32 flags;
 	BRect frame, clientframe;
 	uint32 mbuttons;
+	BPoint mousepos;
 	bool update;
 	bool movewin;
-	bool resizewin;
+	bool hresizewin,vresizewin;
 };
 
 #endif

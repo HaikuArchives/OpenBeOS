@@ -26,6 +26,7 @@ public:
 	
 	virtual click_type Clicked(BPoint pt, uint32 buttons);
 	virtual void Resize(BRect rect);
+	virtual void MoveBy(BPoint pt);
 	virtual BRect GetBorderSize(void);
 	virtual BPoint GetMinimumSize(void);
 	virtual void SetFlags(uint32 flags);

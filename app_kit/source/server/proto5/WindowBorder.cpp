@@ -1,4 +1,5 @@
 #include <String.h>
+#include <Region.h>
 #include <Debug.h>
 #include "View.h"	// for mouse button defines
 #include "ServerWindow.h"
@@ -22,7 +23,8 @@ printf("WindowBorder()\n");
 	swin=win;
 	title=new BString(bordertitle);
 	movewin=false;
-	resizewin=false;
+	hresizewin=false;
+	vresizewin=false;
 }
 
 WindowBorder::~WindowBorder(void)
@@ -38,7 +40,7 @@ void WindowBorder::MouseDown(BPoint pt, uint32 buttons)
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder()::MouseDown\n");
 #endif
-	mbuttons|=buttons;
+	mbuttons=buttons;
 	click_type click=decor->Clicked(pt, mbuttons);
 
 	switch(click)
@@ -52,9 +54,12 @@ printf("WindowBorder(): MoveToBack\n");
 
 			// Move the window to the back (the top of the tree)
 			Layer *top=GetRootLayer();
+			ASSERT(top!=NULL);
 			layerlock->Lock();
-			RemoveSelf();
+			top->RemoveChild(this);
 			top->AddChild(this);
+			swin->SetFocus(false);
+			decor->SetFocus(false);
 			decor->Draw();
 			layerlock->Unlock();
 			break;
@@ -70,11 +75,18 @@ printf("WindowBorder(): MoveToFront\n");
 			// child of the root layer
 			Layer *top=GetRootLayer();
 			layerlock->Lock();
-			RemoveSelf();
+			top->RemoveChild(this);
 			uppersibling=top->bottomchild;
 			lowersibling=NULL;
 			top->bottomchild=this;
+			if(top->topchild==NULL)
+				top->topchild=this;
+			parent=top;
+			swin->SetFocus(true);
+			decor->SetFocus(true);
+			decor->Draw();
 			layerlock->Unlock();
+			movewin=true;
 			break;
 		}
 		case CLICK_CLOSE:
@@ -101,6 +113,15 @@ printf("WindowBorder(): SetMinimizeButton\n");
 			decor->SetMinimizeButton(true);
 			break;
 		}
+		case CLICK_TAB:
+		{
+#ifdef DEBUG_WINBORDER
+printf("WindowBorder(): Click Tab\n");
+#endif
+			if(buttons==B_PRIMARY_MOUSE_BUTTON)
+				movewin=true;
+			break;
+		}
 		case CLICK_NONE:
 		{
 #ifdef DEBUG_WINBORDER
@@ -120,6 +141,20 @@ printf("WindowBorder()::MouseDown: Undefined click type\n");
 
 void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 {
+	if(movewin)
+	{
+		BRegion dirtyreg(frame);
+		frame.OffsetBy(pt);
+		clientframe.OffsetBy(pt);
+
+		dirtyreg.Exclude(frame);
+		for(int32 i=0;i<dirtyreg.CountRects();i++)
+			parent->Invalidate(dirtyreg.RectAt(i));
+		parent->RequestDraw();
+		decor->MoveBy(BPoint(pt.x-mousepos.x, pt.y-mousepos.y));
+		decor->Draw();
+	}
+	mousepos=pt;
 }
 
 void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
@@ -127,7 +162,11 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder()::MouseUp\n");
 #endif
-	mbuttons&= ~buttons;
+//	mbuttons&= ~buttons;
+	mbuttons=buttons;
+
+	// This message isn't sent until no mouse buttons are down
+	movewin=false;
 }
 
 void WindowBorder::Draw(BRect update_rect)

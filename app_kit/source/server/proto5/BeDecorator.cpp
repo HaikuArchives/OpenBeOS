@@ -90,7 +90,7 @@ printf("BeDecorator():Clicked() - Resize thumb\n");
 	if(tabrect.Contains(pt))
 	{
 		// Here's part of our window management stuff
-		if(buttons==B_PRIMARY_MOUSE_BUTTON)
+		if(buttons==B_PRIMARY_MOUSE_BUTTON && !focused)
 			return CLICK_MOVETOFRONT;
 		if(buttons==B_SECONDARY_MOUSE_BUTTON)
 			return CLICK_MOVETOBACK;
@@ -123,7 +123,6 @@ printf("BeDecorator()::Resize()"); rect.PrintToStream();
 #endif
 	frame=rect;
 	closerect=frame;
-	zoomrect=frame;
 	tabrect=frame;
 	resizerect=frame;
 	borderrect=frame;
@@ -133,18 +132,30 @@ printf("BeDecorator()::Resize()"); rect.PrintToStream();
 	closerect.right=closerect.left+10;
 	closerect.bottom=closerect.top+10;
 
-	zoomrect.top+=2;
-	zoomrect.right-=2;
-	zoomrect.bottom-=2;
-	zoomrect.left=zoomrect.right-10;
-	zoomrect.bottom=zoomrect.top+10;
-
 	borderrect.top+=19;
 	
 	resizerect.top=resizerect.bottom-18;
 	resizerect.left=resizerect.right-18;
 	
 	tabrect.bottom=tabrect.top+18;
+	tabrect.right=tabrect.left+tabrect.Width()/2;
+
+	zoomrect=tabrect;
+	zoomrect.top+=2;
+	zoomrect.right-=2;
+	zoomrect.bottom-=2;
+	zoomrect.left=zoomrect.right-10;
+	zoomrect.bottom=zoomrect.top+10;
+}
+
+void BeDecorator::MoveBy(BPoint pt)
+{
+	frame.OffsetBy(pt);
+	closerect.OffsetBy(pt);
+	tabrect.OffsetBy(pt);
+	resizerect.OffsetBy(pt);
+	borderrect.OffsetBy(pt);
+	zoomrect.OffsetBy(pt);
 }
 
 BRect BeDecorator::GetBorderSize(void)

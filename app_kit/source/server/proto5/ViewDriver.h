@@ -54,7 +54,6 @@ public:
 	void Reset(void);
 	void SetScreen(uint32 space);
 	void Clear(uint8 red,uint8 green,uint8 blue);
-
 	VDView *view;
 };
 

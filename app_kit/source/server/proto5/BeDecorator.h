@@ -11,6 +11,7 @@ public:
 	
 	click_type Clicked(BPoint pt, uint32 buttons);
 	void Resize(BRect rect);
+	void MoveBy(BPoint pt);
 	BRect GetBorderSize(void);
 	BPoint GetMinimumSize(void);
 	void SetTitle(const char *newtitle);
