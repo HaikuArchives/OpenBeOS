@@ -213,14 +213,30 @@ BSymLink::ReadLink(char *buf, size_t size)
 ssize_t
 BSymLink::MakeLinkedPath(const char *dirPath, BPath *path)
 {
+/*
 	ssize_t result = (dirPath && path ? 0 : B_BAD_VALUE);
 	char contents[B_PATH_NAME_LENGTH + 1];
 	if (result == 0)
 		result = ReadLink(contents, sizeof(contents));
 	if (result >= 0) {
-		result = path->SetTo(dirPath, contents);
+		if (StorageKit::is_absolute_path(contents))
+			result = path->SetTo(contents);
+		else
+			result = path->SetTo(dirPath, contents);
 		if (result == B_OK)
 			result = strlen(path->Path());
+	}
+	return result;
+*/
+// R5 seems to convert the dirPath to a BDirectory, which causes links to
+// be resolved, i.e. a "/tmp" dirPath expands to "/boot/var/tmp".
+// That also means, that the dirPath must exists!
+	ssize_t result = (dirPath && path ? B_OK : B_BAD_VALUE);
+	if (result == B_OK) {
+		BDirectory dir(dirPath);
+		result = dir.InitCheck();
+		if (result == B_OK)
+			result = MakeLinkedPath(&dir, path);
 	}
 	return result;
 }
@@ -247,7 +263,10 @@ BSymLink::MakeLinkedPath(const BDirectory *dir, BPath *path)
 	if (result == 0)
 		result = ReadLink(contents, sizeof(contents));
 	if (result >= 0) {
-		result = path->SetTo(dir, contents);
+		if (StorageKit::is_absolute_path(contents))
+			result = path->SetTo(contents);
+		else
+			result = path->SetTo(dir, contents);
 		if (result == B_OK)
 			result = strlen(path->Path());
 	}
