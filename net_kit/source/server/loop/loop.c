@@ -21,12 +21,13 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include <module.h>
-
-#include "net_device.h"
-#include "loop_module.h"
-
+static status_t loop_ops(int32 op, ...);
+#define LOOP_MODULE_PATH "network/interface/loop"
+#else
+#define loop_ops NULL
+#define LOOP_MODULE_PATH "interface/loop"
 #endif
+
 
 static struct core_module_info *core = NULL;
 
@@ -132,34 +133,36 @@ static int loop_init(void)
 	return 0;
 }
 
-#ifndef _KERNEL_MODE
-static int loop_module_init(struct core_module_info *cp)
+static int loop_module_init(void *cpp)
 {
-	core = cp;
+	if (cpp)
+		core = cpp;
+
 	loop_init();
 	
 	return 0;
 }
 
-_EXPORT struct device_info device_info = {
-	"Loopback Device Driver",
-	&loop_module_init
+_EXPORT struct kernel_net_module_info device_info = {
+	{
+		LOOP_MODULE_PATH,
+		0,
+		loop_ops
+	},
+	loop_module_init,
+	NULL,
 };
 
-#else
-
+#ifdef _KERNEL_MODE
 static status_t loop_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
-			if (get_module(CORE_MODULE_PATH, 
-					(module_info **)&core) != B_OK) {
-				dprintf("loop_module: failed to get core ptr\n");
+			get_module(CORE_MODULE_PATH, (module_info **)&core);
+			if (!core)
 				return B_ERROR;
-			}
-			break;
+			return B_OK;
 		case B_MODULE_UNINIT:
-			put_module(CORE_MODULE_PATH);
 			break;
 		default:
 			return B_ERROR;
@@ -167,18 +170,8 @@ static status_t loop_ops(int32 op, ...)
 	return B_OK;
 }
 
-static struct device_module_info my_module = {
-	{
-		LOOP_MODULE_PATH,
-		B_KEEP_LOADED,
-		loop_ops
-	},
-
-	loop_init
-};
-
 _EXPORT module_info *modules[] = {
-	(module_info*) &my_module,
+	(module_info*) &device_info,
 	NULL
 };
 
