@@ -212,7 +212,9 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	int len;
 	ipv4_header saved_ip;
 	struct mbuf *opts = NULL;
-	struct inpcb *inp;
+	struct inpcb *inp = NULL;
+
+printf("udp_input: hdrlen = %d\n", hdrlen);
 
 #if SHOW_DEBUG
         dump_udp(buf);
@@ -226,6 +228,7 @@ int udp_input(struct mbuf *buf, int hdrlen)
 		m_adj(buf, len + hdrlen - ip->length);
 	}
 	saved_ip = *ip;
+printf("udp->length = %d\n", len);
 
 	p->length = udp->length;
 	p->zero = 0; /* just to make sure */
@@ -235,23 +238,30 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	/* XXX - if we have options we need to be careful when calculating the
 	 * checksum here...
 	 */
+printf("udp: checking cksum\n");
 	if ((ck = in_cksum(buf, len + sizeof(*ip), 0)) != 0) {
 		printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
 		goto bad;
 	}
-
 	inp = udp_last_inpcb;
-	if (!inp || inp->lport != udp->dst_port ||
+
+	if (inp == NULL ||
+	    inp->lport != udp->dst_port ||
 		inp->fport != udp->src_port ||
 		inp->faddr.s_addr != ip->src.s_addr ||
 		inp->laddr.s_addr != ip->dst.s_addr) {
 
+printf("doing in_pcblookup for %08lx:%d %08lx:%d\n",
+		ip->src.s_addr, udp->src_port,
+		ip->dst.s_addr, udp->dst_port);
+		
 		inp = in_pcblookup(&udb, ip->src, udp->src_port,
 				   ip->dst, udp->dst_port, INPLOOKUP_WILDCARD);
 		if (inp)
 			udp_last_inpcb = inp;
 	}
 	if (!inp) {
+printf("inp is NULL!\n");
 		if (buf->m_flags & (M_BCAST | M_MCAST)) {
 			goto bad;
 		}
@@ -274,16 +284,18 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	buf->m_len -= hdrlen;
 	buf->m_pkthdr.len -= hdrlen;
 	buf->m_data += hdrlen;
+printf("calling sbappendaddr (%p)\n", sbappendaddr);
 
 	if (sbappendaddr(&inp->inp_socket->so_rcv, (struct sockaddr*)&udp_in,
 			buf, opts) == 0) {
 		goto bad;
 	}
-
+printf("waking up socket!\n");
 	sorwakeup(inp->inp_socket);
 	return 0;
 
 bad:
+printf("udp_input: bad: freeing %p\n", buf);
 	if (opts)
 		m_freem(opts);
 	m_freem(buf);
