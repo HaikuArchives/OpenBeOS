@@ -8,12 +8,14 @@
 #include <malloc.h>
 
 #include "ipv4/ipv4.h"
+#include "ipv4/ipv4_var.h"	/* for stats */
 #include "protocols.h"
 #include "net_module.h"
 #include "mbuf.h"
 
 loaded_net_module *net_modules;
 int *prot_table;
+static struct ipstat	ipstat;
 
 #if SHOW_DEBUG
 static void dump_ipv4_header(struct mbuf *buf)
@@ -59,8 +61,17 @@ int ipv4_input(struct mbuf *buf)
 	dump_ipv4_header(buf);
 #endif
 
+	atomic_add(&ipstat.ips_total, 1);
+
+	if (ip->ver != 4) {
+		printf("Wrong IP version!\n");
+		atomic_add(&ipstat.ips_badvers, 1);
+		m_freem(buf);
+		return 0;
+	}
 	if (in_cksum(buf, ip->hl * 4, 0) != 0) {
 		printf("Bogus checksum! Discarding packet.\n");
+		atomic_add(&ipstat.ips_badsum, 1);
 		m_freem(buf);
 		return 0;
 	}
