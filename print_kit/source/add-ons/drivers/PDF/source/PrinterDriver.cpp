@@ -365,8 +365,10 @@ PrinterDriver::OpenTransport()
 	
 	delete msg;
 	delete path;
+
+	BFile* file = dynamic_cast<BFile*>(fTransport);
 	
-	if (fTransport == 0) {
+	if (fTransport == 0 || (file && file->InitCheck() != B_OK)) {
 		BAlert *alert = new BAlert("Uh oh!", "Couldn't open transport.", "OK");
 		alert->Go();
 		return B_ERROR;
