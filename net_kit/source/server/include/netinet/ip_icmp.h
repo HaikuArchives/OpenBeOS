@@ -75,7 +75,7 @@ struct icmp {
 	} icmp_dun;
 };
 
-#define icmp_pptr      icmp_hun.ip_pptr
+#define icmp_pptr      icmp_hun.ih_pptr
 #define icmp_gwaddr    icmp_hun.ih_gwaddr
 #define icmp_id        icmp_hun.ih_idseq.icd_id
 #define icmp_seq       icmp_hun.ih_idseq.icd_seq
