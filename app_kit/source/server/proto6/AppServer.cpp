@@ -296,6 +296,32 @@ printf("AppServer: Delete App\n");
 			}
 			break;
 		}
+		case GET_SCREEN_MODE:
+		{
+			// Synchronous message call to get the stats on the current screen mode
+			// in the app_server. Simply a hack in place for the Input Server until
+			// BScreens are done.
+			
+#ifdef DEBUG_APPSERVER_THREAD
+printf("AppServer: Get Screen Mode\n");
+#endif
+			// Attached Data:
+			// 1) port_id - port to reply to
+			
+			// Returned Data:
+			// 1) int32 width
+			// 2) int32 height
+			// 3) int depth
+			
+			PortLink *replylink=new PortLink(*((port_id*)index));
+			replylink->SetOpCode(GET_SCREEN_MODE);
+			replylink->Attach(driver->GetWidth());
+			replylink->Attach(driver->GetHeight());
+			replylink->Attach((int16)driver->GetDepth());
+			replylink->Flush();
+			delete replylink;
+			break;
+		}
 		case B_QUIT_REQUESTED:
 		{
 #ifdef DEBUG_APPSERVER_THREAD
@@ -390,7 +416,6 @@ void AppServer::LoadDefaultDecorator(void)
 
 Decorator *instantiate_decorator(Layer *lay, uint32 dflags, uint32 wlook)
 {
-printf("AppServer:: instantiate_decorator()\n");
 	Decorator *decor=NULL;
 
 	app_server->decor_lock->Lock();
@@ -398,7 +423,6 @@ printf("AppServer:: instantiate_decorator()\n");
 		decor=app_server->make_decorator(lay, dflags, wlook);
 	else
 	{
-		printf("AppServer:: make_decorator is NULL\n");
 		decor=new BeDecorator(lay, dflags, wlook);
 //		decor=new WinDecorator(lay, dflags, wlook);
 //		decor=new YMakDecorator(lay, dflags, wlook);
