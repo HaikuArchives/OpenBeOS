@@ -6,9 +6,11 @@
 //---------------------------------------------------------------------
 
 #include <Node.h>
+#include <Entry.h>
 #include <errno.h>
 #include <fs_attr.h> // for struct attr_info
 #include "kernel_interface.h"
+#include "storage_support.h"
 
 BNode::BNode() : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fCStatus(B_NO_INIT) {
 }
@@ -43,28 +45,64 @@ BNode::GetStat(struct stat *st) const {
 	return (fCStatus != B_OK) ? fCStatus : StorageKit::get_stat(fFd, st) ;
 }
 
+/*!
+	\todo Currently implemented using StorageKit::entry_ref_to_path().
+		  Reimplement!
+*/
 status_t
 BNode::SetTo(const entry_ref *ref) {
-	return B_ERROR;
+	char path[B_PATH_NAME_LENGTH];
+	status_t error = (ref ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
+	if (error == B_OK)
+		error = SetTo(path);
+	fCStatus = error;
+	return error;
 }
 
+/*!
+	\todo Implemented using SetTo(entry_ref*). Check, if necessary to
+		  reimplement!
+*/
 status_t
 BNode::SetTo(const BEntry *entry) {
-	return B_ERROR;
+	entry_ref ref;
+	status_t error = (entry ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && entry->InitCheck() != B_OK)
+		error = B_BAD_VALUE;
+	if (error == B_OK)
+		error = entry->GetRef(&ref);
+	if (error == B_OK)
+		error = SetTo(&ref);
+	fCStatus = error;
+	return error;
 }
 
 status_t
 BNode::SetTo(const char *path) {
 	Unset();	
 	if (path != NULL) {	
-		fCStatus = StorageKit::open(path, O_RDWR, fFd);
+		fCStatus = StorageKit::open(path, O_RDWR | O_NOTRAVERSE, fFd);
 	}	
 	return fCStatus;
 }
 
+/*!
+	\todo Implemented using SetTo(BEntry*). Check, if necessary to reimplement!
+*/
 status_t
 BNode::SetTo(const BDirectory *dir, const char *path) {
-	return B_ERROR;
+	status_t error = (dir && path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && StorageKit::is_absolute_path(path))
+		error = B_BAD_VALUE;
+	BEntry entry;
+	if (error == B_OK)
+		error = entry.SetTo(dir, path);
+	if (error == B_OK)
+		error = SetTo(&entry);
+	fCStatus = error;
+	return error;
 }
 
 void
