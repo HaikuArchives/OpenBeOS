@@ -228,7 +228,7 @@ _EXPORT void uninit_driver (void)
 
 	if (core) {
 		// shutdown the network stack
-		core->stop();
+		// core->stop();
 		put_module(CORE_MODULE_PATH);
 	};
 }
