@@ -4,6 +4,6 @@
 #include <GraphicsDefs.h>
 
 void GenerateSystemPalette(rgb_color *palette);
-extern rgb_color SystemPalette[];
+extern rgb_color system_palette[];
 
 #endif

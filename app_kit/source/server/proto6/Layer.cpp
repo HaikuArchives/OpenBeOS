@@ -97,11 +97,21 @@ Layer::~Layer(void)
 #ifdef DEBUG_LAYERS
 	cout << "Layer Destructor for " << name->String() << endl << flush;
 #endif
-	if(visible!=NULL)
+	if(visible)
+	{
 		delete visible;
-	if(invalid!=NULL)
+		visible=NULL;
+	}
+	if(invalid)
+	{
 		delete invalid;
-	delete name;
+		invalid=NULL;
+	}
+	if(name)
+	{
+		delete name;
+		name=NULL;
+	}
 }
 
 void Layer::AddChild(Layer *layer)
@@ -224,12 +234,8 @@ Layer *Layer::GetChildAt(BPoint pt, bool recursive=false)
 			if(child->hidecount>0)
 				continue;
 			
-			if(visible && visible->Contains(pt))
+			if(child->frame.Contains(pt))
 				return child;
-//			if(child->frame.Contains(pt))
-//			{
-//				return child;
-//			}
 		}
 	}
 	else
@@ -238,7 +244,8 @@ Layer *Layer::GetChildAt(BPoint pt, bool recursive=false)
 		{
 			if(child->hidecount>0)
 				continue;
-			
+//			if(child->visible && child->visible->Contains(ConvertFromTop(pt)))
+//				printf("child hit by mouse. News at 11\n");
 			if(child->frame.Contains(pt))
 				return child;
 		}

@@ -21,6 +21,7 @@
 #include "DisplayDriver.h"
 #include "DebugTools.h"
 #include "BeDecorator.h"
+#include "WinDecorator.h"
 #include "YMakDecorator.h"
 
 //#define DEBUG_APPSERVER_THREAD
@@ -399,6 +400,7 @@ printf("AppServer:: instantiate_decorator()\n");
 	{
 		printf("AppServer:: make_decorator is NULL\n");
 		decor=new BeDecorator(lay, dflags, wlook);
+//		decor=new WinDecorator(lay, dflags, wlook);
 //		decor=new YMakDecorator(lay, dflags, wlook);
 	}
 

@@ -286,7 +286,7 @@ int SecondDriver::GetDepth(void){
 /*******************************************************
 *   @description
 *******************************************************/
-void SecondDriver::DrawBitmap(ServerBitmap *bitmap){
+void SecondDriver::DrawBitmap(ServerBitmap *bitmap, BRect source, BRect dest){
    printf("Calling DrawBitmap (not writen yet)\n");
 }
 
@@ -413,8 +413,9 @@ void SecondDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect
 /*******************************************************
 *   @description
 *******************************************************/
-void SecondDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col){
+void SecondDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color color){
    printf("FillTriangle is not writen yet\n");
+   StrokeTriangle(first,second,third,rect,color);
 }
 
 /*******************************************************
@@ -425,7 +426,7 @@ void SecondDriver::HideCursor(void){
       sc(false);
       cursor_visible = false;
    }else{
-      printf("Software Hide Cursor\n");
+      printf("Shoftware Hide Cursor\n");
    }
 }
 
@@ -480,6 +481,17 @@ float SecondDriver::PenSize(void){
    return pensize;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
+void SecondDriver::SetCursor(int32 value){
+   printf("Setcursoer value?\n");
+   // Uh what is this all about?
+}
+
+
+
+
 //0 - 1 = black
 //0 - 0 = what
 //1 - 0 = trans
@@ -525,26 +537,6 @@ void SecondDriver::SetCursor(ServerCursor *cursor){
 *******************************************************/
 void SecondDriver::SetPenSize(float size){
    pensize = size;
-}
-
-/*******************************************************
-*   @description
-*******************************************************/
-void SecondDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
-   highcol.red = r;
-   highcol.green = g;
-   highcol.blue = b;
-   highcol.alpha = a;   
-}
-
-/*******************************************************
-*   @description
-*******************************************************/
-void SecondDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
-   lowcol.red = r;
-   lowcol.green = g;
-   lowcol.blue = b;
-   lowcol.alpha = a;
 }
 
 /*******************************************************
@@ -719,8 +711,16 @@ void SecondDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRe
    StrokeLine(first,pattern);
 }
 
-void SecondDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col){
+
+/*******************************************************
+*   @description
+*******************************************************/
+void SecondDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color color){
+   StrokeLine(first,second,color);
+   StrokeLine(first,third,color);
+   StrokeLine(third,second,color);
 }
+
 
 /*******************************************************
 *   

@@ -18,7 +18,7 @@
 #include "WindowBorder.h"
 #include "DebugTools.h"
 
-//#define DEBUG_SERVERWIN
+#define DEBUG_SERVERWIN
 
 // Used for providing identifiers for views
 int32 view_counter=0;
@@ -172,6 +172,8 @@ void ServerWindow::SetFocus(bool value)
 printf("%s::SetFocus(%s)\n",title->String(),(value==true)?"true":"false");
 #endif
 	active=value;
+	decorator->SetFocus(value);
+	decorator->Draw();
 }
 
 bool ServerWindow::HasFocus(void)
@@ -464,10 +466,6 @@ printf("ServerWindow() %s: MouseUp(%.1f,%.1f)\n",mousewin->title->String(),x,y);
 				winborder->MouseMoved(pt,buttons);
 
 				// Do cool mouse stuff here
-				
-#ifdef DEBUG_SERVERWIN
-printf("ServerWindow() %s: MouseMoved(%.1f,%.1f)\n",mousewin->title->String(),x,y);
-#endif
 			}
 			break;
 		}

@@ -46,7 +46,7 @@ public:
 	#else 
 	 virtual void Blit(BRect src, BRect dest);
 	#endif
-	virtual void DrawBitmap(ServerBitmap *bitmap);
+	virtual void DrawBitmap(ServerBitmap *bitmap, BRect source, BRect dest);
 	virtual void DrawChar(char c, BPoint point);
 	virtual void DrawString(char *string, int length, BPoint point);
 
@@ -60,7 +60,7 @@ public:
 	virtual void FillRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
 	virtual void FillShape(BShape *shape);
 	virtual void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
-	virtual void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
+	virtual void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color color);
 
 	virtual void HideCursor(void);
 	virtual bool IsCursorHidden(void);
@@ -69,9 +69,8 @@ public:
 	virtual void ObscureCursor(void);
 	virtual BPoint PenPosition(void);
 	virtual float PenSize(void);
+	virtual void SetCursor(int32 value);
 	virtual void SetCursor(ServerCursor *cursor);
-	virtual void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
-	virtual void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
 	virtual void SetPenSize(float size);
 	virtual void SetPixel(int x, int y, uint8 *pattern);
 	virtual void ShowCursor(void);
@@ -87,7 +86,7 @@ public:
 	virtual void StrokeRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
 	virtual void StrokeShape(BShape *shape);
 	virtual void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
-	virtual void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
+	virtual void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color color);
 private:
    void HorizLine(int32 x1,int32 x2,int32 y, uint8 *pattern);
    void MidpointEllipse(float centerx, float centery,int32 xrad, int32 yrad,bool fill,uint8 *pattern);

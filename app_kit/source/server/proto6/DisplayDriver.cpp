@@ -4,12 +4,14 @@
 		for graphics calls.
 */
 #include "DisplayDriver.h"
+#include "ColorUtils.h"
+#include "SystemPalette.h"
 #include "ServerCursor.h"
 
 DisplayDriver::DisplayDriver(void)
 {
 	is_initialized=false;
-	cursor_visible=false;
+	cursor_visible=true;
 	show_on_move=false;
 	locker=new BLocker();
 
@@ -80,11 +82,19 @@ int DisplayDriver::GetDepth(void)
 	return ginfo->bytes_per_row;
 }
 
+void DisplayDriver::AddLine(BPoint pt1, BPoint pt2, rgb_color col)
+{
+}
+
+void DisplayDriver::BeginLineArray(int32 count)
+{
+}
+
 void DisplayDriver::Blit(BRect src, BRect dest)
 {	// Screen-to-screen bitmap copying
 }
 
-void DisplayDriver::DrawBitmap(ServerBitmap *bitmap)
+void DisplayDriver::DrawBitmap(ServerBitmap *bitmap, BRect source, BRect dest)
 {
 }
 
@@ -92,7 +102,15 @@ void DisplayDriver::DrawChar(char c, BPoint point)
 {
 }
 
+void DisplayDriver::DrawLineArray(int32 count,BPoint *start, BPoint *end, rgb_color *color)
+{
+}
+
 void DisplayDriver::DrawString(char *string, int length, BPoint point)
+{
+}
+
+void DisplayDriver::EndLineArray(void)
 {
 }
 
@@ -180,6 +198,7 @@ void DisplayDriver::MoveCursorTo(float x, float y)
 
 void DisplayDriver::MovePenTo(BPoint pt)
 {	// Moves the graphics pen to this position
+	penpos=pt;
 }
 
 BPoint DisplayDriver::PenPosition(void)
@@ -202,14 +221,35 @@ void DisplayDriver::SetDrawingMode(drawing_mode mode)
 
 void DisplayDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 {
+	SetRGBColor(&highcol,r,g,b,a);
+	high16=FindClosestColor16(highcol);
+	high8=FindClosestColor(system_palette,highcol);
+}
+
+void DisplayDriver::SetHighColor(rgb_color col)
+{
+	highcol=col;
+	high16=FindClosestColor16(highcol);
+	high8=FindClosestColor(system_palette,highcol);
 }
 
 void DisplayDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 {
+	SetRGBColor(&lowcol,r,g,b,a);
+	low16=FindClosestColor16(lowcol);
+	low8=FindClosestColor(system_palette,lowcol);
+}
+
+void DisplayDriver::SetLowColor(rgb_color col)
+{
+	lowcol=col;
+	low16=FindClosestColor16(lowcol);
+	low8=FindClosestColor(system_palette,lowcol);
 }
 
 void DisplayDriver::SetPenSize(float size)
 {
+	pensize=(size>0)?size:1;
 }
 
 void DisplayDriver::SetPixel(int x, int y, uint8 *pattern)

@@ -23,21 +23,18 @@ printf("BeDecorator()\n");
 	// These hard-coded assignments will go bye-bye when the system colors 
 	// API is implemented
 
-	SetRGBColor(&tab_highcol,255,236,33);
-	SetRGBColor(&tab_lowcol,234,181,0);
-//	SetRGBColor(&tab_highcol,255,0,0);
-//	SetRGBColor(&tab_lowcol,168,0,0);
+	// commented these out because they are taken care of by the SetFocus() call
+	SetFocus(false);
+//	SetRGBColor(&tab_highcol,255,236,33);
+//	SetRGBColor(&tab_lowcol,234,181,0);
 
-	SetRGBColor(&button_highcol,255,255,0);
-	SetRGBColor(&button_lowcol,255,203,0);
-//	SetRGBColor(&button_highcol,255,50,0);
-//	SetRGBColor(&button_lowcol,168,50,0);
+//	SetRGBColor(&button_highcol,255,255,0);
+//	SetRGBColor(&button_lowcol,255,203,0);
 
 	SetRGBColor(&frame_highercol,216,216,216);
 	SetRGBColor(&frame_lowercol,110,110,110);
 
 	SetRGBColor(&textcol,0,0,0);
-//	SetRGBColor(&textcol,255,255,255);
 	
 	frame_highcol=MakeBlendColor(frame_lowercol,frame_highercol,0.75);
 	frame_midcol=MakeBlendColor(frame_lowercol,frame_highercol,0.5);
@@ -51,6 +48,9 @@ printf("BeDecorator()\n");
 		delete lay->visible;
 		lay->visible=GetBorderSize();
 	}
+
+	// This flag is used to determine whether or not we're moving the tab
+	slidetab=false;
 }
 
 BeDecorator::~BeDecorator(void)
@@ -252,15 +252,19 @@ void BeDecorator::SetFocus(bool bfocused)
 	{
 		SetRGBColor(&tab_highcol,255,236,33);
 		SetRGBColor(&tab_lowcol,234,181,0);
+
+		SetRGBColor(&button_highcol,255,255,0);
+		SetRGBColor(&button_lowcol,255,203,0);
 	}
 	else
 	{
 		SetRGBColor(&tab_highcol,235,235,235);
 		SetRGBColor(&tab_lowcol,160,160,160);
+
+		SetRGBColor(&button_highcol,229,229,229);
+		SetRGBColor(&button_lowcol,153,153,153);
 	}
 
-	button_highcol=tab_highcol;
-	button_lowcol=tab_lowcol;
 }
 
 void BeDecorator::Draw(BRect update)
@@ -290,7 +294,7 @@ void BeDecorator::Draw(void)
 	// Draw the top view's client area - just a hack :)
 	rgb_color blue={100,100,255,255};
 	driver->FillRect(borderrect,blue);
-	borderrect.PrintToStream();
+
 	DrawFrame();
 }
 
@@ -323,19 +327,21 @@ void BeDecorator::DrawTab(void)
 	float rstep,gstep,bstep;
 
 	int steps=tabrect.IntegerHeight();
-	rstep=(tab_highcol.red-tab_lowcol.red)/steps;
-	gstep=(tab_highcol.green-tab_lowcol.green)/steps;
-	bstep=(tab_highcol.blue-tab_lowcol.blue)/steps;
+	rstep=float(tab_highcol.red-tab_lowcol.red)/steps;
+	gstep=float(tab_highcol.green-tab_lowcol.green)/steps;
+	bstep=float(tab_highcol.blue-tab_lowcol.blue)/steps;
 
 	driver->StrokeRect(tabrect,frame_lowcol);
+	driver->BeginLineArray(steps+1);
 	for(float i=1;i<=steps; i++)
 	{
 		SetRGBColor(&tmpcol, uint8(tab_highcol.red-(i*rstep)),
 			uint8(tab_highcol.green-(i*gstep)),
 			uint8(tab_highcol.blue-(i*bstep)));
-		driver->StrokeLine(BPoint(tabrect.left+1,tabrect.top+i),
+		driver->AddLine(BPoint(tabrect.left+1,tabrect.top+i),
 			BPoint(tabrect.right-1,tabrect.top+i),tmpcol);
 	}
+	driver->EndLineArray();
 	UpdateTitle(layer->name->String());
 
 	// Draw the buttons if we're supposed to	
@@ -372,9 +378,9 @@ void BeDecorator::DrawBlendedRect(BRect r, bool down)
 
 	halfcol=MakeBlendColor(button_lowcol,button_highcol,0.5);
 
-	rstep=(startcol.red-halfcol.red)/steps;
-	gstep=(startcol.green-halfcol.green)/steps;
-	bstep=(startcol.blue-halfcol.blue)/steps;
+	rstep=float(startcol.red-halfcol.red)/steps;
+	gstep=float(startcol.green-halfcol.green)/steps;
+	bstep=float(startcol.blue-halfcol.blue)/steps;
 
 	for(i=0;i<=steps; i++)
 	{
@@ -391,7 +397,6 @@ void BeDecorator::DrawBlendedRect(BRect r, bool down)
 			BPoint(r.left+i,r.top+steps),tmpcol);
 
 	}
-	
 	driver->StrokeRect(r,frame_lowcol);
 }
 
@@ -403,40 +408,41 @@ void BeDecorator::DrawFrame(void)
 		return;
 	
 	BRect r=borderrect;
-	bool down=false;
-	
-	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.right-1,r.top),
+
+	driver->BeginLineArray(12);
+	driver->AddLine(BPoint(r.left,r.top),BPoint(r.right-1,r.top),
 		frame_midcol);
-	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.left,r.bottom),
+	driver->AddLine(BPoint(r.left,r.top),BPoint(r.left,r.bottom),
 		frame_lowcol);
-	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.right,r.top),
+	driver->AddLine(BPoint(r.right,r.bottom),BPoint(r.right,r.top),
 		frame_lowercol);
-	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.left,r.bottom),
+	driver->AddLine(BPoint(r.right,r.bottom),BPoint(r.left,r.bottom),
 		frame_lowercol);
 
 	r.InsetBy(1,1);
-	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.right-1,r.top),
+	driver->AddLine(BPoint(r.left,r.top),BPoint(r.right-1,r.top),
 		frame_highercol);
-	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.left,r.bottom),
+	driver->AddLine(BPoint(r.left,r.top),BPoint(r.left,r.bottom),
 		frame_highercol);
-	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.right,r.top),
+	driver->AddLine(BPoint(r.right,r.bottom),BPoint(r.right,r.top),
 		frame_midcol);
-	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.left,r.bottom),
+	driver->AddLine(BPoint(r.right,r.bottom),BPoint(r.left,r.bottom),
 		frame_midcol);
 	
 	r.InsetBy(1,1);
 	driver->StrokeRect(r,frame_highcol);
 
 	r.InsetBy(1,1);
-	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.right-1,r.top),
+	driver->AddLine(BPoint(r.left,r.top),BPoint(r.right-1,r.top),
 		frame_lowercol);
-	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.left,r.bottom),
+	driver->AddLine(BPoint(r.left,r.top),BPoint(r.left,r.bottom),
 		frame_lowercol);
-	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.right,r.top),
+	driver->AddLine(BPoint(r.right,r.bottom),BPoint(r.right,r.top),
 		frame_highercol);
-	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.left,r.bottom),
+	driver->AddLine(BPoint(r.right,r.bottom),BPoint(r.left,r.bottom),
 		frame_highercol);
-
+	driver->EndLineArray();
+	
 	// Draw the resize thumb if we're supposed to
 	if(!(dflags & NOT_RESIZABLE))
 	{
@@ -449,26 +455,18 @@ void BeDecorator::DrawFrame(void)
 		{
 			rgb_color tmpcol,halfcol, startcol, endcol;
 			float rstep,gstep,bstep,i;
-		
+			
 			int steps=(w<h)?w:h;
 		
-			if(down)
-			{
-				startcol=frame_lowercol;
-				endcol=frame_highercol;
-			}
-			else
-			{
-				startcol=frame_highercol;
-				endcol=frame_lowercol;
-			}
+			startcol=frame_highercol;
+			endcol=frame_lowercol;
 		
 			halfcol=MakeBlendColor(startcol,endcol,0.5);
 		
 			rstep=(startcol.red-halfcol.red)/steps;
 			gstep=(startcol.green-halfcol.green)/steps;
 			bstep=(startcol.blue-halfcol.blue)/steps;
-		
+
 			for(i=0;i<=steps; i++)
 			{
 				SetRGBColor(&tmpcol, uint8(startcol.red-(i*rstep)),
@@ -481,12 +479,9 @@ void BeDecorator::DrawFrame(void)
 					uint8(halfcol.green-(i*gstep)),
 					uint8(halfcol.blue-(i*bstep)));
 				driver->StrokeLine(BPoint(r.left+steps,r.top+i),
-					BPoint(r.left+i,r.top+steps),tmpcol);
-		
+					BPoint(r.left+i,r.top+steps),tmpcol);			
 			}
-			
-			SetRGBColor(&tmpcol, 128,128,0);
-			driver->StrokeRect(r,tmpcol);
+			driver->StrokeRect(r,frame_lowercol);
 		}
 		else
 		{

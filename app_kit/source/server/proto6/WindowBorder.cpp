@@ -207,7 +207,7 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 {
 //	mbuttons&= ~buttons;
 	mbuttons=buttons;
-	activeborder=NULL;
+//	activeborder=NULL;
 	is_moving_window=false;
 	is_resizing_window=false;
 
@@ -306,9 +306,12 @@ printf("WindowBorder(): MoveToBack\n");
 	layerlock->Lock();
 	top->RemoveChild(this);
 	top->AddChild(this);
+	level=1;
 	swin->SetFocus(false);
 	decor->SetFocus(false);
 	decor->Draw();
+printf("MoveToBack: ");
+PrintToStream();
 	layerlock->Unlock();
 }
 
@@ -323,17 +326,37 @@ printf("WindowBorder(): MoveToFront\n");
 	// child of the root layer
 	Layer *top=GetRootLayer();
 	layerlock->Lock();
+
 	top->RemoveChild(this);
+
+	// Make this the bottom child of the parent layer. Can't use
+	// AddChild(), so we'll manipulate the pointers directly. Remember,
+	// we need to change pointers for 3 layers - the parent, the 
+	// uppersibling (if any), and the layer in question
+
+	// Tweak this layer
+	parent=top;
 	uppersibling=top->bottomchild;
 	lowersibling=NULL;
+	level=parent->level+1;
+
+	// tweak parent	
 	top->bottomchild=this;
 	if(top->topchild==NULL)
 		top->topchild=this;
-	parent=top;
+	
+	// tweak uppersibling
+	if(uppersibling)
+		uppersibling->lowersibling=this;
+	
 	swin->SetFocus(true);
 	decor->SetFocus(true);
 	decor->Draw();
+printf("MoveToFront: ");
+PrintToStream();
 	layerlock->Unlock();
 	is_moving_window=true;
+	if(activeborder)
+		activeborder->swin->SetFocus(false);
 	activeborder=this;
 }

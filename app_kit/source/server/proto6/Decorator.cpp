@@ -7,7 +7,7 @@ Decorator::Decorator(Layer *lay, uint32 windowflags, uint32 wlook)
 	minsize.Set(0,0); 
 	bsize.Set(1,1,1,1);
 	dlook=wlook;
-	focused=true;
+	focused=false;
 	driver=get_gfxdriver();
 }
 

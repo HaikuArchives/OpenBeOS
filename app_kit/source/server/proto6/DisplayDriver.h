@@ -43,6 +43,19 @@ typedef struct
 
 class ServerCursor;
 
+#define DRAW_COPY 0
+#define DRAW_OVER 1
+#define DRAW_ERASE 2	
+#define DRAW_INVERT 3
+#define DRAW_ADD 4
+#define DRAW_SUBTRACT 5
+#define DRAW_BLEND 6
+#define DRAW_MIN 7
+#define DRAW_MAX 8
+#define DRAW_SELECT 9
+#define DRAW_ALPHA 10
+
+
 class DisplayDriver
 {
 public:
@@ -65,10 +78,14 @@ public:
 	virtual int GetDepth(void);
 
 	// Drawing functions
+	virtual void AddLine(BPoint pt1, BPoint pt2, rgb_color col);
+	virtual void BeginLineArray(int32 count);
 	virtual void Blit(BRect src, BRect dest);
-	virtual void DrawBitmap(ServerBitmap *bitmap);
+	virtual void DrawBitmap(ServerBitmap *bitmap, BRect source, BRect dest);
 	virtual void DrawChar(char c, BPoint point);
+	virtual void DrawLineArray(int32 count,BPoint *start, BPoint *end, rgb_color *color);
 	virtual void DrawString(char *string, int length, BPoint point);
+	virtual void EndLineArray(void);
 
 	virtual void FillArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
 	virtual void FillBezier(BPoint *points, uint8 *pattern);
@@ -98,7 +115,9 @@ public:
 	virtual void SetDrawingMode(drawing_mode mode);
 	virtual void ShowCursor(void);
 	virtual void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	virtual void SetHighColor(rgb_color col);
 	virtual void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	virtual void SetLowColor(rgb_color col);
 	virtual void SetPenSize(float size);
 	virtual void SetPixel(int x, int y, uint8 *pattern);
 
@@ -124,6 +143,8 @@ protected:
 	ServerCursor *current_cursor;
 	BLocker *locker;
 	rgb_color highcol, lowcol;
+	uint16 high16, low16;
+	uint8 high8, low8;
 	BPoint penpos;
 	float pensize;
 };

@@ -6,7 +6,7 @@
 
 #include "SystemPalette.h"
 
-rgb_color SystemPalette[256];
+rgb_color system_palette[256];
 
 void GenerateSystemPalette(rgb_color *palette)
 {

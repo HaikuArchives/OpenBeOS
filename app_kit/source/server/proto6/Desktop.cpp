@@ -10,6 +10,8 @@
 #include <GraphicsCard.h>
 #include <stdio.h>
 #include <Locker.h>
+#include "ColorUtils.h"
+#include "SystemPalette.h"
 #include "ServerWindow.h"
 #include "ServerCursor.h"
 #include "Layer.h"
@@ -24,21 +26,11 @@ class ServerWindow;
 class ServerBitmap;
 class Workspace;
 
-// Quick hack to make setting rgb_colors much easier to live with
-void set_rgb_color(rgb_color *col,uint8 red, uint8 green, uint8 blue, uint8 alpha=255)
-{
-	col->red=red;
-	col->green=green;
-	col->blue=blue;
-	col->alpha=alpha;
-} 
-
 //--------------------GLOBALS-------------------------
 uint32 workspace_count, active_workspace;
 BList *desktop;
 ServerCursor *startup_cursor;
 Workspace *pactive_workspace;
-color_map system_palette;
 DisplayDriver *gfxdriver;
 int32 token_count=-1;
 BLocker *workspacelock;
@@ -148,9 +140,7 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 
 	// Create the workspaces we're supposed to have
 	for(int8 i=0; i<workspaces; i++)
-	{
 		desktop->AddItem(new Workspace());
-	}
 
 	// Load workspace preferences here
 
@@ -161,9 +151,9 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	if(wksp!=NULL)	// in case I forgot something
 	{
 		rgb_color bcol;
-		set_rgb_color(&bcol,0,200,236);
+		SetRGBColor(&bcol,0,200,236);
 		
-//		set_rgb_color(&(wksp->bgcolor),0,200,236);
+//		SetRGBColor(&(wksp->bgcolor),0,200,236);
 		wksp->SetBGColor(bcol);
 		screen_info *tempsd=&(wksp->screendata);
 		tempsd->mode=B_CMAP8;
@@ -179,10 +169,11 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	gfxdriver->SetScreen(pactive_workspace->screendata.spaces);
 
 	// Clear the screen
-	set_rgb_color(&(pactive_workspace->toplayer->bgcolor),80,85,152);
+	SetRGBColor(&(pactive_workspace->toplayer->bgcolor),80,85,152);
 	gfxdriver->Clear(pactive_workspace->toplayer->bgcolor);
 	startup_cursor=new ServerCursor(default_cursor);
 	gfxdriver->SetCursor(startup_cursor);
+	gfxdriver->ShowCursor();
 
 	pactive_workspace->toplayer->SetVisible(true);
 #ifdef DEBUG_WORKSPACES

@@ -37,6 +37,7 @@ public:
 		frame_lowercol;
 	rgb_color textcol;
 
+	bool slidetab;
 	BRect zoomrect,closerect,tabrect,frame,
 		resizerect,borderrect;
 	int textoffset;
