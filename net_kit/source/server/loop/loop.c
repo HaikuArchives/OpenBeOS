@@ -8,7 +8,7 @@
 #include "sys/socket.h"
 #include "protocols.h"
 #include "netinet/in.h"
-#include "ipv4/ipv4.h"
+#include "netinet/ip.h"
 #include "sys/socketvar.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
@@ -40,10 +40,10 @@ int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 	 * us working.
 	 * XXX - fix me!
 	 */
-	ipv4_header *ip = mtod(m, ipv4_header *);
+	struct ip *ip = mtod(m, struct ip *);
 
-	ip->dst = ip->src;
-	ip->src.s_addr = INADDR_LOOPBACK;
+	ip->ip_dst = ip->ip_src;
+	ip->ip_src.s_addr = INADDR_LOOPBACK;
 
 	IFQ_ENQUEUE(ifp->rxq, m);
 	return 0;
