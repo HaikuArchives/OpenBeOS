@@ -32,6 +32,7 @@ int32 screenSaverThread(void *none)
 				break;
 			case EXIT:
 				done=true;
+				delete saver;
 				break;
 			}
 	return 0;
@@ -39,5 +40,11 @@ int32 screenSaverThread(void *none)
 
 void callDirectConnected (direct_buffer_info *info)
 {
-		saver->DirectConnected(info);
+	saver->DirectConnected(info);
 }
+
+void callSaverDelete(void)
+{
+	delete saver;
+}
+

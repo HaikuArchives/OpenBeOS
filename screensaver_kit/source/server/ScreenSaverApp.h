@@ -17,13 +17,21 @@ public:
 	void goBlank(void);
 	void unBlank(void);
 	void resetTimer(void);
+	void LoadSettings(void);
+	void LoadAddOn(BMessage *msg);
 	void setNewDuration(int newTimer);
-	void setNewSaver(BMessage *newSSMessage);
+	void parseSettings(BMessage *newSSMessage);
 private:
 	int blankTime;
 	int currentTime;
+	int cornerNow;
+	int cornerNever;
+	int passwordLocked;
+	int passwordTime;
+	bool disabled;
+	char moduleName[1024];
 	thread_id threadID;
-
+	image_id addon_image;
 };
 
 #endif //SCREEN_SAVER_H
