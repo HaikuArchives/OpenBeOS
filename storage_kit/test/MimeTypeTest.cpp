@@ -40,15 +40,6 @@ static const char *longSig				= "application/x-vnd.obos.mime-type-test-long."
 "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
 
-// Handy comparison operators for BBitmaps. The size and color depth are compared first,
-// followed by the bitmap data.
-bool operator==(BBitmap &bmp1, BBitmap &b2) {
-	return false;
-}
-bool operator!=(BBitmap &bmp1, BBitmap &b2) {
-	return !(bmp1 == bmp2);
-}
-
 // Suite
 CppUnit::Test*
 MimeTypeTest::Suite() {
