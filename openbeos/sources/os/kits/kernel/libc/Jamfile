@@ -1,7 +1,5 @@
 SubDir OBOS_TOP sources os kits kernel libc ;
 
-#KernelStaticLibrary c_init : nulibc_init.c ;
-
 KernelStaticLibrary libc :
 	<$(SOURCE_GRIST)>nulibc_init.c
 	
@@ -33,7 +31,6 @@ KernelStaticLibrary libc :
 	<$(SOURCE_GRIST)>string/strcpy.c
 	<$(SOURCE_GRIST)>string/strerror.c
 	<$(SOURCE_GRIST)>string/strlcat.c
-	<$(SOURCE_GRIST)>string/strlcat.c
 	<$(SOURCE_GRIST)>string/strlcpy.c
 	<$(SOURCE_GRIST)>string/strlen.c
 	<$(SOURCE_GRIST)>string/strncat.c
@@ -50,6 +47,7 @@ KernelStaticLibrary libc :
 	<$(SOURCE_GRIST)>system/dlfcn.c
 	<$(SOURCE_GRIST)>system/rlimit.c
 	<$(SOURCE_GRIST)>system/syscalls.S
+	<$(SOURCE_GRIST)>system/arch/$(OBOS_ARCH)/atomic.S
 
 	<$(SOURCE_GRIST)>unistd/close.c
 	<$(SOURCE_GRIST)>unistd/dup.c
