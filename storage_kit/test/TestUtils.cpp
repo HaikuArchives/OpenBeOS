@@ -1,8 +1,12 @@
 // TestUtils.cpp
 
 #include "TestUtils.h"
+#include "Test.StorageKit.h"
 
 status_t DecodeResult(status_t result) {
+	if (!shell.BeVerbose())
+		return result;
+
 	std::string str;
 	switch (result) {
 
