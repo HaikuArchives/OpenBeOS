@@ -7,14 +7,18 @@
 
 #include <Node.h>
 
+#include <stdio.h>
+
+#include "TestUtils.h"
+
 class NodeTest : public CppUnit::TestCase
 {
 public:
 	static Test* Suite() {
 		CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 		
-		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::RemoveAttr()", &NodeTest::RemoveAttr) );
-		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::ReadAttr()", &NodeTest::ReadAttr) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Init Test", &NodeTest::InitTest) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Directory Test", &NodeTest::AttrDirTest) );
 		
 		return suite;
 	}		
@@ -25,14 +29,41 @@ public:
 	// This function called after *each* test added in Suite()
 	void tearDown()	{}
 
-	void RemoveAttr() {
+	void InitTest() {
 		BNode node;
-		CPPUNIT_ASSERT( node.RemoveAttr("ThisWillFail") == B_ERROR );
+		CPPUNIT_ASSERT( node.InitCheck() == B_NO_INIT );
+		
+		BNode node2("./");
+		CPPUNIT_ASSERT( node2.InitCheck() == B_OK );
+		
+		BNode node3("./This.File.Ought.Not.Exist");
+		CPPUNIT_ASSERT( node3.InitCheck() == B_ENTRY_NOT_FOUND );
 	}
 
-	void ReadAttr() {
+	void AttrDirTest() {
 		BNode node;
-		CPPUNIT_ASSERT( node.ReadAttr("ThisWillFailToo", 0, 0, NULL, 0) == 0 );
+		CPPUNIT_ASSERT( node.RewindAttrs() == B_BAD_ADDRESS );
+		
+		BNode node2("./");
+		
+		char str[B_ATTR_NAME_LENGTH];
+		status_t result;
+		CPPUNIT_ASSERT( node2.GetNextAttrName(str) == B_OK );
+
+		// Get to the end of the list
+		while( (result = node2.GetNextAttrName(str)) == B_OK ) {
+//			cout << str << endl;	// Uncomment to list off the attribute names
+		}
+			
+		CPPUNIT_ASSERT( result == B_ENTRY_NOT_FOUND );
+			// End of the list
+			
+		CPPUNIT_ASSERT( node2.RewindAttrs() == B_OK );
+			// Rewind
+
+		// The following crashes on R5. Our implementation just returns B_BAD_VALUE
+		//CPPUNIT_ASSERT( node2.GetNextAttrName(NULL) != B_OK );
+		
 	}
 	
 };
