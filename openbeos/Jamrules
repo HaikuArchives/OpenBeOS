@@ -1,0 +1,156 @@
+# Determine if we're building on PPC or x86
+# Determine mimetype of executable
+if $(METROWERKS) {
+	OBOS_TARGET ?= "ppc.R5" ;
+	OBOS_TARGET_TYPE ?= "application/x-be-executable" ;
+} else {
+	OBOS_TARGET ?= "x86.R5" ;
+	OBOS_TARGET_TYPE ?= "application/x-vnd.Be-elfexecutable" ;
+}
+
+# If no OBOS_OBJECT_TARGET is not defined yet, use our default directory and
+# include our "OBOS_TARGET" as subdirectory in there (to prevent different
+# builds mixing objects from different targets).
+if ! $(OBOS_OBJECT_TARGET) {
+	OBOS_OBJECT_TARGET ?= $(OBOS_TOP)/objects/$(OBOS_TARGET) ;
+}
+
+# If no OBOS_DISTRO_TARGET is not defined yet, use our default directory and
+# include our "OBOS_TARGET" as subdirectory in there (to prevent different
+# builds mixing executables from different targets).
+if ! $(OBOS_DISTRO_TARGET) {
+	OBOS_DISTRO_TARGET ?= $(OBOS_TOP)/distro/$(OBOS_TARGET) ;
+}
+
+# Set our version number if not already set and mark it as a developer build
+if ! $(OBOS_BUILD_VERSION) {
+	OBOS_BUILD_VERSION ?= "1 0 0 a 1" ;
+	OBOS_BUILD_DESCRIPTION ?= "Developer Build" ;
+}
+
+# If OBOS_BUILD_VERSION is set, but OBOS_BUILD_DESCRIPTION isn't, mark it as
+# an unknown build.
+if ! $(OBOS_BUILD_DESCRIPTION) {
+	OBOS_BUILD_DESCRIPTION ?= "Unknown Build" ;
+}
+
+# Relative subdirs for distro dir (these are for *INTERNAL* use by the following rules only!)
+OBOS_PREFS_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/preferences ;
+OBOS_SERVER_DIR ?= $(OBOS_DISTRO_TARGET)/beos/system/servers ;
+OBOS_ADDON_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/system/add-ons ;
+OBOS_SHLIB_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/system/lib ;
+
+#-------------------------------------------------------------------------------
+# General High-level OBOS target rules
+#-------------------------------------------------------------------------------
+
+rule Preference
+{
+	# Preference <name> : <sources> ;
+	
+	SetupObjectsDir ;
+	Main $(<) : $(>) ;
+	MakeLocate $(<) : $(OBOS_PREFS_DIR) ;
+}
+
+rule Server
+{
+	# Preference <name> : <sources> ;
+	
+	SetupObjectsDir ;
+	Main $(<) : $(>) ;
+	MakeLocate $(<) : $(OBOS_SERVER_DIR) ;
+}
+
+rule Addon
+{
+	# Addon <name> : <relpath> : <sources> ;	
+	
+	SetupObjectsDir ;
+	Main $(1) : $(3) ;
+
+	# Create output dir path for addon
+	local targetdir;
+	targetdir = [ FDirName $(OBOS_ADDON_DIR) $(2) ] ;
+
+	MakeLocate $(1) : $(targetdir) ;
+	LINKFLAGS on $(1) = $(LINKFLAGS) -nostart -Xlinker -soname=\"$(1)\" ;
+}
+
+rule SharedLibrary
+{
+	# SharedLibrary <name> : <sources> ;
+	
+	SetupObjectsDir ;
+	Main lib$(<).so : $(>) ;
+	MakeLocate lib$(<).so : $(OBOS_SHLIB_DIR) ;
+	LINKFLAGS on lib$(1).so = $(LINKFLAGS) -nostart -Xlinker -soname=\"lib$(<).so\" ;
+}
+
+rule LinkSharedOSLibs
+{
+	# LinkSharedOSLibs <name> : <libs> ;
+	
+	for i in $(>)
+	{
+		LINKLIBS on $(<) += -l$(i) ;
+	}
+}
+
+rule LinkStaticOSLibs
+{
+	# LinkStaticOSLibs <name> : <libs> ;
+	
+	for i in $(>)
+	{
+		LINKLIBS on $(<) = $(LINKLIBS) -l $(i) ;
+	}
+}
+
+rule AddResources
+{
+	# AddResources <name> : <resourcefiles> ;
+
+	local dir;
+	
+	dir = [ FDirName $(OBOS_TOP) $(SUBDIR_TOKENS) ] ;
+
+	for i in $(>)
+	{
+	    RESFILES on $(<) = [ FDirName $(dir) $(i) ] ;
+	    DEPENDS $(<) : [ FDirName $(dir) $(i) ] ;
+	}
+}
+
+#-------------------------------------------------------------------------------
+# Low-level OBOS utility rules
+#-------------------------------------------------------------------------------
+rule SetupObjectsDir
+{
+	local rel_objectsdir;
+	
+	# Copy subdir tokens except the first, as that will be "sources", and we
+	# do not want to include that :)
+	rel_objectsdir = [ FDirName $(SUBDIR_TOKENS[2-]) ] ;
+	LOCATE_TARGET = $(OBOS_OBJECT_TARGET)/$(rel_objectsdir) ;
+}
+
+#-------------------------------------------------------------------------------
+# Link rule/action are overwritten as they don't handle linking files who's name 
+# contain spaces very well. Also adds resources and version to executable.
+#-------------------------------------------------------------------------------
+rule Link
+{
+	MODE on $(<) = $(EXEMODE) ;
+	Chmod $(<) ;
+}
+
+actions Link bind NEEDLIBS
+{
+	$(LINK) $(LINKFLAGS) -o "$(<)" $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS)
+	xres -o "$(<)" $(RESFILES) ;
+	setversion "$(<)" -system $(OBOS_BUILD_VERSION) ;
+	chmod +x "$(<)"
+	settype -t $(OBOS_TARGET_TYPE) "$(<)"
+	mimeset -f "$(<)"
+}
