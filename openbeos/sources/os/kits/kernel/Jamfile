@@ -59,6 +59,7 @@ KernelStaticLibraryObjects libc.a :
 	<$(SOURCE_GRIST)!libc!unistd>close.o
 	<$(SOURCE_GRIST)!libc!unistd>dup.o
 	<$(SOURCE_GRIST)!libc!unistd>dup2.o
+	<$(SOURCE_GRIST)!libc!unistd>getopt.o
 	<$(SOURCE_GRIST)!libc!unistd>lseek.o
 	<$(SOURCE_GRIST)!libc!unistd>open.o
 	<$(SOURCE_GRIST)!libc!unistd>pread.o
@@ -366,6 +367,7 @@ KernelLd libc.so :
 	<$(SOURCE_GRIST)!libc!unistd>close.o
 	<$(SOURCE_GRIST)!libc!unistd>dup.o
 	<$(SOURCE_GRIST)!libc!unistd>dup2.o
+	<$(SOURCE_GRIST)!libc!unistd>getopt.o
 	<$(SOURCE_GRIST)!libc!unistd>lseek.o
 	<$(SOURCE_GRIST)!libc!unistd>open.o
 	<$(SOURCE_GRIST)!libc!unistd>pread.o

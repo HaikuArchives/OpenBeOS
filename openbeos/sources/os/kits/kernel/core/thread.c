@@ -633,6 +633,7 @@ static void _dump_proc_info(struct proc *p)
 	dprintf("state:       %d\n", p->state);
 	dprintf("pending_signals: 0x%x\n", p->pending_signals);
 	dprintf("ioctx:       %p\n", p->ioctx);
+	dprintf("path:        '%s'\n", p->path);
 	dprintf("aspace_id:   0x%x\n", p->_aspace_id);
 	dprintf("aspace:      %p\n", p->aspace);
 	dprintf("kaspace:     %p\n", p->kaspace);
@@ -924,6 +925,8 @@ int thread_init(kernel_args *ka)
 	kernel_proc->ioctx = vfs_new_ioctx(NULL);
 	if(kernel_proc->ioctx == NULL)
 		panic("could not create ioctx for kernel proc!\n");
+
+	//XXX should initialize kernel_proc->path here. Set it to "/"?
 
 	// stick it in the process hash
 	hash_insert(proc_hash, kernel_proc);
@@ -1588,6 +1591,7 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 	p->num_threads = 0;
 	p->ioctx = NULL;
+	p->path[0] = 0;
 	p->_aspace_id = -1;
 	p->aspace = NULL;
 	p->kaspace = vm_get_kernel_aspace();
@@ -1747,6 +1751,8 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 		err = ERR_NO_MEMORY;
 		goto err3;
 	}
+
+	//XXX should set p->path to path(?) here.
 
 	// create an address space for this process
 	p->_aspace_id = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
