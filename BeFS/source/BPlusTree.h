@@ -92,6 +92,13 @@ class TreeIterator;
 class CachedNode;
 class Inode;
 
+// needed for searching (utilizing a stack)
+struct node_and_key
+{
+	off_t	nodeOffset;
+	uint16	keyIndex;
+};
+
 //******** B+tree class *********
 
 class BPlusTree
@@ -123,13 +130,6 @@ class BPlusTree
 		status_t	Find(uint8 *key, uint16 keyLength, off_t *value);
 
 	private:
-		// needed for searching (utilizing a stack)
-		struct node_and_key
-		{
-			off_t	nodeOffset;
-			uint16	keyIndex;
-		};
-
 		status_t	Initialize(int32 nodeSize);
 
 		int32		CompareKeys(const void *key1, int keylength1, const void *key2, int keylength2);
@@ -206,9 +206,9 @@ class TreeIterator
 		TreeIterator(BPlusTree *tree);
 		~TreeIterator();
 
-		void		SetCurrentNode(bplustree_node *node, off_t offset, int8 to);
 		status_t	Goto(int8 to);
 		status_t	Traverse(int8 direction, void *key, uint16 *keyLength, uint16 maxLength, off_t *value);
+		status_t	Find(uint8 *key, uint16 keyLength);
 
 		status_t	Rewind();
 		status_t	GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value);

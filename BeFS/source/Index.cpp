@@ -94,3 +94,33 @@ Index::Type()
 	return 0;
 }
 
+
+size_t
+Index::KeySize()
+{
+	if (fNode == NULL)
+		return 0;
+	
+	int32 mode = fNode->Mode() & (S_STR_INDEX | S_INT_INDEX | S_UINT_INDEX | S_LONG_LONG_INDEX |
+								  S_ULONG_LONG_INDEX | S_FLOAT_INDEX | S_DOUBLE_INDEX);
+
+	if (mode == S_STR_INDEX)
+		// string indices don't have a fixed key size
+		return 0;
+
+	switch (mode) {
+		case S_INT_INDEX:
+		case S_UINT_INDEX:
+			return sizeof(int32);
+		case S_LONG_LONG_INDEX:
+		case S_ULONG_LONG_INDEX:
+			return sizeof(int64);
+		case S_FLOAT_INDEX:
+			return sizeof(float);
+		case S_DOUBLE_INDEX:
+			return sizeof(double);
+	}
+	FATAL(("index has unknown type!\n"));
+	return 0;
+}
+

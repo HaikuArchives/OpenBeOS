@@ -31,16 +31,12 @@
 // the handling of "!" (not), but I remember to have read something about
 // it in Dominic's book.
 //
-// The parser has a very static design, but it will do what is required - if we'd
-// have that functionality in user-land, we could solve it a bit nicer (e.g. no hard-
-// coded operator precedence) - but that doesn't matter too much.
+// The parser has a very static design, but it will do what is required.
 //
 // ParseOr(), ParseAnd(), ParseEquation() are guarantying the operator
 // precedence, that is =,!=,>,<,>=,<= .. && .. ||.
 // Apparently, the "!" (not) can only be used with brackets.
 
-
-// some of this will be moved to the header, when it's ready:
 
 enum ops {
 	OP_NONE,
@@ -111,6 +107,7 @@ class Equation : public Term {
 
 	private:
 		status_t ConvertValue(type_code type);
+		uint8 *Value() const { return fType == B_STRING_TYPE ? (uint8 *)fString : (uint8 *)&fValue; }
 
 		char		*fAttribute;
 		char		*fString;
@@ -154,6 +151,9 @@ class OrOperator : public Operator {
 
 		virtual status_t Match(Inode *inode);
 };
+
+
+//---------------------------------
 
 
 void 
@@ -364,30 +364,32 @@ Equation::ConvertValue(type_code type)
 	char *string = fString;
 
 	switch (type) {
-		B_STRING_TYPE:
-		B_MIME_STRING_TYPE:
+		case B_STRING_TYPE:
+		// B_MIME_STRING_TYPE is defined in Mime.h which I didn't want to include just for that
+		case 'MIMS':
+			type = B_STRING_TYPE;
 			fValue.String = string;
 			break;
-		B_INT32_TYPE:
+		case B_INT32_TYPE:
 			fValue.Int32 = strtol(string,&string,0);
 			break;
-		B_UINT32_TYPE:
+		case B_UINT32_TYPE:
 			fValue.Int32 = strtoul(string,&string,0);
 			break;
-		B_INT64_TYPE:
+		case B_INT64_TYPE:
 			fValue.Int64 = strtoll(string,&string,0);
 			break;
-		B_UINT64_TYPE:
+		case B_UINT64_TYPE:
 			fValue.Uint64 = strtoull(string,&string,0);
 			break;
-		B_FLOAT_TYPE:
+		case B_FLOAT_TYPE:
 			fValue.Float = strtod(string,&string);
 			break;
-		B_DOUBLE_TYPE:
+		case B_DOUBLE_TYPE:
 			fValue.Double = strtod(string,&string);
 			break;
 		default:
-			FATAL(("query value conversion to %lx requested!\n",type));
+			FATAL(("query value conversion to 0x%lx requested!\n",type));
 			// should we fail here or just do a safety int32 conversion?
 			return B_ERROR;
 	}
@@ -478,6 +480,9 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 	} else
 		fHasIndex = true;
 
+	if (ConvertValue(index->Type()) < B_OK)
+		return B_BAD_VALUE;
+
 	BPlusTree *tree;
 	if (index->Node()->GetTree(&tree) < B_OK)
 		return B_ERROR;
@@ -488,7 +493,15 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 
 	if (fOp == OP_EQUAL && fHasIndex && !fIsRegExp) {
 		// set iterator to the exact position
-		// but this is not yet possible with the current TreeIterator implementation...
+		
+		int32 keySize = index->KeySize();
+		if (keySize == 0) {
+			if (fType == B_STRING_TYPE)
+				keySize = strlen(fValue.String);
+			else
+				RETURN_ERROR(B_ENTRY_NOT_FOUND);
+		}
+		RETURN_ERROR((*iterator)->Find(Value(),keySize));
 	}
 
 	return B_OK;
@@ -687,7 +700,7 @@ Equation::PrintToStream()
 //	#pragma mark -
 
 
-Query::Query(char *expr)
+Expression::Expression(char *expr)
 {
 	if (expr == NULL)
 		return;
@@ -699,20 +712,20 @@ Query::Query(char *expr)
 		if (*expr != '\0')
 			PRINT(("Unexpected end of string: \"%s\"!\n",expr));
 	} else
-		PRINT(("Query not parsed, terminated at: \"%s\"!\n",expr));
+		PRINT(("Expression not parsed, terminated at: \"%s\"!\n",expr));
 	);
 	fPosition = expr;
 }
 
 
-Query::~Query()
+Expression::~Expression()
 {
 	delete fTerm;
 }
 
 
 Term *
-Query::ParseEquation(char **expr)
+Expression::ParseEquation(char **expr)
 {
 	skipWhitespace(expr);
 
@@ -748,7 +761,7 @@ Query::ParseEquation(char **expr)
 
 
 Term *
-Query::ParseAnd(char **expr)
+Expression::ParseAnd(char **expr)
 {
 	Term *left = ParseEquation(expr);
 	if (left == NULL)
@@ -772,7 +785,7 @@ Query::ParseAnd(char **expr)
 
 
 Term *
-Query::ParseOr(char **expr)
+Expression::ParseOr(char **expr)
 {
 	Term *left = ParseAnd(expr);
 	if (left == NULL)
@@ -796,7 +809,7 @@ Query::ParseOr(char **expr)
 
 
 bool 
-Query::IsOperator(char **expr, char op)
+Expression::IsOperator(char **expr, char op)
 {
 	char *string = *expr;
 	
@@ -809,7 +822,7 @@ Query::IsOperator(char **expr, char op)
 
 
 status_t 
-Query::InitCheck()
+Expression::InitCheck()
 {
 	if (fTerm == NULL)
 		return B_BAD_VALUE;
@@ -821,16 +834,16 @@ Query::InitCheck()
 //	#pragma mark -
 
 
-QueryFetcher::QueryFetcher(Volume *volume, Query *query)
+Query::Query(Volume *volume, Expression *expression)
 	:
 	fVolume(volume),
-	fQuery(query),
+	fExpression(expression),
 	fCurrent(NULL),
 	fIterator(NULL),
 	fIndex(volume)
 {
 	Stack<Term *> stack;
-	stack.Push(query->fTerm);
+	stack.Push(fExpression->Root());
 
 	Term *term;
 	while (stack.Pop(&term)) {
@@ -847,13 +860,13 @@ QueryFetcher::QueryFetcher(Volume *volume, Query *query)
 }
 
 
-QueryFetcher::~QueryFetcher()
+Query::~Query()
 {
 }
 
 
 status_t 
-QueryFetcher::GetNextEntry(struct dirent *dirent, size_t size)
+Query::GetNextEntry(struct dirent *dirent, size_t size)
 {
 	// If we don't have an equation to use yet/anymore, get a new one
 	// from the stack

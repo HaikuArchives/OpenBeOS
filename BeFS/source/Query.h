@@ -16,42 +16,42 @@ class Volume;
 class Term;
 class Equation;
 class TreeIterator;
-class QueryFetcher;
+class Query;
 
 
-class Query {
+class Expression {
 	public:
-		Query(char *expr);
-		~Query();
+		Expression(char *expr);
+		~Expression();
 
 		status_t InitCheck();
 		const char *Position() const { return fPosition; }
+		Term *Root() const { return fTerm; }
 
-	private:
+	protected:
 		Term *ParseOr(char **expr);
 		Term *ParseAnd(char **expr);
 		Term *ParseEquation(char **expr);
 
 		bool IsOperator(char **expr,char op);
 
+	private:
 		char *fPosition;
-		
-		friend QueryFetcher;
 		Term *fTerm;
 };
 
-class QueryFetcher {
+class Query {
 	public:
-		QueryFetcher(Volume *volume,Query *query);
-		~QueryFetcher();
+		Query(Volume *volume,Expression *expression);
+		~Query();
 
 		status_t GetNextEntry(struct dirent *,size_t size);
 
-		Query *GetQuery() const { return fQuery; }
+		Expression *GetExpression() const { return fExpression; }
 
 	private:
 		Volume			*fVolume;
-		Query			*fQuery;
+		Expression		*fExpression;
 		Equation		*fCurrent;
 		TreeIterator	*fIterator;
 		Index			fIndex;

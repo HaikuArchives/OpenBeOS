@@ -22,6 +22,7 @@ class Index {
 
 		Inode *Node() const { return fNode; };
 		uint32 Type();
+		size_t KeySize();
 
 	private:
 		Volume		*fVolume;

@@ -532,7 +532,7 @@ status_t
 BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
-		|| value == NULL)
+		|| value == NULL || key == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
 	Stack<node_and_key> stack;
@@ -575,15 +575,6 @@ TreeIterator::~TreeIterator()
 }
 
 
-void
-TreeIterator::SetCurrentNode(bplustree_node *node,off_t offset,int8 to)
-{
-	fCurrentNodeOffset = offset;
-	fCurrentKey = to == BPLUSTREE_BEGIN ? -1 : node->all_key_count;
-	fDuplicateNode = 0;
-}
-
-
 status_t
 TreeIterator::Goto(int8 to)
 {
@@ -602,7 +593,9 @@ TreeIterator::Goto(int8 to)
 		// is the node a leaf node?
 		if (node->overflow_link == BPLUSTREE_NULL)
 		{
-			SetCurrentNode(node,pos,to);
+			fCurrentNodeOffset = pos;
+			fCurrentKey = to == BPLUSTREE_BEGIN ? -1 : node->all_key_count;
+			fDuplicateNode = 0;
 
 			return B_OK;
 		}
@@ -736,6 +729,45 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 	*value = offset;
 
 	return B_OK;
+}
+
+
+/**	This is more or less a copy of BPlusTree::Find() - but unlike that one
+ *	it just sets the current position in the iterator
+ */
+
+status_t 
+TreeIterator::Find(uint8 *key, uint16 keyLength)
+{
+	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
+		|| key == NULL)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	Stack<node_and_key> stack;
+	if (fTree->SeekDown(stack,key,keyLength) != B_OK)
+		RETURN_ERROR(B_ERROR);
+
+	node_and_key nodeAndKey;
+	bplustree_node *node;
+
+	CachedNode cached(fTree);
+	if (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
+	{
+		status_t status = fTree->FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
+		//if (status == B_ERROR)
+		//	return B_ERROR;
+		
+		if (status == B_OK && node->overflow_link == BPLUSTREE_NULL)
+		{
+			fCurrentNodeOffset = nodeAndKey.nodeOffset;
+			// is it always legal to do that? We'll find out...
+			fCurrentKey = nodeAndKey.keyIndex - 1;
+			fDuplicateNode = 0;
+
+			return B_OK;
+		}
+	}
+	return B_ENTRY_NOT_FOUND;
 }
 
 

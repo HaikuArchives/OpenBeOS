@@ -932,32 +932,32 @@ bfs_stat_index(void *_ns, const char *name, struct index_info *indexInfo)
 
 
 int 
-bfs_open_query(void *_ns,const char *expression,ulong flags,port_id port,long token,void **cookie)
+bfs_open_query(void *_ns,const char *queryString,ulong flags,port_id port,long token,void **cookie)
 {
 	FUNCTION();
-	if (_ns == NULL || expression == NULL || cookie == NULL)
+	if (_ns == NULL || queryString == NULL || cookie == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
-	PRINT(("query = \"%s\", flags = %lu, port_id = %ld, token = %ld\n",expression,flags,port,token));
+	PRINT(("query = \"%s\", flags = %lu, port_id = %ld, token = %ld\n",queryString,flags,port,token));
 
 	Volume *volume = (Volume *)_ns;
 	
-	Query *query = new Query((char *)expression);
-	if (query == NULL)
+	Expression *expression = new Expression((char *)queryString);
+	if (expression == NULL)
 		RETURN_ERROR(B_NO_MEMORY);
 	
-	if (query->InitCheck() < B_OK) {
-		FATAL(("Could not parse query, stopped at: \"%s\"\n",query->Position()));
-		delete query;
+	if (expression->InitCheck() < B_OK) {
+		FATAL(("Could not parse query, stopped at: \"%s\"\n",expression->Position()));
+		delete expression;
 		RETURN_ERROR(B_BAD_VALUE);
 	}
 
-	QueryFetcher *fetcher = new QueryFetcher(volume,query);
-	if (fetcher == NULL) {
-		delete query;
+	Query *query = new Query(volume,expression);
+	if (query == NULL) {
+		delete expression;
 		RETURN_ERROR(B_NO_MEMORY);
 	}
-	*cookie = (void *)fetcher;
+	*cookie = (void *)query;
 	
 	return B_OK;
 }
@@ -978,10 +978,10 @@ bfs_free_query_cookie(void *ns, void *node, void *cookie)
 	if (cookie == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
-	QueryFetcher *fetcher = (QueryFetcher *)cookie;
-	Query *query = fetcher->GetQuery();
-	delete fetcher;
+	Query *query = (Query *)cookie;
+	Expression *expression = query->GetExpression();
 	delete query;
+	delete expression;
 
 	return B_OK;
 }
@@ -991,11 +991,11 @@ int
 bfs_read_query(void */*ns*/,void *cookie,long *num,struct dirent *dirent,size_t bufferSize)
 {
 	FUNCTION();
-	QueryFetcher *fetcher = (QueryFetcher *)cookie;
-	if (fetcher == NULL)
+	Query *query = (Query *)cookie;
+	if (query == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
-	status_t status = fetcher->GetNextEntry(dirent,bufferSize);
+	status_t status = query->GetNextEntry(dirent,bufferSize);
 	if (status == B_OK)
 		*num = 1;
 	else if (status == B_ENTRY_NOT_FOUND)
