@@ -1,18 +1,8 @@
 SubDir OBOS_TOP sources os kits kernel ;
 
-KernelStaticLibraryObjects libc.a :
-	<$(SOURCE_GRIST)!libc>nulibc_init.o
-
-	<$(SOURCE_GRIST)!libc!hoard>arch-specific.o
-	<$(SOURCE_GRIST)!libc!hoard>heap.o
-	<$(SOURCE_GRIST)!libc!hoard>processheap.o
-	<$(SOURCE_GRIST)!libc!hoard>superblock.o
-	<$(SOURCE_GRIST)!libc!hoard>threadheap.o
-	<$(SOURCE_GRIST)!libc!hoard>wrapper.o
-
+KernelStaticLibraryObjects libkern.a :
 	<$(SOURCE_GRIST)!libc!locale>ctype.o
 
-	<$(SOURCE_GRIST)!libc!stdio>stdio.o
 	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
 
 	<$(SOURCE_GRIST)!libc!stdlib>assert.o
@@ -21,7 +11,6 @@ KernelStaticLibraryObjects libc.a :
 	<$(SOURCE_GRIST)!libc!stdlib>heapsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>merge.o
 	<$(SOURCE_GRIST)!libc!stdlib>qsort.o
-	<$(SOURCE_GRIST)!libc!stdlib>radixsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>rand.o
 	<$(SOURCE_GRIST)!libc!stdlib>random.o
 
@@ -51,24 +40,8 @@ KernelStaticLibraryObjects libc.a :
 	<$(SOURCE_GRIST)!libc!string>strstr.o
 	<$(SOURCE_GRIST)!libc!string>strtok.o
 
-	<$(SOURCE_GRIST)!libc!system>dlfcn.o
 	<$(SOURCE_GRIST)!libc!system>rlimit.o
-	<$(SOURCE_GRIST)!libc!system>syscalls.o
-	<$(SOURCE_GRIST)!libc!system>sysctl.o
 	<$(SOURCE_GRIST)!libc!system!arch!$(OBOS_ARCH)>atomic.o
-
-	<$(SOURCE_GRIST)!libc!unistd>close.o
-	<$(SOURCE_GRIST)!libc!unistd>dup.o
-	<$(SOURCE_GRIST)!libc!unistd>dup2.o
-	<$(SOURCE_GRIST)!libc!unistd>getopt.o
-	<$(SOURCE_GRIST)!libc!unistd>lseek.o
-	<$(SOURCE_GRIST)!libc!unistd>open.o
-	<$(SOURCE_GRIST)!libc!unistd>pread.o
-	<$(SOURCE_GRIST)!libc!unistd>pwrite.o
-	<$(SOURCE_GRIST)!libc!unistd>read.o
-	<$(SOURCE_GRIST)!libc!unistd>sleep.o
-	<$(SOURCE_GRIST)!libc!unistd>usleep.o
-	<$(SOURCE_GRIST)!libc!unistd>write.o
 	;
 
 KernelStaticLibraryObjects libm.a :
@@ -117,7 +90,7 @@ KernelLd stage2
 	<$(SOURCE_GRIST)!boot!arch!$(OBOS_ARCH)>stage2_asm.o
 	<$(SOURCE_GRIST)!boot!arch!$(OBOS_ARCH)>smp_boot.o
 	<$(SOURCE_GRIST)!boot!arch!$(OBOS_ARCH)>smp_trampoline.o
-	libc.a
+	libkern.a
 	:
 	$(SUBDIR)/boot/arch/$(OBOS_ARCH)/stage2.ld 
 	:
@@ -157,6 +130,7 @@ KernelLd kernel
 	<$(SOURCE_GRIST)!core!net>nhash.o
 	<$(SOURCE_GRIST)!core!net>mbuf.o
 	<$(SOURCE_GRIST)!core!net>net.o
+
 	linkhack.so
 
 	libbus.a
@@ -164,7 +138,7 @@ KernelLd kernel
 	libvm.a
 	lib$(OBOS_ARCH).a
 	libdrivers.a
-	libc.a
+	libkern.a
 	:
 	$(SUBDIR)/core/arch/$(OBOS_ARCH)/kernel.ld 
 	:
@@ -204,6 +178,7 @@ KernelLd kernel.so
 	<$(SOURCE_GRIST)!core!net>nhash.o
 	<$(SOURCE_GRIST)!core!net>mbuf.o
 	<$(SOURCE_GRIST)!core!net>net.o
+
 	linkhack.so
 
 	libbus.a
@@ -211,7 +186,7 @@ KernelLd kernel.so
 	libvm.a
 	lib$(OBOS_ARCH).a
 	libdrivers.a
-	libc.a
+	libkern.a
 	:
 	$(SUBDIR)/core/arch/$(OBOS_ARCH)/kernel.ld 
 	:
@@ -317,6 +292,77 @@ KernelLd libm.so
 	no_gcc
 	:
 	lib/libm.so
+	;
+
+KernelStaticLibraryObjects libc.a :
+	<$(SOURCE_GRIST)!libc>nulibc_init.o
+
+	<$(SOURCE_GRIST)!libc!hoard>arch-specific.o
+	<$(SOURCE_GRIST)!libc!hoard>heap.o
+	<$(SOURCE_GRIST)!libc!hoard>processheap.o
+	<$(SOURCE_GRIST)!libc!hoard>superblock.o
+	<$(SOURCE_GRIST)!libc!hoard>threadheap.o
+	<$(SOURCE_GRIST)!libc!hoard>wrapper.o
+
+	<$(SOURCE_GRIST)!libc!locale>ctype.o
+
+	<$(SOURCE_GRIST)!libc!stdio>stdio.o
+	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
+
+	<$(SOURCE_GRIST)!libc!stdlib>assert.o
+	<$(SOURCE_GRIST)!libc!stdlib>atoi.o
+	<$(SOURCE_GRIST)!libc!stdlib>bsearch.o
+	<$(SOURCE_GRIST)!libc!stdlib>heapsort.o
+	<$(SOURCE_GRIST)!libc!stdlib>merge.o
+	<$(SOURCE_GRIST)!libc!stdlib>qsort.o
+	<$(SOURCE_GRIST)!libc!stdlib>radixsort.o
+	<$(SOURCE_GRIST)!libc!stdlib>rand.o
+	<$(SOURCE_GRIST)!libc!stdlib>random.o
+
+	<$(SOURCE_GRIST)!libc!string>bcopy.o
+	<$(SOURCE_GRIST)!libc!string>bzero.o
+	<$(SOURCE_GRIST)!libc!string>memchr.o
+	<$(SOURCE_GRIST)!libc!string>memcmp.o
+	<$(SOURCE_GRIST)!libc!string>memcpy.o
+	<$(SOURCE_GRIST)!libc!string>memmove.o
+	<$(SOURCE_GRIST)!libc!string>memset.o
+	<$(SOURCE_GRIST)!libc!string>strcat.o
+	<$(SOURCE_GRIST)!libc!string>strchr.o
+	<$(SOURCE_GRIST)!libc!string>strcmp.o
+	<$(SOURCE_GRIST)!libc!string>strcpy.o
+	<$(SOURCE_GRIST)!libc!string>strerror.o
+	<$(SOURCE_GRIST)!libc!string>strlcat.o
+	<$(SOURCE_GRIST)!libc!string>strlcpy.o
+	<$(SOURCE_GRIST)!libc!string>strlen.o
+	<$(SOURCE_GRIST)!libc!string>strncat.o
+	<$(SOURCE_GRIST)!libc!string>strncmp.o
+	<$(SOURCE_GRIST)!libc!string>strncpy.o
+	<$(SOURCE_GRIST)!libc!string>strnicmp.o
+	<$(SOURCE_GRIST)!libc!string>strnlen.o
+	<$(SOURCE_GRIST)!libc!string>strpbrk.o
+	<$(SOURCE_GRIST)!libc!string>strrchr.o
+	<$(SOURCE_GRIST)!libc!string>strspn.o
+	<$(SOURCE_GRIST)!libc!string>strstr.o
+	<$(SOURCE_GRIST)!libc!string>strtok.o
+
+	<$(SOURCE_GRIST)!libc!system>dlfcn.o
+	<$(SOURCE_GRIST)!libc!system>rlimit.o
+	<$(SOURCE_GRIST)!libc!system>syscalls.o
+	<$(SOURCE_GRIST)!libc!system>sysctl.o
+	<$(SOURCE_GRIST)!libc!system!arch!$(OBOS_ARCH)>atomic.o
+
+	<$(SOURCE_GRIST)!libc!unistd>close.o
+	<$(SOURCE_GRIST)!libc!unistd>dup.o
+	<$(SOURCE_GRIST)!libc!unistd>dup2.o
+	<$(SOURCE_GRIST)!libc!unistd>getopt.o
+	<$(SOURCE_GRIST)!libc!unistd>lseek.o
+	<$(SOURCE_GRIST)!libc!unistd>open.o
+	<$(SOURCE_GRIST)!libc!unistd>pread.o
+	<$(SOURCE_GRIST)!libc!unistd>pwrite.o
+	<$(SOURCE_GRIST)!libc!unistd>read.o
+	<$(SOURCE_GRIST)!libc!unistd>sleep.o
+	<$(SOURCE_GRIST)!libc!unistd>usleep.o
+	<$(SOURCE_GRIST)!libc!unistd>write.o
 	;
 
 KernelLd libc.so :
