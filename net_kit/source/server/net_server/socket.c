@@ -26,6 +26,9 @@
 static pool_ctl *spool;
 static benaphore sockets_lock;
 
+/* OpenBSD sets this at 128??? */
+static int somaxconn = SOMAXCONN;
+
 /* for now - should be moved to be_error.h */
 #define EDESTADDRREQ EINVAL
 
@@ -195,6 +198,26 @@ int sobind(void *sp, caddr_t data, int len)
 	m_freem(nam);
 	
 	return error;
+}
+
+int solisten(void *sp, int backlog)
+{
+	struct socket *so = (struct socket *)sp;
+	int error;
+
+        error = so->so_proto->pr_userreq(so, PRU_LISTEN, NULL, NULL, NULL);
+        if (error)
+                return error;
+        
+        if (so->so_q == 0)
+                so->so_options |= SO_ACCEPTCONN;
+        if (backlog < 0 || backlog > somaxconn)
+                backlog = somaxconn;
+	/* OpenBSD defines a minimum of 80...hmmm... */
+        if (backlog < 0)
+                backlog = 0;
+        so->so_qlimit = backlog;
+        return 0;
 }
 
 

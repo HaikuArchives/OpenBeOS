@@ -66,6 +66,7 @@ struct core_module_info {
 	int (*socreate)(int, void *, int, int);
 	int (*soclose)(void *);
 	int (*sobind)(void *, caddr_t, int);
+	int (*solisten)(void *, int);
 	int (*recvit)(void *, struct msghdr *, caddr_t, int *);
 	int (*sendit)(void *, struct msghdr *, int, int *);
 	int (*soo_ioctl)(void *, int, caddr_t);

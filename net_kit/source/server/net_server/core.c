@@ -761,6 +761,7 @@ static struct core_module_info core_info = {
 	socreate,
 	soclose,
 	sobind,
+	solisten,
 	recvit,
 	sendit,
 	soo_ioctl

@@ -61,6 +61,9 @@ struct sockaddr {
 	uint8	sa_data[30];
 };
 
+				/* Max listen queue for a socket */
+#define SOMAXCONN	5	/* defined as 128 in OpenBSD */
+
 struct msghdr {
 	caddr_t	msg_name;	/* address we're using (optional) */
 	uint msg_namelen;	/* length of address */
