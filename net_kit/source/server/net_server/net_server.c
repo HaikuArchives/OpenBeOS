@@ -22,6 +22,7 @@
 #include "net_misc.h"
 #include "nhash.h"
 #include "sys/socket.h"
+#include "netinet/in_pcb.h"
 
 static loaded_net_module *global_modules;
 static int nmods = 0;
@@ -256,8 +257,6 @@ static void init_devices(void) {
 
 	while (d) {
 	 	for (i=0;i<nmods;i++) {
-                	printf("calling init_dev for %s%d, %s\n", d->name, d->unit, 
-				global_modules[i].mod->name);
 			if (global_modules[i].mod->dev_init) {
 				global_modules[i].mod->dev_init(d);
 			}
@@ -303,6 +302,8 @@ static void find_modules(void)
 			status = get_image_symbol(u, "net_module_data", B_SYMBOL_TYPE_DATA,
 						(void**)&nm);
 			if (status == B_OK) {
+				if (nmods > 0)
+					global_modules[nmods].next = &global_modules[nmods -1];
 				global_modules[nmods].iid = u;
 				global_modules[nmods].ref_count = 0;
 				global_modules[nmods].mod = nm;
@@ -371,15 +372,48 @@ ifnet *interface_for_address(void *data, int len)
         return la->ifn;
 }
 
+net_module *pffindtype(int domain, int type)
+{
+        int i;
+        net_module *n;
+
+	for (i=0;i<nmods;i++) {
+                n = global_modules[i].mod;
+
+		if (n->domain == domain && n->sock_type == type)
+			return n;
+	}
+	return NULL;
+}
+
+net_module *pffindproto(int domain, int protocol, int type)
+{
+        int i;
+        net_module *n;
+
+        for (i=0;i<nmods;i++) {
+                n = global_modules[i].mod;
+
+                if (n->domain == domain &&
+                        n->proto == protocol &&
+                        n->sock_type == type)
+                        return n;
+        }
+        return NULL;
+}
 
 int main(int argc, char **argv)
 {
 	status_t status;
-	int i;
 	ifnet *d;
+	int s;
+	struct sockaddr_in sin;
 
 	mbinit();
 	localhash = nhash_make();
+
+	sockets_init();
+	inpcb_init();
 
 	printf( "Net Server Test App!\n"
 		"====================\n\n");
@@ -407,6 +441,15 @@ int main(int argc, char **argv)
 
 	list_devices();
 	list_modules();
+
+	
+	/* Just to see if it works! */
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_port = 7777;
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	printf("bind = %d\n", bind(s, (struct sockaddr*)&sin, sizeof(sin)));
 
 	d = devices;
 	while (d) {
