@@ -110,7 +110,7 @@ actions C++
 rule Preference
 {
 	# Preference <name> : <sources> ;
-	SetupIncludes ;
+#	SetupIncludes ;
 	SetupObjectsDir ;
 	Main $(<) : $(>) ;
 	MakeLocate $(<) : $(OBOS_PREFS_DIR) ;
@@ -135,7 +135,8 @@ rule UnitTest
 	MakeLocateObjects $(>) ;
 	Main $(<) : $(>) ;
 	MakeLocate $(<) : $(OBOS_TEST_DIR)/$(3) ;
-	DEPENDS $(<) : /boot/home/config/lib/libcppunit.so ;
+	DEPENDS $(1) : libcppunit.so ;
+	LinkSharedOSLibs $(1) : libcppunit.so ;
 }
 
 rule Addon
@@ -173,7 +174,7 @@ rule MakeLocateObjects
 
 rule StaticLibrary
 {
-	# SharedLibrary <name> : <sources> ;
+	# StaticLibrary <name> : <sources> ;
 	
 	SetupIncludes ;
 	SetupObjectsDir ;
@@ -198,11 +199,20 @@ rule SharedLibrary
 rule LinkSharedOSLibs
 {
 	# LinkSharedOSLibs <name> : <libs> ;
+	# Valid elements for <libs> are e.g. "be" or "libopenbeos.so" or
+	# "/boot/.../libfoo.so". If the basename starts with "lib", it is added
+	# to the NEEDLIBS variable (i.e. the file will be bound!), otherwise it is
+	# prefixed "-l" and added to LINKLIBS.
 	
 	for i in $(>)
 	{
-		LINKFLAGS on $(<) += $(i) ;
+#		LINKFLAGS on $(<) += $(i) ;
 #		LINKLIBS on $(<) += -l$(i) ;
+		switch $(i:B)
+		{
+			case lib*	: NEEDLIBS on $(1) += $(i) ;
+			case *		: LINKLIBS on $(1) += -l$(i) ;
+		}
 	}
 }
 
@@ -288,7 +298,11 @@ rule UseHeaders
 	if $(targets) {
 		ObjectHdrs $(targets) : $(headers) ;
 	} else {
-		SubDirHdrs $(headers) ;
+		# Note: Unlike ObjectHdrs SubDirHdrs expects only one dir given as
+		# path component list.
+		for header in $(headers) {
+			SubDirHdrs $(header) ;
+		}
 	}
 }
 
@@ -302,6 +316,8 @@ rule UseCppUnitHeaders
 
 rule UseArchHeaders
 {
+	# usage: UseArchHeaders <arch>
+	# <arch> specifies the architecture (e.g. x86).
 	local opt = -D$(OBOS_TARGET_DEFINE) ;
 	SubDirCcFlags $(opt)  ;
 	SubDirC++Flags $(opt)  ;
@@ -331,14 +347,25 @@ rule Link
 	Chmod $(<) ;
 }
 
+if $(BEOS)
+{
 actions Link bind NEEDLIBS
 {
 	$(LINK) $(LINKFLAGS) -o "$(1)" $(UNDEFS) $(2) $(NEEDLIBS) $(LINKLIBS) ;
-#	xres -o "$(1)" $(RESFILES) ;
-#	setversion "$(1)" -system $(OBOS_BUILD_VERSION) -short "$(OBOS_BUILD_DESCRIPTION)" ;
+	xres -o "$(1)" $(RESFILES) ;
+	setversion "$(1)" -system $(OBOS_BUILD_VERSION) -short "$(OBOS_BUILD_DESCRIPTION)" ;
 	chmod +x "$(1)" ;
-#	settype -t $(OBOS_TARGET_TYPE) "$(1)" ;
-#	mimeset -f "$(1)" ;
+	settype -t $(OBOS_TARGET_TYPE) "$(1)" ;
+	mimeset -f "$(1)" ;
+}
+}
+else
+{
+actions Link bind NEEDLIBS
+{
+	$(LINK) $(LINKFLAGS) -o "$(1)" $(UNDEFS) $(2) $(NEEDLIBS) $(LINKLIBS) ;
+	chmod +x "$(1)" ;
+}
 }
 
 rule assemble
