@@ -9,13 +9,48 @@
 #include <stdlib.h>
 
 #define TEST_FILE "/boot/etc/fortunes"
-#define RD_BUFFER 100
+#define RD_LINES 5
+#define NEW_FORTUNE "The path has been shown - we are the ones who must walk it"
+
+
+static void read_file(FILE *f)
+{
+	int lines = 0;
+	char *buffer, *tmp;
+	size_t bytes = 0;
+	
+	while ((buffer = fgetln(f, &bytes)) != NULL) {
+		if (*buffer == '#')
+			continue;
+		tmp = (char*) malloc(bytes + 1);
+		if (!tmp)
+			break;
+		memcpy(tmp, buffer, bytes);
+		if (tmp[bytes - 1] != '\n')
+			tmp[bytes - 1] = '\n';
+		fprintf(stdout, "%d: %s", ++lines, tmp);
+	}
+}
 
 int main(int argc, char **argv)
 {
 	FILE *f;
-	char buffer[RD_BUFFER];
-	int rv;
+	
+	f = fopen(TEST_FILE, "rw");
+	if (!f) {
+		printf("Failed to open %s :( [%s]\n", TEST_FILE,
+                       strerror(errno));
+		return -1;
+	}
+
+	read_file(f);
+	fputs("#@#\n", f);
+	fputs(NEW_FORTUNE, f);
+
+	fprintf(stdout, "File added to.\n");
+			
+	fclose(f);
+	printf("File opened and closed\n");
 
 	f = fopen(TEST_FILE, "r");
 	if (!f) {
@@ -23,13 +58,10 @@ int main(int argc, char **argv)
                        strerror(errno));
 		return -1;
 	}
-
-	memset(buffer, 0, RD_BUFFER);	
-	rv = fread(buffer, RD_BUFFER, 1, f);
-	printf("fread() returned %d elements\n%s\n", rv, buffer);
-	fclose(f);
 	
+	read_file(f);
+	fclose(f);	
 	printf("File opened and closed\n");
-
+	
 	return 0;
 }
