@@ -44,8 +44,8 @@ typedef struct {
 	} selectinfo[3];
 } net_socket_cookie;
 
-#define SHOW_INSANE_DEBUGGING	0
-#define SERIAL_DEBUGGING	1
+#define SHOW_INSANE_DEBUGGING     1
+#define SERIAL_DEBUGGING          1
 
 /* Prototypes of device hooks functions */
 static status_t net_socket_open(const char * name, uint32 flags, void ** cookie);
@@ -113,6 +113,12 @@ _EXPORT status_t init_hardware (void)
 	void *sfmptr;
 	int rv;
 
+#if SERIAL_DEBUGGING	
+	/* XXX - switch on/off at top of file... */
+	set_dprintf_enabled(true);
+	rv = load_driver_symbols("socket");
+#endif
+
 	/* get a pointer to the driver settings... */
 	sfmptr = load_driver_settings(B_SAFEMODE_DRIVER_SETTINGS);
 
@@ -130,11 +136,7 @@ _EXPORT status_t init_hardware (void)
 		return B_ERROR;
 	}
 
-#if SERIAL_DEBUGGING	
-	/* XXX - switch on/off at top of file... */
-	set_dprintf_enabled(true);
-	rv = load_driver_symbols("socket");
-#endif
+	dprintf("socket_driver: init_hardware - returning B_OK\n");
 
 	return B_OK;
 }
@@ -152,18 +154,17 @@ _EXPORT status_t init_driver (void)
 #endif
 
 	/* do we need to do anything here? */
-#if SERIAL_DEBUGGING
-	/* switch on/off at top of file */
-	/* XXX ??? - do we need this here? */
-	set_dprintf_enabled(true);
-//	rv = load_driver_symbols("net/socket");
-#endif
-
+	
 	rv = get_module(CORE_MODULE_PATH, (module_info **)&core);
 	if (rv < 0) {
 		dprintf("net_socket_open: core module not found! %d\n", rv);
 		return B_ERROR;
 	}
+	
+#if SHOW_INSANE_DEBUGGING
+	dprintf("socket_driver: init_driver: core = %p\n", core);
+#endif
+	core->start();
 
 	return B_OK;
 }
@@ -302,26 +303,8 @@ static status_t net_socket_control(void *cookie,
 		}
 		case NET_SOCKET_SELECT: {
 			struct select_args *sa = (struct select_args *)data;
-			int i;
-			struct timeval tv;
-			
-			dprintf("NET_SOCKET_SELECT, mfd = %d\n", sa->mfd);	
-			for (i=2; i < sa->mfd;i++) {
-				dprintf("socket %d: ", i);
-				if (sa->rbits && FD_ISSET(i, sa->rbits))
-					dprintf(" read bit ");
-				if (sa->wbits && FD_ISSET(i, sa->wbits))
-					dprintf(" write bit ");
-				if (sa->ebits && FD_ISSET(i, sa->ebits))
-					dprintf(" except bit ");
-					
-				dprintf("\n");
-			}
-			
-			tv.tv_sec = 1;
-			tv.tv_usec = 0;
-			
-			sa->rv = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, &tv);
+		
+			sa->rv = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, sa->tv);
 			dprintf("kernel select returned %d\n", sa->rv);
 			return B_OK;
 		}
@@ -429,6 +412,7 @@ static status_t net_socket_write(void *cookie,
 	iov.iov_len = *writelen;
 	
 	error = core->writeit(nsc->socket, &iov, 0);
+//	dprintf("writeit gave %d\n", error);
 	if (error < 0)
 		return error;
 	*writelen = error;
