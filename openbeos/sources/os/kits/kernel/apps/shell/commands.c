@@ -150,11 +150,11 @@ int cmd_cd(int argc, char *argv[])
 int cmd_pwd(int argc, char *argv[])
 {
 	char buf[257];
-	int rc;
+	char *rc;
 
 	rc = sys_getcwd(buf,256);
-	if (rc < 0) {
-		printf("cd: sys_getcwd() returned error: %s!\n", strerror(rc));
+	if (rc != NULL) {
+		printf("cd: sys_getcwd() returned error!\n");
 	}
 	buf[256] = 0;
 
