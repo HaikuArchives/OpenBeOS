@@ -88,6 +88,10 @@ printf("WindowBorder(): SetZoomButton\n");
 printf("WindowBorder(): SetMinimizeButton\n");
 #endif
 			decor->SetMinimizeButton(true);
+			swin->SetFocus(true);
+			decor->SetFocus(true);
+			decor->Draw();
+			activeborder=this;
 			break;
 		}
 		case CLICK_DRAG:
@@ -145,6 +149,12 @@ void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 	if(click!=CLICK_ZOOM && decor->GetZoomButton())
 	{
 		decor->SetZoomButton(false);
+		decor->Draw();
+	}	
+
+	if(click!=CLICK_MINIMIZE && decor->GetMinimizeButton())
+	{
+		decor->SetMinimizeButton(false);
 		decor->Draw();
 	}	
 
@@ -209,13 +219,27 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 		{
 			decor->SetCloseButton(false);
 			decor->Draw();
+			
+			// call close window stuff here
+			
 			break;
 		}
 		case CLICK_ZOOM:
 		{
 			decor->SetZoomButton(false);
 			decor->Draw();
+			
+			// call zoom stuff here
+			
 			break;
+		}
+		case CLICK_MINIMIZE:
+		{
+			decor->SetMinimizeButton(false);
+			decor->Draw();
+			
+			// call minimize stuff here
+			
 		}
 		default:
 		{
