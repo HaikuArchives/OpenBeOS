@@ -8,12 +8,14 @@
 
 /* define some protocol numbers unique to ethernet */
 enum {
-        ETHER_IPV4  = 0x0800,
-        ETHER_ARP   = 0x0806,
+	ETHER_IPV4  = 0x0800,
+	ETHER_ARP   = 0x0806,
 	ETHER_RARP  = 0x8035,	 
-        ETHER_ATALK = 0x809b,      /* Appletalk */
-        ETHER_SNMP  = 0x814c,      /* SNMP */
-        ETHER_IPV6  = 0x86dd       /* IPv6 */
+	ETHER_ATALK = 0x809b,      /* Appletalk */
+	ETHER_SNMP  = 0x814c,      /* SNMP */
+	ETHER_IPV6  = 0x86dd,       /* IPv6 */
+	ETHER_PPPOE_DISC	= 0x8863, /* PPPoE Discovery */
+	ETHER_PPPOE_SESS	= 0x8864  /* PPPoE Session */
 };
 
 /* define the protocol numbers used by IPv4 */
@@ -37,11 +39,14 @@ enum {
 	NS_TCP = 6,
 	NS_UDP = 17,
 	NS_ETHER=200,
-	NS_IPV4 = 201,
-	NS_IPV6 = 202,
-	NS_ATALK = 203,
-	NS_ARP = 204,
-	NS_RARP = 205
+	NS_IPV4,
+	NS_IPV6,
+	NS_ATALK,
+	NS_ARP,
+	NS_RARP,
+	NS_PPPOE,
+	NS_SERIAL,
+ 
 };
 
 
