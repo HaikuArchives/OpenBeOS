@@ -3,7 +3,6 @@
  * File Descriptors
  */
  
-
 #ifndef _FILE_H
 #define _FILE_H
 
@@ -14,10 +13,10 @@
 #include <sys/stat.h>
 
 
-/* These are defined later but need to be here... */
 struct file_descriptor;
 struct vnode;
 
+/** The I/O context of a process/team, holds the fd array */
 struct io_context {
 	struct vnode *cwd;
 	mutex	io_mutex;
@@ -28,18 +27,19 @@ struct io_context {
 
 struct fd_ops {
 	char *fs_name;
-	ssize_t (*fd_read) (struct file_descriptor *, void *buffer, off_t pos, size_t *length);
-	ssize_t (*fd_write)(struct file_descriptor *, const void *buffer, off_t pos, size_t *length);
-	int     (*fd_ioctl)(struct file_descriptor *, ulong op, void *buffer, size_t length);
-//	int     (*fd_poll)(struct file_descriptor *, int);
-	int     (*fd_stat)(struct file_descriptor *, struct stat *);
-	int     (*fd_close)(struct file_descriptor *, int, struct io_context *);
-	void    (*fd_free)(struct file_descriptor *);
+	ssize_t		(*fd_read) (struct file_descriptor *, void *buffer, off_t pos, size_t *length);
+	ssize_t		(*fd_write)(struct file_descriptor *, const void *buffer, off_t pos, size_t *length);
+	int			(*fd_ioctl)(struct file_descriptor *, ulong op, void *buffer, size_t length);
+//	int			(*fd_poll)(struct file_descriptor *, int);
+	status_t	(*fd_read_dir)(struct file_descriptor *,struct dirent *buffer,size_t bufferSize,uint32 *_count);
+	status_t	(*fd_rewind_dir)(struct file_descriptor *);
+	int			(*fd_stat)(struct file_descriptor *, struct stat *);
+	int			(*fd_close)(struct file_descriptor *, int, struct io_context *);
+	void		(*fd_free)(struct file_descriptor *);
 };
 
 struct file_descriptor {
 	int32	type;               /* descriptor type */
-	int32	open_count;
 	int32	ref_count;
 	struct fd_ops *ops;
 	struct vnode *vnode;
@@ -72,17 +72,6 @@ void remove_fd(struct io_context *, int);
 void put_fd(struct file_descriptor *);
 void free_fd(struct file_descriptor *);
 static struct io_context *get_current_io_context(bool kernel);
-
-
-/** @fn int sys_ioctl(int fd, ulong cmd, void *data, size_t len)
- * The kernel version of ioctl()
- */
-int sys_ioctl(int, ulong, void *, size_t);
-/** @fn int user_ioctl(int fd, ulong cmd, void *data, size_t len)
- * The user_ioctl() function to interface with sys_ioctl()
- */
-int user_ioctl(int, ulong, void *, size_t);
-int user_fstat(int, struct stat *);
 
 
 /* Inlines */
