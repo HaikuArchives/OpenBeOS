@@ -2,8 +2,12 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _KERNEL_THREAD_H
-#define _KERNEL_THREAD_H
+#ifndef _THREAD_H
+#define _THREAD_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <thread_types.h>
 #include <arch/thread.h>
@@ -56,7 +60,10 @@ int user_proc_get_arg_count(void);
 int user_thread_wait_on_thread(thread_id id, int *uretcode);
 proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
-thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
+
+thread_id user_thread_create_user_thread(addr, proc_id, const char*, 
+                                         int, void *);
+
 int user_thread_snooze(bigtime_t time);
 int user_proc_get_table(struct proc_info *pi, size_t len);
 int user_getrlimit(int resource, struct rlimit * rlp);
@@ -66,5 +73,9 @@ int user_setrlimit(int resource, const struct rlimit * rlp);
 // XXX remove later
 int thread_test(void);
 #endif
+
+#ifdef __cplusplus
+}
 #endif
 
+#endif /* _THREAD_H */
