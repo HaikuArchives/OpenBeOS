@@ -14,7 +14,7 @@
 #include <image.h>
 #include <stdlib.h>
 
-#include "if.h"	/* for ifnet definition */
+#include "net/if.h"	/* for ifnet definition */
 #include "net_server/net_server.h"
 #include "protocols.h"
 #include "net_module.h"
@@ -28,20 +28,10 @@
 #include "sys/protosw.h"
 #include "sys/sockio.h"
 
-loaded_net_module *global_modules;
-int prot_table[255];
-
 struct ifnet *devices = NULL;
 struct ifnet *pdevices = NULL;		/* pseudo devices - loopback etc */
 int ndevs = 0;
 sem_id dev_lock;
- 
-
-/* This is just a hack.  Don't know what a sensible figure is... */
-#define MAX_DEVICES 16
-#define MAX_NETMODULES	20
-
-#define RECV_MSGS	10
 
 static int32 if_thread(void *data)
 {
@@ -51,8 +41,14 @@ static int32 if_thread(void *data)
 	size_t len = i->if_mtu;
 	int count = 0;
 
-	while ((status = read(i->devid, buffer, len)) >= B_OK && count < RECV_MSGS) {
+	while ((status = read(i->devid, buffer, len)) >= B_OK) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
+		/* Hmm, not sure about this... */
+		if ((i->flags & IFF_UP) == 0) {
+			m_freem(mb);
+			continue;
+		}
+		
 		if (i->input)
 			i->input(mb);
 		atomic_add(&i->if_ipackets, 1);
@@ -74,9 +70,15 @@ static int32 rx_thread(void *data)
 	struct mbuf *m;
 
 	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
-        while (1) {
+	while (1) {
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
+
+		if ((i->flags & IFF_UP) == 0) {
+			m_freem(m);
+			continue;
+		}
+		
 		if (i->input)
                 	i->input(m);
 		else
@@ -239,6 +241,52 @@ static void start_devices(void)
 	}
 }
 
+/* Start an RX thread and an RX queue if reqd */
+void start_rx_thread(ifnet *dev)
+{
+	int32 priority = B_NORMAL_PRIORITY;
+	char name[B_OS_NAME_LENGTH]; /* 32 */
+	sprintf(name, "%s_rx_thread", dev->if_name);
+
+	if (dev->if_type != IFT_ETHER) {
+		dev->rxq = start_ifq();
+		if (!dev->rxq)
+			return;
+		dev->rx_thread = spawn_thread(rx_thread, name, 
+		                              priority, dev);
+	} else {
+		/* don't need an rxq... */
+		dev->rx_thread = spawn_thread(if_thread, name, 
+		                              priority, dev);
+	}		
+	
+	if (dev->rx_thread < 0) {
+		printf("Failed to start the rx_thread for %s\n", dev->if_name);
+		dev->rx_thread = -1;
+		return;
+	}
+	resume_thread(dev->rx_thread);
+}
+
+/* Start a TX thread and a TX queue */
+void start_tx_thread(ifnet *dev)
+{
+	int32 priority = B_NORMAL_PRIORITY;
+	char name[B_OS_NAME_LENGTH]; /* 32 */
+	dev->txq = start_ifq();
+	if (!dev->txq)
+		return;
+
+	sprintf(name, "%s_tx_thread", dev->if_name);
+	dev->tx_thread = spawn_thread(tx_thread, "net_tx_thread", priority, dev);
+	if (dev->tx_thread < 0) {
+		printf("Failed to start the tx_thread for %s\n", dev->if_name);
+		dev->tx_thread = -1;
+		return;
+	}
+	resume_thread(dev->tx_thread);
+}
+	
 static void start_device_threads(void)
 {
 	ifnet *d = devices;
@@ -336,6 +384,7 @@ static void find_interface_modules(void)
 	DIR *dir;
 	struct dirent *fe;
 	struct device_info *di;
+	
 	status_t status;
 printf("find_interface modules\n");
 	
@@ -603,15 +652,12 @@ int start_stack(void)
 	inpcb_init();
 	route_init();
 	
-	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
-	if (!global_modules)
-		return -1;
 	dev_lock = create_sem(1, "device lock");
 
 	find_interface_modules();
 	start_devices();
 	list_devices();
-	start_device_threads();
+	//start_device_threads();
 	
 	return 0;
 }
@@ -733,7 +779,8 @@ int main(int argc, char **argv)
 	
 	d = devices;
 	while (d) {
-		if (d->rx_thread  && d->if_type == IFT_ETHER) {
+		printf("device %s : rx_thread = %ld\n", d->if_name, d->rx_thread);
+		if (d->rx_thread > 0  && d->if_type == IFT_ETHER) {
 			printf("waiting on thread for %s%d\n", d->name, d->unit);
 			wait_for_thread(d->rx_thread, &status);
 		}
