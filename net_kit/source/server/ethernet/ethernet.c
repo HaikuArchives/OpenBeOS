@@ -117,67 +117,94 @@ static void find_devices(void)
         return;
 }
 
+#if SHOW_DEBUG
+static void dump_ether_details(struct mbuf *buf)
+{
+	ethernet_header *eth = mtod(buf, ethernet_header *);
+	uint16 proto = ntohs(eth->type);
+
+        printf("Ethernet packet from ");
+        print_ether_addr(&eth->src);
+        printf(" to ");
+        print_ether_addr(&eth->dest);
+
+        if (buf->m_flags & M_BCAST)
+                printf(" BCAST");
+
+        printf(" proto ");
+        switch (proto) {
+                case ETHER_ARP:
+                        printf("ARP\n");
+                        break;
+                case ETHER_RARP:
+                        printf("RARP\n");
+                        break;
+                case ETHER_IPV4:
+                        printf("IPv4\n");
+                        break;
+                case ETHER_IPV6:
+                        printf("IPv6\n");
+                default:
+                        printf("unknown (%04x)\n", proto);
+        }
+}
+#endif
+
 /* what should the return value be? */
 /* should probably also pass a structure that identifies the interface */
 int ethernet_input(struct mbuf *buf)
 {
 	ethernet_header *eth = mtod(buf, ethernet_header *);
-	uint16 proto = ntohs(eth->type);
+	int plen = ntohs(eth->type); /* remove one call to ntohs() */
 	int len = sizeof(ethernet_header);
-	int fproto = convert_proto(proto);
+	int fproto = convert_proto(plen);
 
 	if (memcmp((void*)&eth->dest, (void*)&ether_bcast, 6) == 0)
 		buf->m_flags |= M_BCAST;
 		
-	if (proto < 1500) {
+	if (plen < 1500) {
 		eth802_header *e8 = mtod(buf, eth802_header*);
-		proto = htons(e8->type);
 		printf("It's an 802.x encapsulated packet - type %04x\n", ntohs(e8->type));
+		fproto = convert_proto(ntohs(e8->type));
 		len = sizeof(eth802_header);
 	}
-	
-	printf("Ethernet packet from ");
-	print_ether_addr(&eth->src);
-	printf(" to ");
-	print_ether_addr(&eth->dest);
 
-	if (buf->m_flags & M_BCAST)	
-		printf(" BCAST");
-	
-	printf(" proto ");
+#if SHOW_DEBUG	
+	dump_ether_details(buf);
+#endif
+
 	m_adj(buf, len);
 	
-	switch (proto) {
-		case ETHER_ARP:
-			printf("ARP\n");
-			break;
-		case ETHER_RARP:
-			printf("RARP\n");
-			break;
-		case ETHER_IPV4:
-			printf("IPv4\n");
-			break;
-		case ETHER_IPV6:
-			printf("IPv6\n");
-		default:
-			printf("unknown (%04x)\n", proto);
-	}
-
 	if (fproto >= 0 && net_modules[prot_table[fproto]].mod->input) {
 		return net_modules[prot_table[fproto]].mod->input(buf);
 	} else {
 		printf("Failed to determine a valid protocol fproto = %d\n", fproto);
 	}
 
-	printf("\n");
-
 	m_freem(buf);
 	return 0;	
+}
+
+static void arp_callback(int result, struct mbuf *buf,  struct sockaddr *tgt)
+{
+	ethernet_header *eth =  mtod(buf, ethernet_header*);
+
+	if (result == ARP_LOOKUP_FAILED) {
+		m_freem(buf);
+		return;
+	}
+
+	memcpy(&eth->dest, &tgt->sa_data, 6);
+
+	IFQ_ENQUEUE(buf->m_pkthdr.rcvif->txq, buf);
+
+	return;
 }
 
 int ether_output(struct mbuf *buf, int prot, struct sockaddr *tgt)
 {
 	ethernet_header *eth;
+	int rv;
 
 	M_PREPEND(buf, sizeof(ethernet_header));
 	eth = mtod(buf, ethernet_header*);
@@ -188,12 +215,21 @@ int ether_output(struct mbuf *buf, int prot, struct sockaddr *tgt)
 	if (prot == NS_ARP) {
 		eth->type = htons(ETHER_ARP);
 		/* hack - we assume the sockaddr has a valid link address */
-		memcpy(&eth->dest, &tgt->sa_data, 6);
 	}
 	if (prot == NS_IPV4) {
 		eth->type = htons(ETHER_IPV4);
 		/* we assume the tgt is an ip address, so we must resolve it first. */
-	}	
+		rv = net_modules[prot_table[NS_ARP]].mod->lookup(buf, tgt, &arp_callback);
+		if (rv == ARP_LOOKUP_FAILED) {
+			m_freem(buf);
+			return 0;
+		}
+	}
+
+	if (rv == ARP_LOOKUP_QUEUED) 
+		return 0;
+
+	memcpy(&eth->dest, &tgt->sa_data, 6);
 
 	IFQ_ENQUEUE(buf->m_pkthdr.rcvif->txq, buf);
 
