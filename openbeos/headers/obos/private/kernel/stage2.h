@@ -3,30 +3,20 @@
 ** Distributed under the terms of the NewOS License.
 */
 
+#ifndef _KERNEL_STAGE2_H
+#define _KERNEL_STAGE2_H
+
 // this file declares stuff like addr_range, MAX_*, etc.
 #include <stage2_struct.h>
 
-#ifdef ARCH_x86
-#include <arch/x86/stage2.h>
-#endif
-#ifdef ARCH_sh4
-#include <arch/sh4/stage2.h>
-#endif
-#ifdef ARCH_sparc64
-#include <arch/sparc64/stage2.h>
-#endif
-#ifdef ARCH_mips
-#include <arch/mips/stage2.h>
-#endif
-#ifdef ARCH_ppc
-#include <arch/ppc/stage2.h>
-#endif
-#ifdef ARCH_m68k
-#include <arch/m68k/stage2.h>
-#endif
+/* david - I renmaed arch/.../stage2.h to arch_stage2.h and so
+ * as we have the arch specific include directory on the include
+ * path we can just include it here. It's neater and avoids a
+ * name collision that could cause us problems at some point in
+ * the future.
+ */
+#include <arch_stage2.h>
 
-#ifndef _NEWOS_BOOT_STAGE2_H
-#define _NEWOS_BOOT_STAGE2_H
 
 // kernel args
 typedef struct ka {
@@ -59,5 +49,4 @@ typedef struct ka {
 
 } kernel_args;
 
-
-#endif
+#endif /* _KERNEL_STAGE2_H */

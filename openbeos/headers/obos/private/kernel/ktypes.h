@@ -6,7 +6,6 @@
 #define _KERNEL_KTYPES_H
 
 #include <types.h>
-// #include <ktypes.h>
 
 typedef int thread_id;
 typedef int region_id;
@@ -28,6 +27,7 @@ typedef int64 bigtime_t;
 
 #define false 0
 #define true 1
+
 typedef int bool;
 
 #endif

@@ -2,8 +2,8 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_KERNEL_H
-#define _NEWOS_KERNEL_ARCH_KERNEL_H
+#ifndef _KERNEL_ARCH_KERNEL_H
+#define _KERNEL_ARCH_KERNEL_H
 
 #ifdef ARCH_x86
 #include <arch/x86/kernel.h>
@@ -29,6 +29,9 @@
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 #define STACK_SIZE  (PAGE_SIZE*16)
+
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
+#define ROUNDOWN(a, b) (((a) / (b)) * (b))
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))

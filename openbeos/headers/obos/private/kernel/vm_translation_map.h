@@ -6,7 +6,7 @@
 #define _NEWOS_KERNEL_ARCH_VM_TRANSLATION_MAP_H
 
 #include <kernel.h>
-#include <boot/stage2.h>
+#include <stage2.h>
 #include <lock.h>
 
 typedef struct vm_translation_map_struct {

@@ -7,6 +7,7 @@
 
 #include <stage2.h>
 
+int faults_init(kernel_args *ka);
 int arch_faults_init(kernel_args *ka);
 
 #endif
