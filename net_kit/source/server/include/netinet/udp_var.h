@@ -9,7 +9,8 @@ struct udpiphdr {
 	struct ipovly ui_i;
 	struct udphdr ui_u;
 };
-
+#define ui_next         ui_i.ih_next
+#define ui_prev         ui_i.ih_prev
 #define ui_x1           ui_i.ih_x1 /* NB _x1 (one) */
 #define ui_pr           ui_i.ih_pr
 #define ui_len          ui_i.ih_len

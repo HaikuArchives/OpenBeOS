@@ -101,7 +101,8 @@ int udp_output(struct inpcb *inp, struct mbuf *m, struct mbuf *addr,struct mbuf 
 	}
 
 	ui = mtod(m, struct udpiphdr *);
-	memset(&ui->ui_x1,0, sizeof(ui->ui_x1));
+	ui->ui_next = ui->ui_prev = NULL;
+	ui->ui_x1 = 0;
 	ui->ui_pr = IPPROTO_UDP;
 	ui->ui_len = htons(len + sizeof(struct udphdr));	
 	ui->ui_src = inp->laddr;
@@ -249,7 +250,8 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	saved_ip = *ip;
 
 	if (udpcksum && udp->uh_sum) {
-		memset(&((struct ipovly*)ip)->ih_x1[0], 0, sizeof(((struct ipovly*)ip)->ih_x1));
+		((struct ipovly*)ip)->ih_next = ((struct ipovly*)ip)->ih_prev = NULL;
+		((struct ipovly*)ip)->ih_x1 = 0;
 		((struct ipovly*)ip)->ih_len = udp->uh_ulen;
 		/* XXX - if we have options we need to be careful when calculating the
 		 * checksum here...
