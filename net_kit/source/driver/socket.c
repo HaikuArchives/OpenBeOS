@@ -18,6 +18,7 @@
 #define  B_SELECT_READ       1 
 #define  B_SELECT_WRITE      2 
 #define  B_SELECT_EXCEPTION  3 
+
 extern void notify_select_event(selectsync * sync, uint32 ref); 
 
 #include <driver_settings.h>
@@ -28,13 +29,15 @@ extern void notify_select_event(selectsync * sync, uint32 ref);
 #include "net_structures.h"
 #include "sys/select.h"
 
-// Local definitions
-// -----------------
-
-// the cookie we attach to each file descriptor opened on our driver entry
+/*
+ * Local definitions
+ * -----------------
+ */
+ 
+/* the cookie we attach to each file descriptor opened on our driver entry */
 typedef struct {
-	void *		socket;		// NULL before ioctl(fd, NET_SOCKET_SOCKET/ACCEPT)
-	uint32		open_flags;	// the open() flags (mostly for storing O_NONBLOCK mode)
+	void *		socket;		/* NULL before ioctl(fd, NET_SOCKET_SOCKET/ACCEPT) */
+	uint32		open_flags;	/* the open() flags (mostly for storing O_NONBLOCK mode) */
 	struct {
 		selectsync *	sync;
 		uint32			ref;
@@ -44,7 +47,7 @@ typedef struct {
 #define SHOW_INSANE_DEBUGGING	0
 #define SERIAL_DEBUGGING	1
 
-// Prototypes of device hooks functions
+/* Prototypes of device hooks functions */
 static status_t net_socket_open(const char * name, uint32 flags, void ** cookie);
 static status_t net_socket_close(void * cookie);
 static status_t net_socket_free(void * cookie);
@@ -56,12 +59,14 @@ static status_t net_socket_write(void * cookie, off_t pos, const void * buf, siz
 static status_t net_socket_select(void *cookie, uint8 event, uint32 ref, selectsync *sync);
 static status_t net_socket_deselect(void *cookie, uint8 event, selectsync *sync);
 
-// Privates prototypes
+/* Privates prototypes */
 static void on_socket_event(void * socket, uint32 event, void * cookie);
 
-// Global variables
-// ----------------
-
+/*
+ * Global variables
+ * ----------------
+ */
+ 
 const char * device_name_list[] = {
         "net/socket",
         NULL
@@ -77,22 +82,21 @@ device_hooks net_socket_driver_hooks =
         net_socket_write,
 		net_socket_select,
 		net_socket_deselect,
-        NULL, /* Don't implement the scattered buffer read and write. */
+        NULL, 
         NULL
 };
 
 struct core_module_info * core = NULL;
 
-// OKAY, NOW IMPLEMENTATION PLEASE!
-// --------------------------------
-
 #ifdef CODEWARRIOR
 	#pragma mark [Driver API calls]
 #endif
 
-// Driver API calls
-// ----------------
-
+/*
+ * Driver API calls
+ * ----------------
+ */
+ 
 _EXPORT int32 api_version = B_CUR_DRIVER_API_VERSION;
 
 
@@ -105,34 +109,34 @@ _EXPORT int32 api_version = B_CUR_DRIVER_API_VERSION;
  */
 _EXPORT status_t init_hardware (void)
 {
-        bool safemode = false;
-        void *sfmptr;
-		int rv;
+	bool safemode = false;
+	void *sfmptr;
+	int rv;
 
-        /* get a pointer to the driver settings... */
-        sfmptr = load_driver_settings(B_SAFEMODE_DRIVER_SETTINGS);
+	/* get a pointer to the driver settings... */
+	sfmptr = load_driver_settings(B_SAFEMODE_DRIVER_SETTINGS);
 
-        /* only use the pointer if it's valid */
-        if (sfmptr != NULL) {
-                /* we got a pointer, now get setting... */
-                safemode = get_driver_boolean_parameter(sfmptr,
-                        B_SAFEMODE_SAFE_MODE, false, false);
-                /* now get rid of settings */
-                unload_driver_settings(sfmptr);
-        }
-        if (safemode) {
-                dprintf("net_srv: init_hardware: declining offer to join the party.\n");
-                return B_ERROR;
-        }
+	/* only use the pointer if it's valid */
+	if (sfmptr != NULL) {
+		/* we got a pointer, now get setting... */
+		safemode = get_driver_boolean_parameter(sfmptr,
+		                                        B_SAFEMODE_SAFE_MODE, 
+		                                        false, false);
+		/* now get rid of settings */
+		unload_driver_settings(sfmptr);
+	}
+	if (safemode) {
+		dprintf("net_srv: init_hardware: declining offer to join the party.\n");
+		return B_ERROR;
+	}
 
 #if SERIAL_DEBUGGING	
 	/* XXX - switch on/off at top of file... */
-        set_dprintf_enabled(true);
-		rv = load_driver_symbols("socket");
-		dprintf("load-driver_symbols gave %d\n", rv);
+	set_dprintf_enabled(true);
+	rv = load_driver_symbols("socket");
 #endif
 
-        return B_OK;
+	return B_OK;
 }
 
 
@@ -196,8 +200,10 @@ _EXPORT device_hooks * find_device (const char* DeviceName)
 	#pragma mark [Device hooks]
 #endif
 
-// Device hooks
-// ------------
+/*
+ * Device hooks
+ * ------------
+ */
 
 /* the network stack functions - mainly just pass throughs... */
 
@@ -218,10 +224,10 @@ static status_t net_socket_open(const char * name,
 		return B_NO_MEMORY;
 	
 	memset(nsc, 0, sizeof(*nsc));
-	nsc->socket = NULL; // the socket will be allocated in NET_SOCKET_SOCKET ioctl
+	nsc->socket = NULL; /* the socket will be allocated in NET_SOCKET_SOCKET ioctl */
 	nsc->open_flags = flags;
 
-  	// attach this new net_socket_cookie to file descriptor
+  	/* attach this new net_socket_cookie to file descriptor */
 	*cookie = nsc; 
 
 #if SHOW_INSANE_DEBUGGING
@@ -276,6 +282,7 @@ static status_t net_socket_control(void *cookie,
 				return B_OK;
 
 			sa->rv = core->socreate(sa->dom, nsc->socket, sa->type, sa->prot);
+			/* This is where the open flags need to be addressed */
 			return B_OK;
 		}
 		case NET_SOCKET_BIND: {
@@ -395,8 +402,6 @@ static status_t net_socket_read(void *cookie,
 	if (! nsc->socket)
 		return B_BAD_VALUE;
 	
-	// TODO: support the O_NONBLOCK open_flags...
-	
 	iov.iov_base = buffer;
 	iov.iov_len = *readlen;
 	
@@ -419,8 +424,6 @@ static status_t net_socket_write(void *cookie,
 	
 	if (! nsc->socket)
 		return B_BAD_VALUE;
-	
-	// TODO: support the O_NONBLOCK open_flags...
 	
 	iov.iov_base = (void*)buffer;
 	iov.iov_len = *writelen;
@@ -447,7 +450,7 @@ static status_t net_socket_select(void * cookie,
 	if (! nsc->socket)
 		return B_BAD_VALUE;
 	
-	// start (or continue) to monitor for socket event
+	/* start (or continue) to monitor for socket event */
 	return core->set_socket_event_callback(nsc->socket, on_socket_event, nsc);
 }
 
@@ -468,10 +471,10 @@ static status_t net_socket_deselect(void * cookie,
 	
 	for (i = 0; i < 3; i++) {
 		if (nsc->selectinfo[i].sync)
-			return B_OK;	// still one (or more) socket's event to monitor
+			return B_OK;	/* still one (or more) socket's event to monitor */
 	};
 
-	// no need to monitor socket events anymore
+	/* no need to monitor socket events anymore */
 	return core->set_socket_event_callback(nsc->socket, NULL, NULL);
 }
 
@@ -479,22 +482,19 @@ static status_t net_socket_deselect(void * cookie,
 	#pragma mark [Privates routines]
 #endif
 
-// Privates routines
-// -----------------
-
-static void on_socket_event
-	(
-	void * 		socket,
-	uint32 		event,
-	void * 		cookie
-	)
+/* 
+ * Private routines
+ * ----------------
+ */
+static void on_socket_event(void *socket, uint32 event, void *cookie)
 {
 	net_socket_cookie * nsc = (net_socket_cookie *) cookie;
 	if (! nsc)
 		return;
 
-	// BEWARE: We assert there that socket 'event' values are
-	// in fact 'B_SELECT_XXXX' ones
+	/* BEWARE: We assert there that socket 'event' values are
+	 * in fact 'B_SELECT_XXXX' ones
+	 */
 	if (nsc->selectinfo[event-1].sync)
 		notify_select_event(nsc->selectinfo[event-1].sync, nsc->selectinfo[event-1].ref);
 }
