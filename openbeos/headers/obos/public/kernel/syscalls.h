@@ -11,17 +11,12 @@
 #include <resource.h>
 #include <vfs_types.h>
 #include <vm_types.h>
-#include <sem_types.h>
-#include <port_types.h>
 #include <thread_types.h>
+#include <OS.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-/* XXX - until we get OS.h sorted out properly :) */
-struct sem_info;
 
 int sys_null();
 
@@ -58,10 +53,10 @@ int    kern_acquire_sem(sem_id id);
 int    kern_acquire_sem_etc(sem_id id, int count, int flags, bigtime_t timeout);
 int    kern_release_sem(sem_id id);
 int    kern_release_sem_etc(sem_id id, int count, int flags);
-int sys_sem_get_count(sem_id id, int32* thread_count);
-int sys_sem_get_sem_info(sem_id id, struct sem_info *info);
-int sys_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
-int sys_set_sem_owner(sem_id id, proc_id proc);
+int    sys_sem_get_count(sem_id id, int32* thread_count);
+int    kern_get_sem_info(sem_id, struct sem_info *, size_t);
+int    kern_get_next_sem_info(proc_id, uint32 *, struct sem_info *, size_t);
+int    sys_set_sem_owner(sem_id id, proc_id proc);
 
 
 int sys_proc_get_table(struct proc_info *pi, size_t len);
@@ -101,9 +96,9 @@ ssize_t		sys_port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout)
 int32		sys_port_count(port_id port);
 ssize_t		sys_port_read(port_id port, int32 *msg_code, void *msg_buffer, size_t buffer_size);
 ssize_t		sys_port_read_etc(port_id port,	int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
-int			sys_port_set_owner(port_id port, proc_id proc);
-int			sys_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
-int			sys_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
+int			sys_port_set_owner(port_id port, team_id proc);
+int			sys_port_write(port_id port, int32 msg_code, const void *msg_buffer, size_t buffer_size);
+int			sys_port_write_etc(port_id port, int32 msg_code, const void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
 
 /* atomic_* ops (needed for cpus that dont support them directly) */
 int sys_atomic_add(int *val, int incr);
@@ -114,6 +109,9 @@ int sys_test_and_set(int *val, int set_to, int test_val);
 
 int sys_sysctl(int *, uint, void *, size_t *, void *, size_t);
 int sys_socket(int, int, int);
+
+/* region prototypes */
+area_id sys_find_region_by_name(const char *);
 
 #ifdef __cplusplus
 }
