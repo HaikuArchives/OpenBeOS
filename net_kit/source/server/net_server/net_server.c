@@ -437,9 +437,6 @@ int start_stack(void)
 
 	find_modules();
 	init_devices();
-#ifdef _KERNEL_MODE
-	dprintf("core network module: init complete...\n");
-#endif
 
 	return 0;
 }
@@ -510,6 +507,7 @@ void _main(void)
 	start_devices();
 
 	/* Just to see if it works! */
+/*
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
@@ -553,6 +551,7 @@ void _main(void)
         else
                 printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
 
+*/
 
 	d = devices;
 	while (d) {
@@ -565,8 +564,6 @@ void _main(void)
 
 #ifndef _KERNEL_MODE
 
-	server_shutdown();
-
 	return 0;
 #endif
 }
@@ -575,7 +572,6 @@ void _main(void)
 
 static status_t core_std_ops(int32 op, ...) 
 {
-	dprintf("core_std_ops\n");
 	switch(op) {
 		case B_MODULE_INIT:
 			return start_stack();
@@ -599,7 +595,8 @@ static struct core_module_info core_info = {
 
 	initsocket,
 	socreate,
-	soclose
+	soclose,
+	sobind	
 };
 
 _EXPORT module_info *modules[] = {

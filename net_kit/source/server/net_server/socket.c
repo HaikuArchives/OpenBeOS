@@ -16,7 +16,7 @@
 #include "protocols.h"
 #include "mbuf.h"
 #include "sys/net_uio.h"
-
+#include "core_module.h"
 
 /* XXX - This file has the various system calls in it, socket, bind, sendto 
  * which really don't belong here and are just here to allow for testing.
@@ -33,17 +33,11 @@ static struct sock_fd *sockets = NULL;
 static benaphore sockets_lock;
 
 
-/* XXX - Hack for debugging */
-#undef SHOW_DEBUG
-#define SHOW_DEBUG 1
-
 /* for now - should be moved to be_error.h */
 #define EDESTADDRREQ EINVAL
 
-
 int sockets_init(void)
 {
-	dprintf("sockets_init\n");
 	if (!spool)
 		pool_init(&spool, sizeof(struct socket));
 
@@ -118,28 +112,25 @@ int uiomove(caddr_t cp, int n, struct uio *uio)
 	return (error);
 }
 
-int initsocket(void **aso)
+int initsocket(void **sp)
 {
 	struct socket *so = (struct socket*)pool_get(spool);
-	dprintf("core_module: initsocket %p!\n", so);
 
 	if (so == NULL)
 		return ENOMEM;
 
 	memset(so, 0, sizeof(*so));
 
-	*aso = (void*)so;
+	*sp = so;
 
 	return 0;
 }
 
-int socreate(int dom, void *aso, int type, int proto)
+int socreate(int dom, void *sp, int type, int proto)
 {
 	net_module *prm = NULL; /* protocol module */
-	struct socket *so = (struct socket*)aso;
+	struct socket *so = (struct socket*)sp;
 	int error;
-
-dprintf("core_module: socreate!\n");
 
 	if (so == NULL)
 		return EINVAL;
@@ -188,9 +179,11 @@ bad:
 }
 
 
-int sobind(struct socket *so, struct mbuf *nam)
+int sobind(void *sp, struct mbuf *nam)
 {
 	int error;
+	struct socket *so = (struct socket*)sp;
+	
 /* xxx - locking! */
 	error = (*so->so_proto->userreq) (so, PRU_BIND, NULL, nam, NULL);
 
@@ -734,6 +727,7 @@ drop:
 		if (error2 == 0)
 			error = error2;
 	}
+
 discard:
 	sofree(so);
 
@@ -749,7 +743,9 @@ int sofree(struct socket *so)
 		/* we need to handle this! */
 		so->so_head = NULL;
 	}
+
 	pool_put(spool, so);
+
 	return 0;
 }
 
@@ -764,69 +760,6 @@ void sowakeup(struct socket *so, struct sockbuf *sb)
 
 
 //	#pragma mark -
-
-struct sock_fd *make_sock_fd(void)
-{
-	struct sock_fd*sfd;
-
-	sfd = (struct sock_fd*)pool_get(sfdpool);
-
-	if (sfd == NULL)
-		return NULL;
-
-	sfd->fd = atomic_add(&socknum, 1);
-	sfd->so = NULL;
-
-#ifdef _KERNEL_MODE
-	dprintf("craeted a sock_fd structure\n");
-#endif
-
-        /* XXX - add locking! */
-        if (sockets) {
-                sockets->prev->next = sfd;
-                sfd->prev = sockets->prev;
-                sfd->next = sockets;
-                sockets->prev = sfd;
-        } else {
-                sfd->next = sfd->prev = sfd;
-                sockets = sfd;
-        }
-
-	return sfd;
-}
-
-void release_sock_fd(struct sock_fd *sfd)
-{
-	if (sockets == sfd) {
-		sockets = NULL;
-	} else {
-		sfd->next->prev = sfd->prev;
-		sfd->prev->next = sfd->next;
-	}
-	pool_put(sfdpool, sfd);
-}
- 
-int socket(int dom, int type, int proto)
-{
-	struct socket *so;
-	struct sock_fd *sfd = NULL;
-	/* This is a hack to enable us to create a socket! */
-	int error;
-
-	error = socreate(dom, &so, type, proto);
-	if (error < 0)
-		return error;
-
-	sfd = make_sock_fd();
-	sfd->so = so;
-
-#if SHOW_DEBUG
-	printf("Just created socket #%d (%s)\n",  sfd->fd, sfd->so->so_proto->name);
-#endif
-
-	return sfd->fd;
-}
-
 
 /* NB normally we'd be worried about kernel vs userland here, but
  * that's not a worry for a userland stack.
