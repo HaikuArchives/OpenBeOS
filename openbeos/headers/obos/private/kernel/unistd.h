@@ -21,7 +21,7 @@ int     close(int);
 int     dup(int);
 int     dup2(int, int);
 
-int     getopt(int, char * const, const char *);
+int     getopt(int, char * const *, const char *);
 extern	 char *optarg;			/* getopt(3) external variables */
 extern	 int opterr;
 extern	 int optind;
