@@ -93,7 +93,7 @@ private:
 
 MidiPlayerWindow::MidiPlayerWindow(BPoint start)
 				:	BWindow(BRect(start, start + BPoint(660, 360)), "Midi Player",
-							B_TITLED_WINDOW, B_NOT_RESIZABLE),
+							B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS | B_NOT_RESIZABLE),
 					fMidiInput(NULL),
 					fMidiOutput(NULL),
 					fMidiDisplay(NULL),
@@ -536,8 +536,7 @@ entry_ref ref;
 //--------------
 		case CHANGE_VOLUME_SYNTH :
 				msg->FindInt32("be:value", (int32*)&temp);
-				be_synth->SetSynthVolume(temp / 2000);
-				be_synth->SetSampleVolume(temp / 2000);
+				be_synth->SetSynthVolume(temp / 1000.0);
 				break;
 //--------------
 //--------------
