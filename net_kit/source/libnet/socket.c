@@ -16,7 +16,7 @@
 
 #include "net_stack_driver.h"
 
-const char * g_stack_driver_path = "/dev/" NET_STACK_DRIVER_PATH;
+const char *g_stack_driver_path = "/dev/" NET_STACK_DRIVER_PATH;
 
 bool g_beos_r5_compatibility = false;
 
@@ -29,7 +29,7 @@ struct beosr5_sockaddr_in {
 
 static void convert_from_beos_r5_sockaddr(struct sockaddr *to, const struct sockaddr *from);
 static void convert_to_beos_r5_sockaddr(struct sockaddr *to, const struct sockaddr *from);
-static void	convert_from_beos_r5_sockopt(int * level, int * optnum);
+static void	convert_from_beos_r5_sockopt(int *level, int *optnum);
 
 _EXPORT int socket(int family, int type, int protocol)
 {
@@ -89,7 +89,7 @@ _EXPORT int socket(int family, int type, int protocol)
 }
 
 
-_EXPORT int bind(int sock, const struct sockaddr * addr, int addrlen)
+_EXPORT int bind(int sock, const struct sockaddr *addr, int addrlen)
 {
 	struct sockaddr temp;
 	struct sockaddr_args args;
@@ -123,7 +123,7 @@ _EXPORT int shutdown(int sock, int how)
 }
 
 
-_EXPORT int connect(int sock, const struct sockaddr * addr, int addrlen)
+_EXPORT int connect(int sock, const struct sockaddr *addr, int addrlen)
 {
 	struct sockaddr temp;
 	struct sockaddr_args args;
@@ -157,13 +157,13 @@ _EXPORT int listen(int sock, int backlog)
 }
 
 
-_EXPORT int accept(int sock, struct sockaddr * addr, int * addrlen)
+_EXPORT int accept(int sock, struct sockaddr *addr, int *addrlen)
 {
 	struct sockaddr temp;
 	struct accept_args args;
 	int	rv;
 	int	new_sock;
-	void * cookie;
+	void *cookie;
 
 	new_sock = open(g_stack_driver_path, O_RDWR);
 	if (new_sock < 0)
@@ -185,6 +185,7 @@ _EXPORT int accept(int sock, struct sockaddr * addr, int * addrlen)
 	args.addrlen	= g_beos_r5_compatibility ? sizeof(temp) : *addrlen;
 	
 	args.rv = B_ERROR;
+
 	rv = ioctl(sock, NET_STACK_ACCEPT, &args, sizeof(args));
 	if (rv == 0)
 		rv = args.rv;
@@ -204,7 +205,7 @@ _EXPORT int accept(int sock, struct sockaddr * addr, int * addrlen)
 }
 
 
-_EXPORT ssize_t recvfrom(int sock, void * buffer, size_t buflen, int flags,
+_EXPORT ssize_t recvfrom(int sock, void *buffer, size_t buflen, int flags,
              struct sockaddr *addr, size_t *addrlen)
 {
 	struct sockaddr temp;
@@ -240,7 +241,7 @@ _EXPORT ssize_t recvfrom(int sock, void * buffer, size_t buflen, int flags,
 	return rv;
 }
 
-_EXPORT ssize_t sendto(int sock, const void * buffer, size_t buflen, int flags,
+_EXPORT ssize_t sendto(int sock, const void *buffer, size_t buflen, int flags,
            const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr temp;
@@ -271,7 +272,7 @@ _EXPORT ssize_t sendto(int sock, const void * buffer, size_t buflen, int flags,
 /* These need to be adjusted to take account of the MSG_PEEK
  * flag, but old R5 doesn't use it...
  */
-_EXPORT ssize_t recv(int sock, void * data, size_t datalen, int flags)
+_EXPORT ssize_t recv(int sock, void *data, size_t datalen, int flags)
 {
 	struct data_xfer_args args;
 	int	rv;
@@ -291,7 +292,7 @@ _EXPORT ssize_t recv(int sock, void * data, size_t datalen, int flags)
 }
 
 
-_EXPORT ssize_t send(int sock, const void * data, size_t datalen, int flags)
+_EXPORT ssize_t send(int sock, const void *data, size_t datalen, int flags)
 {
 	struct data_xfer_args args;
 	int	rv;
@@ -311,7 +312,7 @@ _EXPORT ssize_t send(int sock, const void * data, size_t datalen, int flags)
 }
 
 
-_EXPORT int getsockopt(int sock, int level, int option, void * optval, size_t * optlen)
+_EXPORT int getsockopt(int sock, int level, int option, void *optval, size_t *optlen)
 {
 	struct sockopt_args args;
 	int rv;
@@ -342,14 +343,17 @@ _EXPORT int getsockopt(int sock, int level, int option, void * optval, size_t * 
 	return args.rv;
 }
 
-_EXPORT int setsockopt(int sock, int level, int option, const void * optval, size_t optlen)
+_EXPORT int setsockopt(int sock, int level, int option, const void *optval, size_t optlen)
 {
 	struct sockopt_args args;
 	int rv;
 	
-	if (g_beos_r5_compatibility && option == 3) { // BeOS R5 SO_NONBLOCK
-		int temp;
-		temp = (*(int*) optlen) ? 1 : 0;
+	/* BeOS R5 uses 
+	 * setsockopt(sock, SOL_SOCKET, SO_NONBLOCK, &i, sizeof(i));
+	 * Try to capture that here and the do the correct thing.
+	 */
+	if (g_beos_r5_compatibility && option == 3) {
+		int temp = *(int*) optval;
 		return ioctl(sock, FIONBIO, &temp);
 	}
 
@@ -366,7 +370,7 @@ _EXPORT int setsockopt(int sock, int level, int option, const void * optval, siz
 	return (rv < 0) ? rv : args.rv;
 }
 
-_EXPORT int getpeername(int sock, struct sockaddr * addr, int * addrlen)
+_EXPORT int getpeername(int sock, struct sockaddr *addr, int *addrlen)
 {
 	struct sockaddr temp;
 	struct sockaddr_args args;
@@ -389,7 +393,7 @@ _EXPORT int getpeername(int sock, struct sockaddr * addr, int * addrlen)
 	return args.rv;
 }
 
-_EXPORT int getsockname(int sock, struct sockaddr * addr, int * addrlen)
+_EXPORT int getsockname(int sock, struct sockaddr *addr, int *addrlen)
 {
 	struct sockaddr temp;
 	struct sockaddr_args args;
@@ -465,7 +469,7 @@ static void convert_to_beos_r5_sockaddr(struct sockaddr *_to, const struct socka
 	to->sin_addr = from->sin_addr.s_addr;
 }
 
-static void	convert_from_beos_r5_sockopt(int * level, int * optnum)
+static void	convert_from_beos_r5_sockopt(int *level, int *optnum)
 {
 	if (*level == 1)
 		*level = SOL_SOCKET;
