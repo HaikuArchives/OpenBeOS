@@ -72,6 +72,8 @@
 		BMenuItem		*separatorStyleTwo;
 		
 		//others
+		FontMenu		*fontMenu;
+		FontSizeMenu	*fontSizeMenu;
 		BMenuItem		*clickToOpenItem;
 		BMenuItem		*alwaysShowTriggersItem;
 		BMenuItem		*colorSchemeItem;
@@ -118,8 +120,6 @@
 		BMenu			*menu;
 		MenuBar			*menuBar;
 		BBox			*menuView;
-		FontMenu		*fontMenu;
-		FontSizeMenu	*fontSizeMenu;
 		BButton 		*revertButton;
 		BButton 		*defaultButton;
 	};

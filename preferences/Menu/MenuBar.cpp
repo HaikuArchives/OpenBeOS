@@ -20,6 +20,9 @@
 	void
 	MenuBar::build_menu()
 	{
+		// font and font size menus
+		fontMenu = new FontMenu();
+		fontSizeMenu = new FontSizeMenu();
 		
 		// create the menu items
 		clickToOpenItem = new BMenuItem("Click To Open", new BMessage(CLICK_OPEN_MSG), 0, 0);
@@ -43,18 +46,20 @@
 		msg = new BMessage(MENU_SEP_TYPE);
 		msg->AddInt32("sep", 2);
 		separatorStyleTwo = new BitmapMenuItem("", msg, fSep2Bmp);
-		if(info.separator == 0)
-			{separatorStyleZero->SetMarked(true);}
-		if(info.separator == 1)
-			{separatorStyleOne->SetMarked(true);}
-		if(info.separator == 2)
-			{separatorStyleTwo->SetMarked(true);}
+		if (info.separator == 0)
+			separatorStyleZero->SetMarked(true);
+		if (info.separator == 1)
+			separatorStyleOne->SetMarked(true);
+		if (info.separator == 2)
+			separatorStyleTwo->SetMarked(true);
 		separatorStyleMenu->AddItem(separatorStyleZero);
 		separatorStyleMenu->AddItem(separatorStyleOne);
 		separatorStyleMenu->AddItem(separatorStyleTwo);
 		separatorStyleMenu->SetTargetForItems(Window());
 	
 		// Add items to menubar	
+		AddItem(fontMenu, 0);
+		AddItem(fontSizeMenu, 1);
 		AddSeparatorItem();
 		AddItem(clickToOpenItem);
 		AddItem(alwaysShowTriggersItem);
@@ -73,26 +78,11 @@
 		// get up-to-date menu info
 		get_menu_info(&info);
 		
-		if (info.triggers_always_shown) {
-			alwaysShowTriggersItem->SetMarked(true);
-			alwaysShowTriggersItem->SetEnabled(true);	
-		} else {
-			alwaysShowTriggersItem->SetMarked(false);
-			alwaysShowTriggersItem->SetEnabled(true);	
-		}
-	
-		if (info.click_to_open) {
-			clickToOpenItem->SetMarked(true);
-			clickToOpenItem->SetEnabled(true);
-			
-			alwaysShowTriggersItem->SetEnabled(true);
-		} else {
-			clickToOpenItem->SetMarked(false);
-			clickToOpenItem->SetEnabled(true);
-			
-			alwaysShowTriggersItem->SetEnabled(false);
-		}	
-		
+		alwaysShowTriggersItem->SetMarked(info.triggers_always_shown);
+
+		clickToOpenItem->SetMarked(info.click_to_open);
+		alwaysShowTriggersItem->SetEnabled(!info.click_to_open);
+
 		set_menu_info(&info);
 	}
 	
@@ -101,6 +91,10 @@
 	{
 		// get up-to-date menu info
 		get_menu_info(&info);
+
+		// update submenus
+		fontMenu->Update();
+		fontSizeMenu->Update();
 
 		// this needs to be updated in case the Defaults
 		// were requested.

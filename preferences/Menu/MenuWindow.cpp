@@ -19,10 +19,6 @@
 			B_FOLLOW_ALL, B_WILL_DRAW | B_FULL_UPDATE_ON_RESIZE);
 		menuView->SetViewColor(219,219,219,255);
 		menuBar = new MenuBar();
-		fontMenu = new FontMenu();
-		fontSizeMenu = new FontSizeMenu();
-		menuBar->AddItem(fontMenu, 0);
-		menuBar->AddItem(fontSizeMenu, 1);
 		menuView->AddChild(menuBar);
 		AddChild(menuView);
 		menuView->ResizeTo((Frame().right),(Frame().bottom));
@@ -62,19 +58,10 @@
 			break;
 		
 		case MENU_FONT_FAMILY:
-		{
-			font_family *family;
-			msg->FindPointer("family", (void**)&family);
-			info.f_family = *family;
-			set_menu_info(&info);
-			Update();
-			break;
-		}
-			
 		case MENU_FONT_STYLE:
 		{
 			font_family *family;
-			msg->FindPointer("family", (void**)&family); 
+			msg->FindPointer("family", (void**)&family);
 			font_style *style;
 			msg->FindPointer("style", (void**)&style);
 			info.f_family = *family;
@@ -167,8 +154,6 @@
     	revertButton->SetEnabled(revert);
     
     	// alert the rest of the application to update	
-		fontMenu->Update();
-		fontSizeMenu->Update();
 		menuBar->Update();
 		
 		// resize the window according to the size of menuBar
