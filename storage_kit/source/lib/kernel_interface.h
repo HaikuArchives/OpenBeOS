@@ -46,6 +46,7 @@ typedef mode_t CreationFlags;	// open() mode
 typedef int SeekMode;			// lseek() mode
 
 // Constants -- POSIX versions
+const FileDescriptor NullFd = -1;
 const Dir NullDir = NULL;
 
 //----------------------------------------------------------------------
@@ -162,17 +163,21 @@ status_t stat_attr( FileDescriptor file, const char *name, AttrInfo *ai );
 // Attribute Directory Functions
 //------------------------------------------------------------------------------
 /*! Opens the attribute directory of a given file. */
-Dir open_attr_dir( FileDescriptor file );
+Dir dopen_attr_dir( FileDescriptor file );
+FileDescriptor open_attr_dir( FileDescriptor file );
 
 /*! Rewinds the given attribute directory. */
-void rewind_attr_dir( Dir dir );
+void drewind_attr_dir( Dir dir );
+void rewind_attr_dir( FileDescriptor dirFd );
 
 /*! Returns the next item in the given attribute directory, or
 	B_ENTRY_NOT_FOUND if at the end of the list. */
-DirEntry* read_attr_dir( Dir dir );
+DirEntry* dread_attr_dir( Dir dir );
+DirEntry* read_attr_dir( FileDescriptor dirFd );
 
 /*! Closes an attribute directory previously opened with open_attr_dir(). */
-status_t close_attr_dir( Dir dir );
+status_t dclose_attr_dir( Dir dir );
+status_t close_attr_dir( FileDescriptor dirFd );
 
 
 //------------------------------------------------------------------------------
@@ -180,14 +185,17 @@ status_t close_attr_dir( Dir dir );
 //------------------------------------------------------------------------------
 /*! Opens the given directory. Sets result to a properly "unitialized" directory
 	if the function fails. */
-status_t open_dir( const char *path, Dir &result );
+status_t dopen_dir( const char *path, Dir &result );
+status_t open_dir( const char *path, FileDescriptor &result );
 
 /*! Returns the next entry in the given directory, or B_ENTRY_NOT_FOUND
 	if at the end of the list. */
-DirEntry* read_dir( Dir dir );
+DirEntry* dread_dir( Dir dir );
+DirEntry* read_dir( FileDescriptor dirFd );
 
 /*! Rewindes the directory to the first entry in the list. */
-status_t rewind_dir( Dir dir );
+status_t drewind_dir( Dir dir );
+status_t rewind_dir( FileDescriptor dirFd );
 
 /*! Iterates through the given directory searching for an entry whose name
 	matches that given by name. On success, places the DirEntry in result
@@ -195,20 +203,23 @@ status_t rewind_dir( Dir dir );
 	StorageKit::NullDir.
 	
 	<b>Note:</b> This call modifies the internal position marker of dir. */
-status_t find_dir( Dir dir, const char *name, DirEntry *&result );
+status_t dfind_dir( Dir dir, const char *name, DirEntry *&result );
+status_t find_dir( FileDescriptor dirFd, const char *name, DirEntry *&result );
 
 /*! Calls the other version of StorageKit::find_dir() and stores the results
 	in the given entry_ref. */
-status_t find_dir( Dir dir, const char *name, entry_ref &result );
-
+status_t dfind_dir( Dir dir, const char *name, entry_ref &result );
+status_t find_dir( FileDescriptor dirFd, const char *name, entry_ref &result );
 
 /*! Creates a duplicated of the given directory and places it in result if successful,
 	returning B_OK. Returns an error code and sets result to StorageKit::NullDir if
 	unsuccessful. */
-status_t dup_dir( Dir dir, Dir &result );
+status_t ddup_dir( Dir dir, Dir &result );
+status_t dup_dir( FileDescriptor dirFd, FileDescriptor &result );
 
 /*! Closes the given directory. */
-status_t close_dir( Dir dir );
+status_t dclose_dir( Dir dir );
+status_t close_dir( FileDescriptor dirFd );
 
 //------------------------------------------------------------------------------
 // SymLink functions
@@ -248,7 +259,8 @@ status_t entry_ref_to_path( dev_t device, ino_t directory, const char *name, cha
 	If dir equals StorageKit::NullDir or result is NULL, B_BAD_VALUE is returned.
 	Otherwise, an appropriate error code is returned.
  */
-status_t dir_to_self_entry_ref( Dir dir, entry_ref *result );
+status_t ddir_to_self_entry_ref( Dir dir, entry_ref *result );
+status_t dir_to_self_entry_ref( FileDescriptor dirFd, entry_ref *result );
 
 
 /*! Converts the given directory into an absolute pathname, returning the
@@ -271,6 +283,7 @@ status_t rename(const char *oldPath, const char *newPath);
 
 /*! Removes path from the filesystem. */
 status_t remove(const char *path);
+
 
 } // namespace StorageKit
 

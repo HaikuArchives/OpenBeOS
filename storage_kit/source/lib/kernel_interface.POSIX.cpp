@@ -30,73 +30,60 @@
 #include <Entry.h>
 	// entry_ref
 
-#include "Error.h"
-	// StorageKit::Error
-	
-	
-	
+#include <OS.h>
+
 // This is just for cout while developing; shouldn't need it
 // when all is said and done.
 #include <iostream>
 
-// Converts the given error code into a BeOS status_t error code
-status_t PosixErrnoToBeOSError() {
-//	cout << endl << "PosixErrnoToBeOSError() -- errno == " << errno << " == 0x" << hex << errno << dec << endl << endl;
-	switch (errno) {
-		case ENOMEM:
-			return B_NO_MEMORY;
-				
-		case EFAULT:
-			return B_BAD_ADDRESS;
-				
-		case EACCES:
-			return B_PERMISSION_DENIED;
-			
-		case EAGAIN:
-			return B_BUSY;
-			
-		case EEXIST:
-			return B_FILE_EXISTS;
-			
-		default:
-			return errno;		
-	}	
+class DirCache {
+public:
+	DirCache() {
+//		fSemID = create_sem(1, "StorageKit_DirCache_Semaphore");
+//		cout << "HEY!!!!!!!! fSemID == " << fSemID << endl;
+		time(&fTime);		
+	}
+	
+	void DoOutput() {
+//		cout << "DirCache(" << fTime << ")" << endl;
+	}
+	
+private:
+	sem_id fSemID;
+	time_t fTime;	// This is just a test. Won't actually be used.
+	
+};
+
+DirCache dirCache;
+
+
+// This function takes a file descriptor (assumed to be file descriptor
+// for a directory), mallocs a new DIR struct, and sets the DIR's fd
+// member to the given file descriptor. Returns a pointer to the new
+// DIR or NULL if the function fails.
+DIR*
+fd_to_dir( StorageKit::FileDescriptor fd ) {
+	DIR *result = (DIR*)malloc(sizeof(DIR) + NAME_MAX);
+	result->fd = fd;
+	return result;
 }
 
-#define ERROR_CASE(number,string) \
-case number: \
-	throw new StorageKit::Error(errno, string); \
-	break; 
-
-// Used to throw the appropriate error as noted by errno
-void ThrowError() {
-	switch (errno) {
-		case ENAMETOOLONG:
-			throw new StorageKit::Error(errno, "Specified pathname is too long");
-			break;
-			
-		case ENOENT:
-			throw new StorageKit::EEntryNotFound();
-			break;
-
-		case ENOTDIR:
-			throw new StorageKit::Error(errno, "Some portion of the path that was expected to be a directory was in fact not");
-			break;
-
-		case EACCES:
-			throw new StorageKit::Error(errno, "Operation is prohibited by locks held by other processes.");
-			break;
-			
-		ERROR_CASE(EAGAIN, " Operation is prohibited because the file has been memory-mapped by another process")
-		
-		ERROR_CASE(EBADF, "Operation is prohibited because the file has been memory-mapped by another process")
-		
-		default:
-			throw new StorageKit::Error(errno, strerror(errno));
-			break;
-
+/*	This function takes a DIR* (assumed to be acquired through a call to
+	opendir() or fs_open_attr_dir), steals the file descriptor from it, and
+	frees the DIR*, returning the file descriptor (or -1 if the function
+	fails).
+*/
+StorageKit::FileDescriptor
+dir_to_fd( DIR *dir ) {
+	if (dir == NULL) {
+		return -1;
+	} else {
+		StorageKit::FileDescriptor fd = dir->fd;
+//		free(dir);
+		return fd;
 	}
 }
+
 
 status_t
 StorageKit::open( const char *path, OpenFlags flags, FileDescriptor &result ) {
@@ -112,7 +99,7 @@ StorageKit::open( const char *path, OpenFlags flags, FileDescriptor &result ) {
 	// Open file and return the proper error code
 	result = ::open(path, flags);
 //	return (result == -1) ? errno : B_OK ;
-	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
+	return (result == -1) ? errno : B_OK ;
 }
 
 
@@ -131,7 +118,7 @@ StorageKit::open( const char *path, OpenFlags flags, CreationFlags creationFlags
 	// Open/Create the file and return the proper error code
 	result = ::open(path, flags | O_CREAT, creationFlags);
 //	return (result == -1) ? errno : B_OK ;
-	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
+	return (result == -1) ? errno : B_OK ;
 }
 
 status_t
@@ -151,7 +138,7 @@ StorageKit::read(StorageKit::FileDescriptor fd, void *buf, ssize_t len)
 	if (result == B_OK) {
 		result = ::read(fd, buf, len);
 		if (result == -1)
-			result = PosixErrnoToBeOSError();
+			result = errno;
 	}
 	return result;
 }
@@ -170,7 +157,7 @@ StorageKit::read(StorageKit::FileDescriptor fd, void *buf, off_t pos,
 	if (result == B_OK) {
 		result = ::read_pos(fd, pos, buf, len);
 		if (result == -1)
-			result = PosixErrnoToBeOSError();
+			result = errno;
 	}
 	return result;
 }
@@ -187,7 +174,7 @@ StorageKit::write(StorageKit::FileDescriptor fd, const void *buf, ssize_t len)
 	if (result == B_OK) {
 		result = ::write(fd, buf, len);
 		if (result == -1)
-			result = PosixErrnoToBeOSError();
+			result = errno;
 	}
 	return result;
 }
@@ -206,7 +193,7 @@ StorageKit::write(StorageKit::FileDescriptor fd, const void *buf, off_t pos,
 	if (result == B_OK) {
 		result = ::write_pos(fd, pos, buf, len);
 		if (result == -1)
-			result = PosixErrnoToBeOSError();
+			result = errno;
 	}
 	return result;
 }
@@ -224,7 +211,7 @@ StorageKit::seek(StorageKit::FileDescriptor fd, off_t pos,
 {
 	off_t result = ::lseek(fd, pos, mode);
 	if (result == -1)
-		result = PosixErrnoToBeOSError();
+		result = errno;
 	return result;
 }
 
@@ -237,7 +224,7 @@ StorageKit::get_position(StorageKit::FileDescriptor fd)
 {
 	off_t result = ::lseek(fd, 0, SEEK_CUR);
 	if (result == -1)
-		result = PosixErrnoToBeOSError();
+		result = errno;
 	return result;
 }
 
@@ -301,28 +288,67 @@ StorageKit::remove_attr ( StorageKit::FileDescriptor file, const char *attr ) {
 }
 
 StorageKit::Dir
-StorageKit::open_attr_dir( FileDescriptor file ) {
+StorageKit::dopen_attr_dir( FileDescriptor file ) {
 	return fs_fopen_attr_dir( file );
+}
+
+StorageKit::FileDescriptor
+StorageKit::open_attr_dir( FileDescriptor file ) {
+	// Open the dir and convert it to a plain file descriptor.
+	return dir_to_fd( fs_fopen_attr_dir( file ) );
 }
 
 
 void
-StorageKit::rewind_attr_dir( Dir dir )
-{
+StorageKit::drewind_attr_dir( Dir dir ) {
 	if (dir != NULL)
 		fs_rewind_attr_dir( dir );
 }
 
+void
+StorageKit::rewind_attr_dir( FileDescriptor dirFd ) {
+	DIR *dir = fd_to_dir( dirFd );
+	if (dir != NULL)
+		fs_rewind_attr_dir( dir );
+//	free(dir);
+}
+
 StorageKit::DirEntry*
-StorageKit::read_attr_dir( Dir dir ) {
+StorageKit::dread_attr_dir( Dir dir ) {
 	return (dir == NullDir) ? NULL : fs_read_attr_dir( dir );
 }
 
+StorageKit::DirEntry*
+StorageKit::read_attr_dir( FileDescriptor dirFd ) {
+	DIR* dir = fd_to_dir(dirFd);
+	if (dir == NULL)
+		return NULL;
+
+	DirEntry *result = fs_read_attr_dir( dir );
+//	free(dir);
+	return result;
+}
+
 status_t
-StorageKit::close_attr_dir ( Dir dir )
+StorageKit::dclose_attr_dir ( Dir dir )
 {
 	if (dir == NULL)
 		return B_BAD_VALUE;
+	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
+}
+
+status_t
+StorageKit::close_attr_dir ( FileDescriptor dirFd )
+{
+	if (dirFd == StorageKit::NullFd)
+		return B_BAD_VALUE;
+		
+	// Allocate a new DIR*, set it up with the proper file descriptor,
+	// and then close it.
+	DIR *dir = fd_to_dir(dirFd);
+	if (dir == NULL)
+		return B_NO_MEMORY;
+		
 	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
 }
 
@@ -411,7 +437,7 @@ StorageKit::lock(FileDescriptor file, OpenFlags mode, FileLock *lock) {
 	
 	errno = 0;
 	
-	return (::fcntl(file, F_SETLK, lock) == 0) ? B_OK : PosixErrnoToBeOSError();
+	return (::fcntl(file, F_SETLK, lock) == 0) ? B_OK : errno;
 */
 }
 
@@ -428,7 +454,7 @@ StorageKit::unlock(FileDescriptor file, FileLock *lock) {
 	
 	lock->l_type = F_UNLCK;
 	
-	return (::fcntl(file, F_SETLK, lock) == 0) ? B_OK : PosixErrnoToBeOSError() ;
+	return (::fcntl(file, F_SETLK, lock) == 0) ? B_OK : errno ;
 */
 }
 
@@ -497,28 +523,60 @@ StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
 			return B_BAD_VALUE;	
 	}
 	
-	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
+	return (result == -1) ? errno : B_OK ;
 }
 
 status_t
 StorageKit::sync( FileDescriptor file ) {
-	return (fsync(file) == -1) ? PosixErrnoToBeOSError() : B_OK ;
+	return (fsync(file) == -1) ? errno : B_OK ;
 }
 
 status_t
-StorageKit::open_dir( const char *path, Dir &result ) {
+StorageKit::dopen_dir( const char *path, Dir &result ) {
 //	cout << endl << "open_dir()" << endl;
 	result = ::opendir( path );
-	return (result == NULL) ? errno : B_OK ;
+	return (result == NullDir) ? errno : B_OK ;
+}
+
+status_t
+StorageKit::open_dir( const char *path, FileDescriptor &result ) {
+//	result = dir_to_fd( ::opendir( path ) );
+	dirCache.DoOutput();
+//	cout << "open_dir: path == " << path << endl;
+	DIR *dir = ::opendir(path);
+	if (dir == NULL) {
+//		cout << "open_dir: dir == NULL" << endl;
+	} else {
+//		cout << "open_dir: dir->p_dev == " << dir->ent.d_pdev << endl;
+//		cout << "open_dir: dir->p_ino == " << dir->ent.d_pino << endl;
+//		cout << "open_dir: dir->dev == " << dir->ent.d_dev << endl;
+//		cout << "open_dir: dir->ino == " << dir->ent.d_ino << endl;
+	}
+	result = dir_to_fd(dir);
+	return (result == NullFd) ? errno : B_OK ;
 }
 
 StorageKit::DirEntry*
-StorageKit::read_dir( Dir dir ) {
+StorageKit::dread_dir( Dir dir ) {
 	return (dir == NullDir) ? NULL : readdir(dir) ;
 }
 
+StorageKit::DirEntry*
+StorageKit::read_dir( FileDescriptor dirFd ) {
+	if (dirFd == NullFd) {
+		return NULL;
+	} else {
+		DIR *dir = fd_to_dir(dirFd);
+		if (dir == NULL)
+			return NULL;
+		DirEntry* result = readdir(dir);
+//		free(dir);
+		return result;
+	}
+}
+
 status_t
-StorageKit::rewind_dir( Dir dir ) {
+StorageKit::drewind_dir( Dir dir ) {
 	if (dir == NullDir)
 		return B_BAD_VALUE;
 	else {
@@ -528,17 +586,31 @@ StorageKit::rewind_dir( Dir dir ) {
 }
 
 status_t
-StorageKit::find_dir( Dir dir, const char *name, DirEntry *&result ) {
+StorageKit::rewind_dir( FileDescriptor dirFd ) {
+	if (dirFd == NullFd) {
+		return B_BAD_VALUE;
+	} else {
+		DIR *dir = fd_to_dir(dirFd);
+		if (dir == NULL)
+			return B_NO_MEMORY;
+		::rewinddir(dir);
+//		free(dir);
+		return B_OK;
+	}
+}
+
+status_t
+StorageKit::dfind_dir( Dir dir, const char *name, DirEntry *&result ) {
 	if (dir == NullDir || name == NULL)
 		return B_BAD_VALUE;
 	
 	status_t status;
 	
-	status = StorageKit::rewind_dir(dir);
+	status = StorageKit::drewind_dir(dir);
 	if (status == B_OK) {
-		for (	result = StorageKit::read_dir(dir);
+		for (	result = StorageKit::dread_dir(dir);
 				result != NULL;
-				result = StorageKit::read_dir(dir)	)
+				result = StorageKit::dread_dir(dir)	)
 		{
 			if (strcmp(result->d_name, name) == 0)
 				return B_OK;
@@ -551,9 +623,33 @@ StorageKit::find_dir( Dir dir, const char *name, DirEntry *&result ) {
 }
 
 status_t
-StorageKit::find_dir( Dir dir, const char *name, entry_ref &result ) {
+StorageKit::find_dir( FileDescriptor dirFd, const char *name, DirEntry *&result ) {
+	if (dirFd == NullFd || name == NULL)
+		return B_BAD_VALUE;
+	
+	status_t status;
+
+	//! /todo The following for loop could be optimized a bit by converting dirFD to a DIR* once and calling fs_read_dir().				
+	status = StorageKit::rewind_dir(dirFd);
+	if (status == B_OK) {
+		for (	result = StorageKit::read_dir(dirFd);
+				result != NULL;
+				result = StorageKit::read_dir(dirFd)	)
+		{
+			if (strcmp(result->d_name, name) == 0)
+				return B_OK;
+		}
+		status = B_ENTRY_NOT_FOUND;
+	}
+	
+	result = NULL;
+	return status;
+}
+
+status_t
+StorageKit::dfind_dir( Dir dir, const char *name, entry_ref &result ) {
 	DirEntry *entry;
-	status_t status = StorageKit::find_dir(dir, name, entry);
+	status_t status = StorageKit::dfind_dir(dir, name, entry);
 	if (status != B_OK)
 		return status;
 		
@@ -563,7 +659,19 @@ StorageKit::find_dir( Dir dir, const char *name, entry_ref &result ) {
 }
 
 status_t
-StorageKit::dup_dir( Dir dir, Dir &result ) {
+StorageKit::find_dir( FileDescriptor dirFd, const char *name, entry_ref &result ) {
+	DirEntry *entry;
+	status_t status = StorageKit::find_dir(dirFd, name, entry);
+	if (status != B_OK)
+		return status;
+		
+	result.device = entry->d_pdev;
+	result.directory = entry->d_pino;
+	return result.set_name(entry->d_name);
+}
+
+status_t
+StorageKit::ddup_dir( Dir dir, Dir &result ) {
 	status_t status = B_ERROR;
 
 	if (dir == NullDir) {
@@ -576,7 +684,45 @@ StorageKit::dup_dir( Dir dir, Dir &result ) {
 
 		// Find "."
 		DirEntry *entry;
-		status = StorageKit::find_dir(dir, ".", entry);
+		status = StorageKit::dfind_dir(dir, ".", entry);
+
+		if (status == B_OK) {
+		
+			// Convert it to an absolute pathname
+			char path[B_PATH_NAME_LENGTH+1];
+			status = StorageKit::entry_ref_to_path(entry->d_pdev,
+				entry->d_pino, ".", path, B_PATH_NAME_LENGTH+1);
+				
+			if (status == B_OK) {			
+				// Open it
+				status = StorageKit::dopen_dir( path, result );				
+			}			
+		}		
+	}
+	
+	
+	if (status != B_OK) {
+		result = NullDir;
+	}
+
+	return status;		 	
+}
+
+status_t
+StorageKit::dup_dir( FileDescriptor dirFd, FileDescriptor &result ) {
+	//! /todo Since we're using file descriptors now, it'd be worth trying a simple call to ::dup() 
+	status_t status = B_ERROR;
+
+	if (dirFd == NullFd) {
+		status = B_BAD_VALUE;
+	} else {
+		// We need to find the entry for "." in the
+		// given directory, get its full path, and
+		// open it as a directory.
+
+		// Find "."
+		DirEntry *entry;
+		status = StorageKit::find_dir(dirFd, ".", entry);
 
 		if (status == B_OK) {
 		
@@ -594,7 +740,7 @@ StorageKit::dup_dir( Dir dir, Dir &result ) {
 	
 	
 	if (status != B_OK) {
-		result = NullDir;
+		result = NullFd;
 	}
 
 	return status;		 	
@@ -602,9 +748,18 @@ StorageKit::dup_dir( Dir dir, Dir &result ) {
 
 
 status_t
-StorageKit::close_dir( Dir dir ) {
-//	cout << endl << "close_dir()" << endl;
+StorageKit::dclose_dir( Dir dir ) {
 	return (::closedir(dir) == -1) ? errno : B_OK;	
+}
+
+status_t
+StorageKit::close_dir( FileDescriptor dirFd ) {
+	DIR *dir = fd_to_dir(dirFd);
+	if (dir == NULL) {
+		return B_NO_MEMORY;
+	} else {
+		return (::closedir(dir) == -1) ? errno : B_OK;
+	}
 }
 
 
@@ -715,7 +870,7 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 			// is absolute). If there's no error, we're done.
 			if (result[0] != '/') {
 				status_t status;
-//				printf("result = '%s'\n", result);
+//				printf("+result = '%s'\n", result);
 				if (sscanf(result, "%ld\n%s", &status, NULL) < 1) {
 					status = -12;
 				}
@@ -733,7 +888,7 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 }
 
 status_t
-StorageKit::dir_to_self_entry_ref( Dir dir, entry_ref *result ) {
+StorageKit::ddir_to_self_entry_ref( Dir dir, entry_ref *result ) {
 	if (dir == StorageKit::NullDir || result == NULL)
 		return B_BAD_VALUE;
 
@@ -746,11 +901,42 @@ StorageKit::dir_to_self_entry_ref( Dir dir, entry_ref *result ) {
 */
 
 	// Convert our directory to an entry_ref 
-	StorageKit::rewind_dir(dir);	
+	StorageKit::drewind_dir(dir);	
 	StorageKit::DirEntry *entry;
-	for (	entry = StorageKit::read_dir(dir);
+	for (	entry = StorageKit::dread_dir(dir);
 			entry != NULL;
-			entry = StorageKit::read_dir(dir)	) {
+			entry = StorageKit::dread_dir(dir)	) {
+		if (strcmp(entry->d_name, ".") == 0) {
+			result->device = entry->d_dev;
+			result->directory = entry->d_ino;
+			result->set_name(".");
+			return B_OK;					
+		}
+	}
+	return B_ENTRY_NOT_FOUND;
+	
+}
+
+status_t
+StorageKit::dir_to_self_entry_ref( FileDescriptor dirFd, entry_ref *result ) {
+	if (dirFd == StorageKit::NullFd || result == NULL)
+		return B_BAD_VALUE;
+
+/*		
+	// Here we're ignoring the fact that we're not supposed to know
+	// what exactly a StorageKit::Dir is, since it's much more efficient
+	result->device = dir->ent.d_pdev;
+	result->directory = dir->ent.d_pino;
+	return result->set_name( dir->ent.d_name );
+*/
+
+	//! /todo The following for loop could be optimized to convert dirFd to a DIR once and call ::readdir() directly
+	// Convert our directory to an entry_ref 
+	StorageKit::rewind_dir(dirFd);	
+	StorageKit::DirEntry *entry;
+	for (	entry = StorageKit::read_dir(dirFd);
+			entry != NULL;
+			entry = StorageKit::read_dir(dirFd)	) {
 		if (strcmp(entry->d_name, ".") == 0) {
 			result->device = entry->d_dev;
 			result->directory = entry->d_ino;
@@ -770,7 +956,7 @@ StorageKit::dir_to_path( Dir dir, char *result, int size ) {
 	entry_ref entry;
 	status_t status;
 	
-	status = dir_to_self_entry_ref(dir, &entry);
+	status = ddir_to_self_entry_ref(dir, &entry);
 	if (status != B_OK)
 		return status;
 		
