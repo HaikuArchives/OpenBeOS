@@ -20,6 +20,7 @@ SharedFromSources $(TOP)/source/lib/libstorage.so :
 	#NodeInfo.cpp
 	OffsetFile.cpp
 	Path.cpp
+	Query.cpp
 	ResourcesContainer.cpp
 	ResourceFile.cpp
 	ResourceItem.cpp
