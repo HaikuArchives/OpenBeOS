@@ -1,5 +1,6 @@
 // MimeTypeTest.cpp
 
+#include <ctype.h>			// For tolower()
 #include <stdio.h>
 #include <string.h>			// For memcmp()
 #include <string>
@@ -22,16 +23,24 @@
 #include "TestApp.h"
 #include "TestUtils.h"
 
+// MIME database directories
 static const char *testDir				= "/tmp/mimeTestDir";
 static const char *mimeDatabaseDir		= "/boot/home/config/settings/beos_mime";
-static const char *testType				= "text/StorageKit-Test";
+
+// MIME Types
+static const char *testType				= "text/Storage-Kit-Test";
 static const char *testTypeApp			= "application/StorageKit-Test";
 static const char *testTypeInvalid		= "text/Are spaces valid?";
+
+// Application Paths
 static const char *testApp				= "/boot/beos/apps/SoundRecorder";
 static const char *testApp2				= "/boot/beos/apps/CDPlayer";
 static const char *fakeTestApp			= "/__this_isn't_likely_to_exist__";
+
+// BMessage field names
 static const char *typeField			= "type";
 static const char *fileExtField			= "extensions";
+
 // Descriptions
 static const char *testDescr			= "Just a test, nothing more :-)";
 static const char *testDescr2			= "Another amazing test string";
@@ -50,9 +59,59 @@ static const char *longSig				= "application/x-vnd.obos.mime-type-test-long."
 "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
 
+// Declarations for handy dandy private functions
+static bool operator==(BBitmap &bmp1, BBitmap &bmp2);
+static bool operator!=(BBitmap &bmp1, BBitmap &bmp2);
+static bool operator==(BMessage &msg1, BMessage &msg2);
+static bool operator!=(BMessage &msg1, BMessage &msg2);
+static void fill_bitmap(BBitmap &bmp, char value);
+static void dump_bitmap(BBitmap &bmp, char *name = "bmp");
+static void dump_ref(entry_ref *ref, char* name = "ref");
+static void to_lower(const char *str, std::string &result);
+static void remove_type(const char *type, const char *databaseDir = mimeDatabaseDir);
+static bool type_exists(const char *type, const char *databaseDir = mimeDatabaseDir);
+
+// Suite
+CppUnit::Test*
+MimeTypeTest::Suite() {
+	StorageKit::TestSuite *suite = new StorageKit::TestSuite();
+	typedef CppUnit::TestCaller<MimeTypeTest> TC;
+		
+	// Tyler
+	suite->addTest( new TC("BMimeType::Install/Delete Test",
+						   &MimeTypeTest::InstallDeleteTest) );
+	suite->addTest( new TC("BMimeType::App Hint Test",
+						   &MimeTypeTest::AppHintTest) );
+	suite->addTest( new TC("BMimeType::File Extensions Test",
+						   &MimeTypeTest::FileExtensionsTest) );
+	suite->addTest( new TC("BMimeType::Icon Test (Large)",
+						   &MimeTypeTest::LargeIconTest) );
+	suite->addTest( new TC("BMimeType::Icon Test (Mini)",
+						   &MimeTypeTest::MiniIconTest) );
+	suite->addTest( new TC("BMimeType::Icon For Type Test (Large)",
+						   &MimeTypeTest::LargeIconForTypeTest) );
+	suite->addTest( new TC("BMimeType::Icon For Type Test (Mini)",
+						   &MimeTypeTest::MiniIconForTypeTest) );
+	suite->addTest( new TC("BMimeType::Long Description Test",
+						   &MimeTypeTest::LongDescriptionTest) );
+	suite->addTest( new TC("BMimeType::Short Description Test",
+						   &MimeTypeTest::ShortDescriptionTest) );
+	suite->addTest( new TC("BMimeType::Preferred App Test",
+						   &MimeTypeTest::PreferredAppTest) );
+
+	// Ingo						   
+	suite->addTest( new TC("BMimeType::Initialization Test",
+						   &MimeTypeTest::InitTest) );
+	suite->addTest( new TC("BMimeType::MIME String Test",
+						   &MimeTypeTest::StringTest) );
+
+	return suite;
+}		
+
 // Handy comparison operators for BBitmaps. The size and color depth
 // are compared first, followed by the bitmap data.
-bool operator==(BBitmap &bmp1, BBitmap &bmp2) {
+bool
+operator==(BBitmap &bmp1, BBitmap &bmp2) {
 	if (bmp1.Bounds() == bmp2.Bounds()) {
 //		printf("bmp== 1\n");
 		if (bmp1.ColorSpace() == bmp2.ColorSpace()) {
@@ -85,14 +144,16 @@ bool operator==(BBitmap &bmp1, BBitmap &bmp2) {
 		return false;
 }
 
-bool operator!=(BBitmap &bmp1, BBitmap &bmp2) {
+bool
+operator!=(BBitmap &bmp1, BBitmap &bmp2) {
 	return !(bmp1 == bmp2);
 }
 
 // Handy comparison operators for BMessages. The BMessages are checked field
 // by field, each of which is verified to be identical with respect to: type,
 // count, and data (all items).
-bool operator==(BMessage &msg1, BMessage &msg2) {
+bool
+operator==(BMessage &msg1, BMessage &msg2) {
 	status_t err = B_OK;
 	
 	// For now I'm ignoring the what fields...I shall deal with that later :-)
@@ -145,48 +206,14 @@ bool operator==(BMessage &msg1, BMessage &msg2) {
 	return !err;
 }
 
-bool operator!=(BMessage &msg1, BMessage &msg2) {
+bool
+operator!=(BMessage &msg1, BMessage &msg2) {
 	return !(msg1 == msg2);
 }
 
-
-// Suite
-CppUnit::Test*
-MimeTypeTest::Suite() {
-	StorageKit::TestSuite *suite = new StorageKit::TestSuite();
-	typedef CppUnit::TestCaller<MimeTypeTest> TC;
-		
-	// Tyler
-	suite->addTest( new TC("BMimeType::App Hint Test",
-						   &MimeTypeTest::AppHintTest) );
-	suite->addTest( new TC("BMimeType::File Extensions Test",
-						   &MimeTypeTest::FileExtensionsTest) );
-	suite->addTest( new TC("BMimeType::Large Icon Test",
-						   &MimeTypeTest::LargeIconTest) );
-	suite->addTest( new TC("BMimeType::Mini Icon Test",
-						   &MimeTypeTest::MiniIconTest) );
-	suite->addTest( new TC("BMimeType::Large Icon For Type Test",
-						   &MimeTypeTest::LargeIconForTypeTest) );
-	suite->addTest( new TC("BMimeType::Mini Icon For Type Test",
-						   &MimeTypeTest::MiniIconForTypeTest) );
-	suite->addTest( new TC("BMimeType::Long Description Test",
-						   &MimeTypeTest::LongDescriptionTest) );
-	suite->addTest( new TC("BMimeType::Short Description Test",
-						   &MimeTypeTest::ShortDescriptionTest) );
-	suite->addTest( new TC("BMimeType::Preferred App Test",
-						   &MimeTypeTest::PreferredAppTest) );
-
-	// Ingo						   
-	suite->addTest( new TC("BMimeType::Initialization Test",
-						   &MimeTypeTest::InitTest) );
-	suite->addTest( new TC("BMimeType::MIME String Test",
-						   &MimeTypeTest::StringTest) );
-
-	return suite;
-}		
-
 // Fills the bitmap data with the given character
-void FillBitmap(BBitmap &bmp, char value) {
+void
+fill_bitmap(BBitmap &bmp, char value) {
 	char *data = (char*)bmp.Bits();
 	for (int i = 0; i < bmp.BitsLength(); data++, i++) {
 //		printf("(%d -> ", *data);
@@ -198,7 +225,8 @@ void FillBitmap(BBitmap &bmp, char value) {
 	
 // Dumps the size, colorspace, and first data byte
 // of the bitmap to stdout
-void DumpBitmap(BBitmap &bmp, char *name = "bmp") {
+void
+dump_bitmap(BBitmap &bmp, char *name = "bmp") {
 	printf("%s == (%dx%d, ", name, bmp.Bounds().IntegerWidth()+1,
 		bmp.Bounds().IntegerHeight()+1);
 	switch (bmp.ColorSpace()) {
@@ -232,9 +260,9 @@ public:
 		  bmpTemp(BitmapBounds(which), B_CMAP8)
 	{
 		// Initialize our three bitmaps to different "colors"
-		FillBitmap(bmp1, 1);
-		FillBitmap(bmp2, 2);
-		FillBitmap(bmpTemp, 3);
+		fill_bitmap(bmp1, 1);
+		fill_bitmap(bmp2, 2);
+		fill_bitmap(bmpTemp, 3);
 	}
 	
 	// Returns the proper bitmap bounds for the given icon size
@@ -321,6 +349,7 @@ MimeTypeTest::tearDown()
 //	execCommand(string("rm -rf ") + testDir);
 
 	// Uninistall our test type
+	//! /todo Uncomment the following uninstall code when all is said and done.
 /*	BMimeType mime(testType);
 	status_t err = mime.InitCheck();
 	if (!err && mime.IsInstalled())
@@ -338,7 +367,8 @@ MimeTypeTest::tearDown()
 
 // entry_ref dumping function ; this may be removed at any time
 
-void printRef(entry_ref *ref, char* name = "ref") {
+void
+dump_ref(entry_ref *ref, char* name = "ref") {
 	if (ref) {
 		BPath path(ref);
 		status_t err = path.InitCheck();
@@ -354,7 +384,8 @@ void printRef(entry_ref *ref, char* name = "ref") {
 		
 // App Hint
 
-void MimeTypeTest::AppHintTest() {
+void
+MimeTypeTest::AppHintTest() {
 	// init a couple of entry_refs to applications
 	BEntry entry(testApp);
 	entry_ref appRef;
@@ -488,7 +519,8 @@ void MimeTypeTest::AppHintTest() {
 
 // File Extensions
 
-void MimeTypeTest::FileExtensionsTest() {
+void
+MimeTypeTest::FileExtensionsTest() {
 	// Create some messages to sling around
 	const int32 WHAT = 234;	// This is the what value that GFE returns...not sure if it has a name yet
 	BMessage msg1(WHAT), msg2(WHAT), msg3(WHAT);
@@ -676,7 +708,8 @@ void MimeTypeTest::FileExtensionsTest() {
 
 // Icon Test Helper Function
 
-void MimeTypeTest::IconTest(IconHelper &helper) {
+void
+MimeTypeTest::IconTest(IconHelper &helper) {
 	BBitmap *bmp = helper.TempBitmap();
 	// Unitialized 
 	nextSubTest();
@@ -739,7 +772,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		CHK(mime.IsInstalled());
 		// Init Test Bitmap
 		BBitmap testBmp(BRect(0,0,9,9), B_CMAP8);
-		FillBitmap(testBmp, 3);
+		fill_bitmap(testBmp, 3);
 		// Test Set()
 		CHK(testBmp != *helper.Bitmap1());
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
@@ -750,7 +783,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		CHK(*bmp == *helper.Bitmap1());
 		CHK(*bmp != testBmp);		
 		// Test Get()
-		FillBitmap(testBmp, 3);
+		fill_bitmap(testBmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, &testBmp) != B_OK);	// R5 == B_BAD_VALUE
 	}
@@ -768,7 +801,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		// Init Test Bitmap
 		BBitmap testBmp(BRect(0,0,99,99), B_CMAP8);
 		// Test Set()
-		FillBitmap(testBmp, 3);
+		fill_bitmap(testBmp, 3);
 		CHK(testBmp != *helper.Bitmap1());
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, bmp) == B_OK);
@@ -778,7 +811,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		CHK(*bmp == *helper.Bitmap1());
 		CHK(*bmp != testBmp);
 		// Test Get()
-		FillBitmap(testBmp, 3);
+		fill_bitmap(testBmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, &testBmp) != B_OK);	// R5 == B_BAD_VALUE
 	}	
@@ -797,7 +830,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		BBitmap testBmp(helper.BitmapBounds(), B_RGBA32);
 		// Test Set()
 #if !SK_TEST_R5
-		FillBitmap(testBmp, 4);
+		fill_bitmap(testBmp, 4);
 		CHK(testBmp != *helper.Bitmap1());
 		CHK(RES(helper.SetIcon(mime, helper.Bitmap1())) == B_OK);
 		CHK(RES(helper.GetIcon(mime, bmp)) == B_OK);
@@ -811,7 +844,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 #endif
 		// Test Get()
 #if SK_TEST_R5
-		FillBitmap(testBmp, 3);
+		fill_bitmap(testBmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, &testBmp) == B_OK);	// R5 == B_OK, but testBmp is not actually modified
 		CHK(testBmp != *helper.Bitmap1());
@@ -829,13 +862,13 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 			CHK(mime.Install() == B_OK);
 		CHK(mime.IsInstalled());
 		// Set() then Get()
-		FillBitmap(*bmp, 3);
+		fill_bitmap(*bmp, 3);
 		CHK(*bmp != *helper.Bitmap1());
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, bmp) == B_OK);
 		CHK(*bmp == *helper.Bitmap1());
 		// Set() then Get() again
-		FillBitmap(*bmp, 3);
+		fill_bitmap(*bmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap2()) == B_OK);
 		CHK(helper.GetIcon(mime, bmp) == B_OK);
 		CHK(*bmp == *helper.Bitmap2());
@@ -845,7 +878,8 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 
 // Icon For Type Helper Functions
 
-void MimeTypeTest::IconForTypeTest(IconForTypeHelper &helper) {
+void
+MimeTypeTest::IconForTypeTest(IconForTypeHelper &helper) {
 	IconTest(helper);	// First run all the icon tests	
 		// Then do some IconForType() specific tests
 		
@@ -863,7 +897,7 @@ void MimeTypeTest::IconForTypeTest(IconForTypeHelper &helper) {
 			CHK(mime.Install() == B_OK);
 		CHK(mime.IsInstalled());
 		// Set() then Get()
-		FillBitmap(*bmp, 3);
+		fill_bitmap(*bmp, 3);
 		CHK(*bmp != *helper.Bitmap1());
 		CHK(mime.SetIconForType(testTypeInvalid, helper.Bitmap1(), helper.Size()) != B_OK);	// R5 == B_BAD_VALUE
 		CHK(mime.GetIconForType(testTypeInvalid, bmp, helper.Size()) != B_OK);				// R5 == B_BAD_VALUE
@@ -881,35 +915,39 @@ void MimeTypeTest::IconForTypeTest(IconForTypeHelper &helper) {
 			CHK(mime.Install() == B_OK);
 		CHK(mime.IsInstalled());
 		// Set() then Get()
-		FillBitmap(*bmp, 3);
+		fill_bitmap(*bmp, 3);
 		CHK(*bmp != *helper.Bitmap1());
 		CHK(mime.SetIconForType(NULL, helper.Bitmap1(), helper.Size()) == B_OK);
 		CHK(mime.GetIconForType(NULL, bmp, helper.Size()) == B_OK);
 		CHK(*bmp == *helper.Bitmap1());
 		// Verify GetIcon() does the same thing
-		FillBitmap(*bmp, 3);
+		fill_bitmap(*bmp, 3);
 		CHK(*bmp != *helper.Bitmap1());
 		CHK(mime.GetIcon(bmp, helper.Size()) == B_OK);
 		CHK(*bmp == *helper.Bitmap1());
 	}	
 }
 
-void MimeTypeTest::LargeIconTest() {
+void
+MimeTypeTest::LargeIconTest() {
 	IconHelper helper(B_LARGE_ICON);
 	IconTest(helper);
 }
 
-void MimeTypeTest::MiniIconTest() {
+void
+MimeTypeTest::MiniIconTest() {
 	IconHelper helper(B_MINI_ICON);
 	IconTest(helper);
 }
 
-void MimeTypeTest::LargeIconForTypeTest() {
+void
+MimeTypeTest::LargeIconForTypeTest() {
 	IconForTypeHelper helper(testType, B_LARGE_ICON);
 	IconForTypeTest(helper);
 }
 
-void MimeTypeTest::MiniIconForTypeTest() {
+void
+MimeTypeTest::MiniIconForTypeTest() {
 	IconForTypeHelper helper(testType, B_MINI_ICON);
 	IconForTypeTest(helper);
 }
@@ -1132,6 +1170,95 @@ MimeTypeTest::PreferredAppTest() {
 	}
 
 }
+
+// Converts every character in str to lowercase and places
+// the result in result.
+void
+to_lower(const char *str, std::string &result) {
+	CHK(str != NULL);
+	result = "";
+	for (int i = 0; i < strlen(str); i++)
+		result += tolower(str[i]);
+}
+
+// Manually removes the file in the MIME database corresponding to
+// the given MIME type
+void
+remove_type(const char *type, const char *databaseDir) {
+	CHK(type != NULL);
+	
+	// Since the MIME types are converted to lower case before their
+	// corresponding file is created in the database, we need to do
+	// the same
+	std::string typeLower;
+	to_lower(type, typeLower);	
+
+	BEntry entry((std::string(mimeDatabaseDir) + "/" + typeLower).c_str());
+	CHK(entry.InitCheck() == B_OK);	
+	if (entry.Exists()) 
+		CHK(entry.Remove() == B_OK);	
+	CHK(!entry.Exists());
+}
+
+// Manually verifies that the file in the MIME database corresponding to
+// the given MIME type exists
+bool
+type_exists(const char *type, const char *databaseDir) {
+	CHK(type != NULL);
+
+	// Since the MIME types are converted to lower case before their
+	// corresponding file is created in the database, we need to do
+	// the same
+	std::string typeLower;
+	to_lower(type, typeLower);	
+
+	BEntry entry((std::string(databaseDir) + "/" + typeLower).c_str());
+	CHK(entry.InitCheck() == B_OK);	
+	return entry.Exists();
+}
+
+void
+MimeTypeTest::InstallDeleteTest() {
+	// Uninitialzized
+	nextSubTest();
+	{
+		BMimeType mime;
+		CHK(mime.InitCheck() == B_NO_INIT);
+		CHK(!mime.IsInstalled());
+		CHK(mime.Install() != B_OK);	// R5 == B_BAD_VALUE
+		CHK(mime.Delete() != B_OK);	// R5 == B_BAD_VALUE
+	}
+	// Invalid Type String
+	nextSubTest();
+	{
+		BMimeType mime(testTypeInvalid);
+		CHK(mime.InitCheck() != B_OK);	// R5 == B_BAD_VALUE
+		CHK(!mime.IsInstalled());
+		CHK(mime.Install() != B_OK);	// R5 == B_BAD_VALUE
+		CHK(mime.Delete() != B_OK);	// R5 == B_BAD_VALUE
+	}
+	// Normal function
+	nextSubTest();
+	{
+		remove_type(testType);
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		CHK(mime.IsInstalled() != true);
+		CHK(mime.Delete() != B_OK);	// R5 == B_ENTRY_NOT_FOUND
+		CHK(!type_exists(testType));
+		CHK(mime.Install() == B_OK);
+		CHK(type_exists(testType));
+		CHK(mime.IsInstalled());
+#if !SK_TEST_R5
+		CHK(mime.Install() != B_OK);	// We ought to return something standard and logical here
+#endif
+		CHK(mime.Delete() == B_OK);
+		CHK(!type_exists(testType));
+		CHK(!mime.IsInstalled());
+	}
+	
+}
+
 
 // init_long_types
 static
@@ -1543,8 +1670,8 @@ MimeTypeTest::StringTest()
 /* Tyler's functions:
 
 	// MIME database access
-	status_t Install();
-	status_t Delete();
++	status_t Install();
++	status_t Delete();
 +	status_t GetIcon(BBitmap *icon, icon_size size) const;
 +	status_t GetPreferredApp(char *signature, app_verb verb = B_OPEN) const;
 	status_t GetAttrInfo(BMessage *info) const;
@@ -1556,7 +1683,7 @@ MimeTypeTest::StringTest()
 +	status_t SetIcon(const BBitmap *icon, icon_size size);
 +	status_t SetPreferredApp(const char *signature, app_verb verb = B_OPEN);
 	status_t SetAttrInfo(const BMessage *info);
-	status_t SetFileExtensions(const BMessage *extensions);
++	status_t SetFileExtensions(const BMessage *extensions);
 +	status_t SetShortDescription(const char *description);
 +	status_t SetLongDescription(const char *description);
 

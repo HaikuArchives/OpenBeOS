@@ -40,6 +40,7 @@ public:
 	void LongDescriptionTest();
 	void ShortDescriptionTest();
 	void PreferredAppTest();
+	void InstallDeleteTest();
 
 	void InitTest();
 	void StringTest();
