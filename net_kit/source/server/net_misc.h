@@ -10,7 +10,7 @@
 
 /* structure for Ethernet MAC address xx:xx:xx:xx:xx:xx */
 typedef struct ether_addr {
-        uint8 eth_addr[6];
+        uint8 addr[6];
 } ether_addr;
 
 typedef struct netaddr {
