@@ -30,7 +30,6 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_device.h"
 
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
