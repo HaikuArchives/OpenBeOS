@@ -141,10 +141,8 @@ enum {
 	MT_FREE		= 0,	/* should be on free list */
 	MT_DATA		= 1,	/* dynamic data allocation */
 	MT_HEADER	= 2,	/* packet header */
-/*
-	MB_SONAME	= 3,
-	MB_SOOPTS	= 4,
-*/
+	MT_SONAME	= 3,
+	MT_SOOPTS	= 4,
 	MT_FTABLE	= 5,	/* fragment reassembly header */
 	MT_CONTROL	= 6,	/* extra-data protocol message */
 	MT_OOBDATA	= 7 	/* out-of-band data */

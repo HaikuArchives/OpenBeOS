@@ -5,6 +5,9 @@
 #include "sys/socketvar.h"
 #include "sys/socket.h"
 #include "net_misc.h"
+#include "pools.h"
+#include "ipv4/ipv4.h"
+#include "netinet/in.h"
 
 #ifndef IN_PCB_H
 #define IN_PCB_H
@@ -22,19 +25,25 @@ struct inpcb {
 	struct inpcb *inp_prev;
 	struct inpcb *inp_head;
 
-	ipv4_addr faddr;	/* foreign address */
-	uint16 fport;		/* foreign port # */	
-	ipv4_addr laddr;	/* local address */
-	uint16 lport;		/* local port # */
+	struct in_addr faddr;	/* foreign address */
+	uint16  fport;		/* foreign port # */	
+	struct in_addr laddr;	/* local address */
+	uint16  lport;		/* local port # */
 
 	struct socket *inp_socket;
 
+	ipv4_header inp_ip;	/* header prototype */	
 	int inp_flags;		/* flags */
 	/* more will be required */
 };
 
-void init_inpcb(void);
+int      in_pcballoc (struct socket *, struct inpcb *head);
+int      in_pcbbind (struct inpcb *, struct mbuf *);
+int      in_pcbconnect (void *, struct mbuf *);
+void     in_pcbdetach (struct inpcb *);
 
+/* helpful macro's */
+#define     sotoinpcb(so)   ((struct inpcb *)(so)->so_pcb)
 
 #endif /* IN_PCB_H */
 

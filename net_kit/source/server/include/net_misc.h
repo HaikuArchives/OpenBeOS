@@ -45,6 +45,10 @@ void insert_local_address(struct sockaddr *sa, ifnet *dev);
 int is_address_local(void *ptr, int len);
 ifnet *interface_for_address(void *data, int len);
 
+/* sockets and in_pcb init */
+int sockets_init(void);
+int inpcb_init(void);
+
 void *protocol_address(ifnet *ifa, int family);
 #define paddr(if, fam, t)	((t)(protocol_address(if, fam)))
 
