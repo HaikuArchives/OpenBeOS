@@ -130,12 +130,6 @@ static int main2(void *unused)
 	
 	//net_init_postdev(&ka);
 
-	/* remove this later, just a hack for right now */
-#ifdef ARCH_x86
-	beos_layer_init();
-	beos_load_beos_driver("speaker");
-#endif
-
 #if 0
 		// XXX remove
 		vfs_test();
