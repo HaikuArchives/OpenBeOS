@@ -25,17 +25,17 @@ struct protosw {
 	
 	/* the functions! */
 	void (*pr_init)(void);
-	int (*pr_input)(struct mbuf*, int);
-	int (*pr_output)(struct mbuf *, struct mbuf *, 
-					 struct route *,
-					 int, void *);
+	void (*pr_input)(struct mbuf*, int);
+	int  (*pr_output)(struct mbuf *, struct mbuf *, 
+	                  struct route *,
+	                  int, void *);
 	
-	int (*pr_userreq)(struct socket *, int,
-					  struct mbuf *, 
-					  struct mbuf *, 
-					  struct mbuf *);
-	int (*pr_sysctl)(int *, uint, void *, size_t *, void *, size_t);
-	int (*pr_ctloutput)(int, struct socket*, int, int, struct mbuf **);
+	int  (*pr_userreq)(struct socket *, int,
+	                   struct mbuf *, 
+	                   struct mbuf *, 
+	                   struct mbuf *);
+	int  (*pr_sysctl)(int *, uint, void *, size_t *, void *, size_t);
+	int  (*pr_ctloutput)(int, struct socket*, int, int, struct mbuf **);
 	
 	struct protosw *pr_next;	/* pointer to next proto structure */
 	struct protosw *dom_next;	/* next protosw pointed by the domain */

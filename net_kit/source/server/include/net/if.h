@@ -141,12 +141,12 @@ struct ifnet {
 	ifq *txq;
 	thread_id tx_thread;
 
-	int	(*start) (struct ifnet *);
-	int	(*stop)  (struct ifnet *);	
-	int	(*input) (struct mbuf*);
-	int	(*output)(struct ifnet *, struct mbuf*, 
+	int	 (*start) (struct ifnet *);
+	int	 (*stop)  (struct ifnet *);	
+	void (*input) (struct mbuf*);
+	int	 (*output)(struct ifnet *, struct mbuf*, 
 			  struct sockaddr*, struct rtentry *); 
-	int	(*ioctl) (struct ifnet *, int, caddr_t);
+	int	 (*ioctl) (struct ifnet *, int, caddr_t);
 	
 };
 #define if_mtu          ifd.ifi_mtu

@@ -49,13 +49,13 @@
  * the bytes before transmission at each protocol level.  The n_ types
  * represent the types with the bytes in ``high-ender'' order.
  */
-typedef uint16 n_short;/* short as received from the net */
-typedef uint32 n_long;/* long as received from the net */
+typedef uint16 n_short; /* short as received from the net */
+typedef uint32 n_long;  /* long as received from the net */
 
-typedef uint32 n_time;/* ms since 00:00 GMT, byte rev */
+typedef uint32 n_time;  /* ms since 00:00 GMT, byte rev */
 
 #ifdef _NETWORK_STACK
-n_time   iptime (void);
+#define iptime()   (htonl((uint32)real_time_clock_usecs()))
 #endif /* _NETWORK_STACK */
 
 #endif /* NETINET_IN_SYSTM_H */

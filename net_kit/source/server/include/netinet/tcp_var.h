@@ -248,12 +248,12 @@ int tcp_mssdflt;
 int tcp_do_rfc1323;
 unsigned long tcp_now;
 
-int tcp_input(struct mbuf *, int);
-int tcp_output(struct tcpcb*);
-int tcp_mss(struct tcpcb *, uint);
+void tcp_input(struct mbuf *, int);
+int  tcp_output(struct tcpcb*);
+int  tcp_mss(struct tcpcb *, uint);
 void tcp_mss_update(struct tcpcb *);
 void tcp_quench(struct inpcb *, int);
-int tcp_userreq(struct socket *, int, struct mbuf *, struct mbuf *, 
+int  tcp_userreq(struct socket *, int, struct mbuf *, struct mbuf *, 
                 struct mbuf *);
 struct tcpcb * tcp_timers(struct tcpcb *, int);
 struct tcpcb *tcp_close(struct tcpcb *);
@@ -268,6 +268,7 @@ struct tcpiphdr *tcp_template(struct tcpcb *);
 void tcp_pulloutofband(struct socket *, struct tcpiphdr *, struct mbuf *);
 
 void tcp_canceltimers(struct tcpcb *);
+void tcp_trace(int16, int16, struct tcpcb *, void *, int, int);
 
 /* Timer functions */
 #ifndef _KERNEL_MODE

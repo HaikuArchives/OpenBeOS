@@ -8,7 +8,7 @@
 #include <ByteOrder.h>
 #include <Errors.h>
 
-#include "mbuf.h"
+#include "sys/mbuf.h"
 
 #ifndef OBOS_NET_MISC_H
 #define OBOS_NET_MISC_H
@@ -47,7 +47,6 @@ typedef	uint32	ipv4_addr;
 #define B_SELECT_READ        1
 #define B_SELECT_WRITE       2
 #define B_SELECT_EXCEPTION   3
-//extern notify_select_event(selectsync *sync, uint32 ref);
 
 /* XXX - add some macro's for inserting various types of address
  */

@@ -7,7 +7,7 @@
 
 #include <ByteOrder.h>
 
-#include "mbuf.h"
+#include "sys/mbuf.h"
 #include "net_misc.h"
 #include "netinet/in_systm.h"
 #include "netinet/in.h"

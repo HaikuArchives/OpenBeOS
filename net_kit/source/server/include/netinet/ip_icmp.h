@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *      @(#)ip_var.h    8.1 (Berkeley) 6/10/93
+ *      @(#)ip_icmp.h    8.1 (Berkeley) 6/10/93
  */
  
 #ifndef NETINET_IP_ICMP_H
@@ -39,7 +39,6 @@
 
 #include <ByteOrder.h>
 
-#include "mbuf.h"
 #include "net_misc.h"
 #include "netinet/in.h"
 
@@ -92,6 +91,9 @@ struct icmp {
 #define icmp_data      icmp_dun.id_data 
 
 #define ICMP_MINLEN                        8 /* absolute minimum length */
+#define ICMP_ADVLENMIN (8 + sizeof(struct ip) + 8)
+#define ICMP_ADVLEN(p) (8 + ((p)->icmp_ip.ip_hl << 2) + 8)
+
 /* Definition of type and code field values.
  *http://www.iana.org/assignments/icmp-parameters
  */
@@ -121,7 +123,7 @@ struct icmp {
 #define   ICMP_SKIP                       39/* SKIP */
 #define   ICMP_PHOTURIS                   40/* Photuris */
 
-#define ICMP_MAXTYPE40
+#define   ICMP_MAXTYPE                    40
 
 #define   ICMP_UNREACH_NET                 0/* bad net */
 #define   ICMP_UNREACH_HOST                1/* bad host */
@@ -166,4 +168,5 @@ struct icmp {
         (type) == ICMP_TSTAMP || (type) == ICMP_TSTAMPREPLY || \
         (type) == ICMP_IREQ || (type) == ICMP_IREQREPLY || \
         (type) == ICMP_MASKREQ || (type) == ICMP_MASKREPLY)   
-#endif /* NETINET_IP_H */
+
+#endif /* NETINET_IP_ICMP_H */

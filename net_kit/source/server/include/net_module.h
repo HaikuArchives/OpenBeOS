@@ -6,7 +6,7 @@
 #include <kernel/OS.h>
 #include <image.h>
 
-#include "mbuf.h"
+#include "sys/mbuf.h"
 #include "net_misc.h"
 #include "sys/socketvar.h"
 #include "net/if.h"
