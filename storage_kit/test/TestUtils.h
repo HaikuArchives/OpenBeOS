@@ -12,6 +12,10 @@ status_t DecodeResult(status_t result) {
 	std::string str;
 	switch (result) {
 
+		case B_OK:
+			str = "B_OK";
+			break;
+
 		case B_ERROR:
 			str = "B_ERROR";
 			break;
