@@ -91,12 +91,11 @@ struct cmsghdr {
 };
 
 /* Function declarations */
-int socket (int, int, int);
-int closesocket(int);
-int	bind(int, struct sockaddr *, size_t);
-int	sendto(int, caddr_t, size_t, int, struct sockaddr*, size_t);
-int	sendit(int, struct msghdr *, int, size_t *);
-int	recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t);
+int     socket (int, int, int);
+int     closesocket(int);
+int     bind(int, const struct sockaddr *, int);
+int     sendto(int, caddr_t, size_t, int, const struct sockaddr*, size_t);
+int     recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t);
 
 #endif /* OBOS_SYS_SOCKET_H */
 

@@ -1,25 +1,13 @@
 /* socketvar.h */
 
-#include <kernel/OS.h>
-#include "mbuf.h"
-#include "sys/net_uio.h"
 
 #ifndef SYS_SOCKETVAR_H
 #define SYS_SOCKETVAR_H
 
-/* XXX - Not sure where these really belong... */
-/*
- * Values for pr_flags.
- * PR_ADDR requires PR_ATOMIC;
- * PR_ADDR and PR_CONNREQUIRED are mutually exclusive.
- */
-#define PR_ATOMIC       0x01            /* exchange atomic messages only */
-#define PR_ADDR         0x02            /* addresses given with messages */
-#define PR_CONNREQUIRED 0x04            /* connection required by protocol */
-#define PR_WANTRCVD     0x08            /* want PRU_RCVD calls */
-#define PR_RIGHTS       0x10            /* passes capabilities */
-#define PR_ABRTACPTDIS  0x20            /* abort on accept(2) to disconnected
-                                           socket */
+#include <kernel/OS.h>
+#include "mbuf.h"
+#include "sys/net_uio.h"
+#include "sys/socket.h"
 
 struct  sockbuf {
 	uint32  sb_cc;			/* actual chars in buffer */
@@ -122,13 +110,15 @@ struct socket {
 /* Function prototypes */
 int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
 
-int	initsocket(void **spp);
-int	socreate (int dom, void *aso, int type, int proto);
+int     initsocket(void **spp);
+int     socreate(int dom, void *aso, int type, int proto);
 
-int	sobind (void *so, struct mbuf *nam);
+int     sobind(void *so, caddr_t, int);
+int     sendit(void *, struct msghdr *, int, int *);
+int     recvit(void *, struct msghdr *, caddr_t, int *);
 
-int	sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
-           struct mbuf *control, int flags);
+int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, 
+               struct mbuf *top, struct mbuf *control, int flags);
 
 void    sbrelease (struct sockbuf *sb);
 int     sbreserve (struct sockbuf *sb, uint32 cc);

@@ -7,7 +7,7 @@
 
 #include <kernel/OS.h>
 #include <Drivers.h>
-#include "sys/socket.h"
+#include "sys/socketvar.h"
 #include "net/if_types.h"
 #include "netinet/in.h"
 #include "net/route.h"

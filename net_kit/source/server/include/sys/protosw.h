@@ -3,6 +3,8 @@
 #ifndef PROTOSW_H
 #define PROTOSW_H
 
+#include "net/route.h"
+
 /* every protocol module init's one of these and passes it into
  * the add_protocol() function, defined below */
 /* NB The pr_domain pointer will be filled in during the
@@ -33,8 +35,19 @@ struct protosw {
 	struct protosw *dom_next;	/* next protosw pointed by the domain */
 };
 
-struct protosw *protocols;
-void add_protocol(struct protosw *pr, int fam);
+
+/*
+ * Values for pr_flags.
+ * PR_ADDR requires PR_ATOMIC;
+ * PR_ADDR and PR_CONNREQUIRED are mutually exclusive.
+ */
+#define PR_ATOMIC       0x01            /* exchange atomic messages only */
+#define PR_ADDR         0x02            /* addresses given with messages */
+#define PR_CONNREQUIRED 0x04            /* connection required by protocol */
+#define PR_WANTRCVD     0x08            /* want PRU_RCVD calls */
+#define PR_RIGHTS       0x10            /* passes capabilities */
+#define PR_ABRTACPTDIS  0x20            /* abort on accept(2) to disconnected
+                                           socket */
 
 /*
  * Defines for the userreq function req field are below.
@@ -78,5 +91,11 @@ void add_protocol(struct protosw *pr, int fam);
 #define PRU_PEEREID             22      /* get local peer eid */
 
 #define PRU_NREQ                22
+
+/* Network stack defines... */
+#ifdef _NETWORK_STACK
+struct protosw *protocols;
+void add_protocol(struct protosw *pr, int fam);
+#endif
 
 #endif /* PROTOSW_H */

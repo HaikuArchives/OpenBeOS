@@ -7,10 +7,10 @@
 #include <image.h>
 
 #include "mbuf.h"
-#include "net/if.h"
 #include "net_misc.h"
-#include "net/route.h"
 #include "sys/socketvar.h"
+#include "net/if.h"
+#include "net/route.h"
 
 #ifndef OBOS_NET_MODULE_H
 #define OBOS_NET_MODULE_H
@@ -43,7 +43,7 @@ typedef struct net_module {
 	int flags;
 
 	int 	(*init) (loaded_net_module *, int *pt);
-	int 	(*dev_init) (ifnet *);
+	int 	(*dev_init) (struct ifnet *);
 	int 	(*input) (struct mbuf *, int);
 	int 	(*output) (struct mbuf *, struct mbuf *, struct route *, int, void *);
 	int     (*resolve) (struct mbuf *, struct rtentry *, struct sockaddr *, void *,

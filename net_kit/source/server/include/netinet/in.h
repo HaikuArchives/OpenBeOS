@@ -1,11 +1,10 @@
 /* in.h */
+#ifndef _NETINET_IN_H_
+#define _NETINET_IN_H_
 
 #include <ByteOrder.h> /* for htonl */
 
 #include "net_misc.h"
-
-#ifndef _NETINET_IN_H_
-#define _NETINET_IN_H_
 
 /* XXX - This really doesn't belong in here... */
 typedef uint32	in_addr_t; 
@@ -66,7 +65,18 @@ struct sockaddr_in {
 
 #define INADDR_ANY              __IPADDR(0x00000000)
 #define INADDR_LOOPBACK         __IPADDR(0x7f000001)
+#define INADDR_BROADCAST        __IPADDR(0xffffffff) /* must be masked */
+
+#define INADDR_UNSPEC_GROUP     __IPADDR(0xe0000000)    /* 224.0.0.0 */
+#define INADDR_ALLHOSTS_GROUP   __IPADDR(0xe0000001)    /* 224.0.0.1 */
+#define INADDR_ALLROUTERS_GROUP __IPADDR(0xe0000002)    /* 224.0.0.2 */
+#define INADDR_MAX_LOCAL_GROUP  __IPADDR(0xe00000ff)    /* 224.0.0.255 */
+
+#define IN_LOOPBACKNET          127                     /* official! */
+
+#ifndef _NETWORK_STACK
 #define INADDR_NONE             __IPADDR(0xffffffff)
+#endif
 
 #define IN_CLASSA(i)            (((uint32)(i) & __IPADDR(0x80000000)) == \
                                  __IPADDR(0x00000000))
@@ -103,9 +113,5 @@ struct sockaddr_in {
 
 #define satosin(sa)     ((struct sockaddr_in *)(sa))
 #define sintosa(sin)    ((struct sockaddr *)(sin))
-
-#ifdef _NETWORK_STACK
-int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp);
-#endif
 
 #endif /* NETINET_IN_H */

@@ -5,7 +5,6 @@
  */
 
 #include "pools.h"
-#include "net/if.h"
  
 #ifndef OBOS_MBUF_H
 #define OBOS_MBUF_H

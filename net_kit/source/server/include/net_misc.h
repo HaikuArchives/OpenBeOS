@@ -53,8 +53,6 @@ typedef	uint32	ipv4_addr;
 void net_server_add_device(ifnet *ifn);
 uint16 in_cksum(struct mbuf *m, int len, int off);
 void local_init(void);
-void insert_local_address(struct sockaddr *sa, ifnet *dev);
-int is_address_local(void *ptr, int len);
 ifnet *interface_for_address(void *data, int len);
 
 /* sockets and in_pcb init */
@@ -65,7 +63,8 @@ int inpcb_init(void);
 void *protocol_address(ifnet *ifa, int family);
 #define paddr(if, fam, t)	((t)(protocol_address(if, fam)))
 
-int compare_sockaddr(struct sockaddr *a, struct sockaddr *b);
+void start_tx_thread(ifnet *dev);
+void start_rx_thread(ifnet *dev);
 
 /* Useful debugging functions */
 void dump_ipv4_addr(char *msg, void *ad);
@@ -74,15 +73,6 @@ void dump_ether_addr(char *msg, void *ma);
 void print_ether_addr(void *ea);
 void dump_buffer(char *buffer, int len);
 void dump_sockaddr(void *ptr);
-
-struct sock_fd {
-        struct sock_fd *next;
-        struct sock_fd *prev;
-        int fd;
-        struct socket *so;
-};
-struct sock_fd *make_sock_fd(void);
-void release_sock_fd(struct sock_fd *sfd);
 
 #ifdef USE_DEBUG_MALLOC
 void *net_malloc(int size);
