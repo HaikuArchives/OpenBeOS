@@ -22,8 +22,10 @@ KERNEL_CCFLAGS += "-fno-builtin -D$(OBOS_TARGET_DEFINE) " ;
 # temporary solution to the GCC path issue. Find the one that applies and
 # remove the comments.
 # Basic R5 beos
-GCC_PATH = /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026
+GCC_PATH = /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 ;
 
+# Newer BeOS versions might prefer this path
+# GCC_PATH = /boot/develop/tools/gnupro/lib/gcc-lib/i586-pc-beos/2.95.3 ;
 # Linux (on mccall's box anyway)
 #GCC_PATH = /usr/lib/gcc-lib/i486-suse-linux/2.95.3 ;
 
