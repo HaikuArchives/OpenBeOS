@@ -42,6 +42,7 @@ BMessage *msg = NULL;
 	Menu = new BPopUpMenu("Select Input");
 	msg = new BMessage(INPUT_CHANGE_TO_FILE);
 	Menu->AddItem(new BMenuItem("From File", msg));
+	
 //	msg = new BMessage(INPUT_CHANGE_TO_BEOS_SYNTH_FILE);
 //	Menu->AddItem(new BMenuItem("From Midi Synth File", msg));
 	msg = new BMessage(INPUT_CHANGE_TO_MIDIPORT);
