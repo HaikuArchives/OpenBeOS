@@ -42,6 +42,10 @@ private:
    BTextView *tvConnectionProfile;
    BTextView *tvCallWaiting;
    BTextView *tvConnection;
+   BTextView *tvTimeOnline;
+   BTextView *tvLIP;
+   BTextView *tvLocalIPAddress;
+   
 };
 
 #endif

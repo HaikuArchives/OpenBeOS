@@ -82,19 +82,34 @@ void DUNWindow::InitWindow(void) {
    
    
    // Displays - <Create a connection profile to continue.> on the main window
-   BRect tvCPLocation(40,43,300,10);
-   tvConnectionProfile = new BTextView(r, "Connection Profile", tvCPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   BRect CPLocation(40,43,300,10);
+   tvConnectionProfile = new BTextView(r, "Connection Profile", CPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvConnectionProfile->SetText("<Create a connection profile to continue.>");
    
    // Displays - Call waiting may be enabled.
-   BRect tvCWLocation(40,113,300,10);
-   tvCallWaiting = new BTextView(r, "Call waiting", tvCWLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   BRect CWLocation(40,113,300,10);
+   tvCallWaiting = new BTextView(r, "Call waiting", CWLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvCallWaiting->SetText("Call waiting may be enabled.");
    
    // Displays - No Connection
-   BRect tvNCLocation(21,168,300,10);
-   tvConnection = new BTextView(r, "No Connection", tvNCLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   BRect NCLocation(21,168,300,10);
+   tvConnection = new BTextView(r, "No Connection", NCLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvConnection->SetText("No Connection");
+   
+   // Display - Time Online ie. 00:00:00
+   BRect TOLocation(249,168,300,10);
+   tvTimeOnline = new BTextView(r, "Time Online", TOLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   tvTimeOnline->SetText("00:00:00");
+   
+   // Display - TextView of Local IP address
+   BRect TextLIPLocation(21,186,300,10);
+   tvLIP = new BTextView(r, "Local IP address", TextLIPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   tvLIP->SetText("Local IP address:");
+   
+   // Display - Local IP address
+   BRect LIPLocation (264,186,300,10);
+   tvLocalIPAddress = new BTextView(r, "None", LIPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   tvLocalIPAddress->SetText("None");
         
    // Outline List View - Fake ones really as we're only using them as an indicator.
    BListItem *conitem;
@@ -142,6 +157,9 @@ void DUNWindow::InitWindow(void) {
    AddChild(tvConnectionProfile);
    AddChild(tvCallWaiting);
    AddChild(tvConnection);
+   AddChild(tvTimeOnline);
+   AddChild(tvLIP);
+   AddChild(tvLocalIPAddress);
    //AddChild(connectionmenufield);
 
      
