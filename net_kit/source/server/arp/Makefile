@@ -7,7 +7,7 @@ LDFLAGS=../_APP_
 all:	$(TARGET)
 
 clean:
-	@if test -e ../modules/$(TARGET); then rm $(TARGET); fi
+	@if test -e ../modules/$(TARGET); then rm ../modules/$(TARGET); fi
 
 $(TARGET):
 	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../modules/$(TARGET) $(TARGET).c

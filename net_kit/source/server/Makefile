@@ -28,9 +28,9 @@ subdirs: $(OBJS)
 	@if test -e _APP_; then rm _APP_; fi
 
 clean:
-	if test -e *.o; then rm *.o; fi
-	if test -e test_mbuf; then rm test_mbuf; fi
-	if test -e net_srv; then rm net_srv; fi
+	@if test -e pools.o; then rm *.o; fi
+	@if test -e test_mbuf; then rm test_mbuf; fi
+	@if test -e net_srv; then rm net_srv; fi
 	@for i in $(SUBDIRS); do \
 		(cd $$i && $(MAKE) clean) || exit 1; \
 	done;
@@ -40,5 +40,5 @@ clean:
 .SUFFIXES: .c .o
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
