@@ -1,6 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=udp
-CFLAGS=-Wall -g -O0 -fPIC -DPIC -nostart
+CFLAGS=-Wall -g -O2 -fPIC -DPIC -nostart
 LDFLAGS=../_APP_
 
 all:	$(TARGET)
