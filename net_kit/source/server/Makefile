@@ -1,12 +1,8 @@
 SUBDIRS=net_server ipv4 udp ethernet icmp loop route raw tcp test 
 KERNELDIRS=net_server ethernet icmp ipv4 loop udp route raw tcp
+USERLAND_DIRS=interface misc protocol
 
-# for profiling, uncomment these next 2 lines.
-# currently broken for the userland stack!
-#CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
-#LDFLAGS=-p
-
-# decides wether to build a kernel or a userland stack
+# decides whether to build a kernel or a userland stack
 ifeq ($(USERLAND), true)
 	## CFLAGS = -O0 -fcheck-memory-usage -D_KERNEL_MODE -g -Wall -DUSER -fPIC -DPIC
 	CFLAGS = -O0 -g -Wall -DUSER -fPIC -DPIC
@@ -19,7 +15,7 @@ endif
 CFLAGS += -D_NETWORK_STACK
 INCLUDES = -I. -I./include -I../driver
 
-all: subdirs userland_server net_srv
+all: directories subdirs userland_server net_srv
 
 test: 
 	@net_srv
@@ -82,6 +78,16 @@ clean:
 	@if test -e net_srv; then rm net_srv; fi
 	@for i in $(SUBDIRS); do \
 		(cd $$i && $(MAKE) clean) || exit 1; \
+	done;
+	@for d in $(USERLAND_DIRS); do \
+		if test -d modules/$$d; then rm -rf modules/$$d; fi; \
+	done;
+
+directories:
+	@for d in $(USERLAND_DIRS); do \
+		if ! test -d modules/$$d; then \
+			mkdir modules/$$d; \
+		fi; \
 	done;
 	
 
