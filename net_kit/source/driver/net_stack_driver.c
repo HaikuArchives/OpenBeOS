@@ -31,7 +31,7 @@ extern void notify_select_event(selectsync * sync, uint32 ref);
 
 
 
-#define SHOW_INSANE_DEBUGGING	(1)
+#define SHOW_INSANE_DEBUGGING	(0)
 #define SERIAL_DEBUGGING		(0)
 /* Force the driver to stay loaded in memory */
 #define STAY_LOADED				(1)	
@@ -356,7 +356,7 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 			/* args->cookie == net_stack_cookie * of the already opened fd to use to the 
 			 * newly accepted socket
 			 */
-			args->rv = core->soaccept(nsc->socket, &ansc->socket, args->addr, &args->addrlen);
+			args->rv = core->soaccept(nsc->socket, &ansc->socket, (void *)args->addr, &args->addrlen);
 			return B_OK;
 		}
 		case NET_STACK_SEND: {
@@ -468,7 +468,9 @@ static status_t net_stack_read(void *cookie,
 #endif
 
 #if STAY_LOADED
+# if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "Calling keep_driver_loaded()...\n");
+# endif
 	keep_driver_loaded();
 #endif
 
