@@ -14,9 +14,39 @@
 #include "protocols.h"
 #include "net_module.h"
 #include "mbuf.h"
+#include "sys/protosw.h"
+#include "sys/domain.h"
 
-loaded_net_module *net_modules;
-int *prot_table;
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#include "net_server/core_module.h"
+#include "net_proto.h"
+
+#define m_free              core->m_free
+#define m_freem             core->m_freem
+#define m_adj               core->m_adj
+#define m_prepend           core->m_prepend
+#define in_pcballoc         core->in_pcballoc
+#define in_pcbconnect       core->in_pcbconnect
+#define in_pcbdisconnect    core->in_pcbdisconnect
+#define in_pcbbind          core->in_pcbbind
+#define soreserve           core->soreserve
+#define sbappendaddr        core->sbappendaddr
+#define in_pcblookup        core->in_pcblookup
+#define sowakeup            core->sowakeup
+#define in_pcbdetach        core->in_pcbdetach
+#define rtfree              core->rtfree
+#define rtalloc             core->rtalloc
+#define ifa_ifwithdstaddr	core->ifa_ifwithdstaddr
+#define ifa_ifwithnet       core->ifa_ifwithnet
+
+static struct core_module_info *core = NULL;
+#define IPV4_MODULE_PATH	"network/protocol/ipv4"
+#else
+#define IPV4_MODULE_PATH	"modules/interface/ipv4"
+#endif
+
+struct protosw *proto[IPPROTO_MAX];
 static struct ipstat	ipstat;
 static uint16 ip_identifier = 0; /* XXX - set this better */
 struct in_ifaddr *in_ifaddr;
@@ -88,9 +118,11 @@ int ipv4_input(struct mbuf *buf, int hdrlen)
 	if (buf->m_len > ip->length)
 		 m_adj(buf, ip->length - buf->m_len);
 
-	if (net_modules[prot_table[ip->prot]].mod->input)
-		net_modules[prot_table[ip->prot]].mod->input(buf, ip->hl * 4);
-
+	if (proto[ip->prot] && proto[ip->prot]->pr_input)
+		return proto[ip->prot]->pr_input(buf, ip->hl * 4);
+	else
+		printf("proto[%d] = %p\n", ip->prot, proto[ip->prot]);
+		
 	return 0; 
 }
 
@@ -190,14 +222,17 @@ bad:
 	goto done;
 }
 
-int ipv4_init(loaded_net_module *ln, int *pt)
+static void ipv4_init(void)
 {
-	net_modules = ln;
-	prot_table = pt;
-
-	return 0;
+	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
+#ifndef _KERNEL_MODE
+	add_protosw(proto, NET_LAYER2);
+#else
+	core->add_protosw(proto, NET_LAYER2);
+#endif
 }
 
+/*
 int ipv4_dev_init(ifnet *dev)
 {
 	struct in_ifaddr *oia;
@@ -225,9 +260,9 @@ int ipv4_dev_init(ifnet *dev)
 	ia = oia;
 
 	if ((ifa = dev->if_addrlist)) {
-		for (; ifa->ifn_next; ifa = ifa->ifn_next)
+		for (; ifa->ifa_next; ifa = ifa->ifa_next)
 			continue;
-		ifa->ifn_next = (struct ifaddr*)ia;
+		ifa->ifa_next = (struct ifaddr*)ia;
 	} else
 		dev->if_addrlist = (struct ifaddr*)ia;
 
@@ -241,7 +276,6 @@ int ipv4_dev_init(ifnet *dev)
 	}
 	ia->ia_ifp = dev;
 
-	/* we now have a structure ready to accept an address, mask and so on... */
 	sin.sin_family = AF_INET;
 	if (dev->if_type == IFT_ETHER)
 		sin.sin_addr.s_addr = htonl(0xc0a80085);
@@ -252,20 +286,80 @@ int ipv4_dev_init(ifnet *dev)
 
 	return in_ifinit(dev, ia, &sin, 1);
 }
+*/
 
-net_module net_module_data = {
-	"IPv4 module",
-	NS_IPV4,
-	NET_LAYER2,
-        0,      /* users can't create sockets in this module! */
-        0,
+struct protosw my_proto = {
+	"IPv4",
+	IPV4_MODULE_PATH,
 	0,
-
+	NULL,
+	IPPROTO_IP,
+	0,
+	NET_LAYER2,
+	
 	&ipv4_init,
-	&ipv4_dev_init,
-	&ipv4_input, 
+	&ipv4_input,
 	&ipv4_output,
-	NULL,	
+	NULL,
+	
+	NULL,
 	NULL
 };
 
+#ifndef _KERNEL_MODE
+
+static void ipv4_protocol_init(void)
+{
+	add_domain(NULL, AF_INET);
+	add_protocol(&my_proto, AF_INET);
+}
+
+struct protocol_info protocol_info = {
+	"IPv4 Module",
+	&ipv4_protocol_init
+};
+
+#else /* kernel setup */
+
+static int k_init(void)
+{
+	if (!core)
+		get_module(CORE_MODULE_PATH, (module_info**)&core);
+
+	core->add_domain(NULL, AF_INET);
+	core->add_protocol(&my_proto, AF_INET);
+	
+	return 0;	
+}
+
+static status_t ipv4_ops(int32 op, ...)
+{
+	dprintf("ipv4_ops:\n");
+	switch (op) {
+		case B_MODULE_INIT:
+			k_init();
+			break;
+		case B_MODULE_UNINIT:
+			break;
+		default:
+			return B_ERROR;
+	}
+	return B_OK;
+}
+
+static struct protocol_module_info my_module = {
+	{
+		IPV4_MODULE_PATH,
+		B_KEEP_LOADED,
+		ipv4_ops
+	},
+	
+	/* ??? */
+};
+
+_EXPORT module_info *modules[] = {
+	(module_info*) &my_module,
+	NULL
+};
+			
+#endif		 
