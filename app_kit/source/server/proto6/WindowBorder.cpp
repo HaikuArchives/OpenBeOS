@@ -33,6 +33,7 @@ printf("WindowBorder()\n");
 	title=new BString(bordertitle);
 	hresizewin=false;
 	vresizewin=false;
+
 }
 
 WindowBorder::~WindowBorder(void)
@@ -313,16 +314,23 @@ printf("WindowBorder(): MoveToBack\n");
 	swin->SetFocus(false);
 	decor->SetFocus(false);
 	decor->Draw();
-printf("MoveToBack: ");
-PrintToStream();
+printf("MoveToBack: \n");
+PrintNode();
+if(parent)
+	parent->PrintNode();
+if(uppersibling)
+	uppersibling->PrintNode();
+if(lowersibling)
+	lowersibling->PrintNode();
 	layerlock->Unlock();
 }
 
 void WindowBorder::MoveToFront(void)
 {
 #ifdef DEBUG_WINBORDER
-printf("WindowBorder(): MoveToFront\n");
+printf("MoveToFront: \n");
 #endif
+
 	swin->SetFocus(true);
 
 	// Move the window to the front by making it the bottom
@@ -334,29 +342,27 @@ printf("WindowBorder(): MoveToFront\n");
 
 	// Make this the bottom child of the parent layer. Can't use
 	// AddChild(), so we'll manipulate the pointers directly. Remember,
-	// we need to change pointers for 3 layers - the parent, the 
-	// uppersibling (if any), and the layer in question
+	// we need to change pointers for 4 layers - the parent, the 
+	// uppersibling (if any), the lowersibling, and the layer in question
+
+	// temporary placeholder while we exchange the data
+	Layer *templayer;
+
+	// tweak parent	
+	templayer=top->bottomchild;
+	top->bottomchild=this;
 
 	// Tweak this layer
 	parent=top;
-	uppersibling=top->bottomchild;
+	uppersibling=templayer;
+	uppersibling->lowersibling=this;
 	lowersibling=NULL;
-	level=parent->level+1;
 
-	// tweak parent	
-	top->bottomchild=this;
-	if(top->topchild==NULL)
-		top->topchild=this;
-	
-	// tweak uppersibling
-	if(uppersibling)
-		uppersibling->lowersibling=this;
-	
+
 	swin->SetFocus(true);
 	decor->SetFocus(true);
 	decor->Draw();
-printf("MoveToFront: ");
-PrintToStream();
+
 	layerlock->Unlock();
 	is_moving_window=true;
 	if(activeborder)
