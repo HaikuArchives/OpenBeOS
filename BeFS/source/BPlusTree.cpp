@@ -422,7 +422,7 @@ BPlusTree::UpdateIterators(off_t offset,uint16 keyIndex,int8 change)
 	// Although every iterator which is affected by this update currently
 	// waits on a semaphore, other iterators could be added/removed at
 	// any time, so we need to protect this loop
-	if (!fIteratorLock.Lock())
+	if (fIteratorLock.Lock() < B_OK)
 		return;
 
 	for (TreeIterator *iterator = fFirstIterator;iterator;iterator = iterator->fNext)
@@ -435,7 +435,7 @@ BPlusTree::UpdateIterators(off_t offset,uint16 keyIndex,int8 change)
 void
 BPlusTree::AddIterator(TreeIterator *iterator)
 {
-	if (!fIteratorLock.Lock())
+	if (fIteratorLock.Lock() < B_OK)
 		return;
 
 	iterator->fNext = fFirstIterator;
@@ -448,7 +448,7 @@ BPlusTree::AddIterator(TreeIterator *iterator)
 void 
 BPlusTree::RemoveIterator(TreeIterator *iterator)
 {
-	if (!fIteratorLock.Lock())
+	if (fIteratorLock.Lock() < B_OK)
 		return;
 
 	// search list for the correct iterator to remove
@@ -1741,8 +1741,9 @@ TreeIterator::Update(off_t offset, uint16 keyIndex, int8 change)
 	if (offset != fCurrentNodeOffset)
 		return;
 
-	// adjust fCurrentKey to point to the same key as before
-	// ToDo: test if this is correct in both cases :-)
+	// Adjust fCurrentKey to point to the same key as before.
+	// Note, that if a key is inserted at the current position
+	// it won't be included in this tree transition.
 	if (keyIndex >= fCurrentKey)
 		fCurrentKey += change;
 

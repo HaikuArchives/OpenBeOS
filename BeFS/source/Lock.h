@@ -60,16 +60,18 @@ class Locker {
 		Locker(Benaphore &lock)
 			: fLock(lock)
 		{
-			lock.Lock();
+			fStatus = lock.Lock();
 		}
 		
 		~Locker()
 		{
-			fLock.Unlock();
+			if (fStatus == B_OK)
+				fLock.Unlock();
 		}
 	
 	private:
 		Benaphore	&fLock;
+		status_t	fStatus;
 };
 
 
@@ -238,16 +240,18 @@ class ReadLocked {
 			:
 			fLock(lock)
 		{
-			lock.Lock();
+			fStatus = lock.Lock();
 		}
 		
 		~ReadLocked()
 		{
-			fLock.Unlock();
+			if (fStatus == B_OK)
+				fLock.Unlock();
 		}
 	
 	private:
 		ReadWriteLock	&fLock;
+		status_t		fStatus;
 };
 
 
@@ -262,7 +266,8 @@ class WriteLocked {
 
 		~WriteLocked()
 		{
-			fLock.UnlockWrite();
+			if (fStatus == B_OK)
+				fLock.UnlockWrite();
 		}
 
 		status_t IsLocked()
@@ -287,7 +292,7 @@ class SimpleLock {
 		{
 		}
 
-		bool Lock(bigtime_t time = 250)
+		status_t Lock(bigtime_t time = 250)
 		{
 			int32 turn = atomic_add(&fLock,1);
 			if (turn != 0) {
@@ -295,9 +300,9 @@ class SimpleLock {
 				while (turn != fLock && tries-- > 0)
 					snooze(time);
 				if (turn != fLock)
-					return false;
+					return B_TIMED_OUT;
 			}
-			return true;
+			return B_OK;
 		}
 
 		void Unlock()
@@ -307,6 +312,32 @@ class SimpleLock {
 
 	private:
 		vint32	fLock;		
+};
+
+// a convenience class to lock the SimpleLock
+
+class SimpleLocker {
+	public:
+		SimpleLocker(SimpleLock &lock)
+			: fLock(lock)
+		{
+			fStatus = lock.Lock();
+		}
+		
+		~SimpleLocker()
+		{
+			if (fStatus == B_OK)
+				fLock.Unlock();
+		}
+
+		status_t IsLocked()
+		{
+			return fStatus;
+		}
+
+	private:
+		SimpleLock	&fLock;
+		status_t	fStatus;
 };
 
 #endif	/* LOCK_H */
