@@ -20,6 +20,7 @@
 /* TODO: add the header once we have min() */
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #if 1
 #include <isa.h>
@@ -336,7 +337,7 @@ static int simple_module_info(module_info *mod, char *file, int offset)
 
 static int recurse_directory(const char *path, const char *match)
 {
-	struct file_stat stat;
+	struct stat stat;
 	int res = 0, file;
 	char *name;
 	
@@ -363,7 +364,7 @@ static int recurse_directory(const char *path, const char *match)
 			sys_close(file);
 			return -1;
 		}
-		if (stat.type == STREAM_TYPE_FILE) {
+		if (S_ISREG(stat.st_mode)) {
 			module_info **hdrs = load_module_file(newpath);
 			int i = 0;
 			if (hdrs) {
@@ -378,7 +379,7 @@ static int recurse_directory(const char *path, const char *match)
 			}
 			if (res != 1)
 				unload_module_file(newpath);
-		} else if (stat.type == STREAM_TYPE_DIR) {
+		} else if (S_ISDIR(stat.st_mode)) {
 			res = recurse_directory(newpath, match);
 		}
 		kfree(newpath);
@@ -652,7 +653,7 @@ static void compose_path( char *path, module_iterator *iter, const char *name, b
 static inline int module_traverse_dir(module_iterator *iter)
 {
 	int res;
-	struct file_stat stat;
+	struct stat stat;
 	char name[SYS_MAX_NAME_LEN];
 	char path[SYS_MAX_PATH_LEN];
 	
@@ -696,21 +697,19 @@ static inline int module_traverse_dir(module_iterator *iter)
 	if ((res = sys_rstat(path, &stat)) != B_NO_ERROR )
 		return res;
 		
-	switch(stat.type) {
-		case STREAM_TYPE_FILE:
-			iter->cur_header = load_module_file(path);
-			iter->cur_path = (char*)kstrdup(path);			
-			if (!iter->cur_header)
-				return EINVAL;
-			return B_NO_ERROR;
-
-		case STREAM_TYPE_DIR:
-			return module_enter_dir(iter, path);
-
-		default:
-			SHOW_FLOW( 3, "entry %s not a file nor a directory - ignored\n", name );
-			return B_NO_ERROR;
+	if (S_ISREG(stat.st_mode)) {
+		iter->cur_header = load_module_file(path);
+		iter->cur_path = (char*)kstrdup(path);			
+		if (!iter->cur_header)
+			return EINVAL;
+		return B_NO_ERROR;
 	}
+	
+	if (S_ISDIR(stat.st_mode))
+		return module_enter_dir(iter, path);
+
+	SHOW_FLOW( 3, "entry %s not a file nor a directory - ignored\n", name );
+	return B_NO_ERROR;
 }
 
 /* module_enter_base_path

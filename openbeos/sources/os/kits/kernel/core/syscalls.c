@@ -18,7 +18,8 @@
 #include <resource.h>
 #include <fd.h>
 #include <sysctl.h>
-#include <socket.h>
+#include <sys/socket.h>
+#include <ksocket.h>
 #include <sys/ioccom.h>
 
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
@@ -89,10 +90,13 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_rename((const char *)arg0, (const char *)arg1);
 			break;
 		case SYSCALL_RSTAT:
-			*call_ret = user_rstat((const char *)arg0, (struct file_stat *)arg1);
+			*call_ret = user_rstat((const char *)arg0, (struct stat *)arg1);
+			break;
+		case SYSCALL_FSTAT:
+			*call_ret = user_fstat((int)arg0, (struct stat*)arg1);
 			break;
 		case SYSCALL_WSTAT:
-			*call_ret = user_wstat((const char *)arg0, (struct file_stat *)arg1, (int)arg2);
+			*call_ret = user_wstat((const char *)arg0, (struct stat *)arg1, (int)arg2);
 			break;
 		case SYSCALL_SYSTEM_TIME:
 			*call_ret = system_time();

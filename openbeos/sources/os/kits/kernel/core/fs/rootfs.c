@@ -10,6 +10,7 @@
 #include <lock.h>
 #include <vm.h>
 #include <Errors.h>
+#include <sys/stat.h>
 
 #include <rootfs.h>
 
@@ -712,21 +713,23 @@ err:
 	return err;
 }
 
-static int rootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
+static int rootfs_rstat(fs_cookie _fs, fs_vnode _v, struct stat *stat)
 {
 	struct rootfs_vnode *v = _v;
 
 	TRACE(("rootfs_rstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 
+//dprintf("rootfs_rstat\n");
+
 	// stream exists, but we know to return size 0, since we can only hold directories
-	stat->vnid = v->id;
-	stat->size = 0;
-	stat->type = STREAM_TYPE_DIR;
+	stat->st_ino = v->id;
+	stat->st_size = 0;
+	stat->st_mode = (S_IFDIR | DEFFILEMODE);
 
 	return 0;
 }
 
-static int rootfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
+static int rootfs_wstat(fs_cookie _fs, fs_vnode _v, struct stat *stat, int stat_mask)
 {
 #if ROOTFS_TRACE
 	struct rootfs *fs = _fs;

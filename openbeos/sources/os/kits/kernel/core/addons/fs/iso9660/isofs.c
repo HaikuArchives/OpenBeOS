@@ -842,7 +842,7 @@ static ssize_t isofs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
+static int isofs_rstat(fs_cookie _fs, fs_vnode _v, struct stat *stat)
 {
 	struct isofs *fs = _fs;
 	struct isofs_vnode *v = _v;
@@ -852,15 +852,16 @@ static int isofs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 
 	mutex_lock(&fs->lock);
 
-	stat->vnid = v->id;
-	stat->type = v->stream.type;
+	stat->st_ino  = v->id;
+	stat->st_size = 0;
 
 	switch(v->stream.type) {
 		case STREAM_TYPE_DIR:
-			stat->size = 0;
+			stat->st_mode = (S_IFDIR | ALLPERMS);
 			break;
 		case STREAM_TYPE_FILE:
-			stat->size = v->stream.data_len;
+			stat->st_mode = (S_IFREG | S_IRUSR | S_IRGRP | S_IROTH);
+			stat->st_size = v->stream.data_len;
 			break;
 		default:
 			err = EINVAL;
@@ -874,7 +875,7 @@ static int isofs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
+static int isofs_wstat(fs_cookie _fs, fs_vnode _v, struct stat *stat, int stat_mask)
 {
 	return EROFS;
 }

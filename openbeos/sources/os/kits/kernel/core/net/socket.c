@@ -16,36 +16,33 @@
 #include <pools.h>
 #include <debug.h>
 #include <fd.h>
-#include <socket.h>
+#include <sys/socketvar.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <ksocket.h>
 
 /* Static global objects... */
 static pool_ctl *spool;
 static benaphore sockets_lock;
 
-/* This is a hack just to get us building :) */
-struct socket {
-	int so_state;
-};
-
 /* XXX - temporary... these go into socket.h */
 int sockets_init(kernel_args *ka);
 
-#define sys_socket(a,b,c)    socket(a,b,c, true)
-
-int socreate(int, struct socket **, int, int);
 void sofree(struct socket *);
 
 static ssize_t so_read(struct file_descriptor *, void *, off_t, size_t *);
 static ssize_t so_write(struct file_descriptor *, const void *, off_t, size_t *);
 static int so_close(struct file_descriptor *,int, struct ioctx *);
-//static int so_ioctl(struct file_descriptor *, ulong, void *, size_t);
+static int so_ioctl(struct file_descriptor *, ulong, void *, size_t);
+static int so_stat(struct file_descriptor *fd, struct stat *stat);
 
 
 static struct fd_ops socket_functions = {
 	"socket",
 	so_read,
 	so_write,
-	NULL,
+	so_ioctl,
+	so_stat,
 	so_close,
 	NULL
 };
@@ -133,6 +130,32 @@ static int so_close(struct file_descriptor *f, int fd, struct ioctx *io)
 	put_fd(f);
 
 	return 0;
+}
+
+static int so_stat(struct file_descriptor *fd, struct stat *stat)
+{
+	stat->st_size = 0;
+	stat->st_mode = S_IFSOCK;
+	
+	return 0;
+}
+
+static int so_ioctl(struct file_descriptor *f, ulong cmd, void *data, size_t len)
+{
+	struct socket *so = (struct socket *)f->cookie;
+	
+	switch(cmd) {
+		/* handle the common cases that don't need us to call another fucntion */
+		case FIONBIO:
+			if (*(int*)data)
+				so->so_state |= SS_NBIO;
+			else
+				so->so_state &= ~SS_NBIO;
+			return 0;
+		/* add FIOASYNC, FIONREAD, */
+	}
+
+	return EINVAL;
 }
 
 void sofree(struct socket *so)

@@ -7,5 +7,5 @@ KernelObjects
 	<$(SOURCE_GRIST)>net.c
 	<$(SOURCE_GRIST)>socket.c
 	: 
-	-D_KERNEL_ -fno-pic
+	-D_KERNEL_MODE -fno-pic
 	;

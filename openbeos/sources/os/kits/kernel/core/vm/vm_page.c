@@ -156,12 +156,12 @@ static int pageout_daemon()
 		/* write the page out to it's backing store */
 		vecs->num = 1;
 		vecs->total_len = PAGE_SIZE;
-		vm_get_physical_page(page->ppn * PAGE_SIZE, (addr *)&vecs->vec[0].start, PHYSICAL_PAGE_CAN_WAIT);
-		vecs->vec[0].len = PAGE_SIZE;
+		vm_get_physical_page(page->ppn * PAGE_SIZE, (addr *)&vecs->vec[0].iov_base, PHYSICAL_PAGE_CAN_WAIT);
+		vecs->vec[0].iov_len = PAGE_SIZE;
 
 		err = page->cache_ref->cache->store->ops->write(page->cache_ref->cache->store, page->offset, vecs);
 
-		vm_put_physical_page((addr)vecs->vec[0].start);
+		vm_put_physical_page((addr)vecs->vec[0].iov_base);
 
 		state = int_disable_interrupts();
 		acquire_spinlock(&page_lock);

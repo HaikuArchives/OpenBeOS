@@ -12,6 +12,7 @@
 #include <string.h>
 #include <Errors.h>
 #include <fd.h>
+#include <sys/stat.h>
 
 #include <pci_bus.h>
 
@@ -86,7 +87,7 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 	ssize_t len;
 	int fd;
 	int err;
-	struct file_stat stat;
+	struct stat stat;
 
 	while((len = sys_read(base_fd, &leaf, -1, sizeof(leaf))) > 0) {
 		// reset the base_path to the original string passed in
@@ -101,14 +102,14 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 			sys_close(fd);
 			continue;
 		}
-		if(stat.type == STREAM_TYPE_DIR) {
+		if(S_ISDIR(stat.st_mode)) {
 			strcat(base_path, "/");	/* XXXfreston... this is unsafe!!!! */
 			err = bus_find_device_recurse(n, base_path, fd, vendor_ids, device_ids);
 			sys_close(fd);
 			if(err >= 0)
 				return err;
 			continue;
-		} else if(stat.type == STREAM_TYPE_DEVICE) {
+		} else if(S_ISREG(stat.st_mode)) {
 			// we opened the device
 			// XXX assumes PCI
 			struct pci_cfg cfg;

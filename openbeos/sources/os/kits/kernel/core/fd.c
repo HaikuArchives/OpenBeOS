@@ -12,6 +12,7 @@
 #include <Errors.h>
 #include <debug.h>
 #include <memheap.h>
+#include <string.h>
 
 #define CHECK_USER_ADDR(x) \
 	if ((addr)(x) >= KERNEL_BASE && (addr)(x) <= KERNEL_TOP) \
@@ -107,7 +108,8 @@ ssize_t user_read(int fd, void *buf, off_t pos, size_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
 	ssize_t rv = 0;	
-	dprintf("user_read: fd %d\n", fd);
+
+//	dprintf("user_read: fd %d\n", fd);
 	
 	if(!f)
 		return EBADF;
@@ -130,7 +132,7 @@ ssize_t user_write(int fd, const void *buf, off_t pos, size_t len)
 	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
 	ssize_t rv = 0;
 	
-	dprintf("user_write: fd %d, %ld bytes\n", fd, len);
+//	dprintf("user_write: fd %d, %ld bytes\n", fd, len);
 	
 	if(!f)
 		return EBADF;
@@ -176,6 +178,32 @@ int user_close(int fd)
 	if (f->ops->fd_close)
 		return f->ops->fd_close(f, fd, ic);
 	else
+		return EOPNOTSUPP;
+}
+
+int user_fstat(int fd, struct stat *stat)
+{
+	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
+	struct stat kstat;
+	ssize_t rv = 0;
+	int cpo = 0;
+
+	if(!f)
+		return EBADF;
+
+	/* This is a user_function, so abort if we have a kernel address */
+	CHECK_USER_ADDR(stat)
+			
+	if (f->ops->fd_stat) {
+		rv = f->ops->fd_stat(f, &kstat);
+		if (rv < 0)
+			return rv;
+		cpo = user_memcpy(stat, &kstat, sizeof(*stat));
+		if (cpo < 0)
+			return cpo;
+
+		return rv;
+	} else
 		return EOPNOTSUPP;
 }
 

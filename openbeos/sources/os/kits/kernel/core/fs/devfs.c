@@ -14,6 +14,7 @@
 #include <vm.h>
 #include <Errors.h>
 #include <drivers.h>
+#include <sys/stat.h>
 
 #include <arch/cpu.h>
 #include <devfs.h>
@@ -140,7 +141,7 @@ static int devfs_delete_vnode(struct devfs *fs, struct devfs_vnode *v, bool forc
 	// cant delete it if it's in a directory or is a directory
 	// and has children
 	if(!force_delete && ((v->stream.type == STREAM_TYPE_DIR && v->stream.u.dir.dir_head != NULL) || v->dir_next != NULL)) {
-		return ERR_NOT_ALLOWED;
+		return EPERM;
 	}
 
 	// remove it from the global hash table
@@ -214,7 +215,7 @@ static struct devfs_vnode *devfs_find_in_dir(struct devfs_vnode *dir, const char
 static int devfs_insert_in_dir(struct devfs_vnode *dir, struct devfs_vnode *v)
 {
 	if(dir->stream.type != STREAM_TYPE_DIR)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	v->dir_next = dir->stream.u.dir.dir_head;
 	dir->stream.u.dir.dir_head = v;
@@ -259,7 +260,7 @@ static int devfs_get_partition_info( struct devfs *fs, struct devfs_vnode *v,
 	struct devfs_part_map *part_map = v->stream.u.dev.part_map;
 	
 	if( v->stream.type != STREAM_TYPE_DEVICE || part_map == NULL )
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 
 	info->offset = part_map->offset;
 	info->size = part_map->size;
@@ -286,20 +287,20 @@ static int devfs_set_partition( struct devfs *fs, struct devfs_vnode *v,
 	info = *(devfs_partition_info *)buf;
 	
 	if( v->stream.type != STREAM_TYPE_DEVICE )
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 		
 	// we don't support nested partitions
 	if( v->stream.u.dev.part_map )
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 	
 	// reduce checks to a minimum - things like negative offsets could be useful
 	if( info.size < 0)
-		return ERR_INVALID_ARGS;
+		return EINVAL;
 				
 	// create partition map
 	part_map = kmalloc( sizeof( *part_map ));
 	if( !part_map )
-		return ERR_NO_MEMORY;
+		return ENOMEM;
 		
 	part_map->offset = info.offset;
 	part_map->size = info.size;
@@ -313,7 +314,7 @@ static int devfs_set_partition( struct devfs *fs, struct devfs_vnode *v,
 	
 	// you cannot change a partition once set
 	if( devfs_find_in_dir( v->parent, part_name )) {
-		res = ERR_INVALID_ARGS;
+		res = EINVAL;
 		goto err1;
 	}
 	
@@ -328,7 +329,7 @@ static int devfs_set_partition( struct devfs *fs, struct devfs_vnode *v,
 	part_node = devfs_create_vnode( fs, part_name );
 	
 	if( part_node == NULL ) {
-		res = ERR_NO_MEMORY;
+		res = ENOMEM;
 		goto err2;
 	}
 
@@ -377,7 +378,7 @@ static int devfs_mount(fs_cookie *_fs, fs_id id, const char *devfs, void *args, 
 
 	fs = kmalloc(sizeof(struct devfs));
 	if(fs == NULL) {
-		err = ERR_NO_MEMORY;
+		err = ENOMEM;
 		goto err;
 	}
 
@@ -392,14 +393,14 @@ static int devfs_mount(fs_cookie *_fs, fs_id id, const char *devfs, void *args, 
 	fs->vnode_list_hash = hash_init(BOOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		&devfs_vnode_compare_func, &devfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
-		err = ERR_NO_MEMORY;
+		err = ENOMEM;
 		goto err2;
 	}
 
 	// create a vnode
 	v = devfs_create_vnode(fs, "");
 	if(v == NULL) {
-		err = ERR_NO_MEMORY;
+		err = ENOMEM;
 		goto err3;
 	}
 
@@ -472,7 +473,7 @@ static int devfs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_id
 	TRACE(("devfs_lookup: entry dir 0x%x, name '%s'\n", dir, name));
 
 	if(dir->stream.type != STREAM_TYPE_DIR)
-		return ERR_VFS_NOT_DIR;
+		return ENOTDIR;
 
 	mutex_lock(&fs->lock);
 
@@ -573,7 +574,7 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 
 	cookie = kmalloc(sizeof(struct devfs_cookie));
 	if(cookie == NULL) {
-		err = ERR_NO_MEMORY;
+		err = ENOMEM;
 		goto err;
 	}
 
@@ -665,7 +666,7 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 			}
 
 			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > *len) {
-				err = ERR_VFS_INSUFFICIENT_BUF;
+				err = ENOBUFS;
 				goto err;
 			}
 
@@ -697,7 +698,7 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 			break;
 		}
 		default:
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 	}
 err:
 	if(is_locked)
@@ -875,7 +876,7 @@ static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 */
 static int devfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
 {
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
 static int devfs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
@@ -895,7 +896,7 @@ static int devfs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 	
 	// you can unlink partitions only
 	if( v->stream.type != STREAM_TYPE_DEVICE || !v->stream.u.dev.part_map ) {
-		res = ERR_VFS_READONLY_FS;
+		res = EROFS;
 		goto err;
 	}
 
@@ -913,24 +914,31 @@ err:
 
 static int devfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
 {
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
-static int devfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
+static int devfs_rstat(fs_cookie _fs, fs_vnode _v, struct stat *stat)
 {
 	struct devfs_vnode *v = _v;
 
 	TRACE(("devfs_rstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 
-	stat->vnid = v->id;
-	stat->type = v->stream.type;
-	stat->size = 0;
+//dprintf("devfs_rstat\n");
+
+	stat->st_ino = v->id;
+	stat->st_mode = DEFFILEMODE;
+	stat->st_size = 0;
+	
+	if (v->stream.type == STREAM_TYPE_DIR)
+		stat->st_mode |= S_IFDIR;
+	else
+		stat->st_mode |= S_IFCHR;
 
 	return 0;
 }
 
 
-static int devfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
+static int devfs_wstat(fs_cookie _fs, fs_vnode _v, struct stat *stat, int stat_mask)
 {
 #if DEVFS_TRACE
 	struct devfs_vnode *v = _v;
@@ -938,7 +946,7 @@ static int devfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int s
 	TRACE(("devfs_wstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 #endif
 	// cannot change anything
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static struct fs_calls devfs_calls = {
@@ -1044,7 +1052,7 @@ int devfs_publish_device(const char *path, void *ident, device_hooks *calls)
 		} else {
 			v = devfs_create_vnode(thedevfs, &temp[last]);
 			if(!v) {
-				err = ERR_NO_MEMORY;
+				err = ENOMEM;
 				goto err;
 			}
 		}

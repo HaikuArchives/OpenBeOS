@@ -11,6 +11,7 @@
 #include <vm.h>
 #include <Errors.h>
 #include <arch/cpu.h>
+#include <sys/stat.h>
 
 #include <bootfs.h>
 
@@ -544,7 +545,7 @@ static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 	struct bootfs_cookie *cookie;
 	int err = 0;
 	int start = 0;
-
+dprintf("bootfs_open: \n");
 	TRACE(("bootfs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
 
 	if(st != STREAM_TYPE_ANY && st != v->stream.type) {
@@ -783,23 +784,23 @@ static ssize_t bootfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 
 	for(i=0; i<vecs->num; i++) {
 		if(pos >= v->stream.u.file.len) {
-			memset(vecs->vec[i].start, 0, vecs->vec[i].len);
-			pos += vecs->vec[i].len;
+			memset(vecs->vec[i].iov_base, 0, vecs->vec[i].iov_len);
+			pos += vecs->vec[i].iov_len;
 		} else {
 			unsigned int copy_len;
 
-			copy_len = min(vecs->vec[i].len, v->stream.u.file.len - pos);
+			copy_len = min(vecs->vec[i].iov_len, v->stream.u.file.len - pos);
 
-			memcpy(vecs->vec[i].start, v->stream.u.file.start + pos, copy_len);
+			memcpy(vecs->vec[i].iov_base, v->stream.u.file.start + pos, copy_len);
 
-			if(copy_len < vecs->vec[i].len)
-				memset((char *)vecs->vec[i].start + copy_len, 0, vecs->vec[i].len - copy_len);
+			if(copy_len < vecs->vec[i].iov_len)
+				memset((char *)vecs->vec[i].iov_base + copy_len, 0, vecs->vec[i].iov_len - copy_len);
 
-			pos += vecs->vec[i].len;
+			pos += vecs->vec[i].iov_len;
 		}
 	}
 
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static ssize_t bootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
@@ -827,25 +828,31 @@ static int bootfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, f
 	return ERR_VFS_READONLY_FS;
 }
 
-static int bootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
+static int bootfs_rstat(fs_cookie _fs, fs_vnode _v, struct stat *stat)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
 	int err = 0;
-
+//dprintf("bootfs_rstat:\n");
 	TRACE(("bootfs_rstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 
 	mutex_lock(&fs->lock);
 
-	stat->vnid = v->id;
-	stat->type = v->stream.type;
+    /* Read Only File System */
+    /** XXX - no pretense at access control, just tell people
+     *        they can read it :)
+     */
+	stat->st_mode = (S_IRUSR | S_IRGRP | S_IROTH);
+	stat->st_size = 0;
+	stat->st_ino = v->id;
 
 	switch(v->stream.type) {
 		case STREAM_TYPE_DIR:
-			stat->size = 0;
+			stat->st_mode |= S_IFDIR;
 			break;
 		case STREAM_TYPE_FILE:
-			stat->size = v->stream.u.file.len;
+			stat->st_size = v->stream.u.file.len;
+			stat->st_mode |= S_IFREG;
 			break;
 		default:
 			err = EINVAL;
@@ -859,7 +866,7 @@ err:
 }
 
 
-static int bootfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
+static int bootfs_wstat(fs_cookie _fs, fs_vnode _v, struct stat *stat, int stat_mask)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
