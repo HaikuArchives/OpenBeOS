@@ -84,20 +84,28 @@ void m_freem(struct mbuf *m)
 struct mbuf *m_prepend(struct mbuf *m, int len)
 {
 	struct mbuf *mnew;
-	MGET(mnew, m->m_type);
-	if (!mnew) {
-		/* free chain */
-		return NULL;
-	}
 
-	if (m->m_flags & M_PKTHDR)
-		M_MOVE_PKTHDR(mnew, m);
-	mnew->m_next = m;
-	m = mnew;
-	if (len < MHLEN)
-		MH_ALIGN(m, len);
-	m->m_len = len;
-	return (m);
+	if (M_LEADINGSPACE(m) >= len) {
+		m->m_data -= len;
+		m->m_len += len;
+	} else {
+		MGET(mnew, m->m_type);
+		if (!mnew) {
+			/* free chain */
+			return NULL;
+		}
+		if (m->m_flags & M_PKTHDR)
+			M_MOVE_PKTHDR(mnew, m);
+		mnew->m_next = m;
+		m = mnew;
+		if (len < MHLEN)
+			MH_ALIGN(m, len);
+		m->m_len = len;
+	}
+	if (m && m->m_flags & M_PKTHDR)
+		m->m_pkthdr.len += len;
+
+	return m;
 }
 
 
