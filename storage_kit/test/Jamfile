@@ -60,8 +60,8 @@ LinkLibraries Test.StorageKit.OpenBeOS :
 	$(TOP)/cppunit/cppunit.a 
 ;
 LinkSharedLibs Test.StorageKit.OpenBeOS :
-	$(TOP)/source/lib/libbeadapter.so
-	$(TOP)/source/lib/libstorage.so
+	$(TOP)/test/lib/libbeadapter.so
+	$(TOP)/test/lib/libstorage.so
 ;
 LinkSharedOSLibs Test.StorageKit.OpenBeOS :
 	/boot/develop/lib/x86/libstdc++.r4.so
