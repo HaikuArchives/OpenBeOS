@@ -9,17 +9,58 @@
 #include "sys/sockio.h"
 #include "netinet/in_var.h"
 #include "net/route.h"
+#include "sys/protosw.h"
 
 extern ifnet *devices;
 extern int ndevs;
 #define IFA_ROUTE	RTF_UP
 
-/* XXX - Yuck! This is a hack to allow us to have access to a "primary"
- * in_ifaddr structure that we can use. This is needed as we don't currently
- * have a way of getting access to teh list kept in the ipv4 module.
- */
-struct in_ifaddr *primary_addr = NULL;
+int ifioctl(struct socket *so, int cmd, caddr_t data)
+{
+	struct ifnet *ifp;
+	struct ifreq *ifr;
+	int error;
+	
+	if (cmd == SIOCGIFCONF)
+		return 0;//(ifconf(cmd, data));
 
+	ifr = (struct ifreq*) data;
+	ifp = ifunit(ifr->ifr_name);
+	if (ifp == NULL)
+		return ENXIO;
+
+	switch(cmd) {
+		case SIOCGIFFLAGS:
+			ifr->ifr_flags = ifp->flags;
+			break;
+		case SIOCGIFMETRIC:
+			/* get interface metric */
+			ifr->ifr_metric = ifp->if_metric;
+			break;
+		case SIOCGIFMTU:
+			/* get interface MTU */
+			ifr->ifr_mtu = ifp->if_mtu;
+			break;
+		case SIOCSIFFLAGS:
+			ifp->flags = ifr->ifr_flags;
+			/* restart card with new settings... */
+			break;
+		case SIOCSIFMETRIC:
+			/* set interface metric */
+			ifp->if_metric = ifr->ifr_metric;
+			break;
+		default:
+			if (so->so_proto == NULL)
+				return EOPNOTSUPP;
+			return (*so->so_proto->pr_userreq)(so, PRU_CONTROL,
+				(struct mbuf*)cmd, (struct mbuf*)data, (struct mbuf*)ifp);
+				
+	}
+	
+	
+	return 0;
+}
+	
 struct ifnet *ifunit(char *name)
 {
 	ifnet *d = devices;
@@ -77,7 +118,7 @@ void *protocol_address(struct ifnet *ifa, int family)
 {
 	struct ifaddr *a = ifa->if_addrlist;
 
-	for (; a != NULL; a = a->ifn_next) {
+	for (; a != NULL; a = a->ifa_next) {
 		if (a->ifa_addr->sa_family == family) {
 			if (family == AF_INET) {
 				return &((struct sockaddr_in*)a->ifa_addr)->sin_addr;
@@ -105,72 +146,6 @@ void in_socktrim(struct sockaddr_in *ap)
 		}
 }
 
-int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
-		int scrub)
-{
-	uint32 i = sin->sin_addr.s_addr;
-	struct sockaddr_in oldsin;
-	int error;
-	int flags = RTF_UP;
-
-	oldsin = ia->ia_addr;
-	ia->ia_addr = *sin;
-
-	if (dev && dev->ioctl) {
-		error = (*dev->ioctl)(dev, SIOCSIFADDR, (caddr_t)ia);
-		if (error) {
-			ia->ia_addr = oldsin;
-			return error;
-		}
-	}
-
-	if (scrub) {
-		ia->ia_ifa.ifa_addr = (struct sockaddr*)&oldsin;
-		//in_ifscrub(ifp, ia);
-		ia->ia_ifa.ifa_addr = (struct sockaddr*)&ia->ia_addr;
-	}
-
-	if (IN_CLASSA(i))
-		ia->ia_netmask = IN_CLASSA_NET;
-	else if (IN_CLASSB(i))
-		ia->ia_netmask = IN_CLASSB_NET;
-	else
-		ia->ia_netmask = IN_CLASSC_NET;
-
-	if (ia->ia_subnetmask == 0) {
-		ia->ia_subnetmask = ia->ia_netmask;
-		ia->ia_sockmask.sin_addr.s_addr = ia->ia_subnetmask;
-	} else
-		ia->ia_netmask &= ia->ia_subnetmask;
-	ia->ia_net = i & ia->ia_netmask;
-	ia->ia_subnet = i & ia->ia_subnetmask;
-	in_socktrim(&ia->ia_sockmask);
-
-	ia->ia_ifa.ifa_metric = dev->if_metric;
-	if (dev->flags & IFF_BROADCAST) {
-		ia->ia_broadaddr.sin_addr.s_addr = htonl(ia->ia_net | ~ia->ia_subnetmask);
-		ia->ia_netbroadcast.s_addr = htonl(ia->ia_net | ~ia->ia_netmask);
-	} else if (dev->flags & IFF_LOOPBACK) {
-		ia->ia_ifa.ifa_dstaddr = ia->ia_ifa.ifa_addr;
-		flags |= RTF_HOST;
-	} else if (dev->flags & IFF_POINTOPOINT) {
-		if (ia->ia_dstaddr.sin_family != AF_INET)
-			return 0;
-		flags |= RTF_HOST;
-	}
-
-	error = rtinit(&(ia->ia_ifa), (int)RTM_ADD, flags);
-	if (error == 0)
-		ia->ia_flags |= IFA_ROUTE;
-
-	/* XXX - Multicast address list */
-
-	if (!primary_addr)
-		primary_addr = ia;
-
-	return error;
-}
-
 #define equal(a1, a2) \
   (memcmp((caddr_t)(a1), (caddr_t)(a2), ((struct sockaddr *)(a1))->sa_len) == 0)
 
@@ -190,7 +165,7 @@ struct ifaddr *ifaof_ifpforaddr(struct sockaddr *addr,
         if (af >= AF_MAX)
                 return (NULL);
 
-        for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifn_next) {
+        for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                 if (ifa->ifa_addr->sa_family != af)
                         continue;
                 ifa_maybe = ifa;
@@ -220,7 +195,7 @@ struct ifaddr *ifa_ifwithdstaddr(struct sockaddr *addr)
 
         for (ifp = devices; ifp != NULL; ifp = ifp->next)
             if (ifp->flags & IFF_POINTOPOINT)
-                for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifn_next) {
+                for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                         if (ifa->ifa_addr->sa_family != addr->sa_family ||
                             ifa->ifa_dstaddr == NULL)
                                 continue;
@@ -236,7 +211,7 @@ struct ifaddr *ifa_ifwithaddr(struct sockaddr *addr)
 	struct ifaddr *ifa;
 
         for (ifp = devices; ifp != NULL; ifp = ifp->next)
-            for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifn_next) {
+            for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                 if (ifa->ifa_addr->sa_family != addr->sa_family)
                         continue;
                 if (equal(addr, ifa->ifa_addr))
@@ -270,7 +245,7 @@ struct ifaddr *ifa_ifwithnet(struct sockaddr *addr)
 			return NULL;
 	}
         for (ifp = devices; ifp != NULL; ifp = ifp->next)
-                for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifn_next) {
+                for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                         register char *cp, *cp2, *cp3;
 
                         if (ifa->ifa_addr->sa_family != af ||
