@@ -149,7 +149,7 @@ int64
 BTrackReader::CountFrames(void)
 {
 	CALLED();
-	return 0;
+	return fMediaTrack ? fMediaTrack->CountFrames() : 0;
 }
 
 const media_raw_audio_format & 
