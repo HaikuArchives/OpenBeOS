@@ -39,7 +39,7 @@ static int ndevs = 0;
 
 struct local_address {
         struct local_address *next;
-        struct sockaddr *addr;
+        struct sockaddr addr;
         ifnet *ifn;
 };
 
@@ -342,14 +342,15 @@ void insert_local_address(struct sockaddr *sa, ifnet *dev)
 {
         if (!nhash_get(localhash, sa->sa_data, sa->sa_len)) {
                 struct local_address *la = malloc(sizeof(struct local_address));
-                printf("inserting local address\n");
-                nhash_set(localhash, sa->sa_data, sa->sa_len, la);
-                la->addr = sa;
+                la->addr = *sa;
                 la->ifn = dev;
+		nhash_set(localhash, &la->addr.sa_data, la->addr.sa_len, la);
                 if (local_addrs)
                         la->next = local_addrs;
                 local_addrs = la;
-        }
+		if (!in_ifaddr && dev->type == IFD_ETHERNET && sa->sa_family == AF_INET)
+			in_ifaddr = &la->addr;
+	}
 }
 
 int is_address_local(void *ptr, int len)
@@ -406,14 +407,18 @@ int main(int argc, char **argv)
 {
 	status_t status;
 	ifnet *d;
-	int s;
+	int s, rv, i;
 	struct sockaddr_in sin;
+	char data[100];
+	char *bigbuf = malloc(sizeof(char) * 1024);
 
 	mbinit();
 	localhash = nhash_make();
 
 	sockets_init();
 	inpcb_init();
+
+	in_ifaddr = NULL;
 
 	printf( "Net Server Test App!\n"
 		"====================\n\n");
@@ -447,10 +452,33 @@ int main(int argc, char **argv)
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
-	sin.sin_port = 7777;
+	sin.sin_port = htons(7777);
 	sin.sin_addr.s_addr = htonl(INADDR_ANY);
-	printf("bind = %d\n", bind(s, (struct sockaddr*)&sin, sizeof(sin)));
 
+	if ((rv = bind(s, (struct sockaddr*)&sin, sizeof(sin))))
+		printf("Call to bind failed. [%s]\n", strerror(rv));
+	else 
+		printf("Call to bind was OK: port = %d\n", ntohs(sin.sin_port));
+
+
+	for (i=0;i<100;i+=2) {
+		data[i] = 0xde;
+		data[i+1] = 0xad;
+	}
+
+	sin.sin_addr.s_addr = htonl(0xc0a8006e);
+	rv = sendto(s, data, 100, 0, (struct sockaddr*)&sin, sizeof(sin));
+	if (rv < 0)
+		printf("sendto gave %d [%s]\n", rv, strerror(rv));
+	else
+		printf("WooHoo - we sent %d bytes!\n", rv);
+
+	rv = recvfrom(s, bigbuf, 1024, 0, (struct sockaddr*)&sin, sizeof(sin));
+        if (rv < 0)
+                printf("recvfrom gave %d [%s]\n", rv, strerror(rv));
+        else
+                printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
+ 	
 	d = devices;
 	while (d) {
 		if (d->rx_thread  && d->type == IFD_ETHERNET) {
