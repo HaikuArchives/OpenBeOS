@@ -51,7 +51,7 @@ extern "C" {
 
 
 /**
- * Class
+ * Class PrinterDriver
  */
 class PrinterDriver {
 public:
