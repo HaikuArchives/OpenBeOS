@@ -39,6 +39,9 @@ static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices *
 static net_module *arp = NULL; /* shortcut to arp module */
 #endif
 
+int ether_dev_start(ifnet *dev);
+int ether_dev_stop(ifnet *dev);
+
 #define DRIVER_DIRECTORY "/dev/net"
 
 uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
@@ -60,20 +63,25 @@ static void open_device(char *driver, char *devno)
 	struct ether_device *ed = malloc(sizeof(struct ether_device));
 	char path[PATH_MAX];
 	int dev;
-	status_t status;
+	status_t status = -1;
 
 	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
-printf("open_device: %s\n", path);
+	printf("open_device: %s\n", path);
 	dev = open(path, O_RDWR);
-	if (dev < B_OK)
-		goto badcard;
-
-	status = ioctl(dev, IF_INIT, NULL, 0);
-	if (status < B_OK) {
-		close(dev);
+	if (dev < B_OK) {
+		printf("Unable to open %s, %ld [%s]\n", path,
+			status, strerror(status));
 		goto badcard;
 	}
 
+	status = ioctl(dev, IF_INIT, NULL, 0);
+	if (status < B_OK) {
+		printf("Unable to init card %s, %ld [%s]\n", path,
+			status, strerror(status));
+		close(dev);
+		goto badcard;
+	}
+	
 	/* Hmm, this should probably actually be done by the device drivers
 	 * but we're not changing the device drivers so we'll do it here.
 	 * The type we set is just the generic IFT_ETHER but it could be
@@ -90,10 +98,7 @@ printf("open_device: %s\n", path);
 	ed->ed_if_addrlist = NULL;
 	ed->ed_hdrlen = 14;
 	ed->ed_addrlen = 6;
-
-#ifdef _KERNEL_MODE
-	ed->ed_start = ether_dev_start;
-#endif
+	ed->ed_start = &ether_dev_start;
 
 	ed->next = NULL; /* we get added at the end of the list */
 	/* we maintain our own list of devices as well as the global list */
@@ -113,7 +118,6 @@ printf("open_device: %s\n", path);
 
 #ifndef _KERNEL_MODE
 	net_server_add_device(&ed->ifn);
-	atomic_add(&net_modules[prot_table[NS_ETHER]].ref_count, 1);
 #else
 	core->add_device(&ed->ifn);
 #endif
@@ -150,16 +154,6 @@ static void find_devices(void)
 		if (strcmp(de->d_name, "ether") == 0)
 			continue;
                         
-		/* XXX - This is a really horrible hack :)
-		 * Basically if you have a 3Com card remove these 
-		 * next 2 lines or you won't get a card detected.
-		 * I've done it so I can continue remote working :)
-		 */	   
-		if (strcmp(de->d_name, "ec9xx") == 0) {
-			printf("find_devices: skipping ec9xx directory...\n");
-			continue;
-		}
-
 		sprintf(path, "%s/%s", DRIVER_DIRECTORY, de->d_name);
 		driv_dir = opendir(path);
 		if (!driv_dir) {
@@ -171,9 +165,10 @@ static void find_devices(void)
 				if (strcmp(dre->d_name, ".") == 0 ||
 					strcmp(dre->d_name, "..") == 0)
 					continue;
-                        		    
+                       		    
 				open_device(de->d_name, dre->d_name);
 			}
+			printf("closing the directory...\n");
 			closedir(driv_dir);
 		}
 	}
@@ -216,17 +211,12 @@ static void dump_ether_details(struct mbuf *buf)
 #endif
 
 /* what should the return value be? */
-/* should probably also pass a structure that identifies the interface */
-int ether_input(struct mbuf *buf, int hdrlen)
+int ether_input(struct mbuf *buf)
 {
 	ethernet_header *eth = mtod(buf, ethernet_header *);
 	int plen = ntohs(eth->type); /* remove one call to ntohs() */
 	int len = sizeof(ethernet_header);
 	int fproto = convert_proto(plen);
-
-#ifdef _KERNEL_MODE
-	dprintf("ether_input!!!\n");
-#endif
 
 	if (memcmp((void*)&eth->dest, (void*)&ether_bcast, 6) == 0)
 		buf->m_flags |= M_BCAST;
@@ -247,15 +237,17 @@ int ether_input(struct mbuf *buf, int hdrlen)
 	core->m_adj(buf, len);
 #endif
 	
+/*
 	if (fproto >= 0 && net_modules[prot_table[fproto]].mod->input) {
 		return net_modules[prot_table[fproto]].mod->input(buf, 0);
 	} else {
 		printf("Failed to determine a valid protocol fproto = %d\n", fproto);
 	}
-
+*/
 #ifndef _KERNEL_MODE
 	m_freem(buf);
 #else
+	dprintf("input routines not called...\n");
 	core->m_freem(buf);
 #endif
 
@@ -412,20 +404,8 @@ printf("setting ether_device ip address to %08x\n", ntohl(IA_SIN(dev)->sin_addr.
 }
 */
 
-int ether_init(loaded_net_module *ln, int *pt)
-{
-	net_modules = ln;
-	prot_table = pt;
 
-	find_devices();
-	return 0;
-}
-
-#ifndef _KERNEL_MODE
-int ether_dev_init(ifnet *dev)
-#else
 int ether_dev_start(ifnet *dev)
-#endif
 {
 	status_t status;
 	int on = 1;
@@ -436,8 +416,6 @@ int ether_dev_start(ifnet *dev)
  	size_t mem_sz, namelen;
 	size_t masklen; /* smaller of the 2 */
 	size_t socklen; /* the sockaddr_dl with link level address */ 
-
-	printf("ether_dev_start: %s%d\n", dev->name, dev->unit);
 
 	if (!ed || dev->if_type != IFT_ETHER)
 		return -1;
@@ -486,7 +464,7 @@ int ether_dev_start(ifnet *dev)
 	sdl->sdl_index = dev->id;
 	sdl->sdl_type = dev->if_type;
 	ifa->ifn = dev;
-	ifa->ifn_next = dev->if_addrlist;
+	ifa->ifa_next = dev->if_addrlist;
 	ifa->ifa_addr = (struct sockaddr*)sdl;
 	dev->if_addrlist = ifa;
 
@@ -501,7 +479,7 @@ int ether_dev_start(ifnet *dev)
 	dev->input = &ether_input;
 	dev->output = &ether_output;
 #ifdef _KERNEL_MODE
-	dev->stop = ether_dev_stop;
+	dev->stop = &ether_dev_stop;
 #endif
 	/* XXX - ioctl needs to be added back in... */
 	
@@ -515,27 +493,21 @@ int ether_dev_start(ifnet *dev)
 
 	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_BROADCAST|IFF_MULTICAST);
 	dev->if_mtu = ETHERMTU;
-
-	dprintf("device %s has been setup!\n", dev->if_name);
-		
+	
 	return 0;
 }
 
 #ifndef _KERNEL_MODE
-net_module net_module_data = {
-	"Ethernet/802.x module",
-	NS_ETHER,
-	NET_LAYER1,
-	0,	/* users can't create sockets in this module! */
-	0,
-	0,
 
-	&ether_init,
-	&ether_dev_init,
-	&ether_input,
-	NULL, /* this is called via the ifnet structure... */
-	NULL,
-	NULL,
+static int ether_init(void)
+{
+	find_devices();
+	return 0;
+}
+
+struct device_info device_info = {
+	"ethernet mdoule",
+	&ether_init
 };
 
 #else

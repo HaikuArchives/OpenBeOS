@@ -1,15 +1,17 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ethernet
+TGT=../modules/interface/$(TARGET)
 LOBJS=../_APP_
+OBJS=ethernet.o
 
-KCFLAGS=-nostart -no-fpic -D_KERNEL_MODE
+KCFLAGS=-Wall -no-fpic -D_KERNEL_MODE
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 KLOBJS=
 
 all:    $(TARGET)
 
 clean:
-	@if test -e ../modules/$(TARGET); then rm ../modules/$(TARGET); fi
+	@if test -e $(TGT); then rm $(TGT) *.o; fi
 	@if test -e $(TARGET); then rm $(TARGET) *.o; fi
 
 kernel:
@@ -19,5 +21,8 @@ kernel:
 installkernel:  kernel
 	cp ethernet /boot/home/config/add-ons/kernel/network/interface/ethernet
 
-$(TARGET):
-	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../modules/$(TARGET) $(TARGET).c
+$(TARGET): $(OBJS)
+	$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+
+.c.o:
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
