@@ -12,13 +12,15 @@
 #include <stdio.h>
 
 //#define DEBUG_LAYERS
-#define DEBUG_REDRAW
 
+// Global used for thread control
+BLocker *dirtylock;
 
 Layer::Layer(BRect rect, const char *layername, ServerWindow *srvwin,
 	int32 viewflags, int32 token)
 {
 	if(rect.IsValid())
+		// frame is in parent layer's coordinates
 		frame=rect;
 	else
 	{
@@ -37,7 +39,7 @@ printf("Invalid BRect: "); rect.PrintToStream();
 	topchild=NULL;
 	bottomchild=NULL;
 
-	visible=new BRegion(frame);
+	visible=new BRegion(Bounds());
 	invalid=NULL;
 
 	serverwin=srvwin;
@@ -49,10 +51,6 @@ printf("Invalid BRect: "); rect.PrintToStream();
 	hidecount=0;
 	is_dirty=false;
 	is_updating=false;
-
-	// This bad boy exists so that the redraw thread isn't a CPU hog
-	dirty_sem=create_sem(1,"rootlayer sem");
-	acquire_sem(dirty_sem);
 
 	// Because this is not part of the tree, level is negative (thus, irrelevant)
 	level=0;
@@ -78,16 +76,14 @@ Layer::Layer(BRect rect, const char *layername)
 	topchild=NULL;
 	bottomchild=NULL;
 
-	visible=new BRegion(frame);
+	visible=new BRegion(Bounds());
 	invalid=NULL;
 
 	serverwin=NULL;
 	flags=0;
 	hidecount=0;
 	is_dirty=false;
-	// This bad boy exists so that the redraw thread isn't a CPU hog
-	dirty_sem=create_sem(1,"rootlayer sem");
-	acquire_sem(dirty_sem);
+
 	level=0;
 
 	view_token=-1;
@@ -106,29 +102,51 @@ Layer::~Layer(void)
 	if(invalid!=NULL)
 		delete invalid;
 	delete name;
-	delete_sem(dirty_sem);
 }
 
 void Layer::AddChild(Layer *layer)
 {
 	// Adds a layer to the top of the layer's children
 #ifdef DEBUG_LAYERS
-	cout << "AddChild " << layer->name->String() << endl;
+printf("AddChild %s\n",layer->name->String());
 #endif
-	
+
 	if(layer->parent!=NULL)
 	{
-		cout << "ERROR: AddChild(): View already has parent\n" << flush;
+		printf("ERROR: AddChild(): View already has a parent\n");
 		return;
 	}
 	layer->parent=this;
+	if(layer->visible && layer->hidecount==0 && visible)
+	{
+		// Technically, we could safely take the address of ConvertToParent(BRegion)
+		// but we don't just to avoid a compiler nag
+		
+		BRegion *reg=new BRegion(layer->ConvertToParent(layer->visible));
+		visible->Exclude(reg);
+		delete reg;
+	}
 
 	if(topchild!=NULL)
 	{
 		layer->lowersibling=topchild;
 		topchild->uppersibling=layer;
+		if(layer->frame.Intersects(layer->lowersibling->frame))
+		{
+			if(layer->lowersibling->visible && layer->lowersibling->hidecount==0)
+			{
+				BRegion *reg=new BRegion(ConvertToParent(layer->visible));
+				BRegion *reg2=new BRegion(layer->lowersibling->ConvertFromParent(reg));
+				delete reg;
+				layer->lowersibling->visible->Exclude(reg2);
+				delete reg2;
+			}
+		}
 	}
+	else
+		bottomchild=layer;
 	topchild=layer;
+	layer->level=level+1;
 }
 
 void Layer::RemoveChild(Layer *layer)
@@ -147,6 +165,13 @@ void Layer::RemoveChild(Layer *layer)
 	{
 		cout << "ERROR: RemoveChild(): View is not a child of this layer\n" << flush;
 		return;
+	}
+
+	if(hidecount==0 && layer->visible && layer->parent->visible)
+	{
+		BRegion *reg=new BRegion(ConvertToParent(visible));
+		layer->parent->visible->Include(reg);
+		delete reg;
 	}
 
 	// Take care of parent
@@ -215,6 +240,16 @@ Layer *Layer::GetChildAt(BPoint pt, bool recursive=false)
 		}
 	}
 	return NULL;
+}
+
+BRect Layer::Bounds(void)
+{
+	return frame.OffsetToCopy(0,0);
+}
+
+BRect Layer::Frame(void)
+{
+	return frame;
 }
 
 void Layer::SetLevel(int32 value)
@@ -302,8 +337,7 @@ void Layer::Invalidate(BRegion region)
 			r=region.RectAt(i);
 			if(frame.Intersects(r))
 				invalid->Include(r & frame);
-		}	
-		release_sem(dirty_sem);
+		}
 #ifdef DEBUG_REDRAW
 printf("Invalidate: "); invalid->PrintToStream();
 #endif
@@ -315,30 +349,25 @@ printf("Invalidate: "); invalid->PrintToStream();
 
 void Layer::Invalidate(BRect rect)
 {
-#ifdef DEBUG_REDRAW
-printf("Invalidate: ");rect.PrintToStream();
-#endif
 	// Make our own section dirty and pass it on to any children, if necessary....
 	// YES, WE ARE SHARING DIRT! Mudpies anyone? :D
-	is_dirty=true;
 
-	// Crap. Not sure if we need to convert the invalid BRect to our own space
-	// because I'm not sure who will be calling this...	I *think* we need to convert
-	// it from the parent's space.
-	if(invalid)
-		invalid->Include(rect);
-	else
-		invalid=new BRegion(rect);
-	release_sem(dirty_sem);
+	if(Bounds().Contains(rect))
+	{
+		is_dirty=true;
+		if(invalid)
+			invalid->Include(rect);
+		else
+			invalid=new BRegion(rect);
 	
-	Layer *lay;
-	for(lay=topchild;lay!=NULL; lay=lay->lowersibling)
-		lay->Invalidate(rect);
+	}	
+	for(Layer *lay=topchild;lay!=NULL; lay=lay->lowersibling)
+		lay->Invalidate(ConvertFromParent(rect));
 }
 
 void Layer::RequestDraw(void)
 {
-	if(visible==NULL || hidecount>0)
+/*	if(visible==NULL || hidecount>0)
 		return;
 
 	if(serverwin)
@@ -349,19 +378,21 @@ void Layer::RequestDraw(void)
 		delete invalid;
 		invalid=NULL;
 	}
+
 	is_dirty=false;
 	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
 	{
 		if(lay->IsDirty())
 			lay->RequestDraw();
 	}
-	acquire_sem(dirty_sem);
+*/
 }
 
 bool Layer::IsDirty(void) const
 {
 	return is_dirty;
 }
+
 void Layer::ShowLayer(void)
 {
 	if(hidecount==0)
@@ -370,7 +401,9 @@ void Layer::ShowLayer(void)
 	hidecount--;
 	if(hidecount==0)
 	{
-		parent->is_dirty=true;
+		BRegion *reg=new BRegion(ConvertToParent(visible));
+		parent->visible->Exclude(reg);
+		delete reg;
 		is_dirty=true;
 	}
 	
@@ -383,6 +416,9 @@ void Layer::HideLayer(void)
 {
 	if(hidecount==0)
 	{
+		BRegion *reg=new BRegion(ConvertToParent(visible));
+		parent->visible->Include(reg);
+		delete reg;
 		parent->is_dirty=true;
 		is_dirty=true;
 	}
@@ -407,17 +443,24 @@ uint32 Layer::CountChildren(void)
 
 void Layer::MoveBy(float x, float y)
 {
-	if(visible)
-		visible->OffsetBy(x,y);
-
 	BRect oldframe(frame);
 	frame.OffsetBy(x,y);
 
-	if(!invalid)
-		invalid=new BRegion(oldframe);
-	else
-		invalid->Include(oldframe);
-	invalid->Include(frame);
+	if(parent)
+	{
+		if(!invalid)
+			parent->invalid=new BRegion(oldframe);
+		else
+			parent->invalid->Include(oldframe);
+	}
+
+	// Don't do this -- visible region is now relative to its layer
+//	if(visible)
+//		visible->OffsetBy(x,y);
+
+	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+		lay->MoveBy(x,y);
+	Invalidate(frame);
 }
 
 void Layer::PrintToStream(void)
@@ -443,10 +486,93 @@ void Layer::PrintToStream(void)
 		printf("Bottom child: %s (%p)\n",bottomchild->name->String(), bottomchild);
 	else
 		printf("Bottom child: NULL\n");
+	printf("Frame: "); frame.PrintToStream();
 	printf("Token: %ld\nLevel: %ld\n",view_token, level);
 	printf("Hide count: %u\n",hidecount);
-	printf("Has invalid areas = %s\n",(is_dirty)?"yes":"no");
+	if(invalid)
+	{
+		printf("Invalid Areas: "); invalid->PrintToStream();
+	}
+	else
+		printf("Invalid Areas: NULL\n");
+	if(visible)
+	{
+		printf("Visible Areas: "); visible->PrintToStream();
+	}
+	else
+		printf("Visible Areas: NULL\n");
 	printf("Is updating = %s\n",(is_updating)?"yes":"no");
+}
+
+BRect Layer::ConvertToParent(BRect rect)
+{
+	return (rect.OffsetByCopy(frame.LeftTop()));
+}
+
+BPoint Layer::ConvertToParent(BPoint point)
+{
+	float x=point.x + frame.left,
+		y=point.y+frame.top;
+	return (BPoint(x,y));
+}
+
+BRegion Layer::ConvertToParent(BRegion *reg)
+{
+	BRegion newreg;
+	for(int32 i=0; i<reg->CountRects();i++)
+		newreg.Include(ConvertToParent(reg->RectAt(i)));
+	return BRegion(newreg);
+}
+
+BRect Layer::ConvertFromParent(BRect rect)
+{
+	return (rect.OffsetByCopy(frame.left*-1,frame.top*-1));
+}
+
+BPoint Layer::ConvertFromParent(BPoint point)
+{
+	return ( point-frame.LeftTop());
+}
+
+BRegion Layer::ConvertFromParent(BRegion *reg)
+{
+	BRegion newreg;
+	for(int32 i=0; i<reg->CountRects();i++)
+		newreg.Include(ConvertFromParent(reg->RectAt(i)));
+	return BRegion(newreg);
+}
+
+BRect Layer::ConvertToTop(BRect rect)
+{
+	if (parent!=NULL)
+		return(parent->ConvertToTop(rect.OffsetByCopy(frame.LeftTop())) );
+	else
+		return(rect);
+}
+
+BPoint Layer::ConvertToTop(BPoint point)
+{
+	if (parent!=NULL)
+		return(parent->ConvertToTop(point + frame.LeftTop()) );
+	else
+		return(point);
+}
+
+BRect Layer::ConvertFromTop(BRect rect)
+{
+	if (parent!=NULL)
+		return(parent->ConvertToTop(rect.OffsetByCopy(frame.LeftTop().x*-1,
+			frame.LeftTop().y*-1)) );
+	else
+		return(rect);
+}
+
+BPoint Layer::ConvertFromTop(BPoint point)
+{
+	if (parent!=NULL)
+		return(parent->ConvertToTop(point - frame.LeftTop()) );
+	else
+		return(point);
 }
 
 RootLayer::RootLayer(BRect rect, const char *layername, ServerWindow *srvwin, 
@@ -472,12 +598,13 @@ void RootLayer::SetVisible(bool is_visible)
 	if(visible!=is_visible)
 	{
 		visible=is_visible;
-		if(visible)
+/*		if(visible)
 		{
 			updater_id=spawn_thread(UpdaterThread,name->String(),B_NORMAL_PRIORITY,this);
 			if(updater_id!=B_NO_MORE_THREADS && updater_id!=B_NO_MEMORY)
 				resume_thread(updater_id);
 		}
+*/
 	}
 }
 
@@ -503,7 +630,6 @@ int32 RootLayer::UpdaterThread(void *data)
 
 		if(root->IsDirty())
 		{
-			acquire_sem(root->dirty_sem);
 			layerlock->Lock();
 			root->RequestDraw();
 			layerlock->Unlock();
@@ -513,7 +639,7 @@ int32 RootLayer::UpdaterThread(void *data)
 
 void RootLayer::RequestDraw(void)
 {
-	if(!invalid)
+/*	if(!invalid)
 		return;
 	
 	DisplayDriver *driver=get_gfxdriver();
@@ -530,6 +656,7 @@ void RootLayer::RequestDraw(void)
 		if(lay->IsDirty())
 			lay->RequestDraw();
 	}
+*/
 }
 
 void RootLayer::SetColor(rgb_color col)
