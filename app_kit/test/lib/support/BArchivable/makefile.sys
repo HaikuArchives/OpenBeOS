@@ -34,6 +34,7 @@ SRCS=	main.cpp						\
 		BArchivableTester.cpp			\
 		ValidateInstantiationTester.cpp	\
 		InstantiateObjectTester.cpp		\
+		FindInstantiationFuncTester.cpp	\
 		LocalTestObject.cpp
 
 #	specify the resource files to use

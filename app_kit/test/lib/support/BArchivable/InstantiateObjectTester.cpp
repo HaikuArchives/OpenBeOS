@@ -295,6 +295,7 @@ void TInstantiateObjectTester::Case9()
 					name of remotely-defined class and string field "add_on"
 					containing invalid signature
 	@param id		Valid image_id pointer
+	@requires		RemoteObjectDef add-on must be built and accessible
 	@results		Returns NULL.
 					*id is set to B_BAD_VALUE (no image loaded).
 					errno is set to B_LAUNCH_FAILED_APP_NOT_FOUND.

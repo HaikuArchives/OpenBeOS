@@ -14,29 +14,34 @@
 #include "BArchivableTester.h"
 #include "ValidateInstantiationTester.h"
 #include "InstantiateObjectTester.h"
+#include "FindInstantiationFuncTester.h"
 
 // Local Defines ---------------------------------------------------------------
 
 // Globals ---------------------------------------------------------------------
 
-class TArchivingTests : TestCase
+//------------------------------------------------------------------------------
+//	Function:	addonTestFunc()
+//	Descr:		This function is called by the test application to
+//				get a pointer to the test to run.
+//------------------------------------------------------------------------------
+
+Test* addonTestFunc()
 {
-	public:
-		TArchivingTests(std::string name) : TestCase(name) {;}
-		static Test* Suite()
-		{
-			TestSuite* tests = new TestSuite;
-//			tests->addTest(TBArchivableTestCase::Suite());
-			tests->addTest(TValidateInstantiationTest::Suite());
-			tests->addTest(TInstantiateObjectTester::Suite());
-			return tests;
-		}
-};
+	TestSuite* tests = new TestSuite("BArchivable");
+
+	tests->addTest(TBArchivableTestCase::Suite());
+	tests->addTest(TValidateInstantiationTest::Suite());
+	tests->addTest(TInstantiateObjectTester::Suite());
+	tests->addTest(TFindInstantiationFuncTester::Suite());
+
+	return tests;
+}
 
 int main()
 {
-	TestSuite* tests = new TestSuite;
-	tests->addTest(TArchivingTests::Suite());
+	Test* tests = addonTestFunc();
+
 	TextTestResult Result;
 	tests->run(&Result);
 	cout << Result << endl;

@@ -40,6 +40,13 @@
 		 << ") " << "in " << __PRETTY_FUNCTION__ << endl
 
 // Globals ---------------------------------------------------------------------
+extern const char* gInvalidClassName;
+extern const char* gInvalidSig;
+extern const char* gLocalClassName;
+extern const char* gLocalSig;
+extern const char* gRemoteClassName;
+extern const char* gRemoteSig;
+extern const char* gValidSig;
 
 
 #endif	//COMMON_H

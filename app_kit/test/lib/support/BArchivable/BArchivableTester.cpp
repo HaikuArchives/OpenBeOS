@@ -3,6 +3,9 @@
 //
 /**
 	BArchivable tests
+	@note	InvalidArchiveShallow() and InvalidArchiveDeep() are not tested
+			against the original implementation as it does not handle NULL
+			parameters gracefully.
  */
 //------------------------------------------------------------------------------
 
@@ -102,9 +105,13 @@ Test* TBArchivableTestCase::Suite()
 {
 	TestSuite* SuiteOfTests = new TestSuite;
 	ADD_TEST(SuiteOfTests, TBArchivableTestCase, TestPerform);
+#if !defined(SYSTEM_TEST)
 	ADD_TEST(SuiteOfTests, TBArchivableTestCase, InvalidArchiveShallow);
+#endif
 	ADD_TEST(SuiteOfTests, TBArchivableTestCase, ValidArchiveShallow);
+#if !defined(SYSTEM_TEST)
 	ADD_TEST(SuiteOfTests, TBArchivableTestCase, InvalidArchiveDeep);
+#endif
 	ADD_TEST(SuiteOfTests, TBArchivableTestCase, ValidArchiveDeep);
 
 	return SuiteOfTests;

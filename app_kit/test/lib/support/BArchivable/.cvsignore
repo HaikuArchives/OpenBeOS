@@ -1,1 +1,4 @@
 obj.x86
+BArchivableSystemTester
+BArchivableTester
+*.dbg
