@@ -127,9 +127,9 @@ class Inode : public CachedBlock {
 		
 		off_t Size() const { return Node()->data.size; }
 
-		block_run BlockRun() const { return Node()->inode_num; }
-		block_run Parent() const { return Node()->parent; }
-		block_run Attributes() const { return Node()->attributes; }
+		block_run &BlockRun() const { return Node()->inode_num; }
+		block_run &Parent() const { return Node()->parent; }
+		block_run &Attributes() const { return Node()->attributes; }
 		Volume *GetVolume() const { return fVolume; }
 
 		status_t InitCheck();
@@ -166,7 +166,7 @@ class Inode : public CachedBlock {
 
 		// create/remove inodes
 		status_t Remove(const char *name, bool isDirectory = false);
-		static status_t Create(Inode *directory,const char *name,int32 mode,int omode,off_t *id);
+		static status_t Create(Volume *volume,Inode *parent,const char *name,int32 mode,int omode,off_t *id);
 
 	private:
 		status_t GrowStream(Transaction *transaction,off_t size);

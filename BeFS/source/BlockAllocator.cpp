@@ -59,6 +59,7 @@ class AllocationGroup {
 		AllocationGroup();
 
 		void AddFreeRange(int32 start,int32 blocks);
+		bool IsFull() const { return fIsFull; }
 
 		int32 fNumBits;
 		int32 fStart;
@@ -168,6 +169,8 @@ AllocationGroup::AddFreeRange(int32 start, int32 blocks)
 		fLargest = blocks;
 		fLargestFirst = start;
 	}
+	if (blocks)
+		fIsFull = false;
 }
 
 
@@ -269,8 +272,15 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 	// satisfy the minimal requirement
 	uint16 numBlocks = maximum;
 
-	for (int32 i = 0;i < fNumGroups * 2;i++,group++) {
+	for (int32 i = 0;i < fNumGroups * 2;i++,group++,start = 0) {
 		group = group % fNumGroups;
+
+		if (start >= fGroups[group].fNumBits || fGroups[group].IsFull())
+			continue;
+
+//		printf("group %ld: num = %ld, start = %ld, firstFree = %ld, largest = %ld, largestFirst = %ld, isFull = %s\n",
+//				group,fGroups[group].fNumBits,fGroups[group].fStart,fGroups[group].fFirstFree,
+//				fGroups[group].fLargest,fGroups[group].fLargestFirst,fGroups[group].fIsFull);
 
 		if (i >= fNumGroups)
 			numBlocks = minimum;
@@ -323,8 +333,11 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 				if (numBlocks < maximum)
 					numBlocks = range;
 				// update first free block in group (doesn't have to be free)
-				if (rangeStart == fGroups[group].fFirstFree)
+				if (rangeStart == fGroups[group].fFirstFree) {
 					fGroups[group].fFirstFree = rangeStart + numBlocks;
+					if (fGroups[group].fFirstFree >= fGroups[group].fNumBits)
+						fGroups[group].fIsFull = true;
+				}
 
 				if (block != rangeBlock) {
 					// allocate the part that's in the current block
@@ -360,7 +373,7 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 
 
 status_t 
-BlockAllocator::AllocateForInode(Transaction *transaction,Inode *parent, mode_t type, block_run &run)
+BlockAllocator::AllocateForInode(Transaction *transaction,const block_run *parent, mode_t type, block_run &run)
 {
 	// apply some allocation policies here (AllocateBlocks() will break them
 	// if necessary) - we will start with those described in Dominic Giampaolo's
@@ -368,7 +381,7 @@ BlockAllocator::AllocateForInode(Transaction *transaction,Inode *parent, mode_t 
 	
 	// files are going in the same allocation group as its parent, sub-directories
 	// will be inserted 8 allocation groups after the one of the parent
-	uint16 group = parent->BlockRun().allocation_group;
+	uint16 group = parent->allocation_group;
 	if (type & S_DIRECTORY)
 		group += 8;
 
@@ -377,7 +390,7 @@ BlockAllocator::AllocateForInode(Transaction *transaction,Inode *parent, mode_t 
 
 
 status_t 
-BlockAllocator::Allocate(Transaction *transaction,Inode *inode, uint16 numBlocks, block_run &run, uint16 minimum)
+BlockAllocator::Allocate(Transaction *transaction,const Inode *inode, uint16 numBlocks, block_run &run, uint16 minimum)
 {
 	// apply some allocation policies here (AllocateBlocks() will break them
 	// if necessary)
@@ -397,7 +410,7 @@ BlockAllocator::Allocate(Transaction *transaction,Inode *inode, uint16 numBlocks
 					break;
 			
 			group = data->direct[last].allocation_group;
-			start = data->direct[last].start;
+			start = data->direct[last].start + data->direct[last].length;
 		}
 	} else if (inode->IsDirectory()) {
 		// directory data will go in the same allocation group as the inode is in

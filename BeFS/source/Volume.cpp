@@ -159,3 +159,10 @@ Volume::Unmount()
 	return 0;
 }
 
+
+status_t 
+Volume::AllocateForInode(Transaction *transaction, const Inode *parent, mode_t type, block_run &run)
+{
+	return fBlockAllocator.AllocateForInode(transaction,&parent->BlockRun(),type,run);
+}
+

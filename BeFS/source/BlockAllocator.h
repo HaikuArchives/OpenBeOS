@@ -25,8 +25,8 @@ class BlockAllocator {
 
 		status_t Initialize();
 
-		status_t AllocateForInode(Transaction *transaction,Inode *parent,mode_t type,block_run &run);
-		status_t Allocate(Transaction *transaction,Inode *inode,uint16 numBlocks,block_run &run,uint16 minimum = 1);
+		status_t AllocateForInode(Transaction *transaction,const block_run *parent,mode_t type,block_run &run);
+		status_t Allocate(Transaction *transaction,const Inode *inode,uint16 numBlocks,block_run &run,uint16 minimum = 1);
 		status_t Free(Transaction *transaction,block_run &run);
 
 		status_t AllocateBlocks(Transaction *transaction,int32 group, uint16 start, uint16 numBlocks, uint16 minimum, block_run &run);

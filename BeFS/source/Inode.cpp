@@ -399,7 +399,9 @@ Inode::CreateAttribute(Transaction *transaction,char *name,uint32 type)
 {
 	// do we need to create the attribute directory first?
 	if (Attributes().IsZero()) {
-		status_t status = Inode::Create(NULL,NULL,S_ATTR_DIR,0,NULL);
+		status_t status = Inode::Create(fVolume,this,NULL,S_ATTR_DIR,0,NULL);
+		if (status < B_OK)
+			RETURN_ERROR(B_ERROR);
 	}
 	return B_ERROR;
 }
@@ -601,7 +603,7 @@ Inode::ReadAt(off_t pos, uint8 *buffer, size_t *_length)
 		}
 	}
 
-	// the first block_run is already filled it at this point
+	// the first block_run is already filled in at this point
 	// read the following complete blocks using cached_read(),
 	// the last partial block is read using the CachedBlock class
 
@@ -728,9 +730,9 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 		}
 	}
 	
-	// the first block_run is already filled it at this point
-	// read the following complete blocks using cached_read(),
-	// the last partial block is read using the CachedBlock class
+	// the first block_run is already filled in at this point
+	// write the following complete blocks using cached_write(),
+	// the last partial block is written using the CachedBlock class
 
 	bool partial = false;
 
@@ -809,8 +811,6 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 		|| size < data->max_indirect_range
 		|| size < data->max_double_indirect_range) {
 		data->size = size;
-		PRINT(("enough space in inode preallocated!\n"));
-		
 		return B_OK;
 	}
 
@@ -888,7 +888,11 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 status_t 
 Inode::ShrinkStream(Transaction *transaction, off_t size)
 {
-	return B_ERROR;
+	data_stream *data = &Node()->data;
+
+	// ToDo: implement me for real, please!
+	data->size = size;
+	return B_OK;
 }
 
 
@@ -983,58 +987,62 @@ Inode::Remove(const char *name,bool isDirectory)
 
 
 status_t 
-Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *id)
+Inode::Create(Volume *volume,Inode *parent, const char *name, int32 mode, int omode, off_t *id)
 {
-	Volume *volume = directory->fVolume;
+	block_run parentRun = parent ? parent->BlockRun() : block_run::Run(0,0,0);
+	BPlusTree *tree = NULL;
 
-	BPlusTree *tree;
-	if (directory->GetTree(&tree) != B_OK)
-		RETURN_ERROR(B_BAD_VALUE);
+	if (parent && (mode & S_ATTR_DIR) == 0 && parent->IsDirectory()) {
+		// check if the file already exists in the directory
+		if (parent->GetTree(&tree) != B_OK)
+			RETURN_ERROR(B_BAD_VALUE);
 
-	// does the file already exist?
-	off_t offset;
-	if (tree->Find((uint8 *)name,(uint16)strlen(name),&offset) == B_OK) {
-		// return if the file should be a directory or opened in exclusive mode
-		if (mode & S_DIRECTORY || omode & O_EXCL)
-			return B_FILE_EXISTS;
+		// does the file already exist?
+		off_t offset;
+		if (tree->Find((uint8 *)name,(uint16)strlen(name),&offset) == B_OK) {
+			// return if the file should be a directory or opened in exclusive mode
+			if (mode & S_DIRECTORY || omode & O_EXCL)
+				return B_FILE_EXISTS;
 
-		Vnode vnode(volume,offset);
-		Inode *inode;
-		status_t status = vnode.Get(&inode);
-		if (status < B_OK) {
-			REPORT_ERROR(status);
-			return B_ENTRY_NOT_FOUND;
+			Vnode vnode(volume,offset);
+			Inode *inode;
+			status_t status = vnode.Get(&inode);
+			if (status < B_OK) {
+				REPORT_ERROR(status);
+				return B_ENTRY_NOT_FOUND;
+			}
+
+			// if it's a directory, bail out!
+			if (inode->IsDirectory())
+				return B_IS_A_DIRECTORY;
+
+			// if omode & O_TRUNC, truncate the existing file
+			if (omode & O_TRUNC) {
+				WriteLocked locked(inode->Lock());
+				Transaction transaction(volume,inode->BlockNumber());
+
+				status_t status = inode->SetFileSize(&transaction,0);
+				if (status < B_OK)
+					return status;
+
+				transaction.Done();
+			}
+
+			// only keep the vnode in memory if the vnode_id pointer is provided
+			if (id) {
+				*id = offset;
+				vnode.Keep();
+			}
+			return B_OK;
 		}
-
-		// if it's a directory, bail out!
-		if (inode->IsDirectory())
-			return B_IS_A_DIRECTORY;
-
-		// if omode & O_TRUNC, truncate the existing file
-		if (omode & O_TRUNC) {
-			WriteLocked locked(inode->Lock());
-			Transaction transaction(volume,directory->BlockNumber());
-
-			status_t status = inode->SetFileSize(&transaction,0);
-			if (status < B_OK)
-				return status;
-
-			transaction.Done();
-		}
-
-		// only keep the vnode in memory if the vnode_id pointer is provided
-		if (id) {
-			*id = offset;
-			vnode.Keep();
-		}
-		return B_OK;
-	}
+	} else if (parent && (mode & S_ATTR_DIR) == 0)
+		return B_BAD_VALUE;
 
 	// allocate space for the new inode
-	Transaction transaction(volume,directory->BlockNumber());
+	Transaction transaction(volume,volume->ToBlock(parentRun));
 	block_run run;
 
-	status_t status = volume->AllocateForInode(&transaction,directory,mode,run);
+	status_t status = volume->AllocateForInode(&transaction,&parentRun,mode,run);
 	if (status < B_OK)
 		return status;
 
@@ -1042,20 +1050,24 @@ Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *
 	if (inode == NULL)
 		return B_NO_MEMORY;
 
-	// add name to the parent's B+tree
-	if (tree->Insert(&transaction,name,volume->ToBlock(run)) < B_OK)
+	// add name to the parent's B+tree (if it's a directory of some kind)
+	if (tree && tree->Insert(&transaction,name,volume->ToBlock(run)) < B_OK) {
 		RETURN_ERROR(B_ERROR);
+	} else if (parent && mode & S_ATTR_DIR) {
+		parent->Attributes() = run;
+		parent->WriteBack(&transaction);
+	}
 
-	// update indices - only if it's a regular file!
+	// ToDo: update indices - only if it's a regular file!
 
-	/** fill the bfs_inode structure **/
+	// initialize the on-disk bfs_inode structure 
 
 	bfs_inode *node = inode->Node();
 	memset(node,0,volume->BlockSize());
 
 	node->magic1 = INODE_MAGIC1;
 	node->inode_num = run;
-	node->parent = directory->BlockRun();
+	node->parent = parentRun;
 
 	node->uid = geteuid();
 	node->gid = getegid();
@@ -1067,7 +1079,7 @@ Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *
 
 	node->inode_size = volume->InodeSize();
 
-	if (inode->SetName(&transaction,name) < B_OK)
+	if (tree && inode->SetName(&transaction,name) < B_OK)
 		return B_ERROR;
 
 	// initialize b+tree if it's a directory (and add "." & ".." if it's
@@ -1090,7 +1102,11 @@ Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *
 	if (new_vnode(volume->ID(),inode->ID(),inode) != B_OK)
 		return B_ERROR;
 
-	notify_listener(B_ENTRY_CREATED,volume->ID(),directory->ID(),0,inode->ID(),name);
+	// if there is no parent, we don't have to notify as this will only be the case
+	// for the root node, and the root index directory
+	if (parent)
+		notify_listener(B_ENTRY_CREATED,volume->ID(),parent->ID(),0,inode->ID(),name);
+
 	if (id != NULL)
 		*id = inode->ID();
 	else

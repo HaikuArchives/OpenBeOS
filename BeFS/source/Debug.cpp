@@ -56,7 +56,7 @@ dump_super_block(disk_super_block *superBlock)
 	Print("  inode_size     = %lu\n",superBlock->inode_size);
 	Print("  magic2         = %#08lx (%s) %s\n",superBlock->magic2, get_tupel(superBlock->magic2), (superBlock->magic2 == (int)SUPER_BLOCK_MAGIC2 ? "valid" : "INVALID"));
 	Print("  blocks_per_ag  = %lu\n",superBlock->blocks_per_ag);
-	Print("  ag_shift       = %lu\n",superBlock->ag_shift);
+	Print("  ag_shift       = %lu (%ld bytes)\n",superBlock->ag_shift, 1LL << superBlock->ag_shift);
 	Print("  num_ags        = %lu\n",superBlock->num_ags);
 	Print("  flags          = %#08lx (%s)\n",superBlock->flags, get_tupel(superBlock->flags));
 	dump_block_run("  log_blocks     = ",superBlock->log_blocks);

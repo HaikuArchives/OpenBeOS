@@ -293,12 +293,16 @@ bfs_write_fs_stat(void *_ns, struct fs_info *info, long mask)
 	
 	// ToDo: we need a lock for the super_block here...
 
+	status_t status = B_BAD_VALUE;
+
 	if (mask & WFSSTAT_NAME) {
 		strncpy(superBlock.name,info->volume_name,sizeof(superBlock.name) - 1);
 		superBlock.name[sizeof(superBlock.name) - 1] = '\0';
 		// ToDo: write the super block back!
+
+		status = B_OK;
 	}
-	return B_ERROR;
+	return status;
 }
 
 
@@ -492,10 +496,14 @@ bfs_ioctl(void *_ns, void *_node, void *_cookie, int cmd, void *buffer, size_t b
 			}
 			return B_OK;
 		}
-#endif
 		case 56743:
 			dump_super_block(&volume->SuperBlock());
 			return B_OK;
+		case 56744:
+			if (inode != NULL)
+				dump_inode(inode->Node());
+			return B_OK;
+#endif
 	}
 	return B_BAD_VALUE;
 }
@@ -605,6 +613,7 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 		if (inode->IsDirectory())
 			return B_IS_A_DIRECTORY;
 		else {
+			//inode->SetFileSize();
 			// not yet implemented
 			// update "size" index
 		}
@@ -636,7 +645,9 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 		|| name == NULL || *name == '\0')
 		RETURN_ERROR(B_BAD_VALUE);
 
+	Volume *volume = (Volume *)_ns;
 	Inode *directory = (Inode *)_directory;
+
 	if (!directory->IsDirectory())
 		RETURN_ERROR(B_BAD_TYPE);
 
@@ -644,7 +655,10 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 	if (status < B_OK)
 		RETURN_ERROR(status);
 
-	return Inode::Create(directory,name,S_FILE | (mode & S_IUMSK),omode,vnid);
+	// we need to safe the open mode for O_APPEND in bfs_write()
+	*(int *)_cookie = omode;
+
+	return Inode::Create(volume,directory,name,S_FILE | (mode & S_IUMSK),omode,vnid);
 }
 
 
@@ -727,7 +741,9 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	//
 	// This could greatly speed up continuous reads of big files, especially
 	// in the indirect block section.
-	// It might also be necessary to safe the open mode in the cookie
+
+	// we need to safe the open mode for O_APPEND in bfs_write()
+	*(int *)_cookie = omode;
 
 	return B_OK;
 }
@@ -764,6 +780,11 @@ bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, s
 		*_length = 0;
 		RETURN_ERROR(B_BAD_VALUE);
 	}
+
+	int omode = (int)cookie;
+
+	if (omode & O_APPEND)
+		pos = inode->Size();
 
 	WriteLocked locked(inode->Lock());
 	Transaction transaction(volume,inode->BlockNumber());
@@ -874,7 +895,9 @@ bfs_mkdir(void *_ns, void *_directory, const char *name, int mode)
 		|| name == NULL || *name == '\0')
 		RETURN_ERROR(B_BAD_VALUE);
 
+	Volume *volume = (Volume *)_ns;
 	Inode *directory = (Inode *)_directory;
+
 	if (!directory->IsDirectory())
 		RETURN_ERROR(B_BAD_TYPE);
 
@@ -882,7 +905,7 @@ bfs_mkdir(void *_ns, void *_directory, const char *name, int mode)
 	if (status < B_OK)
 		RETURN_ERROR(status);
 
-	return Inode::Create(directory,name,S_DIRECTORY | (mode & S_IUMSK),0,NULL);
+	return Inode::Create(volume,directory,name,S_DIRECTORY | (mode & S_IUMSK),0,NULL);
 }
 
 
