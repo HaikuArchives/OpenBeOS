@@ -122,14 +122,14 @@ class BPlusTree
 		status_t	Find(uint8 *key, uint16 keyLength, off_t *value);
 
 	private:
-		// needed for searching
+		// needed for searching (utilizing a stack)
 		struct node_and_key
 		{
 			off_t	nodeOffset;
 			uint16	keyIndex;
 		};
-		
-		void		Initialize(int32 nodeSize);
+
+		status_t	Initialize(int32 nodeSize);
 
 		int32		CompareKeys(const void *key1, int keylength1, const void *key2, int keylength2);
 		status_t	FindKey(bplustree_node *node, uint8 *key, uint16 keyLength, uint16 *index = NULL, off_t *next = NULL);
@@ -141,9 +141,6 @@ class BPlusTree
 	private:
 		friend TreeIterator;
 		friend CachedNode;
-
-		status_t ReadNode(off_t nodeoffset,bplustree_node *node,bool check = true);
-		status_t WriteNode(off_t nodeoffset,bplustree_node *node);
 
 		Inode		*fStream;
 		bplustree_header *fHeader;
@@ -183,7 +180,7 @@ class CachedNode
 		}
 
 		void Unset();
-		bplustree_node *SetTo(off_t offset,bool check = false);
+		bplustree_node *SetTo(off_t offset,bool check = true);
 
 		bplustree_node *Node() const { return fNode; }
 

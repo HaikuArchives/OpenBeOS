@@ -19,6 +19,12 @@
 #include <stdio.h>
 
 
+// Node Caching for the BPlusTree class
+//
+// Note: This code will fail if the block size is smaller than the node size!
+// Since BFS supports block sizes of 1024 bytes or greater, and the node size
+// is hard-coded to 1024 bytes, that's not an issue now.
+
 void 
 CachedNode::Unset()
 {
@@ -52,16 +58,18 @@ CachedNode::SetTo(off_t offset,bool check)
 	block_run run;
 	if (fTree->fStream->FindBlockRun(offset,run,fileOffset) == B_OK) {
 		Volume *volume = fTree->fStream->GetVolume();
+
 		int32 blockOffset = (offset - fileOffset) / volume->BlockSize();
 		fBlockNumber = volume->ToBlock(run) + blockOffset;
 
-		// this only works for block_size >= 1024 !!
 		fBlock = (uint8 *)get_block(volume->Device(),fBlockNumber,volume->BlockSize());
 		if (fBlock) {
+			// the node is somewhere in that block... (confusing offset calculation)
 			fNode = (bplustree_node *)(fBlock + offset -
 						(fileOffset + blockOffset * volume->BlockSize()));
+
+			// sanity checks (links, all_key_count)
 			if (check) {
-				// sanity checks (links, all_key_count)
 				bplustree_header *header = fTree->fHeader;
 				if (!header->IsValidLink(fNode->left_link)
 					|| !header->IsValidLink(fNode->right_link)
@@ -83,7 +91,6 @@ BPlusTree::BPlusTree(int32 keyType,int32 nodeSize,bool allowDuplicates)
 	:
 	fStream(NULL),
 	fHeader(NULL)
-//	fCache(MAX_NODES_IN_CACHE)
 {
 	SetTo(keyType,nodeSize,allowDuplicates);
 }
@@ -93,7 +100,6 @@ BPlusTree::BPlusTree(Inode *stream,bool allowDuplicates)
 	:
 	fStream(NULL),
 	fHeader(NULL)
-//	fCache(MAX_NODES_IN_CACHE)
 {
 	SetTo(stream,allowDuplicates);
 }
@@ -106,33 +112,33 @@ BPlusTree::BPlusTree()
 	fNodeSize(BPLUSTREE_NODE_SIZE),
 	fAllowDuplicates(true),
 	fStatus(B_NO_INIT)
-//	fCache(MAX_NODES_IN_CACHE)
 {
 }
 
 
 BPlusTree::~BPlusTree()
 {
-//	fCache.Flush(this,0,true);
 }
 
 
-void
+status_t
 BPlusTree::Initialize(int32 nodeSize)
 {
-	// free old data
-//	fCache.Flush(0,true);
-
-	if (fHeader)
-		free(fHeader);
-
 	fStream = NULL;
 
 	fNodeSize = nodeSize;
-	fHeader = (bplustree_header *)malloc(fNodeSize);
+
+	// allocate new header if needed
+	if (fHeader == NULL) {
+		fHeader = (bplustree_header *)malloc(fNodeSize);
+		if (fHeader == NULL) {
+			dprintf("bfs: no memory for the b+tree header! Prepare to die...\n");
+			return B_NO_MEMORY;
+		}
+	}
  	memset(fHeader,0,fNodeSize);
  	
-	//fCurrentNodeOffset = BPLUSTREE_NULL;
+ 	return B_OK;
 }
 
 
@@ -141,7 +147,8 @@ BPlusTree::SetTo(int32 keyType,int32 nodeSize,bool allowDuplicates)
 {
 	// initializes in-memory B+Tree
 
-	Initialize(nodeSize);
+	if (Initialize(nodeSize) < B_OK)
+		return B_NO_MEMORY;
 
 	fAllowDuplicates = allowDuplicates;
 
@@ -180,7 +187,6 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 
 	fAllowDuplicates = allowDuplicates;
 
-	//if (DataStream *dataStream = dynamic_cast<DataStream *>(stream))
 	{
 		uint32 toMode[] = {S_STR_INDEX, S_INT_INDEX, S_UINT_INDEX, S_LONG_LONG_INDEX,
 						   S_ULONG_LONG_INDEX, S_FLOAT_INDEX, S_DOUBLE_INDEX};
@@ -193,11 +199,11 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 
 		 // although it's in stat.h, the S_ALLOW_DUPS flag is obviously unused
 		fAllowDuplicates = (stream->Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR;
-
-		//printf("allows duplicates? %s\n",fAllowDuplicates ? "yes" : "no");
 	}
 
-	Initialize(header.node_size);
+	if (Initialize(header.node_size) < B_OK)
+		return B_NO_MEMORY;
+
 	fStream = stream;
 
 	memcpy(fHeader,&header,sizeof(bplustree_header));
@@ -537,57 +543,6 @@ BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 //	#pragma mark -
 
 
-status_t
-BPlusTree::ReadNode(off_t nodeOffset,bplustree_node *node,bool check)
-{
-/*printf("1: %d,%d,%d\n",
-	nodeOffset > fHeader->maximum_size - fNodeSize,
-	nodeOffset < 0 && nodeOffset != BPLUSTREE_NULL,
-	(nodeOffset % fNodeSize) != 0);
-*/
-	if (nodeOffset > fHeader->maximum_size - fNodeSize
-		|| nodeOffset < 0 //&& nodeOffset != BPLUSTREE_NULL
-		|| (nodeOffset % fNodeSize) != 0
-		|| node == NULL)
-		return B_BAD_VALUE;
-
-	size_t length = fNodeSize;
-	if (fStream && fStream->ReadAt(nodeOffset,node,&length) < B_OK || length < fNodeSize)
-		return B_IO_ERROR;
-
-	if (!fStream)	// initialize node
-	{
-	 	node->left_link = BPLUSTREE_NULL;
-	 	node->right_link = BPLUSTREE_NULL;
-	 	node->overflow_link = BPLUSTREE_NULL;
-	 	node->all_key_count = 0;
-	 	node->all_key_length = 0;
-	}
-
-	if (check && node != NULL)
-	{
-		// sanity checks (links, all_key_count)
-		if (!fHeader->IsValidLink(node->left_link)
-			|| !fHeader->IsValidLink(node->right_link)
-			|| !fHeader->IsValidLink(node->overflow_link)
-			|| (int8 *)node->Values() + node->all_key_count * sizeof(off_t) > (int8 *)node + fNodeSize)
-			return B_BAD_DATA;
-	}
-	return B_OK;
-}
-
-
-status_t
-BPlusTree::WriteNode(off_t offset,bplustree_node *node)
-{
-	// not yet implemented
-	return B_ERROR;
-}
-
-
-//	#pragma mark -
-
-
 TreeIterator::TreeIterator(BPlusTree *tree)
 	:
 	fTree(tree),
@@ -652,7 +607,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 		// cause any problems
 
 		if (fDuplicate < fNumDuplicates
-			&& (node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode))) != NULL)
+			&& (node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode),false)) != NULL)
 		{
 			*value = node->DuplicateAt(fDuplicateNode,fIsFragment,fDuplicate++);
 			if (!fIsFragment && fDuplicate == fNumDuplicates)
@@ -660,7 +615,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 				if (node->right_link != BPLUSTREE_NULL)
 				{
 					fDuplicateNode = node->right_link;
-					if ((node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode))) != NULL)
+					if ((node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode),false)) != NULL)
 					{
 						fNumDuplicates = node->CountDuplicates(fDuplicateNode,false);
 						fDuplicate = 0;
@@ -733,7 +688,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 	{
 		fDuplicateNode = offset;
 
-		node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode));
+		node = cached.SetTo(bplustree_node::FragmentOffset(fDuplicateNode),false);
 		if (node == NULL)
 			return B_ERROR;
 
