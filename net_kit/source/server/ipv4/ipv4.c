@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <kernel/OS.h>
-#include <malloc.h>
 
 #include "netinet/in.h"
 #include "netinet/in_var.h"
@@ -20,7 +19,6 @@
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
-#include "net_proto.h"
 
 #define m_free              core->m_free
 #define m_freem             core->m_freem
@@ -122,7 +120,7 @@ int ipv4_input(struct mbuf *buf, int hdrlen)
 		return proto[ip->prot]->pr_input(buf, ip->hl * 4);
 	else
 		printf("proto[%d] = %p\n", ip->prot, proto[ip->prot]);
-		
+
 	return 0; 
 }
 
@@ -232,62 +230,6 @@ static void ipv4_init(void)
 #endif
 }
 
-/*
-int ipv4_dev_init(ifnet *dev)
-{
-	struct in_ifaddr *oia;
-	struct in_ifaddr *ia;
-	struct sockaddr_in sin;
-	struct ifaddr *ifa;
-
-	if (!dev)
-		return EINVAL;
-
-	oia = (struct in_ifaddr *)malloc(sizeof(struct in_ifaddr));
-
-	if (!oia)
-		return ENOMEM;
-
-	memset(oia, 0, sizeof(struct in_ifaddr));
-
-	if ((ia = in_ifaddr)) {
-		for (;ia->ia_next; ia = ia->ia_next)
-			continue;
-		ia->ia_next = oia;
-	} else 
-		in_ifaddr = oia;
-
-	ia = oia;
-
-	if ((ifa = dev->if_addrlist)) {
-		for (; ifa->ifa_next; ifa = ifa->ifa_next)
-			continue;
-		ifa->ifa_next = (struct ifaddr*)ia;
-	} else
-		dev->if_addrlist = (struct ifaddr*)ia;
-
-	ia->ia_ifa.ifa_addr     = (struct sockaddr*) &ia->ia_addr;
-	ia->ia_ifa.ifa_dstaddr  = (struct sockaddr*) &ia->ia_dstaddr;
-	ia->ia_ifa.ifa_netmask  = (struct sockaddr*) &ia->ia_sockmask;
-	ia->ia_sockmask.sin_len = 8;
-	if (dev->flags & IFF_BROADCAST) {
-		ia->ia_broadaddr.sin_len = sizeof(ia->ia_addr);
-		ia->ia_broadaddr.sin_family = AF_INET;
-	}
-	ia->ia_ifp = dev;
-
-	sin.sin_family = AF_INET;
-	if (dev->if_type == IFT_ETHER)
-		sin.sin_addr.s_addr = htonl(0xc0a80085);
-	if (dev->if_type == IFT_LOOP)
-		sin.sin_addr.s_addr = htonl(0x7f000001);
-	sin.sin_len = sizeof(sin);
-	sin.sin_port = 0;
-
-	return in_ifinit(dev, ia, &sin, 1);
-}
-*/
-
 struct protosw my_proto = {
 	"IPv4",
 	IPV4_MODULE_PATH,
@@ -334,7 +276,6 @@ static int k_init(void)
 
 static status_t ipv4_ops(int32 op, ...)
 {
-	dprintf("ipv4_ops:\n");
 	switch (op) {
 		case B_MODULE_INIT:
 			k_init();
@@ -347,14 +288,10 @@ static status_t ipv4_ops(int32 op, ...)
 	return B_OK;
 }
 
-static struct protocol_module_info my_module = {
-	{
+static module_info my_module = {
 		IPV4_MODULE_PATH,
 		B_KEEP_LOADED,
 		ipv4_ops
-	},
-	
-	/* ??? */
 };
 
 _EXPORT module_info *modules[] = {
