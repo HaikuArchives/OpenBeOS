@@ -1,14 +1,10 @@
 // SymLinkTest.cpp
 
-#include <errno.h>
 #include <stdio.h>
 #include <string>
-#include <unistd.h>
-#include <sys/stat.h>
 
 #include <Directory.h>
 #include <Entry.h>
-#include <File.h>
 #include <Path.h>
 #include <SymLink.h>
 
@@ -87,7 +83,6 @@ void SymLinkTest::tearDown()
 {
 	NodeTest::tearDown();
 }
-
 
 // InitTest1
 void
@@ -194,17 +189,14 @@ SymLinkTest::InitTest1()
 		CPPUNIT_ASSERT( link.InitCheck() == B_OK );
 
 	}
-/* BEntry doesn't seem to check the entry name length.
 	nextSubTest();
 	{
 		BEntry entry(tooLongEntryname);
 		// R5 returns E2BIG instead of B_NAME_TOO_LONG
-printf("entry.InitCheck(): %x\n", entry.InitCheck());
-		CPPUNIT_ASSERT( entry.InitCheck() == E2BIG );
+		CPPUNIT_ASSERT( equals(entry.InitCheck(), E2BIG, B_NAME_TOO_LONG) );
 		BSymLink link(&entry);
 		CPPUNIT_ASSERT( equals(link.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
 	}
-*/
 
 	// 4. BSymLink(const entry_ref*)
 	nextSubTest();
@@ -309,16 +301,13 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 		BSymLink link(&pathDir, existingRelDir);
 		CPPUNIT_ASSERT( link.InitCheck() == B_OK );
 	}
-/* BEntry doesn't seem to check the entry name length.
 	nextSubTest();
 	{
 		BDirectory pathDir(tooLongSuperEntryname);
 		CPPUNIT_ASSERT( pathDir.InitCheck() == B_OK );
 		BSymLink link(&pathDir, tooLongRelEntryname);
-printf("link.InitCheck(): %x\n", link.InitCheck());
 		CPPUNIT_ASSERT( link.InitCheck() == B_NAME_TOO_LONG );
 	}
-*/
 	nextSubTest();
 	{
 		BDirectory pathDir(fileSuperDirname);
@@ -409,16 +398,13 @@ SymLinkTest::InitTest2()
 	CPPUNIT_ASSERT( entry.SetTo(existingDir) == B_OK );
 	CPPUNIT_ASSERT( link.SetTo(&entry) == B_OK );
 	CPPUNIT_ASSERT( link.InitCheck() == B_OK );
-/* BEntry doesn't seem to check the entry name length.
 	//
 	nextSubTest();
-	BEntry entry(tooLongEntryname);
 	// R5 returns E2BIG instead of B_NAME_TOO_LONG
-	CPPUNIT_ASSERT( entry.SetTo(tooLongEntryname) == E2BIG );
-printf("entry.InitCheck(): %x\n", entry.InitCheck());
+	CPPUNIT_ASSERT( equals(entry.SetTo(tooLongEntryname), E2BIG,
+						   B_NAME_TOO_LONG) );
 	CPPUNIT_ASSERT( equals(link.SetTo(&entry), B_BAD_ADDRESS, B_BAD_VALUE) );
 	CPPUNIT_ASSERT( equals(link.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
-*/
 
 	// 4. BSymLink(const entry_ref*)
 	nextSubTest();
@@ -495,14 +481,12 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 	CPPUNIT_ASSERT( pathDir.SetTo(existingSuperDir) == B_OK );
 	CPPUNIT_ASSERT( link.SetTo(&pathDir, existingRelDir) == B_OK );
 	CPPUNIT_ASSERT( link.InitCheck() == B_OK );
-/* BEntry doesn't seem to check the entry name length.
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( pathDir.SetTo(tooLongSuperEntryname) == B_OK );
-	CPPUNIT_ASSERT( link.SetTo(&pathDir, tooLongRelEntryname) == B_OK );
-printf("link.InitCheck(): %x\n", link.InitCheck());
+	CPPUNIT_ASSERT( link.SetTo(&pathDir, tooLongRelEntryname)
+					== B_NAME_TOO_LONG );
 	CPPUNIT_ASSERT( link.InitCheck() == B_NAME_TOO_LONG );
-*/
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( pathDir.SetTo(fileSuperDirname) == B_OK );
@@ -585,7 +569,6 @@ SymLinkTest::ReadLinkTest()
 	char smallBuffer[2];
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
 	CPPUNIT_ASSERT( link.ReadLink(smallBuffer, sizeof(smallBuffer))
-//					== sizeof(smallBuffer) );
 					== strlen(dirLink) );
 	CPPUNIT_ASSERT( strncmp(smallBuffer, existingDir, sizeof(smallBuffer)) == 0 );
 	// bad args
@@ -682,14 +665,19 @@ SymLinkTest::MakeLinkedPathTest()
 	entry.Unset();
 	entryPath.Unset();
 	// bad args
-	// R5: crashs, when passing a NULL path
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
-//	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", NULL) == B_BAD_VALUE );
+// R5: crashs, when passing a NULL path
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", NULL) == B_BAD_VALUE );
+#endif
 	CPPUNIT_ASSERT( link.MakeLinkedPath((const char*)NULL, &path)
 					== B_BAD_VALUE );
-//	CPPUNIT_ASSERT( link.MakeLinkedPath((const char*)NULL, NULL)
-//					== B_BAD_VALUE );
+// R5: crashs, when passing a NULL path
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( link.MakeLinkedPath((const char*)NULL, NULL)
+					== B_BAD_VALUE );
+#endif
 	link.Unset();
 	path.Unset();
 
@@ -799,15 +787,21 @@ SymLinkTest::MakeLinkedPathTest()
 	path.Unset();
 	dir.Unset();
 	// bad args
-	// R5: crashs, when passing a NULL path
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo("/boot") == B_OK);
-//	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, NULL) == B_BAD_VALUE );
+// R5: crashs, when passing a NULL path
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, NULL) == B_BAD_VALUE );
+#endif
+
 	CPPUNIT_ASSERT( link.MakeLinkedPath((const BDirectory*)NULL, &path)
 					== B_BAD_VALUE );
-//	CPPUNIT_ASSERT( link.MakeLinkedPath((const BDirectory*)NULL, NULL)
-//					== B_BAD_VALUE );
+// R5: crashs, when passing a NULL path
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( link.MakeLinkedPath((const BDirectory*)NULL, NULL)
+					== B_BAD_VALUE );
+#endif
 	link.Unset();
 	path.Unset();
 	dir.Unset();
@@ -958,20 +952,3 @@ SymLinkTest::AssignmentTest()
 }
 
 
-
-// entries created in tests
-const char *SymLinkTest::allFilenames[] = {
-	existingFilename,
-	existingDirname,
-	nonExistingDirname,
-	testDirname1,
-	dirLinkname,
-	fileLinkname,
-	relDirLinkname,
-	relFileLinkname,
-	badLinkname,
-	cyclicLinkname1,
-	cyclicLinkname2,
-};
-const int32 SymLinkTest::allFilenameCount
-	= sizeof(allFilenames) / sizeof(const char*);

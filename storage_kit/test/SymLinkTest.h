@@ -33,9 +33,6 @@ public:
 	void MakeLinkedPathTest();
 	void IsAbsoluteTest();
 	void AssignmentTest();
-
-	static	const char *		allFilenames[];
-	static	const int32 		allFilenameCount;
 };
 
 #endif	// __sk_sym_link_test_h__
