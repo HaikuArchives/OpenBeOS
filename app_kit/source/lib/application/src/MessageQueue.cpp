@@ -75,6 +75,14 @@ BMessageQueue::AddMessage(BMessage *message)
 		return;
 	}
 	
+	// The Be implementation does not seem to check that the lock acquisition
+	// was successful.  This will specifically cause problems when the
+	// message queue is deleted.  On delete, any thread waiting for the lock
+	// will be notified that the lock failed.  Be's implementation, because
+	// they do not check proceeds with the operation, potentially corrupting
+	// memory.  This implementation is different, but I can't imagine that
+	// Be's implementation is worth emulating.
+	//
 	BAutolock theAutoLocker(fLocker);
 	
 	if (theAutoLocker.IsLocked()) {
@@ -120,6 +128,14 @@ BMessageQueue::RemoveMessage(BMessage *message)
 	
 	BAutolock theAutoLocker(fLocker);
 	
+	// The Be implementation does not seem to check that the lock acquisition
+	// was successful.  This will specifically cause problems when the
+	// message queue is deleted.  On delete, any thread waiting for the lock
+	// will be notified that the lock failed.  Be's implementation, because
+	// they do not check proceeds with the operation, potentially corrupting
+	// memory.  This implementation is different, but I can't imagine that
+	// Be's implementation is worth emulating.
+	//
 	if (theAutoLocker.IsLocked()) {
 		
 		// If the message to be removed is at the front of the queue.
@@ -354,6 +370,14 @@ BMessageQueue::NextMessage(void)
 	BMessage *result = NULL;
 	BAutolock theAutoLocker(fLocker);
 	
+	// The Be implementation does not seem to check that the lock acquisition
+	// was successful.  This will specifically cause problems when the
+	// message queue is deleted.  On delete, any thread waiting for the lock
+	// will be notified that the lock failed.  Be's implementation, because
+	// they do not check proceeds with the operation, potentially corrupting
+	// memory.  This implementation is different, but I can't imagine that
+	// Be's implementation is worth emulating.
+	//
 	if (theAutoLocker.IsLocked()) {
 		// Store the first BMessage in the queue in result.
 		result = fTheQueue;
