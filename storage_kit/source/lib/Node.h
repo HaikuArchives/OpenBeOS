@@ -120,6 +120,7 @@ private:
 private:
 	status_t set_fd(StorageKit::FileDescriptor fd);
 	virtual void close_fd();
+	void set_status(status_t newStatus);
 
 	virtual status_t set_stat(struct stat &st, uint32 what);
 

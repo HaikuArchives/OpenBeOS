@@ -699,6 +699,18 @@ BNode::close_fd() {
 	fCStatus = B_NO_INIT;	
 }
 
+// set_status
+/*! \brief Sets the BNode's status.
+	To be used instead of accessing the BNode's private \c fCStatus member
+	directly.
+	\param newStatus the new value for the status variable.
+*/
+void
+BNode::set_status(status_t newStatus)
+{
+	fCStatus = newStatus;
+}
+
 /*! \brief Modifies a certain setting for this node based on \a what and the
 	corresponding value in \a st.
 	Inherited from and called by BStatable.
