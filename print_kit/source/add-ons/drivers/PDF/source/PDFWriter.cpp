@@ -137,7 +137,7 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 	delete picRegion;
 
 	if (pageNumber == 1) {
-		fLog = fopen("/boot/tmp/pdf_writer.log", "w");
+		fLog = fopen("/tmp/pdf_writer.log", "w");
 
 		PDF_boot();
 
