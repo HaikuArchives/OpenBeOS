@@ -6,5 +6,5 @@ KernelStaticLibrary libfs :
 	<$(SOURCE_GRIST)>rootfs.c 
 	<$(SOURCE_GRIST)>vfs.c 
 	:
-	-fno-pic -Wno-unused
+	-fno-pic -Wno-unused -D_KERNEL_
 	;

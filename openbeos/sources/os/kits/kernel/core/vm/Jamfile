@@ -11,5 +11,5 @@ KernelStaticLibrary libvm :
 	<$(SOURCE_GRIST)>vm_store_vnode.c 
 	<$(SOURCE_GRIST)>vm_tests.c 
 	:
-	-fno-pic -Wno-unused
+	-fno-pic -Wno-unused -D_KERNEL_
 	;

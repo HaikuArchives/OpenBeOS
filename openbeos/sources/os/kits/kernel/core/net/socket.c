@@ -16,8 +16,6 @@
 #include <pools.h>
 #include <debug.h>
 #include <fd.h>
-
-#define _KERNEL_
 #include <socket.h>
 
 /* Static global objects... */

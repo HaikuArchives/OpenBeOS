@@ -18,8 +18,6 @@
 #include <arch/cpu.h>
 #include <resource.h>
 #include <fd.h>
-
-#define _KERNEL_
 #include <sysctl.h>
 #include <socket.h>
 

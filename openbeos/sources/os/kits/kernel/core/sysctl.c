@@ -6,8 +6,6 @@
 #include <debug.h>
 #include <memheap.h>
 #include <Errors.h>
-
-#define _KERNEL_
 #include <sysctl.h>
 
 /* Not sure where to put this definition yet (sys/param.h?), 
