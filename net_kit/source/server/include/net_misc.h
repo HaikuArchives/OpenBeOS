@@ -13,16 +13,18 @@
 /* This idea taken from newos. Type independant address storage
  */
 
+typedef struct ifnet	ifnet;
+
 /* structure for Ethernet MAC address xx:xx:xx:xx:xx:xx */
 typedef struct ether_addr {
         uint8 addr[6];
 } ether_addr;
 
-typedef struct netaddr {
+typedef struct sockaddr {
 	uint8	type;
 	uint8	len;
-	uint8 addr[30];
-} netaddr;
+	uint8	addr[30];
+} sockaddr;
 
 typedef	uint32	ipv4_addr;
 
@@ -30,12 +32,13 @@ typedef	uint32	ipv4_addr;
  */
 
 enum {
-	ADDR_TYPE_ETHERNET	= 0, /* ethernet address */
-	ADDR_TYPE_IPV4		= 1, /* IPv4 address */
-	ADDR_TYPE_IPV6		= 2, /* IPv6 address */
+	AF_LINK		= 0, /* ethernet address */
+	AF_INET		= 1, /* IPv4 address */
+	AF_INET6	= 2, /* IPv6 address */
 };
 
 
+void net_server_add_device(ifnet *ifn);
 int in_cksum(struct mbuf *m, int len);
 
 /* Useful debugging functions */

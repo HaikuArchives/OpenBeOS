@@ -199,3 +199,39 @@ void m_adj(struct mbuf *mp, int req_len)
 	/* -ve case not yet implemented */
 }
 
+void m_copydata(struct mbuf *m, int off, int len, caddr_t cp)
+{
+        uint count;
+
+        if (off < 0) {
+                printf("m_copydata: off %d < 0", off);
+		return;
+	}
+        if (len < 0) {
+                printf("m_copydata: len %d < 0", len);
+		return;
+	}	
+        while (off > 0) {
+                if (m == NULL) {
+                        printf("m_copydata: null mbuf in skip");
+			return;
+		}
+                if (off < m->m_len)
+                        break;
+                off -= m->m_len;
+                m = m->m_next;
+        }
+        while (len > 0) {
+                if (m == NULL) {
+                        printf("m_copydata: null mbuf");
+			return;
+		}
+                count = min(m->m_len - off, len);
+                memcpy(cp, mtod(m, caddr_t) + off, count);
+                len -= count;
+                cp += count;
+                off = 0;
+                m = m->m_next;
+        }
+}
+

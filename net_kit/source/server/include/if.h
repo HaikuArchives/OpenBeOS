@@ -33,26 +33,66 @@ enum {
 	IFF_BROADCAST	= 0x0020
 };
 
-typedef struct ifaadr   ifaddr;
-typedef struct ifnet	ifnet;
+typedef struct ifq	ifq;
+typedef struct ifaddr   ifaddr;
+
+struct ifq {
+	struct mbuf *head;
+	struct mbuf *tail;
+	int maxlen;
+	int len;
+	sem_id lock;
+	sem_id pop;
+};
+
+/* function declaration */
+ifq *start_ifq(void);
+
+#define IFQ_ENQUEUE(ifq, m) { \
+	acquire_sem((ifq)->lock); \
+        (m)->m_nextpkt = 0; \
+        if ((ifq)->tail == 0) \
+                (ifq)->head = m; \
+        else \
+                (ifq)->tail->m_nextpkt = m; \
+        (ifq)->tail = m; \
+        (ifq)->len++; \
+	release_sem((ifq)->lock); \
+	release_sem((ifq)->pop); \
+}
+
+#define IFQ_DEQUEUE(ifq, m) { \
+	acquire_sem((ifq)->lock); \
+        (m) = (ifq)->head; \
+        if (m) { \
+                if (((ifq)->head = (m)->m_nextpkt) == 0) \
+                        (ifq)->tail = 0; \
+                (m)->m_nextpkt = 0; \
+                (ifq)->len--; \
+        } \
+	release_sem((ifq)->lock); \
+}
 
 struct ifaddr {
         struct ifaddr *next;
         ifnet *ifn;
 
-        netaddr if_addr;
+        sockaddr if_addr;
 };
 
 struct ifnet {
+	ifnet *next;		/* next device */
 	ifaddr *if_addrlist;	/* linked list of addresses */
 	int dev;		/* device handle */
 	int id;			/* id within the stack's device list */
-	char *name;		/* name of driver */
+	char *name;		/* name of driver e.g. tulip*/
+	int unit;		/* number of unit e.g  0*/
 	int type;		/* what type of interface are we? */
-	ether_addr mac;		/* The ethernet address if there is one... */
+	sockaddr *link_addr;	/* pointer to sockaddr structure with link address */
 	int flags;		/* flags */
 	int mtu;		/* mtu */
 
+	ifq *txq;
 	thread_id rx_thread;	
 	thread_id tx_thread;
 };

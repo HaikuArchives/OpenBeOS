@@ -45,8 +45,8 @@ typedef struct arp_cache_entry	arp_cache_entry;
 struct arp_cache_entry {
 	arp_cache_entry *next;
 	arp_cache_entry *prev;
-	netaddr		ip_addr; /* we use this so we can deal with other types of address */
-	netaddr		ll_addr; /* link-level address */
+	sockaddr	ip_addr; /* we use this so we can deal with other types of address */
+	sockaddr	ll_addr; /* link-level address */
 	int		status;
 	time_t		expires; /* when does this expire? */
 };

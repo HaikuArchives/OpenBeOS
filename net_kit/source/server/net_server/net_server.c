@@ -44,7 +44,7 @@ static int32 rx_thread(void *data)
 	char buffer[2048];
 	size_t len = 2048;
 
-	printf("%s: starting rx_thread...\n", i->name);
+	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
         while ((status = read(i->dev, buffer, len)) >= B_OK && count < 10) {
                 struct mbuf *mb = m_devget(buffer, len, 0, NULL);
                 global_modules[prot_table[NS_ETHER]].mod->input(mb);
@@ -55,121 +55,144 @@ static int32 rx_thread(void *data)
 	return 0;
 }
 
-static void start_rx(int device) {
-        devices[device].rx_thread = spawn_thread(rx_thread, "net_rx_thread", B_NORMAL_PRIORITY,
-                                        &devices[device]);
-        if ( devices[device].rx_thread < 0) {
-                printf("Failed to start thread for %s\n",  devices[device].name);
-        } else {
-                resume_thread(devices[device].rx_thread);
-        }
-}
-
-static int open_device(char *driver, char *devno)
+static int32 tx_thread(void *data)
 {
-	char path[PATH_MAX];
-	int dev, rv = 0;
+	ifnet *i = (ifnet *)data;
+	struct mbuf *m;
+	char buffer[2048];
+	size_t len = 0;
+	status_t status;
 
-	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
-	dev = open(path, O_RDWR);
-	if (dev < B_OK) {
-		printf("Couldn't open the device %s\n", path);
-		return 0;
-	}
+	printf("%s%d: starting tx_thread...\n", i->name, i->unit);	
+	while (1) {
+		acquire_sem(i->txq->pop);
+		IFQ_DEQUEUE(i->txq, m);
 
-        devices[ndevs].dev = dev;
-        devices[ndevs].id = ndevs;
-        sprintf(path, "%s%s", driver, devno);
-        devices[ndevs].name = strdup(path);
-        devices[ndevs].type = IFD_ETHERNET;
-        devices[ndevs].rx_thread = -1;
-
-	if (global_modules[prot_table[NS_ETHER]].mod->dev_init) {
-		/* try to init the device... */
-		rv = global_modules[prot_table[NS_ETHER]].mod->dev_init(&devices[ndevs]);
-	}
-
-	if (rv) {
-		atomic_add(&global_modules[prot_table[NS_ETHER]].ref_count, 1);
-		start_rx(ndevs);
-		ndevs++;
-	}
-
-	return rv;
-}
-
-static void find_devices(void)
-{
-	DIR *dir;
-	DIR *driv_dir;
-	struct dirent *de;
-	struct dirent *dre;
-	char path[PATH_MAX];
-
-	dir = opendir(DRIVER_DIRECTORY);
-	if (!dir) {
-		printf("Couldn't open the directory %s\n", DRIVER_DIRECTORY);
-		return;
-	}
-
-	while ((de = readdir(dir)) != NULL) {
-		/* hmm, is it a driver? */
-		if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+		len = m->m_len;
+		if (len > 2048) {
+			printf("%s%d: tx_thread: packet was too big!\n", i->name, i->unit);
+			m_freem(m);
 			continue;
+		}
 
-		/* OK we assume it's a driver...but skip the ether driver
-		 * as I don't really know what it is!
-		 */
-		if (strcmp(de->d_name, "ether") == 0)
-			continue;
-
-		sprintf(path, "%s/%s", DRIVER_DIRECTORY, de->d_name);
-		driv_dir = opendir(path);
-		if (!driv_dir) {
-			printf("I coudln't find any drivers in the %s driver directory",
-				de->d_name);
-		} else {
-			while ((dre = readdir(driv_dir)) != NULL) {
-				if (!strcmp(dre->d_name, "0")) {
-					open_device(de->d_name, dre->d_name);
-				}
-			}
-			closedir(driv_dir);
+		m_copydata(m, 0, len, buffer);
+		status = write(i->dev, buffer, len);
+		if (status != B_OK) {
+			printf("Error sending data!\n");
 		}
 	}
-	closedir(dir);
+	return 0;
+}
+	
+ifq *start_ifq(void)
+{
+	ifq *nifq = malloc(sizeof(ifq));
 
-	return;
+	nifq->lock = create_sem(1, "ifq_lock");
+	nifq->pop = create_sem(0, "ifq_pop");
+
+	if (nifq->lock < B_OK || nifq->pop < B_OK)
+		return NULL;
+
+	nifq->len = 0;
+	nifq->maxlen = 50;
+	nifq->head = nifq->tail = NULL;
+	return nifq;
+}
+
+void net_server_add_device(ifnet *ifn)
+{
+	if (!ifn)
+		return;
+
+	if (devices)
+		ifn->next = devices;
+	ifn->id = ndevs;
+	ndevs++;
+	devices = ifn;
+}
+
+static void start_devices(void)
+{
+	ifnet *d = devices;
+	while (d) {
+		d->rx_thread = spawn_thread(rx_thread, "net_rx_thread", B_NORMAL_PRIORITY,
+						d);
+		if (d->rx_thread < 0) {
+			printf("Failed to start the rx_thread for %s%d\n", d->name, d->unit);
+			continue;
+		} else {
+			resume_thread(d->rx_thread);
+		}
+
+		d->txq = start_ifq();
+		if (!d->txq) {
+			kill_thread(d->rx_thread);
+			continue;
+		}
+
+		d->tx_thread = spawn_thread(tx_thread, "net_tx_thread", B_NORMAL_PRIORITY,
+						d);
+                if (d->tx_thread < 0) {
+                        printf("Failed to start the tx_thread for %s%d\n", d->name, d->unit);
+			kill_thread(d->tx_thread);
+                        continue;
+                } else {
+                        resume_thread(d->tx_thread);
+                }
+		d = d->next; 
+	}
 }
 
 static void list_devices(void)
 {
-	int i;
+	ifnet *d = devices;
+	int i = 1;
 	printf( "Dev Name         MTU  MAC Address       Flags\n"
 		"=== ============ ==== ================= ===========================\n");
 	
-	for (i=0;i<ndevs;i++) {
-		printf("%2d  %s       %4d ", i, devices[i].name, devices[i].mtu);
-		print_ether_addr(&devices[i].mac);
-		if (devices[i].flags & IFF_UP)
+	while (d) {
+		printf("%2d  %s%d       %4d ", i++, d->name, d->unit, d->mtu);
+		print_ether_addr((ether_addr*)&d->link_addr->addr);
+		if (d->flags & IFF_UP)
 			printf(" UP");
-		if (devices[i].flags & IFF_RUNNING)
+		if (d->flags & IFF_RUNNING)
 			printf(" RUNNING");
-		if (devices[i].flags & IFF_PROMISC)
+		if (d->flags & IFF_PROMISC)
 			printf(" PROMISCUOUS");
-		if (devices[i].flags & IFF_BROADCAST)
+		if (d->flags & IFF_BROADCAST)
 			printf(" BROADCAST");
-		if (devices[i].flags & IFF_MULTICAST)
+		if (d->flags & IFF_MULTICAST)
 			printf(" MULTICAST");
 		printf("\n");
+		d = d->next; 
+	}
+}
+
+static void init_devices(void) {
+	ifnet *d = devices;
+	int i;
+
+	while (d) {
+	 	for (i=0;i<nmods;i++) {
+                	printf("calling init_dev for %s%d, %s\n", d->name, d->unit, 
+				global_modules[i].mod->name);
+			if (global_modules[i].mod->dev_init) {
+				global_modules[i].mod->dev_init(d);
+			}
+		}
+		d = d->next;
 	}
 }
 
 static void close_devices(void)
 {
-	int i;
-	for (i=0;i<ndevs;i++) {
-		close(devices[i].dev);
+	ifnet *d = devices;
+	while (d) {
+		kill_thread(d->rx_thread);
+		kill_thread(d->tx_thread);
+		close(d->dev);
+		d = d->next;
 	}
 }
 
@@ -246,11 +269,7 @@ int main(int argc, char **argv)
 	if (net_init_timer() < B_OK)
 		printf("timer service won't work!\n");
 
-	devices = malloc(sizeof(ifnet) * MAX_DEVICES);
-	if (!devices) {
-		printf("Failed to malloc memory for devices!\n");
-		exit(-1);
-	}
+	devices = NULL;
 
 	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
 	if (!global_modules) {
@@ -259,8 +278,9 @@ int main(int argc, char **argv)
 	}
 
 	find_modules();
+	init_devices();
+	start_devices();
 
-	find_devices();
 /* These 2 printf's are just for "pretty" display... */
 printf("\n");
 
