@@ -313,6 +313,11 @@ bool validate_instantiation(BMessage* from, const char* class_name)
 instantiation_func find_instantiation_func(const char* class_name,
 										   const char* sig)
 {
+	if (!class_name)
+	{
+		return NULL;
+	}
+
 	BRoster Roster;
 	instantiation_func theFunc = NULL;
 	BString funcName;
@@ -349,6 +354,12 @@ instantiation_func find_instantiation_func(const char* class_name)
 //------------------------------------------------------------------------------
 instantiation_func find_instantiation_func(BMessage* archive_data)
 {
+	if (!archive_data)
+	{
+		// TODO:  extended error handling
+		return NULL;
+	}
+
 	const char* name = NULL;
 	const char* sig = NULL;
 	status_t err;
@@ -378,6 +389,7 @@ int GetNumber(const char*& name)
 
 	return val;
 }
+//------------------------------------------------------------------------------
 void Demangle(const char* name, BString& out)
 {
 // TODO: add support for template classes

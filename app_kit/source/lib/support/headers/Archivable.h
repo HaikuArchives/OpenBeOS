@@ -83,17 +83,10 @@ _IMPEXP_BE instantiation_func	find_instantiation_func(const char* class_name);
 _IMPEXP_BE instantiation_func	find_instantiation_func(BMessage* archive_data);
 
 
-/*-------------------------------------------------------------*/
-/*-------------------------------------------------------------*/
+//------------------------------------------------------------------------------
 
-#ifdef USE_OPENBEOS_NAMESPACE
-}	// namespace OpenBeOS
-using namespace OpenBeOS;
-#endif
 
-#endif /* _ARCHIVABLE_H */
-
-#endif	//ARCHIVABLE_H
+#endif	// _ARCHIVABLE_H
 
 /*
  * $Log $
