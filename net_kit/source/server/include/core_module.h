@@ -20,6 +20,7 @@ struct core_module_info {
 	int (*stop)(void);
 	void (*add_domain)(struct domain *, int);
 	void (*add_protocol)(struct protosw *, int);
+	void (*remove_protocol)(struct protosw *pr);
 	void (*add_protosw)(struct protosw *prt[], int layer);
 	void (*start_rx_thread)(struct ifnet *dev);
 	void (*start_tx_thread)(struct ifnet *dev);

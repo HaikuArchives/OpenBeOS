@@ -104,6 +104,7 @@ struct protosw {
 #ifdef _NETWORK_STACK
 struct protosw *protocols;
 void add_protocol(struct protosw *pr, int fam);
+void remove_protocol(struct protosw *pr);
 #endif
 struct protosw *pffindproto(int domain, int protocol, int type);
 struct protosw *pffindtype(int domain, int type);
