@@ -48,7 +48,7 @@ int bind(int sock, const struct sockaddr *sa, int len)
 }
 
 int recvfrom(int sock, caddr_t buffer, size_t buflen, int flags,
-             struct sockaddr *addr, size_t addrlen)
+             struct sockaddr *addr, size_t *addrlen)
 {
 	struct msghdr mh;
 	struct iovec iov;
@@ -87,15 +87,15 @@ int sendto(int sock, caddr_t buffer, size_t buflen, int flags,
 	return ioctl(sock, NET_SOCKET_SENDTO, &mh, sizeof(mh));
 }
 
-int net_select(int nbits, struct fd_set *rbits, 
+int select(int nbits, struct fd_set *rbits, 
                       struct fd_set *wbits, 
                       struct fd_set *ebits, 
                       struct timeval *timeout)
 {
 	int tmpfd = open("/dev/net/socket", O_RDWR);
 	struct select_args sa;
-	int error;
 	int i;
+	status_t rv;
 	
 	sa.mfd = nbits;
 	sa.rbits = rbits;
@@ -103,14 +103,61 @@ int net_select(int nbits, struct fd_set *rbits,
 	sa.ebits = ebits;
 	sa.tv = timeout;
 	
-	for (i=2; i <10;i++) {
+	for (i=3; i < sa.mfd;i++) {
+		printf("socket %d: ", i);
 		if (rbits)
 			if (FD_ISSET(i, rbits))
-				printf("socket %d set in read bits...\n", i);
+				printf(" read ");
+		if (wbits)
+			if (FD_ISSET(i, wbits))
+				printf(" write ");
+		if (ebits)
+			if (FD_ISSET(i, ebits))
+				printf(" except ");
+		printf("\n");
 	}
 	
-	error = ioctl(tmpfd, NET_SOCKET_SELECT, &sa, sizeof(sa));
-printf("error = %d\n", error);
+	rv = ioctl(tmpfd, NET_SOCKET_SELECT, &sa, sizeof(sa));
+printf("error = %ld\n", rv);
 	close(tmpfd);
-	return (error);
+	return (rv);
 }
+
+int shutdown(int sock, int how)
+{
+	struct shutdown_args sa;
+	
+	sa.how = how;
+	
+	return ioctl(sock, NET_SOCKET_SHUTDOWN, &sa, sizeof(sa));
+}
+
+int sysctl (int *name, uint namelen, void *oldp, size_t *oldlenp, 
+            void *newp, size_t newlen)
+{
+	int s = socket(PF_ROUTE, SOCK_RAW, 0);
+	struct sysctl_args sa;
+	
+	sa.rv = 0;
+	sa.name = name;
+	sa.namelen = namelen;
+	sa.oldp = oldp;
+	sa.oldlenp = oldlenp;
+	sa.newp = newp;
+	sa.newlen = newlen;
+	
+	ioctl(s, NET_SOCKET_SYSCTL, &sa, sizeof(sa));
+	return sa.rv;
+}
+	
+int connect(int sock, const struct sockaddr *name, int namelen)
+{
+	return -1;
+}
+
+int send(int sock, const caddr_t data, int buflen, int flags)
+{
+	return -1;
+}
+
+
