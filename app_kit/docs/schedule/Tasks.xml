@@ -1091,7 +1091,7 @@
 		</section>
 		<section name="BCursor">
 			<class name="BCursor" owner="">
-				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BCursor(const void* cursorData);
 				</task>
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
