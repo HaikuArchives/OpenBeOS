@@ -15,7 +15,8 @@
 
 Inode::Inode(Volume *volume,vnode_id id,uint8 reenter)
 	: CachedBlock(volume,volume->VnodeToBlock(id)),
-	fTree(NULL)
+	fTree(NULL),
+	fLock("bfs inode")
 {
 }
 
@@ -50,6 +51,10 @@ Inode::InitCheck()
 		FATAL(("inode at block %Ld corrupt!\n",fBlockNumber));
 		RETURN_ERROR(B_BAD_DATA);
 	}
+	
+	// Add some tests to check the integrity of the other stuff here,
+	// especially for the data_stream!
+
 	// it's more important to know that the inode is corrupt
 	// so we check for the lock not until here
 	return fLock.InitCheck();
@@ -430,7 +435,7 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 
 
 status_t 
-Inode::WriteAt(off_t pos,void *buffer,size_t *length)
+Inode::WriteAt(Transaction *transaction,off_t pos,void *buffer,size_t *length)
 {
 	// not yet implemented
 	// should be pretty similar to ReadAt(), as long as the space is
@@ -456,8 +461,10 @@ AttributeIterator::AttributeIterator(Inode *inode)
 
 AttributeIterator::~AttributeIterator()
 {
-	if (fAttributes)
+	if (fAttributes) {
+		fAttributes->Lock().Unlock();
 		put_vnode(fAttributes->GetVolume()->ID(),fAttributes->ID());
+	}
 
 	delete fIterator;
 }
@@ -509,13 +516,15 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 
 	Volume *volume = fInode->GetVolume();
 
+	// if you haven't yet access to the attributes directory, get it (and lock the node)
 	if (fAttributes == NULL) {
 		if (get_vnode(volume->ID(),volume->ToVnode(fInode->Attributes()),(void **)&fAttributes) != 0
 			|| fAttributes == NULL) {
 			FATAL(("get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 			return B_ENTRY_NOT_FOUND;
 		}
-		
+		fAttributes->Lock().Lock();
+
 		BPlusTree *tree;
 		if (fAttributes->GetTree(&tree) < B_OK
 			|| (fIterator = new TreeIterator(tree)) == NULL) {
@@ -533,6 +542,8 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 
 	Inode *attribute;
 	status = get_vnode(volume->ID(),id,(void **)&attribute);
+		// when we know how get_vnode() is implemented in the kernel, we could
+		// get rid of those checks (if attribute != NULL) - and we will in OpenBeOS :-)
 	if (status == B_OK && attribute != NULL) {
 		*_type = attribute->Node()->type;
 		*_length = attribute->Node()->data.size;

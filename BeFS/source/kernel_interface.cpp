@@ -47,7 +47,6 @@ extern "C" {
 	static int bfs_read_vnode(void *_ns, vnode_id vnid, char r, void **node);
 	static int bfs_release_vnode(void *_ns, void *_node, char r);
 	static int bfs_remove_vnode(void *ns, void *node, char r);
-	static int bfs_secure_vnode(void *ns, void *node);
 
 	static int bfs_walk(void *_ns, void *_base, const char *file,
 					char **newpath, vnode_id *vnid);
@@ -140,7 +139,7 @@ vnode_ops fs_entry =  {
 	&bfs_read_vnode,			// read_vnode
 	&bfs_release_vnode,			// write_vnode
 	&bfs_remove_vnode,			// remove_vnode
-	&bfs_secure_vnode,			// secure_vnode
+	NULL,						// secure_vnode (not needed)
 	&bfs_walk,					// walk
 	&bfs_access,				// access
 	&bfs_create,				// create
@@ -355,16 +354,6 @@ bfs_remove_vnode(void *ns, void *node, char r)
 }
 
 
-int 
-bfs_secure_vnode(void *ns, void *node)
-{
-	FUNCTION();
-	// if this function returns an error, you can't access anything anymore
-	// I don't know what you can use it for, though.
-	return B_OK;
-}
-
-
 //	#pragma mark -
 
 
@@ -572,7 +561,7 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 		return B_BAD_VALUE;
 
 	Inode *inode = (Inode *)_node;
-	if (!inode->CheckPermissions(OModeToAccess(omode)))
+	if (!inode->CheckPermissions(oModeToAccess(omode)))
 		RETURN_ERROR(B_NOT_ALLOWED);
 
 	// we could actually use a cookie to keep track of:

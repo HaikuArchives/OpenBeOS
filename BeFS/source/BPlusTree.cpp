@@ -26,8 +26,8 @@
 // With write support, there is the need for a function that allocates new
 // nodes by either returning empty nodes, or by growing the file's data stream
 //
-// The CachedNode class assumes that you have properly locked the stream
-// before asking for nodes.
+// !! The CachedNode class assumes that you have properly locked the stream
+// !! before asking for nodes.
 //
 // Note: This code will fail if the block size is smaller than the node size!
 // Since BFS supports block sizes of 1024 bytes or greater, and the node size
@@ -41,19 +41,12 @@ CachedNode::Unset()
 		return;
 	}
 
-	if (fBlock == NULL)
-		return;
+	if (fBlock != NULL) {
+		release_block(fTree->fStream->GetVolume()->Device(),fBlockNumber);
 	
-	Volume *volume = fTree->fStream->GetVolume();
-
-	if (fIsDirty && fNode) {
-		cached_write(volume->Device(),fBlockNumber,fBlock,1,volume->BlockSize());
-		fIsDirty = false;
+		fBlock = NULL;
+		fNode = NULL;
 	}
-	release_block(volume->Device(),fBlockNumber);
-
-	fBlock = NULL;
-	fNode = NULL;
 }
 
 
@@ -67,12 +60,50 @@ CachedNode::SetTo(off_t offset,bool check)
 
 	Unset();
 
-	// You can only ask for nodes at valid positions - the b+tree
-	// header (at offset 0) can't be read using that function
+	// You can only ask for nodes at valid positions - you can't
+	// even access the b+tree header with this method (use SetToHeader()
+	// instead)
 	if (offset > fTree->fHeader->maximum_size - fTree->fNodeSize
 		|| offset <= 0
 		|| (offset % fTree->fNodeSize) != 0)
 		return NULL;
+
+	if (InternalSetTo(offset) != NULL && check) {
+		// sanity checks (links, all_key_count)
+		bplustree_header *header = fTree->fHeader;
+		if (!header->IsValidLink(fNode->left_link)
+			|| !header->IsValidLink(fNode->right_link)
+			|| !header->IsValidLink(fNode->overflow_link)
+			|| (int8 *)fNode->Values() + fNode->all_key_count * sizeof(off_t) >
+					(int8 *)fNode + fTree->fNodeSize) {
+			FATAL(("invalid node read from offset %Ld, inode at %Ld\n",
+					offset,fTree->fStream->ID()));
+			return NULL;
+		}
+	}
+	return fNode;
+}
+
+
+bplustree_header *
+CachedNode::SetToHeader()
+{
+	if (fTree == NULL || fTree->fStream == NULL) {
+		REPORT_ERROR(B_BAD_VALUE);
+		return NULL;
+	}
+
+	Unset();
+	
+	InternalSetTo(0LL);
+	return (bplustree_header *)fNode;
+}
+
+
+bplustree_node *
+CachedNode::InternalSetTo(off_t offset)
+{
+	fNode = NULL;
 
 	off_t fileOffset;
 	block_run run;
@@ -87,20 +118,6 @@ CachedNode::SetTo(off_t offset,bool check)
 			// the node is somewhere in that block... (confusing offset calculation)
 			fNode = (bplustree_node *)(fBlock + offset -
 						(fileOffset + blockOffset * volume->BlockSize()));
-
-			// sanity checks (links, all_key_count)
-			if (check) {
-				bplustree_header *header = fTree->fHeader;
-				if (!header->IsValidLink(fNode->left_link)
-					|| !header->IsValidLink(fNode->right_link)
-					|| !header->IsValidLink(fNode->overflow_link)
-					|| (int8 *)fNode->Values() + fNode->all_key_count * sizeof(off_t) >
-							(int8 *)fNode + fTree->fNodeSize) {
-					FATAL(("invalid node read from offset %Ld, inode at %Ld\n",
-							offset,fTree->fStream->ID()));
-					return NULL;
-				}
-			}
 		} else
 			REPORT_ERROR(B_IO_ERROR);
 	}
@@ -108,22 +125,52 @@ CachedNode::SetTo(off_t offset,bool check)
 }
 
 
+bplustree_node *
+CachedNode::Allocate(Transaction *transaction, off_t *offset)
+{
+	if (transaction == NULL || fTree == NULL || fTree->fStream == NULL) {
+		REPORT_ERROR(B_BAD_VALUE);
+		return NULL;
+	}
+
+	if (fTree->fHeader && SetTo(fTree->fHeader->free_node_pointer) != NULL) {
+		fTree->fHeader->free_node_pointer = fNode->left_link;
+		fTree->fCachedHeader.WriteBack(transaction);
+	}
+	// allocate new node
+	// -> not yet implemented
+	return NULL;
+}
+
+
+status_t 
+CachedNode::WriteBack(Transaction *transaction)
+{
+	if (transaction == NULL || fTree == NULL || fTree->fStream == NULL || fNode == NULL)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	transaction->WriteBlocks(fBlockNumber,fBlock);
+}
+
+
 //	#pragma mark -
 
 
-BPlusTree::BPlusTree(int32 keyType,int32 nodeSize,bool allowDuplicates)
+BPlusTree::BPlusTree(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize,bool allowDuplicates)
 	:
 	fStream(NULL),
-	fHeader(NULL)
+	fHeader(NULL),
+	fCachedHeader(this)
 {
-	SetTo(keyType,nodeSize,allowDuplicates);
+	SetTo(transaction,stream,keyType,nodeSize,allowDuplicates);
 }
 
 
 BPlusTree::BPlusTree(Inode *stream,bool allowDuplicates)
 	:
 	fStream(NULL),
-	fHeader(NULL)
+	fHeader(NULL),
+	fCachedHeader(this)
 {
 	SetTo(stream,allowDuplicates);
 }
@@ -133,6 +180,7 @@ BPlusTree::BPlusTree()
 	:
 	fStream(NULL),
 	fHeader(NULL),
+	fCachedHeader(this),
 	fNodeSize(BPLUSTREE_NODE_SIZE),
 	fAllowDuplicates(true),
 	fStatus(B_NO_INIT)
@@ -169,14 +217,22 @@ BPlusTree::Initialize(int32 nodeSize)
 
 
 status_t
-BPlusTree::SetTo(int32 keyType,int32 nodeSize,bool allowDuplicates)
+BPlusTree::SetTo(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize,bool allowDuplicates)
 {
 	// initializes in-memory B+Tree
 
-	if (Initialize(nodeSize) < B_OK)
-		RETURN_ERROR(B_NO_MEMORY);
+	fCachedHeader.Unset();
+	fStream = stream;
+
+	fHeader = fCachedHeader.SetToHeader();
+	if (fHeader == NULL) {
+		// allocate space for new header + node!
+		// -> not yet implemented
+		RETURN_ERROR(fStatus = B_NO_INIT);
+	}
 
 	fAllowDuplicates = allowDuplicates;
+	fNodeSize = nodeSize;
 
 	// initialize b+tree header
  	fHeader->magic = BPLUSTREE_MAGIC;
@@ -194,24 +250,26 @@ BPlusTree::SetTo(int32 keyType,int32 nodeSize,bool allowDuplicates)
 status_t
 BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 {
-	// initializes on-disk B+Tree
+	// get on-disk B+Tree header
 
-	bplustree_header header;
+	fCachedHeader.Unset();
+	fStream = stream;
+
+	fHeader = fCachedHeader.SetToHeader();
+	if (fHeader == NULL)
+		RETURN_ERROR(fStatus = B_NO_INIT);
 	
-	size_t read = sizeof(bplustree_header);
-	if (stream->ReadAt(0,&header,&read) < B_OK || read < sizeof(bplustree_header))
-		RETURN_ERROR(fStatus = read);
-
 	// is header valid?
 
-	if (header.magic != BPLUSTREE_MAGIC
-		|| header.maximum_size != stream->Node()->data.size
-		|| (header.root_node_pointer % header.node_size) != 0
-		|| !header.IsValidLink(header.root_node_pointer)
-		|| !header.IsValidLink(header.free_node_pointer))
+	if (fHeader->magic != BPLUSTREE_MAGIC
+		|| fHeader->maximum_size != stream->Node()->data.size
+		|| (fHeader->root_node_pointer % fHeader->node_size) != 0
+		|| !fHeader->IsValidLink(fHeader->root_node_pointer)
+		|| !fHeader->IsValidLink(fHeader->free_node_pointer))
 		RETURN_ERROR(fStatus = B_BAD_DATA);
 
 	fAllowDuplicates = allowDuplicates;
+	fNodeSize = fHeader->node_size;
 
 	{
 		uint32 toMode[] = {S_STR_INDEX, S_INT_INDEX, S_UINT_INDEX, S_LONG_LONG_INDEX,
@@ -219,10 +277,10 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 		uint32 mode = stream->Mode() & (S_STR_INDEX | S_INT_INDEX | S_UINT_INDEX | S_LONG_LONG_INDEX
 						   | S_ULONG_LONG_INDEX | S_FLOAT_INDEX | S_DOUBLE_INDEX);
 	
-		if (header.data_type > BPLUSTREE_DOUBLE_TYPE
-			|| (stream->Mode() & S_INDEX_DIR) && toMode[header.data_type] != mode
+		if (fHeader->data_type > BPLUSTREE_DOUBLE_TYPE
+			|| (stream->Mode() & S_INDEX_DIR) && toMode[fHeader->data_type] != mode
 			|| !stream->IsDirectory()) {
-			D(	dump_bplustree_header(&header);
+			D(	dump_bplustree_header(fHeader);
 				dump_inode(stream->Node());
 			);
 			RETURN_ERROR(fStatus = B_BAD_TYPE);
@@ -232,26 +290,8 @@ BPlusTree::SetTo(Inode *stream,bool allowDuplicates)
 		fAllowDuplicates = (stream->Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR;
 	}
 
-	if (Initialize(header.node_size) < B_OK)
-		RETURN_ERROR(B_NO_MEMORY);
-
-	fStream = stream;
-
-	memcpy(fHeader,&header,sizeof(bplustree_header));
-
-	CachedNode cached(this,header.root_node_pointer);
+	CachedNode cached(this,fHeader->root_node_pointer);
 	RETURN_ERROR(fStatus = cached.Node() ? B_OK : B_BAD_DATA);
-}
-
-
-status_t 
-BPlusTree::SetStream(Inode *stream)
-{
-	if (stream && !stream->IsDirectory())
-		RETURN_ERROR(B_BAD_TYPE);
- 
-	fStream = stream;
-	return B_OK;
 }
 
 
@@ -431,7 +471,7 @@ BPlusTree::InsertDuplicate(bplustree_node */*node*/,uint16 /*index*/)
 
 
 status_t
-BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
+BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
 		RETURN_ERROR(B_BAD_VALUE);
@@ -482,8 +522,8 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 		// is the node big enough to hold the pair?
 		if (node->Used() + keyLength + int32(sizeof(uint16) + sizeof(off_t)) < fNodeSize)
 		{
-//			InsertKey(node,key1,keyLength,valueToInsert,nodeAndKey.keyIndex);
-			cached.SetDirty(true);
+			//InsertKey(node,key1,keyLength,valueToInsert,nodeAndKey.keyIndex);
+			cached.WriteBack(transaction);
 
 			return B_OK;
 		}

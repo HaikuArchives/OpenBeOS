@@ -22,13 +22,21 @@ extern "C" {
 	#include <cache.h>
 }
 
+#include <string.h>
+
 #include "Volume.h"
+#include "Journal.h"
 #include "Lock.h"
 
 
 class BPlusTree;
 class TreeIterator;
 
+
+// The CachedBlock class is completely implemented as inlines.
+// It should be used when cache single blocks to make sure they
+// will be properly released after use (and it's also very
+// convenient to use them).
 
 class CachedBlock
 {
@@ -79,7 +87,16 @@ class CachedBlock
 			return SetTo(fVolume->ToBlock(run));
 		}
 
+		status_t WriteBack(Transaction *transaction)
+		{
+			if (transaction == NULL || fBlock == NULL)
+				RETURN_ERROR(B_BAD_VALUE);
+
+			return transaction->WriteBlocks(fBlockNumber,fBlock);
+		}
+
 		uint8 *Block() const { return fBlock; }
+		off_t BlockNumber() const { return fBlockNumber; }
 
 	protected:
 		Volume	*fVolume;
@@ -126,7 +143,7 @@ class Inode : public CachedBlock
 		status_t FindBlockRun(off_t pos,block_run &run,off_t &offset);
 
 		status_t ReadAt(off_t pos,void *buffer,size_t *length);
-		status_t WriteAt(off_t pos,void *buffer,size_t *length);
+		status_t WriteAt(Transaction *transaction,off_t pos,void *buffer,size_t *length);
 	
 	private:
 		BPlusTree		*fTree;
@@ -152,7 +169,12 @@ class AttributeIterator
 };
 
 
-inline int OModeToAccess(int omode)
+/**	Converts the "omode", the open flags given to bfs_open(), into
+ *	access modes, e.g. since O_RDONLY requires read access to the
+ *	file, it will be converted to R_OK.
+ */
+
+inline int oModeToAccess(int omode)
 {
 	omode &= O_RWMASK;
 	if (omode == O_RDONLY)

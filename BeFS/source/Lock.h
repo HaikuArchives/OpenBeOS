@@ -1,6 +1,6 @@
 #ifndef LOCK_H
 #define LOCK_H
-/* Lock - read/write lock implementation
+/* Lock - benaphores, read/write lock implementation
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
 ** Roughly based on a Be sample code written by Nathan Schrenk.
@@ -12,12 +12,57 @@
 #include <KernelExport.h>
 
 
+class Benaphore {
+	public:
+		Benaphore(const char *name = "bfs benaphore")
+			:
+			fSemaphore(create_sem(0, name)),
+			fCount(1)
+		{
+		}
+
+		~Benaphore()
+		{
+			delete_sem(fSemaphore);
+		}
+
+		status_t Lock()
+		{
+			if (atomic_add(&fCount, -1) <= 0)
+				return acquire_sem(fSemaphore);
+
+			return B_OK;
+		}
+	
+		void Unlock()
+		{
+			if (atomic_add(&fCount, 1) < 0)
+				release_sem(fSemaphore);
+		}
+
+	private:
+		sem_id	fSemaphore;
+		vint32	fCount;
+};
+
+
+//**** Many Reader/Single Writer Lock
+
 // This is a "fast" implementation of a single writer/many reader
 // locking scheme. It's fast because it uses the benaphore idea
 // to do lazy semaphore locking - in most cases it will only have
 // to do some simple integer arithmetic.
+// The second semaphore (fWriteLock) is needed to prevent the situation
+// that a second writer can acquire the lock when there are still readers
+// holding it.
 
 #define MAX_READERS 100000
+
+// Note: this code will break if you actually have 100000 readers
+// at once. With the current thread/... limits in BeOS you can't
+// touch that value, but it might be possible in the future.
+// Also, you can only have about 20000 concurrent writers until
+// the semaphore count exceeds the int32 bounds
 
 // Timeouts:
 // It may be a good idea to have timeouts for the WriteLocked class,
@@ -29,10 +74,12 @@
 
 class ReadWriteLock {
 	public:
-		ReadWriteLock()
+		ReadWriteLock(const char *name = "bfs r/w lock")
+			:
+			fSemaphore(create_sem(0, name)),
+			fCount(MAX_READERS),
+			fWriteLock()
 		{
-			fSemaphore = create_sem(0, "bfs r/w lock");
-			fCount = MAX_READERS;
 		}
 
 		~ReadWriteLock()
@@ -48,12 +95,55 @@ class ReadWriteLock {
 			return B_OK;
 		}
 
+		status_t Lock()
+		{
+			if (atomic_add(&fCount, -1) <= 0)
+				return acquire_sem(fSemaphore);
+			
+			return B_OK;
+		}
+		
+		void Unlock()
+		{
+			if (atomic_add(&fCount, 1) < 0)
+				release_sem(fSemaphore);
+		}
+		
+		status_t LockWrite()
+		{
+			if (fWriteLock.Lock() < B_OK)
+				return B_ERROR;
+
+			int32 readers = atomic_add(&fCount, -MAX_READERS);
+			status_t status = B_OK;
+
+			if (readers < MAX_READERS) {
+				// Acquire sem for all readers currently not using a semaphore.
+				// But if we are not the only write lock in the queue, just get
+				// the one for us
+				status = acquire_sem_etc(fSemaphore,readers <= 0 ? 1 : MAX_READERS - readers,0,0);
+			}
+			fWriteLock.Unlock();
+
+			return status;
+		}
+		
+		void UnlockWrite()
+		{
+			int32 readers = atomic_add(&fCount,MAX_READERS);
+			if (readers < 0) {
+				// release sem for all readers only when we were the only writer
+				release_sem_etc(fSemaphore,readers <= -MAX_READERS ? 1 : -readers,0);
+			}
+		}
+
 	private:
 		friend class ReadLocked;
 		friend class WriteLocked;
 
-		sem_id	fSemaphore;
-		int32	fCount;
+		sem_id		fSemaphore;
+		vint32		fCount;
+		Benaphore	fWriteLock;
 };
 
 
@@ -62,14 +152,12 @@ class ReadLocked {
 		ReadLocked(ReadWriteLock &lock)
 			: fLock(lock)
 		{
-			if (atomic_add(&lock.fCount, -1) <= 0)
-				acquire_sem(lock.fSemaphore);
+			lock.Lock();
 		}
 		
 		~ReadLocked()
 		{
-			if (atomic_add(&fLock.fCount, 1) < 0)
-				release_sem(fLock.fSemaphore);
+			fLock.Unlock();
 		}
 	
 	private:
@@ -82,23 +170,12 @@ class WriteLocked {
 		WriteLocked(ReadWriteLock &lock)
 			: fLock(lock)
 		{
-			int32 readers = atomic_add(&lock.fCount, -MAX_READERS);
-			if (readers < MAX_READERS) {
-				// Acquire sem for all readers currently not using a semaphore.
-				// But if we are not the only write lock in the queue, just get
-				// the one for us
-				fStatus = acquire_sem_etc(lock.fSemaphore,readers <= 0 ? 1 : MAX_READERS - readers,0,0);
-			} else
-				fStatus = B_OK;
+			fStatus = lock.LockWrite();
 		}
 
 		~WriteLocked()
 		{
-			int32 readers = atomic_add(&fLock.fCount,MAX_READERS);
-			if (readers < 0) {
-				// release sem for all readers only when we were the only writer
-				release_sem_etc(fLock.fSemaphore,readers <= -MAX_READERS ? 1 : -readers,0);
-			}
+			fLock.UnlockWrite();
 		}
 
 		status_t IsLocked()

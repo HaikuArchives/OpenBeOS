@@ -11,6 +11,7 @@
 
 
 #include "bfs.h"
+#include "Journal.h"
 
 
 //****************** on-disk structures ********************
@@ -99,33 +100,80 @@ struct node_and_key
 	uint16	keyIndex;
 };
 
+
+//***** Cache handling *****
+
+class CachedNode
+{
+	public:
+		CachedNode(BPlusTree *tree)
+			:
+			fTree(tree),
+			fNode(NULL),
+			fBlock(NULL)
+		{
+		}
+
+		CachedNode(BPlusTree *tree,off_t offset)
+			:
+			fTree(tree),
+			fNode(NULL),
+			fBlock(NULL)
+		{
+			SetTo(offset);
+		}
+		
+		~CachedNode()
+		{
+			Unset();
+		}
+
+		bplustree_node *SetTo(off_t offset,bool check = true);
+		bplustree_header *SetToHeader();
+		void Unset();
+
+		bplustree_node *Allocate(Transaction *transaction,off_t *offset);
+		status_t WriteBack(Transaction *transaction);
+
+		bplustree_node *Node() const { return fNode; }
+
+	protected:
+		bplustree_node	*InternalSetTo(off_t offset);
+
+		BPlusTree		*fTree;
+		bplustree_node	*fNode;
+		uint8			*fBlock;
+		off_t			fBlockNumber;
+};
+
+
 //******** B+tree class *********
 
 class BPlusTree
 {
 	public:
-		BPlusTree(int32 keyType,int32 nodeSize = BPLUSTREE_NODE_SIZE,bool allowDuplicates = true);
+		BPlusTree(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize = BPLUSTREE_NODE_SIZE,bool allowDuplicates = true);
 		BPlusTree(Inode *stream,bool allowDuplicates = true);
 		BPlusTree();
 		~BPlusTree();
 
-		status_t	SetTo(int32 keyType,int32 nodeSize = BPLUSTREE_NODE_SIZE,bool allowDuplicates = true);
+		status_t	SetTo(Transaction *transaction,Inode *stream,int32 keyType,int32 nodeSize = BPLUSTREE_NODE_SIZE,bool allowDuplicates = true);
 		status_t	SetTo(Inode *stream,bool allowDuplicates = true);
 		status_t	SetStream(Inode *stream);
 
 		status_t	InitCheck();
 		status_t	Validate();
 
-//		status_t	Remove(uint8 *key, uint16 keyLength);
-		status_t	Insert(uint8 *key, uint16 keyLength, off_t value);
-		
-		status_t	Insert(const char *key, off_t value);
-		status_t	Insert(int32 key, off_t value);
-		status_t	Insert(uint32 key, off_t value);
-		status_t	Insert(int64 key, off_t value);
-		status_t	Insert(uint64 key, off_t value);
-		status_t	Insert(float key, off_t value);
-		status_t	Insert(double key, off_t value);
+		status_t	Remove(Transaction *transaction,uint8 *key, uint16 keyLength);
+		status_t	Insert(Transaction *transaction,uint8 *key, uint16 keyLength, off_t value);
+
+		status_t	Insert(Transaction *transaction,const char *key, off_t value);
+		status_t	Insert(Transaction *transaction,int32 key, off_t value);
+		status_t	Insert(Transaction *transaction,uint32 key, off_t value);
+		status_t	Insert(Transaction *transaction,int64 key, off_t value);
+		status_t	Insert(Transaction *transaction,uint64 key, off_t value);
+		status_t	Insert(Transaction *transaction,float key, off_t value);
+		status_t	Insert(Transaction *transaction,double key, off_t value);
 
 		status_t	Find(uint8 *key, uint16 keyLength, off_t *value);
 
@@ -145,58 +193,12 @@ class BPlusTree
 
 		Inode		*fStream;
 		bplustree_header *fHeader;
+		CachedNode	fCachedHeader;
 		int32		fNodeSize;
 		bool		fAllowDuplicates;
 		status_t	fStatus;
 };
 
-
-//***** Cache handling *****
-
-class CachedNode
-{
-	public:
-		CachedNode(BPlusTree *tree)
-			:
-			fTree(tree),
-			fNode(NULL),
-			fBlock(NULL),
-			fIsDirty(false)
-		{
-		}
-
-		CachedNode(BPlusTree *tree,off_t offset)
-			:
-			fTree(tree),
-			fNode(NULL),
-			fBlock(NULL),
-			fIsDirty(false)
-		{
-			SetTo(offset);
-		}
-		
-		~CachedNode()
-		{
-			Unset();
-		}
-
-		void Unset();
-		bplustree_node *SetTo(off_t offset,bool check = true);
-
-		bplustree_node *Node() const { return fNode; }
-
-		void SetDirty(bool dirty)
-		{
-			fIsDirty = dirty;
-		}
-
-	protected:
-		BPlusTree		*fTree;
-		bplustree_node	*fNode;
-		uint8			*fBlock;
-		off_t			fBlockNumber;
-		bool			fIsDirty;
-};
 
 //***** helper classes/functions *****
 
@@ -228,53 +230,53 @@ class TreeIterator
 
 // BPlusTree's inline functions
 
-inline status_t BPlusTree::Insert(const char *key,off_t value)
+inline status_t BPlusTree::Insert(Transaction *transaction,const char *key,off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_STRING_TYPE)
 		return B_BAD_TYPE;
-	return Insert((uint8 *)key, strlen(key), value);
+	return Insert(transaction,(uint8 *)key, strlen(key), value);
 }
 
-inline status_t BPlusTree::Insert(int32 key, off_t value)
+inline status_t BPlusTree::Insert(Transaction *transaction,int32 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_INT32_TYPE)
 		return B_BAD_TYPE;
-	return Insert((uint8 *)&key, sizeof(key), value);
+	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(uint32 key, off_t value)
+inline status_t BPlusTree::Insert(Transaction *transaction,uint32 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_UINT32_TYPE)
 		return B_BAD_TYPE;
-	return Insert((uint8 *)&key, sizeof(key), value);
+	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(int64 key, off_t value)
+inline status_t BPlusTree::Insert(Transaction *transaction,int64 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_INT64_TYPE)
 		return B_BAD_TYPE;
-	return Insert((uint8 *)&key, sizeof(key), value);
+	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(uint64 key, off_t value)
+inline status_t BPlusTree::Insert(Transaction *transaction,uint64 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_UINT64_TYPE)
 		return B_BAD_TYPE;
-	return Insert((uint8 *)&key, sizeof(key), value);
+	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(float key, off_t value)
+inline status_t BPlusTree::Insert(Transaction *transaction,float key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_FLOAT_TYPE)
 		return B_BAD_TYPE;
-	return Insert((uint8 *)&key, sizeof(key), value);
+	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(double key, off_t value)
+inline status_t BPlusTree::Insert(Transaction *transaction,double key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_DOUBLE_TYPE)
 		return B_BAD_TYPE;
-	return Insert((uint8 *)&key, sizeof(key), value);
+	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
 
