@@ -5,9 +5,9 @@ TGT=$(INSTALL_DIR)/$(TARGET)
 LOBJS=../net_server/nhash.o ../net_server/misc.o ../_APP_
 OBJS=arp.o
 
-KCFLAGS=-nostart -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
+KCFLAGS=-nostart -g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=../net_server/pools.o ../net_server/nhash.o ../net_server/misc.o
+KLOBJS=../net_server/pools.o ../net_server/nhash.o ../net_server/misc.o #../net_server/area_malloc.o
 
 all:	$(TGT)
 

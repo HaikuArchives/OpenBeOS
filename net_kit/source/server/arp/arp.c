@@ -19,6 +19,8 @@
 #include "netinet/in_var.h"
 #include "arp_module.h"
 
+#include "net_malloc.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
@@ -26,10 +28,6 @@
 struct core_module_info *core = NULL;
 struct timer clean_timer;
 status_t arp_ops(int32 op, ...);
-  #ifdef USE_DEBUG_MALLOC
-  #define malloc dbg_malloc
-  #define free dbg_free
-  #endif
 
 #else /* userland */
 
