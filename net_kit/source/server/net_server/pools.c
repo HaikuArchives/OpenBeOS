@@ -7,6 +7,10 @@
 
 #define ROUND_TO_PAGE_SIZE(x) (((x) + (B_PAGE_SIZE) - 1) & ~((B_PAGE_SIZE) - 1))
 
+#ifdef USE_DEBUG_MALLOC
+#define malloc dbg_malloc
+#define free dbg_free
+#endif
 
 void pool_debug_walk(struct pool_ctl *p)
 {
@@ -43,7 +47,7 @@ static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 	printf("pools.c: get_mem_block: malloc(%ld)\n",
 		sizeof(struct pool_mem));
 #endif
-	block = malloc(sizeof(struct pool_mem));
+	block = (struct pool_mem *)malloc(sizeof(struct pool_mem));
 	if (block == NULL)
 		return NULL;
 
@@ -100,19 +104,22 @@ static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 
 status_t pool_init(struct pool_ctl **_newPool, size_t size)
 {
-	struct pool_ctl *pool;
+	struct pool_ctl *pool = NULL;
 
 	/* minimum block size is sizeof the free_blk structure */
 	if (size < sizeof(struct free_blk)) 
 		return B_BAD_VALUE;
+
 #if SHOW_MALLOC_USAGE
 	printf("pools.c: pool_init: malloc(%ld)\n",
 		sizeof(struct pool_ctl));
 #endif
-	pool = malloc(sizeof(struct pool_ctl));
+	pool = (struct pool_ctl*)malloc(sizeof(struct pool_ctl));
 	if (pool == NULL)
 		return B_NO_MEMORY;
 
+	memset(pool, 0, sizeof(*pool));
+	
 	#if POOL_USES_BENAPHORES
 		INIT_BENAPHORE(pool->lock, "pool_lock");
 		if (CHECK_BENAPHORE(pool->lock) < B_OK) {
