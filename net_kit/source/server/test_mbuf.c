@@ -15,22 +15,20 @@
 static int32 mbuf_test_thread(void *data)
 {
 	int th = *(int*)data;
-    struct mbuf *buf[MAX_BUFFS];
-    int i, j;
+	struct mbuf *buf[MAX_BUFFS];
+	int i, j;
 
-printf("Thread %d starting...\n", th);
 
         for (j=0;j<LOOPS;j++) {
-                for (i=0;i< (START_BUFFS + j%16);i++) {
+                for (i=0;i< (START_BUFFS + j/16);i++) {
                         buf[i] = m_get(MT_DATA);
-//printf("Thread %d: loop %d, buf %d => %p\n", th, j,i, buf[i]);
                         if (!buf[i]) {
                         		printf("Thread %d, failed on loop %d, buf %d\n",
                         				th, j, i);
                                 exit(-1);
                         }
                 }
-                for (i=0;i<(START_BUFFS + j%16);i++) {
+                for (i=0;i<(START_BUFFS + j/16);i++) {
                         m_free(buf[i]);
                 }
                 if (j%32 == 0 && j > 0)

@@ -23,13 +23,12 @@ static void get_mem_block(size_t size, struct pool_ctl *p)
 	blk->aid = create_area("net_stack_pools_block", (void**)&blk->base_addr,
 						B_ANY_ADDRESS, size, B_LAZY_LOCK, 
 						B_READ_AREA|B_WRITE_AREA);
-
 	if (!blk->aid)
 		return;
 	
 	blk->mem_size = blk->avail = size;
 	blk->ptr = blk->base_addr;
-        blk->lock = create_sem(1, "pool_mem_lock");
+	blk->lock = create_sem(1, "pool_mem_lock");
 
 	if (!blk->ptr || blk->lock < B_OK)
 		return;
@@ -39,9 +38,8 @@ static void get_mem_block(size_t size, struct pool_ctl *p)
 		blk->next = p->list;
 	p->list = blk;
 	release_sem(p->lock);
+printf("allocated a %ld byte block starting at %p\n", size, blk->ptr);
 
-printf("allocated pool_mem block for %ld byte allocations\n", size);
-	
 	return;
 }
 
@@ -61,7 +59,7 @@ void pool_init(struct pool_ctl **p, size_t sz)
 	if (sz > alloc_sz)
 		alloc_sz = sz;
 
-        pnew->lock = create_sem(1, "pool_lock");
+	pnew->lock = create_sem(1, "pool_lock");
 			
 	/* now add a first block */
 	get_mem_block(alloc_sz, pnew);
@@ -82,7 +80,6 @@ char *pool_get(struct pool_ctl *p)
 
 	acquire_sem(p->lock);
 	if (p->freelist) {
-//	printf("freelist %p\n", p->freelist);
 		/* woohoo, just grab a block! */
 		rv = p->freelist;
 		p->freelist = ((struct free_blk*)rv)->next;
@@ -90,7 +87,7 @@ char *pool_get(struct pool_ctl *p)
 		return rv;
 	}
 	release_sem(p->lock);
-	
+
 	/* no free blocks, try to allocate of the top of the memory blocks */
 	do {
 		acquire_sem(mp->lock);
@@ -104,7 +101,6 @@ char *pool_get(struct pool_ctl *p)
 		release_sem(mp->lock);
 	} while ((mp = mp->next) != NULL);
 
-/* XXX - we should allocate more memory if we get here with rv == NULL */
 	if (rv)
 		return rv;
 
@@ -116,7 +112,7 @@ char *pool_get(struct pool_ctl *p)
         	mp->ptr += p->alloc_size;
         	mp->avail -= p->alloc_size;
 	}
-    release_sem(mp->lock);
+	release_sem(mp->lock);
 
 	return rv;
 }
