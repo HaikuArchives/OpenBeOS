@@ -297,14 +297,18 @@ struct flock {
   //#include <sys/cdefs.h>
   #include <ktypes.h>
   
-  /** @fn int open(const char *path, int flags, mode_t mode);
+  /** @fn int open(const char *path, int oflags, ...);
    * Used to open or create a file for reading/writing
+   * @note oflags passed should be OR'd together, e.g.
+   * @code
+   *    int fd = open("file.txt", O_RDWR | O_APPEND | O_CREAT);
+   * @endcode
    * @note if the flag O_CREAT is supplied and the file given by path doesn't
    *       exist it will be created.
-   * @note flags passed should be OR'd together
+   *
    * @ref File_Status_Flags
    */
-  int	open (const char *, int, mode_t);
+  int	open (const char *, int, ...);
 
   /** @fn int creat(const char *path, mode_t mode)
    * Creates a file.
