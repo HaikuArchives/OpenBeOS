@@ -10,6 +10,8 @@ EntryList.cpp
 File.cpp
 FindDirectory.cpp
 Flattenable.cpp
+Mime.cpp
+MimeType.cpp
 Node.cpp
 #NodeInfo.cpp
 Path.cpp
