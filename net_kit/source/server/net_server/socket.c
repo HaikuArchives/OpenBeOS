@@ -262,6 +262,18 @@ int soconnect(void *sp, caddr_t data, int len)
 	return error;
 }
 
+int soshutdown(void *sp, int how)
+{
+	struct socket *so = (struct socket*)sp;
+	struct protosw *pr = so->so_proto;
+	
+	how++;
+	if (how & SHUT_RD)
+		sorflush(so);
+	if (how & SHUT_WR)
+		return pr->pr_userreq(so, PRU_SHUTDOWN, NULL, NULL, NULL);
+	return 0;
+}
 
 int sendit(void *sp, struct msghdr *mp, int flags, int *retsize)
 {
@@ -325,6 +337,20 @@ bad:
 	return error;
 }
 
+int writeit(void *sp, struct iovec *iov, int flags)
+{
+	struct socket *so = (struct socket *)sp;
+	struct uio auio;
+
+	auio.uio_iov = iov;
+	auio.uio_iovcnt = 1;
+	auio.uio_segflg = UIO_USERSPACE;
+	auio.uio_rw = UIO_WRITE;
+	auio.uio_offset = 0;
+	auio.uio_resid = iov->iov_len;
+
+	return sosend(so, NULL, &auio, NULL, NULL, flags);
+}
 
 int sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
 	   struct mbuf *control, int flags)
@@ -490,6 +516,22 @@ out:
 	return (error);
 }
 
+int readit(void *sp, struct iovec *iov, int *flags)
+{
+	struct socket *so = (struct socket *)sp;
+	struct uio auio;
+
+printf("readit\n");
+
+	auio.uio_iov = iov;
+	auio.uio_iovcnt = 1;
+	auio.uio_segflg = UIO_USERSPACE;
+	auio.uio_rw = UIO_READ;
+	auio.uio_offset = 0;
+	auio.uio_resid = iov->iov_len;
+
+	return soreceive(so, NULL, &auio, NULL, NULL, flags);
+}
 
 int recvit(void *sp, struct msghdr *mp, caddr_t namelenp, int *retsize)
 {
@@ -751,7 +793,7 @@ release:
 int soo_ioctl(void *sp, int cmd, caddr_t data)
 {
 	struct socket *so = (struct socket*)sp;
-
+printf("soo_ioctl:\n");
 	switch (cmd) {
 		case FIONBIO:
 			printf("soo_ioctl: FIONBIO\n");
@@ -804,6 +846,22 @@ discard:
 	sofree(so);
 
 	return error;
+}
+
+int sorflush(struct socket *so)
+{
+	struct sockbuf *sb = &so->so_rcv;
+	struct sockbuf asb;
+
+	sb->sb_flags |= SB_NOINTR;
+//	sblock(sb);
+	socantrcvmore(so);
+//	sbunlock(sb);
+	asb = *sb;
+	memset(sb, 0, sizeof(*sb));
+	
+	sbrelease(&asb);
+	return 0;
 }
 
 int sodisconnect(struct socket *so)
