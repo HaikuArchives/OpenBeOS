@@ -204,7 +204,8 @@ static void start_devices(void)
 
 	d = devices;
 	while (d) {
-		d->start(d);
+		if (d->start)
+			d->start(d);
 		d = d->if_next;
 	}
 }
@@ -310,7 +311,6 @@ static void find_interface_modules(void)
 	struct device_info *di;
 	
 	status_t status;
-printf("find_interface modules\n");
 	
 	getcwd(cdir, PATH_MAX);
 	sprintf(cdir, "%s/modules/interface", cdir);
@@ -332,7 +332,6 @@ printf("find_interface modules\n");
 				di->init();
 		}
 	}
-printf("done findinf interfaces\n");
 }
 		
 static void find_protocol_modules(void)
@@ -583,8 +582,6 @@ int start_stack(void)
 
 	find_interface_modules();
 	start_devices();
-	list_devices();
-	//start_device_threads();
 	
 	return 0;
 }
@@ -608,9 +605,10 @@ int32 create_sockets(void *data)
 	int rv, cnt = 0;
 	bigtime_t tnow;
 
-	printf("starting socket creation test...\n");
+	printf("\n*** socket creation test ***\n\n");
 	
 #define stats(x)	printf("Total sockets created: %d\n", x);
+
 	tnow = real_time_clock_usecs();
 	while (cnt < howmany) {
 		rv = initsocket(&sp);
@@ -639,11 +637,6 @@ int32 create_sockets(void *data)
 	printf("%d sockets in %lld usecs...\n", howmany, real_time_clock_usecs() - tnow);	
 	printf("I have created %d sockets...\n", howmany);
 	
-	printf("Trying route socket...\n");
-	initsocket(&sp);
-	rv = socreate(PF_ROUTE, sp, SOCK_RAW, 0);
-	printf("socreate gave %d [%s]\n", rv, strerror(rv));
-	soclose(sp);
 	return 0;
 }
 
@@ -653,6 +646,9 @@ void assign_addresses(void)
 	int rv;
 	struct ifreq ifr;
 	
+	printf("*** assign sockets test! ***\n"
+	       "Have you chnaged these to match your card and network?\n");
+
 	rv = initsocket(&sp);
 	if (rv < 0) {
 		printf("Couldn't get a socket!\n");
@@ -670,26 +666,32 @@ void assign_addresses(void)
 	memset(&ifr.ifr_addr, 0, sizeof(ifr.ifr_addr));
 	
 	rv = soo_ioctl(sp, SIOCGIFFLAGS, (caddr_t)&ifr);
-	printf("soo_ioctl gave %d\n", rv);
-	printf("ifr.flags = %d\n", ifr.ifr_flags);
+	if (rv < 0) {
+		printf("soo_ioctl gave %d\n", rv);
+		return;
+	}
 
 	((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr = htonl(0xc0a80085);
 	((struct sockaddr_in*)&ifr.ifr_addr)->sin_family = AF_INET;
 	((struct sockaddr_in*)&ifr.ifr_addr)->sin_len = sizeof(struct sockaddr_in);
 	
 	rv = soo_ioctl(sp, SIOCSIFADDR, (caddr_t)&ifr);
-	printf("soo_ioctl gave %d\n", rv);	
-	if (rv < 0)
+	if (rv < 0) {
 		printf("error %d [%s]\n", rv, strerror(rv));
-
+		return;
+	}
+	
 	strcpy(ifr.ifr_name,"loop0");
 	((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr = htonl(0x7f000001);
 	rv = soo_ioctl(sp, SIOCSIFADDR, (caddr_t)&ifr);
-	printf("soo_ioctl gave %d\n", rv);	
-	if (rv < 0)
+	if (rv < 0) {
 		printf("error %d [%s]\n", rv, strerror(rv));
+		return;
+	}
 	
 	soclose(sp);
+
+	printf("Addresses appear to be assigned correctly...let's check :\n");
 }
 
 #define TEST_DATA "Hello World"
@@ -705,13 +707,15 @@ static void big_socket_test(void)
 	int i, rv;
 	int qty = 10;
 	struct sockaddr_in sa;
-
+	int32 nsocks = 0;
+	
 	sa.sin_family = AF_INET;
 	sa.sin_port = 0;
 	sa.sin_addr.s_addr = INADDR_LOOPBACK;
 	sa.sin_len = sizeof(sa);
 	memset(&sa.sin_zero, 0, sizeof(sa.sin_zero));
 	
+	printf("\n*** big socket test (stupid name!) ***\n");
 	while (qty < 100) {
 		for (i=0;i<qty;i++) {
 			rv = initsocket(&sp[i]);
@@ -734,9 +738,12 @@ static void big_socket_test(void)
 		}	
 		for (i=0;i<qty;i++) {
 			soclose(sp[i]);
+			nsocks++;
 		}
 		qty += 10;
 	}
+	printf("Big socket test completed: %ld sockets created/bound and then closed\n",
+	       nsocks);
 }
 			
 static void bind_test(void)
@@ -747,7 +754,8 @@ static void bind_test(void)
 	struct msghdr mh;
 	struct iovec iov;
 	char msg[20];
-		
+
+	printf("\n*** bind test (UDP sockets) ***\n\n");		
 	rv = initsocket(&sp);
 	if (rv < 0) {
 		err(rv, "Couldn't get a socket!");
@@ -805,8 +813,11 @@ static void bind_test(void)
 	printf("Trying to send %ld bytes data\n", strlen(TEST_DATA));
 	
 	rv = sendit(sp, &mh, 0, &rw);
-	printf("sendit gave %d, rw = %d\n", rv, rw);
-	
+	if (rv < 0) {
+		printf("Failed to send data!\n");
+		goto out;
+	}
+		
 	iov.iov_base = &msg;
 	iov.iov_len = 20;
 	mh.msg_namelen = sizeof(sa);
@@ -822,6 +833,7 @@ static void bind_test(void)
 		printf("Came from %08lx:%d\n", ntohl(sa.sin_addr.s_addr), 
 			ntohs(sa.sin_port));
 	}
+out:
 	soclose(sp);
 	soclose(sq);
 }
@@ -833,8 +845,8 @@ int main(int argc, char **argv)
 	thread_id t;
 	int qty = 15000;
 
-	printf( "Net Server Test App!\n"
-		"====================\n\n");
+	printf("Net Server Test App!\n"
+	       "====================\n\n");
 
 	start_stack();
 
@@ -846,15 +858,21 @@ int main(int argc, char **argv)
 		exit (-1);
 	}
 
+	assign_addresses();
+	list_devices();
+
 	t = spawn_thread(create_sockets, "socket creation test",
 		B_NORMAL_PRIORITY, &qty);
 	if (t >= 0)
 		resume_thread(t);
 
-	assign_addresses();
+	/* try to get better output! */
+	wait_for_thread(t, &status);
+	
 	bind_test();
 	big_socket_test();
-	list_devices();
+	
+	printf("\n\n Tests completed!\n");
 	
 	d = devices;
 	while (d) {
