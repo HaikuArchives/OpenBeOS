@@ -2,11 +2,12 @@
 
 MarginView.cpp
 
-Copyright (c) 2001 OpenBeOS.
+Copyright (c) 2002 OpenBeOS.
 
-Author: Simon Gauvin
-
-Version 2001.12.27
+Authors: 
+	Philippe Houdoin
+	Simon Gauvin	
+	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -29,7 +30,6 @@ THE SOFTWARE.
 	Todo:
 
 	2 Make Strings constants or UI resources
-	4 Finish documentation
 	
 */
 
@@ -92,104 +92,18 @@ MarginView::MarginView(BRect frame,
 		
 	   	:BBox(frame, NULL, B_FOLLOW_ALL)
 {
-	//char str[STRING_SIZE];
-	BMessage *msg;
-	BString str;
-
 	this->units = units;
-	unitValue = unitFormat[units];
+	this->unitValue = unitFormat[units];
 	
 	SetLabel("Margins");
 	
-	maxPageHeight = frame.Height() - _minUnitHeight - Y_OFFSET;
-	maxPageWidth = frame.Width() - _minFieldWidth - X_OFFSET;
+	this->maxPageHeight = frame.Height() - _minUnitHeight - Y_OFFSET;
+	this->maxPageWidth = frame.Width() - _minFieldWidth - X_OFFSET;
 
 	this->margins = margins;
 		
 	this->pageWidth = pageWidth;
 	this->pageHeight = pageHeight; 
-
-	// Create the BLooper to handle unit menu messages
-	marginMgr = new MarginManager(this);
-
-// Create text fields
-	msg = new BMessage(MARGIN_CHANGED);
-	BRect r(frame.Width() - be_plain_font->StringWidth("Top#") - _WIDTH, 
-			Y_OFFSET, frame.Width() - X_OFFSET, _WIDTH);
-	// top	
-	msg = new BMessage(TOP_MARGIN_CHANGED);
-	//sprintf(str, "%2.2f", margins.top/unitValue);
-	str << margins.top/unitValue;
-	top = new BTextControl( r, "top", "Top", str.String(), msg,
-				B_FOLLOW_RIGHT);
-	top->SetDivider(be_plain_font->StringWidth("Top#"));
-	top->SetTarget(marginMgr);
-	AllowOnlyNumbers(top, NUM_COUNT);
-	AddChild(top);
-	//left
-	r.OffsetBy(0, Y_OFFSET);
-	r.left = frame.Width() - be_plain_font->StringWidth("Left#") - _WIDTH;
-	//sprintf(str, "%2.2f", margins.left/unitValue);
-    str = "";	
-	str << margins.left/unitValue;
-	msg = new BMessage(LEFT_MARGIN_CHANGED);
-	left = new BTextControl( r, "left", "Left", str.String(), msg,
-				B_FOLLOW_RIGHT);	
-	left->SetDivider(be_plain_font->StringWidth("Left#"));
-	left->SetTarget(marginMgr);
-	AllowOnlyNumbers(left, NUM_COUNT);
-	AddChild(left);
-	//bottom
-	r.OffsetBy(0, Y_OFFSET);
-	r.left = frame.Width() - be_plain_font->StringWidth("Bottom#") - _WIDTH;
-	//sprintf(str, "%2.2f", margins.bottom/unitValue);
-    str = "";	
-	str << margins.bottom/unitValue;
-	msg = new BMessage(BOTTOM_MARGIN_CHANGED);
-	bottom = new BTextControl( r, "bottom", "Bottom", str.String(), msg,
-				B_FOLLOW_RIGHT);
-	bottom->SetDivider(be_plain_font->StringWidth("Bottom#"));
-	bottom->SetTarget(marginMgr);
-	AllowOnlyNumbers(bottom, NUM_COUNT);
-	AddChild(bottom);
-	//right
-	r.OffsetBy(0, Y_OFFSET);
-	r.left = frame.Width() - be_plain_font->StringWidth("Right#") - _WIDTH;
-	//sprintf(str, "%2.2f", margins.right/unitValue);
-    str = "";	
-	str << margins.right/unitValue;
-	msg = new BMessage(RIGHT_MARGIN_CHANGED);
-	right = new BTextControl( r, "right", "Right", str.String(), msg,
-				B_FOLLOW_RIGHT);
-	right->SetDivider(be_plain_font->StringWidth("Right#"));
-	right->SetTarget(marginMgr);
-	AllowOnlyNumbers(right, NUM_COUNT);
-	AddChild(right);
-
-// Create Units popup
-	r.OffsetBy(-X_OFFSET,Y_OFFSET);
-	r.right += Y_OFFSET;
-
-	menu = new BPopUpMenu("units");
-	mf = new BMenuField(r, "units", "Units", menu,
-			B_FOLLOW_BOTTOM|B_FOLLOW_RIGHT|B_WILL_DRAW);
-	mf->ResizeToPreferred();
-	mf->SetDivider(be_plain_font->StringWidth("Units#"));
-	
-	// Construct menu items 
-	for (int i=0; unitNames[i] != NULL; i++ ) 
-	{
-		msg = new BMessage(unitMsg[i]);
-		menu->AddItem(item = new BMenuItem(unitNames[i], msg));
-		item->SetTarget(marginMgr);
-		if (units == unitMsg[i]) {
-			item->SetMarked(true);
-		}
-	}
-	AddChild(mf);
-
-	// calculate the sizes for drawing page view
-	CalculateViewSize(MARGIN_CHANGED);
 }
 
 /**
@@ -199,8 +113,6 @@ MarginView::MarginView(BRect frame,
  * @return void
  */
 MarginView::~MarginView() {
-	marginMgr->Lock();
-	marginMgr->Quit();
 }
 
 /*----------------- MarginView Public BeOS Hook Methods --------------------*/
@@ -280,20 +192,10 @@ void MarginView::AttachedToWindow()
 	if (Parent()) {
 		SetViewColor(Parent()->ViewColor());
 	}
+	ConstructGUI();
 }
 
 /*----------------- MarginView Public Methods --------------------*/
-
-/**
- * GetMessageHandler, returns the BLooper of the MarginManager so that
- * 	you can send messages to this component.
- *
- * @param none
- * @return BLooper*, the margin manager
- */
-BLooper* MarginView::GetMessageHandler() { 
-	return static_cast<BLooper*>(marginMgr); 
-}
 
 /**
  * GetUnits
@@ -383,7 +285,163 @@ BRect MarginView::GetMargin(void)
 	return margin;
 }
 
+/**
+ * MesssageReceived()
+ *
+ * Receive messages for the view 
+ *
+ * @param BMessage* , the message being received
+ * @return void
+ */
+void MarginView::MessageReceived(BMessage *msg)
+{
+	switch (msg->what) 
+	{	
+		case CHANGE_PAGE_SIZE: {
+				float w;
+				float h;
+				msg->FindFloat("width", &w);
+				msg->FindFloat("height", &h);
+				SetPageSize(w, h);
+				UpdateView(MARGIN_CHANGED);
+			}
+			break;
+	
+		case FLIP_PAGE: {	
+				BPoint p;
+				p = GetPageSize();
+				SetPageSize(p.y, p.x);
+				UpdateView(MARGIN_CHANGED);
+			}
+			break;
+			
+		case MARGIN_CHANGED:
+			UpdateView(MARGIN_CHANGED);
+			break;
+		
+		case TOP_MARGIN_CHANGED:
+			UpdateView(TOP_MARGIN_CHANGED);
+			break;
+		
+		case LEFT_MARGIN_CHANGED:
+			UpdateView(LEFT_MARGIN_CHANGED);
+			break;
+		
+		case RIGHT_MARGIN_CHANGED:
+			UpdateView(RIGHT_MARGIN_CHANGED);
+			break;
+		
+		case BOTTOM_MARGIN_CHANGED:
+			UpdateView(BOTTOM_MARGIN_CHANGED);
+			break;
+		
+		case UNIT_INCH:
+		case UNIT_CM:
+		case UNIT_POINT:
+			SetUnits(msg->what);
+			break;
+			
+		default:
+			BView::MessageReceived(msg);
+			break;
+	}
+}
 /*----------------- MarginView Private Methods --------------------*/
+
+/**
+ * ConstructGUI()
+ *
+ * Creates the GUI for the View. MUST be called AFTER the View is attached to
+ *	the Window, or will crash and/or create strange behaviour
+ *
+ * @param none
+ * @return void
+ */
+void MarginView::ConstructGUI()
+{
+	BMessage *msg;
+	BString str;
+
+// Create text fields
+	msg = new BMessage(MARGIN_CHANGED);
+	BRect r(Frame().Width() - be_plain_font->StringWidth("Top#") - _WIDTH, 
+			Y_OFFSET, Frame().Width() - X_OFFSET, _WIDTH);
+	
+	// top	
+	msg = new BMessage(TOP_MARGIN_CHANGED);
+	str << margins.top/unitValue;
+	top = new BTextControl( r, "top", "Top", str.String(), msg,
+				B_FOLLOW_RIGHT);
+	top->SetDivider(be_plain_font->StringWidth("Top#"));
+	top->SetTarget(this);
+	AllowOnlyNumbers(top, NUM_COUNT);
+	AddChild(top);
+	
+	//left
+	r.OffsetBy(0, Y_OFFSET);
+	r.left = Frame().Width() - be_plain_font->StringWidth("Left#") - _WIDTH;
+    str = "";	
+	str << margins.left/unitValue;
+	msg = new BMessage(LEFT_MARGIN_CHANGED);
+	left = new BTextControl( r, "left", "Left", str.String(), msg,
+				B_FOLLOW_RIGHT);	
+	left->SetDivider(be_plain_font->StringWidth("Left#"));
+	left->SetTarget(this);
+	AllowOnlyNumbers(left, NUM_COUNT);
+	AddChild(left);
+	
+	//bottom
+	r.OffsetBy(0, Y_OFFSET);
+	r.left = Frame().Width() - be_plain_font->StringWidth("Bottom#") - _WIDTH;
+    str = "";	
+	str << margins.bottom/unitValue;
+	msg = new BMessage(BOTTOM_MARGIN_CHANGED);
+	bottom = new BTextControl( r, "bottom", "Bottom", str.String(), msg,
+				B_FOLLOW_RIGHT);
+	bottom->SetDivider(be_plain_font->StringWidth("Bottom#"));
+	bottom->SetTarget(this);
+	
+	AllowOnlyNumbers(bottom, NUM_COUNT);
+	AddChild(bottom);
+	
+	//right
+	r.OffsetBy(0, Y_OFFSET);
+	r.left = Frame().Width() - be_plain_font->StringWidth("Right#") - _WIDTH;
+    str = "";	
+	str << margins.right/unitValue;
+	msg = new BMessage(RIGHT_MARGIN_CHANGED);
+	right = new BTextControl( r, "right", "Right", str.String(), msg,
+				B_FOLLOW_RIGHT);
+	right->SetDivider(be_plain_font->StringWidth("Right#"));
+	right->SetTarget(this);
+	AllowOnlyNumbers(right, NUM_COUNT);
+	AddChild(right);
+
+// Create Units popup
+	r.OffsetBy(-X_OFFSET,Y_OFFSET);
+	r.right += Y_OFFSET;
+
+	menu = new BPopUpMenu("units");
+	mf = new BMenuField(r, "units", "Units", menu,
+			B_FOLLOW_BOTTOM|B_FOLLOW_RIGHT|B_WILL_DRAW);
+	mf->ResizeToPreferred();
+	mf->SetDivider(be_plain_font->StringWidth("Units#"));
+	
+	// Construct menu items 
+	for (int i=0; unitNames[i] != NULL; i++ ) 
+	{
+		msg = new BMessage(unitMsg[i]);
+		menu->AddItem(item = new BMenuItem(unitNames[i], msg));
+		item->SetTarget(this);
+		if (units == unitMsg[i]) {
+			item->SetMarked(true);
+		}
+	}
+	AddChild(mf);
+
+	// calculate the sizes for drawing page view
+	CalculateViewSize(MARGIN_CHANGED);
+}
 
 
 /**
@@ -630,87 +688,4 @@ void MarginView::CalculateViewSize(uint32 msg)
 	margins.left = fleft * pixelLength;
 }
 
-/*----------------- MarginManager --------------------*/
 
-/**
- * Constructor for MarginManager class
- *
- * @param MarginView*, the view we are using to proxy messages.
- * @return void
- */
-MarginManager::MarginManager(MarginView *view) 
-{
-	mv = view;
-	Run();
-}
-
-/**
- * Destructor for MarginManager class
- *
- * @param none
- * @return void
- */
-MarginManager::~MarginManager() { 
-}
-
-/**
- * MesssageReceived()
- *
- * Proxy class to receive messages for the view that does not have a BLooper
- *
- * @param BMessage* , the message being received
- * @return void
- */
-void MarginManager::MessageReceived(BMessage *msg)
-{
-	switch (msg->what) 
-	{	
-		case CHANGE_PAGE_SIZE:
-			float w;
-			float h;
-			msg->FindFloat("width", &w);
-			msg->FindFloat("height", &h);
-			mv->SetPageSize(w, h);
-			mv->UpdateView(MARGIN_CHANGED);
-			break;
-
-		case FLIP_PAGE:
-			{	
-				BPoint p;
-				p = mv->GetPageSize();
-				mv->SetPageSize(p.y, p.x);
-				mv->UpdateView(MARGIN_CHANGED);
-			}
-			break;
-			
-		case MARGIN_CHANGED:
-			mv->UpdateView(MARGIN_CHANGED);
-			break;
-		
-		case TOP_MARGIN_CHANGED:
-			mv->UpdateView(TOP_MARGIN_CHANGED);
-			break;
-		
-		case LEFT_MARGIN_CHANGED:
-			mv->UpdateView(LEFT_MARGIN_CHANGED);
-			break;
-		
-		case RIGHT_MARGIN_CHANGED:
-			mv->UpdateView(RIGHT_MARGIN_CHANGED);
-			break;
-		
-		case BOTTOM_MARGIN_CHANGED:
-			mv->UpdateView(BOTTOM_MARGIN_CHANGED);
-			break;
-		
-		case MarginView::UNIT_INCH:
-		case MarginView::UNIT_CM:
-		case MarginView::UNIT_POINT:
-			mv->SetUnits(msg->what);
-			break;
-			
-		default:
-			BLooper::MessageReceived(msg);
-			break;
-	}
-}

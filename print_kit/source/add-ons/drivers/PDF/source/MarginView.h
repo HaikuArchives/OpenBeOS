@@ -2,11 +2,12 @@
 
 MarginView.h
 
-Copyright (c) 2001 OpenBeOS.
+Copyright (c) 2002 OpenBeOS.
 
-Author: Simon Gauvin
-
-Version 2001.12.27
+Authors: 
+	Philippe Houdoin
+	Simon Gauvin	
+	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -84,7 +85,7 @@ THE SOFTWARE.
 			BMessage* msg = new BMessage(CHANGE_PAGE_SIZE);
 			msg->AddFloat("width", pageWidth);
 			msg->AddFloat("height", pageHeight);
-			mv->GetMessageHandler()->PostMessage(msg);
+			mv->PostMessage(msg);
 
 		4) Flip Page with methods:
 		
@@ -94,7 +95,7 @@ THE SOFTWARE.
 		5) Flip Page with BMessage: 
 		
 			BMessage* msg = new BMessage(FLIP_PAGE);
-			mv->GetMessageHandler()->PostMessage(msg);
+			mv->Looper()->PostMessage(msg);
 
 		Note: the MarginView DOES NOT keep track of the orientation. This
 				should be done by the code for the Page setup dialog.
@@ -201,6 +202,9 @@ public:
 
 	~MarginView();
 
+	/// all the GUI construction code
+	void ConstructGUI();
+	
 	// page size
 	void SetPageSize(float pageWidth, float pageHeight);
 	// point.x = width, point.y = height
@@ -219,32 +223,11 @@ public:
 	// will cause a recalc and redraw
 	void UpdateView(uint32 msg);
 
-	// return handler to send messages to View
-	BLooper* GetMessageHandler();
-
 	// BeOS Hook methods
 	virtual void AttachedToWindow(void);
 	void Draw(BRect rect);
 	void FrameResized(float width, float height);
-};
-
-/**
- * Margin Manager Class
- *
- * Proxy class to process menu messages to change the View
- */
-class MarginManager : public BLooper
-{
-private:
-	MarginView *mv;
-	
-public:
-	MarginManager(MarginView *view);
-	~MarginManager();
-
-	// Handle messages
 	void MessageReceived(BMessage *msg);
 };
-
 
 #endif //MARGIN_VIEW_H
