@@ -277,7 +277,7 @@ static void list_devices(void)
 			printf(" MULTICAST");
 		printf("\n");
 		if (d->if_addrlist) {
-			ifaddr *ifa = d->if_addrlist;
+			struct ifaddr *ifa = d->if_addrlist;
 			printf("\t\t Addresses:\n");
 			while (ifa) {
 				dump_sockaddr(ifa->ifa_addr);
@@ -415,6 +415,9 @@ void add_domain(struct domain *dom, int fam)
 				printf("Don't know how to add domain %d\n", fam);
 		}
 	} else {
+		/* find the last domain and add ourselves at the end */
+		for (dm = domains; dm->dom_next; dm = dm->dom_next)
+			continue;
 		if (dm)
 			dm->dom_next = dom;
 		else
@@ -636,6 +639,11 @@ int32 create_sockets(void *data)
 	printf("%d sockets in %lld usecs...\n", howmany, real_time_clock_usecs() - tnow);	
 	printf("I have created %d sockets...\n", howmany);
 	
+	printf("Trying route socket...\n");
+	initsocket(&sp);
+	rv = socreate(PF_ROUTE, sp, SOCK_RAW, 0);
+	printf("socreate gave %d [%s]\n", rv, strerror(rv));
+	soclose(sp);
 	return 0;
 }
 
