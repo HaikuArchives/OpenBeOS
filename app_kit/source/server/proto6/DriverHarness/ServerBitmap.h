@@ -21,6 +21,8 @@ public:
 	void SetArea(area_id ID);
 	area_id Area(void);
 	uint32 BitsLength(void);
+	BRect Bounds() { return BRect(0,0,width-1,height-1); };
+	int32 BytesPerRow(void) { return bytesperline; };
 
 	int32 width,height;
 	int32 bytesperline;

@@ -8,6 +8,7 @@
 #include <GraphicsDefs.h>	// for pattern struct
 #include <Cursor.h>
 #include <Message.h>
+#include <Region.h>
 #include "DisplayDriver.h"
 
 class BBitmap;
@@ -52,71 +53,83 @@ class ViewDriver : public DisplayDriver
 {
 public:
 	ViewDriver(void);
-	virtual ~ViewDriver(void);
+	~ViewDriver(void);
 
-	virtual void Initialize(void);		// Sets the driver
-	virtual bool IsInitialized(void);
-	virtual void Shutdown(void);		// You never know when you'll need this
+	void Initialize(void);		// Sets the driver
+	bool IsInitialized(void);
+	void Shutdown(void);		// You never know when you'll need this
 	
-	virtual void SafeMode(void);	// Easy-access functions for common tasks
-	virtual void Reset(void);
-	virtual void Clear(uint8 red,uint8 green,uint8 blue);
-	virtual void Clear(rgb_color col);
+	void SafeMode(void);	// Easy-access functions for common tasks
+	void Reset(void);
+	void Clear(uint8 red,uint8 green,uint8 blue);
+	void Clear(rgb_color col);
 
 	// Settings functions
-	virtual void SetScreen(uint32 space);
-	virtual int32 GetHeight(void);
-	virtual int32 GetWidth(void);
-	virtual int GetDepth(void);
+	void SetScreen(uint32 space);
+	int32 GetHeight(void);
+	int32 GetWidth(void);
+	int GetDepth(void);
 
 	// Drawing functions
-	virtual void Blit(BRect src, BRect dest);
-	virtual void DrawBitmap(ServerBitmap *bitmap);
-	virtual void DrawChar(char c, BPoint point);
-	virtual void DrawString(char *string, int length, BPoint point);
+	void AddLine(BPoint pt1, BPoint pt2, rgb_color col);
+	void BeginLineArray(int32 count);
+	void Blit(BRect src, BRect dest);
+	void DrawBitmap(ServerBitmap *bitmap);
+	void DrawLineArray(int32 count,BPoint *start, BPoint *end, rgb_color *color);
+	void DrawChar(char c, BPoint point);
+	void DrawString(char *string, int length, BPoint point);
+	void EndLineArray(void);
 
-	virtual void FillArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
-	virtual void FillBezier(BPoint *points, uint8 *pattern);
-	virtual void FillEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);
-	virtual void FillPolygon(int *x, int *y, int numpoints, bool is_closed);
-	virtual void FillRect(BRect rect, uint8 *pattern);
-	virtual void FillRect(BRect rect, rgb_color col);
-	virtual void FillRegion(BRegion *region);
-	virtual void FillRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
-	virtual void FillShape(BShape *shape);
-	virtual void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
+	void FillArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
+	void FillBezier(BPoint *points, uint8 *pattern);
+	void FillEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);
+	void FillPolygon(int *x, int *y, int numpoints, bool is_closed);
+	void FillRect(BRect rect, uint8 *pattern);
+	void FillRect(BRect rect, rgb_color col);
+	void FillRegion(BRegion *region);
+	void FillRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
+	void FillShape(BShape *shape);
+	void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
+	void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
 
-	virtual void HideCursor(void);
-	virtual bool IsCursorHidden(void);
-	virtual void MoveCursorTo(float x, float y);
-	virtual void MovePenTo(BPoint pt);
-	virtual void ObscureCursor(void);
-	virtual BPoint PenPosition(void);
-	virtual float PenSize(void);
-	virtual void SetCursor(ServerCursor *cursor);
-	virtual void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
-	virtual void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
-	virtual void SetPenSize(float size);
-	virtual void SetPixel(int x, int y, uint8 *pattern);
-	virtual void ShowCursor(void);
+	void HideCursor(void);
+	bool IsCursorHidden(void);
+	void MoveCursorTo(float x, float y);
+	void MovePenTo(BPoint pt);
+	void ObscureCursor(void);
+	BPoint PenPosition(void);
+	float PenSize(void);
+	void SetCursor(ServerCursor *cursor);
+	drawing_mode GetDrawingMode(void);
+	void SetDrawingMode(drawing_mode mode);
+	void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	void SetHighColor(rgb_color col);
+	void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	void SetLowColor(rgb_color col);
+	void SetPenSize(float size);
+	void SetPixel(int x, int y, uint8 *pattern);
+	void ShowCursor(void);
 
-	virtual void StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
-	virtual void StrokeBezier(BPoint *points, uint8 *pattern);
-	virtual void StrokeEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);
-	virtual void StrokeLine(BPoint point, uint8 *pattern);
-	virtual void StrokeLine(BPoint pt1, BPoint pt2, rgb_color col);
-	virtual void StrokePolygon(int *x, int *y, int numpoints, bool is_closed);
-	virtual void StrokeRect(BRect rect,uint8 *pattern);
-	virtual void StrokeRect(BRect rect,rgb_color col);
-	virtual void StrokeRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
-	virtual void StrokeShape(BShape *shape);
-	virtual void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
+	float StringWidth(const char *string, int32 length);
+	void StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
+	void StrokeBezier(BPoint *points, uint8 *pattern);
+	void StrokeEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);
+	void StrokeLine(BPoint point, uint8 *pattern);
+	void StrokeLine(BPoint pt1, BPoint pt2, rgb_color col);
+	void StrokePolygon(int *x, int *y, int numpoints, bool is_closed);
+	void StrokeRect(BRect rect,uint8 *pattern);
+	void StrokeRect(BRect rect,rgb_color col);
+	void StrokeRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
+	void StrokeShape(BShape *shape);
+	void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
+	void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
 	VDWindow *screenwin;
 protected:
 	int hide_cursor;
 	bool obscure_cursor;
 	BBitmap *framebuffer;
 	BView *drawview;
+	BRegion laregion;
 
 	PortLink *serverlink;
 	

@@ -286,7 +286,7 @@ int SecondDriver::GetDepth(void){
 /*******************************************************
 *   @description
 *******************************************************/
-void SecondDriver::DrawBitmap(ServerBitmap *bitmap){
+void SecondDriver::DrawBitmap(ServerBitmap *bitmap, BRect source, BRect dest){
    printf("Calling DrawBitmap (not writen yet)\n");
 }
 
@@ -413,6 +413,14 @@ void SecondDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect
 /*******************************************************
 *   @description
 *******************************************************/
+void SecondDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color color){
+   printf("FillTriangle is not writen yet\n");
+   StrokeTriangle(first,second,third,rect,color);
+}
+
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::HideCursor(void){
    if(sc){
       sc(false);
@@ -529,26 +537,6 @@ void SecondDriver::SetCursor(ServerCursor *cursor){
 *******************************************************/
 void SecondDriver::SetPenSize(float size){
    pensize = size;
-}
-
-/*******************************************************
-*   @description
-*******************************************************/
-void SecondDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
-   highcol.red = r;
-   highcol.green = g;
-   highcol.blue = b;
-   highcol.alpha = a;   
-}
-
-/*******************************************************
-*   @description
-*******************************************************/
-void SecondDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
-   lowcol.red = r;
-   lowcol.green = g;
-   lowcol.blue = b;
-   lowcol.alpha = a;
 }
 
 /*******************************************************
@@ -721,6 +709,16 @@ void SecondDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRe
    StrokeLine(second,pattern);
    StrokeLine(third,pattern);
    StrokeLine(first,pattern);
+}
+
+
+/*******************************************************
+*   @description
+*******************************************************/
+void SecondDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color color){
+   StrokeLine(first,second,color);
+   StrokeLine(first,third,color);
+   StrokeLine(third,second,color);
 }
 
 

@@ -16,7 +16,7 @@
 #include "ServerBitmap.h"
 #include "Desktop.h"
 
-#define DEBUG_BITMAP
+//#define DEBUG_BITMAP
 
 #ifdef DEBUG_BITMAP
 #include <stdio.h>

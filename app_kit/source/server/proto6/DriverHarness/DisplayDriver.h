@@ -43,6 +43,19 @@ typedef struct
 
 class ServerCursor;
 
+#define DRAW_COPY 0
+#define DRAW_OVER 1
+#define DRAW_ERASE 2	
+#define DRAW_INVERT 3
+#define DRAW_ADD 4
+#define DRAW_SUBTRACT 5
+#define DRAW_BLEND 6
+#define DRAW_MIN 7
+#define DRAW_MAX 8
+#define DRAW_SELECT 9
+#define DRAW_ALPHA 10
+
+
 class DisplayDriver
 {
 public:
@@ -65,10 +78,14 @@ public:
 	virtual int GetDepth(void);
 
 	// Drawing functions
+	virtual void AddLine(BPoint pt1, BPoint pt2, rgb_color col);
+	virtual void BeginLineArray(int32 count);
 	virtual void Blit(BRect src, BRect dest);
-	virtual void DrawBitmap(ServerBitmap *bitmap);
+	virtual void DrawBitmap(ServerBitmap *bitmap, BRect source, BRect dest);
 	virtual void DrawChar(char c, BPoint point);
+	virtual void DrawLineArray(int32 count,BPoint *start, BPoint *end, rgb_color *color);
 	virtual void DrawString(char *string, int length, BPoint point);
+	virtual void EndLineArray(void);
 
 	virtual void FillArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
 	virtual void FillBezier(BPoint *points, uint8 *pattern);
@@ -80,11 +97,14 @@ public:
 	virtual void FillRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
 	virtual void FillShape(BShape *shape);
 	virtual void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
+	virtual void FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
 
 //	virtual void GetBlendingMode(source_alpha *srcmode, alpha_function *funcmode);
-//	virtual drawing_mode GetDrawingMode(void);
+	virtual drawing_mode GetDrawingMode(void);
 	virtual void HideCursor(void);
+	rgb_color HighColor(void);
 	virtual bool IsCursorHidden(void);
+	rgb_color LowColor(void);
 	virtual void MoveCursorTo(float x, float y);
 	virtual void MovePenTo(BPoint pt);
 	virtual void ObscureCursor(void);
@@ -92,13 +112,16 @@ public:
 	virtual float PenSize(void);
 //	virtual void SetBlendingMode(source_alpha srcmode, alpha_function funcmode);
 	virtual void SetCursor(ServerCursor *cursor);
-//	virtual void SetDrawingMode(drawing_mode mode);
+	virtual void SetDrawingMode(drawing_mode mode);
 	virtual void ShowCursor(void);
 	virtual void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	virtual void SetHighColor(rgb_color col);
 	virtual void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	virtual void SetLowColor(rgb_color col);
 	virtual void SetPenSize(float size);
 	virtual void SetPixel(int x, int y, uint8 *pattern);
 
+	virtual float StringWidth(const char *string, int32 length);
 	virtual void StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern);
 	virtual void StrokeBezier(BPoint *points, uint8 *pattern);
 	virtual void StrokeEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);
@@ -110,15 +133,22 @@ public:
 	virtual void StrokeRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
 	virtual void StrokeShape(BShape *shape);
 	virtual void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
+	virtual void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
 
 	graphics_card_hook ghooks[48];
 	graphics_card_info *ginfo;
 
 protected:
+	virtual void Line32(BPoint pt, BPoint pt2, uint8 *pattern);
+	virtual void Line16(BPoint pt, BPoint pt2, uint8 *pattern);
+	virtual void Line8(BPoint pt, BPoint pt2, uint8 *pattern);
+
 	bool is_initialized, cursor_visible, show_on_move;
 	ServerCursor *current_cursor;
 	BLocker *locker;
 	rgb_color highcol, lowcol;
+	uint16 high16, low16;
+	uint8 high8, low8;
 	BPoint penpos;
 	float pensize;
 };

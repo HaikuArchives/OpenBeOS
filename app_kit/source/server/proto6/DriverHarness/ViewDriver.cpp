@@ -24,8 +24,10 @@
 #include <stdio.h>
 #include <iostream.h>
 #include <Message.h>
+#include <Region.h>
 #include <Bitmap.h>
 #include <OS.h>
+#include <GraphicsDefs.h>
 #include "PortLink.h"
 #include "ServerProtocol.h"
 #include "ServerBitmap.h"
@@ -43,6 +45,8 @@ VDWIN_OBSCURECURSOR,
 VDWIN_MOVECURSOR,
 VDWIN_SETCURSOR,
 };
+
+ViewDriver *viewdriver_global;
 
 VDView::VDView(BRect bounds)
 	: BView(bounds,"viewdriver_view",B_FOLLOW_ALL, B_WILL_DRAW)
@@ -62,6 +66,7 @@ VDView::VDView(BRect bounds)
 	// Create a cursor which isn't just a box
 	cursor=new BBitmap(BRect(0,0,20,20),B_RGBA32,true);
 	BView *v=new BView(cursor->Bounds(),"v", B_FOLLOW_NONE, B_WILL_DRAW);
+	hide_cursor=0;
 
 	cursor->Lock();
 	cursor->AddChild(v);
@@ -346,6 +351,7 @@ void VDWindow::WindowActivated(bool active)
 
 ViewDriver::ViewDriver(void)
 {
+	viewdriver_global=this;
 	screenwin=new VDWindow();
 	framebuffer=screenwin->view->viewbmp;
 	serverlink=screenwin->view->serverlink;
@@ -507,6 +513,21 @@ int ViewDriver::GetDepth(void)
 	return 0;
 }
 
+void ViewDriver::AddLine(BPoint pt1, BPoint pt2, rgb_color col)
+{
+	drawview->AddLine(pt1,pt2,col);
+	laregion.Include(BRect(pt1,pt2));
+}
+
+void ViewDriver::BeginLineArray(int32 count)
+{
+	// NOTE: the unlocking is done in EndLineArray()!
+	screenwin->Lock();
+	framebuffer->Lock();
+	laregion.MakeEmpty();
+	drawview->BeginLineArray(count);
+}
+
 void ViewDriver::Blit(BRect src, BRect dest)
 {
 	screenwin->Lock();
@@ -522,6 +543,25 @@ void ViewDriver::DrawBitmap(ServerBitmap *bitmap)
 {
 }
 
+void ViewDriver::DrawLineArray(int32 count,BPoint *start, BPoint *end, rgb_color *color)
+{
+	screenwin->Lock();
+	framebuffer->Lock();
+
+	BRegion invalid;
+	drawview->BeginLineArray(count+1);
+	for(int32 i=0;i<count;i++)
+	{
+		drawview->AddLine(start[i],end[i],color[i]);
+		invalid.Include(BRect(start[i],end[i]));
+	}
+	drawview->EndLineArray();
+	drawview->Sync();
+	screenwin->view->Invalidate(invalid.Frame());
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
 void ViewDriver::DrawChar(char c, BPoint point)
 {
 	char string[2];
@@ -535,8 +575,22 @@ void ViewDriver::DrawString(char *string, int length, BPoint point)
 	screenwin->Lock();
 	framebuffer->Lock();
 	drawview->DrawString(string,length,point);
+	font_height fheight;
+	drawview->GetFontHeight(&fheight);
+	BRect invalid(point,BPoint(point.x+drawview->StringWidth(string,length),
+		fheight.ascent+5));
 	drawview->Sync();
-	screenwin->view->Invalidate();
+	screenwin->view->Invalidate(invalid);
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
+void ViewDriver::EndLineArray(void)
+{
+	// NOTE: the locking is done in BeginLineArray()!
+	drawview->EndLineArray();
+	drawview->Sync();
+	screenwin->view->Invalidate(laregion.Frame());
 	framebuffer->Unlock();
 	screenwin->Unlock();
 }
@@ -654,6 +708,19 @@ void ViewDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect r
 	screenwin->Unlock();
 }
 
+void ViewDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col)
+{
+	screenwin->Lock();
+	framebuffer->Lock();
+	drawview->SetHighColor(col);
+	drawview->FillTriangle(first,second,third,rect);
+	drawview->SetHighColor(highcolor);
+	drawview->Sync();
+	screenwin->view->Invalidate(rect);
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
 void ViewDriver::HideCursor(void)
 {
 	screenwin->Lock();
@@ -761,6 +828,16 @@ void ViewDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 	screenwin->Unlock();
 }
 
+void ViewDriver::SetHighColor(rgb_color col)
+{
+	screenwin->Lock();
+	framebuffer->Lock();
+	drawview->SetHighColor(col);
+	highcolor=col;
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
 void ViewDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 {
 	screenwin->Lock();
@@ -770,6 +847,37 @@ void ViewDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 	lowcolor.green=g;
 	lowcolor.blue=b;
 	lowcolor.alpha=a;
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
+void ViewDriver::SetLowColor(rgb_color col)
+{
+	screenwin->Lock();
+	framebuffer->Lock();
+	drawview->SetLowColor(col);
+	lowcolor=col;
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
+drawing_mode ViewDriver::GetDrawingMode(void)
+{
+	drawing_mode dm;
+	
+	screenwin->Lock();
+	framebuffer->Lock();
+	dm=drawview->DrawingMode();
+	framebuffer->Unlock();
+	screenwin->Unlock();
+	return dm;
+}
+
+void ViewDriver::SetDrawingMode(drawing_mode dmode)
+{
+	screenwin->Lock();
+	framebuffer->Lock();
+	drawview->SetDrawingMode(dmode);
 	framebuffer->Unlock();
 	screenwin->Unlock();
 }
@@ -787,6 +895,11 @@ void ViewDriver::ShowCursor(void)
 		screenwin->PostMessage(VDWIN_SHOWCURSOR);
 	}
 	screenwin->Unlock();
+}
+
+float ViewDriver::StringWidth(const char *string, int32 length)
+{
+	return drawview->StringWidth(string,length);
 }
 
 void ViewDriver::StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pat)
@@ -864,6 +977,34 @@ void ViewDriver::StrokeLine(BPoint pt1, BPoint pt2, rgb_color col)
 
 void ViewDriver::StrokePolygon(int *x, int *y, int numpoints, bool is_closed)
 {
+	screenwin->Lock();
+	framebuffer->Lock();
+
+	BRegion invalid;
+
+	drawview->BeginLineArray(numpoints+2);
+	BPoint start,end;
+	for(int i=1;i<numpoints;i++)
+	{
+		start.Set(x[i-1],y[i-1]);
+		end.Set(x[i],y[i]);
+		drawview->AddLine(start,end,highcolor);
+		invalid.Include(BRect(start,end));
+	}
+
+	if(is_closed)
+	{
+		start.Set(x[numpoints-1],y[numpoints-1]);
+		end.Set(x[0],y[0]);
+		drawview->AddLine(start,end,highcolor);
+		invalid.Include(BRect(start,end));
+	}
+	drawview->EndLineArray();
+
+	drawview->Sync();
+	screenwin->view->Invalidate(invalid.Frame());
+	framebuffer->Unlock();
+	screenwin->Unlock();
 }
 
 void ViewDriver::StrokeRect(BRect rect, uint8 *pat)
@@ -919,6 +1060,19 @@ void ViewDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect
 		drawview->StrokeTriangle(first,second,third,rect,*((pattern*)pat));
 	else
 		drawview->StrokeTriangle(first,second,third,rect);
+	drawview->Sync();
+	screenwin->view->Invalidate(rect);
+	framebuffer->Unlock();
+	screenwin->Unlock();
+}
+
+void ViewDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col)
+{
+	screenwin->Lock();
+	framebuffer->Lock();
+	drawview->SetHighColor(col);
+	drawview->StrokeTriangle(first,second,third,rect);
+	drawview->SetHighColor(highcolor);
 	drawview->Sync();
 	screenwin->view->Invalidate(rect);
 	framebuffer->Unlock();

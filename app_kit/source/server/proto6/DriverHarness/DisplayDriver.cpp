@@ -4,12 +4,14 @@
 		for graphics calls.
 */
 #include "DisplayDriver.h"
+#include "ColorUtils.h"
+#include "SystemPalette.h"
 #include "ServerCursor.h"
 
 DisplayDriver::DisplayDriver(void)
 {
 	is_initialized=false;
-	cursor_visible=false;
+	cursor_visible=true;
 	show_on_move=false;
 	locker=new BLocker();
 
@@ -80,11 +82,19 @@ int DisplayDriver::GetDepth(void)
 	return ginfo->bytes_per_row;
 }
 
+void DisplayDriver::AddLine(BPoint pt1, BPoint pt2, rgb_color col)
+{
+}
+
+void DisplayDriver::BeginLineArray(int32 count)
+{
+}
+
 void DisplayDriver::Blit(BRect src, BRect dest)
 {	// Screen-to-screen bitmap copying
 }
 
-void DisplayDriver::DrawBitmap(ServerBitmap *bitmap)
+void DisplayDriver::DrawBitmap(ServerBitmap *bitmap, BRect source, BRect dest)
 {
 }
 
@@ -92,7 +102,15 @@ void DisplayDriver::DrawChar(char c, BPoint point)
 {
 }
 
+void DisplayDriver::DrawLineArray(int32 count,BPoint *start, BPoint *end, rgb_color *color)
+{
+}
+
 void DisplayDriver::DrawString(char *string, int length, BPoint point)
+{
+}
+
+void DisplayDriver::EndLineArray(void)
 {
 }
 
@@ -136,13 +154,38 @@ void DisplayDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRec
 {
 }
 
+void DisplayDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col)
+{
+}
+
+drawing_mode DisplayDriver::GetDrawingMode(void)
+{
+	return B_OP_COPY;
+}
+
 void DisplayDriver::HideCursor(void)
 {
+}
+
+rgb_color DisplayDriver::HighColor(void)
+{
+	locker->Lock();
+	rgb_color col=highcol;
+	locker->Unlock();
+	return col;
 }
 
 bool DisplayDriver::IsCursorHidden(void)
 {
 	return false;
+}
+
+rgb_color DisplayDriver::LowColor(void)
+{
+	locker->Lock();
+	rgb_color col=lowcol;
+	locker->Unlock();
+	return col;
 }
 
 void DisplayDriver::ObscureCursor(void)
@@ -155,6 +198,7 @@ void DisplayDriver::MoveCursorTo(float x, float y)
 
 void DisplayDriver::MovePenTo(BPoint pt)
 {	// Moves the graphics pen to this position
+	penpos=pt;
 }
 
 BPoint DisplayDriver::PenPosition(void)
@@ -171,16 +215,41 @@ void DisplayDriver::SetCursor(ServerCursor *cursor)
 {
 }
 
+void DisplayDriver::SetDrawingMode(drawing_mode mode)
+{
+}
+
 void DisplayDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 {
+	SetRGBColor(&highcol,r,g,b,a);
+	high16=FindClosestColor16(highcol);
+	high8=FindClosestColor(system_palette,highcol);
+}
+
+void DisplayDriver::SetHighColor(rgb_color col)
+{
+	highcol=col;
+	high16=FindClosestColor16(highcol);
+	high8=FindClosestColor(system_palette,highcol);
 }
 
 void DisplayDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
 {
+	SetRGBColor(&lowcol,r,g,b,a);
+	low16=FindClosestColor16(lowcol);
+	low8=FindClosestColor(system_palette,lowcol);
+}
+
+void DisplayDriver::SetLowColor(rgb_color col)
+{
+	lowcol=col;
+	low16=FindClosestColor16(lowcol);
+	low8=FindClosestColor(system_palette,lowcol);
 }
 
 void DisplayDriver::SetPenSize(float size)
 {
+	pensize=(size>0)?size:1;
 }
 
 void DisplayDriver::SetPixel(int x, int y, uint8 *pattern)
@@ -190,6 +259,11 @@ void DisplayDriver::SetPixel(int x, int y, uint8 *pattern)
 
 void DisplayDriver::ShowCursor(void)
 {
+}
+
+float DisplayDriver::StringWidth(const char *string, int32 length)
+{
+	return -1.0;
 }
 
 void DisplayDriver::StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern)
@@ -233,5 +307,21 @@ void DisplayDriver::StrokeShape(BShape *shape)
 }
 
 void DisplayDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern)
+{
+}
+
+void DisplayDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col)
+{
+}
+
+void DisplayDriver::Line32(BPoint pt, BPoint pt2, uint8 *pattern)
+{
+}
+
+void DisplayDriver::Line16(BPoint pt, BPoint pt2, uint8 *pattern)
+{
+}
+
+void DisplayDriver::Line8(BPoint pt, BPoint pt2, uint8 *pattern)
 {
 }

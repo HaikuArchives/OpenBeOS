@@ -21,6 +21,9 @@
 #include "DebugTools.h"
 #include "ViewDriver.h"
 #include "DirectDriver.h"
+#include "ScreenDriver.h"
+
+//#define DEBUG_APPSERVER_THREAD
 
 AppServer::AppServer(void) : BApplication("application/x-vnd.obe-OBAppServer")
 {
@@ -38,8 +41,9 @@ printf("Server input port: %ld\n",mouseport);
 	quitting_server=false;
 	exit_poller=false;
 
-	driver=new ViewDriver;
+//	driver=new ViewDriver;
 //	driver=new DirectDriver;
+	driver=new ScreenDriver;
 	driver->Initialize();
 
 	// Spawn our input-polling thread
@@ -62,21 +66,23 @@ AppServer::~AppServer(void)
 
 void AppServer::RunTests(void)
 {
+	driver->SetScreen(B_32_BIT_800x600);
 	driver->Clear(80,85,152);
 
-/*	TestScreenStates();
+//	TestScreenStates();
 	TestArcs();
 	TestBeziers();
 	TestEllipses();
-//	TestLines();
+	TestLines();
 	TestPolygon();
 	TestRects();
 	TestRegions();
 	TestShape();
 	TestTriangle();
-//	TestCursors();
+
+	TestCursors();
 	TestFonts();
-*/
+
 }
 
 thread_id AppServer::Run(void)
@@ -235,6 +241,9 @@ printf("Exiting Poller thread...\n");
 
 void AppServer::TestScreenStates(void)
 {
+	driver->SetScreen(B_8_BIT_640x480);
+	snooze(3000000);
+	driver->SetScreen(B_8_BIT_800x600);
 }
 
 void AppServer::TestArcs(void)
@@ -305,16 +314,39 @@ void AppServer::TestLines(void)
 
 	driver->MovePenTo(BPoint(10,150));
 	driver->SetHighColor(255,0,0);
-	
+
 	for(i=0;i<100;i++)
 	{
 		col.green=100+i;
 		col.blue=100+i;
 		driver->StrokeLine(BPoint(10,10),BPoint(10+i,100),col);
 	}
-	
+
 	for(i=0;i<100;i++)
 		driver->StrokeLine(BPoint(10+i,200),(uint8*)&B_SOLID_HIGH);
+
+//	BPoint start[100],end[100];
+//	rgb_color colarray[100];
+
+/*	for(i=0;i<100;i++)
+	{
+		start[i].Set(10,10);
+		end[i].Set(110,10+i);
+		colarray[i].red=100+i;
+		colarray[i].green=100+i;
+		colarray[i].blue=255;
+	}
+	driver->DrawLineArray(100,start,end,colarray);
+*/
+	driver->BeginLineArray(100);
+	for(i=0;i<100;i++)
+	{
+		col.red=100+i;
+		col.green=100+i;
+		col.blue=255;
+		driver->AddLine(BPoint(10,10),BPoint(110,10+i),col);
+	}
+	driver->EndLineArray();
 }
 
 void AppServer::TestPolygon(void)
