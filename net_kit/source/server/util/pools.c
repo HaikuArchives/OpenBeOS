@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "pools.h"
-
+#include "net_misc.h"
 
 #define ROUND_TO_PAGE_SIZE(x) (((x) + (B_PAGE_SIZE) - 1) & ~((B_PAGE_SIZE) - 1))
 
