@@ -126,7 +126,7 @@ struct ifnet {
 	char *name;			/* name of driver e.g. tulip */
 	int unit;			/* number of unit e.g  0 */
 	char *if_name;			/* full name, e.g. tulip0 */
-	struct if_data ifd;		/* if_data structure...shortcuts below */
+	struct if_data ifd;		/* if_data structure, shortcuts below */
 	int flags;			/* if flags */
 	
 	ifq *rxq;
@@ -134,9 +134,12 @@ struct ifnet {
 	ifq *txq;
 	thread_id tx_thread;
 
-	int	(*input)(struct mbuf*, int len);
-	int	(*output)(struct ifnet *, struct mbuf*, struct sockaddr*, struct rtentry *); 
-	int     (*ioctl) (struct ifnet *, int, caddr_t);
+	int	(*start) (struct ifnet *);
+	int	(*stop)  (struct ifnet *);	
+	int	(*input) (struct mbuf*, int len);
+	int	(*output)(struct ifnet *, struct mbuf*, 
+			  struct sockaddr*, struct rtentry *); 
+	int	(*ioctl) (struct ifnet *, int, caddr_t);
 };
 
 #define if_mtu		ifd.ifi_mtu
