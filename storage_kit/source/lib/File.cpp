@@ -25,7 +25,7 @@ BFile::BFile()
 
 // copy constructor
 /*! If \a file is uninitialized, the newly constructed BFile will be, too.
-	\param file the file to be copied
+	\param file the BFile object to be copied
 */
 BFile::BFile(const BFile &file)
 	 : BNode(),
@@ -117,6 +117,10 @@ BFile::~BFile()
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
+	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.
+	- \c B_BUSY: A node was busy.
+	- \c B_FILE_ERROR: A general file error.
+	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	\todo Currently implemented using StorageKit::entry_ref_to_path().
 		  Reimplement!
 */
@@ -145,6 +149,10 @@ BFile::SetTo(const entry_ref *ref, uint32 openMode)
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
+	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.
+	- \c B_BUSY: A node was busy.
+	- \c B_FILE_ERROR: A general file error.
+	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	\todo Implemented using SetTo(entry_ref*, uint32). Check, if necessary
 		  to reimplement!
 */
@@ -171,6 +179,10 @@ BFile::SetTo(const BEntry *entry, uint32 openMode)
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
+	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.
+	- \c B_BUSY: A node was busy.
+	- \c B_FILE_ERROR: A general file error.
+	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 */
 status_t
 BFile::SetTo(const char *path, uint32 openMode)
@@ -215,11 +227,14 @@ BFile::SetTo(const char *path, uint32 openMode)
 		}
 	} else
 		result = B_BAD_VALUE;
-	set_fd(newFd);
-	if (result == B_OK)
-		set_status(B_OK);
-	else
-		set_status(result);
+	// set the new file descriptor
+	if (result == B_OK) {
+		result = set_fd(newFd);
+		if (result != B_OK)
+			StorageKit::close(newFd);
+	}
+	// finally set the BNode status
+	set_status(result);
 	return result;
 }
 
@@ -234,6 +249,10 @@ BFile::SetTo(const char *path, uint32 openMode)
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
+	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.
+	- \c B_BUSY: A node was busy.
+	- \c B_FILE_ERROR: A general file error.
+	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	\todo Implemented using SetTo(BEntry*, uint32). Check, if necessary
 		  to reimplement!
 */
@@ -423,13 +442,18 @@ BFile::operator=(const BFile &file)
 {
 	Unset();
 	if (file.InitCheck() == B_OK) {
-		int fd = StorageKit::dup(file.get_fd());
-		if (fd != -1) {
-			set_fd(fd);
-			fMode = file.fMode;
-			set_status(B_OK);
-		} else
-			set_status(B_ERROR);
+		// duplicate the file descriptor
+		int fd = -1;
+		status_t status = StorageKit::dup(file.get_fd(), fd);
+		// set it
+		if (status == B_OK) {
+			status = set_fd(fd);
+			if (status == B_OK)
+				fMode = file.fMode;
+			else
+				StorageKit::close(fd);
+		}
+		set_status(status);
 	}
 	return *this;
 }
@@ -451,6 +475,7 @@ BFile::close_fd()
 
 // get_fd
 /*! To be used instead of accessing the BNode's private \c fFd member directly.
+	\return the file descriptor, or -1, if not properly initialized.
 */
 int
 BFile::get_fd() const
