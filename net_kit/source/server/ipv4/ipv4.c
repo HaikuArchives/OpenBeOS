@@ -228,6 +228,80 @@ uint16 ip_id(void)
 /* XXX - unlocking */
 }
 
+static int ipv4_ctloutput(int op, struct socket *so, int level,
+                        int optnum, struct mbuf **mp)
+{
+	struct inpcb *inp = sotoinpcb(so);
+	struct mbuf *m = *mp;
+	int optval;
+	int error = 0;
+	
+	if (level != IPPROTO_IP) {
+		error = EINVAL;
+		if (op == PRCO_SETOPT && *mp)
+			m_free(*mp);
+	} else {
+		switch(op) {
+			case PRCO_SETOPT:
+				switch(optnum) {
+					case IP_OPTIONS:
+						/* process options... */
+						break;
+					case IP_TOS:
+					case IP_TTL:
+					case IP_RECVOPTS:
+					case IP_RECVRETOPTS:
+					case IP_RECVDSTADDR:
+						if (m->m_len != sizeof(int))
+							error = EINVAL;
+						else {
+							optval = *mtod(m, int*);
+							switch (optnum) {
+								case IP_TOS:
+									inp->inp_ip.ip_tos = optval;
+									break;
+								case IP_TTL:
+									inp->inp_ip.ip_ttl = optval;
+									break;
+#define OPTSET(bit) \
+	if (optval) \
+		inp->inp_flags |= bit; \
+	else \
+		inp->inp_flags &= ~bit;
+		
+								case IP_RECVOPTS:
+									OPTSET(INP_RECVOPTS);
+									break;
+								case IP_RECVRETOPTS:
+									OPTSET(INP_RECVRETOPTS);
+									break;
+								case IP_RECVDSTADDR:
+									OPTSET(INP_RECVDSTADDR);
+									break;
+							}
+						}
+						break;
+//freeit:
+					default:
+						error = EINVAL;
+						break;
+				}
+				if (m)
+					m_free(m);
+				break;
+			case PRCO_GETOPT:
+				switch(optnum) {
+					/* XXX - add the code here */		
+					default:
+						error = ENOPROTOOPT;
+						break;
+				}
+				break;
+		}
+	}
+	return error;
+}
+
 static void ipv4_init(void)
 {
 	struct timeval tv;
@@ -257,6 +331,7 @@ struct protosw my_proto = {
 	&ipv4_output,
 	NULL,             /* pr_userreq */
 	NULL,             /* pr_sysctl */
+	&ipv4_ctloutput,
 	
 	NULL,
 	NULL

@@ -17,14 +17,14 @@ clean:
 	@if test -e $(OBJS); then rm $(OBJS); fi
 
 kernel:
-	$(CC) $(KCFLAGS) $(INCLUDES) -c ipv4.c
-	$(CC) $(KLDFLAGS) $(KLOBJS) -o ipv4 ipv4.o
+	@$(CC) $(KCFLAGS) $(INCLUDES) -c ipv4.c
+	@$(CC) $(KLDFLAGS) $(KLOBJS) -o ipv4 ipv4.o
 
 installkernel:  kernel
-	cp ipv4 /boot/home/config/add-ons/kernel/network/protocol/ipv4
+	@cp ipv4 /boot/home/config/add-ons/kernel/network/protocol/ipv4
 
 $(TARGET): $(OBJS)
 	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
