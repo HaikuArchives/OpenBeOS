@@ -53,6 +53,8 @@ static void open_device(char *driver, char *devno)
 	int dev;
 	status_t status = -1;
 
+	memset(ed, 0, sizeof(*ed));
+	
 	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
 	printf("open_device: %s\n", path);
 	dev = open(path, O_RDWR);
@@ -399,7 +401,6 @@ printf("setting ether_device ip address to %08x\n", ntohl(IA_SIN(dev)->sin_addr.
 	return 0;
 }
 */
-
 
 int ether_dev_start(ifnet *dev)
 {
