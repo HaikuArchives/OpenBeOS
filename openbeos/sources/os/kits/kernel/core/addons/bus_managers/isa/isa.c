@@ -71,7 +71,7 @@ static module_header isa_module = {
 	isa_uninit
 };
 
-module_header *modules[] = {
+module_header *newos_modules[] = {
 	&isa_module,
 	NULL
 };
