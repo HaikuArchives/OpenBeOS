@@ -34,6 +34,7 @@ class BPoint {
 	bool	operator==(const BPoint &p) const;
 };
 
+extern const BPoint B_ORIGIN;	// returns (0,0)
 
 inline BPoint::BPoint()
 {
@@ -65,7 +66,6 @@ inline void BPoint::Set(float X, float Y)
 	y = Y;
 }
 
-extern const BPoint B_ORIGIN;	// returns (0,0)
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

@@ -272,8 +272,19 @@ status_t BRadioButton::GetSupportedSuites(BMessage *data)
 	return B_OK;
 }
 
+status_t BRadioButton::Perform(perform_code d, void *arg)
+{
+	return B_ERROR;
+}
+
 void BRadioButton::_ReservedRadioButton1()	{}
 void BRadioButton::_ReservedRadioButton2()	{}
+
+BRadioButton &BRadioButton::operator=(const BRadioButton &)
+{
+	return *this;
+}
+
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

@@ -50,14 +50,19 @@ class BCheckBox : public BControl {
 	virtual void		AllAttached();
 	virtual void		AllDetached();
 
+/*----- Private or reserved -----------------------------------------*/
+	virtual status_t	Perform(perform_code d, void *arg);
+
   private:
 	virtual	void		_ReservedCheckBox1();
 	virtual	void		_ReservedCheckBox2();
 	virtual	void		_ReservedCheckBox3();
 
+			BCheckBox	&operator=(const BCheckBox &);
+
 	bool				fOutlined;
 	bool				fPressed;
-	uint32				_reserved[2];
+	uint32				_reserved[1];
 };
 
 #ifdef USE_OPENBEOS_NAMESPACE

@@ -66,6 +66,10 @@ status_t BControl::Archive(BMessage *data, bool deep = true) const
 	return B_OK;
 }
 
+void BControl::WindowActivated(bool state)
+{
+}
+
 void BControl::AttachedToWindow(){
 	if (Parent())
 		SetViewColor(Parent()->ViewColor());
@@ -73,68 +77,26 @@ void BControl::AttachedToWindow(){
 	BInvoker::SetTarget( Window() );
 }
 
-void BControl::SetLabel(const char *label)
+void BControl::MessageReceived(BMessage *msg)
 {
-	if (fLabel)
-		delete[] fLabel;
-	fLabel = new char[strlen(label)+1];
-	strcpy(fLabel, label);
+	switch(msg->what)
+	{
+		case B_CONTROL_INVOKED:
+			Invoke();
+			break;
 
+		default:
+			BView::MessageReceived(msg);
+	}
+}
+
+void BControl::MakeFocus(bool state = true)
+{
+	BView::MakeFocus(state);
+	fFocusChanging = true;
 	Invalidate();
-}
-
-const char *BControl::Label() const
-{
-	return fLabel;
-}
-
-void BControl::SetValue(int32 value)
-{
-	if (value == Value())
-		return;
-	fValue = value;
-	Invalidate();
-}
-
-void BControl::SetValueNoUpdate(int32 value)
-{
-	if (value == Value())
-		return;
-	fValue = value;
-}
-
-status_t BControl::Invoke(BMessage *message){
-	BInvoker::Invoke(message);
-	return B_OK;
-}
-
-int32 BControl::Value() const{
-	return fValue;
-}
-
-void BControl::SetEnabled(bool on){
-	fEnabled = on;
-	if (fEnabled)
-		BView::SetFlags(Flags() | B_NAVIGABLE);
-	else
-		BView::SetFlags(Flags() & (0xffffffff - B_NAVIGABLE));
-	Invalidate();
-}
-
-bool BControl::IsEnabled() const
-{
-	return fEnabled;
-}
-
-// for BOS tab-control
-uint32 BControl::Tab() const
-{
-	return fTab;
-}
-
-void BControl::SetTab(uint32 tab)
-{
-	fTab = tab;
+	Sync();
+	fFocusChanging = false;
 }
 
 void BControl::KeyDown(const char *bytes, int32 numBytes)
@@ -176,17 +138,64 @@ void BControl::KeyDown(const char *bytes, int32 numBytes)
 	}
 }
 
-void BControl::MessageReceived(BMessage *msg)
+void BControl::MouseDown(BPoint pt)
 {
-	switch(msg->what)
-	{
-		case B_CONTROL_INVOKED:
-			Invoke();
-			break;
+	BView::MouseDown(pt);
+}
 
-		default:
-			BView::MessageReceived(msg);
-	}
+void BControl::MouseUp(BPoint pt)
+{
+	BView::MouseUp(pt);
+}
+
+void BControl::MouseMoved(BPoint pt, uint32 code, const BMessage *msg)
+{
+	BView::MouseMoved(pt, code, msg);
+}
+
+void BControl::DetachedFromWindow()
+{
+}
+
+void BControl::SetLabel(const char *label)
+{
+	if (fLabel)
+		delete[] fLabel;
+	fLabel = new char[strlen(label)+1];
+	strcpy(fLabel, label);
+
+	Invalidate();
+}
+
+const char *BControl::Label() const
+{
+	return fLabel;
+}
+
+void BControl::SetValue(int32 value)
+{
+	if (value == Value())
+		return;
+	fValue = value;
+	Invalidate();
+}
+
+int32 BControl::Value() const{
+	return fValue;
+}
+
+void BControl::SetEnabled(bool on){
+	fEnabled = on;
+	if (fEnabled)
+		BView::SetFlags(Flags() | B_NAVIGABLE);
+	else
+		BView::SetFlags(Flags() & (0xffffffff - B_NAVIGABLE));
+	Invalidate();
+}
+
+bool BControl::IsEnabled() const
+{
+	return fEnabled;
 }
 
 void BControl::GetPreferredSize(float *width, float *height)
@@ -198,6 +207,11 @@ void BControl::GetPreferredSize(float *width, float *height)
 void BControl::ResizeToPreferred()
 {
 	BView::ResizeToPreferred();
+}
+
+status_t BControl::Invoke(BMessage *message){
+	BInvoker::Invoke(message);
+	return B_OK;
 }
 
 BHandler * BControl::ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier,
@@ -216,19 +230,17 @@ status_t BControl::GetSupportedSuites(BMessage *data)
 	return B_OK;
 }
 
-void BControl::MouseDown(BPoint pt)
+void BControl::AllAttached()
 {
-	BView::MouseDown(pt);
 }
 
-void BControl::MouseUp(BPoint pt)
+void BControl::AllDetached()
 {
-	BView::MouseUp(pt);
 }
 
-void BControl::MouseMoved(BPoint pt, uint32 code, const BMessage *msg)
+status_t BControl::Perform(perform_code d, void *arg)
 {
-	BView::MouseMoved(pt, code, msg);
+	return B_ERROR;
 }
 
 bool BControl::IsFocusChanging() const
@@ -246,40 +258,22 @@ void BControl::SetTracking(bool state)
 	fTracking = state;
 }
 
-
-
-
-
-
-void BControl::AllAttached()
+void BControl::SetValueNoUpdate(int32 value)
 {
-}
-
-void BControl::AllDetached()
-{
-}
-
-void BControl::MakeFocus(bool state = true)
-{
-	BView::MakeFocus(state);
-	fFocusChanging = true;
-	Invalidate();
-	Sync();
-	fFocusChanging = false;
-}
-
-void BControl::WindowActivated(bool state)
-{
-}
-
-void BControl::DetachedFromWindow()
-{
+	if (value == Value())
+		return;
+	fValue = value;
 }
 
 void BControl::_ReservedControl1() {}
 void BControl::_ReservedControl2() {}
 void BControl::_ReservedControl3() {}
 void BControl::_ReservedControl4() {}
+
+BControl &BControl::operator=(const BControl &)
+{
+	return *this;
+}
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

@@ -82,6 +82,17 @@ void	BRect::PrintToStream() const{
 	printf("(l:%.1f t:%.1f r:%.1f b:%.1f)\n", left, top, right, bottom);
 }
 
+bool	BRect::Contains(BPoint p) const
+{
+	return( p.x>=left && p.x<=right && p.y>=top && p.y<=bottom);
+}
+
+bool	BRect::Contains(BRect r) const
+{
+	return( r.left>=left && r.right<=right && r.top>=top && r.bottom<=bottom);
+}
+
+
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS
 #endif

@@ -300,10 +300,20 @@ void BButton::FrameResized(float new_width, float new_height) {}
 void BButton::WindowActivated(bool state) {}
 void BButton::DetachedFromWindow() {}
 
+status_t BButton::Perform(perform_code d, void *arg)
+{
+	return B_ERROR;
+}
 
 void BButton::_ReservedButton1()	{}
 void BButton::_ReservedButton2()	{}
 void BButton::_ReservedButton3()	{}
+
+BButton &BButton::operator=(const BButton &)
+{
+	return *this;
+}
+
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

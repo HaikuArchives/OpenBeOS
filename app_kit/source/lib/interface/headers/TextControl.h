@@ -15,7 +15,8 @@ class _BTextInput_;
 // The actual TextControl
 class BTextControl : public BControl {
   public:
-							BTextControl(	BRect frame, const char *name, const char *label,
+							BTextControl(	BRect frame, const char *name,
+											const char *label,
 											const char *initial_text, BMessage *message,
 											uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP,
 											uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
@@ -53,7 +54,9 @@ class BTextControl : public BControl {
 	virtual	void			ResizeToPreferred();
 
 	virtual void			MessageReceived(BMessage *msg);
-	virtual BHandler		*ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier, int32 form, const char *property);
+	virtual BHandler		*ResolveSpecifier(	BMessage *msg, int32 index,
+												BMessage *specifier, int32 form,
+												const char *property);
 
 	virtual	void			MouseUp(BPoint pt);
 	virtual	void			MouseMoved(BPoint pt, uint32 code, const BMessage *msg);
@@ -64,6 +67,9 @@ class BTextControl : public BControl {
 	virtual status_t		GetSupportedSuites(BMessage *data);
 	virtual void			SetFlags(uint32 flags);
 
+/*----- Private or reserved -----------------------------------------*/
+	virtual status_t		Perform(perform_code d, void *arg);
+
   private:
 	friend	class 			_BTextInput_;
 	virtual	void			_ReservedTextControl1();
@@ -71,16 +77,21 @@ class BTextControl : public BControl {
 	virtual	void			_ReservedTextControl3();
 	virtual	void			_ReservedTextControl4();
 
+	BTextControl			&operator=(const BTextControl &);
+
 // this one is not defined, so I guess I am on my own here
 	_BTextInput_			*fText;
 
-//	char					*fLabel;	// this is in BControl
+	char					*fUnusedCharP;	//fLabel;	// this is in BControl
 	BMessage				*fModificationMessage;
 	alignment				fLabelAlign;
 	float					fDivider;
 //	uint16					fPrevWidth;
 //	uint16					fPrevHeight;
-	uint32					_reserved[3];
+	uint32					_reserved[4];
+#if !_PR3_COMPATIBLE_
+	uint32					_more_reserved[4];
+#endif
 
 //	bool					fClean;
 	bool					fSkipSetFlags;		// will use this for SHIFT-TAB

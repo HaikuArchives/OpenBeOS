@@ -207,8 +207,19 @@ status_t BBox::GetSupportedSuites(BMessage *data)
 	return B_OK;
 }
 
+status_t BBox::Perform(perform_code d, void *arg)
+{
+	return B_ERROR;
+}
+
 void BBox::_ReservedBox1()	{}
 void BBox::_ReservedBox2()	{}
+
+BBox &BBox::operator=(const BBox &)
+{
+	return *this;
+}
+
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

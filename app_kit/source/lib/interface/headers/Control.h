@@ -32,41 +32,40 @@ class BControl : public BView, public BInvoker {
 	static BArchivable	*Instantiate(BMessage *data);
 	virtual	status_t	Archive(BMessage *data, bool deep = true) const;
 
+	virtual	void		WindowActivated(bool state);
 	virtual	void		AttachedToWindow();
-	virtual	void		DetachedFromWindow();
 	virtual	void		MessageReceived(BMessage *msg);
+	virtual void		MakeFocus(bool state = true);
 	virtual	void		KeyDown(const char *bytes, int32 numBytes);
 	virtual	void		MouseDown(BPoint pt);
 	virtual	void		MouseUp(BPoint pt);
 	virtual	void		MouseMoved(BPoint pt, uint32 code, const BMessage *msg);
-	virtual void		AllAttached();
-	virtual void		AllDetached();
-	virtual void		MakeFocus(bool state = true);
-	virtual	void		WindowActivated(bool state);
-	virtual	void		GetPreferredSize(float *width, float *height);
-	virtual void		ResizeToPreferred();
-	virtual BHandler	*ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier,
-									int32 form, const char *property);
-	virtual status_t	GetSupportedSuites(BMessage *data);
-
-
-// from BInvoker
-	virtual	status_t	Invoke(BMessage *msg = NULL);
-
+	virtual	void		DetachedFromWindow();
 
 // just BControl
 	virtual	void		SetLabel(const char *text);
 	const char			*Label() const;
-		
+
 	virtual	void		SetValue(int32 value);
 	int32				Value() const;
 
 	virtual void		SetEnabled(bool on);
 	bool				IsEnabled() const;
 
-//This one needs to be set initialy by the BView (BOS)
-	virtual void		SetTab(uint32 tab);
-	uint32				Tab() const;
+	virtual	void		GetPreferredSize(float *width, float *height);
+	virtual void		ResizeToPreferred();
+
+// from BInvoker
+	virtual	status_t	Invoke(BMessage *msg = NULL);
+
+	virtual BHandler	*ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier,
+									int32 form, const char *property);
+	virtual status_t	GetSupportedSuites(BMessage *data);
+
+	virtual void		AllAttached();
+	virtual void		AllDetached();
+
+	virtual status_t	Perform(perform_code d, void *arg);
 
   protected:
 	bool				IsFocusChanging() const;
@@ -82,13 +81,14 @@ class BControl : public BView, public BInvoker {
 	virtual	void		_ReservedControl3();
 	virtual	void		_ReservedControl4();
 
+			BControl	&operator=(const BControl &);
+
 	char				*fLabel;
 	int32				fValue;
 	bool				fEnabled;
 	bool				fFocusChanging;
 	bool				fTracking;
 	bool				fWantsNav;
-	uint32				fTab;
 	uint32				_reserved[4];		// for future extension
 };
 

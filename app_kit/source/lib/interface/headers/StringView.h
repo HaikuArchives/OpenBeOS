@@ -11,7 +11,8 @@ namespace OpenBeOS {
 class BStringView : public BView{
   public:
 						BStringView(	BRect bounds, const char *name, const char *text,
-										uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW);
+										uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP,
+										uint32 flags = B_WILL_DRAW);
 						BStringView(BMessage *data);
 	virtual 			~BStringView();
 	static	BArchivable	*Instantiate(BMessage *data);
@@ -43,10 +44,16 @@ class BStringView : public BView{
 	virtual void		AllDetached();
 	virtual status_t	GetSupportedSuites(BMessage *data);
 
+
+/*----- Private or reserved -----------------------------------------*/
+	virtual status_t	Perform(perform_code d, void *arg);
+
   private:
 	virtual	void		_ReservedStringView1();
 	virtual	void		_ReservedStringView2();
 	virtual	void		_ReservedStringView3();
+
+	BStringView			&operator=(const BStringView &);
 
 	char				*fText;
 	alignment			fAlign;

@@ -19,36 +19,25 @@ class BRect {
 	float	right;
 	float	bottom;
 
-	BRect()									{ left = right = 0;	top = bottom = -1; }		// an invalid rect
-	BRect(const BRect &r)					{ left = r.left; right = r.right; top = r.top; bottom = r.bottom; }
-	BRect(float l, float t, float r, float b)
-											{ left = l; right = r; top = t; bottom = b; }
-	BRect(BPoint lt, BPoint rb)				{ left = lt.x; top = lt.y; right = rb.x; bottom = rb.y; }
+	BRect();
+	BRect(const BRect &r);
+	BRect(float l, float t, float r, float b);
+	BRect(BPoint lt, BPoint rb);
 
-	BRect	&operator=(const BRect &r)		{ left = r.left; right = r.right; top = r.top; bottom = r.bottom; return *this; }
-	void	Set(float l, float t, float r, float b)
-											{ left = l; right = r; top = t; bottom = b; }
+	BRect	&operator=(const BRect &r);
+	void	Set(float l, float t, float r, float b);
 
-	BPoint	LeftTop() const					{ return (BPoint(left, top)); }
-	BPoint	RightBottom() const				{ return (BPoint(right, bottom)); }
-	BPoint	LeftBottom() const				{ return (BPoint(left, bottom)); }
-	BPoint	RightTop() const				{ return (BPoint(right, top)); }
-	void	SetLeftTop(const BPoint p)		{ left = p.x; top = p.y; }
-	void	SetRightBottom(const BPoint p)	{ right = p.x; bottom = p.y; }
-	void	SetLeftBottom(const BPoint p)	{ left = p.x; bottom = p.y; }
-	void	SetRightTop(const BPoint p)		{ right = p.x; top = p.y; }
-	bool	operator==(BRect r) const		{ return( left==r.left && right==r.right && top==r.top && bottom==r.bottom ); }
-	bool	operator!=(BRect r) const		{ return( left!=r.left || right!=r.right || top!=r.top || bottom!=r.bottom ); }
-	BRect	operator&(BRect r) const		{ return( BRect( max(left, r.left), max(top, r.top), min(right, r.right), min(bottom, r.bottom) )); }
-	BRect	operator|(BRect r) const		{ return( BRect( min(left, r.left), min(top, r.top), max(right, r.right), max(bottom, r.bottom) )); }
-	bool	IsValid() const					{ return(left <= right && top <= bottom); }
-	float	Width() const					{ return(right-left); }
-	int32	IntegerWidth() const			{ return((int32)ceil(right-left)); }
-	float	Height() const					{ return(bottom-top); }
-	int32	IntegerHeight() const			{ return((int32)ceil(bottom-top)); }
-	bool	Intersects(BRect r) const;
-	bool	Contains(BPoint p) const		{ return( p.x>=left && p.x<=right && p.y>=top && p.y<=bottom); }
-	bool	Contains(BRect r) const			{ return( r.left>=left && r.right<=right && r.top>=top && r.bottom<=bottom); } 
+	void	PrintToStream() const;
+
+	BPoint	LeftTop() const;
+	BPoint	RightBottom() const;
+	BPoint	LeftBottom() const;
+	BPoint	RightTop() const;
+
+	void	SetLeftTop(const BPoint p);
+	void	SetRightBottom(const BPoint p);
+	void	SetLeftBottom(const BPoint p);
+	void	SetRightTop(const BPoint p);
 
 /* transformation */
 	void	InsetBy(BPoint p)				{ left+=p.x; right-=p.x; top+=p.y; bottom-=p.y; }
@@ -72,8 +61,125 @@ class BRect {
 	BRect	OffsetToCopy(BPoint);
 	BRect	OffsetToCopy(float dx, float dy);
 
-	void	PrintToStream() const;
+/* comparison */
+	bool	operator==(BRect r) const		{ return( left==r.left && right==r.right && top==r.top && bottom==r.bottom ); }
+	bool	operator!=(BRect r) const		{ return( left!=r.left || right!=r.right || top!=r.top || bottom!=r.bottom ); }
+
+/* intersection and union */
+	BRect	operator&(BRect r) const		{ return( BRect( max(left, r.left), max(top, r.top), min(right, r.right), min(bottom, r.bottom) )); }
+	BRect	operator|(BRect r) const		{ return( BRect( min(left, r.left), min(top, r.top), max(right, r.right), max(bottom, r.bottom) )); }
+
+	bool	Intersects(BRect r) const;
+	bool	IsValid() const;
+	float	Width() const;
+	int32	IntegerWidth() const;
+	float	Height() const;
+	int32	IntegerHeight() const;
+	bool	Contains(BPoint p) const;
+	bool	Contains(BRect r) const;
+
 };
+
+/*----------------------------------------------------------------*/
+/*----- inline definitions ---------------------------------------*/
+
+inline BPoint BRect::LeftTop() const
+{
+	return(*((const BPoint*)&left));
+}
+
+inline BPoint BRect::RightBottom() const
+{
+	return(*((const BPoint*)&right));
+}
+
+inline BPoint BRect::LeftBottom() const
+{
+	return(BPoint(left, bottom));
+}
+
+inline BPoint BRect::RightTop() const
+{
+	return(BPoint(right, top));
+}
+
+inline BRect::BRect()
+{
+	top = left = 0;
+	bottom = right = -1;
+}
+
+inline BRect::BRect(float l, float t, float r, float b)
+{
+	left = l;
+	top = t;
+	right = r;
+	bottom = b;
+}
+
+inline BRect::BRect(const BRect &r)
+{
+	left = r.left;
+	top = r.top;
+	right = r.right;
+	bottom = r.bottom;
+}
+
+inline BRect::BRect(BPoint leftTop, BPoint rightBottom)
+{
+	left = leftTop.x;
+	top = leftTop.y;
+	right = rightBottom.x;
+	bottom = rightBottom.y;
+}
+
+inline BRect &BRect::operator=(const BRect& from)
+{
+	left = from.left;
+	top = from.top;
+	right = from.right;
+	bottom = from.bottom;
+	return *this;
+}
+
+inline void BRect::Set(float l, float t, float r, float b)
+{
+	left = l;
+	top = t;
+	right = r;
+	bottom = b;
+}
+
+inline bool BRect::IsValid() const
+{
+	if (left <= right && top <= bottom)
+		return true;
+	else
+		return false;
+}
+
+inline int32 BRect::IntegerWidth() const
+{
+	return((int32)ceil(right - left));
+}
+
+inline float BRect::Width() const
+{
+	return(right - left);
+}
+
+inline int32 BRect::IntegerHeight() const
+{
+	return((int32)ceil(bottom - top));
+}
+
+inline float BRect::Height() const
+{
+	return(bottom - top);
+}
+
+/*-------------------------------------------------------------*/
+/*-------------------------------------------------------------*/
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

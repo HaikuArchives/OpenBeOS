@@ -11,20 +11,28 @@
 namespace OpenBeOS {
 #endif
 
-BStringView::BStringView(	BRect frame, const char *name, const char *text, uint32 resizeMask, uint32 flags)
-						: BView( frame, name, resizeMask, flags)
+BStringView::BStringView(	BRect frame, const char *name, const char *text,
+							uint32 resizeMask, uint32 flags)
+	:	BView( frame, name, resizeMask, flags)
 {
 	fText = new char[strlen(text)+1];
 	strcpy(fText, text);
 	fAlign = B_ALIGN_LEFT;
 }
 
-BStringView::BStringView(BMessage *data) : BView(data)
+BStringView::BStringView(BMessage *data)
+	:	BView(data)
 {
 	const char *text;
 
-	if(data->FindInt32("_aligne",(int32&)fAlign) != B_OK)	fAlign = B_ALIGN_LEFT;
-	if(data->FindString("_text",&text) != B_OK)				text = NULL;
+	if (data->FindInt32("_aligne",(int32&)fAlign) != B_OK)
+	{
+		fAlign = B_ALIGN_LEFT;
+	}
+	if (data->FindString("_text",&text) != B_OK)
+	{
+		text = NULL;
+	}
 	SetText(text);
 }
 
@@ -139,7 +147,9 @@ void BStringView::DetachedFromWindow()	{}
 void BStringView::FrameMoved(BPoint new_position)	{}
 void BStringView::FrameResized(float new_width, float new_height)	{}
 
-BHandler *BStringView::ResolveSpecifier(	BMessage *msg, int32 index, BMessage *specifier, int32 form, const char *property)
+BHandler *BStringView::ResolveSpecifier(	BMessage *msg, int32 index,
+											BMessage *specifier, int32 form,
+											const char *property)
 {
 	return NULL;
 }
@@ -156,9 +166,20 @@ status_t BStringView::GetSupportedSuites(BMessage *data)
 	return B_OK;
 }
 
-void BStringView::_ReservedStringView1()	{}
-void BStringView::_ReservedStringView2()	{}
-void BStringView::_ReservedStringView3()	{}
+status_t BStringView::Perform(perform_code d, void *arg)
+{
+	return B_ERROR;
+}
+
+void BStringView::_ReservedStringView1(){}
+void BStringView::_ReservedStringView2(){}
+void BStringView::_ReservedStringView3(){}
+
+BStringView &BStringView::operator=(const BStringView &)
+{
+	return *this;
+}
+
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

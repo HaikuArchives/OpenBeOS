@@ -17,8 +17,10 @@ namespace OpenBeOS {
 /**************************************************
 * The TextControl
 **************************************************/
-BTextControl::BTextControl(BRect frame, const char *name, const char *label, const char *text, BMessage *message,
-							uint32 mask, uint32 flags) : BControl( frame, name, label, message, mask, flags)
+BTextControl::BTextControl(	BRect frame, const char *name, const char *label,
+							const char *text, BMessage *message, uint32 mask,
+							uint32 flags)
+	:	BControl( frame, name, label, message, mask, flags)
 {
 	if (label)	fDivider = frame.Width()/2.0f;
 	else		fDivider = 0.0f;					// no label
@@ -55,28 +57,63 @@ BTextControl::~BTextControl()
 }
 
 
-BTextControl::BTextControl(BMessage *data) : BControl(data)
+BTextControl::BTextControl(BMessage *data)
+	:	BControl(data)
 {
-//   if(data->FindInt32("_a_label",(int32&)fLabelAlign) != B_OK)	fLabelAlign = B_ALIGN_LEFT;
-//   if(data->FindInt32("_a_text",(int32&)fText->Align()) != B_OK)	fLabelAlign = B_ALIGN_LEFT;
+	if (data->FindInt32("_a_label", (int32*)&fLabelAlign) != B_OK)
+	{
+		fLabelAlign = B_ALIGN_LEFT;
+	}
+
+	alignment textAlign;
+	if (data->FindInt32("_a_text", (int32*)&textAlign) != B_OK)
+	{
+		fText->SetAlignment(B_ALIGN_LEFT);
+	}
+	else
+	{
+		fText->SetAlignment(textAlign);
+	}
+
+	if (data->FindFloat("_divide", &fDivider) != B_OK)
+	{
+		if (Label())
+			fDivider = Frame().Width()/2.0f;
+		else
+			fDivider = 0.0f;
+	}
+
+	if (data->FindMessage("_mod_msg", fModificationMessage) != B_OK)
+	{
+		fModificationMessage = NULL;	// Is this really necessary?
+	}
+
+	// TODO: Recover additional info as per final implementation of Archive()
 }
 
 BArchivable *BTextControl::Instantiate(BMessage *data)
 {
-//   if(!validate_instantiation(data,"BBox"))     return NULL;
-//   return new BBox(data);
-	return NULL;
+	if (!validate_instantiation(data,"BTextControl"))
+		return NULL;
+
+	return new BTextControl(data);
 }
 
 status_t BTextControl::Archive(BMessage *data, bool deep = true) const
 {
-/*	BView::Archive(data, deep);
-	
-	if (fLabel)
-		data->AddString("_label",fLabel);
-	data->AddInt32("_style", fStyle);
-*/
-	return B_OK;
+	// TODO: compare against original version and finish
+	status_t err = BView::Archive(data, deep);
+
+	if (!err)
+		err = data->AddInt32("_a_label", fLabelAlign);
+	if (!err)
+		err = data->AddInt32("_a_text", fText->Alignment());
+	if (!err)
+		err = data->AddFloat("_divide", fDivider);
+	if (!err && fModificationMessage)
+		err = data->AddMessage("_mod_msg", fModificationMessage);
+
+	return err;
 }
 
 void BTextControl::SetText(const char *text)
@@ -234,7 +271,8 @@ void BTextControl::GetPreferredSize(float *width, float *height)
 	font.GetHeight(&fh);
 
 	*height = ceil(fh.ascent + fh.descent + fh.leading) + 7.0f;
-// this one I need to find out
+
+	// TODO: this one I need to find out
 	*width = 4.0f + ceil(font.StringWidth(Label()))*2.0f;
 }
 
@@ -283,10 +321,20 @@ void BTextControl::FrameMoved(BPoint new_position)	{}
 void BTextControl::FrameResized(float new_width, float new_height) {}
 void BTextControl::WindowActivated(bool active)	{}
 
+status_t BTextControl::Perform(perform_code d, void *arg)
+{
+	return B_ERROR;
+}
+
 void BTextControl::_ReservedTextControl1()	{}
 void BTextControl::_ReservedTextControl2()	{}
 void BTextControl::_ReservedTextControl3()	{}
 void BTextControl::_ReservedTextControl4()	{}
+
+BTextControl &BTextControl::operator=(const BTextControl &)
+{
+	return *this;
+}
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

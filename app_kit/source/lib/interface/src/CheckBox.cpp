@@ -243,9 +243,20 @@ status_t BCheckBox::GetSupportedSuites(BMessage *data)
 	return B_OK;
 }
 
+status_t BCheckBox::Perform(perform_code d, void *arg)
+{
+	return B_ERROR;
+}
+
 void BCheckBox::_ReservedCheckBox1()	{}
 void BCheckBox::_ReservedCheckBox2()	{}
 void BCheckBox::_ReservedCheckBox3()	{}
+
+BCheckBox &BCheckBox::operator=(const BCheckBox &)
+{
+	return *this;
+}
+
 
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS

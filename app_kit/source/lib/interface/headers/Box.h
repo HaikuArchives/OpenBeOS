@@ -10,7 +10,8 @@ namespace OpenBeOS {
 
 class BBox : public BView{
   public:
-						BBox(	BRect bounds, const char *name = NULL, uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP,
+						BBox(	BRect bounds, const char *name = NULL,
+								uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP,
 								uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
 								border_style border = B_FANCY_BORDER);
 	virtual 			~BBox(void);
@@ -46,9 +47,15 @@ class BBox : public BView{
 	virtual void		MakeFocus(bool state = true);
 	virtual status_t	GetSupportedSuites(BMessage *data);
 
+/*----- Private or reserved -----------------------------------------*/
+
+	virtual	status_t	Perform(perform_code d, void* arg);
+
   private:
 	virtual	void		_ReservedBox1();
 	virtual	void		_ReservedBox2();
+
+			BBox		&operator=(const BBox &);
 
 	char				*fLabel;
 	BRect				fBounds;
