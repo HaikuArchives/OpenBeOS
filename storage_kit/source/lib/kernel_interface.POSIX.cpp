@@ -12,6 +12,8 @@
 #include "kernel_interface.h"
 #include "storage_support.h"
 
+#include "LibBeAdapter.h"
+
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -592,12 +594,31 @@ StorageKit::set_stat(const char *file, Stat &s, StatMember what) {
 			break;
 			
 		case WSTAT_UID:
-			result = ::chown(file, s.st_uid, 0xFFFFFFFF);
+		{
+			// Doesn't work: chown seems to traverse links.
+//			result = ::chown(file, s.st_uid, 0xFFFFFFFF);
+			int fd = ::open(file, O_RDWR | O_NOTRAVERSE);
+			if (fd != -1) {
+				status_t error = set_stat(fd, s, what);
+				::close(fd);
+				return error;
+			} else
+				result = -1;
 			break;
-			
+		}	
 		case WSTAT_GID:
-			result = ::chown(file, 0xFFFFFFFF, s.st_gid);
+		{
+			// Doesn't work: chown seems to traverse links.
+//			result = ::chown(file, 0xFFFFFFFF, s.st_gid);
+			int fd = ::open(file, O_RDWR | O_NOTRAVERSE);
+			if (fd != -1) {
+				status_t error = set_stat(fd, s, what);
+				::close(fd);
+				return error;
+			} else
+				result = -1;
 			break;
+		}
 
 		case WSTAT_SIZE:
 			// For enlarging files the truncate() behavior seems to be not
@@ -978,7 +999,7 @@ StorageKit::entry_ref_to_path( const struct entry_ref *ref, char *result, int si
 
 status_t
 StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size ) {
-	if (name == NULL || result == NULL || size < 1)
+/*	if (name == NULL || result == NULL || size < 1)
 		return B_BAD_VALUE;
 	if (strlen(name) >= B_FILE_NAME_LENGTH)
 		return B_NAME_TOO_LONG;
@@ -988,6 +1009,8 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 	char params[30 + 2 * B_FILE_NAME_LENGTH];
 	sprintf(params, "%ld %lld %s", device, directory, quotedName);
 	return invoke_EntryRefToPath_tool(params, result, size);
+*/
+	return entry_ref_to_path_adapter(device, directory, name, result, size);
 }
 
 status_t
