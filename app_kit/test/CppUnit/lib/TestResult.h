@@ -2,6 +2,7 @@
 #ifndef CPPUNIT_TESTRESULT_H
 #define CPPUNIT_TESTRESULT_H
 
+#include <Locker.h>
 #include <vector>
 
 #ifndef CPPUNIT_GUARDS_H
@@ -62,12 +63,14 @@ public:
 
     class SynchronizationObject
     {
+    private:
+    	BLocker theLocker;
     public:
                                 SynchronizationObject  () {}
         virtual                 ~SynchronizationObject () {}
 
-        virtual void            lock                   () {}
-        virtual void            unlock                 () {}
+        virtual void            lock                   () {theLocker.Lock();}
+        virtual void            unlock                 () {theLocker.Unlock();}
     };
 
     class ExclusiveZone

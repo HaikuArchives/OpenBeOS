@@ -1,5 +1,5 @@
 
-
+#include "Test.h"
 #include "TextTestResult.h"
 #include "CppUnitException.h"
 #include "estring.h"
@@ -9,24 +9,31 @@ using namespace std;
 void TextTestResult::addError (Test *test, CppUnitException *e)
 {
     TestResult::addError (test, e);
-    cerr << "E\n";
+    cerr << " Error!";
 
 }
 
 void TextTestResult::addFailure (Test *test, CppUnitException *e)
 {
     TestResult::addFailure (test, e);
-    cerr << "F\n";
+    cerr << " Failed!";
 
 }
 
 void TextTestResult::startTest (Test *test)
 {
     TestResult::startTest (test);
-    cerr << ".";
-
+    cerr << "Running test: " << test->toString();
+    testStartTime = system_time();
 }
 
+
+void TextTestResult::endTest (Test *test)
+{
+	bigtime_t testRunTime = system_time() - testStartTime;
+    TestResult::endTest (test);
+    cerr << " (" << testRunTime << " us)" << endl;
+}
 
 void TextTestResult::printErrors (ostream& stream)
 {

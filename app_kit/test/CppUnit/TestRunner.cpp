@@ -17,9 +17,13 @@
 
 #include <iostream>
 #include <vector>
+#include <image.h>
+#include <Path.h>
+#include <Directory.h>
+#include <Entry.h>
 
 #include "TextTestResult.h"
-#include "ExampleTestCase.h"
+#include "Test.h"
 
 
 using namespace std;
@@ -64,6 +68,18 @@ void TestRunner::run (int ac, char **av)
 
         if (string (av [i]) == "-wait") {
             m_wait = true;
+            continue;
+        }
+        
+        if (string (av [i]) == "-all") {
+	        for (mappings::iterator it = m_mappings.begin ();
+	        	it != m_mappings.end ();
+	        	++it) {
+	        	cout << endl << "Executing " << (*it).first << ":" << endl;
+	        	Test *testToRun = (*it).second;
+	        	run (testToRun);
+	        	numberOfTests++;
+ 	        }
             continue;
         }
 
@@ -132,14 +148,37 @@ void TestRunner::run (Test *test)
 }
 
 
+typedef	Test *(*suiteFunc)(void);
+
+void addTests(TestRunner *runner)
+{
+	BDirectory theAddonDir("./add-ons");
+	BPath addonPath;
+	BEntry addonEntry;
+	image_id addonImage;
+	const char **testName;
+	suiteFunc addonFunc;
+
+	while (theAddonDir.GetNextEntry(&addonEntry, true) == B_OK) {
+		addonEntry.GetPath(&addonPath);
+		addonImage = load_add_on(addonPath.Path());
+		if ((addonImage > 0) &&
+		    (get_image_symbol(addonImage, "addonTestName", B_SYMBOL_TYPE_DATA,
+		    	(void **)&testName) == B_OK) &&
+		    (get_image_symbol(addonImage, "addonTestFunc", B_SYMBOL_TYPE_TEXT,
+		    	reinterpret_cast<void **>(&addonFunc)) == B_OK)) {
+		    runner->addTest(*testName, addonFunc());
+		}
+	}
+}
+
+
 int main (int ac, char **av)
 {
     TestRunner runner;
 
-    runner.addTest ("ExampleTestCase", ExampleTestCase::suite ());
+ 	addTests(&runner);
     runner.run (ac, av);
 
     return 0;
 }
-
-

@@ -16,9 +16,9 @@ TestResult *TestCase::defaultResult ()
 
 // Check for a failed general assertion 
 void TestCase::assertImplementation (bool          condition,
-                                     std::string   conditionExpression,
+                                     const char *conditionExpression,
                                      long          lineNumber,
-                                     std::string   fileName)
+                                     const char *fileName)
 { 
     if (!condition) 
         throw CppUnitException (conditionExpression, lineNumber, fileName); 
@@ -29,10 +29,10 @@ void TestCase::assertImplementation (bool          condition,
 void TestCase::assertEquals (long        expected, 
                              long        actual,
                              long        lineNumber,
-                             std::string fileName)
+                             const char *fileName)
 { 
     if (expected != actual) 
-        assertImplementation (false, notEqualsMessage(expected, actual), lineNumber, fileName); 
+        assertImplementation (false, notEqualsMessage(expected, actual).c_str(), lineNumber, fileName); 
 }
 
 
@@ -41,10 +41,10 @@ void TestCase::assertEquals (double        expected,
                              double        actual, 
                              double        delta,
                              long          lineNumber,
-                             std::string   fileName)
+                             const char *fileName)
 { 
     if (fabs (expected - actual) > delta) 
-        assertImplementation (false, notEqualsMessage(expected, actual), lineNumber, fileName); 
+        assertImplementation (false, notEqualsMessage(expected, actual).c_str(), lineNumber, fileName); 
 
 }
 

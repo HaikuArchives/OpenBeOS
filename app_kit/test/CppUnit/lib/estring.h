@@ -4,6 +4,8 @@
 #ifndef CPPUNIT_ESTRING_H
 #define CPPUNIT_ESTRING_H
 
+#include <stdio.h>
+
 
 // Create a string from a const char pointer
 inline std::string estring (const char *cstring)
@@ -23,7 +25,7 @@ inline std::string estring (long number)
 
 // Create a string from a double
 inline std::string estring (double number)
-{ char buffer [50]; sprintf (buffer, "%lf", number); return std::string (buffer); }
+{ char buffer [50]; sprintf (buffer, "%f", number); return std::string (buffer); }
 
 
 #endif

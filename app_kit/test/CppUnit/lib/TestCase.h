@@ -3,7 +3,7 @@
 #define CPPUNIT_TESTCASE_H
 
 #include <string>
-
+#include <typeinfo>
 
 #ifndef CPPUNIT_GUARDS_H
 #include "Guards.h"
@@ -106,20 +106,20 @@ protected:
     TestResult          *defaultResult   ();
     void                assertImplementation 
                                          (bool         condition, 
-                                          std::string  conditionExpression = "",
+                                          const char *conditionExpression = "",
                                           long         lineNumber = CPPUNIT_UNKNOWNLINENUMBER,
-                                          std::string  fileName = CPPUNIT_UNKNOWNFILENAME);
+                                          const char *fileName = CPPUNIT_UNKNOWNFILENAME);
 
     void                assertEquals     (long         expected, 
                                           long         actual,
                                           long         lineNumber = CPPUNIT_UNKNOWNLINENUMBER,
-                                          std::string  fileName = CPPUNIT_UNKNOWNFILENAME);
+                                          const char *fileName = CPPUNIT_UNKNOWNFILENAME);
 
     void                assertEquals     (double       expected, 
                                           double       actual, 
                                           double       delta, 
                                           long         lineNumber = CPPUNIT_UNKNOWNLINENUMBER,
-                                          std::string  fileName = CPPUNIT_UNKNOWNFILENAME);
+                                          const char *fileName = CPPUNIT_UNKNOWNFILENAME);
 
     std::string         notEqualsMessage (long         expected, 
                                           long         actual);
@@ -129,7 +129,6 @@ protected:
     
 private:
     const std::string   m_name;
-
 
 
 };
@@ -168,7 +167,7 @@ inline void TestCase::tearDown ()
 
 // Returns the name of the test case instance
 inline std::string TestCase::toString ()
-{ const type_info& thisClass = typeid (*this); return std::string (thisClass.name ()) + "." + name (); }
+{ const type_info& thisClass = typeid (*this);return std::string (thisClass.name()) + "." + name (); }
 
 
 

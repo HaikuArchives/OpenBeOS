@@ -3,6 +3,7 @@
 #define CPPUNIT_TEXTTESTRESULT_H
 
 #include <iostream>
+#include <OS.h>
 #include "TestResult.h"
 
 
@@ -12,11 +13,13 @@ public:
     virtual void        addError      (Test *test, CppUnitException *e);
     virtual void        addFailure    (Test *test, CppUnitException *e);
     virtual void        startTest     (Test *test);
+    virtual void        endTest     (Test *test);
     virtual void        print         (std::ostream& stream);
     virtual void        printErrors   (std::ostream& stream);
     virtual void        printFailures (std::ostream& stream);
     virtual void        printHeader   (std::ostream& stream);
-
+private:
+	bigtime_t	testStartTime;
 };
 
 
