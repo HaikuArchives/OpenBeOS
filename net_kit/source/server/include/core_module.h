@@ -75,6 +75,10 @@ struct core_module_info {
 	struct rtentry *(*in_pcbrtentry)(struct inpcb *);
 	void (*in_setsockaddr)(struct inpcb *, struct mbuf *);
 	void (*in_setpeeraddr)(struct inpcb *, struct mbuf *);
+	void (*in_pcbnotify)(struct inpcb *, struct sockaddr *,
+                         uint16, struct in_addr, uint16, 
+                         int, void (*)(struct inpcb *, int));
+	int  (*inetctlerrmap)(int);
 	
 	/* mbuf routines... */
 	struct mbuf * (*m_gethdr)(int);

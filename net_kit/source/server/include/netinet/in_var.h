@@ -58,5 +58,6 @@ struct in_ifaddr *in_ifaddr;
 int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp);
 int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
                 int scrub);
+int inetctlerr(int cmd);
 
 #endif /* NETINET_IN_VAR_H */

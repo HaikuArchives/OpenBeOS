@@ -52,6 +52,8 @@
 #	define in_control          core->in_control
 #	define in_setsockaddr      core->in_setsockaddr
 #	define in_setpeeraddr      core->in_setpeeraddr
+#   define in_pcbnotify        core->in_pcbnotify
+#   define inetctlerrmap       core->inetctlerrmap
 
 #	define ifa_ifwithdstaddr   core->ifa_ifwithdstaddr
 #	define ifa_ifwithaddr      core->ifa_ifwithaddr

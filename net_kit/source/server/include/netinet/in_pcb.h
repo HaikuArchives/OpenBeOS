@@ -60,6 +60,9 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 			   uint16 fport_a, struct in_addr laddr,
 			   uint16 lport_a, int flags);
 struct rtentry *in_pcbrtentry (struct inpcb *);
+void     in_pcbnotify (struct inpcb *, struct sockaddr *,
+                      uint16, struct in_addr, uint16, 
+                      int, void (*)(struct inpcb *, int));
 
 /* helpful macro's */
 #define     sotoinpcb(so)   ((struct inpcb *)(so)->so_pcb)

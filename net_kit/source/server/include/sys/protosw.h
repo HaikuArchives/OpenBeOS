@@ -35,6 +35,7 @@ struct protosw {
 	                   struct mbuf *, 
 	                   struct mbuf *);
 	int  (*pr_sysctl)(int *, uint, void *, size_t *, void *, size_t);
+	void (*pr_ctlinput)(int, struct sockaddr *, void *);
 	int  (*pr_ctloutput)(int, struct socket*, int, int, struct mbuf **);
 	
 	struct protosw *pr_next;	/* pointer to next proto structure */
@@ -99,6 +100,40 @@ struct protosw {
 #define PRU_PEEREID             22      /* get local peer eid */
 
 #define PRU_NREQ                22
+
+/*
+ * The arguments to the ctlinput routine are
+ *      (*protosw[].pr_ctlinput)(cmd, sa, arg);
+ * where cmd is one of the commands below, sa is a pointer to a sockaddr,
+ * and arg is an optional caddr_t argument used within a protocol family.
+ */
+#define PRC_IFDOWN              0       /* interface transition */
+#define PRC_ROUTEDEAD           1       /* select new route if possible ??? */
+#define PRC_MTUINC              2       /* increase in mtu to host */
+#define PRC_QUENCH2             3       /* DEC congestion bit says slow down */
+#define PRC_QUENCH              4       /* some one said to slow down */
+#define PRC_MSGSIZE             5       /* message size forced drop */
+#define PRC_HOSTDEAD            6       /* host appears to be down */
+#define PRC_HOSTUNREACH         7       /* deprecated (use PRC_UNREACH_HOST) */
+#define PRC_UNREACH_NET         8       /* no route to network */
+#define PRC_UNREACH_HOST        9       /* no route to host */
+#define PRC_UNREACH_PROTOCOL    10      /* dst says bad protocol */
+#define PRC_UNREACH_PORT        11      /* bad port # */
+/* was  PRC_UNREACH_NEEDFRAG    12         (use PRC_MSGSIZE) */
+#define PRC_UNREACH_SRCFAIL     13      /* source route failed */
+#define PRC_REDIRECT_NET        14      /* net routing redirect */
+#define PRC_REDIRECT_HOST       15      /* host routing redirect */
+#define PRC_REDIRECT_TOSNET     16      /* redirect for type of service & net */
+#define PRC_REDIRECT_TOSHOST    17      /* redirect for tos & host */
+#define PRC_TIMXCEED_INTRANS    18      /* packet lifetime expired in transit */
+#define PRC_TIMXCEED_REASS      19      /* lifetime expired on reass q */
+#define PRC_PARAMPROB           20      /* header incorrect */
+
+#define PRC_NCMDS               21
+
+#define PRC_IS_REDIRECT(cmd)    \
+        ((cmd) >= PRC_REDIRECT_NET && (cmd) <= PRC_REDIRECT_TOSHOST)
+
 
 /* Network stack defines... */
 #ifdef _NETWORK_STACK
