@@ -17,12 +17,13 @@
 #include "ethernet/ethernet.h"
 #include "arp/arp_module.h"
 #include "net/if_dl.h"
+#include "sys/socket.h"
+#include "sys/sockio.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_device.h"
 #include "net_server/core_module.h"
-
 
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
@@ -390,26 +391,57 @@ int arpwhohas(struct ether_device *ed, struct in_addr *ia)
 	return 0;
 }
 
-/*
-int ether_ioctl(struct ifnet *dev, int cmd, caddr_t data)
+
+int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 {
+	struct ether_device *ed = (struct ether_device*)ifp;
 	struct ifaddr *ifa = (struct ifaddr*)data;
-	struct ether_device *ed;
 
 printf("ether_ioctl!\n");
 
-	switch (ifa->ifa_addr->sa_family) {
-		case AF_INET:
-			ed = (struct ether_device*)dev;
-			ed->i_addr = IA_SIN(dev)->sin_addr;
-printf("setting ether_device ip address to %08x\n", ntohl(IA_SIN(dev)->sin_addr.s_addr));
-			arpwhohas(ed,&IA_SIN(dev)->sin_addr);
+	if ((ifp->flags & IFF_UP) == 0 &&
+	    (ifp->rx_thread > 0 || ifp->tx_thread > 0)) {
+		/* shutdown our threads and remove the IFF_RUNNING flag... */
+		if (ifp->rx_thread > 0)
+			kill_thread(ifp->rx_thread);
+		if (ifp->tx_thread > 0)
+			kill_thread(ifp->tx_thread);
+		ifp->rx_thread = ifp->tx_thread = -1;
+		ifp->flags &= ~IFF_RUNNING;
+	}
+
+	switch (cmd) {
+		case SIOCSIFADDR:
+			ifp->flags |= IFF_UP;
+			switch (ifa->ifa_addr->sa_family) {
+				case AF_INET:
+					ed->i_addr = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
+#ifdef ETHER_DEBUG
+					printf("setting ether_device ip address to %08lx\n", 
+						ntohl(((struct sockaddr_in*)ifa->ifa_addr)->sin_addr.s_addr));
+#endif
+					break;
+				default:
+					printf("don't know how to work with address family %d\n", 
+						ifa->ifa_addr->sa_family);
+			}
 			break;
+		default:
+			printf("unhandled call to ethernet_ioctl\n");
+	}
+
+	if ((ifp->flags & IFF_UP) &&
+	    (ifp->rx_thread == -1 || ifp->tx_thread == -1)) {
+		/* start our threads and add the IFF_RUNNING flag... */
+		if (ifp->rx_thread < 0)
+			start_rx_thread(ifp);
+		if (ifp->tx_thread < 0)
+			start_tx_thread(ifp);
+		ifp->flags |= IFF_RUNNING;
 	}
 
 	return 0;
 }
-*/
 
 int ether_dev_stop(ifnet *dev)
 {
@@ -428,6 +460,8 @@ int ether_dev_start(ifnet *dev)
 	struct ether_device *ed = (struct ether_device *)dev;
 	struct sockaddr_dl *sdl = NULL;
 	struct ifaddr *ifa;
+
+printf("ether_dev_start %s\n", dev->if_name);
 
 	if (!ed || dev->if_type != IFT_ETHER)
 		return -1;
@@ -451,6 +485,7 @@ int ether_dev_start(ifnet *dev)
 			return -1;
 		}
 	}
+	arp->init();
 #endif
 
 	/* try to get the MAC address */
@@ -474,7 +509,7 @@ int ether_dev_start(ifnet *dev)
 	dev->input = &ether_input;
 	dev->output = &ether_output;
 	dev->stop = &ether_dev_stop;
-	/* XXX - ioctl needs to be added back in... */
+	dev->ioctl = &ether_ioctl;
 	
 	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_BROADCAST|IFF_MULTICAST);
 	
