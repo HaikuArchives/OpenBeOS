@@ -30,11 +30,11 @@
 
 #define REPLY_TIMEOUT ((bigtime_t)500000)
 
-class CServerApp : BApplication
+class ServerApp : BApplication
 {
 public:
-	CServerApp();
-	~CServerApp();
+	ServerApp();
+	~ServerApp();
 
 	void GetSharedBufferArea(BMessage *msg);
 	void RegisterBuffer(BMessage *msg);
@@ -111,7 +111,7 @@ private:
 	typedef BApplication inherited;
 };
 
-CServerApp::CServerApp()
+ServerApp::ServerApp()
  	: BApplication(NEW_MEDIA_SERVER_SIGNATURE),
  	fBufferManager(new BufferManager),
 	fAppManager(new AppManager),
@@ -125,7 +125,7 @@ CServerApp::CServerApp()
 	//mVolumeRight = ???;
 }
 
-CServerApp::~CServerApp()
+ServerApp::~ServerApp()
 {
 	delete fBufferManager;
 	delete fAppManager;
@@ -134,7 +134,7 @@ CServerApp::~CServerApp()
 }
 
 void
-CServerApp::GetSharedBufferArea(BMessage *msg)
+ServerApp::GetSharedBufferArea(BMessage *msg)
 {
 	BMessage reply(B_OK);
 	reply.AddInt32("shared buffer area",fBufferManager->SharedBufferListID());
@@ -142,7 +142,7 @@ CServerApp::GetSharedBufferArea(BMessage *msg)
 }
 
 void
-CServerApp::RegisterBuffer(BMessage *msg)
+ServerApp::RegisterBuffer(BMessage *msg)
 {
 	team_id teamid;
 	media_buffer_id bufferid;
@@ -179,7 +179,7 @@ CServerApp::RegisterBuffer(BMessage *msg)
 }
 
 void
-CServerApp::UnregisterBuffer(BMessage *msg)
+ServerApp::UnregisterBuffer(BMessage *msg)
 {
 	team_id teamid;
 	media_buffer_id bufferid;
@@ -195,72 +195,72 @@ CServerApp::UnregisterBuffer(BMessage *msg)
 }
 
 
-void CServerApp::GetNodeID(BMessage *msg)
+void ServerApp::GetNodeID(BMessage *msg)
 {
 }
 
 
-void CServerApp::FindRunningInstances(BMessage *msg)
+void ServerApp::FindRunningInstances(BMessage *msg)
 {
 }
 
 
-void CServerApp::BufferGroupReg(BMessage *msg)
+void ServerApp::BufferGroupReg(BMessage *msg)
 {
 }
 
 
-void CServerApp::GetLatentInfo(BMessage *msg)
+void ServerApp::GetLatentInfo(BMessage *msg)
 {
 }
 
 
-void CServerApp::GetDormantFileFormats(BMessage *msg)
+void ServerApp::GetDormantFileFormats(BMessage *msg)
 {
 }
 
 
-void CServerApp::GetDormantFlavor(BMessage *msg)
+void ServerApp::GetDormantFlavor(BMessage *msg)
 {
 }
 
 
-void CServerApp::BroadcastMessage(BMessage *msg)
+void ServerApp::BroadcastMessage(BMessage *msg)
 {
 }
 
 
-void CServerApp::ReleaseNodeReference(BMessage *msg)
+void ServerApp::ReleaseNodeReference(BMessage *msg)
 {
 }
 
 
-void CServerApp::SetRealtimeFlags(BMessage *msg)
+void ServerApp::SetRealtimeFlags(BMessage *msg)
 {
 }
 
 
-void CServerApp::GetRealtimeFlags(BMessage *msg)
+void ServerApp::GetRealtimeFlags(BMessage *msg)
 {
 }
 
 
-void CServerApp::InstantiatePersistentNode(BMessage *msg)
+void ServerApp::InstantiatePersistentNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::SniffFile(BMessage *msg)
+void ServerApp::SniffFile(BMessage *msg)
 {
 }
 
 
-void CServerApp::QueryLatents(BMessage *msg)
+void ServerApp::QueryLatents(BMessage *msg)
 {
 }
 
 
-void CServerApp::RegisterApp(BMessage *msg)
+void ServerApp::RegisterApp(BMessage *msg)
 {
 	team_id team;
 	msg->FindInt32("team", &team);
@@ -271,7 +271,7 @@ void CServerApp::RegisterApp(BMessage *msg)
 }
 
 
-void CServerApp::UnregisterApp(BMessage *msg)
+void ServerApp::UnregisterApp(BMessage *msg)
 {
 	team_id team;
 	msg->FindInt32("team", &team);
@@ -282,96 +282,96 @@ void CServerApp::UnregisterApp(BMessage *msg)
 }
 
 
-void CServerApp::RegisterNode(BMessage *msg)
+void ServerApp::RegisterNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::UnregisterNode(BMessage *msg)
+void ServerApp::UnregisterNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::SetDefault(BMessage *msg)
+void ServerApp::SetDefault(BMessage *msg)
 {
 }
 
 
-void CServerApp::AcquireNodeReference(BMessage *msg)
+void ServerApp::AcquireNodeReference(BMessage *msg)
 {
 }
 
 
-void CServerApp::RequestNotifications(BMessage *msg)
+void ServerApp::RequestNotifications(BMessage *msg)
 {
 }
 
 
-void CServerApp::CancelNotifications(BMessage *msg)
+void ServerApp::CancelNotifications(BMessage *msg)
 {
 }
 
 
-void CServerApp::SetOutputBuffers(BMessage *msg)
+void ServerApp::SetOutputBuffers(BMessage *msg)
 {
 }
 
 
-void CServerApp::ReclaimOutputBuffers(BMessage *msg)
+void ServerApp::ReclaimOutputBuffers(BMessage *msg)
 {
 }
 
 
-void CServerApp::OrphanReclaimableBuffers(BMessage *msg)
+void ServerApp::OrphanReclaimableBuffers(BMessage *msg)
 {
 }
 
 
-void CServerApp::SetTimeSource(BMessage *msg)
+void ServerApp::SetTimeSource(BMessage *msg)
 {
 }
 
 
-void CServerApp::QueryNodes(BMessage *msg)
+void ServerApp::QueryNodes(BMessage *msg)
 {
 }
 
 
-void CServerApp::GetDormantNode(BMessage *msg)
+void ServerApp::GetDormantNode(BMessage *msg)
 {
 }
 
 
-void CServerApp::FormatChanged(BMessage *msg)
+void ServerApp::FormatChanged(BMessage *msg)
 {
 }
 
 
-void CServerApp::GetDefaultInfo(BMessage *msg)
+void ServerApp::GetDefaultInfo(BMessage *msg)
 {
 }
 
 
-void CServerApp::GetRunningDefault(BMessage *msg)
+void ServerApp::GetRunningDefault(BMessage *msg)
 {
 }
 
 
-void CServerApp::SetRunningDefault(BMessage *msg)
+void ServerApp::SetRunningDefault(BMessage *msg)
 {
 }
 
 
-void CServerApp::TypeItemOp(BMessage *msg)
+void ServerApp::TypeItemOp(BMessage *msg)
 {
 }
 
 
-void CServerApp::FormatOp(BMessage *msg)
+void ServerApp::FormatOp(BMessage *msg)
 {
 }
 
-void CServerApp::SetVolume(BMessage *msg)
+void ServerApp::SetVolume(BMessage *msg)
 {
 	float left;
 	float right;
@@ -391,7 +391,7 @@ void CServerApp::SetVolume(BMessage *msg)
 	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 
-void CServerApp::GetVolume(BMessage *msg)
+void ServerApp::GetVolume(BMessage *msg)
 {
 	BMessage reply(B_OK);
 
@@ -404,7 +404,7 @@ void CServerApp::GetVolume(BMessage *msg)
 }
 
 
-void CServerApp::MessageReceived(BMessage *msg)
+void ServerApp::MessageReceived(BMessage *msg)
 {
 	switch (msg->what) {
 		case MEDIA_SERVER_GET_SHARED_BUFFER_AREA: GetSharedBufferArea(msg); break;
@@ -455,7 +455,7 @@ void CServerApp::MessageReceived(BMessage *msg)
 
 int main()
 {
-	new CServerApp;
+	new ServerApp;
 	be_app->Run();
 	delete be_app;
 	return 0;

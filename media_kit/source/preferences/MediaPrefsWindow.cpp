@@ -23,7 +23,7 @@ MediaPrefsWindow::MediaPrefsWindow( BRect wRect )
 	view->AddChild( slider );
 
 	// use private API
-	if ( media_kit_private::GetMasterVolume( &fLeft, &fRight ) == B_OK ) {
+	if ( MediaKitPrivate::GetMasterVolume( &fLeft, &fRight ) == B_OK ) {
 		// left,right range is 0..9.999
 		iLeft = (int32)( fLeft / vI2F );
 		iRight = (int32)( fRight / vI2F );
@@ -55,7 +55,7 @@ void MediaPrefsWindow::MessageReceived( BMessage *msg )
 				float fLeft = float( iLeft ) * vI2F;
 				float fRight = float( iRight ) * vI2F;
 
-				media_kit_private::SetMasterVolume( fLeft, fRight );
+				MediaKitPrivate::SetMasterVolume( fLeft, fRight );
 			}
 			break;
 

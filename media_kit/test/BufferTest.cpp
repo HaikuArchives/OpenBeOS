@@ -7,13 +7,16 @@ int main()
 {
 	// app_server connection (no need to run it)
 	BApplication app("application/x-vnd-test"); 
-
-	printf("using default constructor:\n");
-	BBufferGroup * group = new BBufferGroup();
-
+	
+	BBufferGroup * group;
 	status_t s;
 	int32 count;
 	BBuffer *buffer;
+
+/*
+	printf("using default constructor:\n");
+	group = new BBufferGroup();
+
 
 	s = group->InitCheck();
 	printf("InitCheck: status = %ld\n",s);
@@ -22,7 +25,7 @@ int main()
 	printf("CountBuffers: count = %ld, status = %ld\n",count,s);
 	
 	delete group;
-
+*/
 	printf("\n");
 	printf("using size = 1234 constructor:\n");
 	group = new BBufferGroup(1234);
@@ -76,6 +79,7 @@ int main()
 	delete group2;
 
 	printf("\n");
+/*
 	printf("creating a BSmallBuffer:\n");
 	BSmallBuffer * sb = new BSmallBuffer;
 
@@ -92,6 +96,6 @@ int main()
 	printf("sb->SmallBufferSizeLimit:  = %ld\n",sb->SmallBufferSizeLimit());
 
 	delete sb;
-
+*/
 	return 0;
 }
