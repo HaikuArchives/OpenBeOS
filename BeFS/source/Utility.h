@@ -79,7 +79,7 @@ template<class Node> struct node {
 	Node *
 	Next()
 	{
-		if (next->next != NULL)
+		if (next && next->next != NULL)
 			return next;
 
 		return NULL;
