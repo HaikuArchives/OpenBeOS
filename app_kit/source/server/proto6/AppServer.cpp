@@ -77,7 +77,8 @@ printf("Server input port: %ld\n",mouseport);
 
 	active_app=-1;
 	p_active_app=NULL;
-	
+
+	make_decorator=NULL;	
 //	layerlock=new BLocker;
 //	layerlist=new BList(1);
 }
@@ -388,14 +389,18 @@ void AppServer::LoadDefaultDecorator(void)
 
 Decorator *instantiate_decorator(Layer *lay, uint32 dflags, window_look wlook)
 {
+printf("AppServer:: instantiate_decorator()\n");
 	Decorator *decor=NULL;
 
 	app_server->decor_lock->Lock();
 	if(app_server->make_decorator!=NULL)
 		decor=app_server->make_decorator(lay, dflags, wlook);
 	else
+	{
+		printf("AppServer:: make_decorator is NULL\n");
 		decor=new BeDecorator(lay, dflags, wlook);
 //		decor=new YMakDecorator(lay, dflags, wlook);
+	}
 
 	app_server->decor_lock->Unlock();
 	return decor;
