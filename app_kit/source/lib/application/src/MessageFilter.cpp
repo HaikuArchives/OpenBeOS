@@ -79,6 +79,11 @@ BMessageFilter& BMessageFilter::operator=(const BMessageFilter& from)
 //------------------------------------------------------------------------------
 filter_result BMessageFilter::Filter(BMessage* message, BHandler** target)
 {
+	if (fFilterFunction)
+	{
+		return fFilterFunction(message, target);
+	}
+
 	return B_DISPATCH_MESSAGE;
 }
 //------------------------------------------------------------------------------
