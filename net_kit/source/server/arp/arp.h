@@ -7,6 +7,7 @@
 
 #include "mbuf.h"
 #include "net_misc.h"
+#include "sys/socket.h"
 
 /* arp codes */
 enum {
@@ -45,10 +46,20 @@ typedef struct arp_cache_entry	arp_cache_entry;
 struct arp_cache_entry {
 	arp_cache_entry *next;
 	arp_cache_entry *prev;
-	sockaddr	ip_addr; /* we use this so we can deal with other types of address */
-	sockaddr	ll_addr; /* link-level address */
+	struct sockaddr	ip_addr; /* we use this so we can deal with other types of address */
+	struct sockaddr	ll_addr; /* link-level address */
 	int		status;
-	time_t		expires; /* when does this expire? */
+	bigtime_t	expires; /* when does this expire? */
+};
+
+typedef struct arp_q_entry	arp_q_entry;
+struct arp_q_entry {
+	arp_q_entry *next;
+	struct sockaddr *src;
+	struct sockaddr *tgt;
+	ifnet *ifn;
+	int attempts;
+	bigtime_t lasttx;
 };
 
 
