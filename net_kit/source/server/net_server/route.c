@@ -77,7 +77,7 @@ void rtfree(struct rtentry *rt)
 	if (rt->rt_refcnt <= 0 && (rt->rt_flags && RTF_UP) == 0) {
 		if (rt->rt_nodes->rn_flags & (RNF_ACTIVE | RNF_ROOT)) {
 			printf("Trying to free nodes we shouldn't be!\n");
-			exit(-1);
+			return;
 		}
 		rttrash--;
 		if (rt->rt_refcnt < 0) {
@@ -117,7 +117,7 @@ int rtrequest(int req,  struct sockaddr *dst,
 				snderr(ESRCH);
 			if (rn->rn_flags & (RNF_ACTIVE | RNF_ROOT)) {
 				printf("rtrequest: delete: cannot delete route!\n");
-				exit(-1);
+				return;
 			}
 			rt = (struct rtentry *)rn;
 			rt->rt_flags &= ~RTF_UP; /* mark route as down */
@@ -320,14 +320,14 @@ void rt_maskedcopy(struct sockaddr *src,
 
 void ifafree(struct ifaddr *ifa)
 {
-        if (ifa == NULL) {
+	if (ifa == NULL) {
 		printf("ifafree");
-		exit(-1);
+		return;
 	}		
-        if (ifa->ifa_refcnt == 0)
-                free(ifa);
-        else
-                ifa->ifa_refcnt--;
+	if (ifa->ifa_refcnt == 0)
+		free(ifa);
+	else
+		ifa->ifa_refcnt--;
 }
 
 /*
