@@ -130,6 +130,7 @@ KernelLd kernel
 	<$(SOURCE_GRIST)!core!net>nhash.o
 	<$(SOURCE_GRIST)!core!net>mbuf.o
 	<$(SOURCE_GRIST)!core!net>net.o
+	<$(SOURCE_GRIST)!core!net>socket.o
 
 	linkhack.so
 
@@ -178,6 +179,7 @@ KernelLd kernel.so
 	<$(SOURCE_GRIST)!core!net>nhash.o
 	<$(SOURCE_GRIST)!core!net>mbuf.o
 	<$(SOURCE_GRIST)!core!net>net.o
+	<$(SOURCE_GRIST)!core!net>socket.o
 
 	linkhack.so
 
@@ -636,6 +638,19 @@ KernelLd filetest :
 	:
 	:
 	bin/filetest
+	;
+
+KernelLd sockettesttest :
+	libglue2.o
+	<$(SOURCE_GRIST)!apps!sockettest>main.o
+	libc.so
+	libm.so
+	:
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	:
+	:
+	bin/sockettest
 	;
 
 KernelLd loop :
