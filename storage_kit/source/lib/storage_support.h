@@ -18,10 +18,10 @@ namespace StorageKit {
 bool is_absolute_path(const char *path);
 
 //!	splits a path name into directory path and leaf name
-bool split_path(const char *fullPath, char *&path, char *&leaf);
+status_t split_path(const char *fullPath, char *&path, char *&leaf);
 
 //!	splits a path name into directory path and leaf name
-bool split_path(const char *fullPath, char **path, char **leaf);
+status_t split_path(const char *fullPath, char **path, char **leaf);
 
 //! Parses the first component of a path name.
 status_t parse_first_path_component(const char *path, int32& length,

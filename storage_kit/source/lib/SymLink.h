@@ -38,6 +38,7 @@ public:
 	BSymLink(const BEntry *entry);
 	BSymLink(const char *path);
 	BSymLink(const BDirectory *dir, const char *path);
+	virtual ~BSymLink();
 
 	// WORKAROUND
 	// SetTo() methods: Part of a work around until someone has an idea how to
@@ -47,8 +48,6 @@ public:
 	status_t SetTo(const char *path);
 	status_t SetTo(const BDirectory *dir, const char *path);
 	void Unset();
-
-	virtual ~BSymLink();
 
 	ssize_t ReadLink(char *buf, size_t size);
 

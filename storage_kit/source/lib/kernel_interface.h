@@ -68,16 +68,16 @@ status_t open(const char *path, OpenFlags flags, CreationFlags creationFlags,
 status_t close( FileDescriptor file );
 
 //! Reads data from a file into a buffer.
-ssize_t read(FileDescriptor fd, void *buf, ssize_t len);
+ssize_t read(FileDescriptor fd, void *buf, size_t len);
 
 //! Reads data from a certain position in a file into a buffer.
-ssize_t read(FileDescriptor fd, void *buf, off_t pos, ssize_t len);
+ssize_t read(FileDescriptor fd, void *buf, off_t pos, size_t len);
 
 //! Writes data from a buffer into a file.
-ssize_t write(FileDescriptor fd, const void *buf, ssize_t len);
+ssize_t write(FileDescriptor fd, const void *buf, size_t len);
 
 //! Writes data from a buffer to a certain position in a file.
-ssize_t write(FileDescriptor fd, const void *buf, off_t pos, ssize_t len);
+ssize_t write(FileDescriptor fd, const void *buf, off_t pos, size_t len);
 
 //! Moves a file's read/write pointer.
 off_t seek(FileDescriptor fd, off_t pos, SeekMode mode);
@@ -92,28 +92,28 @@ FileDescriptor dup(FileDescriptor file);
 
 /*! \brief Similar to the first version, aside from that an error code is
 	returned and the resulting file descriptor is passed back via a reference
-	parameter an. */
+	parameter. */
 status_t dup(FileDescriptor file, FileDescriptor& result);
 
 /*! \brief Flushes any buffers associated with the given file to disk
 	and then returns. */
 status_t sync(FileDescriptor file);
 
-//! Locks the given file so it may not be accessed by anyone else. */
+//! Locks the given file so it may not be accessed by anyone else.
 status_t lock(FileDescriptor file, OpenFlags mode, FileLock *lock);
 
-//! Unlocks a file previously locked with lock(). */
+//! Unlocks a file previously locked with lock().
 status_t unlock(FileDescriptor file, FileLock *lock);
 
-//! Returns statistical information for the given file. */
+//! Returns statistical information for the given file.
 status_t get_stat(const char *path, Stat *s);
 status_t get_stat(FileDescriptor file, Stat *s);
 status_t get_stat(entry_ref &ref, Stat *s);
 
-//! Modifies a given portion of the file's statistical information. */
+//! Modifies a given portion of the file's statistical information.
 status_t set_stat(FileDescriptor file, Stat &s, StatMember what);
 
-//! Same as the other version of set_stat(), except the file is specified by name. */
+//! Same as the other version of set_stat(), except the file is specified by name.
 status_t set_stat(const char *filename, Stat &s, StatMember what);
 
 //------------------------------------------------------------------------------
@@ -124,11 +124,11 @@ status_t set_stat(const char *filename, Stat &s, StatMember what);
 ssize_t read_attr(FileDescriptor file, const char *attribute, uint32 type, 
 						off_t pos, void *buf, size_t count );
 						
-//! Write count bytes from the given data buffer into the specified attribute. */
+//! Write count bytes from the given data buffer into the specified attribute.
 ssize_t write_attr(FileDescriptor file, const char *attribute, uint32 type, 
 						off_t pos, const void *buf, size_t count);
 
-//! Removes the specified attribute and any data associated with it. */						
+//! Removes the specified attribute and any data associated with it.
 status_t remove_attr(FileDescriptor file, const char *attr);
 
 //! Returns statistical information about the given attribute. */
@@ -207,18 +207,19 @@ status_t create_link(const char *path, const char *linkToPath,
 					  FileDescriptor &result);
 
 /*! If path refers to a symlink, the pathname of the target to which path
-	is linked is copied into result and NULL terminated, the path being truncated
-	at size-1 chars if necessary (a buffer of size B_PATH_NAME_LENGTH+1 is a good
-	idea), and the number of chars in the target pathname is returned. If size is
-	less than 1 or result is NULL, B_BAD_VALUE will be returned and result will
-	remain unmodified. For any other error, result is set to an empty string and
-	an error code is returned. */
-ssize_t read_link(const char *path, char *result, int size);
+	is linked is copied into result and NULL terminated, if the buffer is
+	long enough, the path is being truncated at size chars if necessary
+	(a buffer of size B_PATH_NAME_LENGTH+1 is a good idea), and the number of
+	chars in the target pathname is returned. If size is less than 1 or result
+	is NULL, B_BAD_VALUE will be returned and result will remain unmodified.
+	For any other error, result is set to an empty string and an error code
+	is returned. */
+ssize_t read_link(const char *path, char *result, size_t size);
 
 /*!	Similar to the first version. Instead of a path name, a file descriptor
 	of the symbolic link is supplied.
 */
-ssize_t read_link(FileDescriptor fd, char *result, int size);
+ssize_t read_link(FileDescriptor fd, char *result, size_t size);
 
 
 //------------------------------------------------------------------------------
@@ -230,13 +231,15 @@ ssize_t read_link(FileDescriptor fd, char *result, int size);
 	
 	Returns B_OK if successful.
 	
-	If ref or result is NULL or size is -1, B_BAD_VALUE is returned. Otherwise,
+	If ref or result is NULL, B_BAD_VALUE is returned. Otherwise,
 	an error code is returned. The state of result after an error is undefined.
 */
-status_t entry_ref_to_path(const struct entry_ref *ref, char *result, int size);
+status_t entry_ref_to_path(const struct entry_ref *ref, char *result,
+						   size_t size);
 
 /*! See the other definition of entry_ref_to_path() */
-status_t entry_ref_to_path(dev_t device, ino_t directory, const char *name, char *result, int size);
+status_t entry_ref_to_path(dev_t device, ino_t directory, const char *name,
+						   char *result, size_t size);
 
 /*! Converts the given directory into an entry_ref. Note that the entry_ref is
 	actually a reference to the file "." in the given directory.
@@ -255,11 +258,11 @@ status_t dir_to_self_entry_ref(FileDescriptor dir, entry_ref *result);
 	
 	Returns B_OK if successful.
 	
-	If dir is < 0 or result is NULL or size is -1, B_BAD_VALUE
+	If dir is < 0 or result is NULL, B_BAD_VALUE
 	is returned. Otherwise, an error code is returned. The state of result after
 	an error is undefined.
 */
-status_t dir_to_path( FileDescriptor dir, char *result, int size );
+status_t dir_to_path( FileDescriptor dir, char *result, size_t size );
 
 /*!	\brief Returns the canonical representation of a given path referring to an
 	potentially abstract entry in an existing directory. */

@@ -20,7 +20,7 @@ namespace StorageKit {
 	\return \c true, if \a path is not \c NULL and absolute, \c false otherwise
 */
 bool
-StorageKit::is_absolute_path(const char *path)
+is_absolute_path(const char *path)
 {
 	return (path && path[0] == '/');
 }
@@ -79,7 +79,7 @@ parse_path(const char *fullPath, int &leafStart, int &leafEnd, int &pathEnd)
 	\param leaf a variable the leaf name pointer shall be
 		   written into, may be NULL
 */
-bool
+status_t
 split_path(const char *fullPath, char *&path, char *&leaf)
 {
 	return split_path(fullPath, &path, &leaf);
@@ -93,7 +93,7 @@ split_path(const char *fullPath, char *&path, char *&leaf)
 	\param leaf a pointer to a variable the leaf name pointer shall be
 		   written into, may be NULL
 */
-bool
+status_t
 split_path(const char *fullPath, char **path, char **leaf)
 {
 	if (path)
@@ -102,7 +102,7 @@ split_path(const char *fullPath, char **path, char **leaf)
 		*leaf = NULL;
 
 	if (fullPath == NULL)
-		return false;
+		return B_BAD_VALUE;
 
 	int leafStart, leafEnd, pathEnd, len;
 	parse_path(fullPath, leafStart, leafEnd, pathEnd);
@@ -124,7 +124,7 @@ split_path(const char *fullPath, char **path, char **leaf)
 					(*leaf)[0] = '.';
 					(*leaf)[1] = 0;
 				}
-				return true;	
+				return B_OK;	
 			} else if (fullPath[0] == 0) {
 				// Handle "", which we'll treat as "./"
 				if (path) {
@@ -136,7 +136,7 @@ split_path(const char *fullPath, char **path, char **leaf)
 					(*leaf)[0] = '.';
 					(*leaf)[1] = 0;
 				}
-				return true;	
+				return B_OK;	
 			}
 	
 		} else if (leafStart == -1) {
@@ -174,12 +174,12 @@ split_path(const char *fullPath, char **path, char **leaf)
 			delete[] *path;
 		if (leaf)
 			delete[] *leaf;
-		return false;
+		return B_NO_MEMORY;
 	}
-	return true;
+	return B_OK;
 }
 
-/*! The length of the first component is returned as well as the index, at
+/*! The length of the first component is returned as well as the index at
 	which the next one starts. These values are only valid, if the function
 	returns \c B_OK.
 	\param path the path to be parsed
@@ -196,13 +196,13 @@ parse_first_path_component(const char *path, int32& length,
 	status_t error = (path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
 		int32 i = 0;
-		// find first '\' or end of name
+		// find first '/' or end of name
 		for (; path[i] != '/' && path[i] != '\0'; i++);
 		// handle special case "/..." (absolute path)
 		if (i == 0 && path[i] != '\0')
 			i = 1;
 		length = i;
-		// find last '\' or end of name
+		// find last '/' or end of name
 		for (; path[i] == '/' && path[i] != '\0'; i++);
 		if (path[i] == '\0')	// this covers "" as well
 			nextComponent = 0;

@@ -421,8 +421,7 @@ BEntry::SetTo(const char *path, bool traverse)
 		// Get the path and leaf portions of the given path
 		char *pathStr, *leafStr;
 		pathStr = leafStr = NULL;
-		if (!StorageKit::split_path(path, pathStr, leafStr))
-			fCStatus = B_NO_MEMORY;
+		fCStatus = StorageKit::split_path(path, pathStr, leafStr);
 		if (fCStatus == B_OK) {
 			// Open the directory
 			StorageKit::FileDescriptor dirFd;
@@ -436,51 +435,6 @@ BEntry::SetTo(const char *path, bool traverse)
 		delete [] pathStr;
 		delete [] leafStr;
 	}
-
-/*
-	if (path != NULL) {
-
-		// Get the path and leaf portions of the given path
-		char *pathStr, *leafStr;
-		pathStr = leafStr = NULL;
-		if (StorageKit::split_path(path, pathStr, leafStr)) {
-			fCStatus = StorageKit::check_entry_name(leafStr);
-			if (fCStatus == B_OK) {
-				// Open the directory
-				StorageKit::FileDescriptor dirFd;
-				fCStatus = StorageKit::open_dir(pathStr, dirFd);
-				if (fCStatus == B_OK) {
-					fCStatus = set(dirFd, leafStr, traverse);
-					if (fCStatus != B_OK)
-						StorageKit::close_dir(dirFd);		
-				}
-			}
-		}
-		delete [] pathStr;
-		delete [] leafStr;
-*/
-/*
-		// Get the path and leaf portions of the given path
-		BPath entryPath(path);
-		BPath dirPath;
-		fCStatus = entryPath.InitCheck();
-		if (fCStatus == B_OK)
-			fCStatus = entryPath.GetParent(&dirPath);
-		if (fCStatus == B_OK) {
-			// Open the directory
-			StorageKit::FileDescriptor dirFd;
-			fCStatus = StorageKit::open_dir(dirPath.Path(), dirFd);
-			if (fCStatus == B_OK) {
-				fCStatus = set(dirFd, entryPath.Leaf(), traverse);
-				if (fCStatus != B_OK)
-					StorageKit::close_dir(dirFd);		
-			}
-		}
-	} else
-		fCStatus = B_BAD_VALUE;
-*/
-
-	
 	return fCStatus;
 }
 
