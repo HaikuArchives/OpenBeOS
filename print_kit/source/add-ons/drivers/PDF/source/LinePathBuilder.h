@@ -68,7 +68,7 @@ class LinePathBuilder
 protected:
 	virtual void MoveTo(BPoint p) = 0;
 	virtual void LineTo(BPoint p) = 0;
-	virtual void BezierTo(BPoint p[3]) = 0; // three control points
+	virtual void BezierTo(BPoint p[3]) = 0;
 	virtual void ClosePath(void) = 0;
 		
 public:

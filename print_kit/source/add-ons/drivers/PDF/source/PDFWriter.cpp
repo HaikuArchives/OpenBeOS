@@ -528,61 +528,6 @@ PDFWriter::SetPattern()
 
 
 // --------------------------------------------------
-void
-PDFWriter::CreateLinePath(BPoint start, BPoint end, float width) {
-	BPoint d = end - start; // calculate direction vector
-	float len = sqrt(d.x*d.x + d.y*d.y); // normalize to length of 1.0
-	d.x = d.x * width / len; d.y = d.y * width / len;
-	d.x /= 2; d.y /= 2;
-	BPoint r(-d.y, d.x); // rotate 90 degrees
-	// generate rectangle that represents the line with penSize width 
-	PDF_moveto(fPdf, tx(start.x + r.x), ty(start.y + r.y));
-	PDF_lineto(fPdf, tx(start.x - r.x), ty(start.y - r.y));
-	PDF_lineto(fPdf, tx(end.x - r.x),   ty(end.y - r.y));
-	PDF_lineto(fPdf, tx(end.x + r.x),   ty(end.y + r.y));
-	PDF_closepath(fPdf);
-	
-	LOG((fLog, "LinePath: "));
-	LOG((fLog, "[%f, %f] ", tx(start.x + r.x), ty(start.y + r.y)));
-	LOG((fLog, "[%f, %f] ", tx(start.x - r.x), ty(start.y - r.y)));
-	LOG((fLog, "[%f, %f] ", tx(end.x - r.x),   ty(end.y - r.y)));
-	LOG((fLog, "[%f, %f]\n", tx(end.x + r.x),   ty(end.y + r.y)));
-}
-
-
-// --------------------------------------------------
-void
-PDFWriter::CreateLinePath(BShape *shape) {
-	DrawShape iterator(this, true);
-	iterator.Iterate(shape);
-}
-
-
-// --------------------------------------------------
-// curve contains 4 points
-void
-PDFWriter::CreateBezierPath(BPoint *curve, float width) {
-	Bezier bezier(curve, 4);
-	BPoint start = bezier.PointAt(0);
-	const int n = 10; // XXX find a heuristic to calculate this value
-	for (int i = 1; i <= n; i ++) {
-		BPoint end = bezier.PointAt(i / (float) n);
-		CreateLinePath(start, end, width);
-		start = end;
-	}
-}
-
-
-// --------------------------------------------------
-// curve contains 3 points
-void
-PDFWriter::CreateBezierPath(BPoint start, BPoint *curve, float width) {
-	BPoint curve1[4] = { start, curve[0], curve[1], curve[2] };
-	CreateBezierPath(curve1, width);
-}
-
-
-// --------------------------------------------------
 void 
 PDFWriter::StrokeOrClip() 
 {
@@ -1276,8 +1221,7 @@ PDFWriter::StrokeLine(BPoint start,	BPoint end)
 		BShape shape;
 		shape.MoveTo(start);
 		shape.LineTo(end);
-		CreateLinePath(&shape);
-		//CreateLinePath(start, end, fState->penSize);
+		StrokeShape(&shape);
 	} else {
 		PDF_moveto(fPdf, tx(start.x), ty(start.y));
 		PDF_lineto(fPdf, tx(end.x),   ty(end.y));
@@ -1302,11 +1246,7 @@ PDFWriter::StrokeRect(BRect rect)
 		shape.LineTo(BPoint(rect.right, rect.bottom));
 		shape.LineTo(BPoint(rect.left, rect.bottom));
 		shape.Close();
-		CreateLinePath(&shape);
-		//CreateLinePath(BPoint(rect.left, rect.top), BPoint(rect.right, rect.top), fState->penSize);
-		//CreateLinePath(BPoint(rect.right, rect.top), BPoint(rect.right, rect.bottom), fState->penSize);
-		//CreateLinePath(BPoint(rect.right, rect.bottom), BPoint(rect.left, rect.bottom), fState->penSize);
-		//CreateLinePath(BPoint(rect.left, rect.bottom), BPoint(rect.left, rect.top), fState->penSize);
+		StrokeShape(&shape);
 	} else {
 		PDF_rect(fPdf, tx(rect.left), ty(rect.bottom), scale(rect.Width()), scale(rect.Height()));
 		StrokeOrClip();
@@ -1339,47 +1279,55 @@ PDFWriter::PaintRoundRect(BRect rect, BPoint radii, bool stroke) {
 
 	BPoint center;
 	
-	float sx = scale(radii.x);
-	float sy = scale(radii.y);
+	float sx = radii.x;
+	float sy = radii.y;
 	
 	float ax = sx;
 	float bx = 0.5555555555555 * sx;
 	float ay = sy;
 	float by = 0.5555555555555 * sy;
 
-	center.x = tx(rect.left) + sx;
-	center.y = ty(rect.top) - sy;
-	
-	PDF_moveto(fPdf, center.x - ax, center.y);
-	PDF_curveto(fPdf, 
-		center.x - ax, center.y + by,
-		center.x - bx, center.y + ay,
-		center.x     , center.y + ay);
-	
-	center.x = tx(rect.right) - sx;
-	PDF_lineto(fPdf, center.x, center.y + ay);
-	PDF_curveto(fPdf, 
-		center.x + bx, center.y + ay,
-		center.x + ax, center.y + by,
-		center.x + ax, center.y);
-		
-	center.y = ty(rect.bottom) + sy;
-	PDF_lineto(fPdf, center.x + sx, center.y); 
-	PDF_curveto(fPdf, 
-		center.x + ax, center.y - by,
-		center.x + bx, center.y - ay,
-		center.x     , center.y - ay);
-	
-	center.x = tx(rect.left) + sx;	
-	PDF_lineto(fPdf, center.x, center.y - ay);
-	PDF_curveto(fPdf, 
-		center.x - bx, center.y - ay,
-		center.x - ax, center.y - by,
-		center.x - ax, center.y);
+	center.x = rect.left + sx;
+	center.y = rect.top - sy;
 
-	PDF_closepath(fPdf);
+	BShape shape;
+	shape.MoveTo(BPoint(center.x - ax, center.y));
+	BPoint a[3] = {
+		BPoint(center.x - ax, center.y + by),
+		BPoint(center.x - bx, center.y + ay),
+		BPoint(center.x     , center.y + ay)};
+	shape.BezierTo(a);
 	
-	Paint(stroke);
+	center.x = rect.right - sx;
+	shape.LineTo(BPoint(center.x, center.y + ay));
+
+	BPoint b[3] = {
+		BPoint(center.x + bx, center.y + ay),
+		BPoint(center.x + ax, center.y + by),
+		BPoint(center.x + ax, center.y)};
+	shape.BezierTo(b);
+		
+	center.y = rect.bottom + sy;
+	shape.LineTo(BPoint(center.x + sx, center.y)); 
+
+	BPoint c[3] = {
+		BPoint(center.x + ax, center.y - by),
+		BPoint(center.x + bx, center.y - ay),
+		BPoint(center.x     , center.y - ay)};
+	shape.BezierTo(c);
+	
+	center.x = rect.left + sx;	
+	shape.LineTo(BPoint(center.x, center.y - ay));
+
+	BPoint d[3] = {
+		BPoint(center.x - bx, center.y - ay),
+		BPoint(center.x - ax, center.y - by),
+		BPoint(center.x - ax, center.y)};
+	shape.BezierTo(d); 
+
+	shape.Close();
+	
+	PaintShape(&shape, stroke);
 }
 
 
@@ -1389,7 +1337,7 @@ PDFWriter::StrokeRoundRect(BRect rect, BPoint radii)
 {
 	LOG((fLog, "StrokeRoundRect center=[%f, %f, %f, %f], radii=[%f, %f]\n", \
 			rect.left, rect.top, rect.right, rect.bottom, radii.x, radii.y));
-	PaintRoundRect(rect, radii, true);
+	PaintRoundRect(rect, radii, kStroke);
 }
 
 
@@ -1399,7 +1347,7 @@ PDFWriter::FillRoundRect(BRect rect, BPoint	radii)
 {
 	LOG((fLog, "FillRoundRect rect=[%f, %f, %f, %f], radii=[%f, %f]\n", \
 			rect.left, rect.top, rect.right, rect.bottom, radii.x, radii.y));
-	PaintRoundRect(rect, radii, false);
+	PaintRoundRect(rect, radii, kFill);
 }
 
 
@@ -1410,19 +1358,11 @@ PDFWriter::StrokeBezier(BPoint	*control)
 	LOG((fLog, "StrokeBezier\n"));
 	SetColor();
 	if (!MakesPDF()) return;
-	if (IsClipping()) {
-		BShape shape;
-		shape.MoveTo(control[0]);
-		shape.BezierTo(&control[1]);
-		CreateLinePath(&shape);
-		// CreateBezierPath(control, fState->penSize);
-	} else {
-		PDF_moveto(fPdf, tx(control[0].x), ty(control[0].y));
-		PDF_curveto(fPdf, tx(control[1].x), ty(control[1].y),
-		            tx(control[2].x), ty(control[2].y),
-		            tx(control[3].x), ty(control[3].y));
-		StrokeOrClip();
-	}
+
+	BShape shape;
+	shape.MoveTo(control[0]);
+	shape.BezierTo(&control[1]);
+	StrokeShape(&shape);
 }
 
 
@@ -1453,7 +1393,8 @@ PDFWriter::PaintArc(BPoint center, BPoint radii, float startTheta, float arcThet
 
 	SetColor();
 	if (!MakesPDF()) return;
-
+	if (IsClipping()); // TODO clip to line path
+	
 	PDF_save(fPdf);
 	PDF_scale(fPdf, sx, sy);
 	PDF_setlinewidth(fPdf, fState->penSize / smax);
@@ -1487,11 +1428,9 @@ PDFWriter::FillArc(BPoint center, BPoint radii, float startTheta, float arcTheta
 void
 PDFWriter::PaintEllipse(BPoint center, BPoint radii, bool stroke)
 {
-	float sx = scale(radii.x);
-	float sy = scale(radii.y);
+	float sx = radii.x;
+	float sy = radii.y;
 	
-	center.x = tx(center.x); center.y = ty(center.y);
-
 	float ax = sx;
 	float bx = 0.5555555555555 * sx;
 	float ay = sy;
@@ -1500,27 +1439,37 @@ PDFWriter::PaintEllipse(BPoint center, BPoint radii, bool stroke)
 	SetColor();
 	if (!MakesPDF()) return;
 
-	PDF_moveto(fPdf, center.x - ax, center.y);
-	PDF_curveto(fPdf, 
-		center.x - ax, center.y - by,
-		center.x - bx, center.y - ay,
-		center.x     , center.y - ay);
-	PDF_curveto(fPdf, 
-		center.x + bx, center.y - ay,
-		center.x + ax, center.y - by,
-		center.x + ax, center.y);
-	PDF_curveto(fPdf, 
-		center.x + ax, center.y + by,
-		center.x + bx, center.y + ay,
-		center.x     , center.y + ay);
-	PDF_curveto(fPdf, 
-		center.x - bx, center.y + ay,
-		center.x - ax, center.y + by,
-		center.x - ax, center.y);
+	BShape shape;
+
+	shape.MoveTo(BPoint(center.x - ax, center.y));
+
+	BPoint a[3] = { 
+		BPoint(center.x - ax, center.y - by),
+		BPoint(center.x - bx, center.y - ay),
+		BPoint(center.x     , center.y - ay) };
+	shape.BezierTo(a);
+
+	BPoint b[3] = {
+		BPoint(center.x + bx, center.y - ay),
+		BPoint(center.x + ax, center.y - by),
+		BPoint(center.x + ax, center.y)};
+	shape.BezierTo(b); 
+
+	BPoint c[3] = {
+		BPoint(center.x + ax, center.y + by),
+		BPoint(center.x + bx, center.y + ay),
+		BPoint(center.x     , center.y + ay)};
+	shape.BezierTo(c);
+
+	BPoint d[3] = {
+		BPoint(center.x - bx, center.y + ay),
+		BPoint(center.x - ax, center.y + by),
+		BPoint(center.x - ax, center.y)};
+	shape.BezierTo(d);
 	
-	PDF_closepath(fPdf);
-	
-	Paint(stroke);
+	shape.Close();
+
+	PaintShape(&shape, stroke);	
 }
 
 // --------------------------------------------------
@@ -1567,21 +1516,7 @@ PDFWriter::StrokePolygon(int32 numPoints, BPoint *points, bool isClosed)
 		}
 		if (isClosed) 
 			shape.Close();
-		CreateLinePath(&shape);
-/*
-		LOG((fLog, " clipping"));
-		LOG((fLog, " [%f, %f]", points->x, points->y));
-		x0 = points->x;
-		y0 = points->y;
-		BPoint p(x0, y0);
-		for (i = 1, points++; i < numPoints; i++, points++ ) {
-			LOG((fLog, " [%f, %f]", points->x, points->y));
-			CreateLinePath(p, *points, fState->penSize);
-			p = *points;
-		}
-		if (isClosed)
-			CreateLinePath(p, BPoint(x0, y0), fState->penSize);
-*/
+		StrokeShape(&shape);
 	} else {
 		for ( i = 0; i < numPoints; i++, points++ ) {
 			LOG((fLog, " [%f, %f]", points->x, points->y));
@@ -1624,6 +1559,13 @@ PDFWriter::FillPolygon(int32 numPoints, BPoint *points, bool isClosed)
 	PDF_closepath(fPdf);
 	FillOrClip();
 	LOG((fLog, "\n"));
+}
+
+
+// --------------------------------------------------
+void PDFWriter::PaintShape(BShape *shape, bool stroke)
+{
+	if (stroke) StrokeShape(shape); else FillShape(shape);
 }
 
 
@@ -1896,9 +1838,9 @@ PDFWriter::SetLineMode(cap_mode capMode, join_mode joinMode, float miterLimit)
 	
 	m = 0;
 	switch (joinMode) {
-		case B_BUTT_JOIN: // fall through XXX: check this; no equivalent in PDF?
 		case B_MITER_JOIN: m = 0; break;
 		case B_ROUND_JOIN: m = 1; break;
+		case B_BUTT_JOIN: // fall through XXX: check this; no equivalent in PDF?
 		case B_SQUARE_JOIN: // fall through XXX: check this too
 		case B_BEVEL_JOIN: m = 2; break;
 	}

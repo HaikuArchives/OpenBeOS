@@ -27,6 +27,7 @@ THE SOFTWARE.
 
 */
 
+#include <stdio.h>
 #include "LinePathBuilder.h"
 
 static const float kNearZero   = 0.000000000001;
@@ -134,6 +135,9 @@ LinePathBuilder::Corner(BPoint a, BPoint b, bool start)
 		}
 		if (start) r = ra; else r = rb;
 		AddPoint(r);
+	} else {
+		fprintf(stderr, "Error in Corner!\n");
+		fSubPath->Print();
 	}
 }
 
@@ -178,8 +182,16 @@ LinePathBuilder::Connect(BPoint a, BPoint b, BPoint c)
 		Parallel(b, c, PenSize(), p[2], p[3]) &&
 		Cut(p[0], p[1], p[2], p[3], r)) {
 
-		if (Inside(p[0], p[1], r)) {
-			AddPoint(r);
+		
+
+		if (LineJoinMode() != B_BUTT_JOIN &&
+			LineJoinMode() != B_SQUARE_JOIN && 
+			Inside(p[0], p[1], r)) {
+			if (!Inside(p[1], p[0], r) || !Inside(p[2], p[3], r)) {
+				AddPoint(p[1]); AddPoint(p[2]);
+			} else {
+				AddPoint(r);
+			}
 			return;
 		}
 		
@@ -200,10 +212,17 @@ LinePathBuilder::Connect(BPoint a, BPoint b, BPoint c)
 				AddPoint(p[1]); AddPoint(b); AddPoint(p[2]);
 				break;
 			case B_SQUARE_JOIN: // ???
-				Vector(a, b, PenSize(), v); AddPoint(p[1] + v);
-				Vector(b, c, PenSize(), v); AddPoint(p[2] - v);
+				Vector(a, b, PenSize(), v); 
+				AddPoint(p[1] + v); AddPoint(b + v);
+				Vector(b, c, PenSize(), v); 
+				AddPoint(b - v); AddPoint(p[2] - v);
 				break;
 		}
+	} else {
+		fprintf(stderr, "Error in connect!\n");
+		fprintf(stderr, "A(%f, %f), B(%f, %f), C(%f, %f)",
+			a.x, a.y, b.x, b.y, c.x, c.y);
+		fSubPath->Print();
 	}
 }
 
@@ -266,42 +285,62 @@ LinePathBuilder::CreateLinePath()
 	const bool start = true;
 	const bool end = false;
 	const int n = fSubPath->CountPoints();
+
 	if (n < 2) return;
 
+	bool is_closed = fSubPath->IsClosed() && n != 2;
+
+	if (fSubPath->IsClosed() && n == 2) {		
+		switch (LineJoinMode()) {
+			case B_ROUND_JOIN:
+				fCapMode = B_ROUND_CAP;
+				break;
+			case B_MITER_JOIN: // fall through
+			case B_BEVEL_JOIN: // fall through
+			case B_BUTT_JOIN:
+				fCapMode = B_BUTT_CAP;
+				break;
+			case B_SQUARE_JOIN:
+				fCapMode = B_SQUARE_CAP;
+				break;
+		}
+	}
+
 	// ahead
-	if (!fSubPath->IsClosed()) {
-		Corner(PointAt(0), PointAt(1), start);	
-	} else {
+	if (is_closed) {
 		Connect(PointAt(n-1), PointAt(0), PointAt(1));
+	} else {
+		Corner(PointAt(0), PointAt(1), start);	
 	}
 
 	for (int i = 1; i < n-1; i++) {
 		Connect(PointAt(i-1), PointAt(i), PointAt(i+1));
 	}
 
-	if (!fSubPath->IsClosed()) {
-		Corner(PointAt(n-2), PointAt(n-1), end);	
-	} else {
+	if (is_closed) {
 		Connect(PointAt(n-2), PointAt(n-1), PointAt(n));
 		Connect(PointAt(n-1), PointAt(n), PointAt(n+1));
+	} else {
+		Corner(PointAt(n-2), PointAt(n-1), end);	
 	}
 
 	// and back
-	if (!fSubPath->IsClosed()) {
-		Corner(PointAt(n-1), PointAt(n-2), start);	
-	} else {
+	if (is_closed) {		
+		ClosePath(); fFirst = true;
 		Connect(PointAt(n+1), PointAt(n), PointAt(n-1));
 		Connect(PointAt(n), PointAt(n-1), PointAt(n-2));
+	} else {
+		Corner(PointAt(n-1), PointAt(n-2), start);	
 	}
 
 	for (int i = n-2; i >= 1; i--) {
 		Connect(PointAt(i+1), PointAt(i), PointAt(i-1));
 	}
 
-	if (!fSubPath->IsClosed()) {
-		Corner(PointAt(1), PointAt(0), end);	
-	} else {
+	if (is_closed) {
 		Connect(PointAt(1), PointAt(0), PointAt(n-1));
+	} else {
+		Corner(PointAt(1), PointAt(0), end);	
 	}
 	ClosePath();
 }

@@ -53,9 +53,16 @@ class DrawShape : public BShapeIterator
 
 	inline float PenSize() const { return fWriter->PenSize(); }
 	inline bool TransformPath() const { return IsStroking() && IsClipping(); }
-	
-	void CreateBezierPath(BPoint *p);
-	void EndSubPath();
+
+	enum {
+		kMinBezierPoints = 2, // must be greater or equal to 2
+		kMaxBezierPoints = 30
+	};
+
+	float BezierLength(BPoint *p, int n);	
+	int   BezierPoints(BPoint *p, int n);
+	void  CreateBezierPath(BPoint *p);
+	void  EndSubPath();
 	
 public:
 	DrawShape(PDFWriter *writer, bool stroke);

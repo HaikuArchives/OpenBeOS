@@ -27,12 +27,14 @@ THE SOFTWARE.
 
 */
 
+#include <stdio.h>
+
 #include "SubPath.h"
 
 
 SubPath::SubPath(int size)
 {
-	fSize   = size <= 0 ? 1 : size;
+	fSize   = size <= 0 ? kInitialSize : size;
 	fLength = 0;
 	fPoints = new BPoint[fSize];
 	fClosed = false;
@@ -111,4 +113,15 @@ SubPath::AtPut(int i, BPoint p)
 	if (InBounds(i)) {
 		fPoints[i] = p;
 	}
+}
+
+void
+SubPath::Print()
+{
+	fprintf(stderr, "SubPath length = %d, size = %d ", (int)fLength, (int)fSize);
+	for (int i = 0; i < fLength; i++) {
+		if (i != 0) fprintf(stderr, ", ");
+		fprintf(stderr, "(%f, %f)", PointAt(i).x, PointAt(i).y);
+	}
+	fprintf(stderr, "\n");
 }

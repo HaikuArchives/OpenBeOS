@@ -54,11 +54,39 @@ DrawShape::~DrawShape()
 
 
 // --------------------------------------------------
+// approximate length of bezier curve
+float
+DrawShape::BezierLength(BPoint *curve, int n) {
+	float len = 0.0;
+	if (n <= 0) return len;
+	BPoint start = curve[0];
+	for (int i = 1; i < n; i++) {
+		BPoint end = curve[i];
+		BPoint diff = start - end;
+		len += sqrt(diff.x * diff.x + diff.y * diff.y);
+		start = end;
+	}
+	return len;
+}
+
+
+// --------------------------------------------------
+int
+DrawShape::BezierPoints(BPoint *curve, int n) {
+	float len = BezierLength(curve, n);
+	if (len <= kMinBezierPoints) return kMinBezierPoints;
+	if (len >  kMaxBezierPoints) return kMaxBezierPoints;
+	return (int)len;
+}
+
+
+// --------------------------------------------------
 void
 DrawShape::CreateBezierPath(BPoint *curve) {
 	Bezier bezier(curve, 4);
-	const int n = 10; // XXX find a heuristic to calculate this value
-	for (int i = 1; i <= n; i ++) {
+	const int n = BezierPoints(curve, 4)-1;
+	LOG((Log(), "BezierPoints %d\n", n));
+	for (int i = 0; i <= n; i ++) {
 		fSubPath.AddPoint(bezier.PointAt(i / (float) n));
 	}
 }
@@ -77,7 +105,9 @@ DrawShape::EndSubPath()
 status_t 
 DrawShape::IterateBezierTo(int32 bezierCount, BPoint *control)
 {
+	LOG((Log(), "BezierTo\n"));
 	for (int32 i = 0; i < bezierCount; i++, control += 3) {
+		LOG((Log(), "    (%f %f) (%f %f) (%f %f)\n", tx(control[0].x), ty(control[0].y), tx(control[1].x), ty(control[1].y), tx(control[2].x), ty(control[2].y)));
 		if (TransformPath()) {
 			BPoint p[4] = { fCurrentPoint, control[0], control[1], control[2] };
 			CreateBezierPath(p);

@@ -309,6 +309,12 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		inline float ty(float y)    { return fState->height - (fState->y0 + fState->scale*y); }
 		inline float scale(float f) { return fState->scale * f; }
 
+		enum
+		{
+			kStroke = true,
+			kFill   = false
+		};
+
 #if PATTERN_SUPPORT
 		inline bool MakesPattern()  { return Pass() == 0; }
 		inline bool MakesPDF()      { return Pass() == 1; }
@@ -338,13 +344,10 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		int  FindPattern();
 		void SetPattern();
 		
-		void CreateLinePath(BPoint start, BPoint end, float width);		
-		void CreateLinePath(BShape *shape);
-		void CreateBezierPath(BPoint *curve, float width);
-		void CreateBezierPath(BPoint start, BPoint *curve, float width);
 		void StrokeOrClip();
 		void FillOrClip();
 		void Paint(bool stroke);
+		void PaintShape(BShape *shape, bool stroke);
 		void PaintRoundRect(BRect rect, BPoint radii, bool stroke);
 		void PaintArc(BPoint center, BPoint radii, float startTheta, float arcTheta, int stroke);
 		void PaintEllipse(BPoint center, BPoint radii, bool stroke);

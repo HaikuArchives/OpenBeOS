@@ -35,6 +35,7 @@ THE SOFTWARE.
 class SubPath {
 private:
 	enum {
+		kInitialSize = 5,
 		kIncrement = 10
 	};
 	int32   fSize;    // allocated points
@@ -42,7 +43,6 @@ private:
 	BPoint *fPoints;
 	bool    fClosed;  // subpath connects last point with first point
 
-	//SubPath() {}
 	void CheckSize(int size);
 	bool InBounds(int i) { return 0 <= i && i < fLength; }
 
@@ -60,6 +60,7 @@ public:
 	BPoint PointAt(int i);
 	void   AtPut(int i, BPoint p);
 	bool   IsClosed() const    { return fClosed; } 
+	void   Print(); // for debugging
 };
 
 #endif
