@@ -4,6 +4,7 @@
 */
 #include <types.h>
 #include <errors.h>
+#include <string.h>
 
 char const *
 strerror(int errnum)
@@ -18,28 +19,32 @@ strerror(int errnum)
 			return "General Error";
 		;
 
-		case ERR_NO_MEMORY:
-			return "No Memory Error";
+//		case ERR_NO_MEMORY:
+		case ENOMEM:
+			return "Cannot allocate memory";
 		;
 
 		case ERR_IO_ERROR:
-			return "IO Error";
+			return "Input/Output error";
 		;
 
 		case ERR_INVALID_ARGS:
 			return "Invalid Arguments";
 		;
 
-		case ERR_TIMED_OUT:
+//		case ERR_TIMED_OUT:
+		case ETIMEDOUT:
 			return "Timed out";
 		;
 
-		case ERR_NOT_ALLOWED:
-			return "Not Allowd";
+//		case ERR_NOT_ALLOWED:
+		case EPERM:
+			return "Operation not permitted";
 		;
 
-		case ERR_PERMISSION_DENIED:
-			return "Permission Denied";
+//		case ERR_PERMISSION_DENIED:
+		case EACCES:
+			return "Operation not permitted";
 		;
 
 		case ERR_INVALID_BINARY:
@@ -54,12 +59,14 @@ strerror(int errnum)
 			return "No more handles";
 		;
 
-		case ERR_UNIMPLEMENTED:
+//		case ERR_UNIMPLEMENTED:
+		case ENOSYS:
 			return "Unimplemented";
 		;
 
-		case ERR_TOO_BIG:
-			return "Too big";
+//		case ERR_TOO_BIG:
+		case EDOM:
+			return "Numerical argument out of range";
 		;
 
 		case ERR_NOT_FOUND:
@@ -69,6 +76,7 @@ strerror(int errnum)
 		case ERR_NOT_IMPLEMENTED_YET:
 			return "Not implemented yet";
 		;
+
 
 		/* Semaphore errors */
 		case ERR_SEM_GENERAL:
@@ -129,20 +137,24 @@ strerror(int errnum)
 			return "VFS path not found";
 		;
 
-		case ERR_VFS_INSUFFICIENT_BUF:
+//		case ERR_VFS_INSUFFICIENT_BUF:
+		case ENOBUFS:
 			return "VFS insufficient buffer";
 		;
 
-		case ERR_VFS_READONLY_FS:
+//		case ERR_VFS_READONLY_FS:
+		case EROFS:
 			return "VFS readonly filesystem";
 		;
 
-		case ERR_VFS_ALREADY_EXISTS:
+//		case ERR_VFS_ALREADY_EXISTS:
+		case EEXIST:
 			return "VFS already exists";
 		;
 
-		case ERR_VFS_FS_BUSY:
-			return "VFS filesystem busy";
+//		case ERR_VFS_FS_BUSY:
+		case EBUSY:
+			return "Device busy";
 		;
 
 		case ERR_VFS_FD_TABLE_FULL:
@@ -154,11 +166,12 @@ strerror(int errnum)
 		;
 
 		case ERR_VFS_DIR_NOT_EMPTY:
-			return "VFS directory not empty";
+			return "Directory not empty";
 		;
 
-		case ERR_VFS_NOT_DIR:
-			return "VFS not directory";
+//		case ERR_VFS_NOT_DIR:
+		case ENOTDIR:
+			return "Not a directory";
 		;
 
 		case ERR_VFS_WRONG_STREAM_TYPE:
