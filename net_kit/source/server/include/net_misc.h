@@ -11,6 +11,11 @@
 #ifndef OBOS_NET_MISC_H
 #define OBOS_NET_MISC_H
 
+#ifdef _KERNEL_MODE
+#define printf  dprintf
+#define show_exit(a)	dprintf("%d\n", a)
+#define exit    show_exit
+#endif  
 
 /* Not really sure if this is safe... */
 #define EHOSTDOWN	(B_POSIX_ERROR_BASE + 45)
@@ -70,5 +75,14 @@ void dump_ether_addr(char *msg, void *ma);
 void print_ether_addr(void *ea);
 void dump_buffer(char *buffer, int len);
 void dump_sockaddr(void *ptr);
+
+struct sock_fd {
+        struct sock_fd *next;
+        struct sock_fd *prev;
+        int fd;
+        struct socket *so;
+};
+struct sock_fd *make_sock_fd(void);
+void release_sock_fd(struct sock_fd *sfd);
 
 #endif /* OBOS_NET_MISC_H */
