@@ -98,23 +98,14 @@ void
 FindDirectoryTest::setUp()
 {
 	BasicTest::setUp();
-	execCommand(string("dd if=/dev/zero of=") + testFile + " bs=1M count=1 "
-					+ " &> /dev/null"
-				+ " ; mkbfs " + testFile
-					+ " > /dev/null"
-				+ " ; sync"
-				+ " ; mkdir " + testMountPoint
-				+ " ; mount " + testFile + " " + testMountPoint);
+	createVolume(testFile, testMountPoint, 1);
 }
 	
 // tearDown
 void
 FindDirectoryTest::tearDown()
 {
-	execCommand(string("sync")
-				+ " ; unmount " + testMountPoint
-				+ " ; rmdir " + testMountPoint
-				+ " ; rm " + testFile);
+	deleteVolume(testFile, testMountPoint);
 	BasicTest::tearDown();
 }
 
