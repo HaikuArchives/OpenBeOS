@@ -1,4 +1,4 @@
 CVS
 *.o
 core
-
+area_malloc
