@@ -24,17 +24,29 @@
 #endif
 #include <InterfaceDefs.h>
 #include <stdio.h>
+#ifndef _TRANSLATIONUTILS_H
+#include <TranslationUtils.h>
+#endif
+#ifndef _BITMAP_H
+#include <Bitmap.h>
+#endif
 
 MouseView::MouseView(BRect rect)
 	   	   : BView(rect, "mouse_view", B_FOLLOW_ALL, B_WILL_DRAW)
 {	
 	BRect 			aRect;
+	BBox			*lineBox;
 	BButton 		*aButton;
-	BBox			*aBox;
 	BTextControl 	*aTextControl;
 	
 	// Set the color to grey...
 	SetViewColor(ui_color( B_PANEL_BACKGROUND_COLOR ));
+	
+	//Lets load the icons we will need
+	double_click_bitmap = BTranslationUtils::GetBitmap("double_click_bmap");
+	speed_bitmap = BTranslationUtils::GetBitmap("speed_bmap");
+	acceleration_bitmap = BTranslationUtils::GetBitmap("acceleration_bmap");
+
 	//Add the "Default" button..	
 	aRect.Set(10,259,85,279);
 	aButton = new BButton(aRect,"mouse_defaults","Defaults", new BMessage(BUTTON_DEFAULTS));
@@ -79,17 +91,33 @@ MouseView::MouseView(BRect rect)
 	speedSlider->SetValue(mspeed);
 	speedSlider->SetLimitLabels("Slow","Fast");
 	aBox->AddChild(speedSlider);
+	
+	// Create the line above the test area
+	aRect.Set(10,199,150,200);
+	lineBox = new BBox(aRect,"line_box",B_FOLLOW_LEFT,B_WILL_DRAW,B_FANCY_BORDER);
+	aBox->AddChild(lineBox);
+	// Create the line above the test area
+	aRect.Set(170,199,362,200);
+	lineBox = new BBox(aRect,"line_box",B_FOLLOW_LEFT,B_WILL_DRAW,B_FANCY_BORDER);
+	aBox->AddChild(lineBox);
+	// Create the line above the test area
+	aRect.Set(160,10,161,230);
+	lineBox = new BBox(aRect,"line_box",B_FOLLOW_LEFT,B_WILL_DRAW,B_FANCY_BORDER);
+	aBox->AddChild(lineBox);
 	// Create the "Double-click test area" text box...
-	aRect=Bounds();
+	aRect=aBox->Bounds();
 	aRect.left=aRect.left+10;
-	aRect.top=135;
-	aRect.right=aRect.right-34;
-	aRect.bottom=aRect.bottom-11;
+	aRect.right=aRect.right-230;
+	aRect.top=aRect.bottom-30;
 	aTextControl = new BTextControl(aRect,"double_click_test_area",NULL,"Double-click test area", new BMessage('DCta'),B_FOLLOW_LEFT,B_WILL_DRAW);
 	aTextControl->SetAlignment(B_ALIGN_LEFT,B_ALIGN_CENTER);
 	aBox->AddChild(aTextControl);	
 	AddChild(aBox);
-
-	
-	
 }
+
+void MouseView::Draw(BRect updateFrame)
+{//MouseView::Draw
+	aBox->DrawBitmap(double_click_bitmap,BPoint(341,20));
+	aBox->DrawBitmap(speed_bitmap,BPoint(331,80));	
+	aBox->DrawBitmap(acceleration_bitmap,BPoint(331,115));	
+}//MouseView::Draw

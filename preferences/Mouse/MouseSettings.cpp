@@ -55,6 +55,19 @@ MouseSettings::MouseSettings()
 	fWindowFrame.top=fcorner.y;
 	fWindowFrame.right=fWindowFrame.left+397;
 	fWindowFrame.bottom=fWindowFrame.top+293;
+	
+	//Check to see if the co-ords of the window are in the range of the Screen
+	BScreen screen;
+		if (screen.Frame().right >= fWindowFrame.right
+			&& screen.Frame().bottom >= fWindowFrame.bottom)
+		return;
+	// If they are not, lets just stick the window in the middle
+	// of the screen.
+	fWindowFrame = screen.Frame();
+	fWindowFrame.left = (fWindowFrame.right-397)/2;
+	fWindowFrame.right = fWindowFrame.left + 397;
+	fWindowFrame.top = (fWindowFrame.bottom-293)/2;
+	fWindowFrame.bottom = fWindowFrame.top + 293;
 
 }//MouseSettings::MouseSettings
 

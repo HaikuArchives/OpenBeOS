@@ -28,12 +28,17 @@ class MouseView : public BView
 {
 public:
 		MouseView(BRect frame);
+		virtual void Draw(BRect updateFrame);
 private:
 		BButton		*revertButton;
 		bigtime_t	dcspeed;
 		int32		mspeed;
 		BSlider		*clickSlider;
 		BSlider		*speedSlider;
+		BBitmap 	*double_click_bitmap;
+		BBitmap 	*speed_bitmap;
+		BBitmap 	*acceleration_bitmap;
+		BBox		*aBox;
 };
 
 #endif //MOUSE_VIEW_H

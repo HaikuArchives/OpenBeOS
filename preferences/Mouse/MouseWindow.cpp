@@ -16,7 +16,8 @@
 #ifndef _BUTTON_H
 #include <Button.h>
 #endif
-
+#include <stdio.h>
+#include <Message.h>
 MouseWindow::MouseWindow(MouseSettings *Settings)
 				: BWindow(Settings->WindowPosition(), "Mouse", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE )
 {//MouseWindow::MouseWindow
@@ -46,6 +47,13 @@ void MouseWindow::MessageReceived(BMessage *message)
 			{//BUTTON_REVERT
 				//set_mouse_speed();
 			}//BUTTON_REVERT
+			break;
+		case SLIDER_DOUBLE_CLICK_SPEED:
+			{//SLIDER_DOUBLE_CLICK_SPEED
+				// We need to minus the value in the BMessage because the
+				// slide is 0 to 1000000 rather than 1000000 to 0.
+				set_click_speed(1000000-message->FindInt32("be:value"));
+			}//SLIDER_DOUBLE_CLICK_SPEED
 			break;
 		default:
 			BWindow::MessageReceived(message);
