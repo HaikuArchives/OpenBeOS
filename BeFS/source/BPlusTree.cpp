@@ -364,31 +364,23 @@ BPlusTree::SeekDown(Stack<node_and_key> &stack,uint8 *key,uint16 keyLength)
 	nodeAndKey.nodeOffset = fHeader->root_node_pointer;
 	nodeAndKey.keyIndex = 0;
 
-	stack.Push(nodeAndKey);
-
 	CachedNode cached(this);
 	bplustree_node *node;
-	while (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
-	{
-		if (node->overflow_link == BPLUSTREE_NULL)
-		{
-			// put the old node back on the stack
+	while ((node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL) {
+		if (node->overflow_link == BPLUSTREE_NULL) {
+			// put the node on the stack
 			stack.Push(nodeAndKey);
 			return B_OK;
 		}
 
-		off_t pos;
-		status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex,&pos);
-		if (status == B_ERROR)
-			return B_ERROR;
-
-		// put the old node back on the stack
-		stack.Push(nodeAndKey);
+		off_t nextOffset;
+		status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex,&nextOffset);
 		
-		nodeAndKey.nodeOffset = pos;
+		if (status == B_ENTRY_NOT_FOUND && nextOffset == nodeAndKey.nodeOffset)
+			return B_ERROR;
+		
+		nodeAndKey.nodeOffset = nextOffset;
 		nodeAndKey.keyIndex = 0;
-
-		stack.Push(nodeAndKey);
 	}
 	return B_ERROR;
 }
