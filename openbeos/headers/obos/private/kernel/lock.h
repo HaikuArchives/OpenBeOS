@@ -29,5 +29,95 @@ void mutex_destroy(mutex *m);
 void mutex_lock(mutex *m);
 void mutex_unlock(mutex *m);
 
+// for read/write locks
+#define MAX_READERS 100000
+
+struct benaphore {
+	sem_id	sem;
+	int32	count;
+};
+
+typedef struct benaphore benaphore;
+
+// it may make sense to add a status field to the rw_lock to
+// be able to check if the semaphore could be locked
+
+struct rw_lock {
+	sem_id		sem;
+	int32		count;
+	benaphore	writeLock;
+};
+
+typedef struct rw_lock rw_lock;
+
+#define INIT_BENAPHORE(lock,name) \
+	{ \
+		(lock).count = 1; \
+		(lock).sem = sem_create(0, name); \
+	}
+
+#define CHECK_BENAPHORE(lock) \
+	((lock).sem)
+
+#define UNINIT_BENAPHORE(lock) \
+	sem_delete((lock).sem);
+
+#define ACQUIRE_BENAPHORE(lock) \
+	(atomic_add(&((lock).count), -1) <= 0 ? \
+		sem_acquire_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL) \
+		: 0)
+
+#define RELEASE_BENAPHORE(lock) \
+	{ \
+		if (atomic_add(&((lock).count), 1) < 0) \
+			sem_release_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE); \
+	}
+
+/* read/write lock */
+#define INIT_RW_LOCK(lock,name) \
+	{ \
+		(lock).sem = sem_create(0, name); \
+		(lock).count = MAX_READERS; \
+		INIT_BENAPHORE((lock).writeLock, "r/w write lock"); \
+	}
+
+#define CHECK_RW_LOCK(lock) \
+	((lock).sem)
+
+#define UNINIT_RW_LOCK(lock) \
+	sem_delete((lock).sem); \
+	UNINIT_BENAPHORE((lock).writeLock)
+
+#define ACQUIRE_READ_LOCK(lock) \
+	{ \
+		if (atomic_add(&(lock).count, -1) <= 0) \
+			sem_acquire_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL); \
+	}
+
+#define RELEASE_READ_LOCK(lock) \
+	{ \
+		if (atomic_add(&(lock).count, 1) < 0) \
+			sem_release_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE); \
+	}
+
+#define ACQUIRE_WRITE_LOCK(lock) \
+	{ \
+		int32 readers; \
+		ACQUIRE_BENAPHORE((lock).writeLock); \
+		readers = atomic_add(&(lock).count, -MAX_READERS); \
+		if (readers < MAX_READERS) \
+			sem_acquire_etc((lock).sem,readers <= 0 ? 1 : MAX_READERS - readers, \
+			                SEM_FLAG_INTERRUPTABLE,0, NULL); \
+		RELEASE_BENAPHORE((lock).writeLock); \
+	}
+
+#define RELEASE_WRITE_LOCK(lock) \
+	{ \
+		int32 readers = atomic_add(&(lock).count,MAX_READERS); \
+		if (readers < 0) \
+			sem_release_etc((lock).sem,readers <= -MAX_READERS ? 1 : -readers,SEM_FLAG_INTERRUPTABLE); \
+	}
+
+
 #endif
 
