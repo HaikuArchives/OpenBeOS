@@ -12,7 +12,7 @@
 
 /**
  * @defgroup CPU CPU Structures (not architecture specific)
- * @ingroup OpenBeOS_Headers
+ * @ingroup OpenBeOS_Kernel
  * @{
  */
 

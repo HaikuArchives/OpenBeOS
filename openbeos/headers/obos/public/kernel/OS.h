@@ -2,11 +2,34 @@
  * 
  * Quake with fear - it's back!!!
  */
- 
 
 #ifndef _OS_H
 #define _OS_H
 
+/**
+ * @mainpage OpenBeOS Header Documentation
+ *
+ * @section Introduction
+ * This is the header documentation as produced with doxygen. Anyone can
+ * produce this using the doxygen tool and doing this
+ * <pre>
+ *	cd docs
+ *	doxygen doxygen.conf
+ * </pre>
+ * The resulting files will be produced in dox/html.
+ *
+ */
+
+/**
+ * @file kernel/OS.h
+ * @brief Definitions, prototypes needed throughout the OS
+ */
+
+/**
+ * @defgroup OpenBeOS_Headers OpenBeOS System Headers
+ * @brief Headers that are available for applications
+ */
+ 
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,6 +37,12 @@ extern "C" {
 #include <ktypes.h>
 
 #define B_OS_NAME_LENGTH 32
+
+/**
+ * @defgroup Areas Memory Areas
+ * @ingroup OpenBeOS_Headers
+ * @{
+ */
 
 /* temporary hacks */
 typedef int32   team_id;
@@ -39,6 +68,14 @@ typedef struct area_info {
         _get_area_info((id), (ainfo),sizeof(*(ainfo)))
 #define get_next_area_info(team, cookie, ainfo) \
         _get_next_area_info((team), (cookie), (ainfo), sizeof(*(ainfo)))
+
+/** @} */
+
+/**
+ * @defgroup Ports Messaging Ports
+ * @ingroup OpenBeOS_Headers
+ * @{
+ */
 
 /* Ports */
 typedef struct port_info {
@@ -73,7 +110,14 @@ int     _get_next_port_info(team_id, int32 *, port_info *, size_t);
 #define get_next_port_info(team, cookie, info)   \
 	         _get_next_port_info((team), (cookie), (info), sizeof(*(info)))
 
-/* Semaphores */
+/** @} */
+
+/**
+ * @defgroup Sems Semaphores
+ * @ingroup OpenBeOS_Headers
+ * @{
+ */
+
 #define B_CAN_INTERRUPT          1
 #define B_DO_NOT_RESCHEDULE      2
 #define B_CHECK_PERMISSION       4
@@ -107,6 +151,14 @@ int    set_sem_owner(sem_id id, proc_id proc);
 	
 #define get_next_sem_info(team, cookie, info)  \
             _get_next_sem_info((team), (cookie), (info), sizeof(*(info)))
+
+/** @} */
+
+/**
+ * @defgroup Threads Threads
+ * @ingroup OpenBeOS_Headers
+ * @{
+ */
 
 /* Threads */
 
@@ -182,6 +234,7 @@ int       suspend_thread(thread_id thread);
 
 thread_id find_thread(const char *);
 
+/** @} */
 #ifdef __cplusplus
 }
 #endif

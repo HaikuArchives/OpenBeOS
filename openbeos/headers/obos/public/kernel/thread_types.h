@@ -7,8 +7,8 @@
  */
 
 /**
- * @defgroup Kernel_Threads Kernel Threads
- * @ingroup OpenBeOS_Headers
+ * @defgroup Kernel_Threads Threads
+ * @ingroup OpenBeOS_Kernel
  * @{
  */
 

@@ -43,6 +43,25 @@
 
 //#include <sys/time.h>
 
+/**
+ * @file stat.h
+ * @brief Stat structures and defines
+ * @note This file will eventually be sys/stat.h as per the
+ *       POSIX standards.
+ */
+ 
+/**
+ * @defgroup OpenBeOS_POSIX POSIX Headers
+ * @brief Headers to provide the POSIX layer
+ */
+ 
+/**
+ * @defgroup Stat sys/stat.h
+ * @brief Structures and prototypes for stat operations
+ * @ingroup OpenBeOS_POSIX
+ * @{
+ */
+ 
 /* XXX - some types we don't yet have in sys/types.h (because we don't yet
  *       have a sys/types.h and these aren't in ktypes.h!)
  */
@@ -152,5 +171,7 @@ int	fchmod (int, mode_t);
 int	lstat (const char *, struct stat *);
 
 #endif
+
+/** @} */
 
 #endif /* !_SYS_STAT_H_ */

@@ -9,6 +9,7 @@
 
 typedef int (*timer_callback)(void *);
 
+
 typedef enum {
 	TIMER_MODE_ONESHOT = 0,
 	TIMER_MODE_PERIODIC
@@ -23,14 +24,14 @@ struct timer_event {
 	void *data;
 };
 
-int timer_init(kernel_args *ka);
-int timer_interrupt(void);
 void timer_setup_timer(timer_callback func, void *data, struct timer_event *event);
 int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event *event);
 int timer_cancel_event(struct timer_event *event);
-
 void spin(bigtime_t microseconds);
 
+/* kernel functions */
+int  timer_init(kernel_args *);
+int  timer_interrupt(void);
 
 /*
  * these two are only to be used by the scheduler

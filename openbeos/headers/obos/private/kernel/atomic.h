@@ -8,8 +8,8 @@
  */
 
 /**
- * @defgroup Kernel_Atomic Kernel Atomic Operations
- * @ingroup OpenBeOS_Headers
+ * @defgroup Kernel_Atomic Atomic Operations
+ * @ingroup OpenBeOS_Kernel
  * @{
  */
 
