@@ -3,6 +3,7 @@
 SubDir TOP source lib ;
 
 Library $(TOP)/source/lib/libstorage :
+ByteOrder.cpp
 DataIO.cpp
 Directory.cpp
 Entry.cpp
@@ -10,11 +11,17 @@ EntryList.cpp
 File.cpp
 FindDirectory.cpp
 Flattenable.cpp
+List.cpp
+MallocIO.cpp
 Mime.cpp
 MimeType.cpp
 Node.cpp
 #NodeInfo.cpp
+OffsetFile.cpp
 Path.cpp
+ResourcesContainer.cpp
+ResourceFile.cpp
+ResourceItem.cpp
 Resources.cpp
 Statable.cpp
 String.cpp
