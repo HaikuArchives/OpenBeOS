@@ -11,6 +11,7 @@
 #include <Path.h>
 #include <SymLink.h>
 
+#include "Test.StorageKit.h"
 #include "DirectoryTest.h"
 
 // == for struct stat
@@ -79,7 +80,7 @@ public:
 		fTestedNames.clear();
 	}
 
-	bool test(string name, bool dump = true)
+	bool test(string name, bool dump = shell.BeVerbose())
 	{
 		bool result = (fUntestedNames.find(name) != fUntestedNames.end());
 		if (result) {
@@ -158,7 +159,8 @@ struct DirectoryTestCaller
 			DirectoryTest::execCommand("rm -rf ",
 									   DirectoryTest::allFilenames[i]);
 		}
-		printf("\n");
+		if (shell.BeVerbose())
+			printf("\n");
 	}
 
 	char fCurrentWorkingDir[B_PATH_NAME_LENGTH];
@@ -1986,7 +1988,8 @@ DirectoryTest::CreateDirectoryTest()
 void
 DirectoryTest::nextSubTest()
 {
-	printf("[%ld]", subTestNumber++);
+	if (shell.BeVerbose())
+		printf("[%ld]", subTestNumber++);
 }
 
 // Calls system() with the concatenated string of command and parameter.
