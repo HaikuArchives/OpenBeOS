@@ -56,13 +56,10 @@ static int check_cpu(void);
 //   supervisor mode
 void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 {
-//	unsigned int new_stack;
 	unsigned int *idt;
 	unsigned int *gdt;
 	unsigned int next_vaddr;
 	unsigned int next_paddr;
-//	unsigned int nextAllocPage;
-//	unsigned int kernelSize;
 	unsigned int i;
 	unsigned int kernel_entry;
 
@@ -106,7 +103,6 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 	next_paddr = BOOTDIR_ADDR + bootdir_pages * PAGE_SIZE;
 
 	if(in_vesa) {
-//		struct VBEInfoBlock *info = (struct VBEInfoBlock *)vesa_ptr;
 		struct VBEModeInfoBlock *mode_info = (struct VBEModeInfoBlock *)(vesa_ptr + 0x200);
 
 		ka->fb.enabled = 1;
