@@ -78,7 +78,7 @@ again:
 	if (fgets(buf, 80, protof) == NULL)
 		return NULL;
 	len = strlen(buf);
-	p = &buf[len];
+	p = buf;
 	
 //	if ((p = fgetln(protof, &len)) == NULL)
 //		return (NULL);

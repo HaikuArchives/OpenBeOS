@@ -4,24 +4,24 @@
 # Updated based on RFC 1340, Assigned Numbers (July 1992).
 # See also http://www.isi.edu/in-notes/iana/assignments/protocol-numbers
 #
-ip           0IP# internet protocol, pseudo protocol number
-icmp         1ICMP# internet control message protocol
-igmp         2IGMP# Internet Group Management
-ggp          3GGP# gateway-gateway protocol
-ipencap      4IP-ENCAP# IP encapsulated in IP (officially ``IP'')
-st           5ST# ST datagram mode
-tcp          6TCP# transmission control protocol
-ucl          7UCL# UCL
-egp          8EGP# exterior gateway protocol
-igp          9IGP# any private interior gateway
-bbn-rcc-mon 10BBN-RCC-MON     # BBN RCC Monitoring
-nvp-ii      11NVP-II# Network Voice Protocol
-pup         12PUP# PARC universal packet protocol
-argus       13ARGUS# ARGUS
-emcon       14EMCON# EMCON
-xnet        15XNET# Cross Net Debugger
-chaos       16CHAOS# Chaos
-udp         17UDP# user datagram protocol
+ip			0		IP			# internet protocol, pseudo protocol number
+icmp		1		ICMP		# internet control message protocol
+igmp		2		IGMP		# Internet Group Management
+ggp			3		GGP			# gateway-gateway protocol
+ipencap		4		IP-ENCAP	# IP encapsulated in IP (officially ``IP'')
+st			5		ST			# ST datagram mode
+tcp			6		TCP			# transmission control protocol
+ucl			7		UCL			# UCL
+egp			8		EGP			# exterior gateway protocol
+igp			9		IGP			# any private interior gateway
+bbn-rcc-mon	10		BBN-RCC-MON	# BBN RCC Monitoring
+nvp-ii		11		NVP-II		# Network Voice Protocol
+pup			12		PUP			# PARC universal packet protocol
+argus		13		ARGUS		# ARGUS
+emcon		14		EMCON		# EMCON
+xnet		15		XNET		# Cross Net Debugger
+chaos		16		CHAOS		# Chaos
+udp			17		UDP			# user datagram protocol
 mux         18MUX# Multiplexing
 dcn-meas    19DCN-MEAS# DCN Measurement Subsystems   
 hmp         20HMP# host monitoring protocol
