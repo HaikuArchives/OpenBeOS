@@ -22,28 +22,32 @@ General Jottings
 Userland vs Kernel Land
 -----------------------
 
-- stack lives in kernel land. apps live in userland.
-- do we need to copy data from top level of stack into userland?
-  Probably to keep memory in correct "area".
+This has been decided as follows...
+- initial stack will be userland
+- stack should be modular enough that it could be moved into kernel with
+  little or no real work.
+
 
 Initial Protocols
 -----------------
 
-- ethernet encapsulation
-- 802.x encapsulation
-- ipv4
-- udp
+- ethernet/802.x encapsulation (rx only for 802.x)
+- slip (?)
+- ppp (?)
 - arp
-- icmpv4
+- ipv4
+- icmp (v4)
+- udp
+- tcp
 
 Extra's
 -------
 
+- appletalk ?
 - ipv6
 - icmpv6
 - ipv6 discovery (arp for v6)
 - atm encapsulation module?
-- ppp module
 - usb interface (net stack to usb??)
 
 Stack Map
@@ -56,97 +60,38 @@ So, how does this all fit together???
 			=================
 			= User apps	=   		USERLAND
 			=================
-			|		|
-		----------------------------------
-			|		|
+			|	|	|
+			|	|	|
 		=========   =========	=========
-		= UDP   =   = ICMP* =	= TCP	=	KERNEL
+		= UDP   =   = ICMP* =	= TCP	=	
 		=========   =========	=========
 			 \      |      /
 			  \     |     /
-			   ===========
-			  /           \
-			 /             \
-		=========   =========	=========
-		= IPv4  =   =  ARP  =	= IPv6  =
-		=========   =========	=========
-                         \      |      /
-		          \     |     /
-                           ===========
-                          /           \
-                         /             \
-                =========               =========
-                = Eth   =               = 802.x =
-                =========               =========
-                         \             /
-                          \           /
-                           ===========
-				|
-			   ===========
-			   = NIC IF  =
+                         ===============
+     MBUF	         =  IP (v4/v6) =
+                         ===============
+                                |     
+                -----------------------------
+                                |           |
+                         ===============    |   =======
+     BUFFER              = Eth/802.x   =----|---= ARP =
+                         ===============    |   =======
+                                |           |
+                ----------------------------|----- 
+				|           |
+			   ===========      |
+			   = NIC IF  =      |           KERNEL
 			   ===========
 
 * ICMP is used as a placeholder for both ICMPv4 and ICMPv6, which are very
   different from each other in scope and usage.
 
+Basically every module only needs to be able to call the module that deal with the
+input/output of the protocol it find encapsulated, i.e. if IP finds a TCP packet
+it simply needs to be able to call tcp_input and pass the mbuf along. There is a
+requirement that each call to xxx_input gives the length of the header as they're 
+variable in most protocols.
+
 This just starts to scratch the surface, but I hope gives more of an idea
 of what's been bouncing around in my head. :)
-
-Frames going up/down the stack should really be able to follow any path
-desired, something that isn't possible with the current newos stack. We 
-almost need a structure that mimcs the above, such as
-
-	switch (frame->encaps_type)
-		case ethernet:
-			go ethernet;
-		case 802.x:
-			go 802.x;
-/* assume that in the encaps layer we set the layer2_proto unless we
- * process the data ourselves (arp)
- */
-	switch (frame->layer2_proto)
-		case ipv4;
-		case arp;
-		case ipv6;
-/* assume that these either process totally or reply with
- * layer3_proto set */
-	switch (frame->layer3_proto)
-etc, etc
-
-One thing that this could allow is for each module visited to attach a 
-pointer such that we can then call
-
-	frame->layer2->output(data)
-
-For this I'd imagine a structure whereby we have this...
-
-	struct if_frame {
-		addr buffer;	/* points to start of buffer */
-		size_t buflen;	/* how big is the buffer? */
-		addr nxt;	/* points to where we should start reading */
-		addr layer1;	/* points to start of layer1 header */
-		addr layer2;
-		addr layer3;
-		ifnet *if;	/* interface we came in on */
-
-		struct io_funcs *layer1; /* i/o functions for layer 1 */
-...
-		uint32 history;	/* bitflags showing which modules have
-				 * processed packet... */
-		char data[???]; /* data buffer */
-	}
-
-This breaks from what newos currently uses (cbufs) in that we don't dispose of
-the headers we've used, but rather hang onto them so subsequent layers can refer
-back. This should reduce the amount of copying we need to do whilst traversing 
-the stack. It does raise questions about where the fragmentation/reconstruction
-takes place and how we deal with larger packets. I'd imagine that we'd have a
-list of these structures with a basic (smallish) data buffer (say 256 bytes 
-for the whole structure, and if the frame was beyond what could be accomodated
-we simply attach a buffer large enough and use that for the data. In this way
-I think we can avoid having 2 memcpy's per large packet?
-
-This would mean that we abstract out a lot of the module specifics. It should
-also allow great debugging opportunities :)
-
 
