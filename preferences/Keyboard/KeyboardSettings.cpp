@@ -35,11 +35,25 @@ KeyboardSettings::KeyboardSettings()
 		if (file.Read(&fcorner, sizeof(BPoint)) != sizeof(BPoint))
 			be_app->PostMessage(ERROR_DETECTED);
 	}
+	
+	// Turn the BPoint into a usefull rectangle for the Keyboard Window.
 	fWindowFrame.left=fcorner.x;
 	fWindowFrame.top=fcorner.y;
 	fWindowFrame.right=fWindowFrame.left+229;
-	fWindowFrame.bottom=fWindowFrame.top+221;
-
+	fWindowFrame.bottom=fWindowFrame.top+221;	
+	
+	//Check to see if the co-ords of the window are in the range of the Screen
+	BScreen screen;
+		if (screen.Frame().right >= fWindowFrame.right
+			&& screen.Frame().bottom >= fWindowFrame.bottom)
+		return;
+	// If they are not, lets just stick the window in the middle
+	// of the screen.
+	fWindowFrame = screen.Frame();
+	fWindowFrame.left = (fWindowFrame.right-229)/2;
+	fWindowFrame.right = fWindowFrame.left + 229;
+	fWindowFrame.top = (fWindowFrame.bottom-221)/2;
+	fWindowFrame.bottom = fWindowFrame.top + 221;
 }//KeyboardSettings::KeyboardSettings
 
 KeyboardSettings::~KeyboardSettings()

@@ -23,6 +23,7 @@ public:
 					KeyboardApplication();
 	virtual 		~KeyboardApplication();
 	virtual void 	MessageReceived(BMessage *message);
+	virtual void 	AboutRequested(void);
 private:
 	KeyboardWindow		*aWindow;
 	KeyboardSettings 	*theseSettings;

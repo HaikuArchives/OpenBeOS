@@ -47,13 +47,13 @@ void KeyboardWindow::MessageReceived(BMessage *message)
 	  			{
 	    			be_app->PostMessage(ERROR_DETECTED);
 	  			};
-	  			aView->rateSlider->SetValue(200);
+	  			aView->SetRepeatRate(200);
 				if (set_key_repeat_delay(250000)!=B_OK) 
 	  			{
 	    			be_app->PostMessage(ERROR_DETECTED);
 	  			};
-	  			aView->delaySlider->SetValue(250000);
-	  			aView->revertButton->SetEnabled(true);
+	  			aView->SetDelayRate(250000);
+	  			aView->SetRevertButton(true);
 			}//BUTTON_DEFAULTS
 			break;
 		case BUTTON_REVERT:
@@ -63,28 +63,28 @@ void KeyboardWindow::MessageReceived(BMessage *message)
 	  			{
 	    			be_app->PostMessage(ERROR_DETECTED);
 	  			};
-	  			aView->rateSlider->SetValue(fSettings->KeyboardRepeatRate());
+	  			aView->SetRepeatRate(fSettings->KeyboardRepeatRate());
 				if (set_key_repeat_delay(fSettings->KeyboardDelayRate())!=B_OK) 
 	  			{
 	    			be_app->PostMessage(ERROR_DETECTED);
 	  			};
-	  			aView->delaySlider->SetValue(fSettings->KeyboardDelayRate());	  			
-				aView->revertButton->SetEnabled(false);
+	  			aView->SetDelayRate(fSettings->KeyboardDelayRate());	  			
+				aView->SetRevertButton(false);
 			}//BUTTON_REVERT
 			break;
 		case SLIDER_REPEAT_RATE:
 			{//SLIDER_REPEAT_RATE
-				if (set_key_repeat_rate(aView->rateSlider->Value())!=B_OK) 
+				if (set_key_repeat_rate(message->FindInt32("be:value"))!=B_OK) 
 	  			{
 	    			be_app->PostMessage(ERROR_DETECTED);
 	  			};
-				aView->revertButton->SetEnabled(true);
+	  			aView->SetRevertButton(true);
 			}//SLIDER_REPEAT_RATE
 			break;
 		case SLIDER_DELAY_RATE:
 			{//SLIDER_DELAY_RATE
 				bigtime_t        drate;
-				drate=aView->delaySlider->Value();
+				drate=message->FindInt32("be:value");
 				// We need to look at the value from the slider and make it "jump"
 				// to the next notch along. Setting the min and max values of the
 				// slider to 1 and 4 doesn't work like the real Keyboard app.
@@ -96,12 +96,12 @@ void KeyboardWindow::MessageReceived(BMessage *message)
 					drate = 750000;
 				if (drate >= 875000)
 					drate = 1000000;
-				aView->delaySlider->SetValue(drate);
+				aView->SetDelayRate(drate);
 				if (set_key_repeat_delay(drate)!=B_OK) 
 	  			{
 	    			be_app->PostMessage(ERROR_DETECTED);
 	  			};
-				aView->revertButton->SetEnabled(true);
+	  			aView->SetRevertButton(true);
 			}//SLIDER_DELAY_RATE
 			break;
 		default:
@@ -113,8 +113,8 @@ void KeyboardWindow::MessageReceived(BMessage *message)
 KeyboardWindow::~KeyboardWindow()
 {//
 	//We only want to write the slider rates at the end of the program
-	fSettings->SetKeyboardRepeatRate(aView->rateSlider->Value());
-	fSettings->SetKeyboardDelayRate(aView->rateSlider->Value());
+	fSettings->SetKeyboardRepeatRate(aView->GetRepeatRate());
+	fSettings->SetKeyboardDelayRate(aView->GetDelayRate());
 }//
 
 void KeyboardWindow::FrameMoved(BPoint origin)

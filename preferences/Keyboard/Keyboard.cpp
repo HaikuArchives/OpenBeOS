@@ -64,3 +64,8 @@ KeyboardApplication::~KeyboardApplication()
 {//KeyboardApplication::~KeyboardApplication
 		delete theseSettings;
 }//KeyboardApplication::~KeyboardApplication
+
+void KeyboardApplication::AboutRequested(void)
+{//KeyboardApplication::AboutRequested
+	(new BAlert("about", "Configure your keyboard here.", "OK"))->Go();
+}//KeyboardApplication::AboutRequested

@@ -28,12 +28,22 @@ class KeyboardView : public BView
 {
 public:
 		KeyboardView(BRect frame);
-		BSlider		*rateSlider;		// Move all these to private and
-		BSlider		*delaySlider;		// create accessor members.
-		BButton		*revertButton;		// This one too.
+		virtual void	Draw(BRect frame);
+		int32	GetRepeatRate() const { return rateSlider->Value(); }
+		bigtime_t GetDelayRate() const { return delaySlider->Value(); }
+		void	SetRepeatRate(int32);
+		void	SetDelayRate(bigtime_t);
+		void	SetRevertButton(bool);
 private:
         int32            rrate;
-		bigtime_t        drate; 
+		bigtime_t        drate;
+		BSlider			*rateSlider;
+		BSlider			*delaySlider;
+		BButton			*revertButton;
+		BBitmap 		*icon_bitmap;
+		BBitmap 		*clock_bitmap;
+		BBox  			*aBox;
+
 };
 
 #endif //KEYBOARD_VIEW_H

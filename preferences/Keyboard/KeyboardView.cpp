@@ -22,18 +22,29 @@
 #ifndef KEYBOARD_MESSAGES_H
 #include "KeyboardMessages.h"
 #endif
-#include <stdio.h>
+#ifndef _INTERFACEDEFS_H
+#include <InterfaceDefs.h>
+#endif
+#ifndef _TRANSLATIONUTILS_H
+#include <TranslationUtils.h>
+#endif
+#ifndef _BITMAP_H
+#include <Bitmap.h>
+#endif
 
 KeyboardView::KeyboardView(BRect rect)
 	   	   : BView(rect, "keyboard_view", B_FOLLOW_ALL, B_WILL_DRAW)
 {
 	BRect 		aRect;
-	BBox  		*aBox;
 	BButton 	*aButton;
 	BTextControl *aTextControl;
 	
 	// Set the color to grey...
-	SetViewColor(216,216,216,0);
+	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	
+	icon_bitmap = BTranslationUtils::GetBitmap("key_bmap");
+	clock_bitmap = BTranslationUtils::GetBitmap("clock_bmap");
+	
 	//Add the "Default" button..	
 	aRect.Set(10,187,85,207);
 	aButton = new BButton(aRect,"keyboard_defaults","Defaults", new BMessage(BUTTON_DEFAULTS));
@@ -61,7 +72,7 @@ KeyboardView::KeyboardView(BRect rect)
 	    	be_app->PostMessage(ERROR_DETECTED);
 	  	}
 	// Create the "Key repeat rate" slider...
-	aRect.Set(10,10,200,50);
+	aRect.Set(10,10,172,50);
 	rateSlider = new BSlider(aRect,"key_repeat_rate","Key repeat rate", new BMessage(SLIDER_REPEAT_RATE),20,300,B_BLOCK_THUMB,B_FOLLOW_LEFT,B_WILL_DRAW);
 	rateSlider->SetHashMarks(B_HASH_MARKS_BOTTOM);
 	rateSlider->SetHashMarkCount(5);
@@ -69,7 +80,7 @@ KeyboardView::KeyboardView(BRect rect)
 	rateSlider->SetValue(rrate);
 	aBox->AddChild(rateSlider);
 	// Create the "Delay until key repeat" slider...
-	aRect.Set(10,65,200,115);
+	aRect.Set(10,65,172,115);
 	delaySlider = new BSlider(aRect,"delay_until_key_repeat","Delay until key repeat", new BMessage(SLIDER_DELAY_RATE),250000,1000000,B_BLOCK_THUMB,B_FOLLOW_LEFT,B_WILL_DRAW);
 	delaySlider->SetHashMarks(B_HASH_MARKS_BOTTOM);
 	delaySlider->SetHashMarkCount(4);
@@ -88,4 +99,25 @@ KeyboardView::KeyboardView(BRect rect)
 	aBox->AddChild(aTextControl);	
 	AddChild(aBox);
 	
+}
+
+void KeyboardView::SetRepeatRate(int32 val)
+{
+	rateSlider->SetValue(val);
+}
+
+void KeyboardView::SetDelayRate(bigtime_t val)
+{
+	delaySlider->SetValue(val);
+}
+
+void KeyboardView::SetRevertButton(bool val)
+{
+	revertButton->SetEnabled(val);
+}
+
+void KeyboardView::Draw(BRect updateFrame)
+{
+	aBox->DrawBitmap(icon_bitmap,BPoint(178,26));
+	aBox->DrawBitmap(clock_bitmap,BPoint(178,83));	
 }

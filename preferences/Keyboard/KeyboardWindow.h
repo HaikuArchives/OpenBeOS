@@ -13,7 +13,9 @@
 #ifndef KEYBOARD_VIEW_H
 #include "KeyboardView.h"
 #endif
+#ifndef KEYBOARD_SETTINGS_H
 #include "KeyboardSettings.h"
+#endif
 
 class KeyboardWindow : public BWindow 
 {

@@ -1,8 +1,12 @@
 #ifndef KEYBOARD_SETTINGS_H_
 #define KEYBOARD_SETTINGS_H_
 
+#ifndef _POINT_H
 #include <Point.h>
+#endif
+#ifndef _SCREEN_H
 #include <Screen.h>
+#endif
 
 typedef struct {
         bigtime_t       key_repeat_delay;
