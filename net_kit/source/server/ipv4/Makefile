@@ -10,6 +10,7 @@ CFLAGS+=-D_NETWORK_STACK
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 KLOBJS=../net_server/cksum.o ../net_server/misc.o
+XMAP_DIR=/boot/home/config/add-ons/kernel/drivers/dev/net
 
 all:	$(TARGET)
 
@@ -21,9 +22,13 @@ clean:
 kernel:
 	@$(CC) $(KCFLAGS) $(INCLUDES) -c ipv4.c
 	@$(CC) $(KLDFLAGS) $(KLOBJS) -o ipv4 ipv4.o
+	@$(CC) $(KLDFLAGS) $(KLOBJS) -Wl,-M=$(TARGET).xMAP *.o
 
 installkernel:  kernel
 	@cp ipv4 /boot/home/config/add-ons/kernel/network/protocol/ipv4
+	@if ! test -L $(XMAP_DIR)/$(TARGET).xMAP; then \
+		ln -s `pwd`/$(TARGET).xMAP $(XMAP_DIR); \
+	fi
 
 $(TARGET): $(OBJS)
 	$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)

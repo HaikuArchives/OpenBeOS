@@ -1,3 +1,5 @@
 CVS
 *.o
 ipv4
+_KERNEL_
+*.xMAP

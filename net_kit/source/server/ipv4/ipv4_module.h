@@ -32,7 +32,7 @@ struct ipv4_module_info {
 	struct mbuf *(*ip_srcroute)(void);
 	void (*ip_stripoptions)(struct mbuf *, 
 	                        struct mbuf *);
-
+	struct mbuf *(*srcroute)(void);
 };
 
 #endif /* IPV4_MODULE_H */
