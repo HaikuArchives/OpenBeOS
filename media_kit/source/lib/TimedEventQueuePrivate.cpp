@@ -110,7 +110,7 @@ _event_queue_imp::RemoveEvent(const media_timed_event *event)
 
 	for (event_queue_entry *entry = fFirstEntry; entry; entry = entry->next) {
 		if (entry->event == *event) {
-			CleanupEvent(&entry->event);
+			// No cleanup here
 			RemoveEntry(entry);
 			return B_OK;
 		}
@@ -130,8 +130,9 @@ _event_queue_imp::RemoveFirstEvent(media_timed_event * outEvent)
 	
 	if (outEvent != 0)
 		*outEvent = fFirstEntry->event;
-
-	CleanupEvent(&fFirstEntry->event);
+	else
+		CleanupEvent(&fFirstEntry->event);
+		
 	RemoveEntry(fFirstEntry);
 
 	return B_OK;
@@ -518,7 +519,8 @@ _event_queue_imp::CleanupEvent(media_timed_event *event)
 	//  events from the queue. If the flag is B_USER_CLEANUP or greater, 
 	//  the cleanup hook function is called when the event is removed. 
 	//Problems:
-	//  B_DELETE is a keyboard code!
+	//  B_DELETE is a keyboard code! (seems to have existed in early 
+	//  sample code as a cleanup flag)
 	//
 	//  exiting cleanup flags are:
 	//		B_NO_CLEANUP = 0,
