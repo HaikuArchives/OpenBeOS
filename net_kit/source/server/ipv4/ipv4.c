@@ -20,10 +20,10 @@
 #include "sys/protosw.h"
 #include "sys/domain.h"
 
-#include "ipv4_module.h"
 #include "core_module.h"
 #include "core_funcs.h"
 #include "net_module.h"
+#include "ipv4_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
