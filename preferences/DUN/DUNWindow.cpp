@@ -1,12 +1,13 @@
 /*
 
-DUNWindow by Sikosis
+DUNWindow for OpenBeOS
 
-(C) 2002
+Author: Sikosis ( sikosis@bemail.org )
 
 */
 
 #include "app/Application.h"
+#include <Alert.h>
 #include <Box.h>
 #include <Button.h>
 #include <CheckBox.h>
@@ -42,7 +43,7 @@ DUNWindow::DUNWindow(BRect frame) : BWindow (frame, "OBOS Dial-up Networking", B
 }
 // ------------------------------------------------------------------------------- //
 
-// DUNWindow::_InitWindow -- Put Initialization commands here
+// DUNWindow::_InitWindow -- Initialization Commands here
 void DUNWindow::_InitWindow(void) {
    BRect r;
    r = Bounds();
@@ -136,6 +137,11 @@ void DUNWindow::_InitWindow(void) {
 }
 // ------------------------------------------------------------------------------- //
 
+void DUNView::MouseDown(BPoint bp) {
+  //BString *tmp;
+   (new BAlert("","Clicked","Okay"))->Go();
+}
+
 // DUNWindow::~DUNWindow -- destructor
 DUNWindow::~DUNWindow() {
    exit(0);
@@ -152,6 +158,9 @@ bool DUNWindow::QuitRequested() {
 // DUNWindow::MessageReceived -- receives messages
 void DUNWindow::MessageReceived (BMessage *message) {
    switch(message->what) {
+   	   case BTN_MODEM:
+   	   	 (new BAlert("","Modem Button","Okay"))->Go(); 	
+   	     break;	
        default:
          BWindow::MessageReceived(message);
          break;
