@@ -61,12 +61,18 @@ net_init_timer(void)
 void
 net_shutdown_timer(void)
 {
+	struct timer_entry *te,*next;
+
 	delete_sem(gTimerInfo.ti_wait);
 	delete_sem(gTimerInfo.ti_lock);
 	gTimerInfo.ti_wait = -1;
 	gTimerInfo.ti_lock = -1;
 
-	// have to free the remaining timer entries here!
+	// free the remaining timer entries
+	for (te = gTimerInfo.ti_first;te;te = next) {
+		next = te->te_next;
+		free(te);
+	}
 }
 
 
@@ -151,8 +157,8 @@ net_add_timer(net_timer_hook hook,void *data,bigtime_t interval)
 	
 	// notify timer about the change
 	release_sem(gTimerInfo.ti_wait);
-	
-	return B_OK;
+
+	return te->te_id;
 }
 
 
