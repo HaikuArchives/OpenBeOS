@@ -49,8 +49,8 @@ class Volume {
 		block_run			Indices() const { return fSuperBlock.indices; }
 		Inode				*IndicesNode() const { return fIndicesNode; }
 		block_run			Log() const { return fSuperBlock.log_blocks; }
-		off_t				LogStart() const { return fSuperBlock.log_start; }
-		off_t				LogEnd() const { return fSuperBlock.log_end; }
+		vint32				&LogStart() { return fLogStart; }
+		vint32				&LogEnd() { return fLogEnd; }
 		int					Device() const { return fDevice; }
 
 		nspace_id			ID() const { return fID; }
@@ -109,6 +109,7 @@ class Volume {
 		BlockAllocator		fBlockAllocator;
 		Benaphore			fLock;
 		Journal				*fJournal;
+		vint32				fLogStart,fLogEnd;
 
 		Inode				*fRootNode;
 		Inode				*fIndicesNode;
@@ -156,9 +157,10 @@ Volume::WriteBlocks(off_t blockNumber, const uint8 *block, uint32 numBlocks)
 inline void 
 Volume::WriteCachedBlocksIfNecessary()
 {
-	if (fDirtyCachedBlocks > 64) {
+	// the specific values are only valid for the current BeOS cache
+	if (fDirtyCachedBlocks > 128) {
 		force_cache_flush(fDevice,false);
-		fDirtyCachedBlocks = 0;
+		atomic_add(&fDirtyCachedBlocks,-64);
 	}
 }
 

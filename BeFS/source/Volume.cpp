@@ -64,6 +64,9 @@ Volume::Panic()
 {
 	FATAL(("we have to panic... switch to read-only mode!\n"));
 	fFlags |= VOLUME_READ_ONLY;
+#ifdef USER
+	debugger("BFS panics!");
+#endif
 }
 
 
@@ -114,6 +117,10 @@ Volume::Mount(const char *deviceName,uint32 flags)
 	memcpy(&fSuperBlock,buffer + 512,sizeof(disk_super_block));
 
 	if (IsValidSuperBlock()) {
+		// set the current log pointers, so that journaling will work correctly
+		fLogStart = fSuperBlock.log_start;
+		fLogEnd = fSuperBlock.log_end;
+
 		if (init_cache_for_device(fDevice, NumBlocks()) == B_OK) {
 			fJournal = new Journal(this);
 			// replaying the log is the first thing we will do on this disk
