@@ -37,7 +37,7 @@
 	#define FUNCTION_START(x) { __out("bfs: %s() ",__FUNCTION__); __out x; }
 	#define FUNCTION() ;
 //	#define FUNCTION_START(x) ;
-	#define D(x) {x};
+	#define D(x) {x;};
 #else
 	#define PRINT(x) ;
 	#define REPORT_ERROR(status) ;

@@ -4,8 +4,15 @@
 ** This file may be used under the terms of the OpenBeOS License.
 */
 
+#define USER 1
+#define DEBUG 1
 
+#include "cpp.h"
 #include "bfs.h"
+#include "Debug.h"
+
+#define Volume void
+nothrow_t _dontthrow;
 
 #include <SupportDefs.h>
 
@@ -63,6 +70,11 @@ class Equation {
 		status_t	ParseQuotedString(char **_start,char **_end);
 		char		*CopyString(char *start, char *end);
 
+		status_t	RunQuery(Volume *volume);
+
+		void		SetScore(int32 score) { fScore = score; }
+		int32		Score() const { return fScore; }
+
 		void		PrintToStream();
 
 	private:
@@ -70,14 +82,18 @@ class Equation {
 		char		*fAttribute;
 		char		*fValue;
 		bool		fIsRegExp;
-};	
+		
+		int32		fScore;
+		bool		fRunsQuery;
+};
 
 class Term {
 	public:
 		Term(Equation *);
 		Term(Term *,int8,Term *);
 		~Term();
-	
+
+		//Term		*Copy() const;
 		void		PrintToStream();
 
 	private:
@@ -91,6 +107,11 @@ class Expression {
 		Expression(char *expr);
 		~Expression();
 		
+		status_t InitCheck();
+		const char *Position() const { return fPosition; }
+
+		status_t RunQuery(Volume *volume);
+
 	//private:
 		Term *ParseOr(char **expr);
 		Term *ParseAnd(char **expr);
@@ -99,6 +120,7 @@ class Expression {
 		bool IsOr(char **expr);
 		bool IsAnd(char **expr);
 
+		char *fPosition;
 		Term *fTerm;
 };
 
@@ -146,11 +168,15 @@ Equation::Equation(char **expr)
 		// set string to a valid start of the equation symbol
 		string = end + 2;
 		skipWhitespace(&string);
-		if (*string != '=' && *string != '<' && *string != '>' && *string != '!')
+		if (*string != '=' && *string != '<' && *string != '>' && *string != '!') {
+			*expr = string;
 			return;
+		}
 	} else {
-		// search the (in)equation for the actual equation symbol
-		while (*string && *string != '=' && *string != '<' && *string != '>' && *string != '!')
+		// search the (in)equation for the actual equation symbol (and for other operators
+		// in case the equation is malformed)
+		while (*string && *string != '=' && *string != '<' && *string != '>' && *string != '!'
+			&& *string != '&' && *string != '|')
 			string++;
 
 		// get the attribute string	(and trim whitespace), in case
@@ -160,7 +186,7 @@ Equation::Equation(char **expr)
 	}
 
 	// attribute string is empty (which is not allowed)
-	if (start == end)
+	if (start > end)
 		return;
 		
 	// at this point, "start" points to the beginning of the string, "end" points
@@ -186,6 +212,7 @@ Equation::Equation(char **expr)
 		
 		// any invalid characters will be rejected
 		default:
+			*expr = string;
 			return;
 	}
 	// lets change "start" to point to the first character after the symbol
@@ -307,7 +334,7 @@ Equation::PrintToStream()
 		case OP_LESSER: symbol = "<"; break;
 		case OP_LESSER_OR_EQUAL: symbol = "<="; break;
 	}
-	printf("[\"%s\" %s \"%s\"]",fAttribute,symbol,fValue);
+	D(__out("[\"%s\" %s \"%s\"]",fAttribute,symbol,fValue));
 }
 
 
@@ -323,6 +350,40 @@ Term::Term(Equation *eq)
 {
 }
 
+#if 0
+Term *
+Term::Copy() const
+{
+	if (fEquation != NULL) {
+		Equation *equation = new Equation(*fEquation);
+		if (equation == NULL)
+			return NULL;
+
+		Term *term = new Term(equation);
+		if (term == NULL)
+			delete equation;
+		
+		return term;
+	}
+
+	Term *left = NULL, *right = NULL;
+
+	if (fLeft != NULL && (left = fLeft->Copy()) == NULL)
+		return NULL;
+	if (fRight != NULL && (right = fRight->Copy()) == NULL) {
+		delete left;
+		return NULL;
+	}
+
+	Term *term = new Term(left,fOp,right);
+	if (term == NULL) {
+		delete left;
+		delete right;
+		return NULL;
+	}
+	return term;
+}
+#endif
 
 Term::Term(Term *left, int8 op, Term *right)
 	:
@@ -350,7 +411,7 @@ Term::PrintToStream()
 		return;
 	}
 
-	printf("( ");
+	D(__out("( "));
 	if (fLeft != NULL)
 		fLeft->PrintToStream();
 	
@@ -360,12 +421,12 @@ Term::PrintToStream()
 		case OP_AND: op = "AND"; break;
 		default: op = "?"; break;
 	}
-	printf(" %s ",op);
+	D(__out(" %s ",op));
 	
 	if (fRight != NULL)
 		fRight->PrintToStream();
 
-	printf(" )");
+	D(__out(" )"));
 }
 
 
@@ -378,6 +439,15 @@ Expression::Expression(char *expr)
 		return;
 	
 	fTerm = ParseOr(&expr);
+	D(if (fTerm != NULL) {
+		fTerm->PrintToStream();
+		D(__out("\n"));
+		if (*expr != '\0')
+			PRINT(("Unexpected end of string: \"%s\"!\n",expr));
+	} else
+		PRINT(("Query not parsed, terminated at: \"%s\"!\n",expr));
+	);
+	fPosition = expr;
 }
 
 
@@ -419,7 +489,11 @@ Expression::ParseEquation(char **expr)
 		delete equation;
 		return NULL;
 	}
-	return new Term(equation);
+	Term *term = new Term(equation);
+	if (term == NULL)
+		delete equation;
+	
+	return term;
 }
 
 
@@ -427,20 +501,20 @@ Term *
 Expression::ParseAnd(char **expr)
 {
 	Term *left = ParseEquation(expr);
+	if (left == NULL)
+		return NULL;
 
 	while (IsAnd(expr)) {
 		Term *right = ParseAnd(expr);
+		Term *newParent = NULL;
 
-		if (right != NULL) {
-			Term *newParent = new Term(left,OP_AND,right);
-			if (newParent == NULL) {
-				delete left;
-				delete right;
+		if (right == NULL || (newParent = new Term(left,OP_AND,right)) == NULL) {
+			delete left;
+			delete right;
 
-				return NULL;
-			}
-			left = newParent;
+			return NULL;
 		}
+		left = newParent;
 	}
 
 	return left;
@@ -451,20 +525,20 @@ Term *
 Expression::ParseOr(char **expr)
 {
 	Term *left = ParseAnd(expr);
+	if (left == NULL)
+		return NULL;
 
 	while (IsOr(expr)) {
 		Term *right = ParseAnd(expr);
+		Term *newParent = NULL;
 
-		if (right != NULL) {
-			Term *newParent = new Term(left,OP_OR,right);
-			if (newParent == NULL) {
-				delete left;
-				delete right;
+		if (right == NULL || (newParent = new Term(left,OP_OR,right)) == NULL) {
+			delete left;
+			delete right;
 
-				return NULL;
-			}
-			left = newParent;
+			return NULL;
 		}
+		left = newParent;
 	}
 
 	return left;
@@ -497,6 +571,22 @@ Expression::IsAnd(char **expr)
 }
 
 
+status_t 
+Expression::InitCheck()
+{
+	if (fTerm == NULL)
+		return B_BAD_VALUE;
+
+	return B_OK;
+}
+
+
+status_t 
+Expression::RunQuery(Volume *volume)
+{
+}
+
+
 //	#pragma mark -
 
 
@@ -508,11 +598,7 @@ int main(int argc,char **argv)
 	}
 
 	Expression expr(argv[1]);
-	if (expr.fTerm != NULL) {
-		expr.fTerm->PrintToStream();
-		printf("\n");
-	} else
-		printf("Query not parsed!\n");
+	if (expr.InitCheck() < B_OK)
 
 	return 0;
 }
