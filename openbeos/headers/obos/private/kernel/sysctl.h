@@ -102,16 +102,17 @@ struct ctlname {
 }
 
 
-#ifdef _KERNEL_
-typedef int (sysctlfn)(int *, uint, void *, size_t *, void *, size_t);
-int kern_sysctl(int *, uint, void *, size_t *, void *, size_t);
-int hw_sysctl(int *, uint, void *, size_t *, void *, size_t);
-int sysctl_int (void *, size_t *, void *, size_t, int *);
-int sysctl_rdint (void *, size_t *, void *, int);
-int sysctl_tstring(void *, size_t *, void *, size_t, char *, int);
-int sysctl__string(void *, size_t *, void *, size_t, char *, int, int);
-int sysctl_rdstring(void *, size_t *, void *, char *);
-int user_sysctl(int *, uint, void *, size_t *, void *, size_t);
+#ifdef _KERNEL_MODE
+  typedef int (sysctlfn)(int *, uint, void *, size_t *, void *, size_t);
+
+  int kern_sysctl(int *, uint, void *, size_t *, void *, size_t);
+  int hw_sysctl(int *, uint, void *, size_t *, void *, size_t);
+  int sysctl_int (void *, size_t *, void *, size_t, int *);
+  int sysctl_rdint (void *, size_t *, void *, int);
+  int sysctl_tstring(void *, size_t *, void *, size_t, char *, int);
+  int sysctl__string(void *, size_t *, void *, size_t, char *, int, int);
+  int sysctl_rdstring(void *, size_t *, void *, char *);
+  int user_sysctl(int *, uint, void *, size_t *, void *, size_t);
 #endif
 
 int sysctl(int *, uint, void *, size_t *, void *, size_t);
