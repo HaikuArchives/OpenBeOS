@@ -1,0 +1,5 @@
+To install, place the the addon in:
+
+/boot/develop/BeIDE/plugins/Editor_add_ons
+
+You'll have to restart the IDE to use it.
