@@ -32,13 +32,13 @@ void DUNView::Draw (BRect updateRect) {
    //MovePenTo(BPoint(22,178));
    //DrawString ("No Connection");
    
-   MovePenTo(BPoint(249,178));
-   DrawString ("00:00:00");
+   //MovePenTo(BPoint(249,178));
+   //DrawString ("00:00:00");
 
-   MovePenTo(BPoint(22,195));
-   DrawString ("Local IP address:");
+   //MovePenTo(BPoint(22,195));
+   //DrawString ("Local IP address:");
 
-   MovePenTo(BPoint(265,195));
-   DrawString ("None");
+   //MovePenTo(BPoint(265,195));
+   //DrawString ("None");
 }
 // end
