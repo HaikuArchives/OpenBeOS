@@ -43,8 +43,6 @@
 #include "net/if_arp.h"
 #include "netinet/if_ether.h"
 
-#include "net_device.h"
-
 struct ifnet *devices = NULL;
 struct ifnet *pdevices = NULL;		/* pseudo devices - loopback etc */
 int ndevs = 0;
@@ -61,7 +59,7 @@ int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
                void *newp, size_t newlen);
 static void add_protosw(struct protosw *[], int layer);
 static struct in_ifaddr *get_primary_addr(void);
-
+static struct net_module *module_list = NULL;
 
 _EXPORT struct core_module_info core_info = {
 	{
@@ -388,6 +386,10 @@ static void merge_devices(void)
 }
 */
 
+/* Hmm, we should do this via the ioctl for the device/module to tell it that
+ * the card is going down...
+ * XXX - implement this correctly.
+ */
 static void close_devices(void)
 {
 	struct ifnet *d = devices;
@@ -557,7 +559,7 @@ static void find_protocol_modules(void)
 	void *ml = open_module_list(NETWORK_PROTOCOLS);
 	size_t sz = B_PATH_NAME_LENGTH;
 	char name[sz];
-	module_info *dmi = NULL;
+	struct net_module *nm = NULL; 
 	int rv;
 
 	if (ml == NULL) {
@@ -567,13 +569,30 @@ static void find_protocol_modules(void)
 	}
 
 	while (read_next_module_name(ml, name, &sz) == B_OK) {
+		nm = (struct net_module *)malloc(sizeof(struct net_module));
+		if (!nm)
+			return;
+		memset(nm, 0, sizeof(*nm));
+		nm->name = strdup(name);
 		printf("module: %s\n", name);
-		rv = get_module(name, &dmi);
-		printf("\tOK\n");
+		rv = get_module(name, (module_info **)&nm->ptr);
+		if (rv == 0) {
+			nm->next = module_list;
+			module_list = nm;		
+		} else {
+			free(nm);
+		}
 		sz = B_PATH_NAME_LENGTH;
 	}
 
 	close_module_list(ml);
+
+	/* we call these here as we want to load all modules ourselves first
+	 */
+	for (nm = module_list; nm; nm = nm->next) {
+		nm->ptr->start(NULL);
+		nm->status = 1;
+	}
 }
 
 
@@ -589,7 +608,7 @@ static void find_interface_modules(void)
 	void *ml = open_module_list(NETWORK_INTERFACES);
 	size_t sz = B_PATH_NAME_LENGTH;
 	char name[sz];
-	device_module_info *dmi = NULL;
+	struct net_module *nm = NULL; 
 	int rv;
 
 	if (ml == NULL) {
@@ -599,10 +618,22 @@ static void find_interface_modules(void)
 	}
 
 	while (read_next_module_name(ml, name, &sz) == B_OK) {
-		rv = get_module(name, (module_info**)&dmi);
+		nm = (struct net_module *)malloc(sizeof(struct net_module));
+		if (!nm)
+			return;
+		memset(nm, 0, sizeof(*nm));
+		nm->name = strdup(name);
+		printf("module: %s\n", name);
+		rv = get_module(name, (module_info**)&nm->ptr);
 		if (rv == 0) {
-			dmi->init();
+			nm->next = module_list;
+			module_list = nm;		
+			nm->ptr->start(NULL);
+			nm->status = 1;
+		} else {
+			free(nm);
 		}
+		
 		sz = B_PATH_NAME_LENGTH;
 	}
 
@@ -614,11 +645,9 @@ static void find_interface_modules(void)
 static void find_interface_modules(void)
 {
 	char path[PATH_MAX], cdir[PATH_MAX];
-	image_id id;
 	DIR *dir;
 	struct dirent *fe;
-	struct device_info *di;
-	
+	struct net_module *nm = NULL;
 	status_t status;
 	
 	getcwd(cdir, PATH_MAX);
@@ -632,13 +661,23 @@ static void find_interface_modules(void)
 			|| strcmp(fe->d_name, "CVS") == 0)
                         continue;
 		sprintf(path, "%s/%s", cdir, fe->d_name);
-		id = load_add_on(path);
-		if (id > 0) {
-			
-			status = get_image_symbol(id, "device_info",
-						B_SYMBOL_TYPE_DATA, (void**)&di);
-			if (status == B_OK)
-				di->init(&core_info);
+
+		nm = (struct net_module*)malloc(sizeof(struct net_module));
+		if (!nm)
+			return;
+		nm->name = strdup(fe->d_name);
+		nm->iid = load_add_on(path);
+		if (nm->iid > 0) {		
+			status = get_image_symbol(nm->iid, "device_info",
+						B_SYMBOL_TYPE_DATA, (void**)&nm->ptr);
+			if (status == B_OK) {
+				nm->next = module_list;
+				module_list = nm;
+				nm->ptr->start(&core_info);
+				nm->status = 1;
+			} else {
+				free(nm);
+			}
 		}
 	}
 }
@@ -646,10 +685,9 @@ static void find_interface_modules(void)
 static void find_protocol_modules(void)
 {
 	char path[PATH_MAX], cdir[PATH_MAX];
-	image_id u;
-	struct protocol_info *pi;
 	DIR *dir;
 	struct dirent *m;
+	struct net_module *nm = NULL;
 	status_t status;
 
 printf("userland: find_protocol_modules...\n");
@@ -666,15 +704,23 @@ printf("userland: find_protocol_modules...\n");
                         continue;
 		/* ok so we try it... */
 		sprintf(path, "%s/%s", cdir, m->d_name);
-		u = load_add_on(path);
 
-		if (u > 0) {
-			status = get_image_symbol(u, "protocol_info", 
-					B_SYMBOL_TYPE_DATA, (void**)&pi);
+		nm = (struct net_module*)malloc(sizeof(struct net_module));
+		if (!nm)
+			return;
+		nm->name = strdup(m->d_name);
+		nm->iid = load_add_on(path);
+		if (nm->iid > 0) {		
+			status = get_image_symbol(nm->iid, "protocol_info",
+						B_SYMBOL_TYPE_DATA, (void**)&nm->ptr);
 			if (status == B_OK) {
-				pi->init(&core_info);
+			printf("loaded %s ok\n", path);
+				nm->next = module_list;
+				module_list = nm;
+				nm->ptr->start(&core_info);
+				nm->status = 1;
 			} else {
-				printf("unable to load %s\n", path);
+				free(nm);
 			}
 		}
 	}
@@ -797,11 +843,36 @@ static int start_stack(void)
 
 static int stop_stack(void)
 {
+	struct net_module *nm = module_list, *onm = NULL;
+	
 	printf("core network module: Stopping network stack!\n");
 
-	sockets_shutdown();
 
 	close_devices();
+
+	/* unload all modules... */
+	printf("trying to stop modules\n");
+	for (;nm; nm = nm->next) {
+		if (nm->ptr->stop)
+			nm->ptr->stop();
+	}
+	printf("trying to unload modules\n");
+	nm = module_list;
+	do {
+#ifdef _KERNEL_MODE
+		put_module(nm->name);
+#else
+		unload_add_on(nm->iid);
+#endif
+		onm = nm;
+		nm = nm->next;
+		free(onm);
+	} while (nm);
+
+	/* This is more likely the correct place for this... 
+	 * can't call it at the moment due to the way we call this function!
+	sockets_shutdown();
+	 */
 
 	return 0;
 }

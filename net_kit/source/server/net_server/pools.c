@@ -10,10 +10,10 @@
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #define AREA_ADDR_FLAG  B_ANY_KERNEL_ADDRESS
-#define AREA_FLAGS      B_CONTIGUOUS|B_FULL_LOCK
+#define AREA_FLAGS      B_FULL_LOCK
 #else
 #define AREA_ADDR_FLAG  B_ANY_ADDRESS
-#define AREA_FLAGS      B_CONTIGUOUS|B_FULL_LOCK
+#define AREA_FLAGS      B_FULL_LOCK
 #endif
 
 static sem_id init_sem = -1;

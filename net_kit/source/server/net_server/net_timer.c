@@ -39,7 +39,6 @@ int32 net_timer(void *_data);
 
 struct timer_info gTimerInfo;
 
-
 status_t
 net_init_timer(void)
 {
