@@ -1,6 +1,6 @@
 /*
 
-PDF Writer printer driver.
+	PDFWriter.cpp
 
 Copyright (c) 2001, 2002 OpenBeOS. 
 
