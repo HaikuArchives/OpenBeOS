@@ -1,5 +1,6 @@
 // QueryTest.cpp
 
+#include <ctype.h>
 #include <fs_info.h>
 #include <stdio.h>
 #include <string>
@@ -117,9 +118,9 @@ public:
 	status_t PushValue(uint64 value)		{ PushUInt64(value); return B_OK; }
 	status_t PushValue(float value)			{ PushFloat(value); return B_OK; }
 	status_t PushValue(double value)		{ PushDouble(value); return B_OK; }
-	status_t PushValue(const BString value)
+	status_t PushValue(const BString value, bool caseInsensitive = false)
 	{
-		PushString(value.String()); return B_OK;
+		PushString(value.String(), caseInsensitive); return B_OK;
 	}
 	status_t PushAttr(const char *attribute)
 	{
@@ -138,7 +139,10 @@ public:
 	status_t PushValue(uint64 value)		{ return PushUInt64(value); }
 	status_t PushValue(float value)			{ return PushFloat(value); }
 	status_t PushValue(double value)		{ return PushDouble(value); }
-	status_t PushValue(const BString value)	{ return PushString(value.String()); }
+	status_t PushValue(const BString value, bool caseInsensitive = false)
+	{
+		return PushString(value.String(), caseInsensitive);
+	}
 #endif
 };
 
@@ -194,14 +198,49 @@ ValueNode<double>::toString() const
 	return BString() << buffer;
 }
 
-// string specialization
-BString
-ValueNode<BString>::toString() const
-{
-	BString escaped(value);
-	escaped.CharacterEscape("\"\\'", '\\');
-	return BString("\"") << escaped << "\"";
-}
+// StringNode
+
+class StringNode : public PredicateNode {
+public:
+	StringNode(BString v, bool caseInsensitive = false)
+		: value(v), caseInsensitive(caseInsensitive)
+	{
+	}
+
+	virtual ~StringNode() {}
+
+	virtual status_t push(Query &query) const
+	{
+		return query.PushValue(value, caseInsensitive);
+	}
+	
+	virtual BString toString() const
+	{
+		BString escaped;
+		if (caseInsensitive) {
+			const char *str = value.String();
+			int32 len = value.Length();
+			for (int32 i = 0; i < len; i++) {
+				char c = str[i];
+				if (isalpha(c)) {
+					int lower = tolower(c);
+					int upper = toupper(c);
+					if (lower < 0 || upper < 0)
+						escaped << c;
+					else
+						escaped << "[" << (char)lower << (char)upper << "]";
+				} else
+					escaped << c;
+			}
+		} else
+			escaped = value;
+		escaped.CharacterEscape("\"\\'", '\\');
+		return BString("\"") << escaped << "\"";
+	}
+
+	BString value;
+	bool	caseInsensitive;
+};
 
 
 // DateNode
@@ -257,7 +296,6 @@ typedef ValueNode<int64>	Int64Node;
 typedef ValueNode<uint64>	UInt64Node;
 typedef ValueNode<float>	FloatNode;
 typedef ValueNode<double>	DoubleNode;
-typedef ValueNode<BString>	StringNode;
 
 
 // ListNode
@@ -749,6 +787,8 @@ QueryTest::PredicateTest()
 	TestPredicate(DoubleNode(42));
 	TestPredicate(StringNode("some \" chars ' to \\ be ( escaped ) or "
 							 "% not!"));
+	TestPredicate(StringNode("some \" chars ' to \\ be ( escaped ) or "
+							 "% not!", true));
 	TestPredicate(DateNode("+15 min"));
 	TestPredicate(DateNode("22 May 2002"));
 	TestPredicate(DateNode("tomorrow"));
@@ -773,6 +813,7 @@ QueryTest::PredicateTest()
 		TestPredicate(OpNode(B_NOT, new AttributeNode("attribute")));
 		TestPredicate(OpNode(B_NOT, new Int32Node(42)));
 		TestPredicate(OpNode(B_NOT, new StringNode("some string")));
+		TestPredicate(OpNode(B_NOT, new StringNode("some string", true)));
 		TestPredicate(OpNode(B_NOT, new DateNode("22 May 2002")));
 		TestPredicate(OpNode(B_NOT, NULL), B_OK, B_NO_INIT);
 	}
@@ -908,6 +949,18 @@ QueryTest::PredicateTest()
 		CPPUNIT_ASSERT( query.PushOp(B_EQ) == B_NOT_ALLOWED );
 #endif
 	}
+	// SetPredicate(): bad args
+// R5: crashes when passing NULL to Set/GetPredicate()
+#if !SK_TEST_R5
+	nextSubTest();
+	{
+		Query query;
+		CPPUNIT_ASSERT( query.SetPredicate(NULL) == B_BAD_VALUE );
+		CPPUNIT_ASSERT( query.SetPredicate("hello") == B_OK );
+		CPPUNIT_ASSERT( query.GetPredicate(NULL) == B_BAD_VALUE );
+		CPPUNIT_ASSERT( query.GetPredicate(NULL, 10) == B_BAD_VALUE );
+	}
+#endif
 }
 
 // ParameterTest
@@ -1305,8 +1358,8 @@ QueryTest::FetchTest()
 		CPPUNIT_ASSERT( query.GetNextEntry(NULL) == B_BAD_VALUE );
 		CPPUNIT_ASSERT( query.GetNextRef(NULL) == B_BAD_VALUE );
 #endif
-		CPPUNIT_ASSERT( query.GetNextDirents(NULL, bufSize, 1)
-						== B_BAD_ADDRESS );
+		CPPUNIT_ASSERT( equals(query.GetNextDirents(NULL, bufSize, 1),
+							   B_BAD_ADDRESS, B_BAD_VALUE) );
 	}
 }
 
