@@ -1,4 +1,4 @@
-#include "CppUnitShell.h"
+#include "Test.StorageKit.h"
 
 // ##### Include your test headers here #####
 #include "DirectoryTest.h"
@@ -7,15 +7,9 @@
 #include "NodeTest.h"
 #include "PathTest.h"
 
-class StorageKitShell : public CppUnitShell {
-public:
-	StorageKitShell();	
-	virtual void PrintDescription(int argc, char *argv[]);
-};
+StorageKitShell shell;
 
 int main(int argc, char *argv[]) {
-	StorageKitShell shell;
-
 	// ##### Add your test suites here #####
 	shell.AddSuite( "BDirectory", &DirectoryTest::Suite );
 	shell.AddSuite( "BEntry", &EntryTest::Suite );
