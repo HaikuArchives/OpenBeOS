@@ -12,11 +12,12 @@
 #include <ScrollView.h>
 #include <FindDirectory.h>
 #include <stdio.h>
+#include "DrawMonitors.h"
 
 void drawPositionalMonitor(BView *view,BRect areaToDrawIn,int state);
 BView *drawSampleMonitor(BView *view, BRect area);
   int columns[4]={15,175,195,430};
-  int rows[6]={10,130,135,255,270,290};
+  int rows[6]={10,150,155,255,270,290};
 
 
 void ScreenSaver::MessageReceived(BMessage *msg)
@@ -31,6 +32,13 @@ void ScreenSaver::MessageReceived(BMessage *msg)
 		updateStatus();
       	BWindow::MessageReceived(msg);
       	break;
+	case PWBUTTON:
+		{
+		updateStatus();
+		pwMessenger->SendMessage(SHOW);
+      	BWindow::MessageReceived(msg);
+		}
+      	break;
 	case B_QUIT_REQUESTED:
 		be_app->PostMessage(B_QUIT_REQUESTED);
       	BWindow::MessageReceived(msg);
@@ -43,40 +51,87 @@ void ScreenSaver::MessageReceived(BMessage *msg)
 
 void ScreenSaver::loadSettings(BMessage *msg)
 {
+	BRect frame;
+	msg->FindRect("windowframe",&frame);
+	MoveTo(frame.left,frame.top);
+	ResizeTo(frame.right-frame.left,frame.bottom-frame.top);
+
+	int32 value;
+	msg->FindInt32("windowtab",&value);
+	tabView->Select(value);
+	msg->FindInt32("timeflags",&value);
+	EnableCheckbox->SetValue(value);
+	msg->FindInt32("timefade",&value);
+	value=secondsToSlider(value);
+	if (value>=0) RunSlider->SetValue(value);
+	msg->FindInt32("timestandby",&value);
+	value=secondsToSlider(value);
+	if (value>=0) TurnOffSlider->SetValue(value);
+
+	msg->FindInt32("cornernow",&value);
+	fadeNow->setDirection(value);
+	msg->FindInt32("cornernever",&value);
+	fadeNever->setDirection(value);
+
+	bool enable;
+	msg->FindBool("lockenable",&enable);
+	PasswordCheckbox->SetValue(enable);
+	msg->FindInt32("lockdelay",&value);
+	value=secondsToSlider(value);
+	if (value>=0) PasswordSlider->SetValue(value);
+
+	BString name;
+	msg->FindString("modulename",&name);
+	const BStringItem **ptr = (const BStringItem **)(ListView1->Items());
+	long count=ListView1->CountItems();
+	for ( long i = 0; i < count; i++ )
+		{
+		if (name==((*ptr)->Text()))
+			ListView1->Select(count=i); // Clever bit here - intentional assignment.
+		else 
+			*ptr++;
+		}
+	msg->what=UTILIZE;	
+	pwMessenger->SendMessage(msg);
+	// Pass to the module for its parameters...
 }
 
 void ScreenSaver::saveSettings(void)
 {
-	BMessage foo;
-	foo.AddRect("windowframe",Frame());
-	foo.AddInt32("windowtab",tabView->Selection());
-	foo.AddInt32("timeflags",EnableCheckbox->Value());
-	foo.AddInt32("timefade", timeInSeconds[RunSlider->Value()]);
-	foo.AddInt32("timestandby", timeInSeconds[TurnOffSlider->Value()]);
-	foo.AddInt32("timesuspend", timeInSeconds[TurnOffSlider->Value()]);
-	foo.AddInt32("timeoff", timeInSeconds[TurnOffSlider->Value()]);
-	foo.AddInt32("cornernow", -1); // UNIMPLEMENTED
-	foo.AddInt32("cornernever", -1); // UNIMPLEMENTED
-	foo.AddBool("lockenable",PasswordCheckbox->Value());
-	foo.AddInt32("lockdelay", timeInSeconds[PasswordSlider->Value()]);
-	foo.AddString("lockpassword", ""); // UNIMPLEMENTED
-	foo.AddString("lockmethod", "custom"); // ??????????????
+	BMessage msg;
+	msg.AddRect("windowframe",Frame());
+	msg.AddInt32("windowtab",tabView->Selection());
+	msg.AddInt32("timeflags",EnableCheckbox->Value());
+	msg.AddInt32("timefade", timeInSeconds[RunSlider->Value()]);
+	msg.AddInt32("timestandby", timeInSeconds[TurnOffSlider->Value()]);
+	msg.AddInt32("timesuspend", timeInSeconds[TurnOffSlider->Value()]);
+	msg.AddInt32("timeoff", timeInSeconds[TurnOffSlider->Value()]);
+	msg.AddInt32("cornernow", fadeNow->getDirection());
+	msg.AddInt32("cornernever", fadeNever->getDirection());
+	msg.AddBool("lockenable",PasswordCheckbox->Value());
+	msg.AddInt32("lockdelay", timeInSeconds[PasswordSlider->Value()]);
+	int selection=ListView1->CurrentSelection(0);
+	if (selection>=0)
+		msg.AddString("modulename", ((BStringItem *)(ListView1->ItemAt(selection)))->Text()); 
+	msg.what=POPULATE;
+	BMessage newMsg;
+	pwMessenger->SendMessage(&msg,&newMsg);
+	// Pass this message to the loaded screen saver so that it can add its own preferences
 		/* > B_MESSAGE_TYPE        "modulesettings_SuperString"
 			>  | What=B_OK
 			>  | B_BOOL_TYPE           "fade"                   1
 			> B_STRING_TYPE         "modulename"             "Lissart"
 		*/
-	// Pass this message to the loaded screen saver so that it can add its own preferences
-	foo.AddString("modulename", ((BStringItem *)(ListView1->ItemAt(ListView1->CurrentSelection(0))))->Text()); 
   BPath path;
   find_directory(B_USER_SETTINGS_DIRECTORY,&path);
   path.Append("OBOS_Screen_Saver",true);
   BFile file(path.Path(),B_READ_WRITE | B_CREATE_FILE | B_ERASE_FILE);
-  foo.Flatten(&file);
+  newMsg.Flatten(&file);
 }
 
 bool ScreenSaver::QuitRequested()
 {
+	updateStatus();
 	be_app->PostMessage(B_QUIT_REQUESTED);
 	return(true);
 }       
@@ -88,14 +143,15 @@ void ScreenSaver::updateStatus(void)
   TurnOffScreenCheckBox->SetEnabled(EnableCheckbox->Value());
   RunSlider->SetEnabled(EnableCheckbox->Value());
   TurnOffSlider->SetEnabled(EnableCheckbox->Value() && TurnOffScreenCheckBox->Value());
+  TurnOffSlider->SetEnabled(false);
+  TurnOffScreenCheckBox->SetEnabled(false);
   PasswordSlider->SetEnabled(EnableCheckbox->Value() && PasswordCheckbox->Value());
   PasswordButton->SetEnabled(EnableCheckbox->Value() && PasswordCheckbox->Value());
   RunSlider->SetLabel(times[RunSlider->Value()]);
   TurnOffSlider->SetLabel(times[TurnOffSlider->Value()]);
   PasswordSlider->SetLabel(times[PasswordSlider->Value()]);
-  sampleView=drawSampleMonitor(tab1,BRect(columns[0],rows[0],columns[1],rows[1]));
-  //tab1->DrawPicture(&samplePicture);
   EnableUpdates();
+  saveSettings();
 };
 
 void ScreenSaver::SetupForm(void)
@@ -126,6 +182,18 @@ void ScreenSaver::SetupForm(void)
 	background->AddChild(tabView);
 	setupTab2();
 	setupTab1();
+	pwWin=new pwWindow;
+	pwMessenger=new BMessenger (NULL,pwWin);
+	pwWin->Show();
+	pwWin->Hide();
+	// Time to load the settings into a message and implement them...
+  	BPath path;
+  	find_directory(B_USER_SETTINGS_DIRECTORY,&path);
+  	path.Append("OBOS_Screen_Saver",true);
+  	BFile file(path.Path(),B_READ_ONLY);
+	BMessage msg;
+  	msg.Unflatten(&file);
+	loadSettings (&msg);
 	updateStatus();
 }
 
@@ -195,9 +263,7 @@ void ScreenSaver::setupTab1(void)
   commonLookAndFeel(AddButton,false,true);
   AddButton->SetLabel("Add...");
 
- // tab1->BeginPicture (&samplePicture);
-  sampleView=drawSampleMonitor(tab1,BRect(columns[0],rows[0],columns[1],rows[1]));
-  //tab1->EndPicture();
+  tab1->AddChild(new previewView(BRect(columns[0],rows[0],columns[1],rows[1]),"preview"));
   // -----------------------------------------------------------------------------------------
   // Populate the listview with the screensavers that exist.
   
@@ -255,14 +321,14 @@ void ScreenSaver::setupTab2(void)
   commonLookAndFeel(PasswordSlider,true,true);
 
   topEdge+=sliderHeight;
-  EnableScreenSaverBox->AddChild( PasswordButton = new BButton(BRect(331,topEdge,405,topEdge+25),"PasswordButton","Password...",  new BMessage (TAB2_CHG)));
+  EnableScreenSaverBox->AddChild( PasswordButton = new BButton(BRect(331,topEdge,405,topEdge+25),"PasswordButton","Password...",  new BMessage (PWBUTTON)));
   commonLookAndFeel(PasswordButton,false,true);
   PasswordButton->SetLabel("Password...");
 
 	// Bottom
 
-//  drawPositionalMonitor(EnableScreenSaverBox,BRect(220,205,280,240) ,fadeState);
-//  drawPositionalMonitor(EnableScreenSaverBox,BRect(220,205,280,240) ,noFadeState);
+  EnableScreenSaverBox->AddChild(fadeNow=new mouseAreaView(BRect(20,205,80,260),"fadeNow"));
+  EnableScreenSaverBox->AddChild(fadeNever=new mouseAreaView(BRect(220,205,280,260),"fadeNever"));
 
   EnableScreenSaverBox->AddChild( FadeNowString = new BStringView(BRect(85,210,188,222),"FadeNowString","Fade now when"));
   commonLookAndFeel(FadeNowString,false,false);
