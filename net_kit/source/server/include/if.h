@@ -77,8 +77,7 @@ ifq *start_ifq(void);
 }
 
 struct ifaddr {
-	/* XXX - change this to ifa_next as it points to next ifaddr! */
-        struct ifaddr 	*ifn_next;	/* the next address for the interface */
+        struct ifaddr 	*ifa_next;	/* the next address for the interface */
         struct ifnet 	*ifn;		/* pointer to the interface structure */
 
         struct sockaddr *ifa_addr;	/* the address - cast to be a suitable type, so we
@@ -136,7 +135,7 @@ struct ifnet {
 
 	int	(*start) (struct ifnet *);
 	int	(*stop)  (struct ifnet *);	
-	int	(*input) (struct mbuf*, int len);
+	int	(*input) (struct mbuf*);
 	int	(*output)(struct ifnet *, struct mbuf*, 
 			  struct sockaddr*, struct rtentry *); 
 	int	(*ioctl) (struct ifnet *, int, caddr_t);
