@@ -7,6 +7,8 @@
 #define NI_BEOS "BEOS"
 // I've added a BEOS hash-define incase we wish to change to OBOS
 #define NI_TYPE NI_BEOS ":TYPE"
+#define NI_PREF NI_BEOS ":PREF_APP"
+#define NI_HINT NI_BEOS ":PPATH"
 #define NI_ICON "STD_ICON"
 #define NI_M_ICON NI_BEOS ":M:" NI_ICON
 #define NI_L_ICON NI_BEOS ":L:" NI_ICON
@@ -48,7 +50,12 @@ BNodeInfo::GetType(char *type) const
 
 		error = fNode->GetAttrInfo(NI_TYPE, &attrInfo);
 		if(error == B_OK) {
-			error = fNode->ReadAttr(NI_TYPE, attrInfo.type, 0, type, attrInfo.size);
+			error = fNode->ReadAttr(NI_TYPE, attrInfo.type, 0, type, 
+									attrInfo.size);
+		} else {
+		  // need to be extended to include working out based on extention etc
+		  strcpy(type, "application/octstream");
+		  error = B_OK;
 		}
 		
 		return (error > B_OK ? B_OK : error);
@@ -90,9 +97,8 @@ BNodeInfo::GetIcon(BBitmap *icon, icon_size k = B_LARGE_ICON) const
 status_t 
 BNodeInfo::SetIcon(const BBitmap *icon, icon_size k = B_LARGE_ICON)
 {
-	return B_ERROR;
 	if( fCStatus == B_OK ) {
-	  status_t error = fNode->WriteAttr(NI_ICON_SIZE(k), B_COLOR_8_BIT_TYPE, 
+	  return fNode->WriteAttr(NI_ICON_SIZE(k), B_COLOR_8_BIT_TYPE, 
 										0, icon, sizeof(icon));
 	} else
 	  return B_NO_INIT;
@@ -102,20 +108,50 @@ status_t
 BNodeInfo::GetPreferredApp(char *signature,
 						   app_verb verb = B_OPEN) const
 {
-	return B_ERROR;
+	if(fCStatus == B_OK) {
+		attr_info attrInfo;
+		int error;
+		
+		error = fNode->GetAttrInfo(NI_PREF, &attrInfo);
+		if(error == B_OK) {
+
+			error = fNode->ReadAttr(NI_ICON_SIZE(k), attrInfo.type, 0, 
+									signature, attrInfo.size);
+			if(error < B_OK) {
+			  char *mimetpye = new char[B_MIME_TYPE_LENGTH];
+			  if( GetMineType(mimetype) >= B_OK ) {
+				BMimeType mime(mimetype);
+				error = GetPreferredApp(signature, verb);
+			  }
+			  
+			  delete minetype;
+			}
+		}
+
+		return (error > B_OK ? B_OK : error);
+	} else
+		return B_NO_INIT;
 }
 
 status_t 
 BNodeInfo::SetPreferredApp(const char *signature,
 						   app_verb verb = B_OPEN)
 {
-	return B_ERROR;
+  
+    if(size_of(signature) > B_MIME_TYPE_LENGTH)
+	  return B_BAD_VALUE;
+
+	if( fCStatus == B_OK ) {
+	  return fNode->WriteAttr(NI_PREF,  B_STRING_TYPE,
+							  0, icon, sizeof(signature));
+	} else
+	  return B_NO_INIT;
 }
 
 status_t 
 BNodeInfo::GetAppHint(entry_ref *ref) const
 {
-	return B_ERROR;
+  return B_ERROR;
 }
 
 status_t 
