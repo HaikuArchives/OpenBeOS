@@ -6,8 +6,12 @@
 //---------------------------------------------------------------------
 
 #include <Node.h>
+#include "kernel_interface.h"
+#include "Error.h"
 
-BNode::BNode() {
+#include <iostream>
+
+BNode::BNode() : fFd(-1), fAttrFd(-1), fAttrDir(NULL), fCStatus(B_NO_INIT) {
 }
 
 BNode::BNode(const entry_ref *ref) {
@@ -16,7 +20,8 @@ BNode::BNode(const entry_ref *ref) {
 BNode::BNode(const BEntry *entry) {
 }
 
-BNode::BNode(const char *path) : fFd(-1), fAttrFd(-1), fCStatus(B_NO_INIT) {
+BNode::BNode(const char *path) : fFd(-1), fAttrFd(-1), fAttrDir(NULL), fCStatus(B_NO_INIT)  {
+	SetTo(path);
 }
 
 BNode::BNode(const BDirectory *dir, const char *path) {
@@ -26,11 +31,12 @@ BNode::BNode(const BNode &node) {
 }
 
 BNode::~BNode() {
+	close_fd();
 }
 
 status_t
 BNode::InitCheck() const {
-	return B_ERROR;
+	return fCStatus;
 }
 
 status_t
@@ -50,7 +56,18 @@ BNode::SetTo(const BEntry *entry) {
 
 status_t
 BNode::SetTo(const char *path) {
-	return B_ERROR;
+	try {
+
+		set_fd(StorageKit::open(path, StorageKit::READ));
+		fCStatus = B_OK;
+
+	} catch (StorageKit::EEntryNotFound *e) {
+
+		set_fd(-1);
+		fCStatus = B_ENTRY_NOT_FOUND;
+		delete e;
+
+	}	
 }
 
 status_t
@@ -60,6 +77,7 @@ BNode::SetTo(const BDirectory *dir, const char *path) {
 
 void
 BNode::Unset() {
+	close_fd();
 }
 
 status_t
@@ -108,12 +126,33 @@ BNode::GetAttrInfo(const char *name, struct attr_info *info) {
 
 status_t
 BNode::GetNextAttrName(char *buffer) {
-	return B_ERROR;
+	// We're allowed to assume buffer is at least
+	// B_BUFFER_NAME_LENGTH chars long, but NULLs
+	// are not acceptable.
+	if (buffer == NULL)
+		return B_BAD_VALUE;	// /new R5 crashed when passed NULL
+
+	if (InitAttrDir() != B_OK)
+		return B_ENTRY_NOT_FOUND;
+		
+	StorageKit::DirEntry *entry = StorageKit::read_attr_dir(fAttrDir);
+	if (entry == NULL) {
+		buffer[0] = 0;
+		return B_ENTRY_NOT_FOUND;
+	} else {
+		strncpy(buffer, entry->d_name, B_ATTR_NAME_LENGTH);
+		return B_OK;
+	}
 }
 
 status_t
 BNode::RewindAttrs() {
-	return B_ERROR;
+	if (InitAttrDir() != B_OK)
+		return B_BAD_ADDRESS;	// This is what R5::BNode returns. Go figure...	
+	
+	StorageKit::rewind_attr_dir(fAttrDir);
+
+	return B_OK;
 }
 
 status_t
@@ -143,7 +182,7 @@ BNode::operator!=(const BNode &node) const {
 
 int
 BNode::Dup() {
-	return -1;
+	return StorageKit::dup(fFd);
 }
 
 
@@ -156,11 +195,25 @@ void BNode::_RudeNode6() { }
 
 status_t
 BNode::set_fd(int fd) {
-	return B_ERROR;
+	if (fFd != -1)
+		close_fd();
+		
+	fFd = fd;
 }
 
 void
 BNode::close_fd() {
+	if (fAttrDir != NULL) {
+		StorageKit::close_attr_dir(fAttrDir);
+		fAttrDir = NULL;
+	}
+
+	if (fFd != -1) {
+		close(fFd);
+		fFd = -1;
+	}	
+		
+	fCStatus = B_NO_INIT;	
 }
 
 status_t
@@ -197,4 +250,27 @@ status_t
 BNode::set_to(const BDirectory *dir, const char *path, bool traverse) {
 	return B_ERROR;
 }
+
+status_t
+BNode::InitAttrDir() {
+	if (fCStatus == B_OK && fAttrDir == NULL)
+		fAttrDir = StorageKit::open_attr_dir(fFd);
+
+	return fCStatus;	
+}
+
+/*
+status_t
+BNode::InitAttrDir() {
+	// Make sure we have an attr file descriptor
+	if (InitAttrFd() != B_OK)
+		return B_FILE_ERROR;
+		
+	// Open the attr directory if necessary
+	if (fAttrDir == NULL) 
+		fAttrDir = StorageKit::open_attr_dir(fAttrFd);
+		
+	return (fAttrDir != NULL) ? B_OK : B_FILE_ERROR;		
+}
+*/
 

@@ -8,6 +8,7 @@
 #define __sk_node_h__
 
 #include <Statable.h>
+#include "kernel_interface.h"
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
@@ -162,10 +163,13 @@ public:
 		and then bumps the pointer to the next attribute. The name is copied into the
 		buffer, which should be at least B_ATTR_NAME_LENGTH characters long. The copied
 		name is NULL-terminated. When you've asked for every name in the list, GetNextAttrName()
-		returns an error. */
+		returns B_ENTRY_NOT_FOUND. If you pass a NULL pointer, it returns B_BAD_VALUE.
+		If successful, it returns B_OK.
+	 */
 	status_t GetNextAttrName(char *buffer);
 
-	/*! Resets the object's attribute pointer to the first attribute in the list. */
+	/*! Resets the object's attribute pointer to the first attribute in the list. Returns
+		B_BAD_ADDRESS on failure, B_OK on success. */
 	status_t RewindAttrs();
 	
 	/*! Writes the specified string to the specified attribute, clobbering any
@@ -195,9 +199,9 @@ private:
 	friend class BFile;
 	friend class BDirectory;
 	friend class BSymLink;
-	
+
 	/*! Currently unused. */
-	virtual void _RudeNode1();
+	virtual void _RudeNode1(); 	
 
 	/*! Currently unused. */
 	virtual void _RudeNode2();
@@ -214,15 +218,20 @@ private:
 	/*! Currently unused. */
 	virtual void _RudeNode6();
 	
+	/*! Attribute directory */
+	StorageKit::Dir *fAttrDir;	
 	
 	/*! Currently unused. */
-	uint32 rudeData[4];
+	uint32 rudeData[3];
 	
 	
-	/*! (to be determined) */
+	/*! Used by each implementation (i.e. BNode, BFile, BDirectory, etc.) to set
+		the node's file descriptor. This allows each subclass to use the various
+		file-type specific system calls for opening file descriptors. */
 	status_t set_fd(int fd);
 	
-	/*! (to be determined) */
+	/*! Implemented to close the file descriptor using the proper system call
+		for the given file-type. */
 	virtual void close_fd();
 
 	/*! (to be determined) */
@@ -249,14 +258,27 @@ private:
 	status_t set_to(const BDirectory *dir, const char *path, bool traverse = false);
 	
 
-	/*! (to be determined) */
+	/*! File descriptor for the given node. */
 	int fFd;
 	
-	/*! (to be determined) */
+	/*! This appears to be passed to the attribute directory functions
+		like a StorageKit::Dir would be, but it's actually a file descriptor.
+		I can't figure out how to do what needs to be done attribute-wise
+		with only a file descriptor, so I've added a DIR*, fAttrDir, to
+		the class. Should that turn out to be all that's necessary, as I
+		believe it will, we can just replace this file descriptor with
+		a pointer to a StorageKit::Dir without affecting binary compatibility
+		(since we'll be re-implementing any classes that would have
+		access to this data member). */
 	int fAttrFd;
 	
-	/*! (to be determined) */
+	/*! The object's initialization status. */
 	status_t fCStatus;
+	
+	/*! Verifies that the BNode has been properly initialized, and then
+		(if necessary) opens the attribute directory on the node's file
+		descriptor, storing it in fAttrDir. */
+	status_t InitAttrDir();
 	
 
 	
