@@ -19,3 +19,13 @@ SymLink.cpp
 kernel_interface.POSIX.cpp
 storage_support.cpp ;
 
+
+# Here come the rules for our adapter library.
+
+HDRS = ;
+
+Objects LibBeAdapter.cpp ;
+LinkShared $(TOP)/source/lib/libbeadapter.so : <$(SOURCE_GRIST)>LibBeAdapter.o ;
+LinkSharedOSLibs $(TOP)/source/lib/libbeadapter.so :
+	/boot/develop/lib/x86/libbe.so
+;
