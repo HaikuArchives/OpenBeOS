@@ -554,6 +554,7 @@ bfs_setflags(void *ns, void *node, void *cookie, int flags)
 	FUNCTION_START(("node = %p, flags = %d",node,flags));
 
 	// ToDo: implement bfs_setflags()!
+	INFORM(("setflags not yet implemented...\n"));
 
 	return B_OK;
 }
@@ -710,8 +711,14 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 	if (status < B_OK)
 		RETURN_ERROR(status);
 
-	// we need to safe the open mode for O_APPEND in bfs_write()
-	*(int *)_cookie = omode;
+	file_cookie *cookie = (file_cookie *)malloc(sizeof(file_cookie));
+	if (cookie == NULL)
+		RETURN_ERROR(B_NO_MEMORY); 
+
+	// initialize the cookie
+	cookie->open_mode = omode;
+	cookie->last_size = 0;
+	cookie->last_notification = system_time();
 
 	Transaction transaction(volume,directory->BlockNumber());
 
@@ -721,6 +728,10 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 
 		notify_listener(B_ENTRY_CREATED,volume->ID(),directory->ID(),0,*vnid,name);
 	}
+	if (status < B_OK)
+		free(cookie);
+	else
+		*_cookie = cookie;
 
 	return status;
 }
@@ -996,19 +1007,7 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	if (status < B_OK)
 		RETURN_ERROR(status);
 
-	// if omode & O_TRUNC, truncate the file
-	if (omode & O_TRUNC) {
-		Transaction transaction(volume,inode->BlockNumber());
-		WriteLocked locked(inode->Lock());
-
-		status_t status = inode->SetFileSize(&transaction,0);
-		if (status < B_OK)
-			return status;
-		
-		transaction.Done();
-	}
-
-	// we could actually use a cookie to keep track of:
+	// we could actually use the cookie to keep track of:
 	//	- the last block_run
 	//	- the location in the data_stream (indirect, double indirect,
 	//	  position in block_run array)
@@ -1016,9 +1015,32 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	// This could greatly speed up continuous reads of big files, especially
 	// in the indirect block section.
 
-	// we need to safe the open mode for O_APPEND in bfs_write()
-	*(int *)_cookie = omode;
+	file_cookie *cookie = (file_cookie *)malloc(sizeof(file_cookie));
+	if (cookie == NULL)
+		RETURN_ERROR(B_NO_MEMORY); 
 
+	// initialize the cookie
+	cookie->open_mode = omode;
+		// needed by e.g. bfs_write() for O_APPEND
+	cookie->last_size = inode->Size();
+	cookie->last_notification = system_time();
+
+	// Should we truncate the file?
+	if (omode & O_TRUNC) {
+		Transaction transaction(volume,inode->BlockNumber());
+		WriteLocked locked(inode->Lock());
+
+		status_t status = inode->SetFileSize(&transaction,0);
+		if (status < B_OK) {
+			// bfs_free_cookie() is only called if this function is successful
+			free(cookie);
+			return status;
+		}
+
+		transaction.Done();
+	}
+
+	*_cookie = cookie;
 	return B_OK;
 }
 
@@ -1044,9 +1066,13 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 
 
 int 
-bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, size_t *_length)
+bfs_write(void *_ns, void *_node, void *_cookie, off_t pos, const void *buffer, size_t *_length)
 {
 	//FUNCTION();
+	// uncomment to be more robust against a buggy vnode layer ;-)
+	//if (_ns == NULL || _node == NULL || _cookie == NULL)
+	//	return B_BAD_VALUE;
+
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
@@ -1055,9 +1081,9 @@ bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, s
 		RETURN_ERROR(B_BAD_VALUE);
 	}
 
-	int omode = (int)cookie;
+	file_cookie *cookie = (file_cookie *)_cookie;
 
-	if (omode & O_APPEND)
+	if (cookie->open_mode & O_APPEND)
 		pos = inode->Size();
 
 	WriteLocked locked(inode->Lock());
@@ -1071,6 +1097,14 @@ bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, s
 	if (status == B_OK)
 		transaction.Done();
 
+	// periodically notify if the file size has changed
+	if (cookie->last_size != inode->Size()
+		&& system_time() > cookie->last_notification + INODE_NOTIFICATION_INTERVAL) {
+		notify_listener(B_STAT_CHANGED,volume->ID(),0,0,inode->ID(),NULL);
+		cookie->last_size = inode->Size();
+		cookie->last_notification = system_time();
+	}
+
 	return status;
 }
 
@@ -1080,16 +1114,15 @@ bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, s
  */
 
 static int
-bfs_close(void *_ns, void *_node, void *cookie)
+bfs_close(void *_ns, void *_node, void *_cookie)
 {
 	FUNCTION();
-	
-	if (_ns == NULL || _node == NULL)
+	if (_ns == NULL || _node == NULL || _cookie == NULL)
 		return B_BAD_VALUE;
 
-	int omode = (int)cookie;
+	file_cookie *cookie = (file_cookie *)_cookie;
 
-	if (omode & O_RWMASK) {
+	if (cookie->open_mode & O_RWMASK) {
 		// trim the preallocated blocks and update the size,
 		// and last_modified indices if needed
 		Volume *volume = (Volume *)_ns;
@@ -1116,8 +1149,13 @@ bfs_close(void *_ns, void *_node, void *cookie)
 
 
 static int
-bfs_free_cookie(void * /*ns*/, void * /*node*/, void * /*cookie*/)
+bfs_free_cookie(void * /*ns*/, void * /*node*/, void *cookie)
 {
+	FUNCTION();
+
+	if (cookie != NULL)
+		free(cookie);
+
 	return B_OK;
 }
 

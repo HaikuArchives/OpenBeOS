@@ -162,6 +162,17 @@ enum inode_flags
 
 //**************************************
 
+struct file_cookie {
+	bigtime_t last_notification;
+	off_t	last_size;
+	int		open_mode;
+};
+
+// notify every 1/2 second if the file size has changed
+#define INODE_NOTIFICATION_INTERVAL	500000LL
+
+//**************************************
+
 
 inline int32
 divide_roundup(int32 num,int32 divisor)
