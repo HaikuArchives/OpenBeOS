@@ -34,10 +34,26 @@ int udp_input(struct mbuf *buf)
 {
 	ipv4_header *ip = mtod(buf, ipv4_header*);
 	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->hl * 4));
+	pudp_header *p = (pudp_header *)ip;
+	uint16 ck = 0;
+	int len = ntohs(udp->length) + sizeof(ipv4_header);
+	/* save a copy in case we need it... */
+	ipv4_header saved = *ip;
 
 #if SHOW_DEBUG
-	dump_udp(buf);
+        dump_udp(buf);
 #endif
+
+	p->length = udp->length;
+	p->zero = 0; /* just to make sure */
+	p->lead = 0;
+	p->lead2 = 0;
+
+	if ((ck = in_cksum(buf, len, 0)) != 0) {
+		printf("UDP Checksum check failed. (%d over %d bytes)\n", ck, len);
+		m_freem(buf);
+		return 0;
+	}
 
 	m_freem(buf);
 
