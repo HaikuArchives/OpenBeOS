@@ -102,19 +102,20 @@ void dump_sockaddr(void *ptr)
 	switch (sa->sa_family) {
 		case AF_LINK: {
 			struct sockaddr_dl *sdl = (struct sockaddr_dl *)ptr;
-			if (sdl->sdl_type == IFT_ETHER)
-				printf("ETHERNET: ");
-
-			printf("Interface ");
-			d = &sdl->sdl_data[0];
-			for (i=0;i<sdl->sdl_nlen;i++, d++) {
-				printf("%c", *d);
-			}
-			printf(" has a link layer address of ");
-			for (i=0;i<sdl->sdl_alen;i++, d++) {
-				printf("%02x", *d);
-				if (i< 5)
-					printf(":");
+			if (sdl->sdl_type == IFT_ETHER) {
+				printf("\t\tETHERNET: ");
+				printf("Interface ");
+				d = &sdl->sdl_data[0];
+				for (i=0;i<sdl->sdl_nlen;i++, d++) {
+					printf("%c", *d);
+				}
+				printf(" -> ");
+				for (i=0;i<sdl->sdl_alen;i++, d++) {
+					printf("%02x", *d);
+					if (i< 5)
+						printf(":");
+				}
+				printf("\n");
 			}
 			break;
 		}
@@ -122,13 +123,14 @@ void dump_sockaddr(void *ptr)
 			struct sockaddr_in *sin = (struct sockaddr_in *)ptr;
 			struct in_addr ho;
 			ho.s_addr = sin->sin_addr.s_addr;
-			printf("IPv4: ");
+			printf("\t\tIPv4: ");
 			d = (uint8*)&ho.s_addr;
 			for (i=0;i<4;i++, d++) {
 				printf("%d", *d);
 				if (i < 3)
 					printf(".");
 			}
+			printf("\n");
 			break;
 		}
 		default:
@@ -287,7 +289,6 @@ void if_attach(struct ifnet *ifp)
 		return;
 
 	sprintf(dname, "%s%d", ifp->name, ifp->if_unit);
-	printf("adding device %s\n", dname);
 	ifp->if_name = strdup(dname);
 	
 	while (*p)
