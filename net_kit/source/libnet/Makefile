@@ -5,10 +5,12 @@ INCLUDES=-I../server/include -I.
 
 ETC_FILES=	protocols \
 		networks \
-		resolv.conf
+		resolv.conf \
+		services
 
 OBJS=	socket.o \
 	select.o \
+	compat.o \
 	arc4random.o \
 	base64.o \
 	inet_addr.o \
@@ -19,12 +21,18 @@ OBJS=	socket.o \
 	inet_network.o \
 	inet_pton.o \
 	inet_ntop.o \
+	gethostnamadr.o \
+	gethostname.o \
 	getnetbyaddr.o \
 	getnetbyname.o \
+	getnetnamadr.o \
 	getprotoname.o \
 	getnetent.o \
 	getproto.o \
 	getprotoent.o \
+	getservent.o \
+	getservbyname.o \
+	getservbyport.o \
 	linkaddr.o \
 	res_comp.o \
 	res_data.o \
@@ -34,9 +42,6 @@ OBJS=	socket.o \
 	res_query.o \
 	res_random.o \
 	res_send.o \
-	gethostnamadr.o \
-	gethostname.o \
-	getnetnamadr.o \
 	sethostent.o
 
 all:	$(TARGET)
@@ -50,6 +55,7 @@ install: installetc
 
 installetc:
 	@for i in $(ETC_FILES); do \
+		echo $$i; \
 		if test -L /etc/$$i; then rm /etc/$$i; fi; \
 		ln -s `pwd`/$$i /etc/$$i; \
 	done;
