@@ -88,6 +88,7 @@ static ssize_t vfs_read(struct file_descriptor *, void *, off_t, ssize_t);
 static ssize_t vfs_write(struct file_descriptor *, const void *, off_t, ssize_t);
 static int vfs_ioctl(struct file_descriptor *, int, void *buf, size_t len);
 static int vfs_close(struct file_descriptor *, int, struct ioctx *);
+static void vfs_free_fd(struct file_descriptor *);
 
 static int vfs_create(char *path, stream_type stream_type, void *args, bool kernel);
 static int vfs_rstat(char *path, struct file_stat *stat, bool kernel);
@@ -98,7 +99,8 @@ struct fd_ops vfsops = {
 	vfs_read,
 	vfs_write,
 	vfs_ioctl,
-	vfs_close
+	vfs_close,
+	vfs_free_fd
 };
 
 #define VNODE_HASH_TABLE_SIZE 1024
@@ -427,7 +429,7 @@ void vfs_vnode_release_ref(void *v)
 int vfs_remove_vnode(fs_id fsid, vnode_id vnid)
 {
 	struct vnode *v;
-
+dprintf("vfs_remove_vnode\n");
 	mutex_lock(&vfs_vnode_mutex);
 
 	v = lookup_vnode(fsid, vnid);
@@ -451,12 +453,13 @@ int vfs_set_cache_ptr(void *vnode, void *cache)
 		return -1;
 }
 
-void free_fd(struct file_descriptor *f)
+static void vfs_free_fd(struct file_descriptor *f)
 {
-	f->vnode->mount->fs->calls->fs_close(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
-	f->vnode->mount->fs->calls->fs_freecookie(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
-	dec_vnode_ref_count(f->vnode, true, false);
-	kfree(f);
+	if (f->vnode) {
+		f->vnode->mount->fs->calls->fs_close(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
+		f->vnode->mount->fs->calls->fs_freecookie(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
+		dec_vnode_ref_count(f->vnode, true, false);
+	}
 }
 
 static struct vnode *get_vnode_from_fd(struct ioctx *ioctx, int fd)
@@ -1147,7 +1150,8 @@ static int vfs_open(char *path, stream_type st, int omode, bool kernel)
 
 	return fd;
 
-	free_fd(f);
+	/* ??? - will this ever be called??? */
+	vfs_free_fd(f);
 err1:
 	dec_vnode_ref_count(v, true, false);
 err:
