@@ -18,6 +18,9 @@
 	
 #include <errno.h>
 	// errno
+	
+#include <fs_attr.h>
+	//  BeOS's C-based attribute functions
 
 #include "Error.h"
 	// SKError
@@ -71,4 +74,48 @@ StorageKit::OpenMode mode) throw (StorageKit::Error) {
 
 int StorageKit::Close(StorageKit::FileDescriptor file) {
 	return ::close(file);
+}
+
+
+ssize_t StorageKit::read_attr ( StorageKit::FileDescriptor file, const char *attribute, 
+				 uint32 type, off_t pos, void *buf, size_t count ) {
+  return fs_read_attr ( file, attribute, type, pos, buf, count );
+}
+
+ssize_t StorageKit::write_attr ( StorageKit::FileDescriptor file, const char *attribute, 
+				  uint32 type, off_t pos, const void *buf, 
+				  size_t count ) {
+  return fs_write_attr ( file, attribute, type, pos, buf, count );
+}
+
+int StorageKit::remove_attr ( StorageKit::FileDescriptor file, const char *attr ) {
+  int result = fs_remove_attr ( file, attr );
+  if(result < B_OK) {
+    ThrowError();
+  }
+  return result;
+}
+
+void StorageKit::rewind_attr_dir( void *cookie )
+{
+  fs_rewind_attr_dir( (DIR*)cookie );
+}
+
+int StorageKit::close_attr_dir ( void *cookie )
+{
+  int result = fs_close_attr_dir( (DIR*)cookie );
+  if( result < B_OK ) {
+    ThrowError();
+  }
+
+  return result;
+}
+
+int StorageKit::stat_attr( StorageKit::FileDescriptor file, const char *name, attr_info *ai )
+{
+  int result = fs_stat_attr( file, name, ai );
+  if ( result < B_OK ) {
+    ThrowError();
+  }
+  return result;
 }

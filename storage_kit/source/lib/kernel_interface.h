@@ -9,8 +9,10 @@
 #ifndef _sk_kernel_interface_h_
 #define _sk_kernel_interface_h_
 
-//#include <SupportKit.h>
+#include <SupportKit.h>
 #include "Error.h"
+
+typedef struct attr_info;
 
 namespace StorageKit {
 
@@ -52,6 +54,19 @@ typedef int FileDescriptor;
 FileDescriptor Open(const char *path, OpenMode mode) throw (Error);
 int Close(FileDescriptor file);
 
+ssize_t read_attr(FileDescriptor file, const char *attribute, uint32 type, 
+				off_t pos, void *buf, size_t count);
+
+ssize_t write_attr (FileDescriptor file, const char *attribute, uint32 type, 
+             off_t pos, const void *buf, size_t count );
+
+int remove_attr(FileDescriptor file, const char *attr );
+
+void rewind_attr_dir(void *cookie );
+
+int close_attr_dir(void *cookie );
+
+int stat_attr( FileDescriptor file, const char *name, attr_info *ai );
 
 }
 
