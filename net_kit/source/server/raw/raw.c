@@ -89,9 +89,6 @@ int rip_output(struct mbuf *m, struct socket *so, uint32 dst)
 	struct mbuf *opts;
 	int flags = (so->so_options & SO_DONTROUTE) | IP_ALLOWBROADCAST;
 
-printf("rip_output: dst = %08lx\n", dst);
-printf("rip_input: inp->laddr = %08lx\n", inp->laddr.s_addr);
-
 	if ((inp->inp_flags & INP_HDRINCL) == 0) {
 		M_PREPEND(m, sizeof(struct ip));
 		ip = mtod(m, struct ip *);
@@ -118,7 +115,6 @@ printf("rip_input: inp->laddr = %08lx\n", inp->laddr.s_addr);
 	}
 
 	if (ipm) {
-		printf("rip_output: calling ip output!\n");
 		return ipm->output(m, opts, &inp->inp_route, flags, NULL);
 	}
 	/* XXX - last arg should be inp->inp_moptions when we have multicast */
