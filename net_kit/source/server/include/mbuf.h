@@ -278,6 +278,8 @@ struct mbuf *m_prepend(struct mbuf *m, int len);
 struct mbuf *m_devget(char *buf, int totlen, int off0,
                         struct ifnet *ifp,
                         void (*copy)(const void *, void *, size_t));
+struct mbuf *m_pullup(struct mbuf *, int len);
+void m_copyback(struct mbuf *m0, int off, int len, caddr_t cp);
 
 struct mbuf *m_free(struct mbuf *mfree);
 void m_freem(struct mbuf *m);
