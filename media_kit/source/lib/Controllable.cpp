@@ -144,21 +144,21 @@ BControllable::BControllable(const BControllable &clone)
 BControllable & BControllable::operator=(const BControllable &clone)
 */
 
-status_t BControllable::_Reserved_Controllable_0(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_1(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_2(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_3(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_4(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_5(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_6(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_7(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_8(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_9(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_10(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_11(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_12(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_13(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_14(void *) { return 0; }
-status_t BControllable::_Reserved_Controllable_15(void *) { return 0; }
+status_t BControllable::_Reserved_Controllable_0(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_1(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_2(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_3(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_4(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_5(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_6(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_7(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_8(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_9(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_10(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_11(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_12(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_13(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_14(void *) { return B_ERROR; }
+status_t BControllable::_Reserved_Controllable_15(void *) { return B_ERROR; }
 
 

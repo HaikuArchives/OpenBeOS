@@ -361,14 +361,14 @@ BMediaAddOn & BMediaAddOn::operator=(const BMediaAddOn &clone)
  * private BMediaAddOn
  *************************************************************/
 
-status_t BMediaAddOn::_Reserved_MediaAddOn_0(void *) { return 0; }
-status_t BMediaAddOn::_Reserved_MediaAddOn_1(void *) { return 0; }
-status_t BMediaAddOn::_Reserved_MediaAddOn_2(void *) { return 0; }
-status_t BMediaAddOn::_Reserved_MediaAddOn_3(void *) { return 0; }
-status_t BMediaAddOn::_Reserved_MediaAddOn_4(void *) { return 0; }
-status_t BMediaAddOn::_Reserved_MediaAddOn_5(void *) { return 0; }
-status_t BMediaAddOn::_Reserved_MediaAddOn_6(void *) { return 0; }
-status_t BMediaAddOn::_Reserved_MediaAddOn_7(void *) { return 0; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_0(void *) { return B_ERROR; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_1(void *) { return B_ERROR; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_2(void *) { return B_ERROR; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_3(void *) { return B_ERROR; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_4(void *) { return B_ERROR; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_5(void *) { return B_ERROR; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_6(void *) { return B_ERROR; }
+status_t BMediaAddOn::_Reserved_MediaAddOn_7(void *) { return B_ERROR; }
 
 void BMediaAddOn::SetOwner(status_t (*hook)(void *, BMediaAddOn *),void * cookie)
 {

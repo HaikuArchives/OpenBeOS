@@ -50,7 +50,9 @@ BTimeSource::PerformanceTimeFor(bigtime_t real_time)
 	bigtime_t performanceTime; 
 	float drift; 
 
-	while (GetTime(&performanceTime, &real_time, &drift) != B_OK); 
+	while (GetTime(&performanceTime, &real_time, &drift) != B_OK)
+		snooze(1000);
+		
 	return (bigtime_t)(performanceTime + (RealTime() - real_time) * drift);
 }
 
@@ -61,7 +63,7 @@ BTimeSource::RealTimeFor(bigtime_t performance_time,
 {
 	CALLED();
 
-	return performance_time + with_latency;
+	return performance_time - with_latency;
 }
 
 
@@ -167,12 +169,12 @@ BTimeSource::BTimeSource(const BTimeSource &clone)
 BTimeSource &BTimeSource::operator=(const BTimeSource &clone)
 */
 
-status_t BTimeSource::_Reserved_TimeSource_0(void *) { return 0; }
-status_t BTimeSource::_Reserved_TimeSource_1(void *) { return 0; }
-status_t BTimeSource::_Reserved_TimeSource_2(void *) { return 0; }
-status_t BTimeSource::_Reserved_TimeSource_3(void *) { return 0; }
-status_t BTimeSource::_Reserved_TimeSource_4(void *) { return 0; }
-status_t BTimeSource::_Reserved_TimeSource_5(void *) { return 0; }
+status_t BTimeSource::_Reserved_TimeSource_0(void *) { return B_ERROR; }
+status_t BTimeSource::_Reserved_TimeSource_1(void *) { return B_ERROR; }
+status_t BTimeSource::_Reserved_TimeSource_2(void *) { return B_ERROR; }
+status_t BTimeSource::_Reserved_TimeSource_3(void *) { return B_ERROR; }
+status_t BTimeSource::_Reserved_TimeSource_4(void *) { return B_ERROR; }
+status_t BTimeSource::_Reserved_TimeSource_5(void *) { return B_ERROR; }
 
 /* explicit */
 BTimeSource::BTimeSource(media_node_id id) :

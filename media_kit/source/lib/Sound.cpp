@@ -178,10 +178,10 @@ BSound::UnbindFrom(BSoundPlayer * player)
  * private BSound
  *************************************************************/
 
-status_t BSound::_Reserved_Sound_0(void *) { return 0; }
-status_t BSound::_Reserved_Sound_1(void *) { return 0; }
-status_t BSound::_Reserved_Sound_2(void *) { return 0; }
-status_t BSound::_Reserved_Sound_3(void *) { return 0; }
-status_t BSound::_Reserved_Sound_4(void *) { return 0; }
-status_t BSound::_Reserved_Sound_5(void *) { return 0; }
+status_t BSound::_Reserved_Sound_0(void *) { return B_ERROR; }
+status_t BSound::_Reserved_Sound_1(void *) { return B_ERROR; }
+status_t BSound::_Reserved_Sound_2(void *) { return B_ERROR; }
+status_t BSound::_Reserved_Sound_3(void *) { return B_ERROR; }
+status_t BSound::_Reserved_Sound_4(void *) { return B_ERROR; }
+status_t BSound::_Reserved_Sound_5(void *) { return B_ERROR; }
 

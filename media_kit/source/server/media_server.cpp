@@ -137,7 +137,7 @@ void
 ServerApp::GetSharedBufferArea(BMessage *msg)
 {
 	BMessage reply(B_OK);
-	reply.AddInt32("shared buffer area",fBufferManager->SharedBufferListID());
+	reply.AddInt32("area",fBufferManager->SharedBufferListID());
 	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 

@@ -317,8 +317,7 @@ virtual		status_t _Reserved_MediaNode_15(void *);
 		int32 _mChangeCountReserved;	//	deprecated
 		uint64 fKinds;
 		media_node_id fTimeSourceID;
-		bool _mUnregisterWhenDone;
-		bool _mReservedBool[3];
+		bool _mReservedBool[4];
 
 mutable	port_id fControlPort;
 

@@ -383,14 +383,14 @@ BSoundPlayer::SetInitError(status_t in_error)
  * private BSoundPlayer
  *************************************************************/
 
-status_t BSoundPlayer::_Reserved_SoundPlayer_0(void *, ...) { return 0; }
-status_t BSoundPlayer::_Reserved_SoundPlayer_1(void *, ...) { return 0; }
-status_t BSoundPlayer::_Reserved_SoundPlayer_2(void *, ...) { return 0; }
-status_t BSoundPlayer::_Reserved_SoundPlayer_3(void *, ...) { return 0; }
-status_t BSoundPlayer::_Reserved_SoundPlayer_4(void *, ...) { return 0; }
-status_t BSoundPlayer::_Reserved_SoundPlayer_5(void *, ...) { return 0; }
-status_t BSoundPlayer::_Reserved_SoundPlayer_6(void *, ...) { return 0; }
-status_t BSoundPlayer::_Reserved_SoundPlayer_7(void *, ...) { return 0; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_0(void *, ...) { return B_ERROR; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_1(void *, ...) { return B_ERROR; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_2(void *, ...) { return B_ERROR; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_3(void *, ...) { return B_ERROR; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_4(void *, ...) { return B_ERROR; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_5(void *, ...) { return B_ERROR; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_6(void *, ...) { return B_ERROR; }
+status_t BSoundPlayer::_Reserved_SoundPlayer_7(void *, ...) { return B_ERROR; }
 
 
 void

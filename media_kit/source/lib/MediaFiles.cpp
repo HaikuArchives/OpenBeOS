@@ -108,12 +108,12 @@ BMediaFiles::RemoveItem(const char *type,
  * private BMediaFiles
  *************************************************************/
 
-status_t BMediaFiles::_Reserved_MediaFiles_0(void *,...) { return 0; }
-status_t BMediaFiles::_Reserved_MediaFiles_1(void *,...) { return 0; }
-status_t BMediaFiles::_Reserved_MediaFiles_2(void *,...) { return 0; }
-status_t BMediaFiles::_Reserved_MediaFiles_3(void *,...) { return 0; }
-status_t BMediaFiles::_Reserved_MediaFiles_4(void *,...) { return 0; }
-status_t BMediaFiles::_Reserved_MediaFiles_5(void *,...) { return 0; }
-status_t BMediaFiles::_Reserved_MediaFiles_6(void *,...) { return 0; }
-status_t BMediaFiles::_Reserved_MediaFiles_7(void *,...) { return 0; }
+status_t BMediaFiles::_Reserved_MediaFiles_0(void *,...) { return B_ERROR; }
+status_t BMediaFiles::_Reserved_MediaFiles_1(void *,...) { return B_ERROR; }
+status_t BMediaFiles::_Reserved_MediaFiles_2(void *,...) { return B_ERROR; }
+status_t BMediaFiles::_Reserved_MediaFiles_3(void *,...) { return B_ERROR; }
+status_t BMediaFiles::_Reserved_MediaFiles_4(void *,...) { return B_ERROR; }
+status_t BMediaFiles::_Reserved_MediaFiles_5(void *,...) { return B_ERROR; }
+status_t BMediaFiles::_Reserved_MediaFiles_6(void *,...) { return B_ERROR; }
+status_t BMediaFiles::_Reserved_MediaFiles_7(void *,...) { return B_ERROR; }
 

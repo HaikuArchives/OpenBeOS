@@ -497,28 +497,28 @@ BMediaEventLooper::DeleteHook(BMediaNode *node)
  * private BMediaEventLooper
  *************************************************************/
 
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_0(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_1(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_2(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_3(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_4(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_5(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_6(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_7(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_8(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_9(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_10(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_11(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_12(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_13(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_14(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_15(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_16(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_17(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_18(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_19(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_20(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_21(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_22(int32 arg,...) { return 0; }
-status_t BMediaEventLooper::_Reserved_BMediaEventLooper_23(int32 arg,...) { return 0; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_0(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_1(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_2(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_3(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_4(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_5(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_6(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_7(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_8(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_9(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_10(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_11(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_12(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_13(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_14(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_15(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_16(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_17(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_18(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_19(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_20(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_21(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_22(int32 arg,...) { return B_ERROR; }
+status_t BMediaEventLooper::_Reserved_BMediaEventLooper_23(int32 arg,...) { return B_ERROR; }
 

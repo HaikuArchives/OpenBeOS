@@ -138,14 +138,14 @@ BMediaTheme::BMediaTheme(const BMediaTheme &clone)
 BMediaTheme & BMediaTheme::operator=(const BMediaTheme &clone)
 */
 
-status_t BMediaTheme::_Reserved_ControlTheme_0(void *) { return 0; }
-status_t BMediaTheme::_Reserved_ControlTheme_1(void *) { return 0; }
-status_t BMediaTheme::_Reserved_ControlTheme_2(void *) { return 0; }
-status_t BMediaTheme::_Reserved_ControlTheme_3(void *) { return 0; }
-status_t BMediaTheme::_Reserved_ControlTheme_4(void *) { return 0; }
-status_t BMediaTheme::_Reserved_ControlTheme_5(void *) { return 0; }
-status_t BMediaTheme::_Reserved_ControlTheme_6(void *) { return 0; }
-status_t BMediaTheme::_Reserved_ControlTheme_7(void *) { return 0; }
+status_t BMediaTheme::_Reserved_ControlTheme_0(void *) { return B_ERROR; }
+status_t BMediaTheme::_Reserved_ControlTheme_1(void *) { return B_ERROR; }
+status_t BMediaTheme::_Reserved_ControlTheme_2(void *) { return B_ERROR; }
+status_t BMediaTheme::_Reserved_ControlTheme_3(void *) { return B_ERROR; }
+status_t BMediaTheme::_Reserved_ControlTheme_4(void *) { return B_ERROR; }
+status_t BMediaTheme::_Reserved_ControlTheme_5(void *) { return B_ERROR; }
+status_t BMediaTheme::_Reserved_ControlTheme_6(void *) { return B_ERROR; }
+status_t BMediaTheme::_Reserved_ControlTheme_7(void *) { return B_ERROR; }
 
 /*************************************************************
  * static BMediaTheme variables

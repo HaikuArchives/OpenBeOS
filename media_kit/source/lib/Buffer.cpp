@@ -253,7 +253,7 @@ BBuffer::~BBuffer()
 
 
 void
-BBuffer::SetHeader(media_header *header)
+BBuffer::SetHeader(const media_header *header)
 {
 	CALLED();
 	fMediaHeader = *header;

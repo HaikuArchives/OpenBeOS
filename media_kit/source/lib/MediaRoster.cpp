@@ -935,14 +935,14 @@ BMediaRoster::SetOutputBuffersFor(const media_source & output,
 	
 
 /* FBC stuffing (Mmmh, Stuffing!) */
-status_t BMediaRoster::_Reserved_MediaRoster_0(void *) { return 0; }
-status_t BMediaRoster::_Reserved_MediaRoster_1(void *) { return 0; }
-status_t BMediaRoster::_Reserved_MediaRoster_2(void *) { return 0; }
-status_t BMediaRoster::_Reserved_MediaRoster_3(void *) { return 0; }
-status_t BMediaRoster::_Reserved_MediaRoster_4(void *) { return 0; }
-status_t BMediaRoster::_Reserved_MediaRoster_5(void *) { return 0; }
-status_t BMediaRoster::_Reserved_MediaRoster_6(void *) { return 0; }
-status_t BMediaRoster::_Reserved_MediaRoster_7(void *) { return 0; }
+status_t BMediaRoster::_Reserved_MediaRoster_0(void *) { return B_ERROR; }
+status_t BMediaRoster::_Reserved_MediaRoster_1(void *) { return B_ERROR; }
+status_t BMediaRoster::_Reserved_MediaRoster_2(void *) { return B_ERROR; }
+status_t BMediaRoster::_Reserved_MediaRoster_3(void *) { return B_ERROR; }
+status_t BMediaRoster::_Reserved_MediaRoster_4(void *) { return B_ERROR; }
+status_t BMediaRoster::_Reserved_MediaRoster_5(void *) { return B_ERROR; }
+status_t BMediaRoster::_Reserved_MediaRoster_6(void *) { return B_ERROR; }
+status_t BMediaRoster::_Reserved_MediaRoster_7(void *) { return B_ERROR; }
 
 
 BMediaRoster::BMediaRoster() : 

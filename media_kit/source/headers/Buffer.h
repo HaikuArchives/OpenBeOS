@@ -79,7 +79,7 @@ private:
 		BBuffer(const BBuffer & clone); /* not implemented */
 		BBuffer & operator=(const BBuffer & clone); /* not implemented */
 
-		void					SetHeader(media_header *header);
+		void					SetHeader(const media_header *header);
 
 		media_header			fMediaHeader;
 		_shared_buffer_list *	fBufferList;

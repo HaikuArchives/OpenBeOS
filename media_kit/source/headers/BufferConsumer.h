@@ -191,8 +191,8 @@ virtual		status_t _Reserved_BufferConsumer_15(void *);
 
 	friend class BMediaRoster;
 
-		media_type _m_consumer_type;
-		_buffer_id_cache * _mBufferCache;
+		media_type fConsumerType;
+		_buffer_id_cache * fBufferCache;
 		uint32 _reserved_buffer_consumer_[15];
 
 };

@@ -189,14 +189,14 @@ BParameterWeb::BParameterWeb(const BParameterWeb &clone)
 BParameterWeb &BParameterWeb::operator=(const BParameterWeb &clone)
 */
 
-status_t BParameterWeb::_Reserved_ControlWeb_0(void *) { return 0; }
-status_t BParameterWeb::_Reserved_ControlWeb_1(void *) { return 0; }
-status_t BParameterWeb::_Reserved_ControlWeb_2(void *) { return 0; }
-status_t BParameterWeb::_Reserved_ControlWeb_3(void *) { return 0; }
-status_t BParameterWeb::_Reserved_ControlWeb_4(void *) { return 0; }
-status_t BParameterWeb::_Reserved_ControlWeb_5(void *) { return 0; }
-status_t BParameterWeb::_Reserved_ControlWeb_6(void *) { return 0; }
-status_t BParameterWeb::_Reserved_ControlWeb_7(void *) { return 0; }
+status_t BParameterWeb::_Reserved_ControlWeb_0(void *) { return B_ERROR; }
+status_t BParameterWeb::_Reserved_ControlWeb_1(void *) { return B_ERROR; }
+status_t BParameterWeb::_Reserved_ControlWeb_2(void *) { return B_ERROR; }
+status_t BParameterWeb::_Reserved_ControlWeb_3(void *) { return B_ERROR; }
+status_t BParameterWeb::_Reserved_ControlWeb_4(void *) { return B_ERROR; }
+status_t BParameterWeb::_Reserved_ControlWeb_5(void *) { return B_ERROR; }
+status_t BParameterWeb::_Reserved_ControlWeb_6(void *) { return B_ERROR; }
+status_t BParameterWeb::_Reserved_ControlWeb_7(void *) { return B_ERROR; }
 
 void
 BParameterWeb::AddRefFix(void *oldItem,
@@ -412,14 +412,14 @@ BParameterGroup::BParameterGroup(const BParameterGroup &clone)
 BParameterGroup &BParameterGroup::operator=(const BParameterGroup &clone)
 */
 
-status_t BParameterGroup::_Reserved_ControlGroup_0(void *) { return 0; }
-status_t BParameterGroup::_Reserved_ControlGroup_1(void *) { return 0; }
-status_t BParameterGroup::_Reserved_ControlGroup_2(void *) { return 0; }
-status_t BParameterGroup::_Reserved_ControlGroup_3(void *) { return 0; }
-status_t BParameterGroup::_Reserved_ControlGroup_4(void *) { return 0; }
-status_t BParameterGroup::_Reserved_ControlGroup_5(void *) { return 0; }
-status_t BParameterGroup::_Reserved_ControlGroup_6(void *) { return 0; }
-status_t BParameterGroup::_Reserved_ControlGroup_7(void *) { return 0; }
+status_t BParameterGroup::_Reserved_ControlGroup_0(void *) { return B_ERROR; }
+status_t BParameterGroup::_Reserved_ControlGroup_1(void *) { return B_ERROR; }
+status_t BParameterGroup::_Reserved_ControlGroup_2(void *) { return B_ERROR; }
+status_t BParameterGroup::_Reserved_ControlGroup_3(void *) { return B_ERROR; }
+status_t BParameterGroup::_Reserved_ControlGroup_4(void *) { return B_ERROR; }
+status_t BParameterGroup::_Reserved_ControlGroup_5(void *) { return B_ERROR; }
+status_t BParameterGroup::_Reserved_ControlGroup_6(void *) { return B_ERROR; }
+status_t BParameterGroup::_Reserved_ControlGroup_7(void *) { return B_ERROR; }
 
 
 BParameter *
@@ -685,14 +685,14 @@ BParameter::Unflatten(type_code c,
  *************************************************************/
 
 
-status_t BParameter::_Reserved_Control_0(void *) { return 0; }
-status_t BParameter::_Reserved_Control_1(void *) { return 0; }
-status_t BParameter::_Reserved_Control_2(void *) { return 0; }
-status_t BParameter::_Reserved_Control_3(void *) { return 0; }
-status_t BParameter::_Reserved_Control_4(void *) { return 0; }
-status_t BParameter::_Reserved_Control_5(void *) { return 0; }
-status_t BParameter::_Reserved_Control_6(void *) { return 0; }
-status_t BParameter::_Reserved_Control_7(void *) { return 0; }
+status_t BParameter::_Reserved_Control_0(void *) { return B_ERROR; }
+status_t BParameter::_Reserved_Control_1(void *) { return B_ERROR; }
+status_t BParameter::_Reserved_Control_2(void *) { return B_ERROR; }
+status_t BParameter::_Reserved_Control_3(void *) { return B_ERROR; }
+status_t BParameter::_Reserved_Control_4(void *) { return B_ERROR; }
+status_t BParameter::_Reserved_Control_5(void *) { return B_ERROR; }
+status_t BParameter::_Reserved_Control_6(void *) { return B_ERROR; }
+status_t BParameter::_Reserved_Control_7(void *) { return B_ERROR; }
 
 
 BParameter::BParameter(int32 id,
@@ -819,14 +819,14 @@ BContinuousParameter::Unflatten(type_code c,
  * private BContinuousParameter
  *************************************************************/
 
-status_t BContinuousParameter::_Reserved_ContinuousParameter_0(void *) { return 0; }
-status_t BContinuousParameter::_Reserved_ContinuousParameter_1(void *) { return 0; }
-status_t BContinuousParameter::_Reserved_ContinuousParameter_2(void *) { return 0; }
-status_t BContinuousParameter::_Reserved_ContinuousParameter_3(void *) { return 0; }
-status_t BContinuousParameter::_Reserved_ContinuousParameter_4(void *) { return 0; }
-status_t BContinuousParameter::_Reserved_ContinuousParameter_5(void *) { return 0; }
-status_t BContinuousParameter::_Reserved_ContinuousParameter_6(void *) { return 0; }
-status_t BContinuousParameter::_Reserved_ContinuousParameter_7(void *) { return 0; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_0(void *) { return B_ERROR; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_1(void *) { return B_ERROR; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_2(void *) { return B_ERROR; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_3(void *) { return B_ERROR; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_4(void *) { return B_ERROR; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_5(void *) { return B_ERROR; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_6(void *) { return B_ERROR; }
+status_t BContinuousParameter::_Reserved_ContinuousParameter_7(void *) { return B_ERROR; }
 
 
 BContinuousParameter::BContinuousParameter(int32 id,
@@ -965,14 +965,14 @@ BDiscreteParameter::Unflatten(type_code c,
  * private BDiscreteParameter
  *************************************************************/
 
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_0(void *) { return 0; }
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_1(void *) { return 0; }
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_2(void *) { return 0; }
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_3(void *) { return 0; }
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_4(void *) { return 0; }
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_5(void *) { return 0; }
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_6(void *) { return 0; }
-status_t BDiscreteParameter::_Reserved_DiscreteParameter_7(void *) { return 0; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_0(void *) { return B_ERROR; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_1(void *) { return B_ERROR; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_2(void *) { return B_ERROR; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_3(void *) { return B_ERROR; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_4(void *) { return B_ERROR; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_5(void *) { return B_ERROR; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_6(void *) { return B_ERROR; }
+status_t BDiscreteParameter::_Reserved_DiscreteParameter_7(void *) { return B_ERROR; }
 
 
 BDiscreteParameter::BDiscreteParameter(int32 id,
@@ -1041,14 +1041,14 @@ BNullParameter::Unflatten(type_code c,
  * private BNullParameter
  *************************************************************/
 
-status_t BNullParameter::_Reserved_NullParameter_0(void *) { return 0; }
-status_t BNullParameter::_Reserved_NullParameter_1(void *) { return 0; }
-status_t BNullParameter::_Reserved_NullParameter_2(void *) { return 0; }
-status_t BNullParameter::_Reserved_NullParameter_3(void *) { return 0; }
-status_t BNullParameter::_Reserved_NullParameter_4(void *) { return 0; }
-status_t BNullParameter::_Reserved_NullParameter_5(void *) { return 0; }
-status_t BNullParameter::_Reserved_NullParameter_6(void *) { return 0; }
-status_t BNullParameter::_Reserved_NullParameter_7(void *) { return 0; }
+status_t BNullParameter::_Reserved_NullParameter_0(void *) { return B_ERROR; }
+status_t BNullParameter::_Reserved_NullParameter_1(void *) { return B_ERROR; }
+status_t BNullParameter::_Reserved_NullParameter_2(void *) { return B_ERROR; }
+status_t BNullParameter::_Reserved_NullParameter_3(void *) { return B_ERROR; }
+status_t BNullParameter::_Reserved_NullParameter_4(void *) { return B_ERROR; }
+status_t BNullParameter::_Reserved_NullParameter_5(void *) { return B_ERROR; }
+status_t BNullParameter::_Reserved_NullParameter_6(void *) { return B_ERROR; }
+status_t BNullParameter::_Reserved_NullParameter_7(void *) { return B_ERROR; }
 
 
 BNullParameter::BNullParameter(int32 id,

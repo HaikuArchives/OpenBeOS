@@ -16,7 +16,7 @@ _SysTimeSource::SnoozeUntil(
 				bigtime_t with_latency,
 				bool retry_signals)
 {
-	bigtime_t time = performance_time + with_latency;
+	bigtime_t time = performance_time - with_latency;
 	status_t err;
 	do {
 		err = snooze_until(time,B_SYSTEM_TIMEBASE);

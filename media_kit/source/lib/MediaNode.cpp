@@ -11,6 +11,7 @@
 #include <FileInterface.h>
 #include <string.h>
 #include "debug.h"
+#include "../server/headers/ServerInterface.h"
 
 // don't rename this one, it's used and exported for binary compatibility
 int32 BMediaNode::_m_changeTag = 0;
@@ -338,8 +339,14 @@ BMediaNode::Seek(bigtime_t media_time,
 BMediaNode::SetRunMode(run_mode mode)
 {
 	CALLED();
+
+	// this is a hook function, and 
+	// may be overriden by derived classes.
+	
+	// the functionality here is only to
+	// support those people that don't
+	// use the roster to set the run mode
 	fRunMode = mode;
-	// TODO something else here?
 }
 
 
@@ -364,6 +371,15 @@ BMediaNode::Preroll()
 BMediaNode::SetTimeSource(BTimeSource *time_source)
 {
 	CALLED();
+	
+	// this is a hook function, and 
+	// may be overriden by derived classes.
+	
+	// the functionality here is only to
+	// support those people that don't
+	// use the roster to set a time source
+	if (time_source == fTimeSource)
+		return;
 	if (time_source == NULL)
 		return;
 	if (fTimeSource)
@@ -381,10 +397,80 @@ BMediaNode::HandleMessage(int32 message,
 						  const void *data,
 						  size_t size)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
+	CALLED();
+	switch (message) {
+		case NODE_START:
+		{
+			const xfer_node_start *data = (const xfer_node_start *)data;
+			Start(data->performance_time);
+			return B_OK;
+		}
 
-	return dummy;
+		case NODE_STOP:
+		{
+			const xfer_node_stop *data = (const xfer_node_stop *)data;
+			Stop(data->performance_time, data->immediate);
+			return B_OK;
+		}
+
+		case NODE_SEEK:
+		{
+			const xfer_node_seek *data = (const xfer_node_seek *)data;
+			Seek(data->media_time, data->performance_time);
+			return B_OK;
+		}
+
+		case NODE_SET_RUN_MODE:
+		{
+			const xfer_node_set_run_mode *data = (const xfer_node_set_run_mode *)data;
+			fRunMode = data->mode;
+			SetRunMode(fRunMode);
+			return B_OK;
+		}
+
+		case NODE_TIME_WARP:
+		{
+			const xfer_node_time_warp *data = (const xfer_node_time_warp *)data;
+			TimeWarp(data->at_real_time,data->to_performance_time);
+			return B_OK;
+		}
+
+		case NODE_PREROLL:
+		{
+			Preroll();
+			return B_OK;
+		}
+
+		case NODE_REGISTERED:
+		{
+			const xfer_node_registered *data = (const xfer_node_registered *)data;
+			fNodeID = data->node_id;
+			NodeRegistered();
+			return B_OK;
+		}
+		
+		case NODE_SET_TIMESOURCE:
+		{
+			const xfer_node_set_timesource *data = (const xfer_node_set_timesource *)data;
+			bool first = (fTimeSourceID == 0);
+			if (fTimeSource)
+				fTimeSource->Release();
+			fTimeSourceID = data->timesource_id;
+			fTimeSource = 0; // XXX create timesource object here
+			if (!first)
+				SetTimeSource(fTimeSource);
+			return B_OK;
+		}
+
+		case NODE_REQUEST_COMPLETED:
+		{
+			const xfer_node_request_completed *data = (const xfer_node_request_completed *)data;
+			RequestCompleted(data->info);
+			return B_OK;
+		}
+		
+	};
+	return B_ERROR;
 }
 
 
@@ -393,7 +479,7 @@ BMediaNode::HandleBadMessage(int32 code,
 							 const void *buffer,
 							 size_t size)
 {
-	UNIMPLEMENTED();
+	CALLED();
 }
 
 
@@ -565,22 +651,22 @@ BMediaNode::AddTimer(bigtime_t at_performance_time,
 }
 
 
-status_t BMediaNode::_Reserved_MediaNode_0(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_1(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_2(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_3(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_4(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_5(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_6(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_7(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_8(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_9(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_10(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_11(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_12(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_13(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_14(void *) { return 0; }
-status_t BMediaNode::_Reserved_MediaNode_15(void *) { return 0; }
+status_t BMediaNode::_Reserved_MediaNode_0(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_1(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_2(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_3(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_4(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_5(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_6(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_7(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_8(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_9(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_10(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_11(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_12(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_13(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_14(void *) { return B_ERROR; }
+status_t BMediaNode::_Reserved_MediaNode_15(void *) { return B_ERROR; }
 
 /*
 private unimplemented
@@ -616,21 +702,7 @@ BMediaNode::BMediaNode(const char *name,
 	TRACE("Media node name is: %s\n",fName);
 
 	// create control port
-	fControlPort = create_port(20,fName);
-
-	if (fNodeID == 0) {
-		// register at media server and get a new fNodeID
-		fNodeID = 1;
-	}
-	
-	// if the node has been registered, call hook function
-	if (fNodeID)
-		NodeRegistered();
-	
-	// somehow get a timesource object for
-	// this media node, and set it.
-	SetTimeSource(0);
-	
+	fControlPort = create_port(64,fName);
 }
 
 
