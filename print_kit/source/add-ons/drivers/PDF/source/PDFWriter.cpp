@@ -478,12 +478,13 @@ PDFWriter::CreatePattern()
 		LOG((fLog, "CreatePattern could not create image\n"));
 		return;
 	}	
-	int pattern = PDF_begin_pattern(fPdf, 8, 8, 8, 8, 2);
+	int pattern = PDF_begin_pattern(fPdf, 8, 8, 8, 8, 1);
 	if (pattern == -1) {
 		LOG((fLog, "CreatePattern could not create pattern\n"));
 		PDF_close_image(fPdf, image);
 		return;
 	}
+	PDF_setcolor(fPdf, "both", "rgb", 0, 0, 1, 0);
 	PDF_place_image(fPdf, image, 0, 0, 1);
 	PDF_end_pattern(fPdf);
 	PDF_close_image(fPdf, image);
@@ -502,7 +503,6 @@ PDFWriter::SetPattern()
 	if (MakesPattern()) {
 		if (FindPattern() == -1) CreatePattern();
 	} else {
-		// assert(MakesPDF());
 		int pattern = FindPattern();
 		if (pattern != -1) {
 			PDF_setcolor(fPdf, "both", "pattern", pattern, 0, 0, 0);
@@ -1653,6 +1653,8 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 	float scaleY = (dest.Height()+1) / (src.Height()+1);
 
 	if (mask) {
+		int32 width = src.IntegerWidth() + 1;
+		int32 height = src.IntegerHeight() + 1;
 		int32 w = (width+7)/8;
 		int32 h = height;
 		maskId = PDF_open_image(fPdf, "raw", "memory", (const char *) mask, w*h, width, height, 1, 1, "mask");
