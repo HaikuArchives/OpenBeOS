@@ -47,7 +47,8 @@ public:
 
 RosterSingleton singleton;
 
-namespace MediaKitPrivate {
+namespace MediaKitPrivate 
+{
 
 status_t QueryServer(BMessage *query, BMessage *reply)
 {

@@ -37,7 +37,9 @@ BBufferGroup::InitBufferGroup()
 	BMessage request(MEDIA_SERVER_GET_SHARED_BUFFER_AREA);
 	BMessage reply;
 
-	// XXX call media server here
+	fInitError = MediaKitPrivate::QueryServer(&request, &reply);
+	if (fInitError != B_OK)
+		return fInitError;
 
 	id = reply.FindInt32("shared buffer area");
 	
@@ -306,8 +308,10 @@ BBufferGroup::WaitForBuffers()
 	// XXX this function is not really useful anyway, and will 
 	// XXX not work exactly as documented, but it is close enough
 
-	if (fBufferCount <= 0)
+	if (fBufferCount < 0)
 		return B_BAD_VALUE;
+	if (fBufferCount == 0)
+		return B_OK;
 
 	// we need to wait until at least one buffer belonging to this group is reclaimed.
 	// this has happened when can aquire "fReclaimSem"
@@ -335,8 +339,10 @@ BBufferGroup::ReclaimAllBuffers()
 	// because additional BBuffers might get added to this group betweeen acquire and release		
 	int32 count = fBufferCount;
 
-	if (count <= 0)
+	if (count < 0)
 		return B_BAD_VALUE;
+	if (count == 0)
+		return B_OK;
 
 	// we need to wait until all BBuffers belonging to this group are reclaimed.
 	// this has happened when the "fReclaimSem" can be aquired "fBufferCount" times

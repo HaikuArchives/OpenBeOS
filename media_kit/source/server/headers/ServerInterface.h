@@ -50,8 +50,9 @@ enum {
 };
 
 // implementation contained in libmedia.so (MediaRoster.cpp)
-namespace MediaKitPrivate {
-	status_t QueryServer(BMessage &reply, const BMessage &query);
+namespace MediaKitPrivate 
+{
+	status_t QueryServer(BMessage *query, BMessage *reply);
 };
 
 #endif

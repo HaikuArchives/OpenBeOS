@@ -172,13 +172,13 @@ BBuffer::BBuffer(const buffer_clone_info & info) :
 	if (info.area == 0 && info.buffer == 0)
 		return;
 
-
 	// ask media_server to get the area_id of the shared buffer list
 	area_id id;
 	BMessage request(MEDIA_SERVER_GET_SHARED_BUFFER_AREA);
 	BMessage reply;
 
-	// XXX call media server here
+	if (MediaKitPrivate::QueryServer(&request, &reply) != B_OK)
+		return;
 
 	id = reply.FindInt32("shared buffer area");
 
@@ -204,7 +204,8 @@ BBuffer::BBuffer(const buffer_clone_info & info) :
 	// until the last buffer has been unregistered
 	// the area_id of the cached area is passed back to us, and we clone it.
 
-	// XXX call media server
+	if (MediaKitPrivate::QueryServer(&create, &response) != B_OK)
+		return;
 
 	// the response from media server contains enough information
 	// to clone the memory for this buffer
@@ -236,7 +237,7 @@ BBuffer::~BBuffer()
 	// unmap the Data
 	if (fData != NULL) {
 		BMessage unregister(MEDIA_SERVER_UNREGISTER_BUFFER);
-		BMessage respose;
+		BMessage response;
 		unregister.AddInt32("team",(int32)CurrentTeam());
 		unregister.AddInt32("buffer",fBufferID);
 
@@ -244,7 +245,7 @@ BBuffer::~BBuffer()
 		// when the last clone of this buffer is gone,
 		// media_server will also remove it's cached area
 
-		// XXX call media server
+		MediaKitPrivate::QueryServer(&unregister, &response);
 		
 		delete_area(fArea);
 	}

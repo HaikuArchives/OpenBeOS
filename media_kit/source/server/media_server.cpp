@@ -135,16 +135,58 @@ CServerApp::~CServerApp()
 void
 CServerApp::GetSharedBufferArea(BMessage *msg)
 {
+	BMessage reply(B_OK);
+	reply.AddInt32("shared buffer area",fBufferManager->SharedBufferListID());
+	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 
 void
 CServerApp::RegisterBuffer(BMessage *msg)
 {
+	team_id teamid;
+	media_buffer_id bufferid;
+	size_t size;
+	int32 flags;
+	size_t offset;
+	area_id area;
+	status_t status;
+	
+	teamid = 	msg->FindInt32("team");
+	area = 		msg->FindInt32("area");
+	offset =	msg->FindInt32("offset");
+	size = 		msg->FindInt32("size");
+	flags = 	msg->FindInt32("flags");
+	bufferid = 	msg->FindInt32("buffer");
+
+	if (bufferid == 0)
+		status = fBufferManager->RegisterBuffer(teamid, size, flags, offset, area, &bufferid);
+	else
+		status = fBufferManager->RegisterBuffer(teamid, bufferid, &size, &flags, &offset, &area);
+
+	BMessage reply(status);
+	reply.AddInt32("buffer",bufferid);
+	reply.AddInt32("size",size);
+	reply.AddInt32("flags",flags);
+	reply.AddInt32("offset",offset);
+	reply.AddInt32("area",area);
+
+	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 
 void
 CServerApp::UnregisterBuffer(BMessage *msg)
 {
+	team_id teamid;
+	media_buffer_id bufferid;
+	status_t status;
+
+	teamid = msg->FindInt32("team");
+	bufferid = msg->FindInt32("buffer");
+	
+	status = fBufferManager->UnregisterBuffer(teamid, bufferid);
+
+	BMessage reply(status);
+	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
 }
 
 
