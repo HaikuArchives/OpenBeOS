@@ -36,6 +36,8 @@
 #	define m_copydata          core->m_copydata
 #	define m_copyback          core->m_copyback
 #	define m_copym             core->m_copym
+#   define m_reserve           core->m_reserve
+#   define m_devget            core->m_devget
 
 #	define in_pcballoc         core->in_pcballoc
 #	define in_pcbconnect       core->in_pcbconnect

@@ -92,7 +92,9 @@ struct core_module_info {
 	struct mbuf *(*m_copym)(struct mbuf *, int, int);
 	struct mbuf * (*m_free)(struct mbuf *);
 	void (*m_freem)(struct mbuf *);
-
+	void (*m_reserve)(struct mbuf *, int);
+	struct mbuf *(*m_devget)(char *, int, int, struct ifnet *,
+			void (*copy)(const void *, void *, size_t));
 
 	/* module control routines... */
 	void (*add_device)(struct ifnet *);
