@@ -6,6 +6,7 @@
 #include "net_module.h"
 #include "net/route.h" /* includes net/radix.h */
 #include "protocols.h"
+#include "net/if.h"
 
 int rttrash = 0;	/* routes in table that should have been freed but hevn't been */
 
@@ -116,8 +117,9 @@ int rtrequest(int req,  struct sockaddr *dst,
 			if ((rn = rnh->rnh_deladdr(dst, netmask, rnh)) == NULL)
 				snderr(ESRCH);
 			if (rn->rn_flags & (RNF_ACTIVE | RNF_ROOT)) {
+				/* XXX - should be panic */
 				printf("rtrequest: delete: cannot delete route!\n");
-				return;
+				return -1;
 			}
 			rt = (struct rtentry *)rn;
 			rt->rt_flags &= ~RTF_UP; /* mark route as down */
