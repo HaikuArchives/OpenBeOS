@@ -95,6 +95,9 @@ struct ifnet {
 	ifq *txq;
 	thread_id rx_thread;	
 	thread_id tx_thread;
+
+	int	(*input)(struct mbuf*);
+	int	(*output)(struct mbuf*, int, struct sockaddr*); 
 };
 
 #endif /* OBOS_IF_H */

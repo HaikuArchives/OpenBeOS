@@ -152,7 +152,7 @@ static void dump_ether_details(struct mbuf *buf)
 
 /* what should the return value be? */
 /* should probably also pass a structure that identifies the interface */
-int ethernet_input(struct mbuf *buf)
+int ether_input(struct mbuf *buf)
 {
 	ethernet_header *eth = mtod(buf, ethernet_header *);
 	int plen = ntohs(eth->type); /* remove one call to ntohs() */
@@ -270,10 +270,15 @@ int ether_dev_init(ifnet *dev)
                 printf("Failed to get a MAC address, ignoring %s%d\n", dev->name, dev->unit);
                 return 0;
         }
+
+        dev->input = &ether_input;
+        dev->output = &ether_output;
+
 	/* Add the link address to address list for device */
 	ifa->if_addr.sa_len = 6;
 	ifa->if_addr.sa_family = AF_LINK;
 	ifa->ifn = dev;
+
 	ifa->next = NULL;
 	if (dev->if_addrlist)
 		dev->if_addrlist->next = ifa;
@@ -304,7 +309,7 @@ net_module net_module_data = {
 
 	&ether_init,
 	&ether_dev_init,
-	&ethernet_input,
+	&ether_input,
 	&ether_output,
 	NULL
 };
