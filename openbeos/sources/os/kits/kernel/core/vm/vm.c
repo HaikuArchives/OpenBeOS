@@ -353,12 +353,13 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store,
 	}
 
 	mutex_lock(&cache_ref->lock);
+	// If we don't have enough committed space to cover through to the new end of region...
 	if(store->committed_size < offset + size) {
 		// try to commit more memory
-		off_t old_store_commitment = store->committed_size;
-		off_t commitment = (store->ops->commit)(store, offset + size);
-		if(commitment < offset + size) {
-			if(cache->temporary) {
+		off_t old_store_commitment = store->committed_size; // Note what we had
+		off_t commitment = (store->ops->commit)(store, offset + size); // Commit through to the new end
+		if(commitment < offset + size) { // Uh oh - didn't work
+			if(cache->temporary) { // If this is a temporary cache, Check to see if we ran out of space and return error.
 				int state = int_disable_interrupts();
 				acquire_spinlock(&max_commit_lock);
 
@@ -1561,11 +1562,37 @@ int vm_delete_aspace(aspace_id aid)
 
 int vm_resize_region (aspace_id aid, region_id rid, size_t newSize)
 {
+	vm_cache_ref *myCacheRef;
+	vm_region *myRegion,*current;
+	size_t oldSize;
+	bool failed=false;
 // Steps:
-// 1) Get the vm_cache_ref for the region
-// 2) Resize all of the regions from the vm_cache_ref (fix them all and fail if they can't be resized)
-// 3) Update the vm_cache size
+//1) Get the vm_cache_ref for the region 
+	myRegion=vm_get_region_by_id(rid);
 
+	if (!myRegion)
+		return B_ERROR;
+
+	myCacheRef=myRegion->cache_ref;
+// 2) Resize all of the regions from the vm_cache_ref (fix them all and fail if they can't be resized)
+	oldSize = myRegion->size;
+	for (current=myCacheRef->region_list;current;current=current->cache_next)
+		{
+		if (current->aspace_next->base<=(current->base+newSize))
+			{
+			failed=true;
+			break;
+			}
+		current->size=newSize;
+		}
+	if (failed) // OH NO! Go back and fix all of the broken ones...
+		{
+		for (current=myCacheRef->region_list;current;current=current->cache_next)
+			current->size=oldSize;
+		return B_ERROR;
+		}
+// 3) Update the vm_cache size
+	myCacheRef->cache->virtual_size=newSize;
 }
 
 int vm_aspace_walk_start(struct hash_iterator *i)
