@@ -41,7 +41,11 @@ public:
 	virtual int GetDepth(void);
 
 	// Drawing functions
-	virtual void Blit(BRect src, BRect dest);
+	#ifdef PROTO_4
+	 virtual void Blit(BPoint loc, ServerBitmap *src, ServerBitmap *dest);
+	#else 
+	 virtual void Blit(BRect src, BRect dest);
+	#endif
 	virtual void DrawBitmap(ServerBitmap *bitmap);
 	virtual void DrawChar(char c, BPoint point);
 	virtual void DrawString(char *string, int length, BPoint point);
@@ -82,8 +86,11 @@ public:
 	virtual void StrokeRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern);
 	virtual void StrokeShape(BShape *shape);
 	virtual void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern);
+private:
+   void HorizLine(int32 x1,int32 x2,int32 y, uint8 *pattern);
+   void MidpointEllipse(float centerx, float centery,int32 xrad, int32 yrad,bool fill,uint8 *pattern);
 protected:
-	int hide_cursor;
+   int hide_cursor;
    
    int fd;
    image_id image;
