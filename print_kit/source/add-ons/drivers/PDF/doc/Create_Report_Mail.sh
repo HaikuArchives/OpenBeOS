@@ -1,5 +1,5 @@
 #!/bin/sh
-/boot/apps/BeMail mailto:philippe.houdoin@free.fr -subject "pdf_writer v.0.33 report" -body "Thanks for taking the time to report how pdf_writer v0.3 worked for you!
+/boot/apps/BeMail mailto:philippe.houdoin@free.fr -subject "pdf_writer v.1.0b1 report" -body "Thanks for taking the time to report how pdf_writer v1.0b1 worked for you!
 
 Please edit the following text to reflect your experience when trying pdf_writer:
 
@@ -28,10 +28,16 @@ Please do not edit the information below, unless you don't want to disclose some
 -- Custom print_server add-ons:
 `/bin/ls -lt /boot/home/config/add-ons/Print/*`
 
--- System drivers:
-`/bin/ls -lt /boot/beos/system/add-ons/kernel/drivers/bin/`
+-- System libraries:
+`/bin/ls -lt /boot/beos/system/lib/`
 
--- Custom drivers:
-`/bin/ls -lt /boot/home/config/add-ons/kernel/drivers/bin/`
+-- Custom libraries:
+`/bin/ls -lt /boot/home/config/lib/`
+
+-- PDF Encoding files:
+`/bin/ls -lt /boot/home/config/settings/PDF\ Writer/`
+
+-- Latest pdf_writer.log:
+`/bin/cat /tmp/pdf_writer.log`
 "
 
