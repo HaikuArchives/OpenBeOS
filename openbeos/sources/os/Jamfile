@@ -1,3 +1,5 @@
+SubDir OBOS_TOP sources os ;
+
 SubInclude OBOS_TOP sources os kits ;
 SubInclude OBOS_TOP sources os apps ;
 SubInclude OBOS_TOP sources os prefs ;

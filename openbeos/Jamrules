@@ -50,7 +50,7 @@ OBOS_KERNEL_DIR ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system ] ;
 
 rule SetupIncludes
 {
-	OBOS_INCLUDES ?= add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
+	OBOS_INCLUDES ?= . add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
 	UsePublicHeaders $(OBOS_INCLUDES) ;
 }
 
@@ -120,7 +120,8 @@ rule LinkSharedOSLibs
 	
 	for i in $(>)
 	{
-		LINKLIBS on $(<) += -l$(i) ;
+		LINKFLAGS on $(<) += $(i) ;
+#		LINKLIBS on $(<) += -l$(i) ;
 	}
 }
 
@@ -288,23 +289,24 @@ rule Stage2
 	UsePrivateHeaders kernel ;
 	UseArchHeaders $(OBOS_ARCH) ;
 
-	CCFLAGS += -nostdinc -Wall -fno-pic -finline ;
-	LINK = ld ;
+	CCFLAGS on stage2 += -nostdinc -Wall -fno-pic -finline ;
+	LINK on stage2 = ld ;
 
 	# XXX - fix me!!
-	LINKFLAGS = -dN --script=stage2.ld ;
+	LINKFLAGS on stage2 = -dN --script=stage2.ld ;
 
 	# libc.a should be the entire of libc, but as we have in smaller chunks, just include
 	# the chunks we need. Messy, but it works.
-	LINKLIBS = [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc libc.a ] ;
-	LINKLIBS +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc stdio libstdio.a ] ;
-	LINKLIBS +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc string libstring.a ] ;
-	LINKLIBS +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc locale liblocale.a ] ;
+	LINKLIBS on stage2 = [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc libc.a ] ;
+	LINKLIBS on stage2 +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc stdio libstdio.a ] ;
+	LINKLIBS on stage2 +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc string libstring.a ] ;
+	LINKLIBS on stage2 +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc locale liblocale.a ] ;
 
 	# TODO - This location of libgcc.a should be detected and set at a higher level
-	LINKLIBS += -L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc ;
+	LINKLIBS on stage2 += -L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc ;
 
 	# ??? - this will invoke a load of apps to do various things to the file. Do we really want
 	#         or need them all to be run on stage2?
 	Main stage2 :  $(<) ;
+
 }
