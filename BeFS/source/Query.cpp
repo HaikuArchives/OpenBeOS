@@ -23,7 +23,7 @@
 #include <string.h>
 
 
-// I have decided to break our rules for the kernel, and use virtuals in
+// I have decided to extend our rules for the kernel, and use virtuals in
 // the query code, virtuals aren't that bad anyway, and the query code
 // shouldn't be in the kernel.
 //
@@ -59,6 +59,15 @@ enum ops {
 	OP_LESSER_OR_EQUAL,
 };
 
+union value {
+	int64	Int64;
+	uint64	Uint64;
+	int32	Int32;
+	uint32	Uint32;
+	float	Float;
+	double	Double;
+	char	*String;
+};
 
 class Term {
 	public:
@@ -90,7 +99,8 @@ class Equation : public Term {
 		char		*CopyString(char *start, char *end);
 
 		virtual status_t Match(Inode *inode);
-		status_t	RunQuery(Volume *volume);
+		status_t	PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator);
+		status_t	GetNextMatching(Volume *volume,TreeIterator *iterator,struct dirent *dirent,size_t bufferSize);
 
 		void		SetScore(int32 score) { fScore = score; }
 		int32		Score() const { return fScore; }
@@ -104,20 +114,12 @@ class Equation : public Term {
 
 		char		*fAttribute;
 		char		*fString;
-		union {
-			int64	Int64;
-			uint64	Uint64;
-			int32	Int32;
-			uint32	Uint32;
-			float	Float;
-			double	Double;
-			char	*String;
-		} fValue;
+		union value fValue;
 		type_code	fType;
 		bool		fIsRegExp;
 		
 		int32		fScore;
-		bool		fRunsQuery;
+		bool		fHasIndex;
 };
 
 class Operator : public Term {
@@ -179,8 +181,7 @@ Equation::Equation(char **expr)
 	: Term(OP_EQUATION),
 	fAttribute(NULL),
 	fString(NULL),
-	fType(0),
-	fRunsQuery(false)
+	fType(0)
 {
 	char *string = *expr;
 	char *start = string;
@@ -465,15 +466,66 @@ Equation::Match(Inode *inode)
 }
 
 
-status_t 
-Equation::RunQuery(Volume *volume)
+status_t
+Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 {
-	fRunsQuery = true;
+	if (index->SetTo(fAttribute) < B_OK) {
+		// try to get an index that holds all files (name)
+		if (index->SetTo("name") < B_OK)
+			return B_ENTRY_NOT_FOUND;
+		
+		fHasIndex = false;
+	} else
+		fHasIndex = true;
 
-	// to be implemented, renamed, reimplemented, changed, etc.
-	
-	fRunsQuery = false;
+	BPlusTree *tree;
+	if (index->Node()->GetTree(&tree) < B_OK)
+		return B_ERROR;
 
+	*iterator = new TreeIterator(tree);
+	if (*iterator == NULL)
+		return B_NO_MEMORY;
+
+	if (fOp == OP_EQUAL && fHasIndex && !fIsRegExp) {
+		// set iterator to the exact position
+		// but this is not yet possible with the current TreeIterator implementation...
+	}
+
+	return B_OK;
+}
+
+
+status_t 
+Equation::GetNextMatching(Volume *volume, TreeIterator *iterator,
+		struct dirent *dirent, size_t bufferSize)
+{
+	union value indexValue;
+	uint16 keyLength;
+	off_t offset;
+	status_t status;
+
+	if (fOp == OP_GREATER || fOp == OP_GREATER_OR_EQUAL)
+		status = iterator->GetPreviousEntry(&indexValue,&keyLength,(uint16)sizeof(indexValue),&offset);
+	else
+		status = iterator->GetNextEntry(&indexValue,&keyLength,(uint16)sizeof(indexValue),&offset);
+
+	if (status < B_OK)
+		return status;
+
+	// comparing is missing!
+
+	Inode *inode;
+	if ((status = get_vnode(volume->ID(),offset,(void **)&inode)) != B_OK) {
+		REPORT_ERROR(status);
+		return B_ENTRY_NOT_FOUND;
+	}
+
+	dirent->d_dev = volume->ID();
+	dirent->d_ino = offset;
+	strcpy(dirent->d_name,inode->Name());
+	dirent->d_reclen = strlen(dirent->d_name);
+
+	put_vnode(volume->ID(), inode->ID());
 	return B_OK;
 }
 
@@ -766,13 +818,19 @@ Query::InitCheck()
 }
 
 
-status_t 
-Query::GetNext(Volume *volume, struct dirent *, size_t size)
+//	#pragma mark -
+
+
+QueryFetcher::QueryFetcher(Volume *volume, Query *query)
+	:
+	fVolume(volume),
+	fQuery(query),
+	fCurrent(NULL),
+	fIterator(NULL),
+	fIndex(volume)
 {
-	Index index(volume);
-	
 	Stack<Term *> stack;
-	stack.Push(fTerm);
+	stack.Push(query->fTerm);
 
 	Term *term;
 	while (stack.Pop(&term)) {
@@ -783,10 +841,37 @@ Query::GetNext(Volume *volume, struct dirent *, size_t size)
 			// here we should use a scoring system to decide which path to add
 			// for now, we are just using the left
 			stack.Push(((Operator *)term)->Left());
-		} else if (term->Op() > OP_EQUATION)
-			((Equation *)term)->RunQuery(volume);
-		else
-			FATAL(("Unknown term on stack"));
+		} else if (term->Op() <= OP_EQUATION || fStack.Push((Equation *)term) < B_OK)
+			FATAL(("Unknown term on stack or stack error"));
 	}
+}
+
+
+QueryFetcher::~QueryFetcher()
+{
+}
+
+
+status_t 
+QueryFetcher::GetNextEntry(struct dirent *dirent, size_t size)
+{
+	// If we don't have an equation to use yet/anymore, get a new one
+	// from the stack
+	if (fIterator == NULL) {
+		if (!fStack.Pop(&fCurrent)
+			|| fCurrent == NULL
+			|| fCurrent->PrepareQuery(fVolume,&fIndex,&fIterator) < B_OK)
+			return B_ENTRY_NOT_FOUND;
+	}
+	if (fCurrent == NULL)
+		RETURN_ERROR(B_ERROR);
+
+	status_t status = fCurrent->GetNextMatching(fVolume,fIterator,dirent,size);
+	if (status < B_OK) {
+		delete fIterator;
+		fIterator = NULL;
+		fCurrent = NULL;
+	}
+	return status;
 }
 
