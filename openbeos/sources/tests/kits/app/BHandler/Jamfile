@@ -1,5 +1,7 @@
 SubDir OBOS_TOP sources tests kits app BHandler ;
 
+UsePublicHeaders app support ;
+
 UnitTest BHandlerTester : main.cpp
 		BHandlerTester.cpp
 		IsWatchedTest.cpp
