@@ -9,6 +9,8 @@
 
 #include <Entry.h>
 
+#include <string.h>
+
 #include <Directory.h>
 #include <Path.h>
 #include <SymLink.h>
@@ -52,7 +54,11 @@ using namespace OpenBeOS;
 
 
 //! Creates an unitialized entry_ref. 
-entry_ref::entry_ref() : device(-1), directory(-1), name(NULL) {
+entry_ref::entry_ref()
+		 : device(-1),
+		   directory(-1),
+		   name(NULL)
+{
 }
 
 /*! \brief Creates an entry_ref initialized to the given file name in the given
@@ -67,8 +73,9 @@ entry_ref::entry_ref() : device(-1), directory(-1), name(NULL) {
 	\param dir the directory in which the entry resides
 	\param name the leaf name of the entry, which is not required to exist
 */
-entry_ref::entry_ref(dev_t dev, ino_t dir, const char *name) :
-	device(dev), directory(dir), name(NULL) {
+entry_ref::entry_ref(dev_t dev, ino_t dir, const char *name)
+		 : device(dev), directory(dir), name(NULL)
+{
 	set_name(name);
 }
 
@@ -76,13 +83,17 @@ entry_ref::entry_ref(dev_t dev, ino_t dir, const char *name) :
 
 	\param ref a reference to an entry_ref to copy
 */
-entry_ref::entry_ref(const entry_ref &ref) : device(ref.device), directory(ref.directory),
-	name(NULL) {
+entry_ref::entry_ref(const entry_ref &ref)
+		 : device(ref.device),
+		   directory(ref.directory),
+		   name(NULL)
+{
 	set_name(ref.name);	
 }
 
 //! Destroys the object and frees the storage allocated for the leaf name, if necessary. 
-entry_ref::~entry_ref() {
+entry_ref::~entry_ref()
+{
 	if (name != NULL)
 		delete [] name;
 }
@@ -93,7 +104,8 @@ entry_ref::~entry_ref() {
 	\param name pointer to a null-terminated string containing the new name for
 	the entry. May be \c NULL.
 */
-status_t entry_ref::set_name(const char *name) {
+status_t entry_ref::set_name(const char *name)
+{
 	if (this->name != NULL) {
 		delete [] this->name;
 	}
@@ -116,12 +128,13 @@ status_t entry_ref::set_name(const char *name) {
 	- \c false: the entry_refs are not equal
 */
 bool
-entry_ref::operator==(const entry_ref &ref) const {
-	return (	device == ref.device &&
-				directory == ref.directory &&
-				(name == ref.name
-				 || name != NULL && ref.name != NULL
-					&& strcmp(name, ref.name) == 0)		);
+entry_ref::operator==(const entry_ref &ref) const
+{
+	return (device == ref.device
+			&& directory == ref.directory
+			&& (name == ref.name
+				|| name != NULL && ref.name != NULL
+					&& strcmp(name, ref.name) == 0));
 }
 
 /*! \brief Compares the entry_ref with another entry_ref, returning true if they are not equal.
@@ -130,17 +143,19 @@ entry_ref::operator==(const entry_ref &ref) const {
 	- \c false: the entry_refs are equal
 */
 bool
-entry_ref::operator!=(const entry_ref &ref) const {
+entry_ref::operator!=(const entry_ref &ref) const
+{
 	return !(*this == ref);
 }
 
 /*! \brief Makes the entry_ref a copy of the entry_ref specified by \a ref.
-	\param ref then entry_ref to copy
+	\param ref the entry_ref to copy
 	\return
 	- a reference to the copy
 */
 entry_ref&
-entry_ref::operator=(const entry_ref &ref) {
+entry_ref::operator=(const entry_ref &ref)
+{
 	if (this == &ref)
 		return *this;	
 
@@ -184,6 +199,7 @@ entry_ref::operator=(const entry_ref &ref) {
 	...you're telling the BEntry object to represent the location of the file
 	called fido within the directory "/boot/home".
 	
+	\author <a href='mailto:bonefish@users.sf.net'>Ingo Weinhold</a>
 	\author <a href='mailto:tylerdauwalder@users.sf.net'>Tyler Dauwalder</a>
 	\author <a href='mailto:scusack@users.sf.net'>Simon Cusack</a>
 	
@@ -198,10 +214,10 @@ entry_ref::operator=(const entry_ref &ref) {
 	- SetTo(const char*, bool)
 	- operator=(const BEntry&)
 */
-BEntry::BEntry() :
-	fCStatus(B_NO_INIT),
-	fDirFd(StorageKit::NullFd),
-	fName(NULL)
+BEntry::BEntry()
+	  : fCStatus(B_NO_INIT),
+		fDirFd(StorageKit::NullFd),
+		fName(NULL)
 {
 }
 
@@ -215,10 +231,10 @@ BEntry::BEntry() :
 	\see SetTo(const BDirectory*, const char *, bool)
 
 */
-BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false) :
-	fCStatus(B_NO_INIT),
-	fDirFd(StorageKit::NullFd),
-	fName(NULL)
+BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse)
+	  : fCStatus(B_NO_INIT),
+		fDirFd(StorageKit::NullFd),
+		fName(NULL)
 {
 	SetTo(dir, path, traverse);
 }
@@ -233,10 +249,10 @@ BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false) :
 	\see SetTo(const entry_ref*, bool)
 */
 
-BEntry::BEntry(const entry_ref *ref, bool traverse = false) :
-	fCStatus(B_NO_INIT),
-	fDirFd(StorageKit::NullFd),
-	fName(NULL)
+BEntry::BEntry(const entry_ref *ref, bool traverse)
+	  : fCStatus(B_NO_INIT),
+		fDirFd(StorageKit::NullFd),
+		fName(NULL)
 {
 	SetTo(ref, traverse);
 }
@@ -252,10 +268,10 @@ BEntry::BEntry(const entry_ref *ref, bool traverse = false) :
 	\see SetTo(const char*, bool)
 	
 */
-BEntry::BEntry(const char *path, bool traverse = false) :
-	fCStatus(B_NO_INIT),
-	fDirFd(StorageKit::NullFd),
-	fName(NULL)
+BEntry::BEntry(const char *path, bool traverse)
+	  : fCStatus(B_NO_INIT),
+		fDirFd(StorageKit::NullFd),
+		fName(NULL)
 {
 	SetTo(path, traverse);
 }
@@ -264,10 +280,10 @@ BEntry::BEntry(const char *path, bool traverse = false) :
 /*! \param entry the entry to be copied
 	\see operator=(const BEntry&)
 */
-BEntry::BEntry(const BEntry &entry) :
-	fCStatus(B_NO_INIT),
-	fDirFd(StorageKit::NullFd),
-	fName(NULL)
+BEntry::BEntry(const BEntry &entry)
+	  : fCStatus(B_NO_INIT),
+		fDirFd(StorageKit::NullFd),
+		fName(NULL)
 {
 	*this = entry;
 }
@@ -275,7 +291,8 @@ BEntry::BEntry(const BEntry &entry) :
 //! Frees all of the BEntry's allocated resources.
 /*! \see Unset()
 */
-BEntry::~BEntry(){
+BEntry::~BEntry()
+{
 	Unset();
 }
 
@@ -286,13 +303,15 @@ BEntry::~BEntry(){
 		- <code>some error code</code>
 */
 status_t
-BEntry::InitCheck() const {
+BEntry::InitCheck() const
+{
 	return fCStatus;
 }
 
 //! Returns true if the Entry exists in the filesytem, false otherwise. 
 bool
-BEntry::Exists() const {
+BEntry::Exists() const
+{
 	if (fCStatus != B_OK)
 		return false;
 
@@ -313,12 +332,13 @@ BEntry::Exists() const {
 	- "error code" another error code
 */
 status_t
-BEntry::GetStat(struct stat *result) const{
+BEntry::GetStat(struct stat *result) const
+{
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 		
-	entry_ref ref;
-	status_t status = StorageKit::find_dir(fDirFd, fName, &ref);
+ 	entry_ref ref;
+	status_t status = GetRef(&ref);
 	if (status != B_OK)
 		return status;
 		
@@ -332,7 +352,8 @@ BEntry::GetStat(struct stat *result) const{
 		  R5 handles this without problems.
 */
 status_t
-BEntry::SetTo(const BDirectory *dir, const char *path, bool traverse = false){
+BEntry::SetTo(const BDirectory *dir, const char *path, bool traverse)
+{
 	Unset();
 	if (dir == NULL)
 		return (fCStatus = B_BAD_VALUE);
@@ -354,8 +375,10 @@ BEntry::SetTo(const BDirectory *dir, const char *path, bool traverse = false){
 			// The concatenated strings must fit into our buffer.
 			if (strlen(rootPath) + strlen(path) + 2 > B_PATH_NAME_LENGTH + 1)
 				fCStatus = B_NAME_TOO_LONG;
-			else
-				sprintf(rootPath, "%s/%s", rootPath, path);
+			else {
+				strcat(rootPath, "/");
+				strcat(rootPath, path);
+			}
 		}
 		// set the resulting path
 		if (fCStatus == B_OK)
@@ -365,9 +388,12 @@ BEntry::SetTo(const BDirectory *dir, const char *path, bool traverse = false){
 }
 				  
 /*! Reinitializes the BEntry to the entry_ref, resolving symlinks if
-	traverse is true */
+	traverse is true
+	\todo Implemented using entry_ref_to_path(). Reimplement!
+*/
 status_t
-BEntry::SetTo(const entry_ref *ref, bool traverse = false){
+BEntry::SetTo(const entry_ref *ref, bool traverse)
+{
 	Unset();
 	if (ref == NULL) {
 		return (fCStatus = B_BAD_VALUE);
@@ -382,7 +408,8 @@ BEntry::SetTo(const entry_ref *ref, bool traverse = false){
 /*! Reinitializes the BEntry object to the path, resolving symlinks if
 	traverse is true */
 status_t
-BEntry::SetTo(const char *path, bool traverse = false) {
+BEntry::SetTo(const char *path, bool traverse)
+{
 	Unset();
 
 	if (path != NULL) {
@@ -413,7 +440,8 @@ BEntry::SetTo(const char *path, bool traverse = false) {
 
 /*! Reinitializes the BEntry to an uninitialized BEntry object */
 void
-BEntry::Unset() {
+BEntry::Unset()
+{
 	// Close the directory
 	if (fDirFd != StorageKit::NullFd) {
 		StorageKit::close_dir(fDirFd);
@@ -431,31 +459,28 @@ BEntry::Unset() {
 
 /*! Gets an entry_ref structure from the BEntry */
 status_t
-BEntry::GetRef(entry_ref *ref) const {
+BEntry::GetRef(entry_ref *ref) const
+{
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 
 	if (ref == NULL)
 		return B_BAD_VALUE;
 	
-	// Unset the entry_ref
-	ref->device = ref->directory = 0;
-	ref->set_name(NULL);
-
-	status_t status;
-		
-	// Convert our directory to an self-referencing entry_ref 
-	status = StorageKit::dir_to_self_entry_ref(fDirFd, ref);
-	if (status != B_OK)
-		return status;
-		
-	// Change the name from "." to our leaf name
-	return ref->set_name(fName);
+	struct stat st;
+	status_t error = StorageKit::get_stat(fDirFd, &st);
+	if (error == B_OK) {
+		ref->device = st.st_dev;
+		ref->directory = st.st_ino;
+		ref->set_name(fName);
+	}
+	return error;
 }
 
 /*! Gets the path for the BEntry */
 status_t
-BEntry::GetPath(BPath *path) const {
+BEntry::GetPath(BPath *path) const
+{
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 
@@ -469,19 +494,19 @@ BEntry::GetPath(BPath *path) const {
 	if (status != B_OK)
 		return status;
 		
-	path->SetTo(&ref);
-	return path->InitCheck();
+	return path->SetTo(&ref);
 }
 
 /*! Gets the parent of the BEntry as another BEntry. */
-status_t BEntry::GetParent(BEntry *entry) const {
+status_t BEntry::GetParent(BEntry *entry) const
+{
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 	
 	if (entry == NULL)
 		return B_BAD_VALUE;
 		
-	// Convert ourselves to a BEntry and change the
+	// Convert ourselves to a entry_ref and change the
 	// leaf name to "."
 
 	entry_ref ref;
@@ -491,7 +516,8 @@ status_t BEntry::GetParent(BEntry *entry) const {
 	if (status == B_OK) {
 	
 		// Verify we aren't an entry representing "/"
-		status = StorageKit::entry_ref_is_root_dir(ref) ? B_ENTRY_NOT_FOUND : B_OK ;
+		status = StorageKit::entry_ref_is_root_dir(ref) ? B_ENTRY_NOT_FOUND
+														: B_OK ;
 		if (status == B_OK) {
 
 			status = ref.set_name(".");
@@ -508,12 +534,12 @@ status_t BEntry::GetParent(BEntry *entry) const {
 	// argument as dictated by the BeBook
 	entry->Unset();
 	return status;
-
 }
 
 /*! Gets the parent of the BEntry as a BDirectory. */
 status_t
-BEntry::GetParent(BDirectory *dir) const {
+BEntry::GetParent(BDirectory *dir) const
+{
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 		
@@ -543,12 +569,12 @@ BEntry::GetParent(BDirectory *dir) const {
 	// argument as dictated by the BeBook
 	dir->Unset();
 	return status;
-	
 }
 
 /*! Gets the name of the entry's leaf. */
 status_t
-BEntry::GetName(char *buffer) const {
+BEntry::GetName(char *buffer) const
+{
 	status_t result = B_ERROR;
 	
 	if (fCStatus != B_OK) {
@@ -560,73 +586,60 @@ BEntry::GetName(char *buffer) const {
 		result = B_OK;
 	}
 	
-	// Set buffer to NULL on error per R5 BeBook
-//	if (result != B_OK)
-//		buffer = NULL;
-
 	return result;
 }
 
 /*! Renames the BEntry to path, replacing an existing entry if clobber is true. */
 status_t
-BEntry::Rename(const char *path, bool clobber = false) {
+BEntry::Rename(const char *path, bool clobber)
+{
 	if (path == NULL)
 		return B_BAD_VALUE;
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 		
-	status_t status;
-	
-	// We'll handle absolute paths locally, and pass relative paths on
-	// to MoveTo()
-	if (path[0] == '/') {
-		// Absolute path
-		if (!clobber) {
-			// We're not supposed to kill an already-existing file,
-			// so we'll try to figure out if it exists by stat()ing it.
-			StorageKit::Stat s;
-			status = StorageKit::get_stat(path, &s);
-			if (status == B_OK) {
-				return B_FILE_EXISTS;
-			} else if (status != B_ENTRY_NOT_FOUND) {
-				return status;
-			}
+	status_t status = B_OK;
+	// Convert the given path to an absolute path, if it isn't already.
+	char fullPath[B_PATH_NAME_LENGTH + 1];
+	if (!StorageKit::is_absolute_path(path)) {
+		// Convert our directory to an absolute pathname
+		status = StorageKit::dir_to_path(fDirFd, fullPath,
+										 B_PATH_NAME_LENGTH + 1);
+		if (status == B_OK) {
+			// Concatenate our pathname to it
+			strcat(fullPath, "/");
+			strcat(fullPath, path);
+			path = fullPath;
 		}
-		
-		// Turn ourselves into a pathname, rename ourselves
+	}
+	// Check, whether the file does already exist, if clobber is false.
+	if (status == B_OK && !clobber) {
+		// We're not supposed to kill an already-existing file,
+		// so we'll try to figure out if it exists by stat()ing it.
+		StorageKit::Stat s;
+		status = StorageKit::get_stat(path, &s);
+		if (status == B_OK)
+			status = B_FILE_EXISTS;
+		else if (status == B_ENTRY_NOT_FOUND)
+			status = B_OK;
+	}
+	// Turn ourselves into a pathname, rename ourselves
+	if (status == B_OK) {
 		BPath oldPath;
 		status = GetPath(&oldPath);
 		if (status == B_OK) {
 			status = StorageKit::rename(oldPath.Path(), path);
-			if (status == B_OK) {
-				SetTo(path, false);
-				status = InitCheck();
-			}
-		}
-	
-		return status;
-	} else {
-		// Get our parent directory
-		BDirectory dir;
-		status = GetParent(&dir);
-		if (status == B_ENTRY_NOT_FOUND) {
-			// Apparently we are a BEntry representing the root directory,
-			// which you're not allowed to rename.
-			return B_NOT_ALLOWED;
-		} else if (status == B_OK) {
-			// Let MoveTo() handle the dirty work
-			return MoveTo(&dir, path, clobber);		
-		} else {
-			return status;
+			if (status == B_OK)
+				status = SetTo(path, false);
 		}
 	}
-		
-	
+	return status;
 }
 
 /*! Moves the BEntry to path or dir path combination, replacing an existing entry if clober is true. */
 status_t
-BEntry::MoveTo(BDirectory *dir, const char *path = NULL, bool clobber = false) {
+BEntry::MoveTo(BDirectory *dir, const char *path = NULL, bool clobber)
+{
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 	else if (dir == NULL)
@@ -636,28 +649,32 @@ BEntry::MoveTo(BDirectory *dir, const char *path = NULL, bool clobber = false) {
 
 	// NULL path simply means move without renaming
 	if (path == NULL)
-		return MoveTo(dir, fName, clobber);
-	else if (path[0] == '/')
-		return Rename(path, clobber);
-	
-	status_t status;
-		
-	// Convert our directory to an absolute pathname
-	char fullPath[B_PATH_NAME_LENGTH];
-	status = StorageKit::dir_to_path(dir->get_fd(), fullPath, B_PATH_NAME_LENGTH);
-	if (status != B_OK)
-		return status;
-		
-	// Concatenate our pathname to it
-	sprintf(fullPath, "%s/%s", fullPath, path);
-	
+		path = fName;
+
+	status_t status = B_OK;
+	// Determine the absolute path of the target entry.
+	if (!StorageKit::is_absolute_path(path)) {
+		// Convert our directory to an absolute pathname
+		char fullPath[B_PATH_NAME_LENGTH + 1];
+		status = StorageKit::dir_to_path(dir->get_fd(), fullPath,
+										 B_PATH_NAME_LENGTH + 1);
+		// Concatenate our pathname to it
+		if (status == B_OK) {
+			strcat(fullPath, "/");
+			strcat(fullPath, path);
+			path = fullPath;
+		}
+	}
 	// Now let rename do the dirty work
-	return Rename(fullPath, clobber);
+	if (status == B_OK)
+		status = Rename(path, clobber);
+	return status;
 }
 
 /*! Removes the entry from the file system. */
 status_t
-BEntry::Remove() {
+BEntry::Remove()
+{
 	if (fCStatus != B_OK)
 		return B_NO_INIT;
 		
@@ -674,8 +691,8 @@ BEntry::Remove() {
 
 /*! Equality operator */
 bool
-BEntry::operator==(const BEntry &item) const {
-
+BEntry::operator==(const BEntry &item) const
+{
 	// First check statuses
 	if (this->InitCheck() != B_OK && item.InitCheck() != B_OK) {
 		return true;
@@ -698,13 +715,15 @@ BEntry::operator==(const BEntry &item) const {
 
 /*! Inequality operator */
 bool
-BEntry::operator!=(const BEntry &item) const {
+BEntry::operator!=(const BEntry &item) const
+{
 	return !(*this == item);
 }
 
-/*! Reinitializes the BEntry to be a copy of the arguement */
+/*! Reinitializes the BEntry to be a copy of the argument */
 BEntry&
-BEntry::operator=(const BEntry &item) {
+BEntry::operator=(const BEntry &item)
+{
 	if (this == &item)
 		return *this;
 
@@ -717,7 +736,6 @@ BEntry::operator=(const BEntry &item) {
 	}
 	
 	return *this;
-
 }
 
 /*! Reserved for future use. */
@@ -735,7 +753,8 @@ void BEntry::_PennyEntry6(){}
 
 /*! Updates the BEntry with the data from the stat structure according to the mask. */
 status_t
-BEntry::set_stat(struct stat &st, uint32 what){
+BEntry::set_stat(struct stat &st, uint32 what)
+{
 	if (fCStatus != B_OK)
 		return B_FILE_ERROR;
 	
@@ -757,7 +776,8 @@ BEntry::set_stat(struct stat &st, uint32 what){
 	otherwise this function will return B_BAD_VALUE. If B_OK is returned, 
 	the caller is no longer responsible for StorageKit::close_dir()ing dir. */
 status_t
-BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
+BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse)
+{
 	// Verify that path is valid
 	status_t error = StorageKit::check_entry_name(leaf);
 	if (error != B_OK)
@@ -774,9 +794,9 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 		// harmless, because BSymLink does, of course, not want to traverse
 		// the link.
 
-		// convert the dir FD into a BDirectory
+		// convert the dir FD into a BPath
 		entry_ref ref;
-		status_t error = StorageKit::dir_to_self_entry_ref(dirFd, &ref);
+		error = StorageKit::dir_to_self_entry_ref(dirFd, &ref);
 		char dirPathname[B_PATH_NAME_LENGTH + 1];
 		if (error == B_OK) {
 			error = StorageKit::entry_ref_to_path(&ref, dirPathname,
@@ -791,11 +811,12 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 		if (error == B_OK) {
 			// Here comes the link traversing loop: A BSymLink is created
 			// from the dir and the leaf name, the link target is determined,
-			// the targets dir and leaf name are got and so on.
+			// the target's dir and leaf name are got and so on.
 			bool isLink = true;
 			int32 linkLimit = B_MAX_SYMLINKS;
 			while (error == B_OK && isLink && linkLimit > 0) {
 				linkLimit--;
+				// that's OK with any node, even if it's not a symlink
 				BSymLink link(linkPath.Path());
 				error = link.InitCheck();
 				if (error == B_OK) {
@@ -833,10 +854,9 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 					}
 				}
 			}
-		}	// getting a the dir path for the FD
-		return error;
+		}	// getting the dir path for the FD
 	} else {
-		// don't traverse: either the flags is not set or the entry is abstract
+		// don't traverse: either the flag is not set or the entry is abstract
 		fDirFd = dirFd;
 		set_name(leaf);
 	}
@@ -845,7 +865,8 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 
 /*! Handles string allocation, deallocation, and copying for our leaf name. */
 status_t
-BEntry::set_name(const char *name) {
+BEntry::set_name(const char *name)
+{
 	if (name == NULL)
 		return B_BAD_VALUE;	
 	
@@ -867,7 +888,8 @@ BEntry::set_name(const char *name) {
 	the R5 implementation, and thus calls to it will mean you can't link with the
 	R5 Storage Kit. */
 void
-BEntry::Dump(const char *name = NULL) {
+BEntry::Dump(const char *name)
+{
 	if (name != NULL) {
 		printf("------------------------------------------------------------\n");
 		printf("%s\n", name);
@@ -916,7 +938,7 @@ get_ref_for_path(const char *path, entry_ref *ref)
 // <
 /*!	\brief Returns whether an entry is less than another.
 	The components are compared in order \c device, \c directory, \c name.
-	A \c NULL \c name is less than any other name.
+	A \c NULL \c name is less than any non-null name.
 */
 bool
 operator<(const entry_ref & a, const entry_ref & b)

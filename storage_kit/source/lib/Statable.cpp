@@ -21,7 +21,7 @@
 	\param st the stat structure to be filled in.
 	\return
 	- \c B_OK: Worked fine
-	- \c B_NO_MEMORY: Could not allocate the memory for the call
+	- \c B_NO_MEMORY: Could not allocate the memory for the call.
 	- \c B_BAD_VALUE: The current node does not exist.
 	- \c B_NOT_ALLOWED: Read only node or volume.
 */
@@ -40,7 +40,7 @@ BStatable::IsFile() const
 		return false;
 }
 
-/*!	\brief Returns if the current node a directory.
+/*!	\brief Returns if the current node is a directory.
 	\return \c true, if the BNode is properly initialized and is a file,
 			\c false otherwise.
 */
@@ -55,7 +55,7 @@ BStatable::IsDirectory() const
 }
 
 /*!	\brief Returns if the current node is a symbolic link.
-	\return \c true, if the BNode is properly initialized and is a file,
+	\return \c true, if the BNode is properly initialized and is a symlink,
 			\c false otherwise.
 */
 bool
@@ -109,16 +109,14 @@ BStatable::GetOwner(uid_t *owner) const
 status_t 
 BStatable::SetOwner(uid_t owner)
 {
-  status_t error;
-  struct stat statData;
-
-  error = GetStat(&statData);
-  if(error == B_OK) {
-    statData.st_uid = owner;
-    error = set_stat(statData, WSTAT_UID);
-  }
-  
-  return error;
+	status_t error;
+	struct stat statData;
+	error = GetStat(&statData);
+	if (error == B_OK) {
+		statData.st_uid = owner;
+		error = set_stat(statData, WSTAT_UID);
+	}
+	return error;
 }
 	
 /*!	\brief Returns the group owner of the node.
@@ -144,16 +142,14 @@ BStatable::GetGroup(gid_t *group) const
 status_t
 BStatable::SetGroup(gid_t group)
 {
-  status_t error;
-  struct stat statData;
-
-  error = GetStat(&statData);
-  if(error == B_OK) {
-    statData.st_gid = group;
-    error = set_stat(statData, WSTAT_GID);
-  }
-  
-  return error;
+	status_t error;
+	struct stat statData;
+	error = GetStat(&statData);
+	if (error == B_OK) {
+		statData.st_gid = group;
+		error = set_stat(statData, WSTAT_GID);
+	}
+	return error;
 }
 	
 /*!	\brief Returns the permissions of the node.
@@ -179,16 +175,14 @@ BStatable::GetPermissions(mode_t *perms) const
 status_t
 BStatable::SetPermissions(mode_t perms)
 {
-  status_t error;
-  struct stat statData;
-
-  error = GetStat(&statData);
-  if(error == B_OK) {
-    statData.st_mode = (statData.st_mode & ~S_IUMSK) | (perms & S_IUMSK);
-    error = set_stat(statData, WSTAT_MODE);
-  }
-  
-  return error;
+	status_t error;
+	struct stat statData;
+	error = GetStat(&statData);
+	if (error == B_OK) {
+		statData.st_mode = (statData.st_mode & ~S_IUMSK) | (perms & S_IUMSK);
+		error = set_stat(statData, WSTAT_MODE);
+	}
+	return error;
 }
 
 /*!	\brief Get the size of the node's data (not counting attributes).
@@ -230,16 +224,14 @@ BStatable::GetModificationTime(time_t *mtime) const
 status_t
 BStatable::SetModificationTime(time_t mtime)
 {
-  status_t error;
-  struct stat statData;
-
-  error = GetStat(&statData);
-  if(error == B_OK) {
-    statData.st_mtime = mtime;
-    error = set_stat(statData, WSTAT_MTIME);
-  }
-  
-  return error;
+	status_t error;
+	struct stat statData;
+	error = GetStat(&statData);
+	if (error == B_OK) {
+		statData.st_mtime = mtime;
+		error = set_stat(statData, WSTAT_MTIME);
+	}
+	return error;
 }
 
 /*!	\brief Returns the time the node was created.
@@ -265,16 +257,14 @@ BStatable::GetCreationTime(time_t *ctime) const
 status_t
 BStatable::SetCreationTime(time_t ctime)
 {
-  status_t error;
-  struct stat statData;
-
-  error = GetStat(&statData);
-  if(error == B_OK) {
-    statData.st_crtime = ctime;
-    error = set_stat(statData, WSTAT_CRTIME);
-  }
-  
-  return error;
+	status_t error;
+	struct stat statData;
+	error = GetStat(&statData);
+	if (error == B_OK) {
+		statData.st_crtime = ctime;
+		error = set_stat(statData, WSTAT_CRTIME);
+	}
+	return error;
 }
 
 /*!	\brief Returns the time the node was accessed.
@@ -302,20 +292,18 @@ BStatable::GetAccessTime(time_t *atime) const
 status_t
 BStatable::SetAccessTime(time_t atime)
 {
-  status_t error;
-  struct stat statData;
-
-  error = GetStat(&statData);
-  if(error == B_OK) {
-    statData.st_atime = atime;
-    error = set_stat(statData, WSTAT_ATIME);
-  }
-  
-  return error;
+	status_t error;
+	struct stat statData;
+	error = GetStat(&statData);
+	if (error == B_OK) {
+		statData.st_atime = atime;
+		error = set_stat(statData, WSTAT_ATIME);
+	}
+	return error;
 }
 
 /*!	\brief Returns the volume the node lives on.
-	\param ctime a pointer to a variable to be set to the result
+	\param vol a pointer to a variable to be set to the result
 	\see BVolume
 	\see GetStat() for return codes
 */
