@@ -51,7 +51,6 @@ Volume::IsValidSuperBlock()
 		|| fSuperBlock.ag_shift < 1
 		|| fSuperBlock.blocks_per_ag < 1
 		|| fSuperBlock.num_blocks < 10
-		|| fSuperBlock.used_blocks > fSuperBlock.num_blocks
 		|| fSuperBlock.num_ags != divide_roundup(fSuperBlock.num_blocks,1L << fSuperBlock.ag_shift))
 		return false;
 
