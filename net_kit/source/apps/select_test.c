@@ -2,6 +2,7 @@
 #include <kernel/OS.h>
 #include <string.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #include "sys/socket.h"
 #include "netinet/in.h"
@@ -39,7 +40,10 @@ int main(int argc, char **argv)
 	rv = select(s + 1, &fdr, NULL, &fde, &tv);
 	rtc = real_time_clock() - rtc;
 	printf("select gave %d in %ld seconds\n", rv, rtc);
+	if (rv < 0)
+		printf("errno = %d [%s]\n", errno, strerror(errno));
 
+	printf("resetting select fd's\n");
 	FD_ZERO(&fdr);
 	FD_SET(s, &fdr);
 	FD_ZERO(&fdw);
