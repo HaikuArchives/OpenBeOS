@@ -266,3 +266,20 @@ Description: The entry_ref passed to SetAppHint() must be valid but is not
              required to refer to a file that actually exists; furthermore,
              if it does exist, the MIME type of the file is not required to
              match the BMimeType object's type.
+
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    SetIcon()
+Description: The BBitmap passed to BMimeType::SetIcon() must be in the B_CMAP8
+             color space, or the application will crash. We should remember
+             to be smarter about this.
+
+             
+OS:          BeOS R5
+Module:      BMimeType
+Location:    GetIcon()
+Description: The BBitmap passed to BMimeType::GetIcon() must be in the B_CMAP8
+             color space. If not, the call returns B_OK but doesn't actually
+             modify the bitmap. We should remember to be smarter about this.
+             
