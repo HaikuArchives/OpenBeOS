@@ -123,7 +123,7 @@ static status_t AddTranslationItems(BMenu *intoMenu, uint32 fromType,
 // BEGIN: Added by Michael Wilber
 private:
 
-static BBitmap * TranslateToBitmap(BPositionIO *pio, uint32 type,
+static BBitmap * TranslateToBitmap(BPositionIO *pio,
 	BTranslatorRoster *roster = NULL);
 	// Translates the image data from pio to the type type using the
 	// supplied BTranslatorRoster. If BTranslatorRoster is not supplied
