@@ -11,6 +11,7 @@
 #include <smp.h>
 #include <sem.h>
 #include <vfs.h>
+#include <debug.h>
 
 #include <stdarg.h>
 #include <stdio.h>

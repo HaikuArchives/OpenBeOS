@@ -35,7 +35,6 @@ int cpu_preboot_init(kernel_args *ka)
 int user_atomic_add(int *uval, int incr)
 {
 	int val;
-	int rc;
 	int ret;
 
 	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
@@ -60,7 +59,6 @@ error:
 int user_atomic_and(int *uval, int incr)
 {
 	int val;
-	int rc;
 	int ret;
 
 	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
@@ -85,7 +83,6 @@ error:
 int user_atomic_or(int *uval, int incr)
 {
 	int val;
-	int rc;
 	int ret;
 
 	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
@@ -110,7 +107,6 @@ error:
 int user_atomic_set(int *uval, int set_to)
 {
 	int val;
-	int rc;
 	int ret;
 
 	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
@@ -135,7 +131,6 @@ error:
 int user_test_and_set(int *uval, int set_to, int test_val)
 {
 	int val;
-	int rc;
 	int ret;
 
 	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
