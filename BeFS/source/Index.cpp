@@ -208,6 +208,9 @@ Index::Update(Transaction *transaction,const char *name,int32 type,const uint8 *
 	if (type != 0 && !compareKeys(type,oldKey,oldLength,newKey,newLength))
 		return B_OK;
 
+	// update all live queries about the change, if they have an index or not
+	fVolume->UpdateLiveQueries(inode,name,type,oldKey,oldLength,newKey,newLength);
+
 	status_t status;
 	if (name != fName && (status = SetTo(name)) < B_OK)
 		return B_BAD_INDEX;
@@ -235,9 +238,6 @@ Index::Update(Transaction *transaction,const char *name,int32 type,const uint8 *
 
 	if (newKey != NULL)
 		status = tree->Insert(transaction,(const uint8 *)newKey,newLength,inode->ID());
-
-	// finally, update all live queries about the change
-	fVolume->UpdateLiveQueries(inode,name,type,oldKey,oldLength,newKey,newLength);
 
 	return status;
 }
