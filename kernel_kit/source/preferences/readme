@@ -1,0 +1,16 @@
+Virtual Memory Preferences App
+By: Matt McMinn
+melfinadev@earthlink.net
+http://home.earthlink.net/~melfina/
+
+Introduction
+It's just a copy of the virtual memory preferences app that comes with BeOS.  Except it doesn't work: once Open BeOS gets along a little farther, and I've learned how, it will actually set the swap file size, etc.  Until then, it's just eye candy.
+
+Documentation
+Even tho it wasn't really necessary, I know I've overdocumented this app,  My excuse is that I wanted to learn how to use doxygen, and this was a good app to run it on.  So if you want full documentation, and you have doxygen installed, available from BeBits, run 
+doxygen .doxygen-conf
+in the code directory, and it will create docs for you, in code/docs.
+
+Version
+0.9: 10/31/2001
+Initial release.  Visually complete.
