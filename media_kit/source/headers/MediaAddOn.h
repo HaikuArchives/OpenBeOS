@@ -80,9 +80,6 @@ virtual	type_code	TypeCode() const;
 virtual	ssize_t		FlattenedSize() const;
 virtual	status_t	Flatten(void *buffer, ssize_t size) const;
 virtual	status_t	Unflatten(type_code c, const void *buf, ssize_t size);
-
-private:
-		void assign_atoms(const flavor_info & that);
 };
 
 
@@ -150,18 +147,11 @@ protected:
 		status_t			NotifyFlavorChange();
 
 private:
-
-	friend class MLatentManager;	// apologies for the no-underscore name
-
 		BMediaAddOn();	/* private unimplemented */
-		BMediaAddOn(
-				const BMediaAddOn & clone);
-		BMediaAddOn & operator=(
-				const BMediaAddOn & clone);
+		BMediaAddOn(const BMediaAddOn & clone);
+		BMediaAddOn & operator=(const BMediaAddOn & clone);
 
 		/* Mmmh, stuffing! */
-		status_t _Reserved_MediaAddOn_0(void *); 	/* now used for GetFileFormatList */
-		status_t _Reserved_MediaAddOn_1(void *);	/* now used for SniffTypeKind */
 virtual		status_t _Reserved_MediaAddOn_2(void *);
 virtual		status_t _Reserved_MediaAddOn_3(void *);
 virtual		status_t _Reserved_MediaAddOn_4(void *);
@@ -169,15 +159,9 @@ virtual		status_t _Reserved_MediaAddOn_5(void *);
 virtual		status_t _Reserved_MediaAddOn_6(void *);
 virtual		status_t _Reserved_MediaAddOn_7(void *);
 
-		image_id _m_image;
-		media_addon_id _m_addon;
-		status_t (*_m_owner_hook)(void * cookie, BMediaAddOn *);
-		void * _m_owner_cookie;
-		uint32 _reserved_media_add_on_[5];
-
-		void SetOwner(
-				status_t (*hook)(void *, BMediaAddOn *),
-				void * cookie);
+	image_id 		_fImage;
+	media_addon_id	_fAddon;
+	uint32			_reserved_media_add_on_[7];
 };
 
 
