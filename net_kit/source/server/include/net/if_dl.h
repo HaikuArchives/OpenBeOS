@@ -23,5 +23,8 @@ struct sockaddr_dl {
 /* Macro to get a pointer to the link level address */
 #define LLADDR(s)	((caddr_t)((s)->sdl_data + (s)->sdl_nlen))
 
+void    link_addr (const char *, struct sockaddr_dl *);
+char    *link_ntoa (const struct sockaddr_dl *);
+
 #endif /* OBOS_IF_DL_H */
 

@@ -120,6 +120,21 @@ struct rtentry {
 #define RTAX_BRD        7       /* for NEWADDR, broadcast or p-p dest addr */
 #define RTAX_MAX        8       /* size of array to allocate */
 
+struct rt_msghdr {
+	uint16 rtm_msglen;
+	uint8 rtm_version;
+	uint8 rtm_type;
+	
+	uint16 rtm_index;
+	int rtm_flags;
+	int rtm_addrs;
+	int rtm_seq;
+	int rtm_errno;
+	int rtm_use;
+	uint32 rtm_inits;
+	struct rt_metrics rtm_rmx;
+};
+
 struct rt_addrinfo {
         int     rti_addrs;
         struct  sockaddr *rti_info[RTAX_MAX];
@@ -127,6 +142,21 @@ struct rt_addrinfo {
         struct  ifaddr *rti_ifa;
         struct  ifnet *rti_ifp;
         struct  rt_msghdr *rti_rtm;
+};
+
+struct route_cb {
+	int32 ip_count;     /* how many AF_INET structures we have */
+	int32 any_count;    /* total of all above... */
+};
+
+struct walkarg {
+	int w_op;
+	int w_arg;
+	int w_given;
+	int w_needed;
+	int w_tmemsize;
+	caddr_t w_where;
+	caddr_t w_tmem;
 };
 
 /*
@@ -164,5 +194,7 @@ void	rt_maskedcopy(struct sockaddr *src,
                 struct sockaddr *netmask);
 int	rt_setgate (struct rtentry *, struct sockaddr *,
                          struct sockaddr *);
+
+struct radix_node_head ** get_rt_tables(void);
 
 #endif /* NET_ROUTE_H */

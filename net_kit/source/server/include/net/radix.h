@@ -141,7 +141,10 @@ struct radix_node_head {
 #define Bcmp(a, b, n) memcmp(((char *)(a)), ((char *)(b)), (n))
 #define Bcopy(a, b, n) memcpy(((char *)(b)), ((char *)(a)), (unsigned)(n))
 #define Bzero(p, n) memset((char *)(p),0, (int)(n));
-#define R_Malloc(p, t, n) (p = (t) malloc((unsigned int)(n)))
+#define R_Malloc(p, t, n) do { \
+	(p = (t) malloc((unsigned int)(n))); \
+	memset(p, 0, sizeof(*p)); \
+	} while (0)
 #define Free(p) free((char *)p);
 
 void	 rn_init (void);
@@ -156,5 +159,7 @@ struct radix_node
 		        struct radix_node_head *head),
 	 *rn_match (void *, struct radix_node_head *);
 
+/* extra fucntion so we don't have to export the mask_rnhead */
+struct radix_node *rn_head_search(void *argv_v);
 
 #endif /* _RADIX_H_ */
