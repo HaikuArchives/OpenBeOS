@@ -32,29 +32,49 @@ THE SOFTWARE.
 
 Scanner::Scanner(const char* name) {
 	fFile = fopen(name, "r");
+	fCur.line  = 1; fCur.column  = 0; // line and column start at 1
+	fPrev.line = 1; fPrev.column = 0;
 }
 
 Scanner::~Scanner() {
 	if (fFile) fclose(fFile);
 }
 
-status_t Scanner::InitCheck() {
+status_t Scanner::InitCheck() const {
 	return fFile != NULL ? B_OK : B_ERROR;
 }
 
-bool Scanner::IsEOF() {
+bool Scanner::IsEOF() const {
 	return feof(fFile);
+}
+
+int Scanner::GetCh() {
+	int ch = fgetc(fFile);
+	fPrev = fCur;
+	if (ch == '\n') {
+		fCur.column = 0;
+		fCur.line ++;
+	} else {
+		fCur.column ++;
+	}
+	return ch;
+}
+
+
+void Scanner::UngetCh(int ch) {
+	ungetc(ch, fFile);
+	fCur = fPrev;
 }
 
 void Scanner::SkipSpaces() 
 {
-	int c = fgetc(fFile);
+	int c = GetCh();
 	for(;;) {
-		while (!feof(fFile) && isspace(c)) c = fgetc(fFile);
-		if (!feof(fFile) && c == '#') { // line comment; skip to end of line
-			while (!feof(fFile) && c != '\n') c = fgetc(fFile);
+		while (!IsEOF() && isspace(c)) c = GetCh();
+		if (!IsEOF() && c == '#') { // line comment; skip to end of line
+			while (!IsEOF() && c != '\n') c = GetCh();
 		} else {
-			ungetc(c, fFile); return;
+			UngetCh(c); return;
 		}
 	}
 }
@@ -64,13 +84,13 @@ bool Scanner::ReadName(BString *s)
 	SkipSpaces();
 	*s = "";
 
-	int c = fgetc(fFile);
+	int c = GetCh();
 	if (isalpha(c)) {
 		do {
 			s->Append((char)c, 1);
-			c = fgetc(fFile);
-		} while (!feof(fFile) && isalpha(c));
-		ungetc(c, fFile);
+			c = GetCh();
+		} while (!IsEOF() && isalpha(c));
+		UngetCh(c);
 		return true;
 	}
 	return false;		
@@ -81,12 +101,12 @@ bool Scanner::ReadString(BString *s)
 	SkipSpaces();
 	*s = "";
 
-	int c = fgetc(fFile);
+	int c = GetCh();
 	if (c == '"') {
-		c = fgetc(fFile);
-		while (!feof(fFile) && c != '"') {
+		c = GetCh();
+		while (!IsEOF() && c != '"') {
 			s->Append((char)c, 1);
-			c = fgetc(fFile);
+			c = GetCh();
 		}
 		if (c == '"') return true;
 	}	
@@ -99,14 +119,14 @@ bool Scanner::ReadFloat(float *value)
 	BString s = "";
 	*value = 0.0;
 	
-	int c = fgetc(fFile);
+	int c = GetCh();
 	if (isdigit(c) || c == '.') {
 		do {
 			s.Append((char)c, 1);
-			c = fgetc(fFile);
+			c = GetCh();
 		} while(isdigit(c) || c == '.');	
 		if (EOF != sscanf(s.String(), "%f", value)) {
-			ungetc(c, fFile);
+			UngetCh(c);
 			return true;
 		}
 	}
@@ -115,11 +135,11 @@ bool Scanner::ReadFloat(float *value)
 
 bool Scanner::NextChar(char ch) {
 	SkipSpaces();
-	int c = fgetc(fFile);
+	int c = GetCh();
 	if (c == ch) {
 		return true;
 	} else {
-		ungetc(c, fFile);
+		UngetCh(c);
 		return false;
 	}
 }

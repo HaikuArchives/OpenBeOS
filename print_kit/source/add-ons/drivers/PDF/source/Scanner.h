@@ -34,13 +34,22 @@ THE SOFTWARE.
 #include <String.h>
 
 class Scanner {
-	FILE* fFile;
-//	int32 fLineNo;
-//	int   fCh;	
+	class Position {
+	public:
+		int32 line;
+		int32 column;
+	};
+	
+	FILE*    fFile;
+	Position fCur;
+	Position fPrev;
+
+	int  GetCh();
+	void UngetCh(int ch);
 	
 public:
 	Scanner(const char* name);
-	status_t InitCheck();
+	status_t InitCheck() const;
 	~Scanner();
 
 	void  SkipSpaces();
@@ -48,8 +57,9 @@ public:
 	bool  ReadString(BString* s);
 	bool  ReadFloat(float* f);
 	bool  NextChar(char c);
-	bool  IsEOF();
-//	int32 LineNo();
+	bool  IsEOF() const;
+	int32 Line() const   { return fCur.line; }
+	int32 Column() const { return fCur.column; }
 };
 
 #endif
