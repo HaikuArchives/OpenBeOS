@@ -279,7 +279,11 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size) {
 		if (find_encoding(unicode, enc, index)) {
 			// fprintf(fLog, "encoding for %x -> %d %d\n", unicode, (int)enc, (int)index);
 			// use one of the user defined encodings
-			encoding = font_encoding(enc + tt_encoding0);
+			if (fState->beFont.FileFormat() == B_TRUETYPE_WINDOWS) {
+				encoding = font_encoding(enc + tt_encoding0);
+			} else {
+				encoding = font_encoding(enc + t1_encoding0);
+			}
 			*dest = index;
 		} else if (find_in_cid_tables(unicode, enc, index)) {
 			// fprintf(fLog, "cid table %d index = %d\n", (int)enc, (int)index);
@@ -315,11 +319,11 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size) {
 	PDF_set_value(fPdf, "textrendering", (face & B_OUTLINED_FACE) != 0 ? 1 : 0); 
 
 	SetColor();
-	// XXX: scaling font size required?
+
 	PDF_setfont(fPdf, fState->font, scale(fState->beFont.Size()));
 
-	const float x = tx(fState->penX /*+ deltax*/);
-	const float y = ty(fState->penY /*+ deltay*/);
+	const float x = tx(fState->penX);
+	const float y = ty(fState->penY);
 	const float rotation = fState->beFont.Rotation();
 	const bool rotate = rotation != 0.0;
 
@@ -339,16 +343,33 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size) {
 }
 
 // --------------------------------------------------
-void	
-PDFWriter::DrawString(char *string, float deltax, float deltay)
-{
-	fprintf(fLog, "DrawString string=\"%s\", deltax=%f, deltay=%f, at %f, %f\n",
-			string, deltax, deltay, fState->penX, fState->penY);
-
-	if (IsClipping()) {
-		fprintf(fLog, "DrawPixels for clipping not implemented yet!");
-		return;
+void
+PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 size) {
+	bool hasGlyph[1];
+	font->GetHasGlyphs(utf8, 1, hasGlyph);
+	if (hasGlyph[0]) {
+		BShape *glyphs[1];
+		BShape glyph;
+		glyphs[0] = &glyph;
+		font->GetGlyphShapes(utf8, 1, glyphs);
+		BPoint p(fState->penX, fState->penY);
+		PushInternalState(); SetOrigin(p);
+		{
+			DrawShape iterator(this, false);
+			iterator.Iterate(&glyph);
+		}
+		PopInternalState();
+	} else {
+		fprintf(fLog, "glyph for %*.*s not found!", size, size, utf8);
 	}
+}
+
+// --------------------------------------------------
+void	
+PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_space)
+{
+	fprintf(fLog, "DrawString string=\"%s\", escapement_nospace=%f, escapement_space=%f, at %f, %f\n",
+			string, escapement_nospace, escapement_space, fState->penX, fState->penY);
 
 	// convert string to UTF8
 	BString utf8;
@@ -364,22 +385,30 @@ PDFWriter::DrawString(char *string, float deltax, float deltay)
 	BFont font = fState->beFont;
 	font.SetEncoding(B_UNICODE_UTF8);
 	// constants to calculate position of next character	
-	const float rotation = fState->beFont.Rotation();
+	const double rotation = DEGREE2RAD(fState->beFont.Rotation());
 	const bool rotate = rotation != 0.0;
-	const float cos1 = rotate ? cos(rotation) : 1;
-	const float sin1 = rotate ? -sin(rotation) : 0;
+	const double cos1 = rotate ? cos(rotation) : 1;
+	const double sin1 = rotate ? -sin(rotation) : 0;
 
 	// draw each character
 	const char *c = utf8.String();
 	const unsigned char *u = (unsigned char*)unicode.String();
 	for (int i = 0; i < unicode.Length(); i += 2) {
-		int s = CodePointSize(c);
-		
-		// XXX: How should deltax/y be handled?
-		DrawChar(u[0]*256+u[1], c, s);		
+		int s = CodePointSize((char*)c);
 
+		if (IsClipping()) {
+			ClipChar(&font, (char*)u, c, s);
+		} else {
+			DrawChar(u[0]*256+u[1], c, s);		
+		}
+		
 		// position of next character
 		float w = font.StringWidth(c, s);
+		if (*(unsigned char*)c <= 0x20) { // should test if c is a white-space!
+			w += escapement_space;
+		} else {
+			w += escapement_nospace;
+		}
 
 		fState->penX += w * cos1;
 		fState->penY += w * sin1;
@@ -389,6 +418,7 @@ PDFWriter::DrawString(char *string, float deltax, float deltay)
 	}
 }
 
+// --------------------------------------------------
 bool
 PDFWriter::EmbedFont(const char* name) {
 	static FontFile* cache = NULL;

@@ -2,7 +2,7 @@
 
 PDF Writer printer driver.
 
-Copyright (c) 2001 OpenBeOS. 
+Copyright (c) 2001, 2002 OpenBeOS. 
 
 Authors: 
 	Philippe Houdoin
@@ -55,68 +55,7 @@ THE SOFTWARE.
 static uint16 ttf_get_uint16(FILE * ttf);
 static uint32 ttf_get_uint32(FILE *ttf);
 static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_size);
-
 static status_t psf_get_fontname(const char * path, char * fontname, size_t fn_size);
-
-// Private Variables
-// -----------------
-
-static void *
-playbackHandlers[] = {
-		_op0,					// 0	no operation
-		_MovePenBy,				// 1	MovePenBy(void *user, BPoint delta)
-		_StrokeLine,			// 2	StrokeLine(void *user, BPoint start, BPoint end)
-		_StrokeRect,			// 3	StrokeRect(void *user, BRect rect)
-		_FillRect,				// 4	FillRect(void *user, BRect rect)
-		_StrokeRoundRect,		// 5	StrokeRoundRect(void *user, BRect rect, BPoint radii)
-		_FillRoundRect,			// 6	FillRoundRect(void *user, BRect rect, BPoint radii)
-		_StrokeBezier,			// 7	StrokeBezier(void *user, BPoint *control)
-		_FillBezier,			// 8	FillBezier(void *user, BPoint *control)
-		_StrokeArc,				// 9	StrokeArc(void *user, BPoint center, BPoint radii, float startTheta, float arcTheta)
-		_FillArc,				// 10	FillArc(void *user, BPoint center, BPoint radii, float startTheta, float arcTheta)
-		_StrokeEllipse,			// 11	StrokeEllipse(void *user, BPoint center, BPoint radii)
-		_FillEllipse,			// 12	FillEllipse(void *user, BPoint center, BPoint radii)
-		_StrokePolygon,			// 13	StrokePolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
-		_FillPolygon,			// 14	FillPolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
-		_StrokeShape,			// 15	StrokeShape(void *user, BShape *shape)
-		_FillShape,				// 16	FillShape(void *user, BShape *shape)
-		_DrawString,			// 17	DrawString(void *user, char *string, float deltax, float deltay)
-		_DrawPixels,			// 18	DrawPixels(void *user, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
-		_op19,					// 19	*reserved*
-		_SetClippingRects,		// 20	SetClippingRects(void *user, BRect *rects, uint32 numRects)
-		_ClipToPicture,			// 21	ClipToPicture(void *user, BPicture *picture, BPoint pt, bool clip_to_inverse_picture)
-		_PushState,				// 22	PushState(void *user)
-		_PopState,				// 23	PopState(void *user)
-		_EnterStateChange,		// 24	EnterStateChange(void *user)
-		_ExitStateChange,		// 25	ExitStateChange(void *user)
-		_EnterFontState,		// 26	EnterFontState(void *user)
-		_ExitFontState,			// 27	ExitFontState(void *user)
-		_SetOrigin,				// 28	SetOrigin(void *user, BPoint pt)
-		_SetPenLocation,		// 29	SetPenLocation(void *user, BPoint pt)
-		_SetDrawingMode,		// 30	SetDrawingMode(void *user, drawing_mode mode)
-		_SetLineMode,			// 31	SetLineMode(void *user, cap_mode capMode, join_mode joinMode, float miterLimit)
-		_SetPenSize,			// 32	SetPenSize(void *user, float size)
-		_SetForeColor,			// 33	SetForeColor(void *user, rgb_color color)
-		_SetBackColor,			// 34	SetBackColor(void *user, rgb_color color)
-		_SetStipplePattern,		// 35	SetStipplePattern(void *user, pattern p)
-		_SetScale,				// 36	SetScale(void *user, float scale)
-		_SetFontFamily,			// 37	SetFontFamily(void *user, char *family)
-		_SetFontStyle,			// 38	SetFontStyle(void *user, char *style)
-		_SetFontSpacing,		// 39	SetFontSpacing(void *user, int32 spacing)
-		_SetFontSize,			// 40	SetFontSize(void *user, float size)
-		_SetFontRotate,			// 41	SetFontRotate(void *user, float rotation)
-		_SetFontEncoding,		// 42	SetFontEncoding(void *user, int32 encoding)
-		_SetFontFlags,			// 43	SetFontFlags(void *user, int32 flags)
-		_SetFontShear,			// 44	SetFontShear(void *user, float shear)
-		_op45,					// 45	*reserved*
-		_SetFontFace,			// 46	SetFontFace(void *user, int32 flags)
-		_op47,
-		_op48,
-		_op49,
-
-		NULL
-	}; 
-
 
 // Constructor & destructor
 // ------------------------
@@ -124,7 +63,7 @@ playbackHandlers[] = {
 PDFWriter::PDFWriter()
 	:	PrinterDriver()
 {
-	fEmbedMaxFontSize = 256 * 1024;
+	fEmbedMaxFontSize = 250 * 1024;
 }
 
 PDFWriter::~PDFWriter()
@@ -211,7 +150,7 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 	
 	BeginPage(paperRect, printRect);
 	for (i = 0; i < pictureCount; i++) {
-		pictures[i]->Play(playbackHandlers, 50, this);
+		Iterate(pictures[i]);
 		delete pictures[i];
 	}
 	EndPage();
@@ -269,9 +208,7 @@ PDFWriter::InitWriter()
 	// PDF_set_parameter(fPdf, "native-unicode", "true");
 
 	fprintf(fLog, "Start of fonts declaration:\n");	
-/*
-	PDF_set_parameter(fPdf, "resourcefile", "/boot/home/config/settings/pdflib.upr");
-*/
+
 	PDF_set_parameter(fPdf, "Encoding", "t1enc0==/boot/home/config/settings/PDF Writer/t1enc0.enc");
 	PDF_set_parameter(fPdf, "Encoding", "t1enc1==/boot/home/config/settings/PDF Writer/t1enc1.enc");
 	PDF_set_parameter(fPdf, "Encoding", "t1enc2==/boot/home/config/settings/PDF Writer/t1enc2.enc");
@@ -285,6 +222,8 @@ PDFWriter::InitWriter()
 	PDF_set_parameter(fPdf, "Encoding", "ttenc4==/boot/home/config/settings/PDF Writer/ttenc4.cpg");
 
 	DeclareFonts();
+
+	CreatePatterns();
 
 	fprintf(fLog, "End of fonts declaration.\n");	
 
@@ -395,7 +334,7 @@ PDFWriter::LookupFontFiles
 		{
 		BPath 		name;
 		char 		fn[512];
-		font_type	ft;
+		font_type	ft = unknown_type; // to keep the compiler silent.
 		off_t 		size;
 		char		buffer[1024];
 		char *		parameter_name;
@@ -748,12 +687,53 @@ PDFWriter::SetColor(rgb_color color)
 }
 
 // --------------------------------------------------
+void
+PDFWriter::CreatePatterns() {
+/*
+	fPattern = -1;
+	fprintf(fLog, "CreatePatterns\n");
+	BBitmap bm(BRect(0, 0, 7, 7), B_RGB24);
+	if (!bm.IsValid()) {
+		fprintf(fLog, "CreatePattern could not create bitmap\n");
+		return;
+	}
+
+	int8* c = (int8*)bm.Bits();
+	c[0] = 255;
+	c[3  +1] = 255;
+	c[2*3+2] = 255;
+
+	int image = PDF_open_image(fPdf, "raw", "memory", (const char *) bm.Bits(), bm.BytesPerRow()*8, 8, 8, 3, 8, 0);
+	if (image == -1) {
+		fprintf(fLog, "CreatePattern could not create image\n");
+		return;
+	}	
+	int pattern = PDF_begin_pattern(fPdf, 8, 8, 8, 8, 2);
+	if (pattern == -1) {
+		fprintf(fLog, "CreatePattern could not create pattern\n");
+		PDF_close_image(fPdf, image);
+		return;
+	}
+	fPattern = pattern;
+	PDF_place_image(fPdf, image, 0, 0, 1);
+	PDF_end_pattern(fPdf);
+	PDF_close_image(fPdf, image);
+*/
+}
+
+// --------------------------------------------------
+void
+PDFWriter::SetPattern() {
+//	PDF_setcolor(fPdf, "both", "pattern", fPattern, 0, 0, 0);
+}
+
+// --------------------------------------------------
 void 
 PDFWriter::StrokeOrClip() {
 	if (IsDrawing()) {
 		PDF_stroke(fPdf);
 	} else {
-		PDF_clip(fPdf);
+		PDF_closepath(fPdf);
 	}
 }
 
@@ -763,7 +743,7 @@ PDFWriter::FillOrClip() {
 	if (IsDrawing()) {
 		PDF_fill(fPdf);
 	} else {
-		PDF_clip(fPdf);
+		PDF_closepath(fPdf);
 	}
 }
 
@@ -792,6 +772,9 @@ PDFWriter::SetColor() {
 		SetColor(fState->foregroundColor);
 	} else if (IsSame(fState->pattern, B_SOLID_LOW)) {
 		SetColor(fState->backgroundColor);
+//	} else {
+//		SetPattern();
+//	} 
 	} else if (IsSame(fState->pattern, B_MIXED_COLORS)) {
 		rgb_color mixed; // XXX
 		mixed.red    = (fState->foregroundColor.red + fState->backgroundColor.red) / 2; 
@@ -846,7 +829,6 @@ PDFWriter::CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 fla
 		shift = 7;
 		
 		for (x = width; x > 0; x-- ) {
-//			fprintf(fLog, "(%d, %d) %d %d %d\n", x, y, (mout - mask), (int)shift, (int)*(in+3));
 			// For each pixel
 			
 			if ((pixelFormat == B_RGBA32 && in[3] < 128) ||
@@ -905,7 +887,6 @@ PDFWriter::ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 
 		out = outLeft;
 
 		for (x = width; x >= 0; x--) {
-//			fprintf(fLog, "(%d, %d) %d %d %d\n", x, y, (mout - mask), (int)shift, (int)*(in+3));
 			// For each pixel
 			*((rgb_color*)out) = *((rgb_color*)in);
 			in += 4;	// next pixel
@@ -997,7 +978,7 @@ DrawShape::Draw() {
 				PDF_fill(Pdf());
 			}
 		} else {
-			PDF_clip(Pdf());
+			PDF_closepath(Pdf());
 		}
 	}
 }
@@ -1377,9 +1358,12 @@ PDFWriter::ClipToPicture(BPicture *picture, BPoint point, bool clip_to_inverse_p
 		}
 
 		fMode = kClippingMode;
-		picture->Play(playbackHandlers, 50, this);
+		// create subpath(s) for clipping
+		Iterate(picture);
 		fMode = kDrawingMode;
-
+		// and clip to it/them
+		PDF_clip(fPdf);
+		
 		if (set_origin) {
 			PopInternalState(); PopInternalState();
 		}
@@ -1447,7 +1431,7 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 	image = PDF_open_image_file(fPdf, "png", "/tmp/pdfwriter.png", 
 		maskId == -1 ? "" : "masked", maskId == -1 ? 0 : maskId);
 	if ( image >= 0 ) {
-		PDF_place_image(fPdf, image, x, y, 1.0);
+		PDF_place_image(fPdf, image, x, y, scale(1.0));
 		PDF_close_image(fPdf, image);
 	} else 
 		fprintf(fLog, "PDF_open_image_file failed!\n");
@@ -1721,7 +1705,7 @@ void
 PDFWriter::SetFontRotate(float rotation)
 {
 	fprintf(fLog, "SetFontRotate rotation=%f\n", rotation);
-	fState->beFont.SetRotation(rotation);
+	fState->beFont.SetRotation(RAD2DEGREE(rotation));
 }
 
 
@@ -1768,60 +1752,4 @@ PDFWriter::SetFontFace(int32 flags)
 
 size_t	_WriteData(PDF *pdf, void *data, size_t size)			{ return ((PDFWriter *) PDF_get_opaque(pdf))->WriteData(data, size); }
 void	_ErrorHandler(PDF *pdf, int type, const char *msg)	{ return ((PDFWriter *) PDF_get_opaque(pdf))->ErrorHandler(type, msg); }
-
-// BPicture playback handlers class instance redirectors
-void	_MovePenBy(void *p, BPoint delta) 														{ return ((PDFWriter *) p)->MovePenBy(delta); }
-void	_StrokeLine(void *p, BPoint start, BPoint end) 										{ return ((PDFWriter *) p)->StrokeLine(start, end); }
-void	_StrokeRect(void *p, BRect rect) 														{ return ((PDFWriter *) p)->StrokeRect(rect); }
-void	_FillRect(void *p, BRect rect) 														{ return ((PDFWriter *) p)->FillRect(rect); }
-void	_StrokeRoundRect(void *p, BRect rect, BPoint radii) 									{ return ((PDFWriter *) p)->StrokeRoundRect(rect, radii); }
-void	_FillRoundRect(void *p, BRect rect, BPoint radii)  									{ return ((PDFWriter *) p)->FillRoundRect(rect, radii); }
-void	_StrokeBezier(void *p, BPoint *control)  												{ return ((PDFWriter *) p)->StrokeBezier(control); }
-void	_FillBezier(void *p, BPoint *control)  												{ return ((PDFWriter *) p)->FillBezier(control); }
-void	_StrokeArc(void *p, BPoint center, BPoint radii, float startTheta, float arcTheta)		{ return ((PDFWriter *) p)->StrokeArc(center, radii, startTheta, arcTheta); }
-void	_FillArc(void *p, BPoint center, BPoint radii, float startTheta, float arcTheta)		{ return ((PDFWriter *) p)->FillArc(center, radii, startTheta, arcTheta); }
-void	_StrokeEllipse(void *p, BPoint center, BPoint radii)									{ return ((PDFWriter *) p)->StrokeEllipse(center, radii); }
-void	_FillEllipse(void *p, BPoint center, BPoint radii)										{ return ((PDFWriter *) p)->FillEllipse(center, radii); }
-void	_StrokePolygon(void *p, int32 numPoints, BPoint *points, bool isClosed) 				{ return ((PDFWriter *) p)->StrokePolygon(numPoints, points, isClosed); }
-void	_FillPolygon(void *p, int32 numPoints, BPoint *points, bool isClosed)					{ return ((PDFWriter *) p)->FillPolygon(numPoints, points, isClosed); }
-void	_StrokeShape(void * p, BShape *shape)													{ return ((PDFWriter *) p)->StrokeShape(shape); }
-void	_FillShape(void * p, BShape *shape)														{ return ((PDFWriter *) p)->FillShape(shape); }
-void	_DrawString(void *p, char *string, float deltax, float deltay)							{ return ((PDFWriter *) p)->DrawString(string, deltax, deltay); }
-void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
-						{ return ((PDFWriter *) p)->DrawPixels(src, dest, width, height, bytesPerRow, pixelFormat, flags, data); }
-void	_SetClippingRects(void *p, BRect *rects, uint32 numRects)								{ return ((PDFWriter *) p)->SetClippingRects(rects, numRects); }
-void	_ClipToPicture(void * p, BPicture *picture, BPoint point, bool clip_to_inverse_picture)	{ return ((PDFWriter *) p)->ClipToPicture(picture, point, clip_to_inverse_picture); }
-void	_PushState(void *p)  																	{ return ((PDFWriter *) p)->PushState(); }
-void	_PopState(void *p)  																	{ return ((PDFWriter *) p)->PopState(); }
-void	_EnterStateChange(void *p) 															{ return ((PDFWriter *) p)->EnterStateChange(); }
-void	_ExitStateChange(void *p) 																{ return ((PDFWriter *) p)->ExitStateChange(); }
-void	_EnterFontState(void *p) 																{ return ((PDFWriter *) p)->EnterFontState(); }
-void	_ExitFontState(void *p) 																{ return ((PDFWriter *) p)->ExitFontState(); }
-void	_SetOrigin(void *p, BPoint pt)															{ return ((PDFWriter *) p)->SetOrigin(pt); }
-void	_SetPenLocation(void *p, BPoint pt)													{ return ((PDFWriter *) p)->SetPenLocation(pt); }
-void	_SetDrawingMode(void *p, drawing_mode mode)											{ return ((PDFWriter *) p)->SetDrawingMode(mode); }
-void	_SetLineMode(void *p, cap_mode capMode, join_mode joinMode, float miterLimit)			{ return ((PDFWriter *) p)->SetLineMode(capMode, joinMode, miterLimit); }
-void	_SetPenSize(void *p, float size)														{ return ((PDFWriter *) p)->SetPenSize(size); }
-void	_SetForeColor(void *p, rgb_color color)												{ return ((PDFWriter *) p)->SetForeColor(color); }
-void	_SetBackColor(void *p, rgb_color color)												{ return ((PDFWriter *) p)->SetBackColor(color); }
-void	_SetStipplePattern(void *p, pattern pat)												{ return ((PDFWriter *) p)->SetStipplePattern(pat); }
-void	_SetScale(void *p, float scale)														{ return ((PDFWriter *) p)->SetScale(scale); }
-void	_SetFontFamily(void *p, char *family)													{ return ((PDFWriter *) p)->SetFontFamily(family); }
-void	_SetFontStyle(void *p, char *style)													{ return ((PDFWriter *) p)->SetFontStyle(style); }
-void	_SetFontSpacing(void *p, int32 spacing)												{ return ((PDFWriter *) p)->SetFontSpacing(spacing); }
-void	_SetFontSize(void *p, float size)														{ return ((PDFWriter *) p)->SetFontSize(size); }
-void	_SetFontRotate(void *p, float rotation)												{ return ((PDFWriter *) p)->SetFontRotate(rotation); }
-void	_SetFontEncoding(void *p, int32 encoding)												{ return ((PDFWriter *) p)->SetFontEncoding(encoding); }
-void	_SetFontFlags(void *p, int32 flags)													{ return ((PDFWriter *) p)->SetFontFlags(flags); }
-void	_SetFontShear(void *p, float shear)													{ return ((PDFWriter *) p)->SetFontShear(shear); }
-void	_SetFontFace(void * p, int32 flags)														{ return ((PDFWriter *) p)->SetFontFace(flags); }
-
-// undefined or undocumented operation handlers...
-void	_op0(void * p)	{ return ((PDFWriter *) p)->Op(0); }
-void	_op19(void * p)	{ return ((PDFWriter *) p)->Op(19); }
-void	_op45(void * p)	{ return ((PDFWriter *) p)->Op(45); }
-void	_op47(void * p)	{ return ((PDFWriter *) p)->Op(47); }
-void	_op48(void * p)	{ return ((PDFWriter *) p)->Op(48); }
-void	_op49(void * p)	{ return ((PDFWriter *) p)->Op(49); }
-
 

@@ -37,7 +37,10 @@ THE SOFTWARE.
 #include <String.h>
 #include <List.h>
 
+#include "math.h"
+
 #include "PrinterDriver.h"
+#include "PictureIterator.h"
 
 #include "pdflib.h"
 
@@ -46,7 +49,11 @@ THE SOFTWARE.
 #define LETTER_WIDTH 8.5
 #define LETTER_HEIGHT 11
 
+#define RAD2DEGREE(r) (180.0 * r / PI)
+#define DEGREE2RAD(d) (PI * d / 180.0)
+
 class DrawShape;
+class RotateShape;
 
 enum font_encoding {
 	macroman_encoding,
@@ -71,13 +78,15 @@ enum font_encoding {
 
 enum font_type {
 	true_type_type,
-	type1_type
+	type1_type,
+	unknown_type
 };
 
-class PDFWriter : public PrinterDriver
+class PDFWriter : public PrinterDriver, public PictureIterator
 	{
 	
 	friend class DrawShape;
+	friend class RotateShape;
 	
 	public:
 		// constructors / destructor
@@ -99,13 +108,14 @@ class PDFWriter : public PrinterDriver
 		BBitmap		*ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 
 		// String handling
-		bool   BeginsChar(char byte) { return (byte & 0xc0) != 0x80; }
-		void   ToUtf8(uint32 encoding, const char *string, BString &utf8);
-		void   ToUnicode(const char *string, BString &unicode);
-		uint16 CodePointSize(const char *s);
-		void   DrawChar(uint16 unicode, const char *utf8, int16 size);
+		bool		BeginsChar(char byte) { return (byte & 0xc0) != 0x80; }
+		void		ToUtf8(uint32 encoding, const char *string, BString &utf8);
+		void		ToUnicode(const char *string, BString &unicode);
+		uint16		CodePointSize(const char *s);
+		void		DrawChar(uint16 unicode, const char *utf8, int16 size);
+		void		ClipChar(BFont* font, const char* unicode, const char *utf8, int16 size);
 		bool   		EmbedFont(const char* n);
-		status_t 	DeclareFonts();
+		status_t	DeclareFonts();
 		status_t	LookupFontFiles(BPath path);	
 
 		// BPicture playback handlers
@@ -234,6 +244,7 @@ class PDFWriter : public PrinterDriver
 		BList           fFontCache;
 		BList           fFontFiles;
 		int64           fEmbedMaxFontSize;
+		int             fPattern;
 		enum {
 			kDrawingMode,
 			kClippingMode
@@ -254,8 +265,10 @@ class PDFWriter : public PrinterDriver
 		void PushInternalState();
 		bool PopInternalState();
 
+		void CreatePatterns();
 		void SetColor(rgb_color toSet);
 		void SetColor();
+		void SetPattern();
 		
 		void StrokeOrClip();
 		void FillOrClip();
@@ -293,59 +306,5 @@ public:
 // PDFLib C callbacks class instance redirectors
 size_t	_WriteData(PDF *p, void *data, size_t size);
 void	_ErrorHandler(PDF *p, int type, const char *msg);
-
-// BPicture playback handlers class instance redirectors
-void	_MovePenBy(void *p, BPoint delta);
-void	_StrokeLine(void *p, BPoint start, BPoint end);
-void	_StrokeRect(void *p, BRect rect);
-void	_FillRect(void *p, BRect rect);
-void	_StrokeRoundRect(void *p, BRect rect, BPoint radii);
-void	_FillRoundRect(void *p, BRect rect, BPoint radii);
-void	_StrokeBezier(void *p, BPoint *control);
-void	_FillBezier(void *p, BPoint *control);
-void	_StrokeArc(void *p, BPoint center, BPoint radii, float startTheta, float arcTheta);
-void	_FillArc(void *p, BPoint center, BPoint radii, float startTheta, float arcTheta);
-void	_StrokeEllipse(void *p, BPoint center, BPoint radii);
-void	_FillEllipse(void *p, BPoint center, BPoint radii);
-void	_StrokePolygon(void *p, int32 numPoints, BPoint *points, bool isClosed);
-void	_FillPolygon(void *p, int32 numPoints, BPoint *points, bool isClosed);
-void	_StrokeShape(void *p, BShape *shape);
-void	_FillShape(void *p, BShape *shape);
-void	_DrawString(void *p, char *string, float deltax, float deltay);
-void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
-void	_SetClippingRects(void *p, BRect *rects, uint32 numRects);
-void	_ClipToPicture(void *p, BPicture *picture, BPoint point, bool clip_to_inverse_picture);
-void	_PushState(void *p);
-void	_PopState(void *p);
-void	_EnterStateChange(void *p);
-void	_ExitStateChange(void *p);
-void	_EnterFontState(void *p);
-void	_ExitFontState(void *p);
-void	_SetOrigin(void *p, BPoint pt);
-void	_SetPenLocation(void *p, BPoint pt);
-void	_SetDrawingMode(void *p, drawing_mode mode);
-void	_SetLineMode(void *p, cap_mode capMode, join_mode joinMode, float miterLimit);
-void	_SetPenSize(void *p, float size);
-void	_SetForeColor(void *p, rgb_color color);
-void	_SetBackColor(void *p, rgb_color color);
-void	_SetStipplePattern(void *p, pattern pat);
-void	_SetScale(void *p, float scale);
-void	_SetFontFamily(void *p, char *family);
-void	_SetFontStyle(void *p, char *style);
-void	_SetFontSpacing(void *p, int32 spacing);
-void	_SetFontSize(void *p, float size);
-void	_SetFontRotate(void *p, float rotation);
-void	_SetFontEncoding(void *p, int32 encoding);
-void	_SetFontFlags(void *p, int32 flags);
-void	_SetFontShear(void *p, float shear);
-void	_SetFontFace(void *p, int32 flags);
-
-// undefined or undocumented operation handlers...
-void	_op0(void *p);
-void	_op19(void *p);
-void	_op45(void *p);
-void	_op47(void *p);
-void	_op48(void *p);
-void	_op49(void *p);
 
 #endif	// #if PDFWRITER_H
