@@ -2,6 +2,7 @@ SubDir OBOS_TOP sources os kits kernel apps ;
 
 KernelObjects false_main.c fibo_main.c init.c true_main.c ;
 
+SubInclude OBOS_TOP sources os kits kernel apps uname ;
 SubInclude OBOS_TOP sources os kits kernel apps echo ;
 SubInclude OBOS_TOP sources os kits kernel apps filetest ;
 SubInclude OBOS_TOP sources os kits kernel apps fortune ;
