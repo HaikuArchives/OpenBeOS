@@ -93,10 +93,34 @@ Inode::CheckPermissions(int accessMode) const
 
 
 status_t
-Inode::MakeSpaceForSmallData(const char *name,uint32 length)
+Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,uint32 bytes)
 {
-	// ToDo: implement me!
-	return B_ERROR;
+	while (bytes > 0) {
+		small_data *item = Node()->small_data_start,*max = NULL;
+		while (!item->IsLast(Node())) {
+			// should not remove that one
+			if (*item->Name() == FILE_NAME_NAME)
+				continue;
+			
+			if (max == NULL || max->Size() < item->Size())
+				max = item;
+			
+			// remove the first one large enough to free the needed amount of bytes
+			if (bytes < item->Size())
+				break;
+		}
+		
+		if (item->IsLast(Node()) && item->Size() < bytes)
+			return B_ERROR;
+
+		bytes -= max->Size();
+		
+		// ToDo: implement me!
+		// -> move the attribute to a real attribute file
+
+		RemoveSmallData(NULL,max);
+	}
+	return B_OK;
 }
 
 
@@ -106,14 +130,19 @@ Inode::MakeSpaceForSmallData(const char *name,uint32 length)
  */
 
 status_t
-Inode::RemoveSmallData(const char *name)
+Inode::RemoveSmallData(const char *name,small_data *item)
 {
-	small_data *item = Node()->small_data_start;
-	while (!item->IsLast(Node()) || !strcmp(item->Name(),name))
-		item = item->Next();
+	if (item == NULL) {
+		if (name == NULL)
+			return B_BAD_VALUE;
 
-	if (strcmp(item->Name(),name))
-		return B_ENTRY_NOT_FOUND;
+		small_data *item = Node()->small_data_start;
+		while (!item->IsLast(Node()) || !strcmp(item->Name(),name))
+			item = item->Next();
+	
+		if (strcmp(item->Name(),name))
+			return B_ENTRY_NOT_FOUND;
+	}
 
 	if (!item->IsLast(Node())) {
 		// find the last attribute
@@ -145,13 +174,13 @@ Inode::RemoveSmallData(const char *name)
  *	one wouldn't fit, the old one is automatically removed from the small_data
  *	section.
  *	Note that you need to write back the inode yourself after having called that
- *	method - it's a bad API decision that it doesn't enforce you to have a
- *	transaction and write back the inode automatically, but it's more efficient
- *	in most cases...
+ *	method - it's a bad API decision that it needs a transaction but enforces you
+ *	to write back the inode automatically, but it's just more efficient in most
+ *	cases...
  */
 
 status_t
-Inode::AddSmallData(const char *name,uint32 type,const uint8 *data,uint32 length,bool force)
+Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const uint8 *data,uint32 length,bool force)
 {
 	if (name == NULL || data == NULL || type == 0)
 		return B_BAD_VALUE;
@@ -184,7 +213,7 @@ Inode::AddSmallData(const char *name,uint32 type,const uint8 *data,uint32 length
 				// ToDo: we're lazy here and requesting the full difference between
 				// the old size and the new size - we could also take the free bytes
 				// at the end of the section into account...
-				if (MakeSpaceForSmallData(name,length - item->data_size) < B_OK)
+				if (MakeSpaceForSmallData(transaction,name,length - item->data_size) < B_OK)
 					return B_ERROR;
 			}
 
@@ -201,7 +230,7 @@ Inode::AddSmallData(const char *name,uint32 type,const uint8 *data,uint32 length
 		}
 
 		// could not replace the old attribute, so remove it!
-		if (RemoveSmallData(name) < B_OK)
+		if (RemoveSmallData(name,item) < B_OK)
 			return B_ERROR;
 
 		return B_DEVICE_FULL;
@@ -215,7 +244,7 @@ Inode::AddSmallData(const char *name,uint32 type,const uint8 *data,uint32 length
 			return B_DEVICE_FULL;
 
 		// make room for the new attribute
-		if (MakeSpaceForSmallData(name,spaceNeeded) < B_OK)
+		if (MakeSpaceForSmallData(transaction,name,spaceNeeded) < B_OK)
 			return B_ERROR;
 
 		// get new last item!
@@ -303,18 +332,19 @@ Inode::Name() const
 /**	Changes or set the name of a file: in the inode small_data section only, it
  *	doesn't change it in the parent directory's b+tree.
  *	Note that you need to write back the inode yourself after having called
- *	that method.
+ *	that method. It suffers from the same API decision as AddSmallData() does
+ *	(and for the same reason).
  */
 
 status_t 
-Inode::SetName(const char *name)
+Inode::SetName(Transaction *transaction,const char *name)
 {
 	if (name == NULL || *name == '\0')
 		return B_BAD_VALUE;
 
 	const char nameTag[2] = {FILE_NAME_NAME, 0};
 
-	return AddSmallData(nameTag,FILE_NAME_TYPE,(uint8 *)name,strlen(name),true);
+	return AddSmallData(transaction,nameTag,FILE_NAME_TYPE,(uint8 *)name,strlen(name),true);
 }
 
 

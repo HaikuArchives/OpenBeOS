@@ -136,13 +136,13 @@ class Inode : public CachedBlock {
 
 		status_t CheckPermissions(int accessMode) const;
 
-		status_t MakeSpaceForSmallData(const char *name, uint32 length);
-		status_t RemoveSmallData(const char *name);
-		status_t AddSmallData(const char *name, uint32 type, const uint8 *data, uint32 length, bool force = false);
+		status_t MakeSpaceForSmallData(Transaction *transaction,const char *name, uint32 length);
+		status_t RemoveSmallData(const char *name,small_data *item = NULL);
+		status_t AddSmallData(Transaction *transaction,const char *name, uint32 type, const uint8 *data, uint32 length, bool force = false);
 		status_t GetNextSmallData(small_data **smallData) const;
 		small_data *FindSmallData(const char *name) const;
 		const char *Name() const;
-		status_t SetName(const char *name);
+		status_t SetName(Transaction *transaction,const char *name);
 
 		Inode *GetAttribute(const char *name);
 		void ReleaseAttribute(Inode *attribute);
