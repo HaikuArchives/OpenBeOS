@@ -23,9 +23,9 @@ public:
 	virtual	bool	QuitRequested();
 	virtual void 	MessageReceived(BMessage *message);
 	virtual void 	FrameMoved(BPoint origin);
-	KeyboardView	*aView;
 private:
 	KeyboardSettings	*fSettings;
+	KeyboardView		*aView;
 };
 
 #endif //KEYBOARD_WINDOW_H

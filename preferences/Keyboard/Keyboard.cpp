@@ -19,7 +19,7 @@
 #ifndef KEYBOARD_SETTINGS_H
 #include "KeyboardSettings.h"
 #endif
-#include <stdio.h>
+
 int main(int, char**)
 {//main	
 	KeyboardApplication	myApplication;

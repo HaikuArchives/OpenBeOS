@@ -28,9 +28,9 @@ class KeyboardView : public BView
 {
 public:
 		KeyboardView(BRect frame);
-		BSlider		*rateSlider;
-		BSlider		*delaySlider;
-		BButton		*revertButton;
+		BSlider		*rateSlider;		// Move all these to private and
+		BSlider		*delaySlider;		// create accessor members.
+		BButton		*revertButton;		// This one too.
 private:
         int32            rrate;
 		bigtime_t        drate; 
