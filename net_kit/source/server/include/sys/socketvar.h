@@ -9,13 +9,6 @@
 #include "sys/net_uio.h"
 #include "sys/socket.h"
 
-struct selinfo {
-	struct selinfo *sel_next;
-	uint8 event;
-	void *sync;
-	uint32 ref;
-};
-
 struct  sockbuf {
 	uint32  sb_cc;			/* actual chars in buffer */
 	uint32  sb_hiwat;		/* max actual char count (high water mark) */
@@ -23,7 +16,6 @@ struct  sockbuf {
 	uint32  sb_mbmax;		/* max chars of mbufs to use */
 	int32   sb_lowat;		/* low water mark */
 	struct  mbuf *sb_mb;	/* the mbuf chain */
-	struct  selinfo *sb_sel;
 	int16   sb_flags;		/* flags, see below */
 	int32   sb_timeo;		/* timeout for read/write */
 	sem_id	sb_pop;			/* sem to wait on... */
@@ -37,6 +29,8 @@ struct  sockbuf {
 #define SB_ASYNC        0x10            /* ASYNC I/O, need signals */
 #define SB_NOINTR       0x40            /* operations not interruptible */
 #define SB_KNOTE        0x80            /* kernel note attached */
+
+typedef void (*socket_event_callback)(void * socket, uint32 event, void * cookie);
 
 struct socket {
 	uint16 so_type;		/* type of socket */
@@ -62,6 +56,10 @@ struct socket {
 	/* our send/recv buffers */
 	struct sockbuf so_snd;
 	struct sockbuf so_rcv;
+
+	// event callback
+	socket_event_callback event_callback;
+	void * event_callback_cookie;
 };
 
 /*
@@ -142,10 +140,10 @@ int     recvit(void *, struct msghdr *, caddr_t, int *);
 
 int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, 
                struct mbuf *top, struct mbuf *control, int flags);
-int     soselect(void *, uint8, uint32, void *);
-int     sodeselect(void *, uint8 , void *);
 int     sosetopt(void *, int, int, const void *, size_t);
 int     sogetopt(void *, int, int, void *, size_t *);
+
+int 	set_socket_event_callback(void *, socket_event_callback, void *);
 
 void    sbrelease (struct sockbuf *sb);
 int     sbreserve (struct sockbuf *sb, uint32 cc);
