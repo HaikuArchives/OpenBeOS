@@ -231,8 +231,6 @@ int solisten(void *sp, int backlog)
 	struct socket *so = (struct socket *)sp;
 	int error;
 
-printf("solisten...\n");
-
 	error = so->so_proto->pr_userreq(so, PRU_LISTEN, NULL, NULL, NULL);
 	if (error)
 		return error;
@@ -257,7 +255,7 @@ int soconnect(void *sp, caddr_t data, int len)
 	if (!nam)
 		return ENOMEM;
 
-	if (so->so_options & SO_ACCEPTCONN)
+	if ((so->so_options & SO_ACCEPTCONN))
 		return (EOPNOTSUPP);
 
 	nam->m_len = len;
@@ -307,20 +305,21 @@ struct socket *sonewconn(struct socket *head, int connstatus)
 	struct socket *so;
 	int soqueue = connstatus ? 1 : 0;
 
-printf("sonewconn\n");
-	
 	if (head->so_qlen + head->so_q0len > 3 * head->so_qlimit / 2)
 		return NULL;
 	if (initsocket((void**)&so) < 0)
 		return NULL;
-	so->so_type = head->so_type;
+
+	so->so_type    = head->so_type;
 	so->so_options = head->so_options & ~SO_ACCEPTCONN;
-	so->so_linger = head->so_linger;
-	so->so_state = head->so_state | SS_NOFDREF;
-	so->so_proto = head->so_proto;
-	so->so_timeo = head->so_timeo;
+	so->so_linger  = head->so_linger;
+	so->so_state   = head->so_state | SS_NOFDREF;
+	so->so_proto   = head->so_proto;
+	so->so_timeo   = head->so_timeo;
+
 	soreserve(so, head->so_snd.sb_hiwat, head->so_rcv.sb_hiwat);
 	soqinsque(head, so, soqueue);
+
 	if ((*so->so_proto->pr_userreq)(so, PRU_ATTACH, NULL, NULL, NULL)) {
 		soqremque(so, soqueue);
 		pool_put(spool, so);
@@ -1405,7 +1404,7 @@ void soisdisconnected(struct socket *so)
 int nsleep(sem_id chan, char *msg, int timeo)
 {
 	status_t rv;
-	printf("nsleep: %s (%ld)\n", msg, chan);
+//	printf("nsleep: %s (%ld)\n", msg, chan);
 
 	if (timeo > 0)
 		rv = acquire_sem_etc(chan, 1, B_TIMEOUT|B_CAN_INTERRUPT, timeo);
@@ -1474,14 +1473,14 @@ int sogetpeername(void *sp, struct sockaddr *sa, int * alen)
         return error;
 }
 
-int soaccept(void *sp, void ** nsp, struct sockaddr *sa, int *alen)
+int soaccept(void *sp, void **nsp, void *data, int *alen)
 {
 	struct socket * so = (struct socket *)sp;
 	int len;
 	int error;
 	struct mbuf *nam;
 	
-	if (sa)
+	if (data)
 		memcpy(&len, alen, sizeof(len));
 	if ((so->so_options & SO_ACCEPTCONN) == 0)
 		return EINVAL;
@@ -1504,7 +1503,7 @@ int soaccept(void *sp, void ** nsp, struct sockaddr *sa, int *alen)
 	{
 		struct socket *aso = so->so_q;
 		if (soqremque(aso, 1) == 0) {
-			printf("PANIC: accep!\n");
+			printf("PANIC: soaccept!\n");
 			return ENOMEM;
 		}
 		so = aso;
@@ -1512,13 +1511,15 @@ int soaccept(void *sp, void ** nsp, struct sockaddr *sa, int *alen)
 	nam = m_get(MT_SONAME);
 	so->so_state &= ~SS_NOFDREF;
 	error = (*so->so_proto->pr_userreq)(so, PRU_ACCEPT, NULL, nam, NULL);
-	if (sa) {
+	if (data) {
 		if (len > nam->m_len)
 			len = nam->m_len;
-		if (memcpy(sa, mtod(nam, caddr_t), len) == NULL)
+		if (memcpy(data, mtod(nam, caddr_t), len) == NULL)
 			memcpy(alen, (caddr_t)&len, sizeof(len));
 	}
 	m_freem(nam);
-				
+	
+	/* assign the socket to the cookie passed in! */
+	*nsp = so;			
 	return error;
 }
