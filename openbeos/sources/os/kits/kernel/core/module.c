@@ -81,14 +81,14 @@ typedef enum {
 	module_err_uninit
 } module_state;
 
-typedef struct module_info {
-	struct module_info *next;
+typedef struct loaded_module_info {
+	struct loaded_module_info *next;
 	struct module_image *image;
 	module_header *header;
 	int ref_count;
 	bool keep_loaded;
 	module_state state;
-} module_info;
+} loaded_module_info;
 
 
 typedef struct module_image {
@@ -123,7 +123,7 @@ void *modules_list;
 
 static int module_info_compare( void *a, const void *key )
 {
-	module_info *module = a;
+	loaded_module_info *module = a;
 	const char *name = key;
 	
 	return strcmp( module->header->name, name );
@@ -131,8 +131,7 @@ static int module_info_compare( void *a, const void *key )
 
 static unsigned int module_info_hash( void *a, const void *key, unsigned int range )
 {
-	module_info *module = a;
-//	const char *name = key;
+	loaded_module_info *module = a;
 
 	if( module != NULL )
 		return hash_hash_str( module->header->name ) % range;
@@ -181,16 +180,17 @@ static inline int check_module_header( module_header *header )
 }
 
 
-static inline module_info *register_module( module_image *image, module_header *header )
+static inline loaded_module_info *register_module(module_image *image, 
+                                                  module_header *header )
 {
-	module_info *module;
+	loaded_module_info *module;
 	
 	SHOW_FLOW( 3, "module %s in image %s\n", header->name, image->path );
 	
 	if( check_module_header( header ) != NO_ERROR )
 		return NULL;
 	
-	module = (module_info *)kmalloc( sizeof( module_info ));
+	module = (loaded_module_info *)kmalloc( sizeof( loaded_module_info ));
 	
 	if( module == NULL )
 		return NULL;
@@ -242,7 +242,7 @@ static void put_module_image( module_image *image )
 	}
 }
 
-static inline void unregister_module( module_info *module )
+static inline void unregister_module( loaded_module_info *module )
 {
 	SHOW_FLOW( 3, "%s\n", module->header->name );
 	hash_remove( modules_list, module );
@@ -409,10 +409,10 @@ static module_image *get_module_image( const char *name, size_t name_len, int ba
 	return image;
 }
 
-static module_info *search_module( const char *name )
+static loaded_module_info *search_module( const char *name )
 {
 	int pos;
-	module_info *module;
+	loaded_module_info *module;
 	
 	SHOW_FLOW( 3, "name: %s\n", name );
 	
@@ -464,7 +464,7 @@ static module_info *search_module( const char *name )
 	return NULL;
 }
 
-static inline int init_module( module_info *module )
+static inline int init_module( loaded_module_info *module )
 {
 	int res;
 	
@@ -507,7 +507,7 @@ static inline int init_module( module_info *module )
 	return res;
 }
 
-static inline int uninit_module( module_info *module )
+static inline int uninit_module( loaded_module_info *module )
 {
 	switch( module->state ) {
 	case module_loaded:
@@ -550,7 +550,7 @@ static inline int uninit_module( module_info *module )
 	}
 }
 
-static int put_module_info( module_info *module )
+static int put_module_info( loaded_module_info *module )
 {
 	int res;
 	
@@ -573,7 +573,7 @@ static int put_module_info( module_info *module )
 int module_get( const char *name, int flags, void **interface )
 {
 //	module_image *image;
-	module_info *module;
+	loaded_module_info *module;
 	int res;
 //	int i;
 	
@@ -615,7 +615,7 @@ err:
 int module_put( const char *name )
 {
 //	module_image *image;
-	module_info *module;
+	loaded_module_info *module;
 	int res;
 	
 	SHOW_FLOW( 0, "name=%s\n", name );
@@ -941,9 +941,9 @@ static inline int module_enter_base_path( module_iterator *iter )
 	return res;		
 }
 
-static inline bool iter_check_module_header( module_iterator *iter )
+static inline bool iter_check_module_header(module_iterator *iter )
 {
-	module_info *module;
+	loaded_module_info *module;
 	module_image *tmp_image;
 	const char *name;
 	
@@ -1009,7 +1009,39 @@ static inline bool iter_check_module_header( module_iterator *iter )
 	return true;
 }
 
-int read_next_module_name( modules_cookie cookie, char *buf, size_t *bufsize )
+void *open_module_list(const char *prefix)
+{
+	module_iterator *iter;
+	
+	SHOW_FLOW( 3, "prefix: %s\n", prefix );
+	
+	iter = (module_iterator *)kmalloc( sizeof( module_iterator ));
+	if (!iter)
+		return NULL;
+
+	iter->prefix = (char *)kstrdup( prefix );
+	if( iter == NULL ) {
+		kfree( iter );
+		return NULL;
+	}
+	
+	/*iter->cur_image = module_sys_image;
+	++module_sys_image->ref_count;
+	iter->cur_header = iter->cur_image->headers;*/
+	iter->cur_image = NULL;
+	iter->cur_header = NULL;
+	
+	iter->base_path_id = -1;
+	iter->base_dir = iter->cur_dir = NULL;
+	iter->err = NO_ERROR;
+	iter->prefix_pos = strlen( prefix );
+	
+	iter->prefix_base_path_id = 0;
+	
+	return (void *)iter;
+}
+
+int read_next_module_name(void *cookie, char *buf, size_t *bufsize )
 {
 	module_iterator *iter = (module_iterator *)cookie;
 	int res;
@@ -1052,7 +1084,7 @@ int read_next_module_name( modules_cookie cookie, char *buf, size_t *bufsize )
 }
 
 
-int close_module_list( modules_cookie cookie )
+int close_module_list(void *cookie)
 {
 	module_iterator *iter = (module_iterator *)cookie;
 	
@@ -1081,7 +1113,7 @@ int module_init( kernel_args *ka, module_header **sys_module_headers )
 	recursive_lock_create( &modules_lock );
 	
 	modules_list = hash_init( MODULES_HASH_SIZE, 
-		offsetof( module_info, next ),
+		offsetof( loaded_module_info, next ),
 		module_info_compare, module_info_hash );
 		
 	if( modules_list == NULL )
@@ -1138,3 +1170,17 @@ int module_init( kernel_args *ka, module_header **sys_module_headers )
 	
 	return NO_ERROR;
 }
+
+
+/* BeOS Compatibility... */
+int	get_module(const char *path, module_info **vec)
+{
+	/* OK, so first we search for an existing copy loaded in */
+	
+	dprintf("get_module(%s, %p)\n", path, vec);
+	
+	return 0;
+}
+
+
+
