@@ -148,7 +148,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		void		ToPDFUnicode(const char *string, BString &unicode);
 		uint16		CodePointSize(const char *s);
 		void		DrawChar(uint16 unicode, const char *utf8, int16 size);
-		void		ClipChar(BFont* font, const char* unicode, const char *utf8, int16 size);
+		void		ClipChar(BFont* font, const char* unicode, const char *utf8, int16 size, float width);
 		bool   		EmbedFont(const char* n);
 		status_t	DeclareFonts();
 

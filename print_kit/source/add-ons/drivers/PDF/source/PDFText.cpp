@@ -396,25 +396,49 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 
 // --------------------------------------------------
 void
-PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 size)
+PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 size, float width)
 {
+	BShape glyph;
 	bool hasGlyph[1];
 	font->GetHasGlyphs(utf8, 1, hasGlyph);
 	if (hasGlyph[0]) {
 		BShape *glyphs[1];
-		BShape glyph;
 		glyphs[0] = &glyph;
 		font->GetGlyphShapes(utf8, 1, glyphs);
-		BPoint p(fState->penX, fState->penY);
-		PushInternalState(); SetOrigin(p);
-		{
-			DrawShape iterator(this, false);
-			iterator.Iterate(&glyph);
-		}
-		PopInternalState();
 	} else {
-		LOG((fLog, "glyph for %*.*s not found!", size, size, utf8));
+		LOG((fLog, "glyph for %*.*s not found!\n", size, size, utf8));
+		// create a rectangle instead
+		font_height height;
+		fState->beFont.GetHeight(&height);
+		BRect r(0, 0, width, height.ascent);
+		float w = r.Width() < r.Height() ? r.Width()*0.1 : r.Height()*0.1;
+		BRect o = r; o.InsetBy(w, w);
+		w *= 2.0;
+		BRect i = r; i.InsetBy(w, w);
+
+		o.OffsetBy(0, -height.ascent);
+		i.OffsetBy(0, -height.ascent);
+
+		glyph.MoveTo(BPoint(o.left,  o.top));
+		glyph.LineTo(BPoint(o.right, o.top));
+		glyph.LineTo(BPoint(o.right, o.bottom));
+		glyph.LineTo(BPoint(o.left,  o.bottom));
+		glyph.Close();
+	
+		glyph.MoveTo(BPoint(i.left,  i.top));
+		glyph.LineTo(BPoint(i.left,  i.bottom));
+		glyph.LineTo(BPoint(i.right, i.bottom));
+		glyph.LineTo(BPoint(i.right, i.top));
+		glyph.Close();		
 	}
+
+	BPoint p(fState->penX, fState->penY);
+	PushInternalState(); SetOrigin(p);
+	{
+		DrawShape iterator(this, false);
+		iterator.Iterate(&glyph);
+	}
+	PopInternalState();
 }
 
 
@@ -455,14 +479,15 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 	for (int i = 0; i < unicode.Length(); i += 2) {
 		int s = CodePointSize((char*)c);
 
+		float w = font.StringWidth(c, s);
+
 		if (IsClipping()) {
-			ClipChar(&font, (char*)u, c, s);
+			ClipChar(&font, (char*)u, c, s, w);
 		} else {
 			DrawChar(u[0]*256+u[1], c, s);		
 		}
 		
 		// position of next character
-		float w = font.StringWidth(c, s);
 		if (*(unsigned char*)c <= 0x20) { // should test if c is a white-space!
 			w += escapement_space;
 		} else {
