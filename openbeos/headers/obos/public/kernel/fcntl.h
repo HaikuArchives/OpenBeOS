@@ -293,7 +293,7 @@ struct flock {
 /** @} */
 
 
-#ifndef _KERNEL_
+#ifndef _KERNEL_MODE
   //#include <sys/cdefs.h>
   #include <ktypes.h>
   
