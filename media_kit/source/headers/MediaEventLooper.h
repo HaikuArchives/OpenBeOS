@@ -113,17 +113,17 @@ class BMediaEventLooper :
 		static void			_CleanUpEntry(const media_timed_event *event, void *context);
 		void				_DispatchCleanUp(const media_timed_event *event);
 
-		BTimedEventQueue	_mEventQueue;
-		BTimedEventQueue	_mRealTimeQueue;
-		thread_id			_mControlThread;
-		int32				_mCurrentPriority;
-		int32				_mSetPriority;
-		int32				_mRunState;
-		bigtime_t			_mEventLatency;
-		bigtime_t			_mSchedulingLatency;
-		bigtime_t			_mBufferDuration;
-		bigtime_t			_mOfflineTime;
-		uint32				_mAPIVersion;
+		BTimedEventQueue	fEventQueue;
+		BTimedEventQueue	fRealTimeQueue;
+		thread_id			fControlThread;
+		int32				fCurrentPriority;
+		int32				fSetPriority;
+		volatile int32		fRunState;
+		bigtime_t			fEventLatency;
+		bigtime_t			fSchedulingLatency;
+		bigtime_t			fBufferDuration;
+		bigtime_t			fOfflineTime;
+		uint32				fApiVersion;
 
 	private:
 	/* unimplemented for your protection */
