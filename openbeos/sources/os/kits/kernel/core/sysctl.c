@@ -126,8 +126,6 @@ int sysctl__string(void *oldp, size_t *oldlenp, void *newp, size_t newlen,
 	int len = strlen(str) + 1;
 	int c;
 
-dprintf("sysctl__string(%p, %p, %p, %d)\n", oldp, oldlenp, newp, newlen);
-
 	if (oldp && *oldlenp < len) {
 		if (trunc == 0 || *oldlenp == 0)
 			return ENOMEM;
