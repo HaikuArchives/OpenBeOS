@@ -10,6 +10,7 @@
 #include "debug.h"
 
 enum {
+	MEDIA_SERVER_GET_SHARED_BUFFER_AREA,
 	MEDIA_SERVER_REGISTER_BUFFER,
 	MEDIA_SERVER_UNREGISTER_BUFFER
 };
@@ -174,15 +175,20 @@ BBuffer::BBuffer(const buffer_clone_info & info) :
 	if (info.area == 0 && info.buffer == 0)
 		return;
 
+
+	// ask media_server to get the area_id of the shared buffer list
 	area_id id;
+	BMessage request(MEDIA_SERVER_GET_SHARED_BUFFER_AREA);
+	BMessage reply;
 
-	// first ask media_server to get the area_id of the shared buffer list
+	// XXX call media server here
 
-	id = 0; // XXX call media server
+	id = reply.FindInt32("shared buffer area");
 
 	fBufferList = _shared_buffer_list::Clone(id);
 	if (fBufferList == NULL)
 		return;
+
 
 	BMessage response;
 	BMessage create(MEDIA_SERVER_REGISTER_BUFFER);
