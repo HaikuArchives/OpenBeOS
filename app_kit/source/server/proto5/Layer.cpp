@@ -15,7 +15,6 @@
 #include <OS.h>
 
 #define DEBUG_LAYERS
-UpdateNode *updatenode;
 
 Layer::Layer(BRect rect, const char *layername, ServerWindow *srvwin,
 	int32 viewflags, int32 token)
@@ -695,14 +694,16 @@ void RootLayer::RequestDraw(void)
 printf("Root::RequestDraw: invalid rects: %ld\n",invalid->CountRects());
 #endif
 
+	for(int32 i=0; invalid->CountRects();i++)
+	{
+		if(invalid->RectAt(i).IsValid())
+		{
 #ifdef DEBUG_LAYERS
 printf("Root::RequestDraw:FillRect, color %u,%u,%u,%u\n",bgcolor.red,bgcolor.green,
 	bgcolor.blue,bgcolor.alpha);
 #endif
-	for(int32 i=0; invalid->CountRects();i++)
-	{
-		if(invalid->RectAt(i).IsValid())
 			driver->FillRect(invalid->RectAt(i),bgcolor);
+		}
 		else
 			break;
 	}
@@ -722,6 +723,10 @@ printf("Root::RequestDraw:FillRect, color %u,%u,%u,%u\n",bgcolor.red,bgcolor.gre
 void RootLayer::SetColor(rgb_color col)
 {
 	bgcolor=col;
+#ifdef DEBUG_LAYERS
+printf("Root::SetColor(%u,%u,%u,%u)\n",bgcolor.red,bgcolor.green,
+	bgcolor.blue,bgcolor.alpha);
+#endif
 }
 
 rgb_color RootLayer::GetColor(void) const
