@@ -7,22 +7,25 @@
 # * Location: a more precise location, e.g. a function
 # * Description: a description of the item
 # * Priority: the priority of the item, may be
-#   very low:  of no/little relevance for OBOS R1 (to be future compatible:
-#              the next release)
-#   low:       of relevance for the next release, but not necessary for the
-#              near future
-#   medium:    of relevance for the next release, needed in the near future
-#   high:      of relevance for the next release, needed in the very near
-#              future/now
-#   very high: of relevance for the next release, needed yesterday
+#	deferrable:	of no/little relevance for OBOS R1 (to be future compatible:
+#				the next release)
+#	low:		of relevance for the next release, but not needed in the
+#				near future
+#	medium:		of relevance for the next release, needed in the near future
+#	high:		of relevance for the next release, needed as soon as possible
+#	urgent:		of relevance for the next release, needed yesterday, i.e.
+#				some people depend on it being finished and can't continue
+#				with their tasks otherwise
 #
-# * Requires: a list of prerequisites needed for the item to be worked on
+# * Requires: a list of prerequisites needed for the item to be worked on,
+#			  omitted, when empty
+# * Responsible: a list of people working on the item, omitted, when empty
+#
 
 Module:      BEntry
 Location:    Entry.cpp
 Description: Definition of SYMLINK_MAX belongs to some header file. Remove it.
 Priority:    low
-Requires:    
 
 
 Module:      BEntry
@@ -52,14 +55,12 @@ Module:      BPath
 Location:    Flatten()
 Description: Reimplement for performance reasons. Don't call FlattenedSize().
 Priority:    low
-Requires:    
 
 
 Module:      BVolume
 Location:    operator==()
 Description: Implement.
 Priority:    high
-Requires:    
 
 
 Module:      StatableTest
@@ -73,14 +74,12 @@ Module:      kernel_interface
 Location:    set_stat(const char*, StatMember)
 Description: Implement WSTAT_CRTIME.
 Priority:    medium
-Requires:    
 
 
 Module:      kernel_interface
 Location:    remove_attr()
 Description: Verify return behavior of fs_remove_attr().
 Priority:    medium
-Requires:    
 
 
 Module:      BeOS R5::libroot
@@ -88,7 +87,6 @@ Location:
 Description: Propose a project wide common handling of the
              B_FILE/PATH_NAME_LENGTH (+ 1?) issue.
 Priority:    low
-Requires:    
 
 
 Module:      BSymLink
@@ -170,7 +168,6 @@ Module:      BFile
 Location:    Read/Write[At]()
 Description: Verify behavior of B_OPEN_AT_END.
 Priority:    medium
-Requires:    
 
 
 Module:      FileTest
