@@ -36,6 +36,7 @@ struct socket {
 	uint16 so_options;	/* socket options */
 	int16 so_linger;	/* dreaded linger value */
 	int16 so_state;		/* socket state */
+	caddr_t so_pcb;		/* pointer to the control block */
 
 	struct protosw *so_proto; /* pointer to protocol module */
 
@@ -54,10 +55,6 @@ struct socket {
 	/* our send/recv buffers */
 	struct sockbuf so_snd;
 	struct sockbuf so_rcv;
-
-	caddr_t so_pcb;		/* pointer to the control block */
-
-	/* XXX - finish me! */
 };
 
 /*

@@ -54,13 +54,6 @@ struct sockaddr_in {
 };
 /* the address is therefore at sin_addr.s_addr */
 
-/* Hmm, need to think about this byte ordering. So far I've
- * tried to keep everything in the stack in network order
- * but that won't be possible once we move to userland,
- * so we'll probably need to have a define that tells
- * these headers we're building in/out of the stack code...
- */
- 
 #define __IPADDR(x)     ((uint32) htonl((uint32)(x)))
 
 #define INADDR_ANY              __IPADDR(0x00000000)
