@@ -15,8 +15,9 @@
 #include <arch/cpu.h>
 #include <debug.h>
 #include <khash.h>
-
+#include <memheap.h>
 #include <elf.h>
+/* TODO: add the header once we have min() */
 
 #include <string.h>
 
@@ -131,7 +132,7 @@ static int module_info_compare( void *a, const void *key )
 static unsigned int module_info_hash( void *a, const void *key, unsigned int range )
 {
 	module_info *module = a;
-	const char *name = key;
+//	const char *name = key;
 
 	if( module != NULL )
 		return hash_hash_str( module->header->name ) % range;
@@ -150,7 +151,7 @@ static int module_image_compare( void *a, const void *key )
 static unsigned int module_image_hash( void *a, const void *key, unsigned int range )
 {
 	module_image *image = (module_image *)a;
-	const char *name = key;
+//	const char *name = key;
 
 	if( image != NULL )
 		return hash_hash_str( image->name ) % range;
@@ -256,7 +257,7 @@ static inline module_image *register_module_image_int( const char *image_name, c
 	int base_path_id, module_header **headers, bool keep_loaded )
 {
 	module_image *image;
-	int res;
+//	int res;
 	
 	image = (module_image *)kmalloc( sizeof( module_image ));
 	
@@ -571,10 +572,10 @@ static int put_module_info( module_info *module )
 
 int module_get( const char *name, int flags, void **interface )
 {
-	module_image *image;
+//	module_image *image;
 	module_info *module;
 	int res;
-	int i;
+//	int i;
 	
 	SHOW_FLOW( 0, "name=%s, flags=%i\n", name, flags );
 	
@@ -613,7 +614,7 @@ err:
 
 int module_put( const char *name )
 {
-	module_image *image;
+//	module_image *image;
 	module_info *module;
 	int res;
 	
@@ -689,7 +690,7 @@ modules_cookie module_open_list( const char *prefix )
 static inline int module_enter_image( module_iterator *iter, const char *image_name )
 {
 	module_image *image;
-	module_info *module;
+//	module_info *module;
 	
 	SHOW_FLOW( 3, "%s\n", image_name );
 	
@@ -912,7 +913,7 @@ static inline int module_enter_master_image( module_iterator *iter )
 static inline int module_enter_base_path( module_iterator *iter )
 {
 	char path[SYS_MAX_PATH_LEN];
-	struct file_stat stat;
+//	struct file_stat stat;
 	int res;
 	
 	++iter->base_path_id;
@@ -1104,9 +1105,9 @@ int module_init( kernel_args *ka, module_header **sys_module_headers )
 	#if 1
 	{
 		isa_bus_manager *isa_interface;
-		int res;
+//		int res;
 		int i;
-		void *iterator;
+//		void *iterator;
 		char module_name[SYS_MAX_PATH_LEN];
 		size_t name_len;
 		const char prefix[] = "bus_managers";
