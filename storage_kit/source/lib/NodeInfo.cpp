@@ -15,134 +15,146 @@
 
 BNodeInfo::BNodeInfo(BNode *node)
 {
-  fCStatus = SetTo(node);
+	fCStatus = SetTo(node);
 }
 
 BNodeInfo::~BNodeInfo()
 {
-  fCStatus = B_NO_INIT;
+	fCStatus = B_NO_INIT;
 }
 
 status_t
 BNodeInfo::SetTo(BNode *node)
 {
-  fCStatus = B_BAD_VALUE;
-  if(node != NULL) {
-	fCStatus = node->InitCheck();
-	fNode = node;
-  }
-  return fCStatus;
+	fCStatus = B_BAD_VALUE;
+	if(node != NULL) {
+		fCStatus = node->InitCheck();
+		fNode = node;
+	}
+	return fCStatus;
 }
+
 status_t 
 BNodeInfo::InitCheck() const
 {
-  return fCStatus;
+	return fCStatus;
 }
 
 status_t 
 BNodeInfo::GetType(char *type) const
 {
-  if(fCStatus == B_OK) {
-	attr_info attrInfo;
-	int error;
+	if(fCStatus == B_OK) {
+		attr_info attrInfo;
+		int error;
 
-	error = fNode->GetAttrInfo(NI_TYPE, &attrInfo);
-	if(error == B_OK) {
-	  error = fNode->ReadAttr(NI_TYPE, attrInfo.type, 0, type, attrInfo.size);
-	}
-
-	return (error > B_OK ? B_OK : error);
-  } else
-	return B_NO_INIT;
-}
-
-status_t SetType(const char *type)
-{
-  return B_ERROR;
-}
-
-
-status_t GetIcon(BBitmap *icon, icon_size k = B_LARGE_ICON) const
-{
-  if(fCStatus == B_OK) {
-	attr_info attrInfo;
-	int error;
-
-	error = fNode->GetAttrInfo(NI_ICON_SIZE(k), &attrInfo);
-	if(error == B_OK) {
-
-	  error = fNode->ReadAttr(NI_ICON_SIZE(k), attrInfo.type, 0, icon, 
-								attrInfo.size);
-	  if(error < B_OK) {
-		// The file does not have an icon.
+		error = fNode->GetAttrInfo(NI_TYPE, &attrInfo);
+		if(error == B_OK) {
+			error = fNode->ReadAttr(NI_TYPE, attrInfo.type, 0, type, attrInfo.size);
+		}
 		
-	  }
-	}
-
-	return (error > B_OK ? B_OK : error);
-  } else
-	return B_NO_INIT;
+		return (error > B_OK ? B_OK : error);
+	} else
+		return B_NO_INIT;
 }
 
-status_t SetIcon(const BBitmap *icon, icon_size k = B_LARGE_ICON)
+status_t
+BNodeInfo::SetType(const char *type)
 {
-  return B_ERROR;
+	return B_ERROR;
 }
 
-status_t GetPreferredApp(char *signature,
+
+status_t
+BNodeInfo::GetIcon(BBitmap *icon, icon_size k = B_LARGE_ICON) const
+{
+	if(fCStatus == B_OK) {
+		attr_info attrInfo;
+		int error;
+		
+		error = fNode->GetAttrInfo(NI_ICON_SIZE(k), &attrInfo);
+		if(error == B_OK) {
+
+			error = fNode->ReadAttr(NI_ICON_SIZE(k), attrInfo.type, 0, icon, 
+								attrInfo.size);
+			if(error < B_OK) {
+				// The file does not have an icon.
+			}
+		}
+
+		return (error > B_OK ? B_OK : error);
+	} else
+		return B_NO_INIT;
+}
+
+status_t 
+BNodeInfo::SetIcon(const BBitmap *icon, icon_size k = B_LARGE_ICON)
+{
+	return B_ERROR;
+}
+
+status_t 
+BNodeInfo::GetPreferredApp(char *signature,
 						   app_verb verb = B_OPEN) const
 {
-  return B_ERROR;
+	return B_ERROR;
 }
 
-status_t SetPreferredApp(const char *signature,
+status_t 
+BNodeInfo::SetPreferredApp(const char *signature,
 						   app_verb verb = B_OPEN)
 {
-  return B_ERROR;
+	return B_ERROR;
 }
 
-status_t GetAppHint(entry_ref *ref) const
+status_t 
+BNodeInfo::GetAppHint(entry_ref *ref) const
 {
-  return B_ERROR;
+	return B_ERROR;
 }
 
-status_t SetAppHint(const entry_ref *ref)
+status_t 
+BNodeInfo::SetAppHint(const entry_ref *ref)
 {
-  return B_ERROR;
+	return B_ERROR;
 }
 
-status_t GetTrackerIcon(BBitmap *icon,
+status_t 
+BNodeInfo::GetTrackerIcon(BBitmap *icon,
 						icon_size k = B_LARGE_ICON) const
 {
-  return B_ERROR;
+	return B_ERROR;
 }
 
 
-static status_t GetTrackerIcon(const entry_ref *ref,
-							   BBitmap *icon,
-							   icon_size k = B_LARGE_ICON)
+status_t 
+BNodeInfo::GetTrackerIcon(const entry_ref *ref,
+							BBitmap *icon,
+							icon_size k = B_LARGE_ICON)
 {
-  return B_ERROR;
+	return B_ERROR;
 }
 
-void _ReservedNodeInfo1()
-{
-}
-
-void _ReservedNodeInfo2()
+void 
+BNodeInfo::_ReservedNodeInfo1()
 {
 }
 
-void _ReservedNodeInfo3()
+void 
+BNodeInfo::_ReservedNodeInfo2()
+{
+}
+
+void 
+BNodeInfo::_ReservedNodeInfo3()
 {
 }
 
 BNodeInfo &
 BNodeInfo::operator=(const BNodeInfo &nodeInfo)
 {
-  return *this;
+	return *this;
 }
 
-BNodeInfo(const BNodeInfo &)
+BNodeInfo::BNodeInfo(const BNodeInfo &)
 {
 }
