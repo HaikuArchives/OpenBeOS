@@ -32,8 +32,19 @@ static const char *mimeDatabaseDir		= "/boot/home/config/settings/beos_mime";
 
 // MIME Types
 // testType and testTypeApp are Delete()d after each test.
-static const char *testType				= "text/Storage-Kit-Test";
+static const char *testType				= "text/x-vnd.obos-Storage-Kit-Test";
+static const char *testType1			= "text/x-vnd.obos-Storage-Kit-Test1";
+static const char *testType2			= "text/x-vnd.obos-Storage-Kit-Test2";
+static const char *testType3			= "text/x-vnd.obos-Storage-Kit-Test3";
+static const char *testType4			= "text/x-vnd.obos-Storage-Kit-Test4";
+static const char *testType5			= "text/x-vnd.obos-Storage-Kit-Test5";
 static const char *testTypeApp			= "application/StorageKit-Test";
+static const char *testTypeApp1			=  "application/"
+										   "x-vnd.obos.mime.test.test1";
+static const char *testTypeApp2			=  "application/"
+										   "x-vnd.obos.mime.test.test2";
+static const char *testTypeApp3			=  "application/"
+										   "x-vnd.obos.mime.test.test3";
 static const char *testTypeInvalid		= "text/Are spaces valid?";
 
 // Application Paths
@@ -118,8 +129,8 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::GetDeviceIconTest) );
 	suite->addTest( new TC("BMimeType::Sniffer Rule Test",
 						   &MimeTypeTest::SnifferRuleTest) );
-//	suite->addTest( new TC("BMimeType::Sniffing Test",
-//						   &MimeTypeTest::SniffingTest) );
+	suite->addTest( new TC("BMimeType::Sniffing Test",
+						   &MimeTypeTest::SniffingTest) );
 
 	return suite;
 }		
@@ -379,11 +390,15 @@ MimeTypeTest::tearDown()
 		delete fApplication;
 		fApplication = NULL;
 	}
-	// remove the types we added
-	BMimeType type(testType);
-	type.Delete();
-	type.SetTo(testTypeApp);
-	type.Delete();
+	// remove the types we've added
+	const char * const testTypes[] = {
+		testType, testType1, testType2, testType3, testType4, testType5,
+		testTypeApp, testTypeApp1, testTypeApp2, testTypeApp3,
+	};
+	for (int32 i = 0; i < sizeof(testTypes) / sizeof(const char*); i++) {
+		BMimeType type(testTypes[i]);
+		type.Delete();
+	}
 	BasicTest::tearDown();
 }
 
@@ -2028,6 +2043,8 @@ public:
 		if (data) {
 			if (size == -1)
 				this->size = strlen((const char*)data) + 1;
+			else
+				this->size = size;
 			this->data = new char[this->size];
 			memcpy(this->data, data, this->size);
 		}
@@ -2072,7 +2089,7 @@ MimeTypeTest::UpdateMimeInfoTest()
 
 	// Note:
 	// * Only synchronous calls are tested.
-	// * Updating all files is not test as it takes too long.
+	// * Updating all files is not tested as it takes too long.
 
 	// individual files
 	nextSubTest();
@@ -2097,7 +2114,9 @@ MimeTypeTest::UpdateMimeInfoTest()
 		CHK(node.ReadAttrString("BEOS:TYPE", &type) == B_OK);
 		node.Unset();
 		CHK(type == file.type.c_str());
+		CHK(file.Delete() == B_OK);
 		// recursion
+		CHK(file.Create() == B_OK);
 		CHK(update_mime_info(file.name.c_str(), true, true, false) == B_OK);
 		CHK(node.SetTo(file.name.c_str()) == B_OK);
 		type = "";
@@ -2106,6 +2125,38 @@ MimeTypeTest::UpdateMimeInfoTest()
 		CHK(type == file.type.c_str());
 		CHK(file.Delete() == B_OK);
 	}
+
+// TODO: The BeBook says: "if force is true, files are updated even if they've
+// been updated already."
+// As I understand this, calling update_mime_info() with force == true on a
+// file, should set the BEOS:TYPE attribute regardless of whether it already
+// had a value. The following test shows, that BEOS:TYPE remains unchanged
+// though.
+#if 0
+	for (int32 i = 0; i < fileCount; i++) {
+		MimeInfoTestFile &file = files[i];
+printf("file: %s\n", file.name.c_str());
+		CHK(file.Create() == B_OK);
+		// add a type attribute
+		BNode node(file.name.c_str());
+		CHK(node.InitCheck() == B_OK);
+		BString type("text/plain");
+		CHK(node.WriteAttrString("BEOS:TYPE", &type) == B_OK);
+		// update, force == false
+		CHK(update_mime_info(file.name.c_str(), false, true, false) == B_OK);
+		type = "";
+		CHK(RES(node.ReadAttrString("BEOS:TYPE", &type)) == B_OK);
+		CHK(type == "text/plain");
+		// update, force == true
+		CHK(update_mime_info(file.name.c_str(), false, true, true) == B_OK);
+		type = "";
+		CHK(RES(node.ReadAttrString("BEOS:TYPE", &type)) == B_OK);
+		node.Unset();
+//		CHK(type == file.type.c_str());
+printf("%s <-> %s\n", type.String(), file.type.c_str());
+		CHK(file.Delete() == B_OK);
+	}
+#endif	// 0
 
 	// directory
 	nextSubTest();
@@ -2124,6 +2175,12 @@ MimeTypeTest::UpdateMimeInfoTest()
 		BString type;
 		CHK(node.ReadAttrString("BEOS:TYPE", &type) == B_ENTRY_NOT_FOUND);
 	}
+	// delete, re-create
+	for (int32 i = 0; i < fileCount; i++) {
+		MimeInfoTestFile &file = files[i];
+		CHK(file.Delete() == B_OK);
+		CHK(file.Create() == B_OK);
+	}
 	// update, recursive
 	CHK(update_mime_info(testDir, true, true, false) == B_OK);
 	for (int32 i = 0; i < fileCount; i++) {
@@ -2134,6 +2191,10 @@ MimeTypeTest::UpdateMimeInfoTest()
 		CHK(node.ReadAttrString("BEOS:TYPE", &type) == B_OK);
 		node.Unset();
 		CHK(type == file.type.c_str());
+	}
+	// delete
+	for (int32 i = 0; i < fileCount; i++) {
+		MimeInfoTestFile &file = files[i];
 		CHK(file.Delete() == B_OK);
 	}
 
@@ -2145,53 +2206,92 @@ MimeTypeTest::UpdateMimeInfoTest()
 	CHK(update_mime_info(files[0].name.c_str(), false, true, false) == B_OK);
 }
 
+// WriteStringAttr
+static
+status_t
+WriteStringAttr(BNode &node, string name, string _value)
+{
+	// Wrapper for BNode::WriteAttrString() taking string rather than
+	// const char*/BString* parameters.
+	BString value(_value.c_str());
+	return node.WriteAttrString(name.c_str(), &value);
+}
+
+const uint32 MINI_ICON_TYPE = 'MICN';
+
 // helper class for create_app_meta_mime() tests
 class AppMimeTestFile {
 public:
-	AppMimeTestFile(string name, string type, string signature)
+	AppMimeTestFile(string name, string type, string signature,
+					const void *icon = NULL)
 		: name(name),
 		  type(type),
-		  signature(signature)
+		  signature(signature),
+		  miniIcon(NULL)
 	{
+		SetMiniIcon(icon);
+	}
+
+	~AppMimeTestFile()
+	{
+		SetMiniIcon(NULL);
+	}
+
+	void SetMiniIcon(const void *icon)
+	{
+		if (miniIcon) {
+			delete[] miniIcon;
+			miniIcon = NULL;
+		}
+		if (icon) {
+			miniIcon = new char[256];
+			memcpy(miniIcon, icon, 256);
+		}
 	}
 
 	status_t Create(bool setAttributes, bool setResources)
 	{
 		BFile file(name.c_str(), B_READ_WRITE | B_CREATE_FILE | B_ERASE_FILE);
 		status_t error = file.InitCheck();
+		// attributes
 		if (error == B_OK && setAttributes) {
-			if (type.length() > 0) {
-				ssize_t written;
-				written = file.WriteAttr("BEOS:TYPE", B_STRING_TYPE, 0,
-										 type.c_str(), type.length() + 1);
+			// type
+			if (type.length() > 0)
+				error = WriteStringAttr(file, "BEOS:TYPE", type);
+			// signature
+			if (error == B_OK)
+				error = WriteStringAttr(file, "BEOS:APP_SIG", signature);
+			// mini icon
+			if (error == B_OK && miniIcon) {
+				ssize_t written = file.WriteAttr("BEOS:M:STD_ICON",
+												 MINI_ICON_TYPE, 0, miniIcon,
+												 256);
 				if (written < 0)
 					error = written;
-				else if (written != type.length() + 1)
-					error = B_ERROR;
-			}
-			if (error == B_OK) {
-				ssize_t written;
-				written = file.WriteAttr("BEOS:APP_SIG", B_STRING_TYPE, 0,
-										 signature.c_str(),
-										 signature.length() + 1);
-				if (written < 0)
-					error = written;
-				else if (written != signature.length() + 1)
+				else if (written != 256)
 					error = B_ERROR;
 			}
 		}
+		// resources
 		if (error == B_OK && setResources) {
 			BResources resources;
 			error = resources.SetTo(&file, true);
+			// type
 			if (error == B_OK && type.length() > 0) {
 				error = resources.AddResource(B_STRING_TYPE, 2, type.c_str(),
 											  type.length() + 1, "BEOS:TYPE");
 			}
+			// signature
 			if (error == B_OK) {
 				error = resources.AddResource(B_STRING_TYPE, 1,
 											  signature.c_str(),
 											  signature.length() + 1,
 											  "BEOS:APP_SIG");
+			}
+			// mini icon
+			if (error == B_OK && miniIcon) {
+				error = resources.AddResource(MINI_ICON_TYPE, 101, miniIcon,
+											  256, "BEOS:M:STD_ICON");
 			}
 		}
 		return error;
@@ -2213,7 +2313,41 @@ public:
 	string	name;
 	string	type;
 	string	signature;
+	char	*miniIcon;
 };
+
+// CheckAppMetaMime
+static
+void
+CheckAppMetaMime(AppMimeTestFile &file)
+{
+	BMimeType type;
+	CHK(type.SetTo(file.signature.c_str()) == B_OK);
+	CHK(type.IsInstalled() == true);
+	// short description
+	char shortDescription[B_MIME_TYPE_LENGTH + 1];
+	CHK(type.GetShortDescription(shortDescription) == B_OK);
+	BPath path(file.name.c_str(), NULL, true);
+	CHK(string(path.Leaf()) == shortDescription);
+	// preferred app
+	char preferredApp[B_MIME_TYPE_LENGTH + 1];
+	CHK(type.GetPreferredApp(preferredApp) == B_OK);
+	CHK(file.signature == preferredApp);
+	// META:PPATH
+	BNode typeFile;
+	string typeFilename(string(mimeDatabaseDir) + "/" + file.signature);
+	CHK(typeFile.SetTo(typeFilename.c_str()) == B_OK);
+	char filePath[B_PATH_NAME_LENGTH + 1];
+	CHK(typeFile.ReadAttr("META:PPATH", B_STRING_TYPE, 0, filePath,
+						  B_PATH_NAME_LENGTH + 1) > 0);
+	CHK(path == filePath);
+	// mini icon
+	if (file.miniIcon) {
+		BBitmap icon(BRect(0, 0, 15, 15), B_CMAP8);
+		CHK(type.GetIcon(&icon, B_MINI_ICON) == B_OK);
+		CHK(memcmp(icon.Bits(), file.miniIcon, 256) == 0);
+	}
+}
 
 // CreateAppMetaMimeTest
 void
@@ -2224,7 +2358,8 @@ MimeTypeTest::CreateAppMetaMimeTest()
 
 	// Note:
 	// * Only synchronous calls are tested.
-	// * Updating all apps is not test as it takes too long.
+	// * The recursive flag isn't tested -- the BeBook sais, it is unused.
+	// * Updating all apps is not tested as it takes too long.
 
 	// attributes and resources
 	nextSubTest();
@@ -2247,28 +2382,9 @@ MimeTypeTest::CreateAppMetaMimeTest()
 		CHK(file.Create(true, true) == B_OK);
 		CHK(create_app_meta_mime(file.name.c_str(), false, true, false)
 			== B_OK);
-		BMimeType type;
-		CHK(type.SetTo(file.signature.c_str()) == B_OK);
-		CHK(type.IsInstalled() == true);
-		// short description
-		char shortDescription[B_MIME_TYPE_LENGTH + 1];
-		CHK(type.GetShortDescription(shortDescription) == B_OK);
-		BPath path(file.name.c_str(), NULL, true);
-		CHK(string(path.Leaf()) == shortDescription);
-		// preferred app
-		char preferredApp[B_MIME_TYPE_LENGTH + 1];
-		CHK(type.GetPreferredApp(preferredApp) == B_OK);
-		CHK(file.signature == preferredApp);
-		// META:PPATH
-		BNode typeFile;
-		string typeFilename(string(mimeDatabaseDir) + "/" + file.signature);
-		CHK(typeFile.SetTo(typeFilename.c_str()) == B_OK);
-		char filePath[B_PATH_NAME_LENGTH + 1];
-		CHK(typeFile.ReadAttr("META:PPATH", B_STRING_TYPE, 0, filePath,
-							  B_PATH_NAME_LENGTH + 1) > 0);
-		CHK(path == filePath);
+		// check the MIME type
+		CheckAppMetaMime(file);
 		// clean up
-		typeFile.Unset();
 		CHK(file.Delete(true) == B_OK);
 	}
 
@@ -2280,28 +2396,9 @@ MimeTypeTest::CreateAppMetaMimeTest()
 		CHK(file.Create(true, false) == B_OK);
 		CHK(create_app_meta_mime(file.name.c_str(), false, true, false)
 			== B_OK);
-		BMimeType type;
-		CHK(type.SetTo(file.signature.c_str()) == B_OK);
-		CHK(type.IsInstalled() == true);
-		// short description
-		char shortDescription[B_MIME_TYPE_LENGTH + 1];
-		CHK(type.GetShortDescription(shortDescription) == B_OK);
-		BPath path(file.name.c_str(), NULL, true);
-		CHK(string(path.Leaf()) == shortDescription);
-		// preferred app
-		char preferredApp[B_MIME_TYPE_LENGTH + 1];
-		CHK(type.GetPreferredApp(preferredApp) == B_OK);
-		CHK(file.signature == preferredApp);
-		// META:PPATH
-		BNode typeFile;
-		string typeFilename(string(mimeDatabaseDir) + "/" + file.signature);
-		CHK(typeFile.SetTo(typeFilename.c_str()) == B_OK);
-		char filePath[B_PATH_NAME_LENGTH + 1];
-		CHK(typeFile.ReadAttr("META:PPATH", B_STRING_TYPE, 0, filePath,
-							  B_PATH_NAME_LENGTH + 1) > 0);
-		CHK(path == filePath);
+		// check the MIME type
+		CheckAppMetaMime(file);
 		// clean up
-		typeFile.Unset();
 		CHK(file.Delete(true) == B_OK);
 	}
 
@@ -2319,6 +2416,86 @@ MimeTypeTest::CreateAppMetaMimeTest()
 		// clean up
 		CHK(file.Delete(false) == B_OK);
 	}
+
+	// test the force flag
+// TODO: The BeBook says: "If force is true, entries are created even if they
+// already exist."
+// As I understand this, re-calling create_app_meta_mime() with force == true,
+// after modifying the original file (e.g. the mini icon attribute) or
+// calling it on another file with the same signature, should update the
+// database entry. But the following tests show, that this doesn't happen.
+// They fail in the third CheckAppMetaMime().
+#if 0
+	// same file, same signature, other parameters
+	{
+		char icon1[256];
+		char icon2[256];
+		memset(icon1, 1, 256);
+		memset(icon2, 2, 256);
+		AppMimeTestFile file1(string(testDir) + "/file1",
+						"application/x-vnd.Be-elfexecutable",
+						"application/x-vnd.obos.mime.test.test1",
+						icon1);
+		AppMimeTestFile file2(string(testDir) + "/file1",
+						"application/x-vnd.Be-elfexecutable",
+						"application/x-vnd.obos.mime.test.test1",
+						icon2);
+		// create file 1, create_app_meta_mime()
+		CHK(file1.Create(true, true) == B_OK);
+		CHK(create_app_meta_mime(file1.name.c_str(), false, true, false)
+			== B_OK);
+		// check the MIME type
+		CheckAppMetaMime(file1);
+		// create file 2, create_app_meta_mime(), no force
+		CHK(file2.Create(true, true) == B_OK);
+		CHK(create_app_meta_mime(file2.name.c_str(), false, true, false)
+			== B_OK);
+		// check the MIME type
+		CheckAppMetaMime(file1);
+		// create_app_meta_mime(), force
+		CHK(create_app_meta_mime(file2.name.c_str(), false, true, true)
+			== B_OK);
+		// check the MIME type
+		CheckAppMetaMime(file2);
+		// clean up
+		CHK(file2.Delete(true) == B_OK);
+	}
+	// different file, same signature, other parameters
+	{
+		char icon1[256];
+		char icon2[256];
+		memset(icon1, 1, 256);
+		memset(icon2, 2, 256);
+		AppMimeTestFile file1(string(testDir) + "/file1",
+						"application/x-vnd.Be-elfexecutable",
+						"application/x-vnd.obos.mime.test.test1",
+						icon1);
+		AppMimeTestFile file2(string(testDir) + "/file2",
+						"application/x-vnd.Be-elfexecutable",
+						"application/x-vnd.obos.mime.test.test1",
+						icon2);
+		// create file 1, create_app_meta_mime()
+		CHK(file1.Create(true, true) == B_OK);
+		CHK(create_app_meta_mime(file1.name.c_str(), false, true, false)
+			== B_OK);
+		// check the MIME type
+		CheckAppMetaMime(file1);
+		// create file 2, create_app_meta_mime(), no force
+		CHK(file2.Create(true, true) == B_OK);
+		CHK(create_app_meta_mime(file2.name.c_str(), false, true, false)
+			== B_OK);
+		// check the MIME type
+		CheckAppMetaMime(file1);
+		// create_app_meta_mime(), force
+		CHK(create_app_meta_mime(file2.name.c_str(), false, true, true)
+			== B_OK);
+		// check the MIME type
+		CheckAppMetaMime(file2);
+		// clean up
+		CHK(file1.Delete(true) == B_OK);
+		CHK(file2.Delete(true) == B_OK);
+	}
+#endif	// 0
 
 	// bad args
 	nextSubTest();
@@ -2397,7 +2574,7 @@ MimeTypeTest::GetDeviceIconTest()
 				// bad args: NULL buffer
 // R5: Wanna see KDL? Here you go...
 #if !SK_TEST_R5
-				CHK(RES(get_device_icon(deviceName, NULL, size)) == B_OK);
+				CHK(get_device_icon(deviceName, NULL, size) == B_BAD_VALUE);
 #endif
 			} else
 				CHK(get_device_icon(deviceName, buffer, size) != B_OK);
@@ -2553,15 +2730,205 @@ printf("error: %s\n", parseError.String());
 	CHK(type.SetSnifferRule("0.0 ('ABC')") == B_BAD_VALUE);
 }
 
+// helper class for GuessMimeType() tests
+class SniffingTestFile {
+public:
+	SniffingTestFile(string name, string extensionType, string contentType,
+					 const void *data = NULL, int32 size = -1)
+		: name(name),
+		  extensionType(extensionType),
+		  contentType(contentType),
+		  data(NULL),
+		  size(0)
+	{
+		// replace wildcard types
+		if (this->extensionType == "")
+			this->extensionType = "application/octet-stream";
+		if (this->contentType == "")
+			this->contentType = "application/octet-stream";
+		// copy data
+		if (data) {
+			if (size == -1)
+				this->size = strlen((const char*)data) + 1;
+			else
+				this->size = size;
+			this->data = new char[this->size];
+			memcpy(this->data, data, this->size);
+		}
+	}
+
+	~SniffingTestFile()
+	{
+		delete[] data;
+	}
+
+	status_t Create()
+	{
+		BFile file(name.c_str(), B_READ_WRITE | B_CREATE_FILE | B_ERASE_FILE);
+		status_t error = file.InitCheck();
+		if (error == B_OK && data) {
+			ssize_t written = file.Write(data, size);
+			if (written < 0)
+				error = written;
+			else if (written != size)
+				error = B_ERROR;
+		}
+		return error;
+	}
+
+	status_t Delete()
+	{
+		return BEntry(name.c_str()).Remove();
+	}
+
+	string	name;
+	string	extensionType;
+	string	contentType;
+	char	*data;
+	int32	size;
+};
+
 // SniffingTest
 void
 MimeTypeTest::SniffingTest()
 {
 	// tests:
-	// * status_t GuessMimeType(const entry_ref *file, BMimeType *result);
-	// * static status_t GuessMimeType(const void *buffer, int32 length,
-	//							  BMimeType *result);
-	// * static status_t GuessMimeType(const char *filename, BMimeType *result);
+	// * GuessMimeType()
+
+	// install some test types with sniffer rules
+	{
+		BMimeType type;
+		CHK(type.SetTo(testType) == B_OK);
+		CHK(type.Install() == B_OK);
+		CHK(type.SetSnifferRule("0.5 [0:1] ('ABCD_EFGH' & 0xffffffff00ffffffff)")
+			== B_OK);
+		CHK(type.SetTo(testType1) == B_OK);
+		CHK(type.Install() == B_OK);
+		CHK(type.SetSnifferRule("0.4 ('ABCD')") == B_OK);
+		CHK(type.SetTo(testType2) == B_OK);
+		CHK(type.Install() == B_OK);
+// This rule is invalid!
+		CHK(type.SetSnifferRule("0.4 [0] ('XYZ') | [0:5] ('CD  E')") == B_OK);
+		CHK(type.SetTo(testType3) == B_OK);
+		CHK(type.Install() == B_OK);
+		CHK(type.SetSnifferRule("0.3 [0:8] ('ABCD' | 'EFGH')") == B_OK);
+		CHK(type.SetTo(testType4) == B_OK);
+		CHK(type.Install() == B_OK);
+		CHK(type.SetSnifferRule("0.2 [0:3] ('ABCD' | 'abcd')") == B_OK);
+		CHK(type.SetTo(testType5) == B_OK);
+		CHK(type.Install() == B_OK);
+		CHK(type.SetSnifferRule("0.2 ('LMNO' & 0xfffeffff)") == B_OK);
+	}
+
+	SniffingTestFile files[] = {
+		SniffingTestFile(string(testDir) + "/file1.cpp",
+						 "text/x-source-code", ""),
+		SniffingTestFile(string(testDir) + "/file2.gif",
+						 "image/gif", ""),
+		SniffingTestFile(string(testDir) + "/file3",
+						 "", "text/html",
+						 "<html>\n<body>\n</body></html>\n"),
+		SniffingTestFile(string(testDir) + "/file4.cpp",
+						 "text/x-source-code", "text/html",
+						 "<html>\n<body>\n</body></html>\n"),
+		SniffingTestFile(string(testDir) + "/file5", "", testType1, "ABCD"),
+		SniffingTestFile(string(testDir) + "/file6", "", testType3, " ABCD"),
+		SniffingTestFile(string(testDir) + "/file7", "", testType4, "abcd"),
+		SniffingTestFile(string(testDir) + "/file8", "", testType3,
+						 " ABCDEFGH"),
+		SniffingTestFile(string(testDir) + "/file9", "", testType,
+						 " ABCD EFGH"),
+//		SniffingTestFile(string(testDir) + "/file10", "", testType2,
+		SniffingTestFile(string(testDir) + "/file10", "", testType3,
+						 " ABCD  EFGH"),
+		SniffingTestFile(string(testDir) + "/file11", "", testType5,
+						 "LMNO"),
+		SniffingTestFile(string(testDir) + "/file12", "", testType5,
+						 "LLNO"),
+		SniffingTestFile(string(testDir) + "/file13", "", "",
+						 "LNNO"),
+	};
+	int fileCount = sizeof(files) / sizeof(SniffingTestFile);
+	for (int32 i = 0; i < fileCount; i++) {
+		nextSubTest();
+		SniffingTestFile &file = files[i];
+		const char *filename = file.name.c_str();
+//printf("file: %s\n", filename);
+		const char *extensionType = file.extensionType.c_str();
+		const char *contentType = file.contentType.c_str();
+		const char *realType = contentType;
+		if (file.contentType == "application/octet-stream")
+			realType = extensionType;
+		// GuessMimeType(const char*,)
+		BMimeType type;
+		CHK(BMimeType::GuessMimeType(filename, &type) == B_OK);
+		CHK(type == extensionType);
+		type.Unset();
+		// GuessMimeType(const void*, int32,)
+		if (file.data != NULL) {
+			CHK(BMimeType::GuessMimeType(file.data, file.size, &type) == B_OK);
+if (!(type == contentType))
+printf("type: %s, should be: %s\n", type.Type(), realType);
+			CHK(type == contentType);
+			type.Unset();
+		}
+		CHK(file.Create() == B_OK);
+		// set BEOS:TYPE to something confusing ;-)
+		BNode node;
+		CHK(node.SetTo(filename) == B_OK);
+		CHK(WriteStringAttr(node, "BEOS:TYPE", "application/x-person") == B_OK);
+		// GuessMimeType(const ref*,)
+		entry_ref ref;
+		CHK(get_ref_for_path(filename, &ref) == B_OK);
+		CHK(BMimeType::GuessMimeType(&ref, &type) == B_OK);
+if (!(type == realType))
+printf("type: %s, should be: %s\n", type.Type(), realType);
+		CHK(type == realType);
+		type.Unset();
+
+		CHK(file.Delete() == B_OK);
+	}
+
+	// GuessMimeType(const ref*,), invalid/abstract entry
+	{
+		nextSubTest();
+		const char *filename = (string(testDir) + "/file100.cpp").c_str();
+		BMimeType type;
+		entry_ref ref;
+		// invalid entry_ref: R5: Is fine!
+		CHK(BMimeType::GuessMimeType(&ref, &type) == B_OK);
+		CHK(type == "application/octet-stream");
+		// abstract entry_ref
+		CHK(get_ref_for_path(filename, &ref) == B_OK);
+		CHK(BMimeType::GuessMimeType(&ref, &type) == B_NAME_NOT_FOUND);
+	}
+
+	// bad args
+	{
+		nextSubTest();
+		SniffingTestFile &file = files[0];
+		CHK(file.Create() == B_OK);
+		const char *filename = file.name.c_str();
+		entry_ref ref;
+		CHK(get_ref_for_path(filename, &ref) == B_OK);
+		BMimeType type;
+		// NULL BMimeType
+		CHK(BMimeType::GuessMimeType(filename, NULL) == B_BAD_VALUE);
+		CHK(BMimeType::GuessMimeType(file.data, file.size, NULL)
+			== B_BAD_VALUE);
+		CHK(BMimeType::GuessMimeType(&ref, NULL) == B_BAD_VALUE);
+		// NULL filename/ref/data
+		CHK(BMimeType::GuessMimeType((const char*)NULL, &type) == B_BAD_VALUE);
+		CHK(BMimeType::GuessMimeType(NULL, 10, &type) == B_BAD_VALUE);
+		CHK(BMimeType::GuessMimeType((const entry_ref*)NULL, &type)
+			== B_BAD_VALUE);
+		// NULL BMimeType and filename/ref/data
+		CHK(BMimeType::GuessMimeType((const char*)NULL, NULL) == B_BAD_VALUE);
+		CHK(BMimeType::GuessMimeType(NULL, 10, NULL) == B_BAD_VALUE);
+		CHK(BMimeType::GuessMimeType((const entry_ref*)NULL, NULL)
+			== B_BAD_VALUE);
+		CHK(file.Delete() == B_OK);
+	}
 }
 
 
@@ -2604,10 +2971,10 @@ MimeTypeTest::SniffingTest()
 +	static status_t CheckSnifferRule(const char *rule, BString *parseError);
 
 	// sniffing
-	status_t GuessMimeType(const entry_ref *file, BMimeType *result);
-	static status_t GuessMimeType(const void *buffer, int32 length,
++	status_t GuessMimeType(const entry_ref *file, BMimeType *result);
++	static status_t GuessMimeType(const void *buffer, int32 length,
 								  BMimeType *result);
-	static status_t GuessMimeType(const char *filename, BMimeType *result);
++	static status_t GuessMimeType(const char *filename, BMimeType *result);
 */
 
 
