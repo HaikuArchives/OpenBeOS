@@ -1,5 +1,16 @@
-#ifndef _THREAD_TYPES_H
-#define _THREAD_TYPES_H
+#ifndef _KERNEL_THREAD_TYPES_H
+#define _KERNEL_THREAD_TYPES_H
+
+/**
+ * @file kernel/thread_types.h
+ * @brief Definitions, structures and functions for threads.
+ */
+
+/**
+ * @defgroup Kernel_Threads Kernel Threads
+ * @ingroup OpenBeOS_Headers
+ * @{
+ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,6 +21,7 @@ extern "C" {
 #include <vm.h>
 #include <smp.h>
 #include <arch/thread_struct.h>
+
 
 #define THREAD_IDLE_PRIORITY 0
 
@@ -53,16 +65,35 @@ enum {
 #define SIG_SUSPEND	1
 #define SIG_KILL 2
 
+/**
+ * The proc structure.
+ * @note This is available only within the kernel.
+ */
 struct proc {
+	/** Pointer to next proc structure */
 	struct proc *next;
-	proc_id id;
-	char name[SYS_MAX_OS_NAME_LEN];
-	int num_threads;
-	int state;
-	int pending_signals;
-	void *ioctx;
-	char path[SYS_MAX_PATH_LEN];
-	aspace_id _aspace_id;
+	/** The proc_id for this process.
+	 * @note This is equivalent to a team_id (???)
+	 */
+	proc_id      id;
+	/** name of the process
+	 * @note The maximum length is current SYS_MAX_OS_NAME_LEN chars.
+	 */
+	char         name[SYS_MAX_OS_NAME_LEN];
+	/** How many threads does this process have? */
+	int          num_threads;
+	/** Current state of the process. */
+	int          state;
+	/** Signals pending for the process? */
+	int          pending_signals;
+	/** Pointer to the I/O context for this process.
+	 * @note see fd.h for definition of ioctx
+	 */
+	void        *ioctx;
+	/** Path ??? */
+	char         path[SYS_MAX_PATH_LEN];
+	/** Our address space pointer */
+	aspace_id    _aspace_id;
 	vm_address_space *aspace;
 	vm_address_space *kaspace;
 	struct thread *main_thread;
@@ -111,21 +142,31 @@ struct thread_queue {
 	struct thread *tail;
 };
 
+/**
+ * Process information structure
+ * @note Seem to be a lot of duplicated fields with main
+ *       proc structure???
+ */
 struct proc_info {
 	proc_id id;
-	char name[SYS_MAX_OS_NAME_LEN];
-	int state;
-	int num_threads;
+	char    name[SYS_MAX_OS_NAME_LEN];
+	int     state;
+	int     num_threads;
 };
 
 #if 1
-// XXX remove later
+/**
+ * Test routine for threads.
+ * @note This function will be removed as is intended for test and
+ *       development purposes only.
+ */
 int thread_test(void);
 #endif
 
 #ifdef __cplusplus
 }
 #endif
+/** @} */
 
-#endif
+#endif /* _KERNEL_THREAD_TYPES_H */
 
