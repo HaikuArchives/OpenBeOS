@@ -143,7 +143,7 @@ public:
 		by <code>len</code>. Returns the number of bytes read. <code>type</code>
 		and <code>offset</code>	are currently ignored. */
 	ssize_t ReadAttr(const char *name, type_code type, off_t offset,
-		void *buffer, size_t len);
+		void *buffer, size_t len) const;
 		
 	
 	/*! Deletes the attribute given by <code>name</code>. */

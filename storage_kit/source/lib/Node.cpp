@@ -16,7 +16,7 @@ BNode::BNode(const entry_ref *ref) {
 BNode::BNode(const BEntry *entry) {
 }
 
-BNode::BNode(const char *path) {
+BNode::BNode(const char *path) : fFd(-1), fAttrFd(-1), fCStatus(B_NO_INIT) {
 }
 
 BNode::BNode(const BDirectory *dir, const char *path) {
@@ -85,7 +85,7 @@ const void *buffer, size_t len) {
 
 ssize_t
 BNode::ReadAttr(const char *attr, type_code type, off_t offset,
-void *buffer, size_t len) {
+void *buffer, size_t len) const {
 	return 0;
 }
 
