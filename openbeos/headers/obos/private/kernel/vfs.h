@@ -52,8 +52,8 @@ struct fs_calls {
 	int (*fs_freecookie)(fs_cookie fs, fs_vnode v, file_cookie cookie);
 	int (*fs_fsync)(fs_cookie fs, fs_vnode v);
 
-	ssize_t (*fs_read)(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, ssize_t len);
-	ssize_t (*fs_write)(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len);
+	ssize_t (*fs_read)(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, size_t *len);
+	ssize_t (*fs_write)(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, size_t *len);
 	int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, seek_type st);
 	int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
 
@@ -102,6 +102,7 @@ int vfs_set_cache_ptr(void *vnode, void *cache);
 #ifdef __cplusplus
 extern "C" {
 #endif 
+
 /* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *device, const char *fs_name, void *args);
 int sys_unmount(const char *path);
@@ -109,8 +110,8 @@ int sys_sync(void);
 int sys_open(const char *path, stream_type st, int omode);
 int sys_close(int fd);
 int sys_fsync(int fd);
-ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len);
-ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len);
+ssize_t sys_read(int fd, void *buf, off_t pos, size_t len);
+ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len);
 int sys_seek(int fd, off_t pos, seek_type seek_type);
 int sys_ioctl(int fd, int op, void *buf, size_t len);
 int sys_create(const char *path, stream_type stream_type);
@@ -130,8 +131,8 @@ int user_sync(void);
 int user_open(const char *path, stream_type st, int omode);
 int user_close(int fd);
 int user_fsync(int fd);
-ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len);
-ssize_t user_write(int fd, const void *buf, off_t pos, ssize_t len);
+ssize_t user_read(int fd, void *buf, off_t pos, size_t len);
+ssize_t user_write(int fd, const void *buf, off_t pos, size_t len);
 int user_seek(int fd, off_t pos, seek_type seek_type);
 int user_ioctl(int fd, int op, void *buf, size_t len);
 int user_create(const char *path, stream_type stream_type);
@@ -143,6 +144,8 @@ int user_getcwd(char *buf, size_t size);
 int user_setcwd(const char* path);
 int user_dup(int fd);
 int user_dup2(int ofd, int nfd);
+
+/* vfs entry points... */
 
 #ifdef __cplusplus
 }

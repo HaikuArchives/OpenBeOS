@@ -30,8 +30,8 @@ struct ioctx {
 
 struct fd_ops {
 	char *fs_name;
-	ssize_t (*fd_read) (struct file_descriptor *, void *, off_t, ssize_t);
-	ssize_t (*fd_write)(struct file_descriptor *, const void *, off_t, ssize_t);
+	ssize_t (*fd_read) (struct file_descriptor *, void *, off_t, size_t *);
+	ssize_t (*fd_write)(struct file_descriptor *, const void *, off_t, size_t *);
 	int     (*fd_ioctl)(struct file_descriptor *, int, void *, size_t);
 //	int     (*fd_poll)(struct file_descriptor *, int);
 //	int     (*fd_stat)(struct file_descriptor *, ...); XXX - complete me :(

@@ -32,8 +32,8 @@ int zfs_close(fs_cookie fs, fs_vnode v, file_cookie cookie);
 int zfs_freecookie(fs_cookie fs, fs_vnode v, file_cookie cookie);
 int zfs_fsync(fs_cookie fs, fs_vnode v);
 
-ssize_t zfs_read(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, ssize_t len);
-ssize_t zfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len);
+ssize_t zfs_read(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, size_t *len);
+ssize_t zfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, size_t *len);
 int zfs_seek(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, seek_type st);
 int zfs_ioctl(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
 
