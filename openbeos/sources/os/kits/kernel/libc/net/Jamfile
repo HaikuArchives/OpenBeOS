@@ -1,0 +1,10 @@
+SubDir OBOS_TOP sources os kits kernel libc net ;
+
+KernelObjects 
+	<$(SOURCE_GRIST)>htonl.c
+	<$(SOURCE_GRIST)>htons.c
+	<$(SOURCE_GRIST)>ntohl.c
+	<$(SOURCE_GRIST)>ntohs.c
+	:
+	-fPIC -DPIC
+ 	;
