@@ -20,7 +20,6 @@ BNodeInfo::BNodeInfo(BNode *node)
 
 BNodeInfo::~BNodeInfo()
 {
-	fCStatus = B_NO_INIT;
 }
 
 status_t
@@ -45,7 +44,7 @@ BNodeInfo::GetType(char *type) const
 {
 	if(fCStatus == B_OK) {
 		attr_info attrInfo;
-		int error;
+		status_t error;
 
 		error = fNode->GetAttrInfo(NI_TYPE, &attrInfo);
 		if(error == B_OK) {
@@ -60,7 +59,12 @@ BNodeInfo::GetType(char *type) const
 status_t
 BNodeInfo::SetType(const char *type)
 {
-	return B_ERROR;
+	if( fCStatus == B_OK ) {
+	  status_t error;
+	  error = fNode->WriteAttr(NI_TYPE, B_STRING_TYPE, 0, type, sizeof(type));
+	  return ( error > B_OK ? B_OK : error );
+	} else 
+	  return B_NO_INIT;
 }
 
 
@@ -76,9 +80,6 @@ BNodeInfo::GetIcon(BBitmap *icon, icon_size k = B_LARGE_ICON) const
 
 			error = fNode->ReadAttr(NI_ICON_SIZE(k), attrInfo.type, 0, icon, 
 								attrInfo.size);
-			if(error < B_OK) {
-				// The file does not have an icon.
-			}
 		}
 
 		return (error > B_OK ? B_OK : error);
@@ -90,6 +91,11 @@ status_t
 BNodeInfo::SetIcon(const BBitmap *icon, icon_size k = B_LARGE_ICON)
 {
 	return B_ERROR;
+	if( fCStatus == B_OK ) {
+	  status_t error = fNode->WriteAttr(NI_ICON_SIZE(k), B_COLOR_8_BIT_TYPE, 
+										0, icon, sizeof(icon));
+	} else
+	  return B_NO_INIT;
 }
 
 status_t 
