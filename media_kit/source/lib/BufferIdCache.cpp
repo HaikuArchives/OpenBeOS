@@ -1,8 +1,9 @@
 /***********************************************************************
- * AUTHOR: Marcus Overhagen
- *   FILE: BufferIdCache.cpp
- *  DESCR: in_use to cache BBuffers to be received by 
- *         BBufferConsumer::BufferReceived()
+ * Copyright (c) 2002 Marcus Overhagen. All Rights Reserved.
+ * This file may be used under the terms of the OpenBeOS License.
+ *
+ * A cache for BBuffers to be received by 
+ * BBufferConsumer::BufferReceived()
  ***********************************************************************/
 
 #include <Buffer.h>

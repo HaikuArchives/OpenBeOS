@@ -1,7 +1,8 @@
 /***********************************************************************
- * AUTHOR: Marcus Overhagen
- *   FILE: SharedBufferList.cpp
- *  DESCR: 
+ * Copyright (c) 2002 Marcus Overhagen. All Rights Reserved.
+ * This file may be used under the terms of the OpenBeOS License.
+ *
+ * Used for BBufferGroup and BBuffer management across teams
  ***********************************************************************/
 #include <Buffer.h>
 #include "SharedBufferList.h"
