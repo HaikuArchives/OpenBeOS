@@ -456,6 +456,16 @@ BVolume::operator=(
 	return (*this);
 }
 
+// FBC
+void BVolume::_TurnUpTheVolume1() {}
+void BVolume::_TurnUpTheVolume2() {}
+void BVolume::_TurnUpTheVolume3() {}
+void BVolume::_TurnUpTheVolume4() {}
+void BVolume::_TurnUpTheVolume5() {}
+void BVolume::_TurnUpTheVolume6() {}
+void BVolume::_TurnUpTheVolume7() {}
+void BVolume::_TurnUpTheVolume8() {}
+
 /*
 #ifdef USE_OPENBEOS_NAMESPACE
 }
