@@ -77,6 +77,33 @@ struct ip_moptions {
 	struct    in_multi *imo_membership[IP_MAX_MEMBERSHIPS];
 };
 
+struct ipasfrag {
+#if B_HOST_IS_BENDIAN
+	uint8  ip_v:4;
+	uint8  ip_hl:4;
+#else
+	uint8  ip_hl:4;
+	uint8  ip_v:4;
+#endif
+	uint8  ipf_mff;
+	int16  ip_len;
+	uint16 ip_id;
+	int16  ip_off;
+	uint8  ip_ttl;
+	uint8  ip_p;
+	struct ipasfrag *ipf_next;
+	struct ipasfrag *ipf_prev;
+};
+
+struct ipq {
+	struct ipq *next, *prev;
+	uint8  ipq_ttl;
+	uint8  ipq_p;
+	uint16 ipq_id;
+	struct ipasfrag *ipq_next, *ipq_prev;
+	struct in_addr ipq_src, ipq_dst;
+};
+
 struct  ipstat {
         int32  ips_total;              /* total packets received */
         int32  ips_badsum;             /* checksum bad */
