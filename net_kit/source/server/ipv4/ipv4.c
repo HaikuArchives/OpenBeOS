@@ -83,6 +83,6 @@ net_module net_module_data = {
 
 	&ipv4_init,
 	&ipv4_dev_init,
-	NULL, 
+	&ipv4_input, 
 	NULL
 };
