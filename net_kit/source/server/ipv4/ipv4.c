@@ -744,6 +744,12 @@ static int ipv4_module_init(void *cpp)
 	return 0;
 }
 
+static int ipv4_module_stop(void)
+{
+	remove_protocol(&my_proto);
+	return 0;
+}
+
 #ifndef _KERNEL_MODE
 void set_core(struct core_module_info *cp)
 {
@@ -759,7 +765,7 @@ _EXPORT struct ipv4_module_info protocol_info = {
 			ipv4_ops
 		},
 		ipv4_module_init, 
-		NULL
+		ipv4_module_stop
 	},
 
 #ifndef _KERNEL_MODE

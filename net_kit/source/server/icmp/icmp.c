@@ -158,6 +158,13 @@ static int icmp_protocol_init(void *cpp)
 		core = (struct core_module_info *)cpp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
+	return 0;
+}
+
+static int icmp_protocol_stop(void)
+{
+	remove_protocol(&my_proto);
+	return 0;
 }
 
 struct kernel_net_module_info protocol_info = {
@@ -167,7 +174,7 @@ struct kernel_net_module_info protocol_info = {
 		icmp_ops
 	},
 	icmp_protocol_init,
-	NULL
+	icmp_protocol_stop
 };
 
 #ifdef _KERNEL_MODE
