@@ -13,3 +13,32 @@ rule AddDebugInfo {
 #	C++FLAGS on $(<) += "-g -O0" ;
 	C++FLAGS += "-g -O0" ;
 }
+
+rule R5Objects
+{
+	for i in $(<)
+	{
+		Object <$(SOURCE_GRIST)>$(i:S=.R5$(SUFOBJ)) : $(i) ;
+	}
+}
+
+rule LibraryFromR5Sources
+{
+	R5Objects $(>) ;
+	LibraryFromObjects $(<) : $(>:S=.R5$(SUFOBJ)) ;
+}
+
+rule POSIXObjects
+{
+	for i in $(<)
+	{
+		Object <$(SOURCE_GRIST)>$(i:S=.POSIX$(SUFOBJ)) : $(i) ;
+	}
+}
+
+rule LibraryFromPOSIXSources
+{
+	POSIXObjects $(>) ;
+	LibraryFromObjects $(<) : $(>:S=.POSIX$(SUFOBJ)) ;
+}
+
