@@ -106,6 +106,9 @@ ssize_t write(FileDescriptor fd, const void *buf, off_t pos, ssize_t len);
 //! Moves a file's read/write pointer.
 off_t seek(FileDescriptor fd, off_t pos, SeekMode mode);
 
+//! Returns the position of a file's read/write pointer.
+off_t get_position(FileDescriptor fd);
+
 /*! Returns a new file descriptor that refers to the same file as
 	that specified, or -1 if unsuccessful. Remember to call close
 	on the file descriptor when through with it. */

@@ -228,6 +228,19 @@ StorageKit::seek(StorageKit::FileDescriptor fd, off_t pos,
 	return result;
 }
 
+/*! \param fd the file descriptor
+	\return the position of the read/write pointer relative to the
+			beginning of the file, or an error code
+*/
+off_t
+StorageKit::get_position(StorageKit::FileDescriptor fd)
+{
+	off_t result = ::lseek(fd, 0, SEEK_CUR);
+	if (result == -1)
+		result = PosixErrnoToBeOSError();
+	return result;
+}
+
 
 
 StorageKit::FileDescriptor
