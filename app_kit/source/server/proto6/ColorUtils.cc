@@ -45,15 +45,21 @@ printf("FindClosestColor( {%u,%u,%u,%u} ) : {%u,%u,%u,%u}\n",
 	return (uint8)cindex;
 }
 
+uint16 FindClosestColor16(rgb_color color)
+{
+	printf("FindClosestColor16 unimplemented\n");
+	return 0;
+}
+
 rgb_color MakeBlendColor(rgb_color col, rgb_color col2, float position)
 {
 	rgb_color newcol={0,0,0,0};
 	float mod=0;
-	int8 delta;
+	int16 delta;
 	if(position<0 || position>1)
 		return newcol;
 
-	delta=int8(col2.red)-int8(col.red);
+	delta=int16(col2.red)-int16(col.red);
 	mod=col.red + (position * delta);
 	newcol.red=uint8(mod);
 	if(mod>255 )
@@ -61,7 +67,7 @@ rgb_color MakeBlendColor(rgb_color col, rgb_color col2, float position)
 	if(mod<0 )
 		newcol.red=0;
 
-	delta=int8(col2.green)-int8(col.green);
+	delta=int16(col2.green)-int16(col.green);
 	mod=col.green + (position * delta);
 	newcol.green=uint8(mod);
 	if(mod>255 )
@@ -69,7 +75,7 @@ rgb_color MakeBlendColor(rgb_color col, rgb_color col2, float position)
 	if(mod<0 )
 		newcol.green=0;
 
-	delta=int8(col2.blue)-int8(col.blue);
+	delta=int16(col2.blue)-int16(col.blue);
 	mod=col.blue + (position * delta);
 	newcol.blue=uint8(mod);
 	if(mod>255 )
