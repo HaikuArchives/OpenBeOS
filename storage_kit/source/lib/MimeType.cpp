@@ -23,34 +23,71 @@ const char *B_FILE_MIME_TYPE		= "application/octet-stream";
 const char *B_APP_MIME_TYPE			= B_ELF_APP_MIME_TYPE;
 
 // constructor
+/*!	\brief Creates an uninitialized BMimeType object.
+*/
 BMimeType::BMimeType()
 {
 }
 
 // constructor
-BMimeType::BMimeType(const char *MIME_type)
+/*!	\brief Creates a BMimeType object and initializes it to the supplied
+	MIME type.
+	The supplied string must specify a valid MIME type or supertype.
+	\see SetTo() for further information.
+	\param mimeType The MIME string.
+*/
+BMimeType::BMimeType(const char *mimeType)
 {
 }
 
 // destructor
+/*!	\brief Frees all resources associated with this object.
+*/
 BMimeType::~BMimeType()
 {
 }
 
 // SetTo
+/*!	\brief Initializes this object to the supplied MIME type.
+	The supplied string must specify a valid MIME type or supertype.
+	Valid MIME types are given by the following grammar:
+	MIMEType	::= Supertype "/" [ Subtype ]
+	Supertype	::= "application" | "audio" | "image" | "message"
+					| "multipart" | "text" | "video"
+	Subtype		::= MIMEChar MIMEChar*
+	MIMEChar	::= any character except white spaces and '/', '<', '>', '@',
+					',', ';', ':', '"', '(', ')', '[', ']', '?', '='
+
+	Currently the supertype is not restricted to one of the seven types given,
+	but can be an arbitrary string (obeying the same rule as the subtype).
+	Nevertheless it is a very bad idea to use another supertype.
+	The supplied MIME string is copied; the caller retains the ownership.
+	\param mimeType The MIME string.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL or invalid \a mimeString.
+	- \c B_NO_MEMORY: Insufficient memory to copy the MIME string.
+*/
 status_t
-BMimeType::SetTo(const char *MIME_type)
+BMimeType::SetTo(const char *mimeType)
 {
 	return NOT_IMPLEMENTED;
 }
 
 // Unset
+/*!	\brief Returns the object to an uninitialized state.
+*/
 void
 BMimeType::Unset()
 {
 }
 
 // InitCheck
+/*!	Returns the result of the most recent constructor or SetTo() call.
+	\return
+	- \c B_OK: The object is properly initialized.
+	- A specific error code otherwise.
+*/
 status_t
 BMimeType::InitCheck() const
 {
@@ -58,6 +95,10 @@ BMimeType::InitCheck() const
 }
 
 // Type
+/*!	\brief Returns the MIME string represented by this object.
+	\return The MIME string, if the object is properly initialized, \c NULL
+			otherwise.
+*/
 const char *
 BMimeType::Type() const
 {
@@ -65,6 +106,11 @@ BMimeType::Type() const
 }
 
 // IsValid
+/*!	\brief Returns whether the object represents a valid MIME type.
+	\see SetTo() for further information.
+	\return \c true, if the object is properly initialized, \c false
+			otherwise.
+*/
 bool
 BMimeType::IsValid() const
 {
@@ -72,6 +118,10 @@ BMimeType::IsValid() const
 }
 
 // IsSupertypeOnly
+/*!	\brief Returns whether this objects represents a supertype.
+	\return \c true, if the object is properly initialized and represents a
+			supertype, \c false otherwise.
+*/
 bool
 BMimeType::IsSupertypeOnly() const
 {
@@ -86,13 +136,28 @@ BMimeType::IsInstalled() const
 }
 
 // GetSupertype
+/*!	\brief Returns the supertype of the MIME type represented by this object.
+	The supplied object is initialized to this object's supertype. If this
+	BMimeType is not properly initialized, the supplied object will be Unset().
+	\param superType A pointer to the BMimeType object that shall be
+		   initialized to this object's supertype.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a superType or this object is not initialized.
+*/
 status_t
-BMimeType::GetSupertype(BMimeType *super_type) const
+BMimeType::GetSupertype(BMimeType *superType) const
 {
 	return NOT_IMPLEMENTED;
 }
 
 // ==
+/*!	\brief Returns whether this and the supplied MIME type are equal.
+	Two BMimeType objects are said to be equal, if they represent the same
+	MIME string, ignoring case, or if both are not initialized.
+	\param type The BMimeType to be compared with.
+	\return \c true, if the objects are equal, \c false otherwise.
+*/
 bool
 BMimeType::operator==(const BMimeType &type) const
 {
@@ -100,6 +165,13 @@ BMimeType::operator==(const BMimeType &type) const
 }
 
 // ==
+/*!	\brief Returns whether this and the supplied MIME type are equal.
+	A BMimeType objects equals a MIME string, if its MIME string equals the
+	latter one, ignoring case, or if it is uninitialized and the MIME string
+	is \c NULL.
+	\param type The MIME string to be compared with.
+	\return \c true, if the MIME types are equal, \c false otherwise.
+*/
 bool
 BMimeType::operator==(const char *type) const
 {
@@ -107,6 +179,12 @@ BMimeType::operator==(const char *type) const
 }
 
 // Contains
+/*!	\brief Returns whether this MIME type is a supertype of or equals the
+	supplied one.
+	\param type The MIME type.
+	\return \c true, if this MIME type is a supertype of or equals the
+			supplied one, \c false otherwise.
+*/
 bool
 BMimeType::Contains(const BMimeType *type) const
 {
@@ -291,6 +369,10 @@ BMimeType::GetWildcardApps(BMessage *wild_ones)
 }
 
 // IsValid
+/*!	\brief Returns whether the given string represents a valid MIME type.
+	\see SetTo() for further information.
+	\return \c true, if the given string represents a valid MIME type.
+*/
 bool
 BMimeType::IsValid(const char *string)
 {
@@ -368,6 +450,14 @@ BMimeType::GuessMimeType(const char *filename, BMimeType *result)
 }
 
 // StartWatching
+/*!	\brief Starts monitoring the MIME database for a given target.
+	Until StopWatching() is called for the target, an update message is sent
+	to it, whenever the MIME database changes.
+	\param target A BMessenger identifying the target for the update messages.
+	\return
+	- \c B_OK: Everything went fine.
+	- An error code otherwise.
+*/
 status_t
 BMimeType::StartWatching(BMessenger target)
 {
@@ -375,6 +465,13 @@ BMimeType::StartWatching(BMessenger target)
 }
 
 // StopWatching
+/*!	\brief Stops monitoring the MIME database for a given target (previously
+	started via StartWatching()).
+	\param target A BMessenger identifying the target for the update messages.
+	\return
+	- \c B_OK: Everything went fine.
+	- An error code otherwise.
+*/
 status_t
 BMimeType::StopWatching(BMessenger target)
 {
@@ -382,8 +479,12 @@ BMimeType::StopWatching(BMessenger target)
 }
 
 // SetType
+/*!	\brief Initializes this object to the supplied MIME type.
+	\deprecated This method has the same semantics as SetTo().
+				Use SetTo() instead.
+*/
 status_t
-BMimeType::SetType(const char *MIME_type)
+BMimeType::SetType(const char *mimeType)
 {
 	return NOT_IMPLEMENTED;
 }
@@ -394,6 +495,8 @@ void BMimeType::_ReservedMimeType2() {}
 void BMimeType::_ReservedMimeType3() {}
 
 // =
+/*!	\brief Unimplemented assignment operator.
+*/
 BMimeType &
 BMimeType::operator=(const BMimeType &)
 {
@@ -401,6 +504,8 @@ BMimeType::operator=(const BMimeType &)
 }
 
 // copy constructor
+/*!	\brief Unimplemented copy constructor.
+*/
 BMimeType::BMimeType(const BMimeType &)
 {
 }

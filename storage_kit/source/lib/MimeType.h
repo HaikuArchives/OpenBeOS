@@ -72,10 +72,10 @@ enum {
 class BMimeType	{
 public:
 	BMimeType();
-	BMimeType(const char *MIME_type);
+	BMimeType(const char *mimeType);
 	virtual ~BMimeType();
 
-	status_t SetTo(const char *MIME_type);
+	status_t SetTo(const char *mimeType);
 	void Unset();
 	status_t InitCheck() const;
 
@@ -84,7 +84,7 @@ public:
 	bool IsValid() const;
 	bool IsSupertypeOnly() const;
 	bool IsInstalled() const;
-	status_t GetSupertype(BMimeType *super_type) const;
+	status_t GetSupertype(BMimeType *superType) const;
 
 	bool operator==(const BMimeType &type) const;
 	bool operator==(const char *type) const;
@@ -114,7 +114,7 @@ public:
 	static status_t GetInstalledTypes(const char *super_type,
 									  BMessage *subtypes);
 	static status_t GetWildcardApps(BMessage *wild_ones);
-	static bool IsValid(const char *string);
+	static bool IsValid(const char *mimeType);
 
 	status_t GetAppHint(entry_ref *ref) const;
 	status_t SetAppHint(const entry_ref *ref);
@@ -141,10 +141,10 @@ public:
 	static status_t StopWatching(BMessenger target);
 
 	/* Deprecated  Use SetTo instead. */
-	status_t SetType(const char *MIME_type);
+	status_t SetType(const char *mimeType);
 
 private:
-	BMimeType(const char *MIME_type, const char *mimePath);
+	BMimeType(const char *mimeType, const char *mimePath);
 		// if mimePath is NULL, defaults to "/boot/home/config/settings/beos_mime/"
 
 	friend class MimeTypeTest;
