@@ -55,10 +55,10 @@ int main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if(argv[argc] == NULL) {
+	if(*argv == NULL) {
 		arg = ".";
 	} else {
-		arg = argv[argc];
+		arg = *argv;
 	}
 	
 	rc = sys_rstat(arg, &stat);
