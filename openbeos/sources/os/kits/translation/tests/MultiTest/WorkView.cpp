@@ -4,11 +4,12 @@
 #include <TranslationUtils.h>
 #include <Bitmap.h>
 #include <stdio.h>
+#include <Path.h>
 #include "MultiTest.h"
 #include "WorkView.h"
 
-const char *kPath1 = "/boot/home/cloudcg.jpg";
-const char *kPath2 = "/boot/home/screen1.tga";
+const char *kPath1 = "../data/images/image.ppm";
+const char *kPath2 = "../data/images/image.gif";
 
 WorkView::WorkView(BRect rect)
 	: BView(rect, "Work View", B_FOLLOW_ALL, B_WILL_DRAW | B_PULSE_NEEDED)
@@ -43,14 +44,16 @@ WorkView::Pulse()
 		else
 			fPath = kPath1;
 	} else {
-		BTranslatorRoster *pRoster = NULL;
-		BBitmap *pBitmap = BTranslationUtils::GetBitmap(fPath, pRoster);
+		//BTranslatorRoster *pRoster = NULL;
+		BBitmap *pBitmap = BTranslationUtils::GetBitmapFile(fPath);
 		if (pBitmap) {
 			ClearViewBitmap();
 			SetViewBitmap(pBitmap);
 			delete pBitmap;
-		} else
-			printf("-- failed to get bitmap!\n");
+		} else {
+			BPath Path(fPath);
+			printf("-- failed to get bitmap (%s)!\n", Path.Path());
+		}
 		fbImage = true;
 	}
 	
