@@ -36,10 +36,10 @@ struct connect_args {
 struct select_args {
 	int rv;
 	int mfd;
-	struct fd_set *rbits;
-	struct fd_set *wbits;
-	struct fd_set *ebits;
-	struct timeval *tv;
+	struct fd_set * rbits;
+	struct fd_set * wbits;
+	struct fd_set * ebits;
+	struct timeval * tv;
 };
 
 struct shutdown_args {
@@ -49,11 +49,11 @@ struct shutdown_args {
 
 struct sysctl_args {
 	int rv;
-	int *name;
+	int * name;
 	uint namelen;
-	void *oldp;
-	size_t *oldlenp;
-	void *newp;
+	void * oldp;
+	size_t * oldlenp;
+	void * newp;
 	size_t newlen;
 };
 
@@ -62,27 +62,28 @@ struct getopt_args {
 	int level;
 	int optnum;
 	caddr_t val;
-	size_t *valsize;
+	size_t * valsize;
 };
 
 struct setopt_args {
 	int rv;
 	int level;
 	int optnum;
-	const void *val;
+	const void * val;
 	size_t valsize;
 };
 
 struct getname_args {
 	int rv;
-	struct sockaddr *name;
-	uint32 *namelen;
+	struct sockaddr * name;
+	int * namelen;
 };
 
 struct accept_args {
 	int rv;
-	struct sockaddr *name;
-	uint32 *namelen;
+	void * cookie;
+	struct sockaddr * name;
+	int namelen;
 };
 
 /* To simplify the addition of ones it's an enum! */
@@ -100,7 +101,8 @@ enum {
 	NET_SOCKET_GETSOCKOPT,
 	NET_SOCKET_SETSOCKOPT,
 	NET_SOCKET_GETSOCKNAME,
-	NET_SOCKET_GETPEERNAME
+	NET_SOCKET_GETPEERNAME,
+	NET_SOCKET_GET_COOKIE
 };
 
 
