@@ -11,7 +11,8 @@
 
 	#define CALLED() \
 		printf("libmedia.so: CALLED %s\n",__PRETTY_FUNCTION__)
-		
+
+	#undef TRACE		
 	#define TRACE \
 		printf
 

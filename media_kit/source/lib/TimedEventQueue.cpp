@@ -1,9 +1,11 @@
 /***********************************************************************
  * AUTHOR: Marcus Overhagen
  *   FILE: TimedEventQueue.cpp
- *  DESCR: 
+ *  DESCR: used by BMediaEventLooper
  ***********************************************************************/
 #include <TimedEventQueue.h>
+#include <string.h>
+#include "TimedEventQueuePrivate.h"
 #include "debug.h"
 
 /*************************************************************
@@ -12,14 +14,18 @@
 
 media_timed_event::media_timed_event()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	memset(this, 0, sizeof(*this));
 }
 
 
 media_timed_event::media_timed_event(bigtime_t inTime,
 									 int32 inType)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	memset(this, 0, sizeof(*this));
+	event_time = inTime;
+	type = inType;
 }
 
 
@@ -28,7 +34,12 @@ media_timed_event::media_timed_event(bigtime_t inTime,
 									 void *inPointer,
 									 uint32 inCleanup)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	memset(this, 0, sizeof(*this));
+	event_time = inTime;
+	type = inType;
+	pointer = inPointer;
+	cleanup = inCleanup;
 }
 
 
@@ -41,26 +52,36 @@ media_timed_event::media_timed_event(bigtime_t inTime,
 									 char *inUserData,
 									 size_t dataSize)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	memset(this, 0, sizeof(*this));
+	event_time = inTime;
+	type = inType;
+	pointer = inPointer;
+	cleanup = inCleanup;
+	data = inData;
+	bigdata = inBigdata;
+	memcpy(user_data,inUserData,min_c(sizeof(media_timed_event::user_data),dataSize));
 }
 
 
 media_timed_event::media_timed_event(const media_timed_event &clone)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	*this = clone;
 }
 
 
 void
 media_timed_event::operator=(const media_timed_event &clone)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	memcpy(this, &clone, sizeof(*this));
 }
 
 
 media_timed_event::~media_timed_event()
 {
-	UNIMPLEMENTED();
+	CALLED();
 }
 
 /*************************************************************
@@ -69,26 +90,26 @@ media_timed_event::~media_timed_event()
 
 bool operator==(const media_timed_event & a, const media_timed_event & b)
 {
-	UNIMPLEMENTED();
-	return true;
+	CALLED();
+	return (0 == memcmp(&a,&b,sizeof(media_timed_event)));
 }
 
 bool operator!=(const media_timed_event & a, const media_timed_event & b)
 {
-	UNIMPLEMENTED();
-	return true;
+	CALLED();
+	return (0 != memcmp(&a,&b,sizeof(media_timed_event)));
 }
 
 bool operator<(const media_timed_event & a, const media_timed_event & b)
 {
-	UNIMPLEMENTED();
-	return true;
+	CALLED();
+	return a.event_time < b.event_time;
 }
 
 bool operator>(const media_timed_event & a, const media_timed_event &b)
 {
-	UNIMPLEMENTED();
-	return true;
+	CALLED();
+	return a.event_time > b.event_time;
 }
 
 
@@ -100,114 +121,102 @@ bool operator>(const media_timed_event & a, const media_timed_event &b)
 void *
 BTimedEventQueue::operator new(size_t s)
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return ::operator new(s);
 }
 
 
 void
-BTimedEventQueue::operator delete(void *p,
-								  size_t s)
+BTimedEventQueue::operator delete(void *p, size_t s)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	return ::operator delete(p);
 }
 
 
-BTimedEventQueue::BTimedEventQueue()
+BTimedEventQueue::BTimedEventQueue() : 
+	fImp(new _event_queue_imp)
 {
-	UNIMPLEMENTED();
+	CALLED();
 }
 
 
 BTimedEventQueue::~BTimedEventQueue()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	delete fImp;
 }
 
 
 status_t
 BTimedEventQueue::AddEvent(const media_timed_event &event)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->AddEvent(event);
 }
 
 
 status_t
 BTimedEventQueue::RemoveEvent(const media_timed_event *event)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->RemoveEvent(event);
 }
 
 
 status_t
 BTimedEventQueue::RemoveFirstEvent(media_timed_event *outEvent)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->RemoveFirstEvent(outEvent);
 }
 
 
 bool
 BTimedEventQueue::HasEvents() const
 {
-	UNIMPLEMENTED();
-	bool dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->HasEvents();
 }
 
 
 int32
 BTimedEventQueue::EventCount() const
 {
-	UNIMPLEMENTED();
-	int32 dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->EventCount();
 }
 
 
 const media_timed_event *
 BTimedEventQueue::FirstEvent() const
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return fImp->FirstEvent();
 }
 
 
 bigtime_t
 BTimedEventQueue::FirstEventTime() const
 {
-	UNIMPLEMENTED();
-	bigtime_t dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->FirstEventTime();
 }
 
 
 const media_timed_event *
 BTimedEventQueue::LastEvent() const
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return fImp->LastEvent();
 }
 
 
 bigtime_t
 BTimedEventQueue::LastEventTime() const
 {
-	UNIMPLEMENTED();
-	bigtime_t dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->LastEventTime();
 }
 
 
@@ -217,8 +226,8 @@ BTimedEventQueue::FindFirstMatch(bigtime_t eventTime,
 								 bool inclusive,
 								 int32 eventType)
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return fImp->FindFirstMatch(eventTime, direction, inclusive, eventType);
 }
 
 
@@ -230,10 +239,8 @@ BTimedEventQueue::DoForEach(for_each_hook hook,
 							bool inclusive,
 							int32 eventType)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->DoForEach(hook, context, eventTime, direction, inclusive, eventType);
 }
 
 
@@ -241,7 +248,8 @@ void
 BTimedEventQueue::SetCleanupHook(cleanup_hook hook,
 								 void *context)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	fImp->SetCleanupHook(hook, context);
 }
 
 
@@ -251,10 +259,8 @@ BTimedEventQueue::FlushEvents(bigtime_t eventTime,
 							  bool inclusive,
 							  int32 eventType)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return fImp->FlushEvents(eventTime, direction, inclusive, eventType);
 }
 
 /*************************************************************
