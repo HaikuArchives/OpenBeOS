@@ -1,4 +1,5 @@
-OBJS=mbuf.o
+OBJS=mbuf.o pools.o
+
 CFLAGS=-O0 -g -Wall
 INCLUDES=-I.
 

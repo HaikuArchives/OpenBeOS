@@ -7,6 +7,10 @@
 #ifndef OBOS_MBUF_H
 #define OBOS_MBUF_H
 
+#include "pools.h"
+
+static struct pool_ctl *mbpool;
+static struct pool_ctl *clpool;
 /* MBuf's are all of a single size, MSIZE bytes. If we have more data
  * than can be fitted we can add a single "MBuf cluster" which is of
  * fixed size MCLBYTES. 
@@ -157,7 +161,8 @@ enum {
 	} while (0)
 	
 /* fill in an mbuf */
-#define _MFILL(n, type) \
+#define MGET(n, type) \
+	n = (struct mbuf*)pool_get(mbpool); \
 	if (n) { \
 		(n)->m_type = (type); \
 		(n)->m_next = (struct mbuf*)NULL; \
@@ -167,6 +172,10 @@ enum {
 		(n)->m_cksum = 0; \
 	}
 
+#define MFREE(m, n) \
+	(n) = (m)->m_next; \
+	pool_put(mbpool, m);
+	
 #define _MFILLHDR(n, type) \
 	if (n) { \
 		(n)->m_type = (type); \
@@ -180,8 +189,8 @@ enum {
 
 /* Functions! */
 void mbinit(void);
-struct mbuf *get_free_mbuf(void);
-void free_mbuf(struct mbuf *b);
+struct mbuf *m_get(int type);
+struct mbuf *m_free(struct mbuf *mfree);
 
 /* debug functions */
 void dump_freelist(void);

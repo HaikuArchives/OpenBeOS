@@ -22,12 +22,12 @@ int main(int argc, char **argv)
 
 	for (j=0;j<64;j++) {
 		for (i=0;i<16;i++) {
-			buf[i] = get_free_mbuf();
+			buf[i] = m_get(MT_DATA);
 			if (!buf[i])
 				break;
 		}
 		for (i=0;i<16;i++) {
-			free_mbuf(buf[i]);
+			m_free(buf[i]);
 		}
 		
 	}
