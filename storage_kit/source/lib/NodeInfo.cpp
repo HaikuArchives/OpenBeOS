@@ -54,35 +54,9 @@ BNodeInfo::GetType(char *type) const
 			error = fNode->ReadAttr(NI_TYPE, attrInfo.type, 0, type, 
 									attrInfo.size);
 		}
-		if(error < B_OK ) {
-		  // No attribute (or a problem with the attr), lets see what the MIME
-		  // database has to say...
-		  BMessage fileTypes();
-		  bool found = false;
-		  uint32 counter = 0;
-		  char *fileType;
-		  BMineType mime;
-		  if( BMimeType.GetInstalledTypes(&fileTypes) == B_OK ) {
-			while(true) {
-			  if (fileTypes.FindString("types", counter++, &fileType) != B_OK)
-				break;
-			  if( mime.SetTo(fileType) == B_OK ){
-				
-				while(true) {
-				  if (msg.FindString("extensions", i++, &ptr) != B_OK)
-					break;
-				  
-				}
-			  }
-			}
-		  }
+		// Future Idea: Add a bit to identify based on extention etc
+		// see CVS verion 1.6 for big chuck of the code.
 
-
-		  if(!found)
-			strcpy(type, "application/octstream");
-		  error = B_OK;
-		}
-		
 		return (error > B_OK ? B_OK : error);
 	} else
 		return B_NO_INIT;
@@ -140,7 +114,7 @@ BNodeInfo::GetPreferredApp(char *signature,
 		error = fNode->GetAttrInfo(NI_PREF, &attrInfo);
 		if(error == B_OK) {
 
-			error = fNode->ReadAttr(NI_ICON_SIZE(k), attrInfo.type, 0, 
+			error = fNode->ReadAttr(NI_PREF, attrInfo.type, 0, 
 									signature, attrInfo.size);
 			if(error < B_OK) {
 			  char *mimetpye = new char[B_MIME_TYPE_LENGTH];
@@ -168,7 +142,7 @@ BNodeInfo::SetPreferredApp(const char *signature,
 
 	if( fCStatus == B_OK ) {
 	  return fNode->WriteAttr(NI_PREF,  B_STRING_TYPE,
-							  0, icon, sizeof(signature));
+							  0, signature, sizeof(signature));
 	} else
 	  return B_NO_INIT;
 }
@@ -176,20 +150,46 @@ BNodeInfo::SetPreferredApp(const char *signature,
 status_t 
 BNodeInfo::GetAppHint(entry_ref *ref) const
 {
-  return B_ERROR;
+	if(fCStatus == B_OK) {
+		attr_info attrInfo;
+		status_t error;
+		
+		error = fNode->GetAttrInfo(NI_HINT, &attrInfo);
+		if(error == B_OK) {
+
+			error = fNode->ReadAttr(NI_HINT, attrInfo.type, 0, 
+									ref, attrInfo.size);
+			if(error < B_OK) {
+			  char *mimetpye = new char[B_MIME_TYPE_LENGTH];
+			  if( GetMineType(mimetype) >= B_OK ) {
+				BMimeType mime(mimetype);
+				error = mime.GetAppHint(ref);
+			  }
+			  
+			  delete minetype;
+			}
+		}
+
+		return (error > B_OK ? B_OK : error);
+	} else
+		return B_NO_INIT;
 }
 
 status_t 
 BNodeInfo::SetAppHint(const entry_ref *ref)
 {
-	return B_ERROR;
+  if( fCStatus == B_OK ) {
+	return fNode->WriteAttr(NI_HINT,  B_REF_TYPE,
+							0, ref, sizeof(ref));
+  } else
+	return B_NO_INIT;
 }
 
 status_t 
 BNodeInfo::GetTrackerIcon(BBitmap *icon,
 						icon_size k = B_LARGE_ICON) const
 {
-	return B_ERROR;
+  return B_ERROR;
 }
 
 
