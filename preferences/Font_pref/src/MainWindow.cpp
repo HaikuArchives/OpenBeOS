@@ -113,7 +113,7 @@ void MainWindow::MessageReceived(BMessage *message){
 			
 		case RESET_FONTS_MSG:
 		
-			printf("reset fonts message\n");
+			fontPanel->resetToDefaults();
 			break;
 			
 		case REVERT_MSG:

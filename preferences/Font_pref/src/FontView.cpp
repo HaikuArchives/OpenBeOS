@@ -43,3 +43,10 @@ void FontView::emptyMenus(){
 
 }//buildMenus
 
+void FontView::resetToDefaults(){
+
+	plainSelectionView->resetToDefaults();
+	boldSelectionView->resetToDefaults();
+	fixedSelectionView->resetToDefaults();
+
+}//resetToDefaults

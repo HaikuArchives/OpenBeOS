@@ -31,6 +31,7 @@
 			FontSelectionView *fixedSelectionView;
 			void buildMenus();
 			void emptyMenus();
+			void resetToDefaults();
 			
 	};
 	

@@ -74,6 +74,7 @@
 			void UpdateFontSelection();
 			void buildMenus();
 			void emptyMenus();
+			void resetToDefaults();
 			
 		private:
 		
@@ -89,6 +90,8 @@
 			BFont defaultFont;
 			BFont workingFont;
 			void emptyMenu(BPopUpMenu *m);
+			void UpdateFontSelection(BFont *fnt);
+			
 	
 	};
 	

@@ -5,6 +5,83 @@
 
 #endif
 
+FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
+	   	   : BView(rect, name, B_FOLLOW_ALL, B_WILL_DRAW)
+{
+	
+	BBox *testTextBox;
+	float x;
+	float y;
+	BRect viewSize = Bounds();
+	BMenuField *fontListField;
+	BMenuField *sizeListField;
+	
+	x = viewSize.Width() / 37;
+	y = viewSize.Height() / 8;
+	
+	minSizeIndex = 9;
+	maxSizeIndex = 12;
+	
+	switch(type){
+	
+		case PLAIN_FONT_SELECTION_VIEW:
+		
+			sprintf(typeLabel, "Plain font");
+			defaultFont = be_plain_font;
+			workingFont = be_plain_font;
+			setSizeChangedMessage = PLAIN_SIZE_CHANGED_MSG;
+			setFontChangedMessage = PLAIN_FONT_CHANGED_MSG;
+			setStyleChangedMessage = PLAIN_STYLE_CHANGED_MSG;
+			
+			break;
+			
+		case BOLD_FONT_SELECTION_VIEW:
+		
+			sprintf(typeLabel, "Bold font");
+			defaultFont = be_bold_font;
+			workingFont = be_bold_font;
+			setSizeChangedMessage = BOLD_SIZE_CHANGED_MSG;
+			setFontChangedMessage = BOLD_FONT_CHANGED_MSG;
+			setStyleChangedMessage = BOLD_STYLE_CHANGED_MSG;
+			
+			break;
+			
+		case FIXED_FONT_SELECTION_VIEW:
+		
+			sprintf(typeLabel, "Fixed font");
+			defaultFont = be_fixed_font;
+			workingFont = be_fixed_font;
+			setSizeChangedMessage = FIXED_SIZE_CHANGED_MSG;
+			setFontChangedMessage = FIXED_FONT_CHANGED_MSG;
+			setStyleChangedMessage = FIXED_STYLE_CHANGED_MSG;
+			
+			break;
+			
+	}//switch
+	
+	sizeList = new BPopUpMenu("sizeList", true, true, B_ITEMS_IN_COLUMN);
+	fontList = new BPopUpMenu("fontList", true, true, B_ITEMS_IN_COLUMN);
+	fontListField = new BMenuField(*(new BRect(x, y, (25 * x), (3 * y))), "fontField", typeLabel, fontList);
+	fontListField->SetDivider(7 * x);
+	sizeListField = new BMenuField(*(new BRect((27 * x), y, (36 * x), (3 * y))), "fontField", "Size", sizeList);
+	sizeListField->SetDivider(31 * x);
+	testText = new BStringView(*(new BRect((8 * x), (5 * y), (35 * x), (8 * y))), "testText", "The quick brown fox jumped over the lazy dog.", B_FOLLOW_ALL, B_WILL_DRAW);
+	testText->SetFont(&workingFont);
+	testTextBox = new BBox(*(new BRect((8 * x), (5 * y), (36 * x), (8 * y))), "TestTextBox", B_FOLLOW_ALL, B_WILL_DRAW, B_FANCY_BORDER);
+	
+	fontList->SetLabelFromMarked(true);
+	
+	buildMenus();
+
+	SetViewColor(216, 216, 216, 0);
+	
+	AddChild(testTextBox);
+	AddChild(testText);
+	AddChild(sizeListField);
+	AddChild(fontListField);
+		
+}
+
 void FontSelectionView::emptyMenu(BPopUpMenu *m){
 
 	int32 cnt;
@@ -124,83 +201,6 @@ void FontSelectionView::buildMenus(){
 	}//for
 	
 }//buildMenus
-
-FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
-	   	   : BView(rect, name, B_FOLLOW_ALL, B_WILL_DRAW)
-{
-	
-	BBox *testTextBox;
-	float x;
-	float y;
-	BRect viewSize = Bounds();
-	BMenuField *fontListField;
-	BMenuField *sizeListField;
-	
-	x = viewSize.Width() / 37;
-	y = viewSize.Height() / 8;
-	
-	minSizeIndex = 9;
-	maxSizeIndex = 12;
-	
-	switch(type){
-	
-		case PLAIN_FONT_SELECTION_VIEW:
-		
-			sprintf(typeLabel, "Plain font");
-			defaultFont = be_plain_font;
-			workingFont = be_plain_font;
-			setSizeChangedMessage = PLAIN_SIZE_CHANGED_MSG;
-			setFontChangedMessage = PLAIN_FONT_CHANGED_MSG;
-			setStyleChangedMessage = PLAIN_STYLE_CHANGED_MSG;
-			
-			break;
-			
-		case BOLD_FONT_SELECTION_VIEW:
-		
-			sprintf(typeLabel, "Bold font");
-			defaultFont = be_bold_font;
-			workingFont = be_bold_font;
-			setSizeChangedMessage = BOLD_SIZE_CHANGED_MSG;
-			setFontChangedMessage = BOLD_FONT_CHANGED_MSG;
-			setStyleChangedMessage = BOLD_STYLE_CHANGED_MSG;
-			
-			break;
-			
-		case FIXED_FONT_SELECTION_VIEW:
-		
-			sprintf(typeLabel, "Fixed font");
-			defaultFont = be_fixed_font;
-			workingFont = be_fixed_font;
-			setSizeChangedMessage = FIXED_SIZE_CHANGED_MSG;
-			setFontChangedMessage = FIXED_FONT_CHANGED_MSG;
-			setStyleChangedMessage = FIXED_STYLE_CHANGED_MSG;
-			
-			break;
-			
-	}//switch
-	
-	sizeList = new BPopUpMenu("sizeList", true, true, B_ITEMS_IN_COLUMN);
-	fontList = new BPopUpMenu("fontList", true, true, B_ITEMS_IN_COLUMN);
-	fontListField = new BMenuField(*(new BRect(x, y, (25 * x), (3 * y))), "fontField", typeLabel, fontList);
-	fontListField->SetDivider(7 * x);
-	sizeListField = new BMenuField(*(new BRect((27 * x), y, (36 * x), (3 * y))), "fontField", "Size", sizeList);
-	sizeListField->SetDivider(31 * x);
-	testText = new BStringView(*(new BRect((8 * x), (5 * y), (35 * x), (8 * y))), "testText", "The quick brown fox jumped over the lazy dog.", B_FOLLOW_ALL, B_WILL_DRAW);
-	testText->SetFont(&workingFont);
-	testTextBox = new BBox(*(new BRect((8 * x), (5 * y), (36 * x), (8 * y))), "TestTextBox", B_FOLLOW_ALL, B_WILL_DRAW, B_FANCY_BORDER);
-	
-	fontList->SetLabelFromMarked(true);
-	
-	buildMenus();
-
-	SetViewColor(216, 216, 216, 0);
-	
-	AddChild(testTextBox);
-	AddChild(testText);
-	AddChild(sizeListField);
-	AddChild(fontListField);
-		
-}
 
 void FontSelectionView::SetTestTextFont(BFont *fnt){
 
@@ -340,3 +340,69 @@ void FontSelectionView::UpdateFontSelection(){
 	}//for
 
 }//UpdateFontSelection
+
+//This methd needs rewriting BADLY - it's horribly written
+void FontSelectionView::UpdateFontSelection(BFont *fnt){
+
+	int i = 0;
+	char style[64];
+	char family[64];
+	
+	fnt->GetFamilyAndStyle(&family, &style);
+	
+	for(i = 0;i < fontList->CountItems();i++){
+	
+		int j = 0;
+		
+		if(strcmp(fontList->ItemAt(i)->Label(), family) == 0){
+		
+			fontList->ItemAt(i)->SetMarked(true);
+		
+		}//if
+		
+		for(j = 0;j < fontList->ItemAt(i)->Submenu()->CountItems();j++){
+		
+			if(fontList->ItemAt(i)->Submenu()->ItemAt(j)->IsMarked()){
+				
+				fontList->ItemAt(i)->Submenu()->ItemAt(j)->SetMarked(false);
+				
+			}//if
+			if(strcmp(fontList->ItemAt(i)->Label(), family) == 0){
+			
+				if(strcmp(fontList->ItemAt(i)->Submenu()->ItemAt(j)->Label(), style) == 0){
+				
+					fontList->ItemAt(i)->Submenu()->ItemAt(j)->SetMarked(true);
+				
+				}//if
+			
+			}//if
+		
+		}//for
+		
+	}//for
+	
+	//Update size menu
+	for(i = 0;i < sizeList->CountItems();i++){
+	
+		char size[1];
+		
+		sprintf(size, "%d", (int)fnt->Size());
+		if(strcmp(sizeList->ItemAt(i)->Label(), size) == 0){
+		
+			sizeList->ItemAt(i)->SetMarked(true);
+		
+		}//if
+	
+	}//for
+	
+}//UpdateFontSelection
+
+void FontSelectionView::resetToDefaults(){
+
+	//Update menus
+	UpdateFontSelection(&defaultFont);
+
+	//Update test text
+	SetTestTextFont(&defaultFont);
+	
+}//resetToDefaults
