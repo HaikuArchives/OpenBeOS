@@ -14,6 +14,10 @@
 #include <image.h>
 #include <stdlib.h>
 
+#ifdef _KERNEL_MODE
+#include <driver_settings.h>
+#endif
+
 #include "if.h"	/* for ifnet definition */
 #include "net_server/net_server.h"
 #include "protocols.h"
@@ -29,10 +33,11 @@ loaded_net_module *global_modules;
 static int nmods = 0;
 int prot_table[255];
 
-struct ifnet *devices;
-struct ifnet *pdevices;		/* pseudo devices - loopback etc */
+struct ifnet *devices = NULL;
+struct ifnet *pdevices = NULL;		/* pseudo devices - loopback etc */
 int ndevs = 0;
 sem_id dev_lock;
+ 
 
 /* This is just a hack.  Don't know what a sensible figure is... */
 #define MAX_DEVICES 16
@@ -220,17 +225,19 @@ static void start_devices(void)
 
 static void merge_devices(void)
 {
-	struct ifnet *d;
+	struct ifnet *d = NULL;
 
-	if (!devices) {
+	if (!devices && !pdevices) {
 		printf("No devices!\n");
-		exit(-1);
+		return;
 	}
 
-acquire_sem(dev_lock);
-	/* Now append the pseudo devices and then start them. */
-	for (d = devices; d->next != NULL; d = d->next) {
-		continue;
+	acquire_sem(dev_lock);
+	if (devices) {
+		/* Now append the pseudo devices and then start them. */
+		for (d = devices; d->next != NULL; d = d->next) {
+			continue;
+		}
 	}
 	if (pdevices) {
 		if (d) {
@@ -285,11 +292,15 @@ static void list_devices(void)
 
 static void init_devices(void) 
 {
-	ifnet *d = devices;
+	ifnet *d = NULL;
 	int i;
 
 	merge_devices();
 
+	if (devices == NULL)
+		return;
+
+	d = devices;
 	while (d) {
 	 	for (i=0;i<nmods;i++) {
 			if (global_modules[i].mod->dev_init) {
@@ -321,18 +332,28 @@ static void find_modules(void)
 	status_t status;
 
 	getcwd(cdir, PATH_MAX);
+#ifndef _KERNEL_MODE
 	sprintf(cdir, "%s/modules", cdir);
+#else
+	/* This is a real hack - adjust for your setup */
+	sprintf(cdir, "/boot/home/openbeos/net_kit/source/server/modules");
+#endif
 	dir = opendir(cdir);
 
 	while ((m = readdir(dir)) != NULL) {
 		/* last 2 entries are only valid for development... */
 		if (strcmp(m->d_name, ".") == 0 || strcmp(m->d_name, "..") == 0
+			|| strcmp(m->d_name, "socket") == 0
 			|| strcmp(m->d_name, ".cvsignore") == 0 
 			|| strcmp(m->d_name, "CVS") == 0)
                         continue;
 		/* ok so we try it... */
 		sprintf(path, "%s/%s", cdir, m->d_name);
+#ifndef _KERNEL_MODE
        		u = load_add_on(path);
+#else
+		u = -1;
+#endif
 		if (u > 0) {
 			status = get_image_symbol(u, "net_module_data", B_SYMBOL_TYPE_DATA,
 						(void**)&nm);
@@ -372,49 +393,6 @@ static void list_modules(void)
 	}
 	printf("\n");
 }
-/*
-void insert_local_address(struct sockaddr *sa, ifnet *dev)
-{
-	void *ptr;
-	if (sa->sa_family == AF_INET)
-		ptr = &((struct sockaddr_in*)sa)->sin_addr.s_addr;
-	else
-		ptr = &sa->sa_data;
-	
-        if (!nhash_get(localhash, ptr, sa->sa_len)) {
-                struct local_address *la = malloc(sizeof(struct local_address));
-                la->addr.sa_len = sa->sa_len;
-		memcpy(&la->addr.sa_data, ptr, sa->sa_len);
-		la->addr.sa_family = sa->sa_family;
-                la->ifn = dev;
-
-		nhash_set(localhash, &la->addr.sa_data, la->addr.sa_len, la);
-                if (local_addrs)
-                        la->next = local_addrs;
-                local_addrs = la;
-	}
-}
-
-int is_address_local(void *ptr, int len)
-{
-	struct local_address *la;
-
-	la = (struct local_address*)nhash_get(localhash, ptr, len);
-	if (la)
-		return 1;
-	return 0;
-}
-
-ifnet *interface_for_address(void *data, int len)
-{
-        struct local_address *la;
-
-        la = (struct local_address*)nhash_get(localhash, data, len);
-        if (!la)
-                return NULL;
-        return la->ifn;
-}
-*/
 
 net_module *pffindtype(int domain, int type)
 {
@@ -446,7 +424,20 @@ net_module *pffindproto(int domain, int protocol, int type)
         return NULL;
 }
 
+void server_shutdown(void)
+{
+	sockets_shutdown();
+
+	close_devices();
+
+	net_shutdown_timer();
+}
+
+#ifndef _KERNEL_MODE
 int main(int argc, char **argv)
+#else
+void _main(void)
+#endif
 {
 	status_t status;
 	ifnet *d;
@@ -455,13 +446,13 @@ int main(int argc, char **argv)
 	char data[100];
 	char *bigbuf = malloc(sizeof(char) * 1024);
 
+	printf( "Net Server Test App!\n"
+		"====================\n\n");
+
 	mbinit();
 
 	sockets_init();
 	inpcb_init();
-
-	printf( "Net Server Test App!\n"
-		"====================\n\n");
 
 	if (net_init_timer() < B_OK)
 		printf("timer service won't work!\n");
@@ -475,7 +466,11 @@ int main(int argc, char **argv)
 	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
 	if (!global_modules) {
 		printf("Failed to malloc space for net modules list\n");
-		exit(-1);
+#ifndef _KERNEL_MODE
+		return (-1);
+#else
+		return;
+#endif
 	}
 
 	find_modules();
@@ -483,7 +478,11 @@ int main(int argc, char **argv)
 
 	if (ndevs == 0) {
 		printf("\nFATAL: no devices configured!\n");
-		exit(-1);
+#ifndef _KERNEL_MODE
+		return (-1);
+#else
+		return;
+#endif
 	}
 
 	list_devices();
@@ -545,12 +544,193 @@ int main(int argc, char **argv)
 		d = d->next; 
 	}
 
-	sockets_shutdown();
+#ifndef _KERNEL_MODE
 
-	close_devices();
-
-	net_shutdown_timer();
+	server_shutdown();
 
 	return 0;
+#endif
 }
- 
+
+#ifdef _KERNEL_MODE
+
+const char *PublishedDeviceNames [] =
+{
+	"net/socket",
+	NULL
+};
+
+/* device stuff */
+/* do we inti ourselves? If we're in safe mode we'll decline so if things
+ * screw up we can boot and delete the broken driver!
+ * After my experiences earlier - a good idea!
+ *
+ * Also we'll turn on the serial debugger to aid in our debugging
+ * experience.
+ */
+status_t init_hardware (void)
+{
+	bool safemode = false;
+	void *sfmptr;
+
+	/* get a pointer to the driver settings... */
+	sfmptr = load_driver_settings(B_SAFEMODE_DRIVER_SETTINGS);
+
+	/* only use the pointer if it's valid */
+	if (sfmptr != NULL) {
+		/* we got a pointer, now get setting... */
+		safemode = get_driver_boolean_parameter(sfmptr, 
+			B_SAFEMODE_SAFE_MODE, false, false);
+		/* now get rid of settings */
+		unload_driver_settings(sfmptr);
+	}
+	if (safemode) {
+		dprintf("net_srv: init_hardware: declining offer to join the party.\n");
+		return B_ERROR;
+	}
+
+	/* XXX - remove me when debugging is no longer required! */
+	set_dprintf_enabled(true);
+
+	return B_OK;
+}
+
+status_t init_driver (void)
+{
+	/* do we need to do anything here? */
+	dprintf("net_srv: init_driver: returning OK!\n");
+	return B_OK;
+}
+
+void uninit_driver (void)
+{
+	dprintf("net_srv: uninit_driver: uninit_driver\n");
+	/* shutdown core server */
+}
+
+const char** publish_devices()
+{
+	return PublishedDeviceNames;
+}
+
+static status_t openbeos_net_server_open(const char *devName, 
+				uint32 flags,
+				void **cpp)
+{
+	struct sock_fd *sfd;
+
+	dprintf("net_srv: _open: called!\n");
+	if (cpp == NULL) {
+		dprintf("net_srv: _open: NULL cookie pointer!\n");
+		return B_BAD_ADDRESS;
+	}
+
+	*cpp = NULL; /* make sure we return NULL in case of error */
+
+	if (devName == NULL) {
+		dprintf("net_srv: _open: NULL device name???\n");
+		return B_BAD_ADDRESS;
+	}
+
+	if (strcmp(devName, PublishedDeviceNames[0]) != 0) {
+		dprintf("net_srv: _open: device name doesn't match! %s\n", devName);
+		return B_NAME_NOT_FOUND;
+	}
+
+	dprintf("net_srv: _open: all OK, trying to init server!\n");
+
+	if (devices == NULL)
+		_main();
+
+	/* OK, so here we now need to allocate a socket structure that
+	 * we return as the cookie!
+	 */
+	sfd = make_sock_fd();
+	if (sfd == NULL) {
+		dprintf("net_srv: _open: failed to create internal socket structure\n");
+		return B_DEV_NO_MEMORY;
+	}
+	*cpp = (void*)sfd;
+	
+	dprintf("Server Init complete.\n");
+	return B_OK;
+}
+
+static status_t openbeos_net_server_close(void *cookie)
+{
+	struct sock_fd *sfd = (struct sock_fd *)cookie;
+
+	dprintf("net_srv: _close: close sfd->fd %d\n", sfd->fd);
+
+	release_sock_fd(sfd);
+
+	return B_OK;
+}
+
+static status_t openbeos_net_server_free(void *cookie)
+{
+	dprintf("net_srv: _free\n");
+	return B_OK;
+}
+
+static status_t openbeos_net_server_control(void *cookie,
+				uint32 op,
+				void *data,
+				size_t len)
+{
+	dprintf("net_srv: _control:\n");
+	return B_OK;
+}
+
+static status_t openbeos_net_server_read(void *cookie,
+				off_t position,
+				void *buffer,
+				size_t *readlen)
+{
+	dprintf("net_srv: _read\n");
+	return B_OK;
+}
+
+static status_t openbeos_net_server_write(void *cookie,
+				off_t position,
+				const void *buffer,
+				size_t *writelen)
+{
+	dprintf("net_srv: _write\n");
+	return B_OK;
+}	
+	
+device_hooks openbeos_net_server_hooks =
+{
+	openbeos_net_server_open,
+	openbeos_net_server_close,
+	openbeos_net_server_free,
+	openbeos_net_server_control,
+	openbeos_net_server_read,
+	openbeos_net_server_write,
+	NULL, /* We don't implement the select hooks. */
+	NULL,
+	NULL, /* Don't implement the scattered buffer read and write. */
+	NULL
+};
+
+device_hooks* find_device (const char* DeviceName)
+{
+	int rv;
+	dprintf("net_srv: find_device: %s\n", DeviceName);
+
+	if (DeviceName == NULL)
+		return NULL;
+
+	if ((rv = strcmp(DeviceName, PublishedDeviceNames[0])) != 0) {
+		dprintf("net_srv: find_device: wasn't us...\n");
+		dprintf("'%s' vs '%s' = %d\n", DeviceName,
+			PublishedDeviceNames[0], rv);
+		return NULL;
+	}
+
+	dprintf("net_srv: find_device: It was us!\n");
+	return &openbeos_net_server_hooks;
+}
+#endif /* _KERNEL_MODE */
+
