@@ -8,6 +8,7 @@
 #include <vector>
 
 
+#include <fs_info.h>
 #include <Application.h>
 #include <Bitmap.h>
 #include <DataIO.h>
@@ -110,8 +111,8 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::UpdateMimeInfoTest) );
 	suite->addTest( new TC("BMimeType::create_app_meta_mime() Test",
 						   &MimeTypeTest::CreateAppMetaMimeTest) );
-//	suite->addTest( new TC("BMimeType::get_device_icon() Test",
-//						   &MimeTypeTest::GetDeviceIconTest) );
+	suite->addTest( new TC("BMimeType::get_device_icon() Test",
+						   &MimeTypeTest::GetDeviceIconTest) );
 
 	return suite;
 }		
@@ -2330,6 +2331,48 @@ MimeTypeTest::GetDeviceIconTest()
 {
 	// tests:
 	// * get_device_icon()
+
+	// test a volume device, a non-volume device, and an invalid dev name
+	struct test_case {
+		const char	*path;
+		bool		valid;
+	} testCases[] = {
+		{ "/dev/zero", false },
+		{ "/boot", true },
+		{ "/boot/home", false }
+	};
+	const int testCaseCount = sizeof(testCases) / sizeof(test_case);
+	for (int32 i = 0; i < testCaseCount; i++) {
+		nextSubTest();
+		test_case &testCase = testCases[i];
+		// get device name from path name
+		fs_info info;
+		const char *deviceName = testCase.path;
+		if (testCase.valid) {
+			dev_t dev = dev_for_path(testCase.path);
+			CHK(dev > 0);
+			CHK(fs_stat_dev(dev, &info) == 0);
+			deviceName = info.device_name;
+		}
+		// the two valid and one invalid icon size
+		const int32	iconSizes[] = { 16, 32, 20 };
+		const bool 	validSizes[] = { true, true, false };
+		const int sizeCount = sizeof(iconSizes) / sizeof(int32);
+		for (int32 k = 0; k < sizeCount; k++) {
+			int32 size = iconSizes[k];
+			bool valid = testCase.valid && validSizes[k];
+			char buffer[1024];
+			if (valid) {
+				CHK(get_device_icon(deviceName, buffer, size) == B_OK);
+				// bad args: NULL buffer
+// R5: Wanna see KDL? Here you go...
+#if !SK_TEST_R5
+				CHK(RES(get_device_icon(deviceName, NULL, size)) == B_OK);
+#endif
+			} else
+				CHK(get_device_icon(deviceName, buffer, size) != B_OK);
+		}
+	}
 }
 
 
