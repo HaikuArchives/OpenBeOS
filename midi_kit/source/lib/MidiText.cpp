@@ -86,14 +86,14 @@ void BMidiText::AllNotesOff(bool just_chan, uint32 time) {
 
 void BMidiText::ResetTimer(bool start) {
 	if(start) {
-		_start_time = (int32)(system_time() >> 32);
+		_start_time = (int32)(system_time() / 1000);
 	} else {
 		_start_time = 0;
 	}
 }
 
 void BMidiText::_PrintTime() {
-	int32 cur_time = (int32)(system_time() >> 32);
+	int32 cur_time = (int32)(system_time() / 1000);
 	if(_start_time == 0) {
 		_start_time = cur_time;	
 	}
