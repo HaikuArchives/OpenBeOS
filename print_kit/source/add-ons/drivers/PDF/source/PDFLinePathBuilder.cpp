@@ -1,12 +1,10 @@
 /*
 
-PDF Writer printer driver.
+PDFLinePathBuilder
 
 Copyright (c) 2002 OpenBeOS. 
 
-Authors: 
-	Philippe Houdoin
-	Simon Gauvin	
+Author: 
 	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,57 +27,39 @@ THE SOFTWARE.
 
 */
 
-#include <math.h>
-#include "Bezier.h"
+#include "PDFLinePathBuilder.h"
 
-/*
-  Bezier curve of degree n with control points P[0] ... P[n]:
-    P(t) = sum i from 0 to n of B(i, n, t) * P[i]
-  Bernsteinpolynomial:
-    B(i, n, t) = n! / (i! * (n-i)!) * t^i * (1-t)^(n-i)
-*/
-
-Bezier::Bezier(BPoint *points, int noOfPoints)
+PDFLinePathBuilder::PDFLinePathBuilder(SubPath *subPath, PDFWriter *writer)
+	: LinePathBuilder(subPath, writer->PenSize(), writer->LineCapMode(), writer->LineJoinMode(), writer->LineMiterLimit())
+	, fWriter(writer)
 {
-	int i;
-	fPoints = new BPoint[noOfPoints];
-	fBernsteinWeights = new double[noOfPoints];
-	fNoOfPoints = noOfPoints;
-	const int n = noOfPoints - 1;
-	for (i = 0; i < noOfPoints; i++) {
-		fPoints[i] = points[i];	
-		fBernsteinWeights[i] = Fact(n) / (Fact(i) * Fact(n-i));
-	}
 }
 
-
-Bezier::~Bezier() 
+void 
+PDFLinePathBuilder::MoveTo(BPoint p)
 {
-	delete []fPoints;
-	delete []fBernsteinWeights;
+	PDF_moveto(Pdf(), tx(p.x), ty(p.y));
 }
 
-
-double 
-Bezier::Fact(int n)
+void 
+PDFLinePathBuilder::LineTo(BPoint p)
 {
-	double f = 1;
-	for (; n > 0; n --) f *= n;
-	return f;
+	PDF_lineto(Pdf(), tx(p.x), ty(p.y));
 }
 
-
-BPoint 
-Bezier::PointAt(float t)
+void 
+PDFLinePathBuilder::BezierTo(BPoint p[3])
 {
-	const int n = fNoOfPoints - 1;
-	double x, y;
-	x = y = 0.0;
-	for (int i = 0; i < fNoOfPoints; i ++) {
-		double w = fBernsteinWeights[i] * pow(t, i) * pow(1 - t, n - i);
-		x += w * fPoints[i].x;
-		y += w * fPoints[i].y;
-	}
-	return BPoint(x, y);
+	PDF_curveto(Pdf(),
+		tx(p[0].x), ty(p[0].y),
+		tx(p[1].x), ty(p[1].y),
+		tx(p[2].x), ty(p[2].y)); 
 }
+
+void 
+PDFLinePathBuilder::ClosePath(void)
+{
+	PDF_closepath(Pdf());
+}
+
 

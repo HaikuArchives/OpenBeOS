@@ -39,6 +39,8 @@ THE SOFTWARE.
 #include <support/UTF8.h>
 
 #include "PDFWriter.h"
+#include "DrawShape.h"
+#include "Log.h"
 #include "pdflib.h"
 
 typedef struct
@@ -208,7 +210,7 @@ PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding)
 	if (cache && cache->encoding == encoding && strcmp(cache->name.String(), fontName) == 0) 
 		return cache->font;
 
-	fprintf(fLog, "FindFont %s\n", fontName); 
+	LOG((fLog, "FindFont %s\n", fontName)); 
 	Font *f = NULL;
 	const int n = fFontCache.CountItems();
 	for (int i = 0; i < n; i++) {
@@ -221,10 +223,10 @@ PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding)
 	
 	if (embed) embed = EmbedFont(fontName);
 
-	fprintf(fLog, "Create new font\n");
+	LOG((fLog, "Create new font\n"));
 	int font = PDF_findfont(fPdf, fontName, encoding_names[encoding], embed);
 	if (font != -1) {
-		fprintf(fLog, "font created\n");
+		LOG((fLog, "font created\n"));
 		cache = new Font(fontName, font, encoding);
 		fFontCache.AddItem(cache);
 	}
@@ -328,7 +330,7 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 		uint16 index;
 		// is code point in the Adobe Glyph List? 
 		if (find_encoding(unicode, enc, index)) {
-			// fprintf(fLog, "encoding for %x -> %d %d\n", unicode, (int)enc, (int)index);
+			// LOG((fLog, "encoding for %x -> %d %d\n", unicode, (int)enc, (int)index));
 			// use one of the user defined encodings
 			if (fState->beFont.FileFormat() == B_TRUETYPE_WINDOWS) {
 				encoding = font_encoding(enc + tt_encoding0);
@@ -337,19 +339,19 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 			}
 			*dest = index;
 		} else if (find_in_cid_tables(unicode, enc, index)) {
-			// fprintf(fLog, "cid table %d index = %d\n", (int)enc, (int)index);
+			// LOG((fLog, "cid table %d index = %d\n", (int)enc, (int)index));
 			dest[0] = unicode / 256; 
 			dest[1] = unicode % 256; 
 			destLen = 2;
 			encoding = font_encoding(enc + japanese_encoding);
 			embed = false;
 		} else {
-			// fprintf(fLog, "encoding for %x not found!\n", unicode);
+			// LOG((fLog, "encoding for %x not found!\n", unicode));
 			*dest = 0; // paint a box (is 0 a box in MacRoman) or
 			return; // simply skip character 
 		}
 	} 
-	// else fprintf(fLog, "macroman srcLen=%d destLen=%d dest= %d %d!\n", srcLen, destLen, (int)dest[0], (int)dest[1]);
+	// else LOG((fLog, "macroman srcLen=%d destLen=%d dest= %d %d!\n", srcLen, destLen, (int)dest[0], (int)dest[1]));
 
 	char 	fontName[B_FONT_FAMILY_LENGTH+B_FONT_STYLE_LENGTH+1];
 	int		font;
@@ -357,7 +359,7 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 	GetFontName(&fState->beFont, fontName, embed, encoding);
 	font = FindFont(fontName, embed, encoding);	
 	if (font < 0) {
-		fprintf(fLog, "**** PDF_findfont(%s) failed, back to default font\n", fontName);
+		LOG((fLog, "**** PDF_findfont(%s) failed, back to default font\n", fontName));
 		font = PDF_findfont(fPdf, "Helvetica", "macroman", 0);
 	}
 
@@ -411,7 +413,7 @@ PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 si
 		}
 		PopInternalState();
 	} else {
-		fprintf(fLog, "glyph for %*.*s not found!", size, size, utf8);
+		LOG((fLog, "glyph for %*.*s not found!", size, size, utf8));
 	}
 }
 
@@ -420,8 +422,8 @@ PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 si
 void	
 PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_space)
 {
-	fprintf(fLog, "DrawString string=\"%s\", escapement_nospace=%f, escapement_space=%f, at %f, %f\n",
-			string, escapement_nospace, escapement_space, fState->penX, fState->penY);
+	LOG((fLog, "DrawString string=\"%s\", escapement_nospace=%f, escapement_space=%f, at %f, %f\n", \
+			string, escapement_nospace, escapement_space, fState->penX, fState->penY));
 
 	if (IsDrawing()) {
 		SetColor();

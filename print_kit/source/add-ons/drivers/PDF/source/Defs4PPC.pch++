@@ -4,3 +4,4 @@
 #include <stdio.h>
 
 #define PATTERN_SUPPORT 0
+#define LOGGING 1

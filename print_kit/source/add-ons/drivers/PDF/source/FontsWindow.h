@@ -42,6 +42,11 @@ THE SOFTWARE.
 #include "Utils.h"
 #include "Fonts.h"
 
+#define USE_CLV 0
+#if USE_CLV
+#include "ColumnListView.h"
+#endif
+
 class FontsWindow : public HWindow 
 {
 public:
@@ -68,7 +73,11 @@ public:
 
 private:
 	Fonts*                  fFonts;	
+#if USE_CLV
+	BColumnListView         fList;
+#else
 	BListView*              fList;
+#endif
 
 	void                    FillFontList();
 	void                    EmptyFontList();

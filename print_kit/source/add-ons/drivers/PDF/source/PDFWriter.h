@@ -42,6 +42,7 @@ THE SOFTWARE.
 #include "PrinterDriver.h"
 #include "PictureIterator.h"
 #include "Fonts.h"
+#include "SubPath.h"
 
 #include "pdflib.h"
 
@@ -81,6 +82,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 {
 	
 	friend class DrawShape;
+	friend class PDFLinePathBuilder;
 	
 	public:
 		// constructors / destructor
@@ -317,7 +319,10 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		inline bool IsDrawing() const  { return fMode == kDrawingMode; }
 		inline bool IsClipping() const { return fMode == kClippingMode; }
 
-		inline float PenSize() const { return fState->penSize; }
+		inline float     PenSize() const        { return fState->penSize; }
+		inline cap_mode  LineCapMode() const    { return fState->capMode; }
+		inline join_mode LineJoinMode() const   { return fState->joinMode; }
+		inline float     LineMiterLimit() const { return fState->miterLimit; }
 
 		bool StoreTranslatorBitmap(BBitmap *bitmap, const char *filename, uint32 type);
 
@@ -334,6 +339,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		void SetPattern();
 		
 		void CreateLinePath(BPoint start, BPoint end, float width);		
+		void CreateLinePath(BShape *shape);
 		void CreateBezierPath(BPoint *curve, float width);
 		void CreateBezierPath(BPoint start, BPoint *curve, float width);
 		void StrokeOrClip();
@@ -342,40 +348,9 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		void PaintRoundRect(BRect rect, BPoint radii, bool stroke);
 		void PaintArc(BPoint center, BPoint radii, float startTheta, float arcTheta, int stroke);
 		void PaintEllipse(BPoint center, BPoint radii, bool stroke);
-	};
-
-
-class DrawShape : public BShapeIterator
-{
-	PDFWriter *fWriter;
-	bool       fStroke;
-	bool       fDrawn;
-	BPoint     fCurrentPoint;
-	
-	inline FILE *Log()			{ return fWriter->fLog; }
-	inline PDF *Pdf()			{ return fWriter->fPdf; }
-	inline float tx(float x)	{ return fWriter->tx(x); }
-	inline float ty(float y)	{ return fWriter->ty(y); }
-
-	inline bool IsDrawing() const  { return fWriter->IsDrawing(); }
-	inline bool IsClipping() const { return fWriter->IsClipping(); }
-
-	inline bool IsStroking() const { return fStroke; }
-	inline bool IsFilling() const  { return !fStroke; }
-
-	inline float PenSize() const { return fWriter->PenSize(); }
-	inline bool TransformPath() const { return IsStroking() && IsClipping(); }
-	
-public:
-	DrawShape(PDFWriter *writer, bool stroke);
-	~DrawShape();
-	status_t IterateBezierTo(int32 bezierCount, BPoint *bezierPoints);
-	status_t IterateClose(void);
-	status_t IterateLineTo(int32 lineCount, BPoint *linePoints);
-	status_t IterateMoveTo(BPoint *point);
-	
-	void Draw();
 };
+
+
 
 // PDFLib C callbacks class instance redirectors
 size_t	_WriteData(PDF *p, void *data, size_t size);

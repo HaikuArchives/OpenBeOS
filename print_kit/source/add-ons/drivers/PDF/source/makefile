@@ -38,10 +38,13 @@ SRCS= Driver.cpp \
 	  MarginView.cpp \
 	  PrinterSettings.cpp \
 	  PrinterPrefs.cpp \
-	  Fonts.cpp \
-	  FontsWindow.cpp \
 	  PictureIterator.cpp \
 	  PDFText.cpp \
+	  DrawShape.cpp \
+	  LinePathBuilder.cpp \
+	  PDFLinePathBuilder.cpp \
+	  SubPath.cpp \
+	  Bezier.cpp \
 	  PDFWriter.cpp
 		
 #	specify the resource files to use
@@ -104,7 +107,7 @@ SYMBOLS =
 DEBUGGER = 
 
 #	specify additional compiler flags for all files
-COMPILER_FLAGS = -DPATTERN_SUPPORT=0
+COMPILER_FLAGS = -DPATTERN_SUPPORT=0 -DLOGGING=1
 
 #	specify additional linker flags
 LINKER_FLAGS =

@@ -1,12 +1,10 @@
 /*
 
-PDF Writer printer driver.
+SubPath
 
 Copyright (c) 2002 OpenBeOS. 
 
-Authors: 
-	Philippe Houdoin
-	Simon Gauvin	
+Author: 
 	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,57 +27,88 @@ THE SOFTWARE.
 
 */
 
-#include <math.h>
-#include "Bezier.h"
+#include "SubPath.h"
 
-/*
-  Bezier curve of degree n with control points P[0] ... P[n]:
-    P(t) = sum i from 0 to n of B(i, n, t) * P[i]
-  Bernsteinpolynomial:
-    B(i, n, t) = n! / (i! * (n-i)!) * t^i * (1-t)^(n-i)
-*/
 
-Bezier::Bezier(BPoint *points, int noOfPoints)
+SubPath::SubPath(int size)
 {
-	int i;
-	fPoints = new BPoint[noOfPoints];
-	fBernsteinWeights = new double[noOfPoints];
-	fNoOfPoints = noOfPoints;
-	const int n = noOfPoints - 1;
-	for (i = 0; i < noOfPoints; i++) {
-		fPoints[i] = points[i];	
-		fBernsteinWeights[i] = Fact(n) / (Fact(i) * Fact(n-i));
+	fSize   = size <= 0 ? 1 : size;
+	fLength = 0;
+	fPoints = new BPoint[fSize];
+	fClosed = false;
+}
+
+
+SubPath::~SubPath()
+{
+	delete []fPoints;
+}
+
+
+void 
+SubPath::MakeEmpty()
+{ 
+	fLength = 0; 
+	fClosed = false; 
+}
+
+
+void
+SubPath::Truncate(int numOfPoints)
+{
+	fLength -= numOfPoints;
+	if (fLength < 0) fLength = 0;
+}
+
+
+void 
+SubPath::CheckSize(int size)
+{
+	if (fSize < size) {
+		fSize = size + kIncrement;
+		BPoint* points = new BPoint[fSize];
+		for (int i = 0; i < fLength; i++) points[i] = fPoints[i];
+		delete []fPoints;
+		fPoints = points;
 	}
 }
 
 
-Bezier::~Bezier() 
+void 
+SubPath::AddPoint(BPoint p)
 {
-	delete []fPoints;
-	delete []fBernsteinWeights;
+	CheckSize(fLength + 1);
+	fPoints[fLength] = p; fLength ++;
 }
 
 
-double 
-Bezier::Fact(int n)
+void 
+SubPath::Close() 
 {
-	double f = 1;
-	for (; n > 0; n --) f *= n;
-	return f;
+	fClosed = true;
+}
+
+
+void 
+SubPath::Open() 
+{
+	fClosed = false;
 }
 
 
 BPoint 
-Bezier::PointAt(float t)
+SubPath::PointAt(int i)
 {
-	const int n = fNoOfPoints - 1;
-	double x, y;
-	x = y = 0.0;
-	for (int i = 0; i < fNoOfPoints; i ++) {
-		double w = fBernsteinWeights[i] * pow(t, i) * pow(1 - t, n - i);
-		x += w * fPoints[i].x;
-		y += w * fPoints[i].y;
+	if (InBounds(i)) {
+		return fPoints[i];
 	}
-	return BPoint(x, y);
+	return fPoints[0];
 }
 
+void
+SubPath::AtPut(int i, BPoint p)
+{
+	if (InBounds(i)) {
+		fPoints[i] = p;
+	}
+}

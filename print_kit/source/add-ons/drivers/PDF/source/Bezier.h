@@ -1,12 +1,10 @@
 /*
 
-PDF Writer printer driver.
+Bezier curve
 
 Copyright (c) 2002 OpenBeOS. 
 
-Authors: 
-	Philippe Houdoin
-	Simon Gauvin
+Author: 
 	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of

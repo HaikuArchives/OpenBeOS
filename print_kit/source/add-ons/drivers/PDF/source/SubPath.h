@@ -1,12 +1,10 @@
 /*
 
-PDF Writer printer driver.
+SubPath
 
 Copyright (c) 2002 OpenBeOS. 
 
-Authors: 
-	Philippe Houdoin
-	Simon Gauvin	
+Author: 
 	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,57 +27,39 @@ THE SOFTWARE.
 
 */
 
-#include <math.h>
-#include "Bezier.h"
+#ifndef SUBPATH_H
+#define SUBPATH_H
 
-/*
-  Bezier curve of degree n with control points P[0] ... P[n]:
-    P(t) = sum i from 0 to n of B(i, n, t) * P[i]
-  Bernsteinpolynomial:
-    B(i, n, t) = n! / (i! * (n-i)!) * t^i * (1-t)^(n-i)
-*/
+#include <Point.h>
 
-Bezier::Bezier(BPoint *points, int noOfPoints)
-{
-	int i;
-	fPoints = new BPoint[noOfPoints];
-	fBernsteinWeights = new double[noOfPoints];
-	fNoOfPoints = noOfPoints;
-	const int n = noOfPoints - 1;
-	for (i = 0; i < noOfPoints; i++) {
-		fPoints[i] = points[i];	
-		fBernsteinWeights[i] = Fact(n) / (Fact(i) * Fact(n-i));
-	}
-}
+class SubPath {
+private:
+	enum {
+		kIncrement = 10
+	};
+	int32   fSize;    // allocated points
+	int32   fLength;  // number of valid points
+	BPoint *fPoints;
+	bool    fClosed;  // subpath connects last point with first point
 
+	//SubPath() {}
+	void CheckSize(int size);
+	bool InBounds(int i) { return 0 <= i && i < fLength; }
 
-Bezier::~Bezier() 
-{
-	delete []fPoints;
-	delete []fBernsteinWeights;
-}
+public:
+	SubPath(int size = 10);
+	~SubPath();
+	void MakeEmpty();
+	void Truncate(int numOfPoints);
+	
+	void AddPoint(BPoint p);
+	void Close();
+	void Open();
 
+	int32  CountPoints() const { return fLength; }
+	BPoint PointAt(int i);
+	void   AtPut(int i, BPoint p);
+	bool   IsClosed() const    { return fClosed; } 
+};
 
-double 
-Bezier::Fact(int n)
-{
-	double f = 1;
-	for (; n > 0; n --) f *= n;
-	return f;
-}
-
-
-BPoint 
-Bezier::PointAt(float t)
-{
-	const int n = fNoOfPoints - 1;
-	double x, y;
-	x = y = 0.0;
-	for (int i = 0; i < fNoOfPoints; i ++) {
-		double w = fBernsteinWeights[i] * pow(t, i) * pow(1 - t, n - i);
-		x += w * fPoints[i].x;
-		y += w * fPoints[i].y;
-	}
-	return BPoint(x, y);
-}
-
+#endif

@@ -61,11 +61,16 @@ FontsWindow::FontsWindow(Fonts *fonts)
 					B_PLAIN_BORDER);
 
 	// add font list
+#if USE_CLV
+	fList = new BColumnListView(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
+		"fonts_list", B_FOLLOW_ALL, B_WILL_DRAW | B_NAVIGABLE_JUMP);
+	panel->AddChild(fList);
+#else
 	fList = new BListView(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
 		"fonts_list", B_MULTIPLE_SELECTION_LIST);
 	panel->AddChild(new BScrollView("scroll_list", fList, 
 		B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true));
-
+#endif
 	FillFontList();
 
 	// add a "OK" button, and make it default
@@ -176,18 +181,24 @@ FontsWindow::MessageReceived(BMessage *msg)
 
 		case EMBED_MSG:
 			{
+			#if USE_CLV
+			#else
 			EmbedFont e(this, fList, fFonts, true);
 			fList->DoForEach(EmbedFont::DoIt, (void*)&e);
 			}
 			fList->Invalidate();
+			#endif
 			break;
 			
 		case SUBST_MSG:
 			{
+			#if USE_CLV
+			#else
 			EmbedFont e(this, fList, fFonts, false);
 			fList->DoForEach(EmbedFont::DoIt, (void*)&e);
 			}
 			fList->Invalidate();
+			#endif
 			break;
 	
 		default:
@@ -225,20 +236,26 @@ FontsWindow::FillFontList()
 {
 	const int n = fFonts->Length();
 	for (int i = 0; i < n; i++) {
+#if USE_CLV
+#else
 		BStringItem* s;
 		FontFile* f = fFonts->At(i);
 		fList->AddItem(s = new BStringItem(""));
 		SetItemText(s, f);
+#endif
 	}
 }
 
 void
 FontsWindow::EmptyFontList()
 {
+#if USE_CLV
+#else
 	const int n = fList->CountItems();
 	for (int i = 0; i < n; i++) {
 		BListItem* item = fList->ItemAt(i);
 		delete item;
 	}
 	fList->MakeEmpty();
+#endif
 }
