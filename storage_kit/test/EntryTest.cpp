@@ -6,12 +6,12 @@
 #include <sys/utsname.h> // Not needed
 #include <sys/statvfs.h> // Not needed
 
-//#include <stdio.h>
+//#include <string.h>
 
 //#include <sys/stat.h>	// For struct stat
 //#include <fs_attr.h>	// For struct attr_info
 
-//#include <kernel_interface.h>
+#include <kernel_interface.h>
 
 CppUnit::Test*
 EntryTest::Suite() {
@@ -281,7 +281,7 @@ EntryTest::ConversionTest() {
 		
 	CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
 	CPPUNIT_ASSERT( entry.GetRef(&ref) == B_OK );
-	CPPUNIT_ASSERT( entry.GetPath(&path) == B_OK );
+	CPPUNIT_ASSERT( DecodeResult(entry.GetPath(&path) == B_OK) );
 	CPPUNIT_ASSERT( entry.GetParent(&entry2) == B_ENTRY_NOT_FOUND );
 //	CPPUNIT_ASSERT( DecodeResult(entry.GetParent(&dir)) == B_OK );
 		
@@ -363,6 +363,11 @@ EntryTest::RenameTest() {
 	CPPUNIT_ASSERT( verifier != abstract );
 		
 	// Verify concrete entries renamed to relative filenames
+	CPPUNIT_ASSERT( abstract.Exists() );
+//	cout << "abstract() == " << BPath( &abstract ).Path() << endl;
+	RemoveFile("SomeCrazyLinkIsFun");
+	CPPUNIT_ASSERT( DecodeResult(abstract.Rename("SomeCrazyLinkIsFun", false)) == B_FILE_EXISTS );
+	CPPUNIT_ASSERT( DecodeResult(abstract.Rename("SomeCrazyLinkIsFun", true)) == B_OK );
 		
 
 	// Clean up
