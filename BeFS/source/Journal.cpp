@@ -273,7 +273,9 @@ Journal::WriteLogEntry()
 		if (block == NULL)
 			return B_IO_ERROR;
 
-		cached_write(fVolume->Device(),logOffset + logPosition,block,1,fVolume->BlockSize());
+		// ToDo: try if copying them to a buffer and writing them to disk at once
+		// is faster
+		write_pos(fVolume->Device(),logOffset + logPosition,block,fVolume->BlockSize());
 		logPosition = (logPosition + 1) % fLogSize;
 	}
 
@@ -294,16 +296,12 @@ Journal::WriteLogEntry()
 		set_blocks_info(fVolume->Device(),&array->values[0],array->count,blockNotify,logEntry);
 	}
 
-	// Flush blocks in log (writes the log entry to disk)
-
-	// if the log goes to the next round (the log is written as a
+	// If the log goes to the next round (the log is written as a
 	// circular buffer), all blocks will be flushed out which is
 	// possible because we don't have any locked blocks at this
 	// point.
 	if (logPosition < fVolume->LogEnd())
 		flush_device(fVolume->Device(),0);
-	else
-		flush_blocks(fVolume->Device(),logOffset + logStart,logPosition);
 
 	fArray.MakeEmpty();
 
