@@ -181,6 +181,24 @@ int udp_userreq(struct socket *so, int req,
 		case PRU_SEND:
 			/* we can use this as we're in the same module... */
 			return udp_output(inp, m, addr, ctrl);
+		case PRU_LISTEN:
+			error = EINVAL;//EOPNOTSUPP;
+			break;
+		case PRU_CONNECT:
+			if (inp->faddr.s_addr != INADDR_ANY) {
+				error = EISCONN;
+				break;
+			}
+			error = in_pcbconnect(inp, addr);
+			if (error == 0)
+				soisconnected(so);
+			break;
+		case PRU_CONNECT2:
+			error = EINVAL;//EOPNOTSUPP;
+			break;
+		case PRU_ACCEPT:
+			error = EINVAL;//EOPNOTSUPP;
+			break;
 		case PRU_DISCONNECT:
 			if (inp->faddr.s_addr == INADDR_ANY) {
 				error = ENOTCONN;
