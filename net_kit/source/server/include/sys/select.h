@@ -9,13 +9,13 @@
  */
 
 #ifndef FD_SETSIZE
-#define FD_SETSIZE 256
+#define FD_SETSIZE 1024
 #endif /* FD_SETSIZE */
 
 /* compatability with BSD */
 #define NBBY    8               /* number of bits in a byte */
 
-typedef int32 fd_mask;
+typedef unsigned long fd_mask;
 
 #ifndef howmany
 #define howmany(x, y)   (((x) + ((y) - 1)) / (y))
@@ -36,6 +36,7 @@ typedef struct fd_set {
 
 #define _FDMSKNO(fd) ((fd) / NFDBITS)
 #define _FDBITNO(fd) ((fd) % NFDBITS)
+
 #define FD_ZERO(setp) memset((setp)->mask, 0, sizeof((setp)->mask))
 #define FD_SET(fd, setp) ((setp)->mask[_FDMSKNO(fd)] |= (1 << (_FDBITNO(fd))))
 #define FD_CLR(fd, setp) ((setp)->mask[_FDMSKNO(fd)] &= ~(1 << (_FDBITNO(fd))))
