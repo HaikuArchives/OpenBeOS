@@ -19,7 +19,9 @@
 
 /*! \file Node.h */
 
+//----------------------------------------------------------------------
 // node_ref
+//----------------------------------------------------------------------
 
 // constructor
 /*! \brief Creates an uninitialized node_ref object.
@@ -74,8 +76,9 @@ node_ref::operator=(const node_ref &ref)
 	return *this;
 }
 
-
+//----------------------------------------------------------------------
 // BNode
+//----------------------------------------------------------------------
 
 /*!	\brief Creates an uninitialized BNode object
 */
@@ -234,9 +237,8 @@ BNode::SetTo(const BEntry *entry) {
 status_t
 BNode::SetTo(const char *path) {
 	Unset();	
-	if (path != NULL) {	
+	if (path != NULL) 
 		fCStatus = StorageKit::open(path, O_RDWR | O_NOTRAVERSE, fFd);
-	}	
 	return fCStatus;
 }
 
@@ -279,6 +281,7 @@ BNode::Unset() {
 	- \c B_OK: Everything went fine.
 	- \c B_FILE_ERROR: The object is not initialized.
 	- \c B_BUSY: The node is already locked.
+	\todo Currently unimplemented; requires new kernel.
 */
 status_t
 BNode::Lock() {
@@ -299,12 +302,12 @@ BNode::Lock() {
 	- \c B_OK: Everything went fine.
 	- \c B_FILE_ERROR: The object is not initialized.
 	- \c B_BAD_VALUE: The node is not locked.
+	\todo Currently unimplemented; requires new kernel.
 */
 status_t
 BNode::Unlock() {
 	if (fCStatus != B_OK)
 		return fCStatus;
-
 	// This will have to wait for the new kenel
 	return B_FILE_ERROR;
 }
@@ -404,7 +407,6 @@ BNode::RemoveAttr(const char *name) {
 */
 status_t
 BNode::RenameAttr(const char *oldname, const char *newname) {
-
 	if (fCStatus != B_OK)
 		return B_FILE_ERROR;
 
@@ -415,33 +417,27 @@ BNode::RenameAttr(const char *oldname, const char *newname) {
 	// Figure out how much data there is
 	result = GetAttrInfo(oldname, &info);
 	if (result != B_OK)
-		return B_BAD_VALUE;	// This is what R5::BNode returns...
-		
+		return B_BAD_VALUE;	// This is what R5::BNode returns...		
 	// Alloc a buffer
 	void *data = new(nothrow) char[info.size];
 	if (data == NULL)
-		return B_NO_MEMORY;
-		
+		return B_NO_MEMORY;		
 	// Read in the data
 	size = ReadAttr(oldname, B_STRING_TYPE, 0, data, info.size);
 	if (size != info.size) {
 		delete data;		
 		return size;
-	}
-		
+	}		
 	// Write it to the new attribute
 	size = WriteAttr(newname, B_STRING_TYPE, 0, data, size);
 	if (size != info.size) {
 		delete data;		
 		return size;
-	}
-	
+	}	
 	// We're done with the buffer now.
-	delete data;
-	
+	delete data;	
 	// Remove the old attribute
-	return RemoveAttr(oldname);
-	
+	return RemoveAttr(oldname);	
 }
 
 
@@ -484,7 +480,6 @@ BNode::GetNextAttrName(char *buffer) {
 	// are not acceptable.
 	if (buffer == NULL)
 		return B_BAD_VALUE;	// /new R5 crashed when passed NULL
-
 	if (InitAttrDir() != B_OK)
 		return B_FILE_ERROR;
 		
@@ -506,10 +501,8 @@ BNode::GetNextAttrName(char *buffer) {
 status_t
 BNode::RewindAttrs() {
 	if (InitAttrDir() != B_OK)
-		return B_FILE_ERROR;
-	
+		return B_FILE_ERROR;	
 	StorageKit::rewind_attr_dir(fAttrFd);
-
 	return B_OK;
 }
 
@@ -527,11 +520,10 @@ BNode::RewindAttrs() {
 	- \c B_NOT_ALLOWED: The node resides on a read only volume.
 	- \c B_DEVICE_FULL: Insufficient disk space.
 	- \c B_NO_MEMORY: Insufficient memory to complete the operation.
-	\todo Implement, when OBOS BString is available.
 */
 status_t
 BNode::WriteAttrString(const char *name, const BString *data) {
-	status_t error = (data == NULL) ? B_BAD_VALUE : B_OK;
+	status_t error = (!name || !data)  ? B_BAD_VALUE : B_OK;
 	if (error == B_OK) {
 		int32 len = data->Length();
 		ssize_t sizeWritten = WriteAttr(name, B_STRING_TYPE, 0, data->String(),
@@ -551,41 +543,33 @@ BNode::WriteAttrString(const char *name, const BString *data) {
 	- \c B_BAD_VALUE: \c NULL \a name or \a result
 	- \c B_FILE_ERROR: The object is not initialized.
 	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a attr.
-	\todo Implement, when OBOS BString is available.
 */
 status_t
 BNode::ReadAttrString(const char *name, BString *result) const {
-	if (result == NULL)
+	if (!name || !result)
 		return B_BAD_VALUE;
 	
 	attr_info info;
-	status_t r;
+	status_t error;
 	
-	r = GetAttrInfo(name, &info);
-	if (r != B_OK)
-		return r;
-		
+	error = GetAttrInfo(name, &info);
+	if (error != B_OK)
+		return error;		
+	// Lock the string's buffer so we can meddle with it	
 	char *data = result->LockBuffer(info.size+1);
-		// Lock the string's buffer so we can meddle with it
-	
+	// Read the attribute		
 	ssize_t bytes = ReadAttr(name, B_STRING_TYPE, 0, data, info.size);
-		// Read the attribute
-		
 	// Check for failure
 	if (bytes < 0) {
-		r = bytes;
+		error = bytes;
 		bytes = 0;	// In this instance, we simply clear the string
-	} else {
-		r = B_OK;
-	}
-	
-	data[bytes] = 0;
-		// Null terminate the new string just to be sure (since it *is*
-		// possible to read and write non-NULL-terminated strings)
-		
-	result->UnlockBuffer(bytes+1);
-	
-	return r;
+	} else 
+		error = B_OK;
+	// Null terminate the new string just to be sure (since it *is*
+	// possible to read and write non-NULL-terminated strings)
+	data[bytes] = 0;		
+	result->UnlockBuffer(bytes+1);	
+	return error;
 }
 
 /*!	\brief Reinitializes the object as a copy of the \a node.
@@ -596,16 +580,13 @@ BNode&
 BNode::operator=(const BNode &node) {
 	// No need to do any assignment if already equal
 	if (*this == node)
-		return *this;
-	
+		return *this;	
 	// Close down out current state
-	close_fd();
-	
+	close_fd();	
 	// We have to manually dup the node, because R5::BNode::Dup()
 	// is not declared to be const (which IMO is retarded).
 	fFd = StorageKit::dup(node.fFd);
-	fCStatus = (fFd == -1) ? B_NO_INIT : B_OK ;
-
+	fCStatus = (fFd == StorageKit::NullFd) ? B_NO_INIT : B_OK ;
 	return *this;
 }
 
@@ -618,8 +599,7 @@ BNode::operator=(const BNode &node) {
 bool
 BNode::operator==(const BNode &node) const {
 	if (fCStatus == B_NO_INIT && node.InitCheck() == B_NO_INIT)
-		return true;
-		
+		return true;		
 	if (fCStatus == B_OK && node.InitCheck() == B_OK) {
 		// Check if they're identical
 		StorageKit::Stat s1, s2;
@@ -628,8 +608,7 @@ BNode::operator==(const BNode &node) const {
 		if (node.GetStat(&s2) != B_OK)
 			return false;
 		return (s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino);
-	}
-	
+	}	
 	return false;	
 }
 
@@ -656,12 +635,12 @@ BNode::Dup() {
 
 
 /*! (currently unused) */
-void BNode::_RudeNode1() { }
-void BNode::_RudeNode2() { }
-void BNode::_RudeNode3() { }
-void BNode::_RudeNode4() { }
-void BNode::_RudeNode5() { }
-void BNode::_RudeNode6() { }
+void BNode::_ReservedNode1() { }
+void BNode::_ReservedNode2() { }
+void BNode::_ReservedNode3() { }
+void BNode::_ReservedNode4() { }
+void BNode::_ReservedNode5() { }
+void BNode::_ReservedNode6() { }
 
 /*!	\brief Sets the node's file descriptor.
 	Used by each implementation (i.e. BNode, BFile, BDirectory, etc.) to set
@@ -673,8 +652,7 @@ void BNode::_RudeNode6() { }
 status_t
 BNode::set_fd(StorageKit::FileDescriptor fd) {
 	if (fFd != -1)
-		close_fd();
-		
+		close_fd();		
 	fFd = fd;
 	return B_OK;
 }
@@ -690,13 +668,11 @@ BNode::close_fd() {
 	if (fAttrFd != StorageKit::NullFd) {
 		StorageKit::close_attr_dir(fAttrFd);
 		fAttrFd = StorageKit::NullFd;
-	}
-	
+	}	
 	if (fFd != StorageKit::NullFd) {
 		close(fFd);
 		fFd = StorageKit::NullFd;
 	}	
-		
 	fCStatus = B_NO_INIT;	
 }
 
@@ -723,7 +699,6 @@ status_t
 BNode::set_stat(struct stat &st, uint32 what) {
 	if (fCStatus != B_OK)
 		return B_FILE_ERROR;
-
 	return StorageKit::set_stat(fFd, st, what);
 }
 
@@ -734,11 +709,8 @@ BNode::set_stat(struct stat &st, uint32 what) {
 */
 status_t
 BNode::InitAttrDir() {
-	if (fCStatus == B_OK && fAttrFd == StorageKit::NullFd) {
-		//fAttrDir = StorageKit::open_attr_dir(fFd);
+	if (fCStatus == B_OK && fAttrFd == StorageKit::NullFd) 
 		return StorageKit::open_attr_dir(fFd, fAttrFd);
-	}
-
 	return fCStatus;	
 }
 
