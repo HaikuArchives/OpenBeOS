@@ -142,6 +142,8 @@ _EXPORT struct core_module_info core_info = {
 	m_copym,
 	m_free,
 	m_freem,
+	m_reserve,
+	m_devget,
 	
 	net_server_add_device,
 	get_interfaces,
