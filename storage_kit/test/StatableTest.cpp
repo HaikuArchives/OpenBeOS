@@ -8,6 +8,7 @@
 #include <Statable.h>
 #include <Entry.h>
 #include <Node.h>
+#include <Volume.h>
 
 #include "StatableTest.h"
 
@@ -109,9 +110,9 @@ StatableTest::GetXYZTest()
 		time_t mtime;
 		time_t ctime;
 //		time_t atime;
+		BVolume volume;
 // R5: access time unused
-// OBOS: BVolume not yet available.
-//		BVolume vol;
+		BVolume vol;
 		CPPUNIT_ASSERT( lstat(entryName.c_str(), &st) == 0 );
 		CPPUNIT_ASSERT( statable->GetNodeRef(&ref) == B_OK );
 		CPPUNIT_ASSERT( statable->GetOwner(&owner) == B_OK );
@@ -121,7 +122,7 @@ StatableTest::GetXYZTest()
 		CPPUNIT_ASSERT( statable->GetModificationTime(&mtime) == B_OK );
 		CPPUNIT_ASSERT( statable->GetCreationTime(&ctime) == B_OK );
 //		CPPUNIT_ASSERT( statable->GetAccessTime(&atime) == B_OK );
-//		CPPUNIT_ASSERT( statable->GetVolume(&volume) == B_OK );
+		CPPUNIT_ASSERT( statable->GetVolume(&volume) == B_OK );
 		CPPUNIT_ASSERT( ref.device == st.st_dev && ref.node == st.st_ino );
 		CPPUNIT_ASSERT( owner == st.st_uid );
 		CPPUNIT_ASSERT( group == st.st_gid );
@@ -147,8 +148,7 @@ StatableTest::GetXYZTest()
 		time_t mtime;
 		time_t ctime;
 		time_t atime;
-// OBOS: BVolume not yet available.
-//		BVolume vol;
+		BVolume volume;
 		CPPUNIT_ASSERT( statable->GetNodeRef(&ref) == B_NO_INIT );
 		CPPUNIT_ASSERT( statable->GetOwner(&owner) == B_NO_INIT );
 		CPPUNIT_ASSERT( statable->GetGroup(&group) == B_NO_INIT );
@@ -157,7 +157,7 @@ StatableTest::GetXYZTest()
 		CPPUNIT_ASSERT( statable->GetModificationTime(&mtime) == B_NO_INIT );
 		CPPUNIT_ASSERT( statable->GetCreationTime(&ctime) == B_NO_INIT );
 		CPPUNIT_ASSERT( statable->GetAccessTime(&atime) == B_NO_INIT );
-//		CPPUNIT_ASSERT( statable->GetVolume(&volume) == B_NO_INIT );
+		CPPUNIT_ASSERT( statable->GetVolume(&volume) == B_NO_INIT );
 	}
 	testEntries.delete_all();
 	// bad args
@@ -165,15 +165,17 @@ StatableTest::GetXYZTest()
 	CreateROStatables(testEntries);
 	for (testEntries.rewind(); testEntries.getNext(statable, entryName); ) {
 // R5: crashs, if passing NULL to any of these methods
-//		CPPUNIT_ASSERT( statable->GetNodeRef(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetOwner(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetGroup(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetPermissions(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetSize(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetModificationTime(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetCreationTime(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetAccessTime(NULL) != B_OK );
-//		CPPUNIT_ASSERT( statable->GetVolume(NULL) != B_OK );
+#if !SK_TEST_R5
+		CPPUNIT_ASSERT( statable->GetNodeRef(NULL) == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetOwner(NULL)  == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetGroup(NULL)  == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetPermissions(NULL)  == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetSize(NULL)  == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetModificationTime(NULL)  == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetCreationTime(NULL)  == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetAccessTime(NULL)  == B_BAD_VALUE );
+		CPPUNIT_ASSERT( statable->GetVolume(NULL)  == B_BAD_VALUE );
+#endif
 	}
 	testEntries.delete_all();
 }
