@@ -357,6 +357,16 @@ void if_attach(struct ifnet *ifp)
 	}
 }
 
+void if_detach(struct ifnet *ifp)
+{
+	struct ifnet **p = &devices, *q;
+
+	for (; (*p)->if_next != ifp ; (*p) = (*p)->if_next)
+		continue;
+	q = (*p)->if_next->if_next;
+	(*p)->if_next = q;
+}
+	
 /* XXX - memcpy used as copyin / copyout not available. I did look
  * for the source for them but was unable to find them in the
  * code jungle that is OpenBSD and FreeBSD!

@@ -958,13 +958,16 @@ int soo_ioctl(void *sp, int cmd, caddr_t data)
 			/* how many bytes do we have waiting... */
 			*(int*)data = so->so_rcv.sb_cc;
 			return 0;
+		case SIOCATMARK:
+			*(int*)data = (so->so_state & SS_RCVATMARK) != 0;
+			return 0;
 	}
 
 	if (IOCGROUP(cmd) == 'i') {
 		return ifioctl(so, cmd, data);
 	}
 	if (IOCGROUP(cmd) == 'r') {
-		return 0;
+		return EINVAL; /* EOPNOTSUPP */
 	}	
 	return (*so->so_proto->pr_userreq)(so, PRU_CONTROL, 
 		(struct mbuf*)cmd, (struct mbuf*)data, NULL);

@@ -417,6 +417,9 @@ struct mbuf *m_pullup(struct mbuf *n, int len)
 	int count;
 	int space;
 
+	if (n->m_len <= len)
+		return n;
+
 	/*
 	 * If first mbuf has no cluster, and has room for len bytes
 	 * without shifting current data, pullup into it,
@@ -453,7 +456,9 @@ struct mbuf *m_pullup(struct mbuf *n, int len)
 		else
 			n = m_free(n);
 	} while (len > 0 && n);
+
 	if (len > 0) {
+printf("m_pullup: failed: len = %d\n", len);
 		(void)m_free(m);
 		goto bad;
 	}

@@ -43,6 +43,7 @@
 /* Defines we need */
 #define NETWORK_INTERFACES	"network/interface"
 #define NETWORK_PROTOCOLS	"network/protocol"
+#define PPP_DEVICES "ppp/devices"
 
 /* Variables used in other core modules */
 int ndevs = 0;
@@ -161,6 +162,7 @@ _EXPORT struct core_module_info core_info = {
 	ifa_ifwithdstaddr,
 	ifa_ifwithnet,
 	if_attach,
+	if_detach,
 	ifa_ifwithaddr,
 	ifa_ifwithroute,
 	ifaof_ifpforaddr,
@@ -743,17 +745,15 @@ static void find_interface_modules(void)
 
 #else
 
-static void find_interface_modules(void)
+static void _find_interface_modules(char *dirpath)
 {
-	char path[PATH_MAX], cdir[PATH_MAX];
+	char path[PATH_MAX];
 	DIR *dir;
 	struct dirent *fe;
 	struct net_module *nm = NULL;
 	status_t status;
 	
-	getcwd(cdir, PATH_MAX);
-	sprintf(cdir, "%s/modules/interface", cdir);
-	dir = opendir(cdir);
+	dir = opendir(dirpath);
 	
 	while ((fe = readdir(dir)) != NULL) {
 		/* last 2 entries are only valid for development... */
@@ -761,7 +761,7 @@ static void find_interface_modules(void)
 			|| strcmp(fe->d_name, ".cvsignore") == 0 
 			|| strcmp(fe->d_name, "CVS") == 0)
                         continue;
-		sprintf(path, "%s/%s", cdir, fe->d_name);
+		sprintf(path, "%s/%s", dirpath, fe->d_name);
 
 		nm = (struct net_module*)malloc(sizeof(struct net_module));
 		if (!nm)
@@ -776,11 +776,22 @@ static void find_interface_modules(void)
 				module_list = nm;
 				nm->ptr->start(&core_info);
 				nm->status = 1;
+				printf("\t%s\n", path);
 			} else {
 				free(nm);
 			}
 		}
 	}
+}
+
+static void find_interface_modules(void)
+{
+	char cdir[PATH_MAX], path[PATH_MAX];
+	getcwd(cdir, PATH_MAX);
+	sprintf(path, "%s/modules/interface", cdir);
+	_find_interface_modules(path);
+	sprintf(path, "%s/modules/ppp/devices", cdir);
+	_find_interface_modules(path);
 }
 
 static void find_protocol_modules(void)
