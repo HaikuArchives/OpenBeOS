@@ -277,6 +277,12 @@ status_t get_canonical_dir_path(const char *path, char *result, size_t size);
 	existing directory. */
 status_t get_canonical_dir_path(const char *path, char *&result);
 
+/*! \brief Returns the path of this application.
+	The supplied buffer must be at least B_PATH_NAME_LENGTH + 1 bytes long.
+	The result will be null terminated.
+*/
+status_t get_app_path(char *buffer);
+
 /*! Returns true if the given entry_ref represents the root directory, false otherwise. */
 bool entry_ref_is_root_dir(entry_ref &ref);
 

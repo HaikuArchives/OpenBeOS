@@ -35,6 +35,9 @@
 #include <Entry.h>
 	// entry_ref
 	
+#include <image.h>
+	// used by get_app_path()
+
 #include <utime.h>
 	// for utime() and struct utimbuf
 
@@ -938,6 +941,25 @@ StorageKit::get_canonical_dir_path(const char *path, char *&result)
 			result = NULL;
 		}
 	}
+	return error;
+}
+
+status_t
+StorageKit::get_app_path(char *buffer)
+{
+	status_t error = (buffer ? B_OK : B_BAD_VALUE);
+	image_info info;
+	int32 cookie = 0;
+	bool found = false;
+	while (!found && get_next_image_info(0, &cookie, &info) == B_OK) {
+		if (info.type == B_APP_IMAGE) {
+			strncpy(buffer, info.name, B_PATH_NAME_LENGTH);
+			buffer[B_PATH_NAME_LENGTH] = 0;
+			found = true;
+		}
+	}
+	if (error == B_OK && !found)
+		error = B_ENTRY_NOT_FOUND;
 	return error;
 }
 
