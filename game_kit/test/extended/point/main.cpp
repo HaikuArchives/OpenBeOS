@@ -175,7 +175,7 @@ bool test_constrain()
 	cPoint.ConstrainTo( rect );
 
 	bool test3 = compare_points( bPoint, cPoint );
-	if( test2 == false )
+	if( test3 == false )
 	{
 		cout << endl << "point in rect test: " << endl;
 		print_point( bPoint );
@@ -189,7 +189,7 @@ bool test_constrain()
 	cPoint.ConstrainTo( rect );
 
 	bool test4 = compare_points( bPoint, cPoint );
-	if( test2 == false )
+	if( test4 == false )
 	{
 		cout << endl << "point on corner test: " << endl;
 		print_point( bPoint );
