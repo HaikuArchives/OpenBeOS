@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 
+#include "mbuf.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
 #include "sys/socket.h"
@@ -15,8 +16,11 @@
 #include "net_server/core_module.h"
 #include <KernelExport.h>
 #include "ipv4/ipv4_module.h"
+#include "raw/raw_module.h"
 
+#define m_copym             core->m_copym
 #define m_free              core->m_free
+#define m_freem             core->m_freem
 #define m_prepend           core->m_prepend
 #define soreserve			core->soreserve
 #define in_pcballoc         core->in_pcballoc
@@ -24,31 +28,70 @@
 #define in_pcbdisconnect	core->in_pcbdisconnect
 #define in_pcbbind			core->in_pcbbind
 #define in_pcbdetach		core->in_pcbdetach
+#define sbappendaddr        core->sbappendaddr
 #define soisconnected       core->soisconnected
 #define soisdisconnected    core->soisdisconnected
 #define socantsendmore      core->socantsendmore
+#define sowakeup            core->sowakeup
 #define ifa_ifwithaddr      core->ifa_ifwithaddr
 #define get_interfaces      core->get_interfaces
 
 static struct core_module_info *core = NULL;
 static struct ipv4_module_info *ipm = NULL;
-#define RAW_MODULE_PATH              "network/protocol/raw"
 #else
 #define RAW_MODULE_PATH              "modules/protocols/raw"
 #endif
 
 static struct inpcb rawinpcb;
-//static struct sockaddr_in ripsrc;
+static struct sockaddr_in ripsrc;
 static int rip_sendspace = 8192;
 static int rip_recvspace = 8192;
 
 void rip_init(void)
 {
 	rawinpcb.inp_next = rawinpcb.inp_prev = &rawinpcb;
+	memset(&ripsrc, 0, sizeof(ripsrc));
+	ripsrc.sin_family = AF_INET;
+	ripsrc.sin_len = sizeof(ripsrc);
 }
 
 int rip_input(struct mbuf *m, int hdrlen)
 {
+	struct ip *ip = mtod(m, struct ip*);
+	struct inpcb *inp;
+	struct socket *last = NULL;
+	
+	ripsrc.sin_addr = ip->ip_src;
+	for (inp = rawinpcb.inp_next; inp != &rawinpcb; inp=inp->inp_next) {
+		if (inp->inp_ip.ip_p && inp->inp_ip.ip_p != ip->ip_p)
+			continue;
+		if (inp->laddr.s_addr && inp->laddr.s_addr == ip->ip_dst.s_addr)
+			continue;
+		if (inp->faddr.s_addr && inp->faddr.s_addr == ip->ip_src.s_addr)
+			continue;
+		if (last) {
+			struct mbuf *n;
+			if ((n = m_copym(m, 0, (int)M_COPYALL))) {
+				if (sbappendaddr(&last->so_rcv, (struct sockaddr*)&ripsrc, 
+				                 n, NULL) == 0)
+					m_freem(n);
+				else
+					sorwakeup(last);
+			}
+		}
+		last = inp->inp_socket;
+	}
+	if (last) {
+		if (sbappendaddr(&last->so_rcv, (struct sockaddr*)&ripsrc, 
+		                 m, NULL) == 0)
+			m_freem(m);
+		else
+			sorwakeup(last);
+	} else {
+		m_freem(m);
+		ipstat.ips_noproto++;
+		ipstat.ips_delivered--;
+	}
 	return 0;
 }
 
@@ -59,8 +102,6 @@ int rip_output(struct mbuf *m, struct socket *so, uint32 dst)
 	struct mbuf *opts;
 	int flags = (so->so_options & SO_DONTROUTE) | IP_ALLOWBROADCAST;
 
-printf("rip_output\n");
-	
 	if ((inp->inp_flags & INP_HDRINCL) == 0) {
 		M_PREPEND(m, sizeof(struct ip));
 		ip = mtod(m, struct ip *);
@@ -102,7 +143,6 @@ int rip_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *nam,
 	struct inpcb *inp = sotoinpcb(so);
 	struct ifnet *interfaces = get_interfaces();
 	
-printf("rip_userreq\n");	
 	switch(req) {
 		case PRU_ATTACH:
 			if (inp) {
@@ -302,14 +342,17 @@ static status_t rip_ops(int32 op, ...)
 	return B_OK;
 }
 
-static module_info my_module = {
-	RAW_MODULE_PATH,
-	B_KEEP_LOADED,
-	rip_ops
+static struct raw_module_info my_module = {
+	{
+		RAW_MODULE_PATH,
+		B_KEEP_LOADED,
+		rip_ops
+	},
+	&rip_input
 };
 
 _EXPORT module_info *modules[] = {
-	&my_module,
+	(module_info*)&my_module,
 	NULL
 };
 
