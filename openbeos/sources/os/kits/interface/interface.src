@@ -1,15 +1,14 @@
-if ! $(INTERFACE_KIT_SOURCE)
-{
-	INTERFACE_KIT_SOURCE ?= ../interface/Alert.cpp
-		../interface/Box.cpp
-		../interface/Button.cpp
-		../interface/CheckBox.cpp
-		../interface/Control.cpp
-		../interface/Point.cpp
-		../interface/RadioButton.cpp
-		../interface/Rect.cpp
-		../interface/StatusBar.cpp
-		../interface/StringView.cpp
-		../interface/TextControl.cpp
-		../interface/TextInput.cpp ;
-}
+INTERFACE_KIT_SOURCE =
+	Alert.cpp
+	Box.cpp
+	Button.cpp
+	CheckBox.cpp
+	Control.cpp
+	Point.cpp
+	RadioButton.cpp
+	Rect.cpp
+	StatusBar.cpp
+	StringView.cpp
+	TextControl.cpp
+	TextInput.cpp
+;

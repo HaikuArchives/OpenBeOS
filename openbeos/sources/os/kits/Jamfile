@@ -1,5 +1,22 @@
 SubDir OBOS_TOP sources os kits ;
 
+include $(SUBDIR)/app/app.src ;
+include $(SUBDIR)/interface/interface.src ;
+include $(SUBDIR)/support/support.src ;
+
+UsePrivateHeaders app ;
+UsePrivateHeaders interface ;
+
+SharedLibrary openbeos :
+	<$(SOURCE_GRIST)>app/$(APP_KIT_SOURCE)
+	<$(SOURCE_GRIST)>interface/$(INTERFACE_KIT_SOURCE)
+	<$(SOURCE_GRIST)>support/$(SUPPORT_KIT_SOURCE)
+;
+
+LinkSharedOSLibs libopenbeos.so :
+	/boot/beos/system/lib/libbe.so
+	/boot/beos/system/lib/libstdc++.r4.so ;
+
 SubInclude OBOS_TOP sources os kits app ;
 SubInclude OBOS_TOP sources os kits device ;
 SubInclude OBOS_TOP sources os kits game ;

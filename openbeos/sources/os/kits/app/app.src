@@ -1,10 +1,9 @@
-if ! $(APP_KIT_SOURCE)
-{
-	APP_KIT_SOURCE ?= ../app/Cursor.cpp
- 		../app/Handler.cpp
- 		../app/Invoker.cpp
- 		../app/Looper.cpp
- 		../app/MessageFilter.cpp
- 		../app/MessageQueue.cpp
- 		../app/TokenSpace.cpp ;
-}
+APP_KIT_SOURCE =
+	Cursor.cpp
+	Handler.cpp
+	Invoker.cpp
+	Looper.cpp
+	MessageFilter.cpp
+	MessageQueue.cpp
+	TokenSpace.cpp
+;

@@ -1,8 +1,7 @@
-if ! $(SUPPORT_KIT_SOURCE)
-{
-	SUPPORT_KIT_SOURCE ?= ../support/Archivable.cpp
-		../support/DataIO.cpp
-		../support/Locker.cpp
-		../support/StopWatch.cpp
-		../support/String.cpp ;
-}
+SUPPORT_KIT_SOURCE =
+	Archivable.cpp
+	DataIO.cpp
+	Locker.cpp
+	StopWatch.cpp
+	String.cpp
+;
