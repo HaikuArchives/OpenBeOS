@@ -29,6 +29,7 @@ struct  sockbuf {
 #define SB_ASYNC        0x10            /* ASYNC I/O, need signals */
 #define SB_NOINTR       0x40            /* operations not interruptible */
 #define SB_KNOTE        0x80            /* kernel note attached */
+#define SB_NOTIFY       (SB_WAIT|SB_SEL|SB_ASYNC)
 
 typedef void (*socket_event_callback)(void * socket, uint32 event, void * cookie);
 
@@ -46,11 +47,11 @@ struct socket {
 	struct socket *so_q0;
 	struct socket *so_q;
 
-	int16 so_q0len;
-	int16 so_qlen;
-	int16 so_qlimit;
-	uint16 so_error;
-	pid_t so_pgid;
+	int16  so_q0len;
+	int16  so_qlen;
+	int16  so_qlimit;
+	int32  so_error;
+//	pid_t  so_pgid;
 	uint32 so_oobmark;
 
 	/* our send/recv buffers */
@@ -121,6 +122,10 @@ struct socket {
 /* we don't handle upcall for sockets */
 #define sowwakeup(so)   sowakeup((so), &(so)->so_snd)
 
+#ifdef _NETWORK_STACK
+
+uint32 sb_max;
+
 /* Function prototypes */
 int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
 
@@ -143,6 +148,7 @@ int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio,
 int     sosetopt(void *, int, int, const void *, size_t);
 int     sogetopt(void *, int, int, void *, size_t *);
 
+struct socket *sonewconn(struct socket *head, int connstatus);
 int 	set_socket_event_callback(void *, socket_event_callback, void *);
 
 void    sbrelease (struct sockbuf *sb);
@@ -169,6 +175,7 @@ int     soclose(void *sp);
 int     sodisconnect(struct socket *);
 void    sofree(struct socket *);
 
+void    sohasoutofband(struct socket *so);
 void    socantsendmore(struct socket *so);
 void    socantrcvmore(struct socket *so);
 void    soisconnected (struct socket *so);
@@ -181,5 +188,7 @@ int     sorflush(struct socket *so);
 
 int     nsleep(sem_id chan, char *msg, int timeo);
 void    wakeup(sem_id chan);
+
+#endif /* _NETWORK_STACK */
 
 #endif /* SYS_SOCKETVAR_H */
