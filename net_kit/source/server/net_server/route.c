@@ -41,8 +41,8 @@ struct rtentry *rtalloc1(struct sockaddr *dst, int report)
 	    && ((rn->rn_flags & RNF_ROOT) == 0)) {
 		newrt = rt = (struct rtentry*) rn;
 		if (report && (rt->rt_flags & RTF_CLONING)) {
-			err = rtrequest(RTM_RESOLVE, dst, SA(NULL),
-				        SA(NULL), 0, &newrt);
+			err = rtrequest(RTM_RESOLVE, dst, NULL,
+				        NULL, 0, &newrt);
 			if (err) {
 				newrt = rt;
 				rt->rt_refcnt++;

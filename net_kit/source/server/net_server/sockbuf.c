@@ -154,10 +154,8 @@ int sbappendaddr(struct sockbuf *sb, struct sockaddr *asa,
 	struct mbuf *m, *n;
 	int space = asa->sa_len;
 
-	if (m0 && (m0->m_flags & M_PKTHDR) == 0) {
-		printf("sbappendaddr\n");
+	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
 		return(-1);
-	}
 
 	if (m0)
 		space += m0->m_pkthdr.len;
@@ -251,9 +249,11 @@ void sbdroprecord(struct sockbuf *sb)
 int sbwait(struct sockbuf *sb)
 {
 	status_t rv = 0;
+
 	sb->sb_flags |= SB_WAIT;
 	if (sb->sb_pop > 0)
 		rv = acquire_sem_etc(sb->sb_pop, 1, B_CAN_INTERRUPT, 0);
+
 	return (int)rv;
 }
 
