@@ -69,7 +69,6 @@ public:
 	virtual void ObscureCursor(void);
 	virtual BPoint PenPosition(void);
 	virtual float PenSize(void);
-	virtual void SetCursor(int32 value);
 	virtual void SetCursor(ServerCursor *cursor);
 	virtual void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
 	virtual void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);

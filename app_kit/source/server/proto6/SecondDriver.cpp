@@ -425,7 +425,7 @@ void SecondDriver::HideCursor(void){
       sc(false);
       cursor_visible = false;
    }else{
-      printf("Shoftware Hide Cursor\n");
+      printf("Software Hide Cursor\n");
    }
 }
 
@@ -479,17 +479,6 @@ BPoint SecondDriver::PenPosition(void){
 float SecondDriver::PenSize(void){
    return pensize;
 }
-
-/*******************************************************
-*   @description
-*******************************************************/
-void SecondDriver::SetCursor(int32 value){
-   printf("Setcursoer value?\n");
-   // Uh what is this all about?
-}
-
-
-
 
 //0 - 1 = black
 //0 - 0 = what
