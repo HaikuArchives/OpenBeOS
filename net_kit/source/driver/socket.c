@@ -15,6 +15,7 @@
 #include <driver_settings.h>
 
 #include "net_server/core_module.h"
+#include "net_structures.h"
 
 /* static variables... */
 struct core_module_info *core = NULL;
@@ -64,9 +65,16 @@ status_t init_hardware (void)
  */
 status_t init_driver (void)
 {
+	int rv = 0;
         /* do we need to do anything here? */
 	set_dprintf_enabled(true);
         dprintf("socket: socket device driver - init called\n");
+	rv = get_module(CORE_MODULE_PATH, (module_info **)&core);
+	if (rv < 0) {
+		dprintf("net_socket_open: core module not found! %d\n", rv);
+		return B_ERROR;
+	}
+
         return B_OK;
 }
 
@@ -76,6 +84,7 @@ status_t init_driver (void)
 void uninit_driver (void)
 {
         dprintf("net_srv: uninit_driver: uninit_driver\n");
+	put_module(CORE_MODULE_PATH);
         /* shutdown core server */
 }
 
@@ -100,30 +109,33 @@ static status_t net_socket_open(const char *devName,
                                 void **cpp)
 {
 	int rv;
-
+	struct sock_ptr *sp;
 	dprintf("net_socket_open\n");
 	if (!core) {
-		get_module(CORE_MODULE_PATH, (module_info **)core);	
-		if (!core) {
-			dprintf("net_socket_open: core module not found!\n");
+		rv = get_module(CORE_MODULE_PATH, (module_info **)&core);	
+		if (rv < 0) {
+			dprintf("net_socket_open: core module not found! %d\n", rv);
 			return B_ERROR;
 		}
-		(*core->start)();
 	}
 
 	rv = core->initsocket(cpp);
 	if (rv != 0)
 		return rv;
-	
+
 	return B_OK;
 }
 
 static status_t net_socket_close(void *cookie)
 {
+	int rv = core->soclose(cookie);
 	dprintf("net_socket_close\n");
-	return B_OK;
+	
+	put_module(CORE_MODULE_PATH);
+	return rv;
 }
 
+/* Resources are freed on the stack when we close... */
 static status_t net_socket_free(void *cookie)
 {
         dprintf("net_socket_free\n");
@@ -136,7 +148,13 @@ static status_t net_socket_control(void *cookie,
                                 size_t len)
 {
 	dprintf("net_socket_control: \n");
-	return core->ioctl(cookie, op, data);
+
+	if (op == NET_SOCKET_CREATE) {
+		struct socket_args *sa = (struct socket_args*)data;
+		return core->socreate(sa->dom, cookie, sa->type, sa->prot);
+	}
+
+	return core->soo_ioctl(cookie, op, data);
 }
 
 static status_t net_socket_read(void *cookie,

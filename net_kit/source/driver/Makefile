@@ -1,6 +1,6 @@
 CFLAGS=-nostart -no-fpic -D_KERNEL_MODE
 LDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-INCLUDES=-I../server/ -I../server/include
+INCLUDES=-I../server/ -I../server/include -I../libnet
 
 all:	socket
 
