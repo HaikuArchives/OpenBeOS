@@ -1,7 +1,7 @@
 /***********************************************************************
  * AUTHOR: Zousar Shaker
  *   FILE: ParameterWeb.cpp
- *  DESCR: BParameterGroup, BParameter, BNullParameter, 
+ *  DESCR: ParameterWeb, BParameterGroup, BParameter, BNullParameter, 
  *         BContinuousParameter, BDiscreteParameter
  ***********************************************************************/
 #include <ParameterWeb.h>
@@ -20,7 +20,7 @@ typedef unsigned char byte;
 /* by Marcus Overhagen: Sorry Zousar, but I really want the program
  * to be stopped when something is wrong!
  */
-#if 1
+#if 1 /* always use these */
 
 #define ASSERT_WRETURN_VALUE(CheckExpr,RetVal) \
 		ASSERT(CheckExpr)
@@ -28,7 +28,7 @@ typedef unsigned char byte;
 #define ASSERT_RETURN(CheckExpr) \
 		ASSERT(CheckExpr)
 
-#else /* disable the other macros */
+#else /* and disable the other macros */
 
 /*************************************************************
  * Used to check assertions, and if the assertions fail, a
