@@ -186,9 +186,8 @@ BTranslationUtils::GetBitmap(uint32 type, int32 id, BTranslatorRoster *roster)
 		// so that it can be used with BTranslatorRoster->Translate() in
 		// the TranslateToBitmap() function
 	
-	return TranslateToBitmap(&memio, type, roster);
-		// Translate the data in memio to the type type using
-		// the BTranslatorRoster roster
+	return TranslateToBitmap(&memio, roster);
+		// Translate the data in memio using the BTranslatorRoster roster
 }
 
 // ---------------------------------------------------------------
@@ -231,9 +230,8 @@ BTranslationUtils::GetBitmap(uint32 type, const char *kName,
 		// Put the pointer to the raw image data into a BMemoryIO object so
 		// that it can be used with BTranslatorRoster->Translate() 
 	
-	return TranslateToBitmap(&memio, type, roster);
-		// Translate the data in memio to the type type using the
-		// BTranslatorRoster roster
+	return TranslateToBitmap(&memio, roster);
+		// Translate the data in memio using the BTranslatorRoster roster
 }
 
 // ---------------------------------------------------------------
@@ -260,9 +258,8 @@ BTranslationUtils::GetBitmapFile(const char *kName, BTranslatorRoster *roster)
 	if (bitmapFile.InitCheck() != B_OK)
 		return NULL;
 
-	return TranslateToBitmap(&bitmapFile, B_TRANSLATOR_BITMAP, roster);
-		// Translate the data in memio to the type B_TRANSLATOR_BITMAP
-		// using the BTranslatorRoster roster
+	return TranslateToBitmap(&bitmapFile, roster);
+		// Translate the data in memio using the BTranslatorRoster roster
 }
 
 // ---------------------------------------------------------------
@@ -289,9 +286,8 @@ BTranslationUtils::GetBitmap(const entry_ref *kRef, BTranslatorRoster *roster)
 	if (bitmapFile.InitCheck() != B_OK)
 		return NULL;
 
-	return TranslateToBitmap(&bitmapFile, B_TRANSLATOR_BITMAP, roster);
-		// Translate the data in bitmapFile to the type B_TRANSLATOR_BITMAP
-		// using the BTranslatorRoster roster
+	return TranslateToBitmap(&bitmapFile, roster);
+		// Translate the data in bitmapFile using the BTranslatorRoster roster
 }
 
 // ---------------------------------------------------------------
@@ -313,9 +309,8 @@ BTranslationUtils::GetBitmap(const entry_ref *kRef, BTranslatorRoster *roster)
 BBitmap *
 BTranslationUtils::GetBitmap(BPositionIO *stream, BTranslatorRoster *roster)
 {	
-	return TranslateToBitmap(stream, B_TRANSLATOR_BITMAP, roster);
-		// Translate the data in memio to the type type
-		// using the BTranslatorRoster roster
+	return TranslateToBitmap(stream, roster);
+		// Translate the data in memio using the BTranslatorRoster roster
 }
 
 // ---------------------------------------------------------------
@@ -938,7 +933,7 @@ BTranslationUtils::AddTranslationItems(BMenu *intoMenu, uint32 fromType,
 //          BBitmap * for the bitmap data from pio if successful
 // ---------------------------------------------------------------
 BBitmap *
-BTranslationUtils::TranslateToBitmap(BPositionIO *pio, uint32 type,
+BTranslationUtils::TranslateToBitmap(BPositionIO *pio,
 	BTranslatorRoster *roster)
 {
 	if (pio == NULL)
@@ -954,7 +949,8 @@ BTranslationUtils::TranslateToBitmap(BPositionIO *pio, uint32 type,
 	// Translate the file from whatever format it is in the file
 	// to the type format so that it can be stored in a BBitmap
 	BBitmapStream bitmapStream;
-	if (roster->Translate(pio, NULL, NULL, &bitmapStream, type) < B_OK)
+	if (roster->Translate(pio, NULL, NULL, &bitmapStream,
+		B_TRANSLATOR_BITMAP) < B_OK)
 		return NULL;
 	
 	// Detach the BBitmap from the BBitmapStream so the user
