@@ -2,6 +2,7 @@
 
 #include <set>
 #include <errno.h>
+#include <stdio.h>
 #include <string>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -246,7 +247,7 @@ SymLinkTest::InitTest1()
 	nextSubTest();
 	{
 		BSymLink link((const char *)NULL);
-		CPPUNIT_ASSERT( link.InitCheck() == B_BAD_VALUE );
+		CPPUNIT_ASSERT( equals(link.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	}
 	nextSubTest();
 	{
@@ -293,7 +294,7 @@ SymLinkTest::InitTest1()
 	{
 		BEntry entry;
 		BSymLink link(&entry);
-		CPPUNIT_ASSERT( link.InitCheck() == B_BAD_ADDRESS );
+		CPPUNIT_ASSERT( equals(link.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
 	}
 	nextSubTest();
 	{
@@ -475,8 +476,9 @@ SymLinkTest::InitTest2()
 	CPPUNIT_ASSERT( link.InitCheck() == B_ENTRY_NOT_FOUND );
 	//
 	nextSubTest();
-	CPPUNIT_ASSERT( link.SetTo((const char *)NULL) == B_BAD_VALUE );
-	CPPUNIT_ASSERT( link.InitCheck() == B_BAD_VALUE );
+	CPPUNIT_ASSERT( equals(link.SetTo((const char *)NULL), B_BAD_VALUE,
+						   B_NO_INIT) );
+	CPPUNIT_ASSERT( equals(link.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo("") == B_ENTRY_NOT_FOUND );
@@ -513,8 +515,8 @@ SymLinkTest::InitTest2()
 	nextSubTest();
 	entry.Unset();
 	CPPUNIT_ASSERT( entry.InitCheck() == B_NO_INIT );
-	CPPUNIT_ASSERT( link.SetTo(&entry) == B_BAD_ADDRESS );
-	CPPUNIT_ASSERT( link.InitCheck() == B_BAD_ADDRESS );
+	CPPUNIT_ASSERT( equals(link.SetTo(&entry), B_BAD_ADDRESS, B_BAD_VALUE) );
+	CPPUNIT_ASSERT( equals(link.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( entry.SetTo(existingFile) == B_OK );
@@ -654,7 +656,8 @@ SymLinkTest::ReadLinkTest()
 	// R5: returns B_BAD_ADDRESS instead of (as doc'ed) B_FILE_ERROR
 	nextSubTest();
 	CPPUNIT_ASSERT( link.InitCheck() == B_NO_INIT );
-	CPPUNIT_ASSERT( link.ReadLink(buffer, sizeof(buffer)) == B_BAD_ADDRESS );
+	CPPUNIT_ASSERT( equals(link.ReadLink(buffer, sizeof(buffer)),
+						   B_BAD_ADDRESS, B_FILE_ERROR) );
 	// existing dir link
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
@@ -683,8 +686,8 @@ SymLinkTest::ReadLinkTest()
 	// R5: returns B_BAD_ADDRESS instead of (as doc'ed) B_FILE_ERROR
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(nonExisting) == B_ENTRY_NOT_FOUND );
-	CPPUNIT_ASSERT( link.ReadLink(buffer, sizeof(buffer))
-					== B_BAD_ADDRESS );
+	CPPUNIT_ASSERT( equals(link.ReadLink(buffer, sizeof(buffer)),
+						   B_BAD_ADDRESS, B_FILE_ERROR) );
 	// dir
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(existingDir) == B_OK );
@@ -695,10 +698,10 @@ SymLinkTest::ReadLinkTest()
 	CPPUNIT_ASSERT( link.ReadLink(buffer, sizeof(buffer)) == B_BAD_VALUE );
 	// small buffer
 	// R5: returns the size of the contents, not the number of bytes copied
+	// OBOS: ... so do we
 	nextSubTest();
 	char smallBuffer[2];
 	CPPUNIT_ASSERT( link.SetTo(dirLink) == B_OK );
-//printf("link.ReadLink(smallBuffer, sizeof(smallBuffer)): %x\n", link.ReadLink(smallBuffer, sizeof(smallBuffer)));
 	CPPUNIT_ASSERT( link.ReadLink(smallBuffer, sizeof(smallBuffer))
 //					== sizeof(smallBuffer) );
 					== strlen(dirLink) );
@@ -706,7 +709,8 @@ SymLinkTest::ReadLinkTest()
 	// bad args
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(fileLink) == B_OK );
-	CPPUNIT_ASSERT( link.ReadLink(NULL, sizeof(buffer)) == B_BAD_ADDRESS );
+	CPPUNIT_ASSERT( equals(link.ReadLink(NULL, sizeof(buffer)), B_BAD_ADDRESS,
+						   B_BAD_VALUE) );
 }
 
 // MakeLinkedPathTest
@@ -739,7 +743,8 @@ SymLinkTest::MakeLinkedPathTest()
 	// uninitialized
 	nextSubTest();
 	CPPUNIT_ASSERT( link.InitCheck() == B_NO_INIT );
-	CPPUNIT_ASSERT( link.MakeLinkedPath("/boot", &path) == B_BAD_ADDRESS );
+	CPPUNIT_ASSERT( equals(link.MakeLinkedPath("/boot", &path), B_BAD_ADDRESS,
+						   B_FILE_ERROR) );
 	link.Unset();
 	path.Unset();
 	// existing absolute dir link
@@ -813,7 +818,8 @@ SymLinkTest::MakeLinkedPathTest()
 	CPPUNIT_ASSERT( link.InitCheck() == B_NO_INIT );
 	BDirectory dir;
 	CPPUNIT_ASSERT( dir.SetTo("/boot") == B_OK);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == B_BAD_ADDRESS );
+	CPPUNIT_ASSERT( equals(link.MakeLinkedPath(&dir, &path), B_BAD_ADDRESS,
+						   B_FILE_ERROR) );
 	link.Unset();
 	path.Unset();
 	dir.Unset();
@@ -1012,7 +1018,7 @@ SymLinkTest::AssignmentTest()
 		CPPUNIT_ASSERT( link.InitCheck() == B_NO_INIT );
 		BSymLink link2(link);
 		// R5 returns B_BAD_VALUE instead of B_NO_INIT
-		CPPUNIT_ASSERT( link2.InitCheck() == B_BAD_VALUE );
+		CPPUNIT_ASSERT( equals(link2.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	}
 	// existing dir link
 	nextSubTest();
@@ -1039,7 +1045,7 @@ SymLinkTest::AssignmentTest()
 		BSymLink link2;
 		link2 = link;
 		// R5 returns B_BAD_VALUE instead of B_NO_INIT
-		CPPUNIT_ASSERT( link2.InitCheck() == B_BAD_VALUE );
+		CPPUNIT_ASSERT( equals(link2.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	}
 	nextSubTest();
 	{
@@ -1047,7 +1053,7 @@ SymLinkTest::AssignmentTest()
 		BSymLink link2(dirLink);
 		link2 = link;
 		// R5 returns B_BAD_VALUE instead of B_NO_INIT
-		CPPUNIT_ASSERT( link2.InitCheck() == B_BAD_VALUE );
+		CPPUNIT_ASSERT( equals(link2.InitCheck(), B_BAD_VALUE, B_NO_INIT) );
 	}
 	// existing dir link
 	nextSubTest();
