@@ -45,6 +45,9 @@
  * byte, on the second the X offset, and on the 3rd the Y offset.
  */
 
+#ifndef _KERNEL_ARCH_x86_PS2MOUSE_H
+#define _KERNEL_ARCH_x86_PS2MOUSE_H
+
 #include <kernel.h>
 #include <memheap.h>
 #include <int.h>
@@ -91,8 +94,13 @@ typedef struct {
 	char delta_y;
 } mouse_data; // mouse_data
 
+#ifdef _PS2MOUSE_
 static mouse_data md_int;
 static mouse_data md_read;
 static sem_id mouse_sem;
 static bool in_read;
+#endif
 
+int mouse_dev_init(kernel_args *ka);
+
+#endif /* _KERNEL_ARCH_x86_PS2MOUSE_H */
