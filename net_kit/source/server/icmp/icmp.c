@@ -97,6 +97,7 @@ net_module net_module_data = {
 	NULL,
 	&icmp_input,
 	NULL,
+	NULL,
 	NULL
 };
 

@@ -313,6 +313,7 @@ net_module net_module_data = {
 	&ether_dev_init,
 	&ether_input,
 	&ether_output,
+	NULL,
 	NULL
 };
 

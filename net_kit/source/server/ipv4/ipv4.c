@@ -152,6 +152,7 @@ net_module net_module_data = {
 	&ipv4_dev_init,
 	&ipv4_input, 
 	&ipv4_output,
+	NULL,	
 	NULL
 };
 

@@ -442,6 +442,7 @@ net_module net_module_data = {
 	NULL,
 	&arp_input, 
 	NULL,
-	&arp_lookup
+	&arp_lookup,
+	NULL
 };
 
