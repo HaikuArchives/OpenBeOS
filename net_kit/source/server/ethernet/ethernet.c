@@ -110,7 +110,8 @@ static void find_devices(void)
 
         while ((de = readdir(dir)) != NULL) {
                 /* hmm, is it a driver? */
-                if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+                if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0
+		    || strcmp(de->d_name, "socket") == 0)
                         continue;
 
                 /* OK we assume it's a driver...but skip the ether driver
@@ -122,7 +123,7 @@ static void find_devices(void)
                 sprintf(path, "%s/%s", DRIVER_DIRECTORY, de->d_name);
                 driv_dir = opendir(path);
                 if (!driv_dir) {
-                        printf("I coudln't find any drivers in the %s driver directory",
+                        printf("I coudln't find any drivers in the %s driver directory\n",
                                 de->d_name);
                 } else {
                         while ((dre = readdir(driv_dir)) != NULL) {
