@@ -38,6 +38,8 @@
 
 #include <kernel/OS.h>
 
+#include "net/if_arp.h"
+
 /*
  * Ethernet address - 6 octets
  * this is only used by the ethers(3) functions.
@@ -183,8 +185,16 @@ int arpresolve(struct arpcom *ac, struct rtentry *rt, struct mbuf *m,
                struct sockaddr *dst, uint8 *desten);
 void arpwhohas(struct arpcom *ac, struct in_addr *ia);
 
-#endif
 
+#else
+
+char *ether_ntoa (struct ether_addr *);
+struct ether_addr *ether_aton (char *);
+int ether_ntohost (char *, struct ether_addr *);
+int ether_hostton (char *, struct ether_addr *);
+int ether_line(char *line, struct ether_addr *e, char *hostname);
+
+#endif
 
 #endif /* NETINET_IF_ETHER_H */
 
