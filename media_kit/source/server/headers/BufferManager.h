@@ -16,6 +16,7 @@ public:
 
 	status_t	UnregisterBuffer(team_id teamid, media_buffer_id bufferid);
 
+	void 		PrintToStream();
 
 private:
 	struct _team_list 

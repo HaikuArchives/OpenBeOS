@@ -8,6 +8,7 @@
 #include "BufferManager.h"
 #include "NodeManager.h"
 #include "AppManager.h"
+#include "debug.h"
 
 /*
  *
@@ -27,7 +28,7 @@
  */
 
 
-#define REPLY_TIMEOUT ((bigtime_t)100000)
+#define REPLY_TIMEOUT ((bigtime_t)500000)
 
 class CServerApp : BApplication
 {
@@ -151,12 +152,16 @@ CServerApp::RegisterBuffer(BMessage *msg)
 	area_id area;
 	status_t status;
 	
+	//msg->PrintToStream();
+	
 	teamid = 	msg->FindInt32("team");
 	area = 		msg->FindInt32("area");
 	offset =	msg->FindInt32("offset");
 	size = 		msg->FindInt32("size");
 	flags = 	msg->FindInt32("flags");
 	bufferid = 	msg->FindInt32("buffer");
+
+	//TRACE("ServerApp::RegisterBuffer team = 0x%08x, areaid = 0x%08x, offset = 0x%08x, size = 0x%08x, flags = 0x%08x, buffer = 0x%08x\n",(int)teamid,(int)area,(int)offset,(int)size,(int)flags,(int)bufferid);
 
 	if (bufferid == 0)
 		status = fBufferManager->RegisterBuffer(teamid, size, flags, offset, area, &bufferid);
@@ -402,9 +407,9 @@ void CServerApp::GetVolume(BMessage *msg)
 void CServerApp::MessageReceived(BMessage *msg)
 {
 	switch (msg->what) {
-		case MEDIA_SERVER_GET_SHARED_BUFFER_AREA: GetSharedBufferArea(msg);
-		case MEDIA_SERVER_REGISTER_BUFFER: RegisterBuffer(msg);
-		case MEDIA_SERVER_UNREGISTER_BUFFER: UnregisterBuffer(msg);
+		case MEDIA_SERVER_GET_SHARED_BUFFER_AREA: GetSharedBufferArea(msg); break;
+		case MEDIA_SERVER_REGISTER_BUFFER: RegisterBuffer(msg); break;
+		case MEDIA_SERVER_UNREGISTER_BUFFER: UnregisterBuffer(msg); break;
 	
 	
 		case MEDIA_SERVER_GET_NODE_ID: GetNodeID(msg); break;

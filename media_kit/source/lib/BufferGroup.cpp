@@ -44,7 +44,7 @@ BBufferGroup::InitBufferGroup()
 	id = reply.FindInt32("shared buffer area");
 	
 	fBufferList = _shared_buffer_list::Clone(id);
-	if (fBufferList != NULL)
+	if (fBufferList == NULL)
 		fInitError = B_ERROR;
 
 	return fInitError;

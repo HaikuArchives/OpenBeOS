@@ -52,7 +52,16 @@ namespace MediaKitPrivate
 
 status_t QueryServer(BMessage *query, BMessage *reply)
 {
-	return ServerMessenger->SendMessage(query,reply);
+	status_t status;
+	status = ServerMessenger->SendMessage(query,reply);
+	if (status != B_OK || reply->what != B_OK) {
+		TRACE("QueryServer failed! status = 0x%08lx\n",status);
+		TRACE("Query:\n");
+		query->PrintToStream();
+		TRACE("Reply:\n");
+		reply->PrintToStream();
+	}
+	return status;
 }
 
 };

@@ -2,7 +2,7 @@
 #include <Autolock.h>
 #include "BufferManager.h"
 #include "../lib/headers/SharedBufferList.h"
-#include "../lib/headers/debug.h"
+#include "debug.h"
 
 BufferManager::BufferManager()
 {
@@ -30,6 +30,7 @@ BufferManager::RegisterBuffer(team_id teamid, media_buffer_id bufferid,
 							  size_t *size, int32 *flags, size_t *offset, area_id *area)
 {
 	BAutolock lock(fLocker);
+	TRACE("RegisterBuffer team = 0x%08x, bufferid = 0x%08x\n",(int)teamid,(int)bufferid);
 	
 	_buffer_list *list;
 	_team_list *team;
@@ -44,10 +45,12 @@ BufferManager::RegisterBuffer(team_id teamid, media_buffer_id bufferid,
 			*offset 	= list->offset;
 			*size 		= list->size, 
 			*flags 		= list->flags;
+			PrintToStream();
 			return B_OK;
 		}
 
 	TRACE("failed to register buffer! team = 0x%08x, bufferid = 0x%08x\n",(int)teamid,(int)bufferid);
+	PrintToStream();
 	return B_ERROR;
 }
 
@@ -56,6 +59,7 @@ BufferManager::RegisterBuffer(team_id teamid, size_t size, int32 flags, size_t o
 							  media_buffer_id *bufferid)
 {
 	BAutolock lock(fLocker);
+	TRACE("RegisterBuffer team = 0x%08x, areaid = 0x%08x, offset = 0x%08x, size = 0x%08x\n",(int)teamid,(int)area,(int)offset,(int)size);
 	
 	void *adr;
 	area_id newarea;
@@ -83,6 +87,7 @@ BufferManager::RegisterBuffer(team_id teamid, size_t size, int32 flags, size_t o
 
 	fNextBufferId++;
 	
+	PrintToStream();
 	return B_OK;
 }
 
@@ -90,6 +95,7 @@ status_t
 BufferManager::UnregisterBuffer(team_id teamid, media_buffer_id bufferid)
 {
 	BAutolock lock(fLocker);
+	TRACE("UnregisterBuffer team = 0x%08x bufferid = 0x%08x\n",(int)teamid,(int)bufferid);
 
 	_buffer_list *currentlist;
 	_buffer_list **nextlist;
@@ -99,25 +105,45 @@ BufferManager::UnregisterBuffer(team_id teamid, media_buffer_id bufferid)
 	for (nextlist = &fBufferList; (*nextlist); nextlist = &((*nextlist)->next)) {
 		if ((*nextlist)->id == bufferid) {
 			currentlist = *nextlist;
-			*nextlist = (*nextlist)->next;
 			for (nextteam = &(currentlist->teams); (*nextteam); nextteam = &((*nextteam)->next)) {
 				if ((*nextteam)->team == teamid) {
 					currentteam = *nextteam;
 					*nextteam = (*nextteam)->next;
 					delete currentteam;
 					TRACE("team = 0x%08x removed from bufferid = 0x%08x\n",(int)teamid,(int)bufferid);
+					PrintToStream();
 					break;
 				}
 			}
 			if (currentlist->teams == NULL) {
+				*nextlist = (*nextlist)->next;
 				delete_area(currentlist->area);
 				delete currentlist;
 				TRACE("bufferid = 0x%08x removed\n",(int)bufferid);
+				PrintToStream();
 			}
 			return B_OK;
 		}
 	}
+	PrintToStream();
 	TRACE("failed to unregister buffer! team = 0x%08x, bufferid = 0x%08x\n",(int)teamid,(int)bufferid);
 	return B_ERROR;
 }
 
+void
+BufferManager::PrintToStream()
+{
+	return;
+	BAutolock lock(fLocker);
+	_buffer_list *list;
+	_team_list *team;
+	
+	printf("Buffer list:\n");
+	for (list = fBufferList; list; list = list->next) {
+		printf(" bufferid = 0x%08x, areaid = 0x%08x, offset = 0x%08x, size = 0x%08x, flags = 0x%08x, next = 0x%08x\n",
+			(int)list->id,(int)list->area,(int)list->offset,(int)list->size,(int)list->flags,(int)list->next);
+		for (team = list->teams; team; team = team->next)
+			printf("   team = 0x%08x, next = 0x%08x =>",(int)team->team,(int)team->next);
+		printf("\n");
+	}
+}

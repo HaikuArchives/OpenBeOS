@@ -47,6 +47,7 @@ _shared_buffer_list::Clone(area_id id)
 		}
 	} else {
 		status = clone_area("shared buffer list clone",(void **)&adr,B_ANY_KERNEL_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
+		//TRACE("cloned area, id = 0x%08lx, ptr = 0x%08x\n",status,(int)adr);
 	}
 	
 	return (status < B_OK) ? NULL : adr;
