@@ -8,6 +8,8 @@
 #include "BufferManager.h"
 #include "NodeManager.h"
 #include "AppManager.h"
+#define DEBUG 1
+#include <Debug.h>
 #include "debug.h"
 
 /*
@@ -148,11 +150,56 @@ ServerApp::~ServerApp()
 void 
 ServerApp::HandleMessage(int32 code, void *data, size_t size)
 {
+	status_t rv;
 	switch (code) {
-		case ADDONSERVER_INSTANTIATE_DORMANT_NODE:
+		case SERVER_GET_NODE:
 		{
+			xfer_server_get_node *msg = (xfer_server_get_node *)data;
+			xfer_server_get_node_reply reply;
+			reply.result = B_ERROR;
+			write_port(msg->reply_port, 0, &reply, sizeof(reply));
 			break;
 		}
+
+		case SERVER_SET_NODE:
+		{
+			xfer_server_set_node *msg = (xfer_server_set_node *)data;
+			xfer_server_set_node_reply reply;
+			reply.result = B_ERROR;
+			write_port(msg->reply_port, 0, &reply, sizeof(reply));
+			break;
+		}
+
+		case SERVER_REGISTER_MEDIAADDON:
+		{
+			xfer_server_register_mediaaddon *msg = (xfer_server_register_mediaaddon *)data;
+			xfer_server_register_mediaaddon_reply reply;
+			fNodeManager->RegisterAddon(&reply.addonid);
+			write_port(msg->reply_port, 0, &reply, sizeof(reply));
+			break;
+		}
+		
+		case SERVER_UNREGISTER_MEDIAADDON:
+		{
+			xfer_server_unregister_mediaaddon *msg = (xfer_server_unregister_mediaaddon *)data;
+			fNodeManager->UnregisterAddon(msg->addonid);
+			break;
+		}
+		
+		case SERVER_REGISTER_DORMANT_NODE:
+		{
+			xfer_server_register_dormant_node *msg = (xfer_server_register_dormant_node *)data;
+			dormant_flavor_info dfi;
+			if (msg->purge_id > 0)
+				fNodeManager->RemoveDormantFlavorInfo(msg->purge_id);
+			rv = dfi.Unflatten(msg->dfi_type, &(msg->dfi), msg->dfi_size);
+			ASSERT(rv == B_OK);
+			fNodeManager->AddDormantFlavorInfo(dfi);	
+			break;
+		}
+		
+		default:
+			printf("media_server: received unknown message code %#08lx\n",code);
 	}
 }
 
@@ -160,16 +207,14 @@ int32
 ServerApp::controlthread(void *arg)
 {
 	char data[B_MEDIA_MESSAGE_SIZE];
-	int32 code;
+	ServerApp *app;
 	ssize_t size;
-	ServerApp *app = (ServerApp *)arg;
+	int32 code;
 	
-	for (;;) {
-		size = read_port_etc(app->control_port, &code, data, sizeof(data), 0, 0);
-		if (size <= 0)
-			break;
+	app = (ServerApp *)arg;
+	while ((size = read_port_etc(app->control_port, &code, data, sizeof(data), 0, 0)) > 0)
 		app->HandleMessage(code, data, size);
-	}
+
 	return 0;
 }
 

@@ -5,6 +5,7 @@
  ***********************************************************************/
 #include <TimeSource.h>
 #include "debug.h"
+#include "../server/headers/ServerInterface.h"
 
 // XXX This BTimeSource only works for realtime, nothing else is implemented
 
@@ -121,11 +122,20 @@ BTimeSource::BTimeSource() :
 
 status_t
 BTimeSource::HandleMessage(int32 message,
-						   const void *data,
+						   const void *rawdata,
 						   size_t size)
 {
 	CALLED();
-	return BMediaNode::HandleMessage(message,data,size);
+	switch (message) {
+		case TIMESOURCE_OP:
+		{
+			const time_source_op_info *data = (const time_source_op_info *)rawdata;
+			status_t result;
+			result = TimeSourceOp(*data, NULL);
+			return B_OK;
+		}
+	};
+	return B_ERROR;
 }
 
 

@@ -235,7 +235,6 @@ BMediaEventLooper::ControlLoop()
 			DispatchEvent(&event,lateness,is_realtime);
 		}
 	}
-	TRACE("### BMediaEventLooper control thread finished\n");
 }
 
 

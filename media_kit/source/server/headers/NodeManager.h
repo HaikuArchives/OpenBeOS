@@ -23,4 +23,12 @@ public:
 	status_t BroadcastMessage(long, void *, long, long long);
 	status_t LoadState();
 	status_t SaveState();
+
+	void AddDormantFlavorInfo(const dormant_flavor_info &dfi);	
+	void RemoveDormantFlavorInfo(media_addon_id id);	
+	void RegisterAddon(media_addon_id *newid);
+	void UnregisterAddon(media_addon_id id);
+
+private:
+	media_addon_id nextaddonid;
 };

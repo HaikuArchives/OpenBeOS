@@ -21,7 +21,7 @@ int32 BMediaNode::_m_changeTag = 0;
  * media_node 
  *************************************************************/
 
-// final & verfied
+// final & verified
 media_node::media_node()
 	: node(-1),
 	port(-1),
@@ -30,7 +30,7 @@ media_node::media_node()
 	CALLED();
 }
 
-// final & verfied
+// final & verified
 media_node::~media_node()
 {
 	CALLED();
@@ -40,7 +40,7 @@ media_node::~media_node()
  * static media_node variables
  *************************************************************/
 
-// final & verfied
+// final & verified
 media_node media_node::null;
 
 /*************************************************************
@@ -81,7 +81,7 @@ media_output::~media_output()
  * live_node_info 
  *************************************************************/
 
-// final & verfied
+// final & verified
 live_node_info::live_node_info()
 	: hint_point(0.0f,0.0f)
 {
@@ -89,7 +89,7 @@ live_node_info::live_node_info()
 	name[0] = '\0';
 }
 
-// final & verfied
+// final & verified
 live_node_info::~live_node_info()
 {
 	CALLED();

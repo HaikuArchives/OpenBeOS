@@ -102,8 +102,7 @@ dormant_flavor_info::operator=(const dormant_flavor_info &clone)
 	CALLED();
 	//*this = static_cast<const flavor_info>(clone);
 	*this = (const flavor_info)clone;
-	dormant_node_info temp;
-	node_info = temp;
+	node_info = clone.node_info;
 	return *this;
 }
 
@@ -149,6 +148,10 @@ dormant_flavor_info::operator=(const flavor_info &clone)
 	} else {
 		out_formats = 0;
 	}
+	
+	dormant_node_info temp;
+	node_info = temp;
+	
 	return *this;
 }
 
@@ -574,13 +577,13 @@ BMediaAddOn::NotifyFlavorChange()
 		return B_ERROR;
 	
 	port_id port;
-	port = find_port("media_server port");
+	port = find_port("media_addon_server port");
 	if (port <= B_OK)
 		return B_ERROR;
 
-	xfer_server_rescan_mediaaddon_flavors msg;
+	xfer_addonserver_rescan_mediaaddon_flavors msg;
 	msg.addonid = _fAddon;
-	return write_port(port, SERVER_RESCAN_MEDIAADDON_FLAVORS, &msg, sizeof(msg));
+	return write_port(port, ADDONSERVER_RESCAN_MEDIAADDON_FLAVORS, &msg, sizeof(msg));
 }
 
 /*************************************************************
@@ -601,10 +604,10 @@ BMediaAddOn & BMediaAddOn::operator=(const BMediaAddOn &clone)
 
 extern "C" {
 	// declared here to remove them from the class header file
-	status_t _Reserved_MediaAddOn_0__11BMediaAddOnPv(void *); /* now used for BMediaAddOn::GetFileFormatList */
-	status_t _Reserved_MediaAddOn_1__11BMediaAddOnPv(void *); /* now used for BMediaAddOn::SniffTypeKind */
-	status_t _Reserved_MediaAddOn_0__11BMediaAddOnPv(void *) { return B_ERROR; }
-	status_t _Reserved_MediaAddOn_1__11BMediaAddOnPv(void *) { return B_ERROR; }
+	status_t _Reserved_MediaAddOn_0__11BMediaAddOnPv(void *, void *); /* now used for BMediaAddOn::GetFileFormatList */
+	status_t _Reserved_MediaAddOn_1__11BMediaAddOnPv(void *, void *); /* now used for BMediaAddOn::SniffTypeKind */
+	status_t _Reserved_MediaAddOn_0__11BMediaAddOnPv(void *, void *) { return B_ERROR; }
+	status_t _Reserved_MediaAddOn_1__11BMediaAddOnPv(void *, void *) { return B_ERROR; }
 };
 
 status_t BMediaAddOn::_Reserved_MediaAddOn_2(void *) { return B_ERROR; }

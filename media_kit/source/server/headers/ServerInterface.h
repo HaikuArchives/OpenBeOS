@@ -93,11 +93,68 @@ enum {
 	ADDONSERVER_INSTANTIATE_DORMANT_NODE,
 	SERVER_REGISTER_MEDIAADDON,
 	SERVER_UNREGISTER_MEDIAADDON,
-	SERVER_RESCAN_MEDIAADDON_FLAVORS,
+	ADDONSERVER_RESCAN_MEDIAADDON_FLAVORS,
+	SERVER_REGISTER_DORMANT_NODE,
+	SERVER_GET_NODE,
+	SERVER_SET_NODE,
+	TIMESOURCE_OP, // datablock is a struct time_source_op_info
 	END
 };
 
-struct xfer_server_rescan_mediaaddon_flavors
+enum node_type 
+{ 
+	VIDEO_INPUT, 
+	AUDIO_INPUT, 
+	VIDEO_OUTPUT, 
+	AUDIO_MIXER, 
+	AUDIO_OUTPUT, 
+	AUDIO_OUTPUT_EX, 
+	TIME_SOURCE, 
+	SYSTEM_TIME_SOURCE 
+};
+
+struct xfer_server_set_node
+{
+	node_type type;
+	bool use_node;
+	media_node node;
+	bool use_dni;
+	dormant_node_info dni;
+	bool use_input;
+	media_input input;
+	port_id reply_port;
+};
+
+struct xfer_server_set_node_reply
+{
+	status_t result;
+};
+
+struct xfer_server_get_node
+{
+	node_type type;
+	port_id reply_port;
+};
+
+struct xfer_server_get_node_reply
+{
+	media_node node;
+	status_t result;
+
+	// for AUDIO_OUTPUT_EX
+	char input_name[B_MEDIA_NAME_LENGTH];
+	int32 input_id;
+};
+
+struct xfer_server_register_dormant_node
+{
+	media_addon_id	purge_id; // if > 0, server must first remove all dormant_flavor_infos belonging to that id
+	type_code		dfi_type; // the flatten type_code
+	size_t 			dfi_size; 
+	char 			dfi[1];   // a flattened dormant_flavor_info, dfi_size large
+};
+
+struct xfer_addonserver_rescan_mediaaddon_flavors
 {
 	media_addon_id addonid;
 };

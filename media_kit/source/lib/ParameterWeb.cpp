@@ -1,7 +1,7 @@
 /***********************************************************************
  * AUTHOR: Zousar Shaker
  *   FILE: ParameterWeb.cpp
- *  DESCR: ParameterWeb, BParameterGroup, BParameter, BNullParameter, 
+ *  DESCR: BParameterWeb, BParameterGroup, BParameter, BNullParameter, 
  *         BContinuousParameter, BDiscreteParameter
  ***********************************************************************/
 #include <ParameterWeb.h>

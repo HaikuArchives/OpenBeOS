@@ -9,6 +9,8 @@
 #include <Messenger.h>
 #include <StopWatch.h>
 #include <OS.h>
+#include <String.h>
+#include <TimeSource.h>
 #include "debug.h"
 #include "PortPool.h"
 #include "../server/headers/ServerInterface.h"
@@ -22,11 +24,12 @@ static team_id team;
 class _DefaultDeleter
 {
 public:
-	void DeleteMediaRoster() 
-	{ 
-		delete BMediaRoster::_sDefault; 
-	}
+	void Delete() { delete BMediaRoster::_sDefault; }
 };
+
+
+namespace MediaKitPrivate 
+{
 
 class RosterSingleton
 {
@@ -40,16 +43,17 @@ public:
 	}
 	~RosterSingleton()
 	{
-		_DefaultDeleter deleter; 
-		deleter.DeleteMediaRoster();
+		_DefaultDeleter deleter;
+		deleter.Delete(); // deletes BMediaRoster::_sDefault
 		delete ServerMessenger;
 	}
 };
 
 RosterSingleton singleton;
 
-namespace MediaKitPrivate 
-{
+
+status_t GetNode(node_type type, media_node * out_node, int32 * out_input_id = NULL, BString * out_input_name = NULL);
+status_t SetNode(node_type type, const media_node *node, const dormant_node_info *info = NULL, const media_input *input = NULL);
 
 status_t QueryServer(BMessage *query, BMessage *reply)
 {
@@ -65,6 +69,74 @@ status_t QueryServer(BMessage *query, BMessage *reply)
 	return status;
 }
 
+status_t GetNode(node_type type, media_node * out_node, int32 * out_input_id, BString * out_input_name)
+{
+	if (out_node == NULL)
+		return B_BAD_VALUE;
+
+	xfer_server_get_node msg;
+	xfer_server_get_node_reply reply;
+	port_id port;
+	status_t rv;
+	int32 code;
+
+	port = find_port("media_server port");
+	if (port <= B_OK)
+		return B_ERROR;
+		
+	msg.type = type;
+	msg.reply_port = _PortPool->GetPort();
+	rv = write_port(port, SERVER_GET_NODE, &msg, sizeof(msg));
+	if (rv != B_OK) {
+		_PortPool->PutPort(msg.reply_port);
+		return rv;
+	}
+	rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
+	_PortPool->PutPort(msg.reply_port);
+	if (rv < B_OK)
+		return rv;
+	*out_node = reply.node;
+	if (out_input_id)
+		*out_input_id = reply.input_id;
+	if (out_input_name)
+		*out_input_name = reply.input_name;
+	return reply.result;
+}
+
+status_t SetNode(node_type type, const media_node *node, const dormant_node_info *info, const media_input *input)
+{
+	xfer_server_set_node msg;
+	xfer_server_set_node_reply reply;
+	port_id port;
+	status_t rv;
+	int32 code;
+
+	port = find_port("media_server port");
+	if (port <= B_OK)
+		return B_ERROR;
+		
+	msg.type = type;
+	msg.use_node = node ? true : false;
+	if (node)
+		msg.node = *node;
+	msg.use_dni = info ? true : false;
+	if (info)
+		msg.dni = *info;
+	msg.use_input = input ? true : false;
+	if (input)
+		msg.input = *input;
+	msg.reply_port = _PortPool->GetPort();
+	rv = write_port(port, SERVER_SET_NODE, &msg, sizeof(msg));
+	if (rv != B_OK) {
+		_PortPool->PutPort(msg.reply_port);
+		return rv;
+	}
+	rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
+	_PortPool->PutPort(msg.reply_port);
+
+	return (rv < B_OK) ? rv : reply.result;
+}
+
 };
 
 /*************************************************************
@@ -74,40 +146,40 @@ status_t QueryServer(BMessage *query, BMessage *reply)
 status_t 
 BMediaRoster::GetVideoInput(media_node * out_node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(VIDEO_INPUT, out_node);
 }
 
 		
 status_t 
 BMediaRoster::GetAudioInput(media_node * out_node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(AUDIO_INPUT, out_node);
 }
 
 
 status_t 
 BMediaRoster::GetVideoOutput(media_node * out_node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(VIDEO_OUTPUT, out_node);
 }
 
 
 status_t 
 BMediaRoster::GetAudioMixer(media_node * out_node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(AUDIO_MIXER, out_node);
 }
 
 
 status_t 
 BMediaRoster::GetAudioOutput(media_node * out_node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(AUDIO_OUTPUT, out_node);
 }
 
 
@@ -116,88 +188,88 @@ BMediaRoster::GetAudioOutput(media_node * out_node,
 							 int32 * out_input_id,
 							 BString * out_input_name)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(AUDIO_OUTPUT_EX, out_node, out_input_id, out_input_name);
 }
 
 							 
 status_t 
 BMediaRoster::GetTimeSource(media_node * out_node)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(TIME_SOURCE, out_node);
 }
 
 
 status_t 
 BMediaRoster::SetVideoInput(const media_node & producer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(VIDEO_INPUT, &producer);
 }
 
 
 status_t 
 BMediaRoster::SetVideoInput(const dormant_node_info & producer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(VIDEO_INPUT, NULL, &producer);
 }
 
 
 status_t 
 BMediaRoster::SetAudioInput(const media_node & producer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(AUDIO_INPUT, &producer);
 }
 
 
 status_t 
 BMediaRoster::SetAudioInput(const dormant_node_info & producer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(AUDIO_INPUT, NULL, &producer);
 }
 
 
 status_t 
 BMediaRoster::SetVideoOutput(const media_node & consumer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(VIDEO_OUTPUT, &consumer);
 }
 
 
 status_t 
 BMediaRoster::SetVideoOutput(const dormant_node_info & consumer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(VIDEO_OUTPUT, NULL, &consumer);
 }
 
 
 status_t 
 BMediaRoster::SetAudioOutput(const media_node & consumer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(AUDIO_OUTPUT, &consumer);
 }
 
 
 status_t 
 BMediaRoster::SetAudioOutput(const media_input & input_to_output)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(AUDIO_OUTPUT, NULL, NULL, &input_to_output);
 }
 
 
 status_t 
 BMediaRoster::SetAudioOutput(const dormant_node_info & consumer)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::SetNode(AUDIO_OUTPUT, NULL, &consumer);
 }
 
 
@@ -213,8 +285,8 @@ BMediaRoster::GetNodeFor(media_node_id node,
 status_t 
 BMediaRoster::GetSystemTimeSource(media_node * clone)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	return MediaKitPrivate::GetNode(SYSTEM_TIME_SOURCE, clone);
 }
 
 
@@ -447,8 +519,17 @@ status_t
 BMediaRoster::StartTimeSource(const media_node & node,
 							  bigtime_t at_real_time)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+	if ((node.kind & B_TIME_SOURCE) == 0)
+		return B_MEDIA_BAD_NODE;
+		
+	BTimeSource::time_source_op_info msg;
+	msg.op = BTimeSource::B_TIMESOURCE_START;
+	msg.real_time = at_real_time;
+
+	return write_port(node.port, TIMESOURCE_OP, &msg, sizeof(msg));
 }
 
 							  
@@ -457,8 +538,17 @@ BMediaRoster::StopTimeSource(const media_node & node,
 							 bigtime_t at_real_time,
 							 bool immediate)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+	if ((node.kind & B_TIME_SOURCE) == 0)
+		return B_MEDIA_BAD_NODE;
+		
+	BTimeSource::time_source_op_info msg;
+	msg.op = immediate ? BTimeSource::B_TIMESOURCE_STOP_IMMEDIATELY : BTimeSource::B_TIMESOURCE_STOP;
+	msg.real_time = at_real_time;
+
+	return write_port(node.port, TIMESOURCE_OP, &msg, sizeof(msg));
 }
 
 							 
@@ -467,8 +557,18 @@ BMediaRoster::SeekTimeSource(const media_node & node,
 							 bigtime_t to_performance_time,
 							 bigtime_t at_real_time)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (node.node == 0)
+		return B_MEDIA_BAD_NODE;
+	if ((node.kind & B_TIME_SOURCE) == 0)
+		return B_MEDIA_BAD_NODE;
+		
+	BTimeSource::time_source_op_info msg;
+	msg.op = BTimeSource::B_TIMESOURCE_SEEK;
+	msg.real_time = at_real_time;
+	msg.performance_time = to_performance_time; 
+
+	return write_port(node.port, TIMESOURCE_OP, &msg, sizeof(msg));
 }
 
 
@@ -535,8 +635,28 @@ BMediaRoster::SetProducerRate(const media_node & producer,
 							  int32 numer,
 							  int32 denom)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (producer.node == 0)
+		return B_MEDIA_BAD_NODE;
+	if ((producer.kind & B_BUFFER_PRODUCER) == 0)
+		return B_MEDIA_BAD_NODE;
+
+	xfer_producer_set_play_rate msg;
+	xfer_producer_set_play_rate_reply reply;
+	status_t rv;
+	int32 code;
+
+	msg.numer = numer;
+	msg.denom = denom;
+	msg.reply_port = _PortPool->GetPort();
+	rv = write_port(producer.node, PRODUCER_SET_PLAY_RATE, &msg, sizeof(msg));
+	if (rv != B_OK) {
+		_PortPool->PutPort(msg.reply_port);
+		return rv;
+	}
+	rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
+	_PortPool->PutPort(msg.reply_port);
+	return (rv < B_OK) ? rv : reply.result;
 }
 
 
@@ -840,11 +960,11 @@ BMediaRoster::StartControlPanel(const media_node & node,
 status_t 
 BMediaRoster::GetDormantNodes(dormant_node_info * out_info,
 							  int32 * io_count,
-							  const media_format * has_input,
-							  const media_format * has_output,
-							  const char * name,
-							  uint64 require_kinds,
-							  uint64 deny_kinds)
+							  const media_format * has_input /* = NULL */,
+							  const media_format * has_output /* = NULL */,
+							  const char * name /* = NULL */,
+							  uint64 require_kinds /* = NULL */,
+							  uint64 deny_kinds /* = NULL */)
 {
 	UNIMPLEMENTED();
 	return B_ERROR;
