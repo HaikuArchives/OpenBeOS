@@ -36,6 +36,11 @@
 				}
 				BMessage *msg = new BMessage(MENU_FONT_FAMILY);
 				msg->AddPointer("family", family);
+				font_style *style = (font_style*)malloc(sizeof(font_style));
+				// if font family selected, we need to change style to
+				// first style
+				if ( get_font_style(*family, 0, style, &flags) == B_OK )
+					msg->AddPointer("style", style);
 				fontFamily = new BMenuItem(fontStyleMenu, msg);
 				AddItem(fontFamily);
 			}
@@ -61,8 +66,7 @@
 		// font style menus 		
  		for (int i = 0; i < CountItems(); i++) {
  			ItemAt(i)->Submenu()->SetFont(&font);
-		}
-		
+		}	
 		 
 		ClearAllMarkedItems();
 		PlaceCheckMarkOnFont(info.f_family, info.f_style);
@@ -105,13 +109,14 @@
 	void
 	FontMenu::ClearAllMarkedItems()
 	{
-		BMenuItem *markedItem;
-	
-		markedItem = FindMarked();
-	
-		while (markedItem != NULL)
-		{
-			markedItem->SetMarked(false);
-			markedItem = FindMarked();
-		}
+		// we need to clear all menuitems and submenuitems		
+		for (int i = 0; i < CountItems(); i++) { 
+			ItemAt(i)->SetMarked(false);
+			
+			BMenu *submenu = ItemAt(i)->Submenu(); 
+			for (int j = 0; j < submenu->CountItems(); j++) { 
+				submenu->ItemAt(j)->SetMarked(false);                                        
+			} 
+		} 
+		
 	}
