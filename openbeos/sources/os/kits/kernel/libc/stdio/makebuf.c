@@ -35,7 +35,7 @@
  */
 
 #include <ktypes.h>
-#include "stat.h"
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,7 +73,7 @@ __smakebuf(fp)
 	fp->_bf._base = fp->_p = p;
 	fp->_bf._size = size;
 	/* XXX - once stat is fixed and we have isatty() */
-	if (/*couldbetty && */fp->_file < 3) //isatty(fp->_file))
+	if (couldbetty && fp->_file < 3) //isatty(fp->_file))
 		flags |= __SLBF;
 	fp->_flags |= flags;
 }
@@ -89,7 +89,7 @@ __swhatbuf(fp, bufsize, couldbetty)
 {
 	struct stat st;
 
-	if (fp->_file < 0) { // || fstat(fp->_file, &st) < 0) {
+	if (fp->_file < 0 || fstat(fp->_file, &st) < 0) {
 		*couldbetty = 0;
 		*bufsize = BUFSIZ;
 		return (__SNPT);

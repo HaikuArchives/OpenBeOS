@@ -102,3 +102,4 @@ SYSCALL3(sys_test_and_set, 70)
 SYSCALL6(sys_sysctl, 71)
 SYSCALL3(sys_socket, 72)
 SYSCALL0(kern_getdtablesize, 73);
+SYSCALL2(sys_fstat, 74)

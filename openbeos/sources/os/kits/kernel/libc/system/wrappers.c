@@ -1,6 +1,6 @@
 #include <ktypes.h>
 #include <sysctl.h>
-#include <socket.h>
+#include <sys/socket.h>
 #include <OS.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -50,6 +50,25 @@ int ioctl(int fd, ulong cmd, ...)
 
 	SET_ERRNO(err)
 
+	return err;
+}
+
+int stat(const char *path, struct stat *stat)
+{
+	int err = sys_rstat(path, stat);
+
+	SET_ERRNO(err)
+	
+	return err;
+}
+	
+	
+int fstat(int fd, struct stat *stat)
+{
+	int err = sys_fstat(fd, stat);
+	
+	SET_ERRNO(err)
+	
 	return err;
 }
 

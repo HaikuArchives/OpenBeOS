@@ -18,12 +18,12 @@ open(const char *path, int oflags, ...)
 {
 	int retval;
 //	va_args args;
-
+printf("open: %s: %d\n", path, oflags);
 //	va_start(args, oflags);
-	retval= sys_open(path, STREAM_TYPE_ANY , oflags);
+	retval= sys_open(path, STREAM_TYPE_ANY, oflags);
 //	va_end(args);
 
-	if(retval< 0) {
+	if (retval < 0) {
 		errno = retval;
 		retval = -1;
 	}
