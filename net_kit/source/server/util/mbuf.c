@@ -32,6 +32,8 @@ void mbinit(void)
          * header (2 x 6-byte MAC address + 2-byte type)
          */
 	max_linkhdr = 14;
+	max_protohdr = 40;
+	max_hdr = max_linkhdr + max_protohdr;
 }
 
 struct mbuf *m_get(int type)
@@ -200,7 +202,7 @@ void m_reserve(struct mbuf *mp, int len)
 void m_adj(struct mbuf *mp, int req_len)
 {
 	struct mbuf *m;
-	int len = req_len;
+	int len = req_len, count = 0;
 
 	if ((m = mp) == NULL)
 		return;
@@ -223,8 +225,42 @@ void m_adj(struct mbuf *mp, int req_len)
 		m = mp;
 		if (mp->m_flags & M_PKTHDR)
 			m->m_pkthdr.len -= (req_len - len);
+	} else {
+		/* trim from tail... */
+		len = -len;
+		count = 0;
+		for (;;) {
+			count += m->m_len;
+			if (m->m_next == NULL)
+				break;
+			m = m->m_next;
+		}
+		if (m->m_len >= len) {
+			m->m_len -= len;
+			if (mp->m_flags & M_PKTHDR)
+				mp->m_pkthdr.len -= len;
+			return;
+		}
+		count -= len;
+		if (count < 0)
+			count = 0;
+		/* The correct length for the chain is now "count".
+		 * find the last mbuf, adjust it's length and toss
+		 * remaining mbufs...
+		 */
+		m = mp; /* first mbuf */
+		if (m->m_flags & M_PKTHDR)
+			m->m_pkthdr.len = count;
+		for (; m; m= m->m_next) {
+			if (m->m_len >= count) {
+				m->m_len = count;
+				break;
+			}
+			count -= m->m_len;
+		}
+		while (m->m_next)
+			(m = m->m_next)->m_len = 0;
 	}
-	/* -ve case not yet implemented */
 }
 
 void m_copydata(struct mbuf *m, int off, int len, caddr_t cp)
@@ -261,5 +297,77 @@ void m_copydata(struct mbuf *m, int off, int len, caddr_t cp)
                 off = 0;
                 m = m->m_next;
         }
+}
+
+struct mbuf *m_copym(struct mbuf *m, int off0, int len)
+{
+        struct mbuf *n, **np;
+        int off = off0;
+        struct mbuf *top;
+        int copyhdr = 0;
+
+        if (off < 0 || len < 0) {
+                printf("m_copym0: off %d, len %d\n", off, len);
+		exit(-1);
+	}
+        if (!off && m->m_flags & M_PKTHDR)
+                copyhdr = 1;
+        while (off > 0) {
+                if (!m)
+                        printf("m_copym: null mbuf\n");
+                if (off < m->m_len)
+                        break;
+                off -= m->m_len;
+                m = m->m_next;
+        }
+        np = &top;
+        top = 0;
+        while (len > 0) {
+                if (!m) {
+                        if (len != M_COPYALL)
+                                printf("m_copym0: m == 0 and not COPYALL\n");
+                        break;
+                }
+                MGET(n, m->m_type);
+                *np = n;
+                if (!n)
+                        goto nospace;
+                if (copyhdr) {
+                        M_DUP_PKTHDR(n, m);
+                        if (len == M_COPYALL)
+                                n->m_pkthdr.len -= off0;
+                        else
+                                n->m_pkthdr.len = len;
+                        copyhdr = 0;
+                }
+                n->m_len = min(len, m->m_len - off);
+                if (m->m_flags & M_EXT) {
+			/*
+                         * we are unsure about the way m was allocated.
+                         * copy into multiple MCLBYTES cluster mbufs.
+                         */
+                        MCLGET(n);
+                        n->m_len = 0;
+                        n->m_len = M_TRAILINGSPACE(n);
+                        n->m_len = min(n->m_len, len);
+                        n->m_len = min(n->m_len, m->m_len - off);
+                        memcpy(mtod(n, caddr_t), mtod(m, caddr_t) + off,
+                               (unsigned)n->m_len);
+                } else
+                        memcpy(mtod(n, caddr_t), mtod(m, caddr_t)+off,
+                            (unsigned)n->m_len);
+                if (len != M_COPYALL)
+                        len -= n->m_len;
+                off += n->m_len;
+                if (off == m->m_len) {
+                        m = m->m_next;
+                        off = 0;
+                }
+                np = &n->m_next;
+        }
+        return (top);
+nospace:
+        m_freem(top);
+        return (0);
 }
 

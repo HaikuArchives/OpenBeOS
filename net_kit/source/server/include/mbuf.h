@@ -20,7 +20,7 @@
 
 #define MSIZE				256 /* total size of structure */
 #define MCLSHIFT			11
-#define MCLBYTES			1 << MCLSHIFT
+#define MCLBYTES			(1 << MCLSHIFT)
 
 #define MCLMAXBYTES			2048	/* they can't be bigger than 2k */
 #define MLEN		(MSIZE - sizeof(struct m_hdr)) /* data length w/o a pkt_hdr */
@@ -148,6 +148,9 @@ enum {
 	MT_OOBDATA	= 7 	/* out-of-band data */
 };
 
+/* length to m_copy to copy all */
+#define M_COPYALL       1000000000
+
 /* now some macro's to make life easier... */
 
 /* need to add the macro's here :) */
@@ -221,8 +224,6 @@ enum {
 
 #define MCLGET(m) do { \
 	(m)->m_ext.ext_buf = pool_get(clpool); \
-	if ((m)->m_ext.ext_buf == NULL) \
-		return NULL; \
 	if ((m)->m_ext.ext_buf != NULL) { \
 		(m)->m_data = (m)->m_ext.ext_buf; \
 		(m)->m_flags |= M_EXT|M_CLUSTER; \
@@ -245,6 +246,28 @@ enum {
                 (m)->m_pkthdr.len += (plen); \
 }
 
+/*
+ * Duplicate just m_pkthdr from from to to.
+ */
+#define M_DUP_HDR(to, from) { \
+        (to)->m_pkthdr = (from)->m_pkthdr; \
+}
+
+/*
+ * Duplicate mbuf pkthdr from from to to.
+ * from must have M_PKTHDR set, and to must be empty.
+ */
+#define M_DUP_PKTHDR(to, from) { \
+        (to)->m_flags = (from)->m_flags & M_COPYFLAGS; \
+        M_DUP_HDR((to), (from)); \
+        (to)->m_data = (to)->m_pktdat; \
+}
+
+#define M_TRAILINGSPACE(m) \
+        ((m)->m_flags & M_EXT ? (m)->m_ext.ext_buf + (m)->m_ext.ext_size - \
+            ((m)->m_data + (m)->m_len) : \
+            &(m)->m_dat[MLEN] - ((m)->m_data + (m)->m_len))
+
 /* Functions! */
 void mbinit(void);
 struct mbuf *m_get(int type);
@@ -263,6 +286,7 @@ void m_freem(struct mbuf *m);
 void m_reserve(struct mbuf *mp, int len);
 void m_adj(struct mbuf *mp, int req_len);
 void m_copydata(struct mbuf *m, int off, int len, caddr_t cp);
+struct mbuf *m_copym(struct mbuf *m, int off0, int len);
 
 /* debug functions */
 void dump_freelist(void);
@@ -274,6 +298,8 @@ void dump_freelist(void);
 struct pool_ctl *mbpool;
 struct pool_ctl *clpool;
 
-int max_linkhdr;		/* largest link level header */
+int     max_hdr;		/* largest link+protocol header */
+int	max_linkhdr;		/* largest link level header */
+int 	max_protohdr;		/* largest protocol header */
 
 #endif /* OBOS_MBUF_H */
