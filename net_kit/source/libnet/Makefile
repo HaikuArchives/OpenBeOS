@@ -59,14 +59,23 @@ install: installetc
 
 installetc:
 	@for i in $(ETC_FILES); do \
-		echo $$i; \
-		if test -L /etc/$$i; then rm /etc/$$i; fi; \
-		ln -s "`pwd`/$$i" /etc/$$i; \
+		if ! test -e /etc/$$i; then \
+			echo "Installing link to $$i"; \
+			ln -s "`pwd`/$$i" /etc/$$i; \
+		else \
+			echo "Skipping $$i, already installed"; \
+		fi; \
 	done;
 
 removeetc:
 	@for i in $(ETC_FILES); do \
-                if test -L /etc/$$i; then rm /etc/$$i; fi; \
+                if test -L /etc/$$i; then \
+			rm /etc/$$i; \
+			echo "Removed $$i"; \
+		fi; \
+		if test -e /etc/$$i; then \
+			echo "Couldn't remove $$i, not a linked file"; \
+		fi; \
 	done;
 
 libnet.so:	$(OBJS)
