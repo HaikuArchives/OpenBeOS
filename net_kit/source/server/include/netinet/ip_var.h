@@ -121,6 +121,8 @@ struct  ipstat {
 
 struct ipstat ipstat;
 
+void    ip_stripoptions (struct mbuf *, struct mbuf *);
+
 #endif /* _NETWORK_STACK */
 
 #endif /* NETINET_IP_VAR_H */
