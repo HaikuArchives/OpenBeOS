@@ -40,6 +40,7 @@
 #define rtalloc             core->rtalloc
 #define ifa_ifwithdstaddr	core->ifa_ifwithdstaddr
 #define ifa_ifwithnet       core->ifa_ifwithnet
+#define in_broadcast        core->in_broadcast
 
 static struct core_module_info *core = NULL;
 
@@ -132,9 +133,25 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 	struct route iproute; /* temporary route we may need */
 	struct sockaddr_in *dst; /* destination address */
 	struct in_ifaddr *ia;
-	int error = 0;
+	int error = 0, hlen = sizeof(struct ip);
 	struct ifnet *ifp = NULL;
 
+	/* handle options... */
+	if (opt) {
+		printf("We have options!!!\n");
+	}
+
+	ip = mtod(buf, struct ip*);
+	
+	if ((flags & (IP_FORWARDING | IP_RAWOUTPUT)) == 0) {
+		ip->ip_v = IPVERSION;
+		ip->ip_off &= IP_DF;
+		ip->ip_id = htons(ip_identifier++);
+		ip->ip_hl = hlen >> 2;
+		ipstat.ips_localout++;
+	} else
+		hlen = ip->ip_hl << 2;
+		
 	/* route the packet! */
 	if (!ro) {
 		ro = &iproute;
@@ -157,14 +174,18 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 		/* we're routing to an interface... */
 		if (!(ia = ifatoia(ifa_ifwithdstaddr(sintosa(dst)))) &&
 		    !(ia = ifatoia(ifa_ifwithnet(sintosa(dst))))) {
+			ipstat.ips_noroute++;
 			error = ENETUNREACH;
 			goto bad;
 		}
+		ifp = ia->ia_ifp;
+		ip->ip_ttl = 1;
 	} else {
 		/* normal routing */
 		if (ro->ro_rt == NULL)
 			rtalloc(ro);
 		if (ro->ro_rt == NULL) {
+			ipstat.ips_noroute++;
 			printf("EHOSTUNREACH\n");
 			error = EHOSTUNREACH;
 			goto bad;
@@ -184,30 +205,42 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 	if (ip->ip_src.s_addr == INADDR_ANY)
 		ip->ip_src = IA_SIN(ia)->sin_addr;
 
-	/* XXX - deal with broadcast */
+	if ((in_broadcast(dst->sin_addr, ifp))) {
+		if ((ifp->if_flags & IFF_BROADCAST) == 0) {
+			error = EADDRNOTAVAIL;
+			goto bad;
+		}
+		if ((flags & IP_ALLOWBROADCAST) == 0) {
+			error = EACCES;
+			goto bad;
+		}
+		if (ip->ip_len > ifp->if_mtu) {
+			error = EMSGSIZE;
+			goto bad;
+		}
+		buf->m_flags |= M_BCAST;
+	} else 
+		buf->m_flags &= ~M_BCAST;
 
 #if SHOW_ROUTE
 	/* This just shows which interface we're planning on using */
 	printf("Sending to address ");
-	printf("%08lx", ip->ip_dst.s_addr);
+	printf("%08lx", ntohl(ip->ip_dst.s_addr));
 	printf(" via device %s using source ", ifp->if_name);
-	printf("%08lx\n", ip->ip_src.s_addr);
+	printf("%08lx\n", ntohl(ip->ip_src.s_addr));
 #endif
 
-	ip->ip_v = IPVERSION;
-	ip->ip_hl = 5; /* XXX - only if we have no options following...hmmm fix this! */
-
-	if (ip->ip_len <= ifp->if_mtu) { /* can we send it? */
+	if (ip->ip_len <= ifp->if_mtu) {
 		ip->ip_len = htons(ip->ip_len);
-/* XXX - locking!! */		
-		ip->ip_id = htons(ip_identifier++);
-/* XXX - unlock me !! */
+		ip->ip_off = htons(ip->ip_off);
 		ip->ip_sum = 0;
-		ip->ip_sum = in_cksum(buf, (ip->ip_hl * 4), 0);
+		ip->ip_sum = in_cksum(buf, hlen, 0);
 		/* now send the packet! */
 		error = (*ifp->output)(ifp, buf, (struct sockaddr *)dst, ro->ro_rt);
+		goto done;
 	}
 
+	/* Deal with fragmentation... */
 done:
 	if (ro == &iproute && /* we used our own variable */
 	    (flags & IP_ROUTETOIF) == 0 && /* we didn't route to an iterface */
