@@ -34,8 +34,13 @@ THE SOFTWARE.
 #include <Path.h>
 #include <Node.h>
 
+typedef struct _printer_data {
+	char defaultPrinterName[256];
+} printer_data_t;
+
 // -----------------------------------------------------------------------------
-int main()
+int
+main()
 {
 	new PrintServer;
 		be_app->Run();
@@ -46,17 +51,21 @@ int main()
 
 // -----------------------------------------------------------------------------
 PrintServer::PrintServer()
-	: Inherited(B_PSRV_APP_SIGNATURE)
+	: Inherited(B_PSRV_APP_SIGNATURE),
+	fDefaultPrinter(NULL)
 {
 	ScanForPrinters();
+	RetrieveDefaultPrinter();
 	InstallNodeMonitor();
 }
 
 // -----------------------------------------------------------------------------
-bool PrintServer::QuitRequested()
+bool
+PrintServer::QuitRequested()
 {
 	bool quitingIsOk = Inherited::QuitRequested();
 	if (quitingIsOk) {
+		StoreDefaultPrinter();
 		RemoveNodeMonitor();
 	}
 
@@ -64,7 +73,8 @@ bool PrintServer::QuitRequested()
 }
 
 // -----------------------------------------------------------------------------
-void PrintServer::MessageReceived(BMessage* msg)
+void
+PrintServer::MessageReceived(BMessage* msg)
 {
 	int32 opcode;
 
@@ -111,7 +121,8 @@ void PrintServer::MessageReceived(BMessage* msg)
 }
 
 // -----------------------------------------------------------------------------
-status_t PrintServer::InstallNodeMonitor()
+status_t
+PrintServer::InstallNodeMonitor()
 {
 	status_t rc = B_OK;
 	BPath path;
@@ -130,7 +141,8 @@ status_t PrintServer::InstallNodeMonitor()
 }
 
 // -----------------------------------------------------------------------------
-status_t PrintServer::RemoveNodeMonitor()
+status_t
+PrintServer::RemoveNodeMonitor()
 {
 	status_t rc = B_OK;
 	BPath path;
@@ -149,7 +161,8 @@ status_t PrintServer::RemoveNodeMonitor()
 }
 
 // -----------------------------------------------------------------------------
-status_t PrintServer::ScanForPrinters()
+status_t
+PrintServer::ScanForPrinters()
 {
 	status_t rc = B_OK;
 	char mimetype[256];
@@ -181,6 +194,55 @@ status_t PrintServer::ScanForPrinters()
 			//	  return B_OK
 		if (rc == B_ENTRY_NOT_FOUND)
 			rc = B_OK;
+	}
+	
+	return rc;
+}
+
+// -----------------------------------------------------------------------------
+status_t
+PrintServer::RetrieveDefaultPrinter()
+{
+	printer_data_t prefs;
+	status_t rc = B_OK;
+	BPath path;
+
+	if ((rc=find_directory(B_USER_SETTINGS_DIRECTORY, &path, true)) == B_OK) {
+		BFile file;
+		
+		path.Append("printer_data");
+
+		if ((rc=file.SetTo(path.Path(), B_READ_ONLY)) == B_OK) {
+			file.ReadAt(0, &prefs, sizeof(prefs));
+			fDefaultPrinter = Printer::Find(prefs.defaultPrinterName);
+		}
+	}
+	
+	return rc;
+}
+
+// -----------------------------------------------------------------------------
+status_t
+PrintServer::StoreDefaultPrinter()
+{
+	printer_data_t prefs;
+	status_t rc = B_OK;
+	BPath path;
+
+	if ((rc=find_directory(B_USER_SETTINGS_DIRECTORY, &path, true)) == B_OK) {
+		BFile file;
+		
+		path.Append("printer_data");
+
+		if ((rc=file.SetTo(path.Path(), B_WRITE_ONLY)) == B_OK) {
+
+			if (fDefaultPrinter != NULL)
+				::strcpy(prefs.defaultPrinterName, fDefaultPrinter->Name());
+			else
+				prefs.defaultPrinterName[0] = '\0';
+
+			file.WriteAt(0, &prefs, sizeof(prefs));
+		}
 	}
 	
 	return rc;

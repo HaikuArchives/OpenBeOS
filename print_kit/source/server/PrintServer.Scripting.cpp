@@ -1,26 +1,35 @@
-/*
-
-Copyright (c) 2001 OpenBeOS. Written by I.R. Adema.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-*/
+/*****************************************************************************/
+// PrintServer.Scripting.cpp
+//
+// Version: 1.0.0 Development
+//
+// Implements scripting for PrintServer.
+//
+//
+// This application and all source files used in its construction, except 
+// where noted, are licensed under the MIT License, and have been written 
+// and are:
+//
+// Copyright (c) 2001 OpenBeOS Project
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+// and/or sell copies of the Software, and to permit persons to whom the 
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included 
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+/*****************************************************************************/
 
 #include "PrintServer.h"
 #include "Printer.h"
@@ -31,6 +40,15 @@ THE SOFTWARE.
 
 static property_info prop_list[] = {
 	{
+		"PageSetup",
+		{ B_EXECUTE_PROPERTY },
+		{ B_DIRECT_SPECIFIER },
+		"Pose the PageSetup dialog for the default printer",
+		0, // extra data
+		//uint32		types[10];
+		//compound_type	ctypes[3];
+		//uint32		_reserved[10];
+	},{
 		"Printer",
 		{ B_GET_PROPERTY, B_SET_PROPERTY, B_EXECUTE_PROPERTY },
 		{ B_NAME_SPECIFIER, B_INDEX_SPECIFIER, B_REVERSE_INDEX_SPECIFIER },
@@ -71,6 +89,12 @@ static property_info prop_list[] = {
 		//uint32		_reserved[10];
 	}
 };
+
+				BString propName;
+				status_t error = B_OK;
+				
+				BMessage spec;
+				int32 idx;
 
 // -----------------------------------------------------------------------------
 void
@@ -128,7 +152,18 @@ PrintServer::ResolveSpecifier(BMessage *message, int32 index,
 		case B_ERROR:	// Not found!
 			break;
 
-		case 0:			// Return Printer handler
+		case 0:			// Pose Page Setup for default printer
+			if (fDefaultPrinter == NULL)
+			{
+					// Generate error reply and do not handle
+				BMessage reply(B_REPLY);
+				reply.AddInt32("error", B_NO_PRINT_SERVER); //should be B_NO_DEFAULT_PRINTER
+				message->SendReply(&reply);
+			}
+			
+			return fDefaultPrinter;
+
+		case 1:			// Return Printer handler
 			{
 				message->PopSpecifier();
 				printer = this->GetPrinterFromSpecifier(what,specifier);
@@ -148,7 +183,7 @@ PrintServer::ResolveSpecifier(BMessage *message, int32 index,
 			}
 			break;
 
-		case 1:			// Create new Printer and return it
+		case 2:			// Create new Printer and return it
 			{
 				Printer* printerConfig = new Printer;
 				printerConfig->Create(message);

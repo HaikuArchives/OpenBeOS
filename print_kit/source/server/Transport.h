@@ -31,6 +31,7 @@ class Transport;
 
 #include <Handler.h>
 #include <String.h>
+#include <Path.h>
 
 #include "ObjectList.h"
 
@@ -45,8 +46,11 @@ public:
 	static Transport* Find(const char* name);
 
 private:
-	BString fName;
+	Transport(const BPath& path);
 
+	BString fName;
+	BPath fPath;
+	
 	static BObjectList<Transport> sTransports;
 };
 

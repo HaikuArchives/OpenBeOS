@@ -103,6 +103,8 @@ Printer::Delete()
 		(err=entry.SetTo(&dir,NULL)) == B_OK &&
 		(err=entry.GetPath(&path)) == B_OK)
 		::rmdir(path.Path());
+
+	return err;
 }
 
 // -----------------------------------------------------------------------------

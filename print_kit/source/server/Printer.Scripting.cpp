@@ -64,16 +64,25 @@ void Printer::HandleScriptingCommand(BMessage* msg)
 				if (spec.FindString("property", &propName) == B_OK)
 				{
 					BMessage reply(B_REPLY);
-/*					
+
+					reply.AddFloat("scale", 100.0);
+					reply.AddInt32("xres", 300.0);
+					reply.AddInt32("yres", 300.0);
+					reply.AddInt32("orientation", 0);
+					reply.AddInt32("page_format", 0);
+
+					BRect paper_rect(0, 0, 612.0, 792.0);
+					reply.AddRect("paper_rect", paper_rect);
+					reply.AddRect("printable_rect", paper_rect.InsetByCopy(18,18));
+					reply.AddString("current_printer", Name());
+
 					if (propName == "PageSetup")
-						fDriver->DoConfigPage(&fSpoolDir, &reply);
+						error = fDriver->DoConfigPage(&fSpoolDir, &reply);
 					else if (propName == "JobSetup")
-						fDriver->DoConfigJob(&fSpoolDir, &reply);
+						error = fDriver->DoConfigJob(&fSpoolDir, &reply);
 					else
-*/						error = B_BAD_SCRIPT_SYNTAX;
 						
 					reply.AddInt32("error", error);
-					
 					msg->SendReply(&reply);
 				}
 				else	// probably empty specifier

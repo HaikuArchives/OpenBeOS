@@ -48,7 +48,11 @@ public:
 	BHandler* ResolveSpecifier(BMessage* message, int32 index, BMessage* specifier,
 								int32 what, const char *property);
 private:
+	Printer* fDefaultPrinter;
+
 	status_t ScanForPrinters();
+	status_t RetrieveDefaultPrinter();
+	status_t StoreDefaultPrinter();
 	status_t InstallNodeMonitor();
 	status_t RemoveNodeMonitor();
 };

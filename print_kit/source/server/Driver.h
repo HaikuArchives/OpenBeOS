@@ -30,6 +30,7 @@ class Driver;
 // -----------------------------------------------------------------------------
 #include <Handler.h>
 #include <String.h>
+#include <Path.h>
 
 #include "ObjectList.h"
 
@@ -43,9 +44,14 @@ public:
 
 	static Driver* Find(const char* name);
 
+	status_t DoConfigPage(BNode* fSpoolDir, BMessage* reply);
+	status_t DoConfigJob(BNode* fSpoolDir, BMessage* reply);
 private:
-	BString fName;
+	Driver(const BPath& path);
 
+	BString fName;
+	BPath fPath;
+	
 	static BObjectList<Driver> sDrivers;
 };
 // -----------------------------------------------------------------------------
