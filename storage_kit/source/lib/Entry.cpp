@@ -91,13 +91,21 @@ BEntry::BEntry() :
 
 /*! Creates a BEntry object initialized to path or a dir path combination,
 	resolves symlinks if traverse is true */
-BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false){
+BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false) :
+	fCStatus(B_NO_INIT),
+	fDir(StorageKit::NullDir),
+	fName(NULL)
+{
 	SetTo(dir, path, traverse);
 };
 
 /*! Creates a BEntry object initialized to the entry_ref, resolves
 	symlinks if traverse is true */
-BEntry::BEntry(const entry_ref *ref, bool traverse = false){
+BEntry::BEntry(const entry_ref *ref, bool traverse = false) :
+	fCStatus(B_NO_INIT),
+	fDir(StorageKit::NullDir),
+	fName(NULL)
+{
 	SetTo(ref, traverse);
 };
 
@@ -111,8 +119,20 @@ BEntry::BEntry(const char *path, bool traverse = false) :
 	SetTo(path, traverse);
 };
 
-/*! Copy constructor; creates a BEntry object initialized another entry. */
-BEntry::BEntry(const BEntry &entry){
+/*! Copy constructor; creates a BEntry object initialized as a duplicate of another entry. */
+BEntry::BEntry(const BEntry &entry) :
+	fCStatus(B_NO_INIT),
+	fDir(StorageKit::NullDir),
+	fName(NULL)
+{
+	entry_ref ref;
+	status_t status;
+	
+	fCStatus = entry.GetRef(&ref);
+	if (fCStatus == B_OK)
+		SetTo(&ref, false);
+			// Here we don't want to traverse, since we need to be
+			// straight copy of the given entry
 };
 
 /*! Destructor, frees all previously allocated resources */
@@ -122,29 +142,63 @@ BEntry::~BEntry(){
 
 /*! Returns the status of the most recent construction or
 	SetTo() call */
-status_t BEntry::InitCheck() const {
+status_t
+BEntry::InitCheck() const {
 	return fCStatus;
 };
 
 /*! Returns true if the Entry exists in the filesytem, false otherwise. */
-bool BEntry::Exists() const{
-	return false;
+bool
+BEntry::Exists() const {
+	if (fCStatus != B_OK)
+		return fCStatus;
+		
+	// Attempt to find the entry in our current directory
+	StorageKit::DirEntry *entry;
+	return StorageKit::find_dir(fDir, fName, entry) == B_OK;
 };
 
 /*! Gets a stat structure for the Entry */
-status_t BEntry::GetStat(struct stat *st) const{
+status_t
+BEntry::GetStat(struct stat *st) const{
+	if (fCStatus != B_OK)
+		return fCStatus;
+
 };
 
 /*! Reinitializes the BEntry to the path or directory path combination,
 	resolving symlinks if traverse is true */
 status_t
 BEntry::SetTo(const BDirectory *dir, const char *path, bool traverse = false){
+	//! @todo Perhaps we should return dir->fCStatus if dir->fCStatus != B_OK ???
+	if (dir == NULL || dir->fCStatus != B_OK || path == NULL)
+		return B_BAD_VALUE;
+		
+	char rootPath[B_PATH_NAME_LENGTH];
+
+	fCStatus = StorageKit::dir_to_path(dir->fDir, rootPath, B_PATH_NAME_LENGTH);
+	if (fCStatus != B_OK)
+		return fCStatus;
+	
+	//! @todo Need to verify whether the R5 implemenation returns an error if path is not relative 
+	
+	// Concatenate our two path strings together
+	sprintf(rootPath, "%s/%s", rootPath, path);
+	
+	return SetTo(rootPath, traverse);
 };
 				  
 /*! Reinitializes the BEntry to the entry_ref, resolving symlinks if
 	traverse is true */
 status_t
 BEntry::SetTo(const entry_ref *ref, bool traverse = false){
+	if (ref == NULL)
+		return B_BAD_VALUE;
+
+	char path[B_PATH_NAME_LENGTH];
+
+	fCStatus = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
+	return (fCStatus == B_OK) ? SetTo(path, traverse) : fCStatus ;
 };
 
 /*! Reinitializes the BEntry object to the path, resolving symlinks if
@@ -199,66 +253,208 @@ BEntry::Unset() {
 /*! Gets an entry_ref structure from the BEntry */
 status_t
 BEntry::GetRef(entry_ref *ref) const {
+	if (fCStatus != B_OK)
+		return fCStatus;
+
 	if (ref == NULL)
 		return B_BAD_VALUE;
 	
 	// Unset the entry_ref
 	ref->device = ref->directory = 0;
 	ref->set_name(NULL);
-	
-	if (fCStatus != B_OK)
-		return fCStatus;
+
+	status_t status;
 		
-	// Find ourselves in the directory listing
-	StorageKit::rewind_dir(fDir);	
-	StorageKit::DirEntry *entry;
-	for (	entry = StorageKit::read_dir(fDir);
-			entry != NULL;
-			entry = StorageKit::read_dir(fDir)	) {
-		if (strcmp(entry->d_name, ".") == 0) {
-			ref->device = entry->d_dev;
-			ref->directory = entry->d_ino;
-			ref->set_name(fName);
-			return B_OK;					
-		}
-	}
-	
-	return B_FILE_ERROR;
-	
+	// Convert our directory to an self-referencing entry_ref 
+	status = StorageKit::dir_to_self_entry_ref(fDir, ref);
+	if (status != B_OK)
+		return status;
+		
+	// Change the name from "." to our leaf name
+	return ref->set_name(fName);
 };
 
 /*! Gets the path for the BEntry */
 status_t
 BEntry::GetPath(BPath *path) const {
+	if (fCStatus != B_OK)
+		return fCStatus;
+
+	if (path == NULL)
+		return B_BAD_VALUE;
+		
+	entry_ref ref;
+	status_t status;
+	
+	status = GetRef(&ref);
+	if (status != B_OK)
+		return status;
+		
+	path->SetTo(&ref);
+	return path->InitCheck();
 };
 
-/*! Gets the parent of the BEntry */
+/*! Gets the parent of the BEntry as another BEntry. */
 status_t BEntry::GetParent(BEntry *entry) const {
+	if (fCStatus != B_OK)
+		return fCStatus;
+	
+	if (entry == NULL)
+		return B_BAD_VALUE;
+		
+	// Convert ourselves to a BEntry and change the
+	// leaf name to "."
+
+	entry_ref ref;
+	status_t status;
+
+	status = GetRef(&ref);
+	if (status == B_OK) {
+	
+		// Verify we aren't an entry representing "/"
+		status = StorageKit::entry_ref_is_root_dir(ref) ? B_ENTRY_NOT_FOUND : B_OK ;
+		if (status == B_OK) {
+
+			status = ref.set_name(".");
+			if (status == B_OK) {
+			
+				entry->SetTo(&ref);
+				return entry->InitCheck();
+				
+			}
+		}
+	}
+	
+	// If we get this far, an error occured, so we Unset() the
+	// argument as dictated by the BeBook
+	entry->Unset();
+	return status;
+
 };
 
-/*! Gets the parent of the BEntry as a BDirectory */
+/*! Gets the parent of the BEntry as a BDirectory. */
 status_t
 BEntry::GetParent(BDirectory *dir) const {
+	if (fCStatus != B_OK)
+		return fCStatus;
+		
+	if (dir == NULL)
+		return B_BAD_VALUE;
+	
+	entry_ref ref;
+	status_t status;
+	
+	status = GetRef(&ref);
+	if (status == B_OK) {
+	
+		// Verify we aren't an entry representing "/"
+		status = StorageKit::entry_ref_is_root_dir(ref) ? B_ENTRY_NOT_FOUND : B_OK ;
+		if (status == B_OK) {
+			dir->SetTo(&ref);
+			return dir->InitCheck();
+		}
+	}
+	
+	// If we get this far, an error occured, so we Unset() the
+	// argument as dictated by the BeBook
+	dir->Unset();
+	return status;
+	
 };
 
-/*! Gets the name of the */
+/*! Gets the name of the entry's leaf. */
 status_t
 BEntry::GetName(char *buffer) const {
+	status_t result = B_ERROR;
+	
+	if (fCStatus != B_OK) {
+		result = fCStatus;
+	} else if (buffer == NULL) {
+		result = B_BAD_VALUE;
+	} else {
+		strcpy(buffer, fName);
+		result = B_OK;
+	}
+	
+	// Set buffer to NULL on error per R5 BeBook
+//	if (result != B_OK)
+//		buffer = NULL;
+
+	return result;
 };
 
 /*! Renames the BEntry to path, replacing an existing entry if clobber is true. */
 status_t
 BEntry::Rename(const char *path, bool clobber = false) {
+	if (fCStatus != B_OK)
+		return fCStatus;
+		
+//	if (!Exists())
+//		return B_ENTRY_NOT_FOUND;
+		
+	status_t status;
+	
+	// We'll handle absolute paths locally, and pass relative paths on
+	// to MoveTo()
+	if (path[0] == '/') {
+		// Absolute path
+		if (!clobber) {
+			// We're not supposed to kill an already-existing file,
+			// so we'll try to figure out if it exists by stat()ing it.
+			StorageKit::Stat s;
+			status = StorageKit::get_stat(path, &s);
+			if (status == B_OK) {
+				return B_FILE_EXISTS;
+			} else if (status != B_ENTRY_NOT_FOUND) {
+				return status;
+			}
+		}
+		
+		// Turn ourselves into a pathname, rename ourselves
+		BPath oldPath;
+		status = GetPath(&oldPath);
+		if (status == B_OK) {
+			status = StorageKit::rename(oldPath.Path(), path);
+			if (status == B_OK) {
+				SetTo(path, false);
+				status = InitCheck();
+			}
+		}
+	
+		return status;
+	} else {
+		// Haven't implemented this yet
+		return B_ERROR;
+	
+		// Get our parent directory
+		BDirectory dir;
+		status = GetParent(&dir);
+		if (status == B_ENTRY_NOT_FOUND) {
+			// Apparently we are a BEntry representing the root directory,
+			// which you're not allowed to rename.
+			return B_NOT_ALLOWED;
+		}
+	}
+		
+	
 };
 
 /*! Moves the BEntry to path or dir path combination, replacing an existing entry if clober is true. */
 status_t
 BEntry::MoveTo(BDirectory *dir, const char *path = NULL, bool clobber = false) {
+	if (fCStatus != B_OK)
+		return fCStatus;
+		
+	return B_ERROR;
 };
 
 /*! Removes the entry from the file system */
 status_t
 BEntry::Remove() {
+	if (fCStatus != B_OK)
+		return fCStatus;
+
+	return B_ERROR;
 };
 
 
