@@ -1,8 +1,11 @@
 INCLUDES=-I. -I.. -I../include
-TARGET=../modules/core
-LOBJS=	../util/*.o
-XMAP_DIR=/boot/home/config/add-ons/kernel/drivers/dev/net
-DEBUG_OBJS=##area_malloc.o
+TARGET=core
+ifeq ($(USERLAND), true)
+	TGT=../modules/$(TARGET)
+else
+	TGT=$(TARGET)
+endif
+
 CORE_OBJS= 	socket.o \
 		sockbuf.o \
 		inpcb.o \
@@ -17,10 +20,7 @@ CORE_OBJS= 	socket.o \
 		pools.o \
 		in.o \
 		net_timer.o \
-		core.o \
-		$(DEBUG_OBJS)
-
-CORE_C:=	$(CORE_OBJS:.o=.c)
+		core.o
 
 all:	$(TARGET)
 
@@ -29,7 +29,7 @@ clean:
 	@rm -f *.o
 
 $(TARGET): $(CORE_OBJS)
-	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o $(TARGET) $(CORE_OBJS)
+	@$(CC) $(INCLUDES) $(LDFLAGS) -o $(TGT) $(CORE_OBJS)
 
 .SUFFIXES: .c .o
 

@@ -25,7 +25,7 @@ endif
 CFLAGS += -D_NETWORK_STACK
 INCLUDES = -I. -I./include -I../driver
 
-all: clean directories subdirs $(USERLAND_BUILD)
+all: buildclean directories subdirs $(USERLAND_BUILD)
 
 install: all $(INSTALL_TGT)
 
@@ -41,7 +41,6 @@ net_srv: net_srv.o
 
 subdirs: $(OBJS)
 	@for i in $(SUBDIRS); do \
-		echo "Making $$i module"; \
 		(cd $$i && CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" $(MAKE)) || exit 1; \
 	done;
 
@@ -49,6 +48,7 @@ installuser:
 	@echo "Nothing to be installed :)"
 
 installkernel: subdirs
+	@echo "Installing modules"
 	@if ! test -d $(INSTALL_PATH); then \
 		mkdir $(INSTALL_PATH); \
 		for d in $(MODULE_DIRS); do \
@@ -74,26 +74,55 @@ installdriver:
 removedriver:
 	@(cd ../driver && make clean) || exit 1
 
+buildclean:
+	@if test -n "$(USERLAND_BUILD)"; then \
+		if ! test -e userland_server; then \
+			for i in $(SUBDIRS); do \
+				(cd $$i && $(MAKE) clean) || exit 1; \
+			done; \
+		fi; \
+	else \
+		if test -e userland_server; then \
+			for i in $(SUBDIRS); do \
+				(cd $$i && $(MAKE) clean) || exit 1; \
+			done; \
+			rm userland_server *.o; \
+			if test -e net_srv; then \
+				rm net_srv; \
+			fi; \
+		fi; \
+	fi
 
 clean:
-	@if test -e net_srv; then rm net_srv; fi
 	@for i in $(SUBDIRS); do \
 		(cd $$i && $(MAKE) clean) || exit 1; \
-	done;
-	@for d in $(MODULE_DIRS); do \
-		if test -d modules/$$d; then rm -rf modules/$$d; fi; \
-	done;
+	done
 	@if test -e userland_server; then \
-		rm userland_server userland_server.o; \
-	fi
+		rm *.o userland_server; \
+	fi;
 	@if test -e net_srv; then \
-		rm net_srv net_srv.o; \
+		rm net_srv; \
 	fi
-	@for d in $(MODULE_DIRS); do \
-		if test -e $(INSTALL_PATH)/$$d; then \
-			rm -r $(INSTALL_PATH)/$$d/*; \
+
+cleankernel:
+	@for c in $(CORE_MODULES); do \
+		if test -e $(INSTALL_PATH)/$$c; then \
+			rm $(INSTALL_PATH)/$$c; \
 		fi; \
-	done;   
+	done;
+	@for p in $(PROTO_MODULES); do \
+		if test -e $(INSTALL_PATH)/protocol/$$p; then \
+			rm  $(INSTALL_PATH)/protocol/$$p; \
+		fi; \
+	done;
+#	@for m in $(MISC_MODULES); do \
+#		cp $$m/$$m $(INSTALL_PATH)/misc/$$m; \
+#	done;
+	@for i in $(INTERFACE_MODULES); do \
+		if test -e $(INSTALL_PATH)/interface/$$i; then \
+			rm $(INSTALL_PATH)/interface/$$i; \
+		fi; \
+	done;
 
 directories:
 	@for d in $(MODULE_DIRS); do \
