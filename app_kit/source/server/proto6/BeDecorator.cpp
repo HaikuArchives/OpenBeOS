@@ -3,11 +3,19 @@
 #include <View.h>
 #include "BeDecorator.h"
 
-#define DEBUG_DECOR
+//#define DEBUG_DECOR
 
 #ifdef DEBUG_DECOR
 #include <stdio.h>
 #endif
+
+void SetRGBColor(rgb_color *col,uint8 r, uint8 g, uint8 b, uint8 a=255)
+{
+	col->red=r;
+	col->green=g;
+	col->blue=b;
+	col->alpha=a;
+}
 
 BeDecorator::BeDecorator(Layer *lay, uint32 dflags, window_look wlook)
  : Decorator(lay, dflags, wlook)
@@ -19,43 +27,40 @@ printf("BeDecorator()\n");
 	closestate=false;
 	taboffset=0;
 
-	blue.red=100;
-	blue.green=100;
-	blue.blue=255;
+	// These particular colors will disappear once I get the "attribute"
+	// or "part" colors fully implemented
+	SetRGBColor(&blue,100,100,255);
+	SetRGBColor(&blue2,150,150,255);
+	SetRGBColor(&black,0,0,0);
 
-	blue2.red=150;
-	blue2.green=150;
-	blue2.blue=255;
+	SetRGBColor(&gray,224,224,224);
+	SetRGBColor(&white,224,224,224);
+	SetRGBColor(&yellow,255,203,0);
 
-	black.red=0;
-	black.green=0;
-	black.blue=0;
+	SetRGBColor(&ltyellow,255,236,33);
+	SetRGBColor(&mdyellow,255,203,0);
+	SetRGBColor(&dkyellow,234,181,0);
 
-	gray.red=224;
-	gray.green=224;
-	gray.blue=224;
-	
-	white.red=224;
-	white.green=224;
-	white.blue=224;
+	// These hard-coded assignments will go bye-bye when the system colors 
+	// API is implemented
+	SetRGBColor(&tab_highcol,255,236,33);
+	SetRGBColor(&tab_lowcol,234,181,0);
 
-	yellow.red=255;
-	yellow.green=203;
-	yellow.blue=0;
+	SetRGBColor(&button_highcol,255,255,0);
+	SetRGBColor(&button_lowcol,255,203,0);
 
-	ltyellow.red=255;
-	ltyellow.green=236;
-	ltyellow.blue=33;
-
-	mdyellow.red=255;
-	mdyellow.green=203;
-	mdyellow.blue=0;
-
-	dkyellow.red=234;
-	dkyellow.green=181;
-	dkyellow.blue=0;
+	SetRGBColor(&frame_highcol,216,216,216);
+	SetRGBColor(&frame_midcol,184,184,184);
+	SetRGBColor(&frame_lowcol,110,110,110);
 
 	Resize(lay->frame);
+	
+	// We need to modify the visible rectangle because we have tabbed windows
+	if(lay->visible)
+	{
+		delete lay->visible;
+		lay->visible=GetBorderSize();
+	}
 }
 
 BeDecorator::~BeDecorator(void)
@@ -95,7 +100,7 @@ printf("BeDecorator():Clicked() - Zoom\n");
 printf("BeDecorator():Clicked() - Resize thumb\n");
 #endif
 
-		return CLICK_RESIZE_RB;
+		return CLICK_RESIZE;
 	}
 
 	// Clicking in the tab?
@@ -106,7 +111,7 @@ printf("BeDecorator():Clicked() - Resize thumb\n");
 			return CLICK_MOVETOFRONT;
 		if(buttons==B_SECONDARY_MOUSE_BUTTON)
 			return CLICK_MOVETOBACK;
-		return CLICK_TAB;
+		return CLICK_DRAG;
 	}
 
 	// We got this far, so user is clicking on the border?
@@ -150,8 +155,16 @@ printf("BeDecorator()::Resize()"); rect.PrintToStream();
 	resizerect.left=resizerect.right-18;
 	
 	tabrect.bottom=tabrect.top+18;
-	tabrect.right=tabrect.left+tabrect.Width()/2;
-
+	if(layer->name)
+	{
+		float titlewidth=closerect.right
+			+driver->StringWidth(layer->name->String(),
+			layer->name->Length())+35;
+		tabrect.right=(titlewidth<frame.right-1)?titlewidth:frame.right-1;
+	}
+	else
+		tabrect.right=tabrect.left+tabrect.Width()/2;
+	
 	zoomrect=tabrect;
 	zoomrect.top+=2;
 	zoomrect.right-=2;
@@ -170,9 +183,11 @@ void BeDecorator::MoveBy(BPoint pt)
 	zoomrect.OffsetBy(pt);
 }
 
-BRect BeDecorator::GetBorderSize(void)
+BRegion *BeDecorator::GetBorderSize(void)
 {
-	return bsize;
+	BRegion *r=new BRegion(borderrect);
+	r->Include(tabrect);
+	return r;
 }
 
 BPoint BeDecorator::GetMinimumSize(void)
@@ -191,11 +206,33 @@ void BeDecorator::UpdateFont(void)
 
 void BeDecorator::UpdateTitle(const char *string)
 {
+	if(string)
+	{
+		driver->SetDrawingMode(B_OP_OVER);
+		driver->DrawString((char *)string,strlen(string),
+			BPoint(closerect.right+7,closerect.bottom));
+		driver->SetDrawingMode(B_OP_COPY);
+	}
+
 }
 
 void BeDecorator::SetFocus(bool bfocused)
 {
 	focused=bfocused;
+
+	if(focused)
+	{
+		SetRGBColor(&tab_highcol,255,236,33);
+		SetRGBColor(&tab_lowcol,234,181,0);
+	}
+	else
+	{
+		SetRGBColor(&tab_highcol,235,235,235);
+		SetRGBColor(&tab_lowcol,160,160,160);
+	}
+
+	button_highcol=tab_highcol;
+	button_lowcol=tab_lowcol;
 }
 
 void BeDecorator::SetCloseButton(bool down)
@@ -225,65 +262,6 @@ printf("BeDecorator()::Draw():"); update.PrintToStream();
 
 }
 
-void BeDecorator::DrawZoom(BRect r)
-{
-	BPoint pt1(r.left+2,r.bottom-2);
-	BPoint pt2(r.left+(r.Width()/2),r.top+2);
-	BPoint pt3(r.right-2,r.bottom-2);
-	if(zoomstate)
-	{
-		driver->FillRect(r,ltyellow);
-		driver->FillRect(r,(uint8*)&B_SOLID_LOW);
-		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_HIGH);
-		driver->StrokeLine(pt1,pt2,white);
-		driver->StrokeRect(r,black);
-	}	
-	else
-	{
-		driver->FillRect(r,ltyellow);
-		driver->FillRect(r,(uint8*)&B_SOLID_HIGH);
-		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_LOW);
-		driver->StrokeLine(pt1,pt2,white);
-		driver->StrokeRect(r,black);
-	}
-}
-
-void BeDecorator::DrawClose(BRect r)
-{
-	float w=r.Width()/2,  h=r.Height()/2;
-	
-	if(closestate)
-	{
-		BPoint pt1(r.LeftTop());
-		BPoint pt2(r.left+w,r.top);
-		BPoint pt3(r.left,r.top+h);
-		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_HIGH);
-		
-		pt1.Set(r.right-w,r.bottom);
-		pt2.Set(r.right,r.bottom-h);
-		pt3.Set(r.right,r.bottom);
-		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_LOW);
-
-		driver->StrokeRect(r,black);
-	}
-	else
-	{
-		driver->FillRect(r,mdyellow);
-
-		BPoint pt1(r.LeftTop());
-		BPoint pt2(r.left+w,r.top);
-		BPoint pt3(r.left,r.top+h);
-		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_LOW);
-
-		pt1.Set(r.right-w,r.bottom);
-		pt2.Set(r.right,r.bottom-h);
-		pt3.Set(r.right,r.bottom);
-		driver->FillTriangle(pt1,pt2,pt3,r,(uint8*)&B_SOLID_HIGH);
-
-		driver->StrokeRect(r,black);
-	}
-}
-
 void BeDecorator::Draw(void)
 {
 	// Easy way to draw everything - no worries about drawing only certain
@@ -297,31 +275,171 @@ void BeDecorator::Draw(void)
 	DrawFrame();
 }
 
-void BeDecorator::DrawTab(void)
+void BeDecorator::DrawZoom(BRect r)
 {
-	if(focused)
-		driver->FillRect(tabrect,yellow);
-	else
-		driver->FillRect(tabrect,gray);
-	driver->StrokeRect(tabrect,black);
+	BRect zr=r;
+	zr.left+=zr.Width()/3;
+	zr.top+=zr.Height()/3;
+
+	DrawBlendedRect(zr,zoomstate);
+	DrawBlendedRect(zr.OffsetToCopy(r.LeftTop()),
+		zoomstate);
 }
 
-void BeDecorator::DrawFrame(void)
+void BeDecorator::DrawClose(BRect r)
 {
-	driver->StrokeRect(borderrect,black);
+	DrawBlendedRect(r,closestate);
+}
 
-	// Draw the resize thumb if we're supposed to
-	if(!(flags & B_NOT_RESIZABLE))
+void BeDecorator::DrawTab(void)
+{
+	rgb_color tmpcol;
+	float rstep,gstep,bstep;
+
+	int steps=tabrect.IntegerHeight();
+	rstep=(tab_highcol.red-tab_lowcol.red)/steps;
+	gstep=(tab_highcol.green-tab_lowcol.green)/steps;
+	bstep=(tab_highcol.blue-tab_lowcol.blue)/steps;
+
+	for(float i=0;i<=steps; i++)
 	{
-		driver->FillRect(resizerect,gray);
-		driver->StrokeRect(resizerect,black);
+		SetRGBColor(&tmpcol, uint8(tab_highcol.red-(i*rstep)),
+			uint8(tab_highcol.green-(i*gstep)),
+			uint8(tab_highcol.blue-(i*bstep)));
+		driver->StrokeLine(BPoint(tabrect.left,tabrect.top+i),
+			BPoint(tabrect.right,tabrect.top+i),tmpcol);
 	}
+
+	UpdateTitle(layer->name->String());
 
 	// Draw the buttons if we're supposed to	
 	if(!(flags & B_NOT_CLOSABLE))
 		DrawClose(closerect);
 	if(!(flags & B_NOT_ZOOMABLE))
 		DrawZoom(zoomrect);
+}
+
+void BeDecorator::DrawBlendedRect(BRect r, bool down)
+{
+	// This bad boy is used to draw a rectangle with a gradient.
+	// Note that it is not part of the Decorator API - it's specific
+	// to just the BeDecorator. Called by DrawZoom and Draw Close
+
+	// Actually just draws a blended square
+	int32 w=r.IntegerWidth(),  h=r.IntegerHeight();
+
+	rgb_color tmpcol,halfcol, startcol, endcol;
+	float rstep,gstep,bstep,i;
+
+	int steps=(w<h)?w:h;
+
+	if(down)
+	{
+		startcol=button_lowcol;
+		endcol=button_highcol;
+	}
+	else
+	{
+		startcol=button_highcol;
+		endcol=button_lowcol;
+	}
+
+	SetRGBColor(&halfcol,(startcol.red+endcol.red)/2,
+		(startcol.green+endcol.green)/2,
+		(startcol.blue+endcol.blue)/2);
+
+	rstep=(startcol.red-halfcol.red)/steps;
+	gstep=(startcol.green-halfcol.green)/steps;
+	bstep=(startcol.blue-halfcol.blue)/steps;
+
+	for(i=0;i<=steps; i++)
+	{
+		SetRGBColor(&tmpcol, uint8(startcol.red-(i*rstep)),
+			uint8(startcol.green-(i*gstep)),
+			uint8(startcol.blue-(i*bstep)));
+		driver->StrokeLine(BPoint(r.left,r.top+i),
+			BPoint(r.left+i,r.top),tmpcol);
+
+		SetRGBColor(&tmpcol, uint8(halfcol.red-(i*rstep)),
+			uint8(halfcol.green-(i*gstep)),
+			uint8(halfcol.blue-(i*bstep)));
+		driver->StrokeLine(BPoint(r.left+steps,r.top+i),
+			BPoint(r.left+i,r.top+steps),tmpcol);
+
+	}
+	
+	SetRGBColor(&tmpcol, 128,128,0);
+	driver->StrokeRect(r,tmpcol);
+}
+
+void BeDecorator::DrawFrame(void)
+{
+	BRect r=borderrect;
+	bool down=false;
+	
+	r.InsetBy(1,1);
+	driver->StrokeRect(r,frame_midcol);
+
+	r.InsetBy(-1,-1);
+	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.right,r.top),
+		frame_highcol);
+	driver->StrokeLine(BPoint(r.left,r.top),BPoint(r.left,r.bottom),
+		frame_highcol);
+	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.right,r.top-1),
+		frame_lowcol);
+	driver->StrokeLine(BPoint(r.right,r.bottom),BPoint(r.left-1,r.bottom),
+		frame_lowcol);
+	
+	// Draw the resize thumb if we're supposed to
+	if(!(flags & B_NOT_RESIZABLE))
+	{
+		r=resizerect;
+
+		int32 w=r.IntegerWidth(),  h=r.IntegerHeight();
+	
+		rgb_color tmpcol,halfcol, startcol, endcol;
+		float rstep,gstep,bstep,i;
+	
+		int steps=(w<h)?w:h;
+	
+		if(down)
+		{
+			startcol=frame_lowcol;
+			endcol=frame_highcol;
+		}
+		else
+		{
+			startcol=frame_highcol;
+			endcol=frame_lowcol;
+		}
+	
+		SetRGBColor(&halfcol,(startcol.red+endcol.red)/2,
+			(startcol.green+endcol.green)/2,
+			(startcol.blue+endcol.blue)/2);
+	
+		rstep=(startcol.red-halfcol.red)/steps;
+		gstep=(startcol.green-halfcol.green)/steps;
+		bstep=(startcol.blue-halfcol.blue)/steps;
+	
+		for(i=0;i<=steps; i++)
+		{
+			SetRGBColor(&tmpcol, uint8(startcol.red-(i*rstep)),
+				uint8(startcol.green-(i*gstep)),
+				uint8(startcol.blue-(i*bstep)));
+			driver->StrokeLine(BPoint(r.left,r.top+i),
+				BPoint(r.left+i,r.top),tmpcol);
+	
+			SetRGBColor(&tmpcol, uint8(halfcol.red-(i*rstep)),
+				uint8(halfcol.green-(i*gstep)),
+				uint8(halfcol.blue-(i*bstep)));
+			driver->StrokeLine(BPoint(r.left+steps,r.top+i),
+				BPoint(r.left+i,r.top+steps),tmpcol);
+	
+		}
+		
+		SetRGBColor(&tmpcol, 128,128,0);
+		driver->StrokeRect(r,tmpcol);
+	}
 }
 
 void BeDecorator::SetLook(window_look wlook)

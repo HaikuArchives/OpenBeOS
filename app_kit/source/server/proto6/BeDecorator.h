@@ -12,7 +12,7 @@ public:
 	click_type Clicked(BPoint pt, uint32 buttons);
 	void Resize(BRect rect);
 	void MoveBy(BPoint pt);
-	BRect GetBorderSize(void);
+	BRegion *GetBorderSize(void);
 	BPoint GetMinimumSize(void);
 	void SetTitle(const char *newtitle);
 	void SetFlags(uint32 flags);
@@ -30,9 +30,15 @@ public:
 	void DrawFrame(void);
 	void CalculateBorders(void);
 
+	void DrawBlendedRect(BRect r, bool down);
 	uint32 taboffset;
 	rgb_color blue,blue2,black,gray,white,yellow;
 	rgb_color ltyellow,mdyellow, dkyellow;
+
+	rgb_color tab_highcol, tab_lowcol;
+	rgb_color button_highcol, button_lowcol;
+	rgb_color frame_highcol, frame_midcol, frame_lowcol;
+
 	BRect zoomrect,closerect,tabrect,frame,
 		resizerect,borderrect;
 };
