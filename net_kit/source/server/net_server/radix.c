@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include "net/radix.h"
 #endif
+#include "sys/domain.h"
 
 static int	rn_walktree_from (struct radix_node_head *h, void *a,
 				      void *m, walktree_f_t *f, void *w);
@@ -1054,9 +1055,11 @@ void
 rn_init()
 {
 	char *cp, *cplim;
-
-	/* XXX - horrible kludge until domain support added */
-	max_keylen = 16;
+	struct domain *dom;
+	
+	for (dom = domains; dom; dom = dom->dom_next)
+		if (dom->dom_maxrtkey > max_keylen)
+			max_keylen = dom->dom_maxrtkey;
 
 	if (max_keylen == 0) {
 		printf(
