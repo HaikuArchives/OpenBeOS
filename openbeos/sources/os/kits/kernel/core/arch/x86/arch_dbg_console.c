@@ -14,7 +14,7 @@
 
 #include <string.h>
 
-#define BOCHS_E9_HACK 0
+#define BOCHS_E9_HACK 1
 
 // Select between COM1 and COM2 for debug output
 #define USE_COM1 1
