@@ -63,7 +63,7 @@ Inode::InitCheck()
  */
 
 status_t
-Inode::GetNextSmallData(small_data **smallData)
+Inode::GetNextSmallData(small_data **smallData) const
 {
 	if (!Node())
 		return B_ERROR;
@@ -83,6 +83,18 @@ Inode::GetNextSmallData(small_data **smallData)
 	*smallData = data;
 
 	return B_OK;
+}
+
+
+small_data *
+Inode::FindSmallData(const char *name) const
+{
+	small_data *smallData = NULL;
+	while (GetNextSmallData(&smallData) == B_OK) {
+		if (!strcmp(smallData->Name(),name))
+			return smallData;
+	}
+	return NULL;
 }
 
 
@@ -373,7 +385,7 @@ AttributeIterator::Rewind()
 
 
 status_t 
-AttributeIterator::GetNext(char *name, uint32 *type, void **data, size_t *length)
+AttributeIterator::GetNext(char *name, size_t *length, uint32 *type)
 {
 	// read attributes out of the small data section
 
@@ -392,8 +404,8 @@ AttributeIterator::GetNext(char *name, uint32 *type, void **data, size_t *length
 		if (!fCurrentSmallData->IsLast(fInode->Node())) {
 			strncpy(name,fCurrentSmallData->Name(),B_FILE_NAME_LENGTH);
 			*type = fCurrentSmallData->type;
-			*data = fCurrentSmallData->Data();
-			*length = fCurrentSmallData->data_size;
+			*length = fCurrentSmallData->name_size;
+			//*data = fCurrentSmallData->Data();
 			
 			return B_OK;
 		}
@@ -407,13 +419,17 @@ AttributeIterator::GetNext(char *name, uint32 *type, void **data, size_t *length
 	if (fAttributes == NULL) {
 		Volume *volume = fInode->GetVolume();
 		if (get_vnode(volume->ID(),volume->ToVnode(fInode->Attributes()),(void **)&fAttributes) != 0
-			|| fAttributes == NULL)
+			|| fAttributes == NULL) {
+			dprintf("bfs: get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->VnodeID(),name);
 			return B_ENTRY_NOT_FOUND;
+		}
 		
 		BPlusTree *tree;
 		if (fAttributes->GetTree(&tree) < B_OK
-			|| (fIterator = new TreeIterator(tree)) == NULL)
+			|| (fIterator = new TreeIterator(tree)) == NULL) {
+			dprintf("bfs: could not get tree in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->VnodeID(),name);
 			return B_ENTRY_NOT_FOUND;
+		}
 	}
 
 //	block_run run;

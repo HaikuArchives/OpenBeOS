@@ -191,9 +191,9 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void * parms,
 {
 	dprintf("bfs_mount()\n");
 
-//#ifdef DEBUG
-//	load_driver_symbols("obfs");
-//#endif
+#ifndef USER
+	load_driver_symbols("obfs");
+#endif
 
 	Volume *volume = new Volume(nsid);
 
@@ -235,14 +235,6 @@ bfs_rfsstat(void *_ns, struct fs_info *info)
 
 	Volume *volume = (Volume *)_ns;
 	
-	//dprintf("bfs_rfsstat - ENTER\n");
-	
-	// Fill in device id.
-	//info->dev = volume->Device();
-	
-	// Root vnode ID
-	//info->root = ISO_ROOTNODE_ID;
-	
 	// File system flags.
 	info->flags = B_FS_IS_PERSISTENT | B_FS_IS_READONLY | B_FS_HAS_ATTR | B_FS_HAS_MIME;
 
@@ -264,6 +256,9 @@ bfs_rfsstat(void *_ns, struct fs_info *info)
 	
 	return B_NO_ERROR;
 }
+
+
+//	#pragma mark -
 
 // bfs_walk - the walk function just "walks" through a directory looking for
 //				the specified file. When you find it, call get_vnode on its vnid to init
@@ -363,7 +358,16 @@ static int
 bfs_open(void *_ns, void *_node, int omode, void **cookie)
 {
 	dprintf("bfs_open()\n");
-	return 0;
+
+	// we could actually use a cookie to keep track of:
+	//	- the last block_run
+	//	- the location in the data_stream (indirect, double indirect,
+	//	  position in block_run array)
+	//
+	// This could greatly speed up continuous reads of big files, especially
+	// in the indirect block section.
+
+	return B_OK;
 }
 
 // bfs_read - Read a file specified by node, using information in cookie
@@ -372,6 +376,7 @@ bfs_open(void *_ns, void *_node, int omode, void **cookie)
 static int
 bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t *_length)
 {
+	dprintf("bfs_read()\n");
 	Inode *inode = (Inode *)_node;
 	
 	if (inode->IsSymLink()) {
@@ -379,7 +384,6 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 		return B_BAD_VALUE;
 	}
 	
-	dprintf("bfs_read()\n");
 	return inode->ReadAt(pos,buffer,_length);
 }
 
@@ -417,6 +421,9 @@ bfs_read_link(void *_ns, void *_node, char *buf, size_t *bufsize)
 	return 0;
 }
 
+
+//	#pragma mark -
+
 // bfs_opendir - creates fs-specific "cookie" struct that keeps track of where
 //					you are at in reading through directory entries in bfs_readdir.
 
@@ -439,7 +446,7 @@ bfs_open_dir(void *_ns, void *_node, void **cookie)
 		return B_NO_MEMORY;
 
 	*cookie = iterator;
-	return 0;
+	return B_OK;
 }
 
 // bfs_readdir - read 1 or more dirents, keep state in cookie, return
@@ -464,7 +471,6 @@ bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num,
 	} else if (status != B_OK)
 		return status;
 
-
 	Volume *volume = (Volume *)_ns;
 
 	dirent->d_dev = volume->ID();
@@ -481,13 +487,13 @@ bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num,
 static int
 bfs_rewind_dir(void * /*ns*/, void * /*node*/, void *_cookie)
 {
+	dprintf("bfs_rewind_dir()\n");
 	TreeIterator *iterator = (TreeIterator *)_cookie;
-	
+
 	if (iterator == NULL)
 		return B_BAD_VALUE;
 	
-	iterator->Rewind();
-	return 0;
+	return iterator->Rewind();
 }
 
 // bfs_closedir - Do whatever you need to to close a directory (sometimes
@@ -496,7 +502,8 @@ bfs_rewind_dir(void * /*ns*/, void * /*node*/, void *_cookie)
 static int		
 bfs_close_dir(void * /*ns*/, void * /*node*/, void * /*_cookie*/)
 {
-	return 0;
+	dprintf("bfs_close_dir()\n");
+	return B_OK;
 }
 
 // bfs_free_dircookie - Free the fs-specific cookie struct
@@ -510,7 +517,7 @@ bfs_free_dir_cookie(void *ns, void *node, void *_cookie)
 		return B_BAD_VALUE;
 
 	delete iterator;
-	return 0;
+	return B_OK;
 }
 
 
@@ -518,10 +525,20 @@ bfs_free_dir_cookie(void *ns, void *node, void *_cookie)
 
 
 int 
-bfs_open_attrdir(void *ns, void *node, void **cookie)
+bfs_open_attrdir(void *_ns, void *_node, void **cookie)
 {
 	dprintf("bfs_open_attrdir()\n");
-	return B_ERROR;
+	
+	Inode *inode = (Inode *)_node;
+	if (inode == NULL || inode->Node() == NULL)
+		return B_ERROR;
+
+	AttributeIterator *iterator = new AttributeIterator(inode);
+	if (iterator == NULL)
+		return B_NO_MEMORY;
+
+	*cookie = iterator;
+	return B_OK;
 }
 
 
@@ -529,31 +546,63 @@ int
 bfs_close_attrdir(void *ns, void *node, void *cookie)
 {
 	dprintf("bfs_close_attrdir()\n");
-	return B_ERROR;
+	return B_OK;
 }
 
 
 int
-bfs_free_attrdir_cookie(void *ns, void *node, void *cookie)
+bfs_free_attrdir_cookie(void *ns, void *node, void *_cookie)
 {
 	dprintf("bfs_free_attrdir_cookie()\n");
-	return B_ERROR;
+	AttributeIterator *iterator = (AttributeIterator *)_cookie;
+
+	if (iterator == NULL)
+		return B_BAD_VALUE;
+
+	delete iterator;
+	return B_OK;
 }
 
 
 int
-bfs_rewind_attrdir(void *ns, void *node, void *cookie)
+bfs_rewind_attrdir(void *_ns, void *_node, void *_cookie)
 {
 	dprintf("bfs_rewind_attrdir()\n");
-	return B_ERROR;
+	
+	AttributeIterator *iterator = (AttributeIterator *)_cookie;
+	if (iterator == NULL)
+		return B_BAD_VALUE;
+	
+	return iterator->Rewind();
 }
 
 
 int 
-bfs_read_attrdir(void *ns, void *node, void *cookie, long *num, struct dirent *buf, size_t bufsize)
+bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent *dirent, size_t bufsize)
 {
 	dprintf("bfs_read_attrdir()\n");
-	return B_ERROR;
+	AttributeIterator *iterator = (AttributeIterator *)_cookie;
+
+	if (iterator == NULL)
+		return B_BAD_VALUE;
+
+	uint32 type;
+	size_t length;
+	status_t status = iterator->GetNext(dirent->d_name,&length,&type);
+	if (status == B_ENTRY_NOT_FOUND) {
+		*num = 0;
+		return B_OK;
+	} else if (status != B_OK)
+		return status;
+
+	Volume *volume = (Volume *)_ns;
+
+	dirent->d_dev = volume->ID();
+	dirent->d_ino = 0;
+	dirent->d_reclen = length;
+
+	*num = 1;
+	return B_OK;
 }
 
 
@@ -574,9 +623,22 @@ bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 
 
 int
-bfs_stat_attr(void *ns, void *node, const char *name,struct attr_info *buf)
+bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo)
 {
 	dprintf("bfs_stat_attr(name = \"%s\")\n",name);
+
+	Inode *inode = (Inode *)_node;
+	if (inode == NULL || inode->Node() == NULL)
+		return B_ERROR;
+	
+	small_data *smallData = inode->FindSmallData((const char *)name);
+	if (smallData != NULL) {
+		attrInfo->type = smallData->type;
+		attrInfo->size = smallData->data_size;
+
+		return B_OK;
+	}
+
 	return B_ENTRY_NOT_FOUND;
 }
 
@@ -595,11 +657,16 @@ bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buf, size_
 	Inode *inode = (Inode *)_node;
 	dprintf("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->VnodeID(),name,*_length);
 	
-	small_data *smallData = NULL;
-	while (inode->GetNextSmallData(&smallData) == B_OK) {
-		if (strcmp(smallData->Name(),name))
-			continue;
-		
+	if (inode == NULL || inode->Node() == NULL)
+		return B_ERROR;
+
+	small_data *smallData = inode->FindSmallData((const char *)name);
+	if (smallData != NULL) {
+		// writing to a specific position is not supported
+		// for the small_data section right now
+		if (pos != 0)
+			return B_ERROR;
+
 		size_t length = *_length;
 		if (length > smallData->data_size)
 			length = smallData->data_size;
@@ -608,6 +675,8 @@ bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buf, size_
 		*_length = length;
 		return B_OK;
 	}
+	// search in the attribute directory
+
 	return B_ENTRY_NOT_FOUND;
 }
 

@@ -106,7 +106,8 @@ class Inode : public CachedBlock
 
 		status_t InitCheck();
 
-		status_t GetNextSmallData(small_data **smallData);
+		status_t GetNextSmallData(small_data **smallData) const;
+		small_data *FindSmallData(const char *name) const;
 
 		// for directories only:
 		status_t GetTree(BPlusTree **);
@@ -129,7 +130,7 @@ class AttributeIterator
 		~AttributeIterator();
 		
 		status_t Rewind();
-		status_t GetNext(char *name,uint32 *type,void **data,size_t *length);
+		status_t GetNext(char *name,size_t *length,uint32 *type);
 
 	private:
 		small_data	*fCurrentSmallData;
