@@ -907,7 +907,6 @@ found:
 
 static int start_stack(void)
 {
-printf("start_stack!\n");
 	if (init_done)
 		return 0;
 

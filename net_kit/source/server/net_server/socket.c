@@ -949,14 +949,12 @@ int soo_ioctl(void *sp, int cmd, caddr_t data)
 
 	switch (cmd) {
 		case FIONBIO:
-			printf("soo_ioctl: FIONBIO\n");
 			if (*(int*)data)
 				so->so_state |= SS_NBIO;
 			else
 				so->so_state &= ~SS_NBIO;
 			return 0;
 		case FIONREAD:
-			printf("soo_ioctl: FIONREAD\n");
 			/* how many bytes do we have waiting... */
 			*(int*)data = so->so_rcv.sb_cc;
 			return 0;
@@ -1271,7 +1269,7 @@ int sogetopt(void *sp, int level, int optnum, void *data, size_t *datalen)
 int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie, int event)
 {
 	struct socket *so = (struct socket *) sp;
-printf("set_socket_event_callback -> event = %d\n", event);
+
 	so->event_callback = cb;
 	so->event_callback_cookie = cookie;
 	if (cb) {
