@@ -22,7 +22,7 @@ main(int argc, char *argv[])
 	int num= 0;
 	int silent= 0;
 	int result;
-
+	
 	switch(argc) {
 		case 2:
 			num= atoi(argv[1]);
@@ -40,13 +40,13 @@ main(int argc, char *argv[])
 			break;
 	}
 
-	if(num< 2) {
+	if(num < 2) {
 		result= 1;
 	} else {
 		proc_id pid;
 		int retcode;
 		char buffer[64];
-		char *aaargv[]= { argv[0], "-s", buffer, NULL };
+		char *aaargv[]= { "/boot/bin/fibo", "-s", buffer, NULL };
 		int  aaargc= 3;
 
 		sprintf(buffer, "%d", num-1);
