@@ -3,4 +3,5 @@ SubDir OBOS_TOP sources os kits kernel libc system ;
 KernelObjects
 	<$(SOURCE_GRIST)>dlfcn.c 
 	<$(SOURCE_GRIST)>rlimit.c 
-	<$(SOURCE_GRIST)>syscalls.S ;
+	<$(SOURCE_GRIST)>syscalls.S 
+	<$(SOURCE_GRIST)>sysctl.c ;
