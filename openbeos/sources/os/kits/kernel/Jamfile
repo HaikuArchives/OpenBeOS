@@ -318,6 +318,7 @@ KernelStaticLibraryObjects libc.a :
 	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
 	<$(SOURCE_GRIST)!libc!stdio>printf.o
 	<$(SOURCE_GRIST)!libc!stdio>putc.o
+	<$(SOURCE_GRIST)!libc!stdio>putchar.o
 	<$(SOURCE_GRIST)!libc!stdio>puts.o
 	<$(SOURCE_GRIST)!libc!stdio>putw.o
 	<$(SOURCE_GRIST)!libc!stdio>refill.o
@@ -431,6 +432,7 @@ KernelLd libc.so :
 	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
 	<$(SOURCE_GRIST)!libc!stdio>printf.o
 	<$(SOURCE_GRIST)!libc!stdio>putc.o
+	<$(SOURCE_GRIST)!libc!stdio>putchar.o
 	<$(SOURCE_GRIST)!libc!stdio>puts.o
 	<$(SOURCE_GRIST)!libc!stdio>putw.o
 	<$(SOURCE_GRIST)!libc!stdio>refill.o
@@ -818,6 +820,18 @@ KernelLd ps :
         :
         :
         bin/ps
+        ; 
+
+KernelLd echo :
+	libglue2.o
+        <$(SOURCE_GRIST)!apps!echo>main.o
+        libc.so
+        :
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+        :
+        :
+        :
+        bin/echo
         ; 
 
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
