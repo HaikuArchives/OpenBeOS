@@ -11,5 +11,5 @@ clean:
 	cd source/lib; make clean
 	cd test; make clean
 
-runtests:	all
-	cd test; make runtests
+test:	all
+	cd test; make test

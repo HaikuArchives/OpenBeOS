@@ -4,13 +4,16 @@
 #
 
 all:
+	mkdir -p add-ons
+	cd CppUnit; make
 	cd lib/support/BLocker; make
 	cd lib/application/BMessageQueue; make
 
 clean:
+	cd CppUnit; make clean
 	cd lib/support/BLocker; make clean
 	cd lib/application/BMessageQueue; make clean
+	rm -rf add-ons
 
-runtests:
-	cd lib/support/BLocker; make runtests
-	cd lib/application/BMessageQueue; make runtests
+test:
+	CppUnit/TestRunner -all
