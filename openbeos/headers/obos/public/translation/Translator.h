@@ -1,18 +1,36 @@
-/********************************************************************************
-/
-/      File:           Translator.h
-/
-/      Description:    This header file defines a superclass for translator
-/                      objects which you can create within your application and 
-/                      then add to a TranslatorRoster.
-/
-/      Copyright 1998-1999, Be Incorporated, All Rights Reserved.
-/      Copyright 1995-1997, Jon Watte
-/
-/      2002 - Reimplimented by Michael Wilber, OpenBeOS Translation Kit Team
-/
-********************************************************************************/
-
+/*****************************************************************************/
+//               File: Translator.h
+//              Class: BTranslator
+//   Reimplimented by: Michael Wilber, Translation Kit Team
+//   Reimplimentation: 2002-06-15
+//
+// Description: This file contains the BTranslator class, the base class for
+//              all translators that don't use the BeOS R4/R4.5 add-on method.
+//
+//
+// Copyright (c) 2002 OpenBeOS Project
+//
+// Original Version: Copyright 1998, Be Incorporated, All Rights Reserved.
+//                   Copyright 1995-1997, Jon Watte
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+// and/or sell copies of the Software, and to permit persons to whom the 
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included 
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+/*****************************************************************************/
 #ifndef _TRANSLATOR_H
 #define _TRANSLATOR_H
 
@@ -44,11 +62,13 @@ public:
 	virtual int32 TranslatorVersion() const = 0;
 		// returns the version of the translator
 
-	virtual const translation_format *InputFormats(int32 *out_count) const = 0;
+	virtual const translation_format *InputFormats(int32 *out_count)
+		const = 0;
 		// returns the input formats and the count of input formats
 		// that this translator supports
 		
-	virtual const translation_format *OutputFormats(int32 *out_count) const = 0;
+	virtual const translation_format *OutputFormats(int32 *out_count)
+		const = 0;
 		// returns the output formats and the count of output formats
 		// that this translator supports
 
@@ -104,12 +124,13 @@ private:
 	virtual status_t _Reserved_Translator_7(int32, void *);
 };
 
-//	The post-4.5 API suggests implementing this function in your translator
-//	add-on rather than the separate functions and variables of the previous API.
-//	You will be called for values of n starting at 0 and increasing; return 0
-//	when you can't make another kind of translator (i e for n=1 if you only
-//	implement one subclass of BTranslator). Ignore flags for now.
-extern "C" _EXPORT BTranslator *make_nth_translator(int32 n, image_id you, uint32 flags, ...);
+// The post-4.5 API suggests implementing this function in your translator
+// add-on rather than the separate functions and variables of the previous
+// API. You will be called for values of n starting at 0 and increasing;
+// return 0 when you can't make another kind of translator (i.e. for n=1
+// if you only implement one subclass of BTranslator). Ignore flags for now.
+extern "C" _EXPORT BTranslator *make_nth_translator(int32 n, image_id you,
+	uint32 flags, ...);
 
 
 
