@@ -172,6 +172,7 @@ class Inode : public CachedBlock {
 
 		status_t ReadAt(off_t pos,uint8 *buffer,size_t *length);
 		status_t WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *length);
+		status_t FillGapWithZeros(off_t oldSize,off_t newSize);
 
 		status_t SetFileSize(Transaction *transaction,off_t size);
 		status_t Append(Transaction *transaction,off_t bytes);

@@ -218,8 +218,8 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 	// add the prototype:
 	//	extern int load_driver_symbols(const char *driver_name);
 	// to your KernelExport.h include (since it's missing there in some releases
-	// of BeOS R5), or just uncomment the line, it won't do any harm and is used
-	// only for debugging purposes.
+	// of BeOS R5), or just comment out the line, it won't do any harm and is
+	// used only for debugging purposes.
 	load_driver_symbols("obfs");
 #endif
 
@@ -261,27 +261,29 @@ static int
 bfs_read_fs_stat(void *_ns, struct fs_info *info)
 {
 	FUNCTION();
+	if (_ns == NULL || info == NULL)
+		return B_BAD_VALUE;
+
 	Volume *volume = (Volume *)_ns;
-	
+
 	// File system flags.
 	info->flags = B_FS_IS_PERSISTENT | B_FS_HAS_ATTR | B_FS_HAS_MIME | B_FS_HAS_QUERY |
 			(volume->IsReadOnly() ? B_FS_IS_READONLY : 0);
 
-	// whatever is appropriate here? Just use the same value as BFS (and iso9660) for now
 	info->io_size = BFS_IO_SIZE;
+		// whatever is appropriate here? Just use the same value as BFS (and iso9660) for now
 
 	info->block_size = volume->BlockSize();
 	info->total_blocks = volume->NumBlocks();
-
-	info->free_blocks = volume->NumBlocks() - volume->UsedBlocks();
+	info->free_blocks = volume->FreeBlocks();
 
 	// Volume name
 	strncpy(info->volume_name, volume->Name(), sizeof(info->volume_name) - 1);
 	info->volume_name[sizeof(info->volume_name) - 1] = '\0';
-	
-	// File system name
+
+	// File system name (ToDo: has to change to "bfs" later)
 	strcpy(info->fsh_name,"obfs");
-	
+
 	return B_NO_ERROR;
 }
 
@@ -293,7 +295,7 @@ bfs_write_fs_stat(void *_ns, struct fs_info *info, long mask)
 	Volume *volume = (Volume *)_ns;
 	disk_super_block &superBlock = volume->SuperBlock();
 	
-	// ToDo: we need a lock for the super_block here...
+	Locker locker(volume->Lock());
 
 	status_t status = B_BAD_VALUE;
 
@@ -656,8 +658,11 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 	if (mask & WSTAT_SIZE) {
 		if (inode->IsDirectory())
 			return B_IS_A_DIRECTORY;
-		else {
+		else if (inode->Size() != stat->st_size) {
 			status = inode->SetFileSize(&transaction,stat->st_size);
+
+			// fill the new blocks (if any) with zeros
+			inode->FillGapWithZeros(inode->OldSize(),inode->Size());
 
 			Index index(volume);
 			index.UpdateSize(&transaction,inode);

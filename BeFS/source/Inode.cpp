@@ -1062,12 +1062,18 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 	if (pos < 0)
 		pos = 0;
 	else if (pos + length > Node()->data.size) {
+		off_t oldSize = Size();
+
 		// let's grow the data stream to the size needed
 		status_t status = SetFileSize(transaction,pos + length);
 		if (status < B_OK) {
 			*_length = 0;
 			RETURN_ERROR(status);
 		}
+		// If the position of the write was beyond the file size, we
+		// have to fill the gap between that position and the old file
+		// size with zeros.
+		FillGapWithZeros(oldSize,pos);
 	}
 
 	block_run run;
@@ -1190,6 +1196,91 @@ Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_l
 
 	*_length = bytesWritten;
 	return B_NO_ERROR;
+}
+
+
+/**	Fills the gap between the old file size and the new file size
+ *	with zeros.
+ *	It's more or less a copy of Inode::WriteAt() but it can handle
+ *	length differences of more than just 4 GB, and it never uses
+ *	the log, even if the INODE_LOGGED flag is set.
+ */
+
+status_t
+Inode::FillGapWithZeros(off_t pos,off_t newSize)
+{
+	if (pos >= newSize)
+		return B_OK;
+
+	block_run run;
+	off_t offset;
+	if (FindBlockRun(pos,run,offset) < B_OK)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	off_t length = newSize - pos;
+	uint32 bytesWritten = 0;
+	uint32 blockSize = fVolume->BlockSize();
+	uint32 blockShift = fVolume->BlockShift();
+	uint8 *block;
+
+	// the first block_run we write could not be aligned to the block_size boundary
+	// (write partial block at the beginning)
+
+	// pos % block_size == (pos - offset) % block_size, offset % block_size == 0
+	if (pos % blockSize != 0) {
+		run.start += (pos - offset) / blockSize;
+		run.length -= (pos - offset) / blockSize;
+
+		CachedBlock cached(fVolume,run);
+		if ((block = cached.Block()) == NULL)
+			RETURN_ERROR(B_BAD_VALUE);
+
+		bytesWritten = blockSize - (pos % blockSize);
+		if (length < bytesWritten)
+			bytesWritten = length;
+
+		memset(block + (pos % blockSize),0,bytesWritten);
+		cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize);
+
+		pos += bytesWritten;
+		
+		length -= bytesWritten;
+		if (length == 0)
+			return B_OK;
+
+		if (FindBlockRun(pos,run,offset) < B_OK)
+			RETURN_ERROR(B_BAD_VALUE);
+	}
+
+	while (length > 0) {
+		// offset is the offset to the current pos in the block_run
+		run.start += (pos - offset) >> blockShift;
+		run.length -= (pos - offset) >> blockShift;
+
+		CachedBlock cached(fVolume);
+		off_t blockNumber = fVolume->ToBlock(run);
+		for (int32 i = 0;i < run.length;i++) {
+			if ((block = cached.SetTo(blockNumber + i,true)) == NULL)
+				RETURN_ERROR(B_IO_ERROR);
+
+			if (cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize) < B_OK)
+				RETURN_ERROR(B_IO_ERROR);
+		}
+
+		int32 bytes = run.length << blockShift;
+		length -= bytes;
+		bytesWritten += bytes;
+		
+		// since we don't respect a last partial block, length can be lower
+		if (length <= 0)
+			break;
+
+		pos += bytes;
+
+		if (FindBlockRun(pos,run,offset) < B_OK)
+			RETURN_ERROR(B_BAD_VALUE);
+	}
+	return B_OK;
 }
 
 
@@ -1637,7 +1728,7 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 
 	node->create_time = (bigtime_t)time(NULL) << INODE_TIME_SHIFT;
 	node->last_modified_time = node->create_time | (volume->GetUniqueID() & INODE_TIME_MASK);
-		// we use Volume::GetUniqueID() to avoid having to many duplicates in the
+		// we use Volume::GetUniqueID() to avoid having too many duplicates in the
 		// last_modified index
 
 	node->inode_size = volume->InodeSize();
