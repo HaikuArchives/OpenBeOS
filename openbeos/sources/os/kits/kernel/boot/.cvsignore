@@ -1,0 +1,6 @@
+CVS
+*.o
+bin2h
+bin2asm
+bootmaker
+makeflop
