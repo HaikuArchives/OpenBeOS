@@ -1,16 +1,12 @@
+/*
+Author:	Jerome LEVEQUE
+Email:	jerl1@caramail.com
+*/
 #include "Activity.h"
 
 #include <Window.h>
 #include <StringView.h>
 
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
 //----------------------------------------------------------
 
 Activity::Activity(BRect rect)
@@ -24,15 +20,9 @@ Activity::Activity(BRect rect)
 
 //----------------------------------------------------------
 
-Activity::~Activity(void)
-{
-}
-
-//----------------------------------------------------------
-
 void Activity::AttachedToWindow(void)
 {
-	Window()->SetPulseRate(100000);
+	Window()->SetPulseRate(200000);
 
 	AddChild(new BStringView(BRect( 65, 45,  80, 55), NULL, "1"));
 	AddChild(new BStringView(BRect(125, 45, 140, 55), NULL, "2"));
@@ -59,7 +49,7 @@ void Activity::AttachedToWindow(void)
 
 void Activity::Draw(BRect rect)
 {
-bigtime_t present = system_time() - 800000;
+bigtime_t present = system_time() - 600000;
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 		{
@@ -68,10 +58,7 @@ bigtime_t present = system_time() - 800000;
 			StrokeEllipse(aPoint, 5, 5);
 			SetHighColor(0, 255, 0);
 			if (present < fActivity[j * 4 + i])
-				FillEllipse(aPoint, 4.9, 4.9);
-				
-//			aPoint += BPoint(0, 20);
-//			StrokeEllipse(aPoint, 5, 5);
+				FillEllipse(aPoint, 4, 4);
 		}
 }
 
@@ -86,23 +73,9 @@ void Activity::Pulse(void)
 
 void Activity::NoteOn(uchar channel, uchar note,
 	uchar velocity, uint32 time = B_NOW)
-{
+{//This function just update the variable
 	fActivity[channel - 1] = system_time();
 	BMidi::NoteOn(channel, note, velocity, time);
 }
 
 //----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-
-//--------------
-//--------------
-//--------------
-//--------------
-//--------------
-//--------------
-

@@ -1,3 +1,7 @@
+/*
+Author:	Jerome LEVEQUE
+Email:	jerl1@caramail.com
+*/
 #ifndef ACTIVITY_H
 #define ACTIVITY_H
 
@@ -18,7 +22,6 @@ class Activity : public BMidi, public BView
 {
 public:
 	Activity(BRect rect);
-	~Activity(void);
 	
 	virtual void AttachedToWindow(void);
 	virtual void Draw(BRect rect);

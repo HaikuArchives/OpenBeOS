@@ -1,3 +1,7 @@
+/*
+Author:	Jerome LEVEQUE
+Email:	jerl1@caramail.com
+*/
 #include "MidiPlayerWindow.h"
 #include "MidiDelay.h"
 #include "Activity.h"
@@ -70,6 +74,7 @@ public:
 //--------------
 //--------------
 //--------------
+
 private:
 	MidiPlayerWindow *fWindows;
 
@@ -291,6 +296,8 @@ entry_ref ref;
 				break;
 //--------------
 //--------------
+//Message from Input file
+//--------------
 		case CHANGE_INPUT_FILE :
 				if (fInputFilePanel)
 				{
@@ -321,6 +328,26 @@ entry_ref ref;
 				}
 				break;
 //--------------
+		case REWIND_INPUT_FILE :
+				((BMidiStore*)fMidiInput)->Stop();
+				if (fMidiOutput) fMidiOutput->AllNotesOff();
+				fInputCurrentEvent = 0;
+				return;
+//--------------
+		case PLAY_INPUT_FILE :
+				((BMidiStore*)fMidiInput)->SetCurrentEvent(fInputCurrentEvent);
+				((BMidiStore*)fMidiInput)->Start();
+				break;
+//--------------
+		case PAUSE_INPUT_FILE :
+				fInputCurrentEvent = ((BMidiStore*)fMidiInput)->CurrentEvent();
+				((BMidiStore*)fMidiInput)->Stop();
+				if (fMidiOutput) fMidiOutput->AllNotesOff();
+				break;
+//--------------
+//--------------
+//Message from Output file
+//--------------
 		case CHANGE_OUTPUT_FILE :
 				if (fOutputFilePanel)
 				{
@@ -350,41 +377,6 @@ entry_ref ref;
 				}
 				break;
 //--------------
-		case B_CANCEL :
-				msg->FindInt32("old_what", (int32*)&temp);
-				if (temp == CHANGE_INPUT_FILE)
-				{
-					delete fInputFilePanel;
-					fInputFilePanel = NULL;
-				}
-				if (temp == CHANGE_OUTPUT_FILE)
-				{
-					delete fOutputFilePanel;
-					fOutputFilePanel = NULL;
-				}
-				break;
-//--------------
-//--------------
-//--------------
-		case REWIND_INPUT_FILE :
-				((BMidiStore*)fMidiInput)->Stop();
-				if (fMidiOutput) fMidiOutput->AllNotesOff();
-				fInputCurrentEvent = 0;
-				return;
-//--------------
-		case PLAY_INPUT_FILE :
-				((BMidiStore*)fMidiInput)->SetCurrentEvent(fInputCurrentEvent);
-				((BMidiStore*)fMidiInput)->Start();
-				break;
-//--------------
-		case PAUSE_INPUT_FILE :
-				fInputCurrentEvent = ((BMidiStore*)fMidiInput)->CurrentEvent();
-				((BMidiStore*)fMidiInput)->Stop();
-				if (fMidiOutput) fMidiOutput->AllNotesOff();
-				break;
-//--------------
-//--------------
-//--------------
 		case REWIND_OUTPUT_FILE :
 				Disconnect();
 				delete fMidiOutput;
@@ -403,6 +395,7 @@ entry_ref ref;
 				break;
 //--------------
 //--------------
+//Message from the input Midiport
 //--------------
 		case CHANGE_INPUT_MIDIPORT :
 				if (msg->FindPointer("source", (void**)&item) == B_OK)
@@ -413,6 +406,7 @@ entry_ref ref;
 				break;
 //--------------
 //--------------
+//Message from the output Midiport
 //--------------
 		case CHANGE_OUTPUT_MIDIPORT :
 				if (msg->FindPointer("source", (void**)&item) == B_OK)
@@ -423,8 +417,9 @@ entry_ref ref;
 				break;
 //--------------
 //--------------
+//Message from the BeOS Synth
 //--------------
-		case CHANGE_OUTPUT_BEOS_SYNTH_FILE:
+		case CHANGE_BEOS_SYNTH_FILE:
 				if (fOutputFilePanel)
 				{
 					msg->FindRef("refs", &fOutputFile);
@@ -444,12 +439,12 @@ entry_ref ref;
 				}
 				break;
 //--------------
-		case REWIND_OUTPUT_BEOS_SYNTH_FILE :
+		case REWIND_BEOS_SYNTH_FILE :
 				((BMidiSynthFile*)fMidiOutput)->Stop();
 				fOutputCurrentEvent = 0;
 				return;
 //--------------
-		case PLAY_OUTPUT_BEOS_SYNTH_FILE :
+		case PLAY_BEOS_SYNTH_FILE :
 				if (fOutputCurrentEvent == 1)
 					((BMidiSynthFile*)fMidiOutput)->Resume();
 				else
@@ -457,12 +452,10 @@ entry_ref ref;
 				fOutputCurrentEvent = 0;
 				break;
 //--------------
-		case PAUSE_OUTPUT_BEOS_SYNTH_FILE :
+		case PAUSE_BEOS_SYNTH_FILE :
 				fOutputCurrentEvent = 1;
 				((BMidiSynthFile*)fMidiOutput)->Pause();
 				break;
-//--------------
-//--------------
 //--------------
 		case CHANGE_SAMPLE_RATE_SYNTH :
 				msg->FindInt32("index", (int32*)&temp);
@@ -547,8 +540,8 @@ entry_ref ref;
 				be_synth->SetSampleVolume(temp / 2000);
 				break;
 //--------------
-//For the drag and drop function
 //--------------
+//For the drag and drop function
 //--------------
 		case B_SIMPLE_DATA : //A file had been dropped into application
 				if (msg->FindRef("refs", &ref) == B_OK)
@@ -561,6 +554,22 @@ entry_ref ref;
 					PostMessage(&message);
 					message = BMessage(OUTPUT_CHANGE_TO_BEOS_SYNTH);
 					PostMessage(&message);
+					message = BMessage(PLAY_INPUT_FILE);
+					PostMessage(&message);
+				}
+				break;
+//--------------
+		case B_CANCEL :
+				msg->FindInt32("old_what", (int32*)&temp);
+				if (temp == CHANGE_INPUT_FILE)
+				{
+					delete fInputFilePanel;
+					fInputFilePanel = NULL;
+				}
+				if (temp == CHANGE_OUTPUT_FILE)
+				{
+					delete fOutputFilePanel;
+					fOutputFilePanel = NULL;
 				}
 				break;
 //--------------

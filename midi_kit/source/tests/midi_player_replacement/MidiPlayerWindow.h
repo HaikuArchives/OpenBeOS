@@ -1,3 +1,7 @@
+/*
+Author:	Jerome LEVEQUE
+Email:	jerl1@caramail.com
+*/
 #ifndef MIDI_PLAYER_WINDOW_H
 #define MIDI_PLAYER_WINDOW_H
 

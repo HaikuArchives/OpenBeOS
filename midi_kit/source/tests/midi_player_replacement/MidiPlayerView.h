@@ -1,3 +1,7 @@
+/*
+Author:	Jerome LEVEQUE
+Email:	jerl1@caramail.com
+*/
 #ifndef MIDI_PLAYER_VIEW_H
 #define MIDI_PLAYER_VIEW_H
 
@@ -32,10 +36,10 @@
 #define CHANGE_INPUT_MIDIPORT 'chim'
 #define CHANGE_OUTPUT_MIDIPORT 'chom'
 //--------------
-#define CHANGE_OUTPUT_BEOS_SYNTH_FILE 'chob'
-#define REWIND_OUTPUT_BEOS_SYNTH_FILE 'reob'
-#define PLAY_OUTPUT_BEOS_SYNTH_FILE 'plob'
-#define PAUSE_OUTPUT_BEOS_SYNTH_FILE 'paob'
+#define CHANGE_BEOS_SYNTH_FILE 'cbsf'
+#define REWIND_BEOS_SYNTH_FILE 'rbsf'
+#define PLAY_BEOS_SYNTH_FILE 'plsf'
+#define PAUSE_BEOS_SYNTH_FILE 'pasf'
 //--------------
 #define CHANGE_SAMPLE_RATE_SYNTH 'csrs'
 #define CHANGE_INTERPOLATION_TYPE_SYNTH 'cits'
@@ -68,6 +72,7 @@ public:
 	BStringView *GetOutputStringView(void);
 
 	void RemoveAll(BView *aView);
+	void SetBeOSSynthView(BView *aView);
 	
 private:
 	BBox *fInputBox;
@@ -78,11 +83,7 @@ private:
 	BStringView *fOutputStringView;
 };
 
-
 //----------------------------------------------------------
-
-void SetBeOSSynthView(BView *aView);
-
 //----------------------------------------------------------
 //----------------------------------------------------------
 //----------------------------------------------------------

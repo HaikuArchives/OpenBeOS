@@ -1,3 +1,7 @@
+/*
+Author:	Jerome LEVEQUE
+Email:	jerl1@caramail.com
+*/
 #include "MidiPlayerView.h"
 #include "Scope.h"
 #include "Activity.h"
@@ -12,6 +16,12 @@
 #include <Directory.h>
 #include <Slider.h>
 
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
 //----------------------------------------------------------
 //----------------------------------------------------------
 
@@ -70,7 +80,6 @@ BMessage *msg = NULL;
 	Menu->AddItem(new BMenuItem("Scope", msg));
 	msg = new BMessage(VIEW_CHANGE_TO_ACTIVITY);
 	Menu->AddItem(new BMenuItem("Midi activity", msg));
-//	Menu->SetTargetForItems(this);
 	Field = new BMenuField(BRect(0, 0, 150, 20), NULL, NULL, Menu);
 	fViewBox->SetLabel((BView*)Field);
 	
@@ -85,6 +94,10 @@ BMenuField *Field = NULL;
 Activity *view = NULL;
 	switch (msg->what)
 	{
+//--------------
+//--------------
+//For The Input
+//--------------
 		case INPUT_CHANGE_TO_FILE :
 				RemoveAll(fInputBox);
 				fInputBox->AddChild(fInputStringView);
@@ -102,6 +115,8 @@ Activity *view = NULL;
 				break;
 //--------------
 //--------------
+//For the Output
+//--------------
 		case OUTPUT_CHANGE_TO_FILE :
 				RemoveAll(fOutputBox);
 				fOutputBox->AddChild(fOutputStringView);
@@ -118,10 +133,10 @@ Activity *view = NULL;
 		case OUTPUT_CHANGE_TO_BEOS_SYNTH_FILE :
 				RemoveAll(fOutputBox);
 				fOutputBox->AddChild(fOutputStringView);
-				fOutputBox->AddChild(new BButton(BRect(220, 20, 270, 40), NULL, "Select", new BMessage(CHANGE_OUTPUT_BEOS_SYNTH_FILE)));
-				fOutputBox->AddChild(new BButton(BRect(50, 140, 100, 160), NULL, "Rewind", new BMessage(REWIND_OUTPUT_BEOS_SYNTH_FILE)));
-				fOutputBox->AddChild(new BButton(BRect(110, 140, 160, 160), NULL, "Play", new BMessage(PLAY_OUTPUT_BEOS_SYNTH_FILE)));
-				fOutputBox->AddChild(new BButton(BRect(170, 140, 220, 160), NULL, "Pause", new BMessage(PAUSE_OUTPUT_BEOS_SYNTH_FILE)));
+				fOutputBox->AddChild(new BButton(BRect(220, 20, 270, 40), NULL, "Select", new BMessage(CHANGE_BEOS_SYNTH_FILE)));
+				fOutputBox->AddChild(new BButton(BRect(50, 140, 100, 160), NULL, "Rewind", new BMessage(REWIND_BEOS_SYNTH_FILE)));
+				fOutputBox->AddChild(new BButton(BRect(110, 140, 160, 160), NULL, "Play", new BMessage(PLAY_BEOS_SYNTH_FILE)));
+				fOutputBox->AddChild(new BButton(BRect(170, 140, 220, 160), NULL, "Pause", new BMessage(PAUSE_BEOS_SYNTH_FILE)));
 				SetBeOSSynthView(fOutputBox);
 				break;
 //--------------
@@ -132,6 +147,8 @@ Activity *view = NULL;
 				Field->SetDivider(60);
 				break;
 //--------------
+//--------------
+//For the display view
 //--------------
 		case VIEW_CHANGE_TO_NONE :
 				RemoveAll(fViewBox);
@@ -145,9 +162,24 @@ Activity *view = NULL;
 		case VIEW_CHANGE_TO_ACTIVITY :
 				RemoveAll(fViewBox);
 				msg->FindPointer("View", (void**)&view);
-//				view = new Activity(BRect(10, 25, 340, 340));
 				fViewBox->AddChild(view);
 				break;
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
+//--------------
 //--------------
 //--------------
 //--------------
@@ -188,16 +220,8 @@ BView *Temp = NULL;
 }
 
 //----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
-//----------------------------------------------------------
 
-void SetBeOSSynthView(BView *aView)
+void MidiPlayerView::SetBeOSSynthView(BView *aView)
 {
 BPopUpMenu *Menu = NULL;
 BMenuField *field = NULL;
@@ -280,6 +304,14 @@ BSlider *slider = new BSlider(BRect(5, 100, 275, 130), NULL, "Volume",
 	aView->AddChild(slider);
 }
 
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
+//----------------------------------------------------------
 //----------------------------------------------------------
 //----------------------------------------------------------
 //----------------------------------------------------------
