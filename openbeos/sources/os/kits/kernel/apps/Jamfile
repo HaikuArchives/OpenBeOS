@@ -2,6 +2,7 @@ SubDir OBOS_TOP sources os kits kernel apps ;
 
 KernelObjects false_main.c fibo_main.c init.c true_main.c : -fpic ;
 
+SubInclude OBOS_TOP sources os kits kernel apps filetest ;
 SubInclude OBOS_TOP sources os kits kernel apps fortune ;
 SubInclude OBOS_TOP sources os kits kernel apps hostname ;
 SubInclude OBOS_TOP sources os kits kernel apps ls ;
