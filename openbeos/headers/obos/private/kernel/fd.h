@@ -10,6 +10,7 @@
 #include <sem.h>
 #include <lock.h>
 #include <atomic.h>
+#include <memheap.h>
 
 /* Types of file descriptors we can create */
 #define DTYPE_VNODE        1
@@ -35,6 +36,7 @@ struct fd_ops {
 //	int     (*fd_poll)(struct file_descriptor *, int);
 //	int     (*fd_stat)(struct file_descriptor *, ...); XXX - complete me :(
 	int     (*fd_close)(struct file_descriptor *, int, struct ioctx *);
+	void    (*fd_cleanup)(struct file_descriptor *);
 };
 
 struct file_descriptor {
@@ -66,10 +68,15 @@ static __inline struct ioctx *get_current_ioctx(bool kernel)
 	return ioctx;
 }
 
+/* Run a cleanup (fd_free) routine if there is one and free structure, but only
+ * if we've just removed the final reference to it :)
+ */
 static __inline void put_fd(struct file_descriptor *f)
 {
 	if(atomic_add(&f->ref_count, -1) == 1) {
-		free_fd(f);
+		if (f->ops->fd_cleanup)
+			f->ops->fd_cleanup(f);
+		kfree(f);
 	}
 }
 
