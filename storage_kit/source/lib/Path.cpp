@@ -112,6 +112,7 @@ BPath::~BPath() {
 
 
 status_t BPath::InitCheck() const {
+	return B_NO_INIT;
 }
 
 status_t BPath::SetTo(const char *path, const char *leaf = NULL, bool normalize = false) {
