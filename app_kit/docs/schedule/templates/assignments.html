@@ -1,0 +1,69 @@
+<html>
+<head>
+	<title>Interface Kit Team Assignments</title>
+</head>
+<body>
+<h1>
+	Interface Kit Team Assignments and Open Tasks
+	<hr>
+</h1>
+
+<h2>
+	Assignments:
+</h2>
+
+<table>
+<scripting>
+@for_each engineer in $Assignments.engineers
+	<tr>
+		<td>
+			$engineer.name
+		</td>
+	</tr>
+@for_each etask in $engineer.tasks
+	<tr>
+		<td>
+		</td>
+		<td>
+			$etask.str
+		</td>
+	</tr>
+@end
+	<tr>
+		<td height="15" colspan="2"></td>
+	</tr>
+@end
+</scripting>
+</table>
+
+
+<h2>
+	Open Tasks:
+</h2>
+
+<table>
+<scripting>
+@for_each section in $Assignments.sections
+	<tr>
+		<td>
+			$section.name
+		</td>
+	</tr>
+@for_each stask in $section.tasks
+	<tr>
+		<td>
+		</td>
+		<td>
+			$stask.str
+		</td>
+	</tr>
+@end
+	<tr>
+		<td height="15" colspan="2"></td>
+	</tr>
+@end
+</scripting>
+</table>
+
+</body>
+</html>
