@@ -38,6 +38,7 @@ THE SOFTWARE.
 #include <File.h>
 #include <FindDirectory.h>
 #include <Path.h>
+#include <String.h>
 
 class MarginView;
 
