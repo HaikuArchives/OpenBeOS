@@ -223,6 +223,11 @@ res_isourserver(inp)
 	int ns, ret;
 
 	ret = 0;
+
+	/* XXX - debug code to see why we fail in this routine! */
+	printf("inp->sin_family = %d (AF_INET = %d)\n",
+           inp->sin_family, AF_INET);
+
 	switch (inp->sin_family) {
 #ifdef INET6
 	case AF_INET6:
@@ -362,7 +367,7 @@ res_send(buf, buflen, ans, anssiz)
 	    for (ns = 0; ns < _res.nscount; ns++) {
 		struct sockaddr *nsap = get_nsaddr(ns);
 		uint32 salen;
-
+		
 		if (nsap->sa_len)
 			salen = nsap->sa_len;
 #ifdef INET6
@@ -723,6 +728,7 @@ read_len:
 			fromlen = sizeof(from);
 			resplen = recvfrom(s, (char*)ans, anssiz, 0,
 					   (struct sockaddr *)&from, &fromlen);
+
 			if (resplen <= 0) {
 				Perror(stderr, "recvfrom", errno);
 				res_close();
@@ -741,7 +747,13 @@ read_len:
 					ans, (resplen>anssiz)?anssiz:resplen);
 				goto wait;
 			}
-#if CHECK_SRVR_ADDR
+/* XXX - We should really be using this section of code, but on my server
+ * this causes the name lookup to fail as the sin_family returned is 0, and 
+ * thus we fail the res_isourserver check. Not sure if this is specific
+ * to my server or it's setup, but it's annoying. 
+ * Can other people remove the comment and see if this works for them?
+ */
+#if 0//CHECK_SRVR_ADDR
 			if (!(_res.options & RES_INSECURE1) &&
 			    !res_isourserver((struct sockaddr_in *)&from)) {
 				/*
@@ -753,6 +765,7 @@ read_len:
 					(_res.pfcode & RES_PRF_REPLY),
 					(stdout, ";; not our server:\n"),
 					ans, (resplen>anssiz)?anssiz:resplen);
+
 				goto wait;
 			}
 #endif
@@ -770,6 +783,7 @@ read_len:
 					ans, (resplen>anssiz)?anssiz:resplen);
 				goto wait;
 			}
+
 			if (anhp->rcode == SERVFAIL ||
 			    anhp->rcode == NOTIMP ||
 			    anhp->rcode == REFUSED) {

@@ -242,7 +242,7 @@ res_init()
 	    buf[0] = '\0';
 	    while (fgets(lbuf, 80, fp) != NULL) {
 			/* skip lines that are too long or zero length */
-			len = strlen(lbuf);
+			len = strlen(lbuf) - 1;
 			cp = lbuf;
 			if (len >= sizeof(buf) || len == 0)
 			    continue;
@@ -340,7 +340,6 @@ res_init()
 #else
 			    struct in_addr a;
 #endif /* INET6 */
-
 			    cp = buf + sizeof("nameserver") - 1;
 			    while (*cp == ' ' || *cp == '\t')
 				cp++;
