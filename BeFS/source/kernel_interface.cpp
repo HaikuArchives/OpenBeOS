@@ -676,7 +676,8 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 	if (mask & WSTAT_SIZE) {
 		if (inode->IsDirectory())
 			return B_IS_A_DIRECTORY;
-		else if (inode->Size() != stat->st_size) {
+
+		if (inode->Size() != stat->st_size) {
 			status = inode->SetFileSize(&transaction,stat->st_size);
 
 			// fill the new blocks (if any) with zeros
@@ -1016,8 +1017,12 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 
 	// opening a directory read-only is allowed, although you can't read
 	// any data from it.
-	if (inode->IsDirectory() && omode & O_RWMASK)
-		return B_IS_A_DIRECTORY;
+	if (inode->IsDirectory() && omode & O_RWMASK) {
+		omode = omode & ~O_RWMASK;
+		// ToDo: for compatibility reasons, we don't return an error here...
+		// e.g. "copyattr" tries to do that
+		//return B_IS_A_DIRECTORY;
+	}
 
 	status_t status = inode->CheckPermissions(oModeToAccess(omode));
 	if (status < B_OK)
