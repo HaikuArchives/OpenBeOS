@@ -239,11 +239,10 @@ void pool_put(struct pool_ctl *p, void *ptr)
 	#else
 		ACQUIRE_WRITE_LOCK(p->lock);
 	#endif
-	if (p->freelist) {
-		((struct free_blk*)ptr)->next = p->freelist;
-	}
+
+	((struct free_blk*)ptr)->next = p->freelist;
 	p->freelist = ptr;
-	
+
 	#if POOL_USES_BENAPHORES
 		RELEASE_BENAPHORE(p->lock);
 	#else
