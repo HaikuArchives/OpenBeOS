@@ -10,6 +10,30 @@
 #include "protocols.h"
 #include "ipv4/ipv4.h"
 #include "netinet/in_pcb.h"
+#include "sys/domain.h"
+#include "sys/protosw.h"
+
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#include "net_server/core_module.h"
+
+static struct core_module_info *core = NULL;
+#define UDP_MODULE_PATH		"network/protocol/udp"
+#define m_freem	core->m_freem
+#define m_adj	core->m_adj
+#define m_prepend	core->m_prepend
+#define in_pcballoc	core->in_pcballoc
+#define in_pcbconnect	core->in_pcbconnect
+#define in_pcbdisconnect	core->in_pcbdisconnect
+#define in_pcbbind			core->in_pcbbind
+#define soreserve			core->soreserve
+#define sbappendaddr		core->sbappendaddr
+#define in_pcblookup		core->in_pcblookup
+#define sowakeup			core->sowakeup
+#define in_pcbdetach		core->in_pcbdetach
+#else
+#define UDP_MODULE_PATH	"modules/protocol/udp"
+#endif
 
 int *prot_table;
 loaded_net_module *net_modules;
@@ -109,7 +133,8 @@ release:
 	return error;
 }
 
-int udp_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr, struct mbuf *ctrl)
+int udp_userreq(struct socket *so, int req,
+			    struct mbuf *m, struct mbuf *addr, struct mbuf *ctrl)
 {
 	struct inpcb *inp = sotoinpcb(so);
 	int error = 0;
@@ -135,6 +160,12 @@ int udp_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr, s
 			/* XXX - this is a hack! This should be the default ip TTL */
 			((struct inpcb*) so->so_pcb)->inp_ip.ttl = 64;
 			break;
+		case PRU_DETACH:
+			/* This should really be protected when in kernel... */
+			if (inp == udp_last_inpcb)
+				udp_last_inpcb = &udb;
+			in_pcbdetach(inp);
+			break;
 		case PRU_BIND:
 			/* XXX - locking */
 			error = in_pcbbind(inp, addr);
@@ -142,6 +173,17 @@ int udp_userreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr, s
 		case PRU_SEND:
 			/* we can use this as we're in the same module... */
 			return udp_output(inp, m, addr, ctrl);
+		case PRU_DISCONNECT:
+			if (inp->faddr.s_addr == INADDR_ANY) {
+				error = ENOTCONN;
+				break;
+			}
+			in_pcbdisconnect(inp);
+			inp->laddr.s_addr = INADDR_ANY;
+			so->so_state &= ~SS_ISCONNECTED;
+			break;
+		default:
+			printf("Unknown options passed to udp_userreq (%d)\n", req);
 	}
 
 release:
@@ -189,7 +231,6 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	 */
 	if ((ck = in_cksum(buf, len + sizeof(*ip), 0)) != 0) {
 		printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
-		dump_buffer(mtod(buf, void *), len + hdrlen);
 		goto bad;
 	}
 
@@ -244,31 +285,78 @@ bad:
 	return 0;
 }
 
-int udp_init(loaded_net_module *ln, int *pt)
+void udp_init(void)
 {
-	net_modules = ln;
-	prot_table = pt;
-	
 	udb.inp_prev = udb.inp_next = &udb;
 	udp_sendspace = 9216; /* default size */
 	udp_recvspace = 41600; /* default size */
+}
 
+static struct protosw my_proto = {
+	"UDP Module",
+	UDP_MODULE_PATH,
+	SOCK_DGRAM,
+	NULL,
+	IPPROTO_UDP,
+	PR_ATOMIC | PR_ADDR,
+	NET_LAYER4,
+	
+	&udp_init,
+	&udp_input,
+	NULL,
+	&udp_userreq,
+	
+	NULL,
+	NULL
+};
+
+#ifndef _KERNEL_MODE
+static void udp_protocol_init(void)
+{
+	add_domain(NULL, AF_INET);
+	add_protocol(&my_proto, AF_INET);
+}
+
+struct protocol_info protocol_info = {
+	"UDP Module",
+	&udp_protocol_init
+};
+
+#else /* kernel setup */
+
+static status_t k_init(void)
+{
+	if (!core)
+		get_module(CORE_MODULE_PATH, (module_info**)&core);
+	
+	core->add_domain(NULL, AF_INET);
+	core->add_protocol(&my_proto, AF_INET);
+	
 	return 0;
 }
 
-net_module net_module_data = {
-	"UDP module",
-	NS_UDP,
-	NET_LAYER3,
-	AF_INET,
-	SOCK_DGRAM,
-	PR_ATOMIC | PR_ADDR,
+static status_t udp_ops(int32 op, ...)
+{
+	switch(op) {
+		case B_MODULE_INIT:
+			return k_init();
+		case B_MODULE_UNINIT:
+			break;
+		default:
+			return B_ERROR;
+	}
+	return B_OK;
+}
 
-	&udp_init,
-	NULL,
-	&udp_input,
-	NULL,
-	NULL,
-	&udp_userreq
+static module_info my_module = {
+	UDP_MODULE_PATH,
+	B_KEEP_LOADED,
+	udp_ops
 };
- 
+
+_EXPORT module_info *modules[] = {
+	&my_module,
+	NULL
+};
+
+#endif

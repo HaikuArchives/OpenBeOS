@@ -1,11 +1,28 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=udp
+TGT=../modules/protocol/$(TARGET)
 LOBJS=../_APP_
+OBJS=udp.o
+
+KCFLAGS=-Wall -no-fpic -D_KERNEL_MODE
+KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
+KLOBJS=../net_server/cksum.o
 
 all:	$(TARGET)
 
 clean:
-	@if test -e ../modules/$(TARGET); then rm ../modules/$(TARGET); fi
+	@if test -e $(TGT); then rm $(TGT) *.o; fi
+	@if test -e $(TARGET); then rm $(TARGET) *.o; fi
 
-udp:
-	@$(CC) -nostart $(CFLAGS) $(INCLUDES) $(LOBJS) $(LDFLAGS) -o ../modules/$(TARGET) $(TARGET).c
+kernel:
+	$(CC) $(KCFLAGS) $(INCLUDES) -c udp.c
+	$(CC) $(KLDFLAGS) $(KLOBJS) -o udp udp.o
+
+installkernel:	kernel
+	cp udp /boot/home/config/add-ons/kernel/network/protocol/udp
+
+udp: $(OBJS)
+	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+
+.c.o:
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
