@@ -1,6 +1,7 @@
 // MimeTypeTest.cpp
 
 #include <ctype.h>			// For tolower()
+#include <fcntl.h>			// open()
 #include <stdio.h>
 #include <string.h>			// For memcmp()
 #include <string>
@@ -12,6 +13,7 @@
 #include <Application.h>
 #include <Bitmap.h>
 #include <DataIO.h>
+#include <Drivers.h>		// B_GET_ICON, device_icon
 #include <Message.h>
 #include <Mime.h>
 #include <MimeTypeTest.h>
@@ -29,6 +31,7 @@ static const char *testDir				= "/tmp/mimeTestDir";
 static const char *mimeDatabaseDir		= "/boot/home/config/settings/beos_mime";
 
 // MIME Types
+// testType and testTypeApp are Delete()d after each test.
 static const char *testType				= "text/Storage-Kit-Test";
 static const char *testTypeApp			= "application/StorageKit-Test";
 static const char *testTypeInvalid		= "text/Are spaces valid?";
@@ -113,6 +116,10 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::CreateAppMetaMimeTest) );
 	suite->addTest( new TC("BMimeType::get_device_icon() Test",
 						   &MimeTypeTest::GetDeviceIconTest) );
+	suite->addTest( new TC("BMimeType::Sniffer Rule Test",
+						   &MimeTypeTest::SnifferRuleTest) );
+//	suite->addTest( new TC("BMimeType::Sniffing Test",
+//						   &MimeTypeTest::SniffingTest) );
 
 	return suite;
 }		
@@ -2325,6 +2332,28 @@ MimeTypeTest::CreateAppMetaMimeTest()
 		== B_OK);
 }
 
+// CheckIconData
+static
+void
+CheckIconData(const char *device, int32 iconSize, const void* data)
+{
+	// open the device
+	int fd = open(device, O_RDONLY);
+	CHK(fd != -1);
+	// get the icon
+	char buffer[1024];
+	device_icon iconData = {
+		iconSize,
+		buffer
+	};
+	int error = ioctl(fd, B_GET_ICON, &iconData);
+	// close the device
+	CHK(close(fd) == 0);
+	CHK(error == 0);
+	// compare the icon data
+	CHK(memcmp(data, buffer, iconSize * iconSize) == 0);
+}
+
 // GetDeviceIconTest
 void
 MimeTypeTest::GetDeviceIconTest()
@@ -2364,6 +2393,7 @@ MimeTypeTest::GetDeviceIconTest()
 			char buffer[1024];
 			if (valid) {
 				CHK(get_device_icon(deviceName, buffer, size) == B_OK);
+				CheckIconData(deviceName, size, buffer);
 				// bad args: NULL buffer
 // R5: Wanna see KDL? Here you go...
 #if !SK_TEST_R5
@@ -2373,6 +2403,165 @@ MimeTypeTest::GetDeviceIconTest()
 				CHK(get_device_icon(deviceName, buffer, size) != B_OK);
 		}
 	}
+}
+
+// SnifferRuleTest
+void
+MimeTypeTest::SnifferRuleTest()
+{
+	// tests:
+	// * status_t GetSnifferRule(BString *result) const;
+	// * status_t SetSnifferRule(const char *);
+	// * static status_t CheckSnifferRule(const char *rule, BString *parseError);
+
+	// test a couple of valid and invalid rules
+	struct test_case {
+		const char	*rule;
+		const char	*error;	// NULL, if valid
+	} testCases[] = {
+		// valid rules
+		{ "1.0 (\"ABCD\")", NULL },
+		{ "1.0 ('ABCD')", NULL },
+		{ "  1.0 ('ABCD')  ", NULL },
+		{ "0.8 [0:3] ('ABCDEFG' | 'abcdefghij')", NULL },
+		{ "0.5([10]'ABCD'|[17]'abcd'|[13]'EFGH')", NULL } ,
+		{ "0.5  \n   [0:3]  \t ('ABCD' \n | 'abcd' | 'EFGH')", NULL },
+		{ "0.8 [  0  :  3  ] ('ABCDEFG' | 'abcdefghij')", NULL },
+		{ "0.8 [0:3] ('ABCDEFG' & 'abcdefg')", NULL },
+		{ "1.0 ('ABCD') | ('EFGH')", NULL },
+		{ "1.0 [0:3] ('ABCD') | [2:4] ('EFGH')", NULL },
+		{ "0.8 [0:3] (\\077Mkl0x34 & 'abcdefgh')", NULL },
+		{ "0.8 [0:3] (\\077034 & 'abcd')", NULL },
+		{ "0.8 [0:3] (\\077\\034 & 'ab')", NULL },
+		{ "0.8 [0:3] (\\77\\034 & 'ab')", NULL },
+		{ "0.8 [0:3] (\\7 & 'a')", NULL },
+		{ "0.8 [0:3] (\"\\17\" & 'a')", NULL },
+		{ "0.8 [0:3] ('\\17' & 'a')", NULL },
+		{ "0.8 [0:3] (\\g & 'a')", NULL },
+		{ "0.8 [0:3] (\\g&\\b)", NULL },
+		{ "0.8 [0:3] (\\g\\&b & 'abc')", NULL },
+		{ "0.8 [0:3] (0x3457 & 'ab')", NULL },
+		{ "0.8 [0:3] (0xA4b7 & 'ab')", NULL },
+		{ "0.8 [0:3] ('ab\"' & 'abc')", NULL },
+		{ "0.8 [0:3] (\"ab\\\"\" & 'abc')", NULL },
+		{ "0.8 [0:3] (\"ab\\A\" & 'abc')", NULL },
+		{ "0.8 [0:3] (\"ab'\" & 'abc')", NULL },
+		{ "0.8 [0:3] (\"ab\\\\\" & 'abc')", NULL },
+		{ "0.8 [-5:-3] (\"abc\" & 'abc')", NULL },
+		{ "0.8 [5:3] (\"abc\" & 'abc')", NULL },
+		{ "1.2 ('ABCD')", NULL },
+		{ ".2 ('ABCD')", NULL },
+		{ "0. ('ABCD')", NULL },
+		{ "-1 ('ABCD')", NULL },
+		{ "+1 ('ABCD')", NULL },
+		{ "1E25 ('ABCD')", NULL },
+		{ "1e25 ('ABCD')", NULL },
+		// invalid rules
+		{ "0.0 ('')", "Sniffer pattern error: illegal empty pattern" },
+		{ "('ABCD')", "Sniffer pattern error: match level expected" },
+		{ "[0:3] ('ABCD')", "Sniffer pattern error: match level expected" },
+		{ "0.8 [0:3] ( | 'abcdefghij')",
+		  "Sniffer pattern error: missing pattern" },
+		{ "0.8 [0:3] ('ABCDEFG' | )",
+		  "Sniffer pattern error: missing pattern" },
+		{ "[0:3] ('ABCD')", "Sniffer pattern error: match level expected" },
+		{ "1.0 (ABCD')", "Sniffer pattern error: misplaced single quote" },
+		{ "1.0 ('ABCD)", "Sniffer pattern error: unterminated rule" },
+		{ "1.0 (ABCD)", "Sniffer pattern error: missing pattern" },
+		{ "1.0 (ABCD 'ABCD')", "Sniffer pattern error: missing pattern" },
+		{ "1.0 'ABCD')", "Sniffer pattern error: missing pattern" },
+		{ "1.0 ('ABCD'", "Sniffer pattern error: unterminated rule" },
+		{ "1.0 'ABCD'", "Sniffer pattern error: missing sniff pattern" },
+		{ "0.5 [0:3] ('ABCD' | 'abcd' | [13] 'EFGH')", 
+		  "Sniffer pattern error: missing pattern" },
+		{ "0.5('ABCD'|'abcd'|[13]'EFGH')",
+		  "Sniffer pattern error: missing pattern" },
+		{ "0.5[0:3]([10]'ABCD'|[17]'abcd'|[13]'EFGH')",
+		  "Sniffer pattern error: missing pattern" },
+		{ "0.8 [0x10:3] ('ABCDEFG' | 'abcdefghij')",
+		  "Sniffer pattern error: pattern offset expected" },
+		{ "0.8 [0:A] ('ABCDEFG' | 'abcdefghij')",
+		  "Sniffer pattern error: pattern range end expected" },
+		{ "0.8 [0:3] ('ABCDEFG' & 'abcdefghij')",
+		  "Sniffer pattern error: pattern and mask lengths do not match" },
+		{ "0.8 [0:3] ('ABCDEFG' & 'abcdefg' & 'xyzwmno')",
+		  "Sniffer pattern error: unterminated rule" },
+		{ "0.8 [0:3] (\\g&b & 'a')", "Sniffer pattern error: missing mask" },
+		{ "0.8 [0:3] (\\19 & 'a')",
+		  "Sniffer pattern error: pattern and mask lengths do not match" },
+		{ "0.8 [0:3] (0x345 & 'ab')",
+		  "Sniffer pattern error: bad hex literal" },
+		{ "0.8 [0:3] (0x3457M & 'abc')",
+		  "Sniffer pattern error: expecting '|' or '&'" },
+		{ "0.8 [0:3] (0x3457\\7 & 'abc')",
+		  "Sniffer pattern error: expecting '|' or '&'" },
+		{ "1E-25 ('ABCD')", "Sniffer pattern error: missing pattern" },
+	};
+	const int testCaseCount = sizeof(testCases) / sizeof(test_case);
+	BMimeType type;
+	CHK(type.SetTo(testType) == B_OK);
+	CHK(type.Install() == B_OK);
+	for (int32 i = 0; i < testCaseCount; i++) {
+		nextSubTest();
+		test_case &testCase = testCases[i];
+		BString parseError;
+		status_t error = BMimeType::CheckSnifferRule(testCase.rule,
+													 &parseError);
+		if (testCase.error == NULL) {
+if (error != B_OK)
+printf("error: %s\n", parseError.String());
+			CHK(error == B_OK);
+			CHK(type.SetSnifferRule(testCase.rule) == B_OK);
+			BString rule;
+			CHK(type.GetSnifferRule(&rule) == B_OK);
+			CHK(rule == testCase.rule);
+		} else {
+			CHK(error == B_BAD_MIME_SNIFFER_RULE);
+			CHK(parseError.FindLast(testCase.error) >= 0);
+			CHK(type.SetSnifferRule(testCase.rule) == B_BAD_MIME_SNIFFER_RULE);
+		}
+	}
+
+	// bad args: NULL rule/result string
+	nextSubTest();
+	BString parseError;
+	CHK(BMimeType::CheckSnifferRule("0.0 ('')", NULL)
+		== B_BAD_MIME_SNIFFER_RULE);
+// R5: crashes when passing a NULL rule/result buffer.
+#if !SK_TEST_R5
+	CHK(BMimeType::CheckSnifferRule(NULL, &parseError) == B_BAD_VALUE);
+	CHK(BMimeType::CheckSnifferRule(NULL, NULL) == B_BAD_VALUE);
+	CHK(type.GetSnifferRule(NULL) == B_BAD_VALUE);
+#endif
+
+	// NULL rule to SetSnifferRule unsets the attribute
+	nextSubTest();
+	CHK(type.IsInstalled() == true);
+	CHK(type.SetSnifferRule(NULL) == B_OK);
+	BString rule;
+	CHK(type.GetSnifferRule(&rule) == B_ENTRY_NOT_FOUND);
+
+	// bad args: uninstalled type
+	CHK(type.Delete() == B_OK);
+	CHK(type.GetSnifferRule(&rule) == B_ENTRY_NOT_FOUND);
+	CHK(type.SetSnifferRule("0.0 ('ABC')") == B_OK);
+	CHK(type.GetSnifferRule(&rule) == B_ENTRY_NOT_FOUND);
+
+	// bad args: uninitialized BMimeType
+	type.Unset();
+	CHK(type.GetSnifferRule(&rule) == B_BAD_VALUE);
+	CHK(type.SetSnifferRule("0.0 ('ABC')") == B_BAD_VALUE);
+}
+
+// SniffingTest
+void
+MimeTypeTest::SniffingTest()
+{
+	// tests:
+	// * status_t GuessMimeType(const entry_ref *file, BMimeType *result);
+	// * static status_t GuessMimeType(const void *buffer, int32 length,
+	//							  BMimeType *result);
+	// * static status_t GuessMimeType(const char *filename, BMimeType *result);
 }
 
 
@@ -2403,11 +2592,22 @@ MimeTypeTest::GetDeviceIconTest()
 +	static status_t StopWatching(BMessenger target);
 
 	// C functions
-	int update_mime_info(const char *path, int recursive, int synchronous,
++	int update_mime_info(const char *path, int recursive, int synchronous,
 						 int force);
-	status_t create_app_meta_mime(const char *path, int recursive,
++	status_t create_app_meta_mime(const char *path, int recursive,
 								  int synchronous, int force);
-	status_t get_device_icon(const char *dev, void *icon, int32 size);
++	status_t get_device_icon(const char *dev, void *icon, int32 size);
+
+	// sniffer rule manipulation
++	status_t GetSnifferRule(BString *result) const;
++	status_t SetSnifferRule(const char *);
++	static status_t CheckSnifferRule(const char *rule, BString *parseError);
+
+	// sniffing
+	status_t GuessMimeType(const entry_ref *file, BMimeType *result);
+	static status_t GuessMimeType(const void *buffer, int32 length,
+								  BMimeType *result);
+	static status_t GuessMimeType(const char *filename, BMimeType *result);
 */
 
 
@@ -2447,16 +2647,3 @@ MimeTypeTest::GetDeviceIconTest()
 */
 
 
-/* unassigned functions:
-
-	// sniffer rule manipulation
-	status_t GetSnifferRule(BString *result) const;
-	status_t SetSnifferRule(const char *);
-	static status_t CheckSnifferRule(const char *rule, BString *parseError);
-
-	// sniffing
-	status_t GuessMimeType(const entry_ref *file, BMimeType *result);
-	static status_t GuessMimeType(const void *buffer, int32 length,
-								  BMimeType *result);
-	static status_t GuessMimeType(const char *filename, BMimeType *result);
-*/

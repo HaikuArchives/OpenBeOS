@@ -49,6 +49,8 @@ public:
 	void UpdateMimeInfoTest();
 	void CreateAppMetaMimeTest();
 	void GetDeviceIconTest();
+	void SnifferRuleTest();
+	void SniffingTest();
 
 	//------------------------------------------------------------
 	// Helper functions
