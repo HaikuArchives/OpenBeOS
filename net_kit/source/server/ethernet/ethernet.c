@@ -204,7 +204,6 @@ static void arp_callback(int result, struct mbuf *buf,  struct sockaddr *tgt)
 int ether_output(struct mbuf *buf, int prot, struct sockaddr *tgt)
 {
 	ethernet_header *eth;
-	int rv;
 
 	M_PREPEND(buf, sizeof(ethernet_header));
 	eth = mtod(buf, ethernet_header*);
@@ -217,17 +216,28 @@ int ether_output(struct mbuf *buf, int prot, struct sockaddr *tgt)
 		/* hack - we assume the sockaddr has a valid link address */
 	}
 	if (prot == NS_IPV4) {
-		eth->type = htons(ETHER_IPV4);
-		/* we assume the tgt is an ip address, so we must resolve it first. */
-		rv = net_modules[prot_table[NS_ARP]].mod->lookup(buf, tgt, &arp_callback);
-		if (rv == ARP_LOOKUP_FAILED) {
+		int rv = ARP_LOOKUP_FAILED;
+
+		if (tgt->sa_family != AF_INET) {
+			/* oh dear! We can't go on from here as we're looking for an ipv4
+			 * address and we haven't been given one to send to! Doh!
+			 */
 			m_freem(buf);
 			return 0;
 		}
-	}
 
-	if (rv == ARP_LOOKUP_QUEUED) 
-		return 0;
+		eth->type = htons(ETHER_IPV4);
+		rv = net_modules[prot_table[NS_ARP]].mod->lookup(buf, tgt, &arp_callback);
+		/* if we failed, free the mbuf */
+		if (rv == ARP_LOOKUP_FAILED)
+			m_freem(buf);
+		/* if we didn't succeed, we're returning. If we've been queued then the callback
+		 * will take care of it and we won't have freed the mbuf, if we failed outright
+		 * then we'll have freed the mbuf and will be exiting.
+		 */
+		if (rv != ARP_LOOKUP_OK)
+			return 0;
+	}
 
 	memcpy(&eth->dest, &tgt->sa_data, 6);
 

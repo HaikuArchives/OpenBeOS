@@ -1,6 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ethernet
-CFLAGS=-Wall -g -O0 -fPIC -DPIC -nostart
+CFLAGS=-Wall -g -O2 -fPIC -DPIC -nostart
 LOBJS=../util/misc.o
 LDFLAGS=../_APP_
 
