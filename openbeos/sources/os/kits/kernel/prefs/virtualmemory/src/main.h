@@ -47,6 +47,10 @@
 			 * Constructor.
 			 */
 			VM_pref();
+			
+			/**
+			 * Destructor.
+			 */
 			virtual ~VM_pref();
 		
 		private:
