@@ -1,0 +1,59 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>
+			op_write_attr
+		</title>
+	</head>
+	<body>
+		<h1>
+			op_write_attr - Writes an attribute
+		</h1>
+		<p>
+			Writes an attribute to the disk.
+		</p>
+		<h2>
+			Declaration
+		</h2>
+		<p>
+			<code>
+				int op_write_attr(void *ns, void *node, const char *name, int type, const void *buf, size_t *len, off_t pos);
+			</code>
+		</p>
+		<h2>
+			Parameters
+		</h2>
+		<h3>
+			Inputs
+		</h3>
+		<p>
+			<code>ns</code> - pointer to a volume structure<br>
+			<code>node</code> - pointer to a valid node structure
+				representing a file on the volume<br>
+			<code>name</code> - The name of the attribute to write.<br>
+			<code>buf</code> - The object to write to disk.<br>
+			<code>len</code> - The length of the object to write<br>
+			<code>pos</code> - The off set into the attribute to write
+							the new data<br>
+		</p>
+		<h2>
+			Return
+		</h2>
+		<p>
+			<code>B_OK</code> - Operation completed <br>
+			<code>ENOMEM</code> - Not enough memory<br>
+			<code>EINVAL</code> - Invaild parameters<br>
+			<code>ENOENT</code> - The file to which the attribute is
+							part of does not exist.<br>
+			<code>ENOSPC</code> - No space on device.<br>
+		</p>
+		<h2>
+			Notes
+		</h2>
+		<p>
+			This definition was devised using the source for the AtheOS file 
+			system driver (downloadable from bebits.com) and OpenBeFS from 
+			the OpenBeOS CVS.
+		</p>
+	</body>
+</html>
