@@ -24,35 +24,9 @@ extern struct pool_ctl *tcppool;
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
 
 extern struct core_module_info *core;
-#define pool_get            core->pool_get
-#define pool_put            core->pool_put
-#define add_protosw         core->add_protosw
-#define m_gethdr            core->m_gethdr
-#define m_free              core->m_free
-#define m_freem             core->m_freem
-#define m_copydata          core->m_copydata
-#define m_copym             core->m_copym
-#define m_adj               core->m_adj
-#define m_prepend           core->m_prepend
-#define in_pcballoc         core->in_pcballoc
-#define in_pcbconnect       core->in_pcbconnect
-#define in_pcbdisconnect    core->in_pcbdisconnect
-#define in_pcbbind          core->in_pcbbind
-#define soreserve           core->soreserve
-#define sbreserve           core->sbreserve
-#define sbappendaddr        core->sbappendaddr
-#define in_pcblookup        core->in_pcblookup
-#define in_localaddr        core->in_localaddr
-#define sowakeup            core->sowakeup
-#define in_pcbdetach        core->in_pcbdetach
-#define in_control          core->in_control
-#define soisconnected       core->soisconnected
-#define soisdisconnected    core->soisdisconnected
-#define soisdisconnecting   core->soisdisconnecting
-#define sbflush             core->sbflush
-#define rtalloc             core->rtalloc
 #endif
 
 #define  roundup(x, y)   ((((x)+((y)-1))/(y))*(y))

@@ -33,6 +33,11 @@ subdirs: clean $(OBJS)
 	done;
 	@if test -e _APP_; then rm _APP_; fi
 
+kernel:
+	@for i in $(KERNELDIRS); do \
+		(cd $$i && $(MAKE) kernel) || exit 1; \
+	done
+
 installkernel: clean
 	@if ! test -d /boot/home/config/add-ons/kernel/network; then \
 		mkdir /boot/home/config/add-ons/kernel/network; \

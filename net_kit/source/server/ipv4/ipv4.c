@@ -502,11 +502,8 @@ static void ipv4_init(void)
 
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
-#ifndef _KERNEL_MODE
+
 	add_protosw(proto, NET_LAYER2);
-#else
-	core->add_protosw(proto, NET_LAYER2);
-#endif
 }
 
 struct protosw my_proto = {

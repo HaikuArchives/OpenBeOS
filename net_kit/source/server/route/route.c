@@ -3,51 +3,6 @@
 #include <kernel/OS.h>
 #include <stdio.h>
 
-#ifdef _KERNEL_MODE
-#include <KernelExport.h>
-#include "net_server/core_module.h"
-
-static struct core_module_info *core = NULL;
-
-#define pool_init           core->pool_init
-#define pool_get            core->pool_get
-#define pool_put            core->pool_put
-
-#define m_freem             core->m_freem
-#define m_adj               core->m_adj
-#define m_prepend           core->m_prepend
-#define m_pullup            core->m_pullup
-#define m_copydata          core->m_copydata
-#define m_copyback          core->m_copyback
-#define m_copym             core->m_copym
-
-#define soreserve			core->soreserve
-#define sbappendaddr		core->sbappendaddr
-#define sowakeup			core->sowakeup
-#define soisconnected       core->soisconnected
-#define soisdisconnected    core->soisdisconnected
-#define socantsendmore      core->socantsendmore
-
-#define rtalloc1            core->rtalloc1
-#define rtfree              core->rtfree
-#define rtrequest           core->rtrequest
-#define rn_addmask          core->rn_addmask
-#define rn_head_search      core->rn_head_search
-#define get_rt_tables       core->get_rt_tables
-#define rt_setgate          core->rt_setgate
-
-#define ifa_ifwithaddr      core->ifa_ifwithaddr
-#define ifa_ifwithnet       core->ifa_ifwithnet
-#define ifa_ifwithroute     core->ifa_ifwithroute
-#define ifaof_ifpforaddr    core->ifaof_ifpforaddr
-#define ifafree             core->ifafree
-#define get_interfaces      core->get_interfaces
-
-#define ROUTE_MODULE_PATH	"network/protocol/route"
-#else
-#define ROUTE_MODULE_PATH	"modules/protocol/route"
-#endif
-
 #include "net_malloc.h"
 #include "mbuf.h"
 
@@ -60,6 +15,18 @@ static struct core_module_info *core = NULL;
 #include "sys/socket.h"
 #include "net/raw_cb.h"
 #include "sys/socketvar.h"
+
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
+
+static struct core_module_info *core = NULL;
+
+#define ROUTE_MODULE_PATH	"network/protocol/route"
+#else	/* _KERNEL_MODE */
+#define ROUTE_MODULE_PATH	"modules/protocol/route"
+#endif
 
 static struct rawcb rawcb;
 static struct route_cb route_cb;

@@ -9,6 +9,8 @@
 
 #ifdef _KERNEL_MODE
 #	define add_protosw         core->add_protosw
+#	define start_rx_thread	    core->start_rx_thread
+#	define start_tx_thread	    core->start_tx_thread
 
 #	define pool_init           core->pool_init
 #	define pool_get            core->pool_get
@@ -22,6 +24,7 @@
 #	define m_prepend           core->m_prepend
 #	define m_pullup            core->m_pullup
 #	define m_copydata          core->m_copydata
+#	define m_copyback          core->m_copyback
 #	define m_copym             core->m_copym
 
 #	define in_pcballoc         core->in_pcballoc
@@ -31,6 +34,7 @@
 #	define in_pcblookup        core->in_pcblookup
 #	define in_pcbdetach        core->in_pcbdetach
 #	define in_pcbrtentry       core->in_pcbrtentry
+#	define if_attach           core->if_attach
 #	define in_localaddr        core->in_localaddr
 #	define in_losing           core->in_losing
 #	define in_broadcast        core->in_broadcast
@@ -39,7 +43,11 @@
 #	define in_setpeeraddr      core->in_setpeeraddr
 
 #	define ifa_ifwithdstaddr   core->ifa_ifwithdstaddr
+#	define ifa_ifwithaddr      core->ifa_ifwithaddr
 #	define ifa_ifwithnet       core->ifa_ifwithnet
+#	define ifa_ifwithroute     core->ifa_ifwithroute
+#	define ifaof_ifpforaddr    core->ifaof_ifpforaddr
+#	define ifafree             core->ifafree
 
 #	define sbappend            core->sbappend
 #	define sbappendaddr        core->sbappendaddr
@@ -60,6 +68,16 @@
 
 #	define rtfree              core->rtfree
 #	define rtalloc             core->rtalloc
+#	define rtalloc1            core->rtalloc1
+#	define rtrequest           core->rtrequest
+
+#	define rt_setgate          core->rt_setgate
+#	define get_rt_tables       core->get_rt_tables
+
+#	define rn_addmask          core->rn_addmask
+#	define rn_head_search      core->rn_head_search
+
+#	define get_interfaces      core->get_interfaces
 #	define get_primary_addr    core->get_primary_addr
 #endif	/* _KERNEL_MODE */
 

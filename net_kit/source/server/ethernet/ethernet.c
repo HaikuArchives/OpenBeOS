@@ -28,22 +28,7 @@
 #include <KernelExport.h>
 #include "net_device.h"
 #include "net_server/core_module.h"
-
-#define if_attach           core->if_attach
-#define rt_setgate          core->rt_setgate
-#define start_rx_thread	    core->start_rx_thread
-#define start_tx_thread	    core->start_tx_thread
-#define m_get               core->m_get
-#define m_gethdr            core->m_gethdr
-#define m_copym             core->m_copym
-#define m_adj               core->m_adj
-#define m_free              core->m_free
-#define m_freem             core->m_freem
-#define m_prepend           core->m_prepend
-#define rtalloc1            core->rtalloc1
-#define rtfree              core->rtfree
-#define rtrequest           core->rtrequest
-#define get_primary_addr    core->get_primary_addr
+#include "net_server/core_funcs.h"
 
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
@@ -53,7 +38,7 @@ static timer arp_timer;
 /* forward prototypes */
 int ether_dev_start(ifnet *dev);
 int ether_dev_stop (ifnet *dev);
-#else
+#else	/* _KERNEL_MODE */
 #include "net_timer.h"
 #endif
 
@@ -893,9 +878,9 @@ static int k_init(void)
 	find_devices();
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
-	core->add_protosw(proto, NET_LAYER2);
+	add_protosw(proto, NET_LAYER2);
 	arp_init();
-	
+
 	return 0;
 }
 

@@ -19,29 +19,12 @@
 #include "raw/raw_module.h"
 
 #ifdef _KERNEL_MODE
-#include "net_server/core_module.h"
 #include <KernelExport.h>
-
-#define m_copym             core->m_copym
-#define m_free              core->m_free
-#define m_freem             core->m_freem
-#define m_prepend           core->m_prepend
-#define soreserve			core->soreserve
-#define in_pcballoc         core->in_pcballoc
-#define in_pcbconnect       core->in_pcbconnect
-#define in_pcbdisconnect	core->in_pcbdisconnect
-#define in_pcbbind			core->in_pcbbind
-#define in_pcbdetach		core->in_pcbdetach
-#define sbappendaddr        core->sbappendaddr
-#define soisconnected       core->soisconnected
-#define soisdisconnected    core->soisdisconnected
-#define socantsendmore      core->socantsendmore
-#define sowakeup            core->sowakeup
-#define ifa_ifwithaddr      core->ifa_ifwithaddr
-#define get_interfaces      core->get_interfaces
+#include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
 
 static struct core_module_info *core = NULL;
-#else
+#else	/* _KERNEL_MODE */
 static image_id ipid;
 #endif
 
