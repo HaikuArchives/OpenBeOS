@@ -100,7 +100,6 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	// add a "copies" input field
 
 /* Simon: temporarily removed this code
-
 	sprintf(buffer, "%d", (int)copies);
 	fCopies = new BTextControl(BRect(x, y, x+100, y+20), "copies", kCopiesLabel,
 								buffer, new BMessage(NB_COPIES_MSG));
