@@ -9,8 +9,78 @@
 #include "netinet/in_var.h"
 #include "net/route.h"
 
-struct in_ifaddr *in_ifaddr = NULL;
 #define IFA_ROUTE	RTF_UP
+
+struct in_ifaddr *get_primary_addr(void)
+{
+	return in_ifaddr;
+}
+
+int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
+		int scrub)
+{
+	uint32 i = sin->sin_addr.s_addr;
+	struct sockaddr_in oldsin;
+	int error;
+	int flags = RTF_UP;
+
+	oldsin = ia->ia_addr;
+	ia->ia_addr = *sin;
+
+	if (dev && dev->ioctl) {
+		error = (*dev->ioctl)(dev, SIOCSIFADDR, (caddr_t)ia);
+		if (error) {
+			ia->ia_addr = oldsin;
+			return error;
+		}
+	}
+
+	if (scrub) {
+		ia->ia_ifa.ifa_addr = (struct sockaddr*)&oldsin;
+		//in_ifscrub(ifp, ia);
+		ia->ia_ifa.ifa_addr = (struct sockaddr*)&ia->ia_addr;
+	}
+
+	if (IN_CLASSA(i))
+		ia->ia_netmask = IN_CLASSA_NET;
+	else if (IN_CLASSB(i))
+		ia->ia_netmask = IN_CLASSB_NET;
+	else
+		ia->ia_netmask = IN_CLASSC_NET;
+
+	if (ia->ia_subnetmask == 0) {
+		ia->ia_subnetmask = ia->ia_netmask;
+		ia->ia_sockmask.sin_addr.s_addr = ia->ia_subnetmask;
+	} else
+		ia->ia_netmask &= ia->ia_subnetmask;
+	ia->ia_net = i & ia->ia_netmask;
+	ia->ia_subnet = i & ia->ia_subnetmask;
+	in_socktrim(&ia->ia_sockmask);
+
+	ia->ia_ifa.ifa_metric = dev->if_metric;
+	if (dev->flags & IFF_BROADCAST) {
+		ia->ia_broadaddr.sin_addr.s_addr = htonl(ia->ia_net | ~ia->ia_subnetmask);
+		ia->ia_netbroadcast.s_addr = htonl(ia->ia_net | ~ia->ia_netmask);
+	} else if (dev->flags & IFF_LOOPBACK) {
+		ia->ia_ifa.ifa_dstaddr = ia->ia_ifa.ifa_addr;
+		flags |= RTF_HOST;
+	} else if (dev->flags & IFF_POINTOPOINT) {
+		if (ia->ia_dstaddr.sin_family != AF_INET)
+			return 0;
+		flags |= RTF_HOST;
+	}
+
+	error = rtinit(&(ia->ia_ifa), (int)RTM_ADD, flags);
+	if (error == 0)
+		ia->ia_flags |= IFA_ROUTE;
+
+	/* XXX - Multicast address list */
+
+	if (!in_ifaddr)
+		in_ifaddr = ia;
+
+	return error;
+}
 
 int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 {
