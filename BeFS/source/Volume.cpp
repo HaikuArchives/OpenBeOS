@@ -158,7 +158,7 @@ Volume::Unmount()
 	remove_cached_device_blocks(fDevice,ALLOW_WRITES);
 	close(fDevice);
 
-	return 0;
+	return B_OK;
 }
 
 

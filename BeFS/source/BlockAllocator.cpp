@@ -179,7 +179,8 @@ AllocationGroup::AddFreeRange(int32 start, int32 blocks)
 
 BlockAllocator::BlockAllocator(Volume *volume)
 	:
-	fVolume(volume)
+	fVolume(volume),
+	fGroups(NULL)
 {
 }
 

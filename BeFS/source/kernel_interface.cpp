@@ -241,14 +241,10 @@ bfs_unmount(void *ns)
 	FUNCTION();
 	Volume* volume = (Volume *)ns;
 
-	int status = volume->Unmount();
+	status_t status = volume->Unmount();
 	delete volume;
 
-	//remove_cached_device_blocks(ns->fd, 0);
-	//result = close(ns->fd);
-	//free(ns);
-
-	return status;
+	RETURN_ERROR(status);
 }
 
 

@@ -302,6 +302,9 @@ BPlusTree::SetTo(Transaction *transaction,Inode *stream,int32 nodeSize)
 status_t
 BPlusTree::SetTo(Inode *stream)
 {
+	if (stream == NULL || stream->Node() == NULL)
+		RETURN_ERROR(fStatus = B_BAD_VALUE);
+
 	// get on-disk B+Tree header
 
 	fCachedHeader.Unset();
@@ -341,7 +344,7 @@ BPlusTree::SetTo(Inode *stream)
 		 // in the original BFS code - we will honour it nevertheless
 		fAllowDuplicates = ((stream->Mode() & S_INDEX_DIR) == S_INDEX_DIR
 							&& stream->BlockRun() != stream->Parent())
-							|| stream->Mode() & S_ALLOW_DUPS;
+							|| (stream->Mode() & S_ALLOW_DUPS) > 0;
 	}
 
 	CachedNode cached(this,fHeader->root_node_pointer);
