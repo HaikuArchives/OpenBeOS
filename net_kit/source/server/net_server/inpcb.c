@@ -5,6 +5,10 @@
 
 #include <stdio.h>
 
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
+
 #include "pools.h"
 #include "mbuf.h"
 #include "sys/socketvar.h"
@@ -15,19 +19,8 @@
 #include "netinet/in_var.h"
 #include "sys/protosw.h"
 
-static struct pool_ctl *pcbpool;
+static struct pool_ctl *pcbpool = NULL;
 static struct in_addr zeroin_addr;
-
-static void walk_inp(struct inpcb *head)
-{
-	struct inpcb *n;
-printf("head = %p\n", head);	
-	for (n = head->inp_next; n; n = n->inp_next) {
-		printf("%p <- %p -> %p\n", n->inp_prev, n, n->inp_next);
-		if (n == head)
-			break;
-	}
-}
 
 int inpcb_init(void)
 {
@@ -37,8 +30,8 @@ int inpcb_init(void)
 		pool_init(&pcbpool, sizeof(struct inpcb));
 
 	if (!pcbpool) {
-		printf("Doh! Failed to create an inpcb pool!\n");
-		return -1;
+		printf("inpcb_init: ENOMEM\n");
+		return ENOMEM;
 	}
 
 	zeroin_addr.s_addr = 0;
@@ -51,8 +44,10 @@ int in_pcballoc(struct socket *so, struct inpcb *head)
 
 	inp = (struct inpcb *)pool_get(pcbpool);
 
-	if (!inp)
+	if (!inp) {
+		printf("in_pcballoc: ENOMEM\n");
 		return ENOMEM;
+	}
 
 	memset(inp, 0, sizeof(*inp));
 
@@ -105,8 +100,10 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 	int wild = 0;
 	int reuseport = (so->so_options & SO_REUSEPORT);
 
-	if (inp->lport || inp->laddr.s_addr != INADDR_ANY)
+	if (inp->lport || inp->laddr.s_addr != INADDR_ANY) {
+		printf("in_pcbbind: EINVAL\n");
 		return EINVAL;
+	}
 
 	/* XXX - yuck! Try to format this better */
 	/* This basically checks all the options that might be set that allow
@@ -120,7 +117,7 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 	if (nam) {
 		sin = mtod(nam, struct sockaddr_in *);
 		if (nam->m_len != sizeof(*sin)) {
-			printf("in_pcbind: EINVAL! (m_len = %ld)\n", nam->m_len);
+			printf("in_pcbind: EINVAL\n");
 			/* whoops, too much data! */
 			return EINVAL;
 		}
@@ -129,8 +126,10 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 		 * in older programs, so this may need
 		 * to be commented out...
 		 */
-		if (sin->sin_family != AF_INET)
+		if (sin->sin_family != AF_INET) {
+			printf("in_pcbbind: EAFNOSUPPORT\n");
 			return EAFNOSUPPORT;
+		}
 
 		lport = sin->sin_port;
 
@@ -148,7 +147,7 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 		} else if (sin->sin_addr.s_addr != INADDR_ANY) {
 			sin->sin_port = 0; /* must be zero for next step */
 			if (ifa_ifwithaddr((struct sockaddr*)sin) == NULL) {
-				printf("ifa_ifwithaddr == NULL\n");
+				printf("in_pcbbind: EADDRNOTAVAIL\n");
 				return EADDRNOTAVAIL;
 			}
 
@@ -160,8 +159,10 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 			/* XXX - fix me if we ever have multi-user */
 			t = in_pcblookup(head, zeroin_addr, 0,
 					 sin->sin_addr, lport, wild);
-			if (t && (reuseport & t->inp_socket->so_options) == 0)
+			if (t && (reuseport & t->inp_socket->so_options) == 0) {
+				printf("in_pcbbind: EADDRINUSE\n");
 				return EADDRINUSE;
+			}
 		}
 		inp->laddr = sin->sin_addr;
 	}
@@ -177,15 +178,6 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 		} while (in_pcblookup(head, zeroin_addr, 0, 
 					inp->laddr, lport, wild));
 	}
-
-#ifdef SHOW_DEBUG
-	/* if we're using an ephemereal port we don't set it back into
-	 * the sockaddr structure, so this is the onyl way we have of 
-	 * checking that we're assigning correctly...
-	 */
-	printf("bound to port %d for ", ntohs(lport));
-	dump_ipv4_addr("address ", &inp->laddr);
-#endif
 
 	inp->lport = lport;
 	return 0;
@@ -251,12 +243,16 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 	struct sockaddr_in *ifaddr = NULL;
 	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
 
-	if (nam->m_len != sizeof(*sin))
+	if (nam->m_len != sizeof(*sin)) {
+		printf("in_pcbconnect: EINVAL\n");
 		return EINVAL;
+	}
 	if (sin->sin_family != AF_INET) {
+		printf("in_pcbconnect: EAFNOSUPPORT\n");
 		return EAFNOSUPPORT;
 	}
 	if (sin->sin_port == 0) {
+		printf("in_pcbconnect: EADDRNOTAVAIL\n");
 		return EADDRNOTAVAIL;
 	}
 	
@@ -302,8 +298,10 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 			sin->sin_port = fport;
 			if (ia == NULL)
 				ia = in_ifaddr;
-			if (ia == NULL)
+			if (ia == NULL) {
+				printf("in_pcbconnect: EADDRNOTAVAIL\n");
 				return EADDRNOTAVAIL;
+			}
 		}
 		/* XXX - handle multicast */
 		ifaddr = (struct sockaddr_in*) &ia->ia_addr;
@@ -312,6 +310,7 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 	if (in_pcblookup(inp->inp_head, sin->sin_addr, sin->sin_port, 
 			 inp->laddr.s_addr ? inp->laddr : ifaddr->sin_addr,
 			 inp->lport, 0)) {
+		printf("in_pcbconnect: EADDRINUSE\n"); 
 		return EADDRINUSE;
 	}
 
@@ -338,5 +337,6 @@ int in_pcbdisconnect(struct inpcb *inp)
 	 * the fact we're here implies there is still a reference.
 	 */
 	in_pcbdetach(inp);
+	return 0;
 }
 
