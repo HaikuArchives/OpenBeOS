@@ -71,6 +71,9 @@ strerror(int errnum)
 		case EMFILE:
 			return "Too many open files";
 
+		case ENXIO:
+			return "Device not configured";
+
 //		case ERR_UNIMPLEMENTED:
 		case ENOSYS:
 			return "Unimplemented";
