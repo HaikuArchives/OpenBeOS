@@ -401,10 +401,13 @@ BPlusTree::SeekDown(Stack<node_and_key> &stack,uint8 *key,uint16 keyLength)
 	CachedNode cached(this);
 	bplustree_node *node;
 	while ((node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL) {
-		if (node->overflow_link == BPLUSTREE_NULL) {
-			// put the node on the stack
-			RETURN_ERROR(stack.Push(nodeAndKey));
-		}
+		// put the node on the stack
+		if (stack.Push(nodeAndKey) < B_OK)
+			RETURN_ERROR(B_NO_MEMORY);
+
+		// if we are already on leaf level, we're done
+		if (node->overflow_link == BPLUSTREE_NULL)
+			return B_OK;
 
 		off_t nextOffset;
 		status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex,&nextOffset);
@@ -535,37 +538,45 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 }
 
 
+/**	Searches the key in the tree, and stores the offset found in
+ *	_value, if successful.
+ *	It's very similar to BPlusTree::SeekDown(), but doesn't fill
+ *	a stack while it descends the tree.
+ *	Returns B_OK when the key could be found, B_ENTRY_NOT_FOUND
+ *	if not. It can also return other errors to indicate that
+ *	something went wrong.
+ */
+
 status_t
-BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
+BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *_value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
-		|| value == NULL || key == NULL)
+		|| key == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
 	// lock access to stream
 	ReadLocked locked(fStream->Lock());
 
-	Stack<node_and_key> stack;
-	if (SeekDown(stack,key,keyLength) != B_OK)
-		RETURN_ERROR(B_ERROR);
-
-	node_and_key nodeAndKey;
+	off_t nodeOffset = fHeader->root_node_pointer;
+	CachedNode cached(this);
 	bplustree_node *node;
 
-	CachedNode cached(this);
-	if (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
-	{
-		status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
-		//if (status == B_ERROR)
-		//	return B_ERROR;
-		
-		if (status == B_OK && node->overflow_link == BPLUSTREE_NULL)
-		{
-			*value = node->Values()[nodeAndKey.keyIndex];
-			return B_OK;
-		}
+	while ((node = cached.SetTo(nodeOffset)) != NULL) {
+		uint16 keyIndex = 0;
+		off_t nextOffset;
+		status_t status = FindKey(node,key,keyLength,&keyIndex,&nextOffset);
+
+		if (node->overflow_link == BPLUSTREE_NULL) {
+			if (status == B_OK && _value != NULL)
+				*_value = node->Values()[keyIndex];
+
+			return status;
+		} else if (nextOffset == nodeOffset)
+			RETURN_ERROR(B_ERROR);
+
+		nodeOffset = nextOffset;
 	}
-	return B_ENTRY_NOT_FOUND;
+	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -591,31 +602,31 @@ TreeIterator::Goto(int8 to)
 	if (fTree == NULL || fTree->fHeader == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
-	Stack<off_t> stack;
-	if (stack.Push(fTree->fHeader->root_node_pointer) < B_OK)
-		RETURN_ERROR(B_NO_MEMORY);
-
 	// lock access to stream
 	ReadLocked locked(fTree->fStream->Lock());
 
+	off_t nodeOffset = fTree->fHeader->root_node_pointer;
 	CachedNode cached(fTree);
 	bplustree_node *node;
-	off_t pos;
-	while (stack.Pop(&pos) && (node = cached.SetTo(pos)) != NULL)
-	{
+
+	while ((node = cached.SetTo(nodeOffset)) != NULL) {
 		// is the node a leaf node?
-		if (node->overflow_link == BPLUSTREE_NULL)
-		{
-			fCurrentNodeOffset = pos;
+		if (node->overflow_link == BPLUSTREE_NULL) {
+			fCurrentNodeOffset = nodeOffset;
 			fCurrentKey = to == BPLUSTREE_BEGIN ? -1 : node->all_key_count;
 			fDuplicateNode = 0;
 
 			return B_OK;
 		}
 
-		if (stack.Push(to == BPLUSTREE_END || node->all_key_count == 0 ?
-				node->overflow_link : *node->Values()) < B_OK)
+		// get the next node offset depending on the direction (and if there
+		// are any keys in that node at all)
+		off_t nextOffset = to == BPLUSTREE_END || node->all_key_count == 0 ?
+				node->overflow_link : *node->Values();
+		if (nextOffset == nodeOffset)
 			break;
+
+		nodeOffset = nextOffset;
 	}
 	FATAL(("%s fails\n",__PRETTY_FUNCTION__));
 	RETURN_ERROR(B_ERROR);
@@ -748,7 +759,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 }
 
 
-/**	This is more or less a copy of BPlusTree::SeekDown() - but it just
+/**	This is more or less a copy of BPlusTree::Find() - but it just
  *	sets the current position in the iterator, regardless of if the
  *	key could be found or not.
  */
@@ -772,8 +783,7 @@ TreeIterator::Find(uint8 *key, uint16 keyLength)
 		off_t nextOffset;
 		status_t status = fTree->FindKey(node,key,keyLength,&keyIndex,&nextOffset);
 
-		if (node->overflow_link == BPLUSTREE_NULL)
-		{
+		if (node->overflow_link == BPLUSTREE_NULL) {
 			fCurrentNodeOffset = nodeOffset;
 			fCurrentKey = keyIndex - 1;
 			fDuplicateNode = 0;
@@ -781,7 +791,7 @@ TreeIterator::Find(uint8 *key, uint16 keyLength)
 			return status;
 		} else if (nextOffset == nodeOffset)
 			RETURN_ERROR(B_ERROR);
-		
+
 		nodeOffset = nextOffset;
 	}
 	RETURN_ERROR(B_ERROR);

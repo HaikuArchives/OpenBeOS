@@ -67,7 +67,7 @@ class Benaphore {
 // Timeouts:
 // It may be a good idea to have timeouts for the WriteLocked class,
 // in case something went wrong - we'll see if this is necessary,
-// but it would be a somewhat poor work-around a deadlock...
+// but it would be a somewhat poor work-around for a deadlock...
 // But the only real problem with timeouts could be for things like
 // "chkbfs" - because such a tool may need to lock for some more time
 

@@ -461,10 +461,8 @@ AttributeIterator::AttributeIterator(Inode *inode)
 
 AttributeIterator::~AttributeIterator()
 {
-	if (fAttributes) {
-		fAttributes->Lock().Unlock();
+	if (fAttributes)
 		put_vnode(fAttributes->GetVolume()->ID(),fAttributes->ID());
-	}
 
 	delete fIterator;
 }
@@ -516,14 +514,13 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 
 	Volume *volume = fInode->GetVolume();
 
-	// if you haven't yet access to the attributes directory, get it (and lock the node)
+	// if you haven't yet access to the attributes directory, get it
 	if (fAttributes == NULL) {
 		if (get_vnode(volume->ID(),volume->ToVnode(fInode->Attributes()),(void **)&fAttributes) != 0
 			|| fAttributes == NULL) {
 			FATAL(("get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
 			return B_ENTRY_NOT_FOUND;
 		}
-		fAttributes->Lock().Lock();
 
 		BPlusTree *tree;
 		if (fAttributes->GetTree(&tree) < B_OK
