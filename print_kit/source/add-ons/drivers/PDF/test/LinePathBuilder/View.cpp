@@ -68,9 +68,23 @@ void View::Draw(BRect updateRect) {
 
 		ShapeLPB path(&fPath, fWidth, LineCapMode(), LineJoinMode(), LineMiterLimit()); 
 		path.CreateLinePath();
-		SetPenSize(3);
+		SetPenSize(1);
+
+		BPicture picture;
+		BeginPicture(&picture);
+		FillShape(path.Shape());
+		EndPicture();
+
+		PushState();
+		ClipToPicture(&picture);
+		SetHighColor(0, 255, 0);
+		FillRect(Bounds());
+		PopState();
+		
+		SetOrigin(200, 0);
 		SetHighColor(255, 0, 0);
 		StrokeShape(path.Shape());
+		Flush();
 	}
 }
 
