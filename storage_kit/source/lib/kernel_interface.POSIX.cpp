@@ -96,37 +96,37 @@ void ThrowError() {
 }
 
 status_t
-StorageKit::open( const char *path, Mode mode, FileDescriptor &result ) {
+StorageKit::open( const char *path, OpenFlags flags, FileDescriptor &result ) {
 	if (path == NULL) {
 		result = -1;
 		return B_BAD_VALUE;
 	}
 
-	// Choose the proper posix flags
-	int posix_flags;
-	switch (mode) { 
-		case READ: 
-			posix_flags = O_RDONLY;	// Read only
-			break; 
-		case WRITE: 
-			posix_flags = O_WRONLY;	// Write only 
-			break; 
-		case READ_WRITE: 
-			posix_flags = O_RDWR;	// Read/Write
-			break;       
+	// This version of the function may not be called with the O_CREAT flag
+	if (flags & O_CREAT)
+		return B_BAD_VALUE;
+
+	// Open file and return the proper error code
+	result = ::open(path, flags);
+	return (result == -1) ? errno : B_OK ;
+}
+
+
+
+/*! Same as the other version of open() except the file is created with the
+	permissions given by creationFlags if it doesn't exist. */
+status_t
+StorageKit::open( const char *path, OpenFlags flags, CreationFlags creationFlags,
+	FileDescriptor &result )
+{
+	if (path == NULL) {
+		result = -1;
+		return B_BAD_VALUE;
 	}
-	
-	// Add in O_CREAT so the file will be created if necessary
-//	posix_flags &= O_CREAT;
-	
-	// Choose rwxrwxrwx as default persmissions
-//	mode_t posix_mode = S_IRWXU | S_IRWXG | S_IRWXO;
-	
-	// Open the file
-	result = ::open(path, posix_flags);
-	
-	// Check for errors
-	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
+
+	// Open/Create the file and return the proper error code
+	result = ::open(path, flags | O_CREAT, creationFlags);
+	return (result == -1) ? errno : B_OK ;
 }
 
 status_t
@@ -240,7 +240,7 @@ void DumpLock(StorageKit::FileLock &lock) {
 // are unimplemented in BeOS R5. Thus locking will have to wait for the new
 // kernel. I believe this function would work if fcntl() worked correctly.
 status_t
-StorageKit::lock(FileDescriptor file, Mode mode, FileLock *lock) {
+StorageKit::lock(FileDescriptor file, OpenFlags mode, FileLock *lock) {
 	return B_FILE_ERROR;
 
 /*
@@ -304,11 +304,19 @@ StorageKit::unlock(FileDescriptor file, FileLock *lock) {
 }
 
 status_t
+StorageKit::get_stat(const char *path, Stat *s) {
+	if (path == NULL || s == NULL)
+		return B_BAD_VALUE;
+		
+	return (::stat(path, s) == -1) ? errno : B_OK ;
+}
+
+status_t
 StorageKit::get_stat(FileDescriptor file, Stat *s) {
 	if (s == NULL)
 		return B_BAD_VALUE;
 		
-	return (::fstat(file, s) == -1) ? PosixErrnoToBeOSError() : B_OK ;
+	return (::fstat(file, s) == -1) ? errno : B_OK ;
 }
 
 
@@ -568,4 +576,70 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 	
 }
 
+status_t
+StorageKit::dir_to_self_entry_ref( Dir dir, entry_ref *result ) {
+	if (dir == StorageKit::NullDir || result == NULL)
+		return B_BAD_VALUE;
+
+/*		
+	// Here we're ignoring the fact that we're not supposed to know
+	// what exactly a StorageKit::Dir is, since it's much more efficient
+	result->device = dir->ent.d_pdev;
+	result->directory = dir->ent.d_pino;
+	return result->set_name( dir->ent.d_name );
+*/
+
+	// Convert our directory to an entry_ref 
+	StorageKit::rewind_dir(dir);	
+	StorageKit::DirEntry *entry;
+	for (	entry = StorageKit::read_dir(dir);
+			entry != NULL;
+			entry = StorageKit::read_dir(dir)	) {
+		if (strcmp(entry->d_name, ".") == 0) {
+			result->device = entry->d_dev;
+			result->directory = entry->d_ino;
+			result->set_name(".");
+			return B_OK;					
+		}
+	}
+	return B_ENTRY_NOT_FOUND;
+	
+}
+
+status_t
+StorageKit::dir_to_path( Dir dir, char *result, int size ) {
+	if (dir == StorageKit::NullDir || result == NULL)
+		return B_BAD_VALUE;
+
+	entry_ref entry;
+	status_t status;
+	
+	status = dir_to_self_entry_ref(dir, &entry);
+	if (status != B_OK)
+		return status;
+		
+	return entry_ref_to_path(&entry, result, size);
+}
+
+bool
+StorageKit::entry_ref_is_root_dir( entry_ref &ref ) {
+	return ref.directory == 1 && ref.device == 1 && ref.name[0] == '.' && ref.name[1] == 0;
+}
+
+status_t
+StorageKit::rename(const char *oldPath, const char *newPath) {
+	if (oldPath == NULL || newPath == NULL)
+		return B_BAD_VALUE;
+	
+	return (::rename(oldPath, newPath) == -1) ? errno : B_OK ;		
+}
+
+/*! Removes path from the filesystem. */
+status_t
+StorageKit::remove(const char *path) {
+	if (path == NULL)
+		return B_BAD_VALUE;
+	
+	return (::remove(path) == -1) ? errno : B_OK ;		
+}
 

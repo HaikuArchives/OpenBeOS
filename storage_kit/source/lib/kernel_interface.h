@@ -27,13 +27,6 @@ struct entry_ref;
 /*! Private Storage Kit Namespace */
 namespace StorageKit {
 
-// Modes for opening files
-enum Mode {
-	READ,
-	WRITE,
-	READ_WRITE
-};
-
 // Specialized Exceptions
 class EEntryNotFound : public Error {
 public:
@@ -48,6 +41,8 @@ typedef flock FileLock;
 typedef struct stat Stat;
 typedef uint32 StatMember;
 typedef attr_info AttrInfo;
+typedef int OpenFlags;			// open() flags
+typedef mode_t CreationFlags;	// open() mode
 
 // Constants -- POSIX versions
 const Dir NullDir = NULL;
@@ -80,8 +75,17 @@ const Dir NullDir = NULL;
 // File Functions
 //------------------------------------------------------------------------------
 /*! Opens the filesystem entry specified by path. Returns a
-	new file descriptor if successful, -1 otherwise. */
-status_t open( const char *path, Mode mode, FileDescriptor &fd );
+	new file descriptor if successful, -1 otherwise. This version
+	fails if the given file does not exist, or if you specify
+	O_CREAT as one of the flags (use the four argument version
+	of StorageKit::open() if you wish to create the file when
+	it doesn't already exist). */
+status_t open( const char *path, OpenFlags flags, FileDescriptor &result );
+
+/*! Same as the other version of open() except the file is created with the
+	permissions given by creationFlags if it doesn't exist. */
+status_t open( const char *path, OpenFlags flags, CreationFlags creationFlags,
+	FileDescriptor &result );
 
 /*! Closes a previously open()ed file. */
 status_t close( FileDescriptor file );
@@ -96,13 +100,14 @@ FileDescriptor dup( FileDescriptor file );
 status_t sync( FileDescriptor file );
 
 /*! Returns statistical information for the given file. */
+status_t get_stat(const char *path, Stat *s);
 status_t get_stat( FileDescriptor file, Stat *s );
 
 /*! Modifies a given portion of the file's statistical information. */
 status_t set_stat( FileDescriptor file, Stat &s, StatMember what );
 
 /*! Locks the given file so it may not be accessed by anyone else. */
-status_t lock( FileDescriptor file, Mode mode, FileLock *lock );
+status_t lock( FileDescriptor file, OpenFlags mode, FileLock *lock );
 
 /*! Unlocks a file previously locked with lock(). */
 status_t unlock( FileDescriptor file, FileLock *lock );
@@ -160,12 +165,12 @@ DirEntry* read_dir( Dir dir );
 status_t rewind_dir( Dir dir );
 
 /*! Iterates through the given directory searching for an entry whose name
-	matches that given by entry. On success, places the DirEntry in result
+	matches that given by name. On success, places the DirEntry in result
 	and returns B_OK. On failures, returns an error code and sets result to
 	StorageKit::NullDir.
 	
 	<b>Note:</b> This call modifies the internal position marker of dir. */
-status_t find_dir( Dir dir, const char *entry, DirEntry *&result );
+status_t find_dir( Dir dir, const char *name, DirEntry *&result );
 
 /*! Creates a duplicated of the given directory and places it in result if successful,
 	returning B_OK. Returns an error code and sets result to StorageKit::NullDir if
@@ -193,14 +198,49 @@ ssize_t read_link( const char *path, char *result, int size );
 //------------------------------------------------------------------------------
 /*! Converts the given entry_ref into an absolute pathname, returning
 	the result in the string of length size pointed to by result (a size
-	of B_PATH_NAME_LENGTH+1 is a good idea). Returns B_OK if successful.
-	If ref or result is NULL or size is -1, B_BAD_VALUE is returned and result
-	is unmodified. Otherwise, an error code is returned and result is
-	set to be an empty string. */
+	of B_PATH_NAME_LENGTH+1 is a good idea).
+	
+	Returns B_OK if successful.
+	
+	If ref or result is NULL or size is -1, B_BAD_VALUE is returned. Otherwise,
+	an error code is returned. The state of result after an error is undefined.
+*/
 status_t entry_ref_to_path( const struct entry_ref *ref, char *result, int size );
 
 /*! See the other definition of entry_ref_to_path() */
 status_t entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size );
+
+/*! Converts the given directory into an entry_ref. Note that the entry_ref is
+	actually a reference to the file "." in the given directory.
+
+	Returns B_OK if successful.
+	
+	If dir equals StorageKit::NullDir or result is NULL, B_BAD_VALUE is returned.
+	Otherwise, an appropriate error code is returned.
+ */
+status_t dir_to_self_entry_ref( Dir dir, entry_ref *result );
+
+
+/*! Converts the given directory into an absolute pathname, returning the
+	result in the string of length size pointed to by result (a size of
+	B_PATH_NAME_LENGTH is a good idea).
+	
+	Returns B_OK if successful.
+	
+	If dir equals StorageKit::NullDir or result is NULL or size is -1, B_BAD_VALUE
+	is returned. Otherwise, an error code is returned. The state of result after
+	an error is undefined.
+*/
+status_t dir_to_path( Dir dir, char *result, int size );
+
+/*! Returns true if the given entry_ref represents the root directory, false otherwise. */
+bool entry_ref_is_root_dir( entry_ref &ref );
+
+/*! Renames oldPath to newPath, replacing newPath if it exists. */
+status_t rename(const char *oldPath, const char *newPath);
+
+/*! Removes path from the filesystem. */
+status_t remove(const char *path);
 
 } // namespace StorageKit
 
