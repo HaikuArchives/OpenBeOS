@@ -44,6 +44,34 @@
 struct LongDIR : DIR { char _buffer[B_FILE_NAME_LENGTH]; };
 
 
+//! Quotes a string.
+static
+status_t
+quote_string(const char *str, char *buffer, size_t size)
+{
+	status_t error = (str && buffer ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		int32 i = 0, k = 0;
+		for (; k < size && str[i] != 0; i++, k++) {
+			switch (str[i]) {
+				// Just quote each character, that's fine for now.
+				default:
+					buffer[k++] = '\\';
+					break;
+			}
+			if (k < size)
+				buffer[k] = str[i];
+		}
+		// null terminate
+		if (k < size)
+			buffer[k] = 0;
+		else
+			error = B_BAD_VALUE;
+	}
+	return error;
+}
+
+
 const char *kEntryRefToPathToolPaths[] = {
 	"tools/EntryRefToPath",
 	"../tools/EntryRefToPath",
@@ -923,11 +951,15 @@ StorageKit::entry_ref_to_path( const struct entry_ref *ref, char *result, int si
 
 status_t
 StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size ) {
-	if (result == NULL || size < 1)
+	if (name == NULL || result == NULL || size < 1)
 		return B_BAD_VALUE;
+	if (strlen(name) >= B_FILE_NAME_LENGTH)
+		return B_NAME_TOO_LONG;
 
-	char params[30 + B_FILE_NAME_LENGTH];
-	sprintf(params, "%ld %lld %s", device, directory, name);
+	char quotedName[2 * B_FILE_NAME_LENGTH];
+	quote_string(name, quotedName, sizeof(quotedName));
+	char params[30 + 2 * B_FILE_NAME_LENGTH];
+	sprintf(params, "%ld %lld %s", device, directory, quotedName);
 	return invoke_EntryRefToPath_tool(params, result, size);
 }
 
@@ -975,9 +1007,14 @@ StorageKit::get_canonical_path(const char *path, char *result, size_t size)
 				error = get_canonical_dir_path(dirPath, result, size);
 				if (error == B_OK) {
 					size_t dirPathLen = strlen(result);
-					if (dirPathLen + 1 + strlen(leafName) + 1 <= size) {
-						strcat(result + dirPathLen, "/");
-						strcat(result + dirPathLen + 1, leafName);
+					// "/" doesn't need a '/' to be appended
+					bool separatorNeeded = (result[dirPathLen - 1] != '/');
+					size_t neededSize = dirPathLen + (separatorNeeded ? 1 : 0)
+										+ strlen(leafName) + 1;
+					if (neededSize <= size) {
+						if (separatorNeeded)
+							strcat(result + dirPathLen, "/");
+						strcat(result + dirPathLen, leafName);
 					} else
 						error = B_BAD_VALUE;
 				}
