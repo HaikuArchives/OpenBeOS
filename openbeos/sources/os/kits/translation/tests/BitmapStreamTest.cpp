@@ -219,7 +219,7 @@ void BitmapStreamTest::Debug(char* string) {
 }
 
 int main() {
-	BApplication app("application/OpenBeOS.translationkit.test");
+	BApplication app("application/x-vnd.OpenBeOS-translationkit_bitmapstreamtest");
 	BitmapStreamTest test;
 	test.setVerbose(true);
 	test.Initialize();
