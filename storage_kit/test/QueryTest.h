@@ -11,6 +11,8 @@
 
 #include "BasicTest.h"
 
+class QueryTestEntry;
+
 class QueryTest : public BasicTest
 {
 public:
@@ -28,6 +30,13 @@ public:
 	void PredicateTest();
 	void ParameterTest();
 	void FetchTest();
+	void AddLiveEntries(QueryTestEntry **entries, int32 entryCount,
+						QueryTestEntry **queryEntries, int32 queryEntryCount);
+	void RemoveLiveEntries(QueryTestEntry **entries, int32 entryCount,
+						   QueryTestEntry **queryEntries,
+						   int32 queryEntryCount);
+	void CheckUpdateMessages(uint32 opcode, QueryTestEntry **entries,
+							 int32 entryCount);
 	void LiveTest();
 
 private:

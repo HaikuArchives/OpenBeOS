@@ -11,6 +11,7 @@
 #include <Message.h>
 #include <MessageQueue.h>
 #include <Messenger.h>
+#include <NodeMonitor.h>
 #include <OS.h>
 #include <Path.h>
 #include <Query.h>
@@ -23,7 +24,7 @@
 // QueryHandler
 
 class QueryTest::QueryHandler : public BHandler {
-
+public:
 	virtual void MessageReceived(BMessage *message)
 	{
 		// clone and push it
@@ -422,7 +423,10 @@ public:
 		  cpath(NULL),
 		  kind(kind),
 		  linkToPath(),
-		  clinkToPath(NULL)
+		  clinkToPath(NULL),
+		  directory(-1),
+		  node(-1),
+		  name()
 	{
 		cpath = this->path.c_str();
 		if (linkTarget)
@@ -440,6 +444,9 @@ public:
 	node_flavor	kind;
 	string		linkToPath;
 	const char	*clinkToPath;
+	ino_t		directory;
+	ino_t		node;
+	string		name;
 };
 
 static const char *testVolumeImage	= "/tmp/query-test-image";
@@ -535,6 +542,29 @@ create_test_entries(QueryTestEntry **testEntries, int32 count)
 	BasicTest::execCommand(cmdLine);
 }
 
+// delete_test_entries
+void
+delete_test_entries(QueryTestEntry **testEntries, int32 count)
+{
+	// create the command line
+	string cmdLine("true");
+	for (int32 i = 0; i < count; i++) {
+		const QueryTestEntry *entry = testEntries[i];
+		switch (entry->kind) {
+			case B_DIRECTORY_NODE:
+			case B_FILE_NODE:
+			case B_SYMLINK_NODE:
+				cmdLine += " ; rm -rf " + entry->path;
+				break;
+			case B_ANY_NODE:
+			default:
+				printf("WARNING: invalid node kind\n");
+				break;
+		}
+	}
+	BasicTest::execCommand(cmdLine);
+}
+
 
 
 
@@ -546,12 +576,12 @@ QueryTest::Suite() {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 	typedef CppUnit::TestCaller<QueryTest> TC;
 		
-//	suite->addTest( new TC("BQuery::Predicate Test",
-//						   &QueryTest::PredicateTest) );
-//	suite->addTest( new TC("BQuery::Parameter Test",
-//						   &QueryTest::ParameterTest) );
+	suite->addTest( new TC("BQuery::Predicate Test",
+						   &QueryTest::PredicateTest) );
+	suite->addTest( new TC("BQuery::Parameter Test",
+						   &QueryTest::ParameterTest) );
 	suite->addTest( new TC("BQuery::Fetch Test", &QueryTest::FetchTest) );
-//	suite->addTest( new TC("BQuery::Live Test", &QueryTest::LiveTest) );
+	suite->addTest( new TC("BQuery::Live Test", &QueryTest::LiveTest) );
 
 	return suite;
 }		
@@ -1280,11 +1310,186 @@ QueryTest::FetchTest()
 	}
 }
 
+// AddLiveEntries
+void
+QueryTest::AddLiveEntries(QueryTestEntry **entries, int32 entryCount,
+						  QueryTestEntry **queryEntries, int32 queryEntryCount)
+{
+	create_test_entries(entries, entryCount);
+	for (int32 i = 0; i < entryCount; i++) {
+		QueryTestEntry *entry = entries[i];
+		BNode node(entry->cpath);
+		CPPUNIT_ASSERT( node.InitCheck() == B_OK );
+		node_ref nref;
+		CPPUNIT_ASSERT( node.GetNodeRef(&nref) == B_OK );
+		entry->node = nref.node;
+		entry_ref ref;
+		CPPUNIT_ASSERT( get_ref_for_path(entry->cpath, &ref) == B_OK );
+		entry->directory = ref.directory;
+		entry->name = ref.name;
+	}
+	CheckUpdateMessages(B_ENTRY_CREATED, queryEntries, queryEntryCount);
+}
+
+// RemoveLiveEntries
+void
+QueryTest::RemoveLiveEntries(QueryTestEntry **entries, int32 entryCount,
+							 QueryTestEntry **queryEntries,
+							 int32 queryEntryCount)
+{
+	delete_test_entries(entries, entryCount);
+	CheckUpdateMessages(B_ENTRY_REMOVED, queryEntries, queryEntryCount);
+	for (int32 i = 0; i < entryCount; i++) {
+		QueryTestEntry *entry = entries[i];
+		entry->directory = -1;
+		entry->node = -1;
+		entry->name = "";
+	}
+}
+
+// CheckUpdateMessages
+void
+QueryTest::CheckUpdateMessages(uint32 opcode, QueryTestEntry **entries,
+							   int32 entryCount)
+{
+
+	// wait for the messages
+	snooze(100000);
+	if (fApplication) {
+		BMessageQueue &queue = fApplication->Handler().Queue();
+		CPPUNIT_ASSERT( queue.Lock() );
+		try {
+			int32 entryNum = 0;
+			while (BMessage *_message = queue.NextMessage()) {
+				BMessage message(*_message);
+				delete _message;
+				CPPUNIT_ASSERT( entryNum < entryCount );
+				QueryTestEntry *entry = entries[entryNum];
+				CPPUNIT_ASSERT( message.what == B_QUERY_UPDATE );
+				int32 msgOpcode;
+				CPPUNIT_ASSERT( message.FindInt32("opcode", &msgOpcode)
+								== B_OK );
+				CPPUNIT_ASSERT( msgOpcode == opcode );
+				dev_t device;
+				CPPUNIT_ASSERT( message.FindInt32("device", &device)
+								== B_OK );
+				CPPUNIT_ASSERT( device == dev_for_path(testMountPoint) );
+				ino_t directory;
+				CPPUNIT_ASSERT( message.FindInt64("directory", &directory)
+								== B_OK );
+				CPPUNIT_ASSERT( directory == entry->directory );
+				ino_t node;
+				CPPUNIT_ASSERT( message.FindInt64("node", &node)
+								== B_OK );
+				CPPUNIT_ASSERT( node == entry->node );
+				if (opcode == B_ENTRY_CREATED) {
+					const char *name;
+					CPPUNIT_ASSERT( message.FindString("name", &name)
+									== B_OK );
+					CPPUNIT_ASSERT( entry->name == name );
+				}
+				entryNum++;
+			}
+			CPPUNIT_ASSERT( entryNum == entryCount );
+		} catch (CppUnit::Exception exception) {
+			queue.Unlock();
+			throw exception;
+		}
+		queue.Unlock();
+	}
+}
+
 // LiveTest
 void
 QueryTest::LiveTest()
 {
-// tests:
-// * live queries
+	// tests:
+	// * live queries
+	CPPUNIT_ASSERT( fApplication != NULL );
+	createVolume(testVolumeImage, testMountPoint, 2);
+	fVolumeCreated = true;
+	create_test_entries(allTestEntries, allTestEntryCount);
+	BMessenger target(&fApplication->Handler());
+
+	// empty query, add some files, remove some files
+	nextSubTest();
+	{
+		Query query;
+		CPPUNIT_ASSERT( query.SetPredicate("name=\"*Argh\"")
+						== B_OK );
+		BVolume volume(dev_for_path(testMountPoint));
+		CPPUNIT_ASSERT( volume.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( query.SetVolume(&volume) == B_OK );
+		CPPUNIT_ASSERT( query.SetTarget(target) == B_OK );
+		CPPUNIT_ASSERT( query.Fetch() == B_OK );
+		BEntry entry;
+		CPPUNIT_ASSERT( query.GetNextEntry(&entry) == B_ENTRY_NOT_FOUND );
+		// the test entries
+		QueryTestEntry testDir1(dir1 + "testDirArgh", B_DIRECTORY_NODE);
+		QueryTestEntry testDir2(dir1 + "testDir2", B_DIRECTORY_NODE);
+		QueryTestEntry testFile1(subdir21 + "testFileArgh", B_FILE_NODE);
+		QueryTestEntry testFile2(subdir21 + "testFile2", B_FILE_NODE);
+		QueryTestEntry testLink1(subdir32 + "testLinkArgh", B_SYMLINK_NODE,
+								 &file11);
+		QueryTestEntry testLink2(subdir32 + "testLink2", B_SYMLINK_NODE,
+								 &file11);
+		QueryTestEntry *entries[] = {
+			&testDir1, &testDir2, &testFile1, &testFile2,
+			&testLink1, &testLink2
+		};
+		int32 entryCount = sizeof(entries) / sizeof(QueryTestEntry*);
+		QueryTestEntry *queryEntries[] = {
+			&testDir1, &testFile1, &testLink1
+		};
+		int32 queryEntryCount = sizeof(queryEntries) / sizeof(QueryTestEntry*);
+		AddLiveEntries(entries, entryCount, queryEntries, queryEntryCount);
+		RemoveLiveEntries(entries, entryCount, queryEntries, queryEntryCount);
+	}
+	// non-empty query, add some files, remove some files
+	nextSubTest();
+	{
+		Query query;
+		TestSet testSet;
+		CPPUNIT_ASSERT( query.SetTarget(target) == B_OK );
+		QueryTestEntry *initialEntries[] = {
+			&file11, &file12, &file21, &file22, &file31, &file32, &file1,
+			&file2, &file3
+		};
+		int32 initialEntryCount
+			= sizeof(initialEntries) / sizeof(QueryTestEntry*);
+		TestFetchPredicateInit(query, testSet, testMountPoint,
+							   "name=\"*ile*\"", initialEntries,
+							   initialEntryCount);
+		BEntry entry;
+		while (query.GetNextEntry(&entry) == B_OK) {
+			BPath path;
+			CPPUNIT_ASSERT( entry.InitCheck() == B_OK );
+			CPPUNIT_ASSERT( entry.GetPath(&path) == B_OK );
+			CPPUNIT_ASSERT( testSet.test(path.Path()) == true );
+		}
+		CPPUNIT_ASSERT( testSet.testDone() == true );
+		CPPUNIT_ASSERT( query.GetNextEntry(&entry) == B_ENTRY_NOT_FOUND );
+		// the test entries
+		QueryTestEntry testDir1(dir1 + "testDir1", B_DIRECTORY_NODE);
+		QueryTestEntry testDir2(dir1 + "testDir2", B_DIRECTORY_NODE);
+		QueryTestEntry testFile1(subdir21 + "testFile1", B_FILE_NODE);
+		QueryTestEntry testFile2(subdir21 + "testFile2", B_FILE_NODE);
+		QueryTestEntry testLink1(subdir32 + "testLink1", B_SYMLINK_NODE,
+								 &file11);
+		QueryTestEntry testLink2(subdir32 + "testLink2", B_SYMLINK_NODE,
+								 &file11);
+		QueryTestEntry testFile3(subdir32 + "testFile3", B_FILE_NODE);
+		QueryTestEntry *entries[] = {
+			&testDir1, &testDir2, &testFile1, &testFile2,
+			&testLink1, &testLink2, &testFile3
+		};
+		int32 entryCount = sizeof(entries) / sizeof(QueryTestEntry*);
+		QueryTestEntry *queryEntries[] = {
+			&testFile1, &testFile2, &testFile3
+		};
+		int32 queryEntryCount = sizeof(queryEntries) / sizeof(QueryTestEntry*);
+		AddLiveEntries(entries, entryCount, queryEntries, queryEntryCount);
+		RemoveLiveEntries(entries, entryCount, queryEntries, queryEntryCount);
+	}
 }
 
