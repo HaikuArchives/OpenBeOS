@@ -191,10 +191,10 @@ int     socket (int, int, int);
 int     bind(int, const struct sockaddr *, int);
 int     connect(int, const struct sockaddr *, int);
 
-int     send(int, caddr_t, int, int);
-int     recv(int, caddr_t, int, int);
-int     sendto(int, caddr_t, size_t, int, const struct sockaddr*, size_t);
-int     recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t*);
+int     send(int, const void *, int, int);
+int     recv(int, void *, int, int);
+int     sendto(int, const void *, size_t, int, const struct sockaddr*, size_t);
+int     recvfrom(int, void *, size_t, int, struct sockaddr *, size_t*);
 
 int     closesocket(int);
 int     shutdown(int sock, int how);
@@ -202,8 +202,8 @@ int     shutdown(int sock, int how);
 int     sysctl (int *, uint, void *, size_t *, void *, size_t);
 
 int     getsockopt(int, int, int, void *, size_t *);
-int     getpeername(int, struct sockaddr *, uint32 *);
-int     getsockname(int, struct sockaddr *, uint32 *);
+int     getpeername(int, struct sockaddr *, int *);
+int     getsockname(int, struct sockaddr *, int *);
 
 int     setsockopt(int, int, int, const void *, size_t);
 
