@@ -55,6 +55,7 @@ OBOS_ADDON_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system add-ons ] ;
 OBOS_SHLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
 OBOS_STLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
 OBOS_KERNEL_DIR ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system ] ;
+OBOS_TEST_DIR   ?= [ FDirName $(OBOS_TOP) tests ] ;
 
 OBOS_KERNEL_CONFIG = config.$(OBOS_ARCH).ini ;
 OBOS_KERNEL = kernel.$(OBOS_ARCH) ;
@@ -112,6 +113,18 @@ rule Server
 	SetupObjectsDir ;
 	Main $(<) : $(>) ;
 	MakeLocate $(<) : $(OBOS_SERVER_DIR) ;
+}
+
+rule UnitTest
+{
+	# Test <name> : <sources> : <dest> ;
+	SetupIncludes ;
+	UseCppUnitHeaders ;
+	SetupObjectsDir ;
+	MakeLocateObjects $(>) ;
+	Main $(<) : $(>) ;
+	MakeLocate $(<) : $(OBOS_TEST_DIR)/$(3) ;
+	DEPENDS $(<) : /boot/home/config/lib/libcppunit.so ;
 }
 
 rule Addon
@@ -266,6 +279,14 @@ rule UseHeaders
 	} else {
 		SubDirHdrs $(headers) ;
 	}
+}
+
+rule UseCppUnitHeaders
+{
+	local opt = -I [ FDirName $(OBOS_TOP) headers tools cppunit ] ;
+
+	SubDirCcFlags $(opt) ;
+	SubDirC++Flags $(opt) ;
 }
 
 rule UseArchHeaders
