@@ -74,6 +74,7 @@ typedef attr_info AttrInfo;
 /*! Opens the filesystem entry specified by path. Returns a
 	new file descriptor if successful, -1 otherwise. */
 FileDescriptor open( const char *path, Mode mode );
+status_t open( const char *path, Mode mode, FileDescriptor &fd );
 
 /*! Closes a previously open()ed file. */
 status_t close( FileDescriptor file );

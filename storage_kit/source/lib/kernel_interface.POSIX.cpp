@@ -36,6 +36,7 @@
 
 // Converts the given error code into a BeOS status_t error code
 status_t PosixErrnoToBeOSError() {
+//	cout << endl << "PosixErrnoToBeOSError() -- errno == " << errno << " == 0x" << hex << errno << dec << endl << endl;
 	switch (errno) {
 		case ENOMEM:
 			return B_NO_MEMORY;
@@ -46,8 +47,11 @@ status_t PosixErrnoToBeOSError() {
 		case EACCES:
 			return B_PERMISSION_DENIED;
 			
+		case EAGAIN:
+			return B_BUSY;
+			
 		default:
-			return B_FILE_ERROR;		
+			return errno;		
 	}	
 }
 
@@ -86,9 +90,8 @@ void ThrowError() {
 	}
 }
 
-
-StorageKit::FileDescriptor
-StorageKit::open(const char *path, StorageKit::Mode mode) {
+status_t
+StorageKit::open( const char *path, Mode mode, FileDescriptor &result ) {
 	// Choose the proper posix flags
 	int posix_flags;
 	switch (mode) { 
@@ -110,15 +113,11 @@ StorageKit::open(const char *path, StorageKit::Mode mode) {
 //	mode_t posix_mode = S_IRWXU | S_IRWXG | S_IRWXO;
 	
 	// Open the file
-	FileDescriptor result = ::open(path, posix_flags);
+	result = ::open(path, posix_flags);
 	
 	// Check for errors
-	if (result == -1)
-		ThrowError();
-	
-	return result;
+	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
 }
-
 
 status_t
 StorageKit::close(StorageKit::FileDescriptor file) {
@@ -173,12 +172,7 @@ StorageKit::read_attr_dir( Dir* dir ) {
 status_t
 StorageKit::close_attr_dir ( Dir* dir )
 {
-	int result = fs_close_attr_dir( dir );
-	if( result < B_OK ) {
-		ThrowError();
-	}
-
-	return result;
+	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
 }
 
 status_t
@@ -187,54 +181,101 @@ StorageKit::stat_attr( FileDescriptor file, const char *name, AttrInfo *ai )
 	return (fs_stat_attr( file, name, ai ) == -1) ? errno : B_OK ;
 }
 
-// This doesn't work right yet
+
+void DumpLock(StorageKit::FileLock &lock) {
+	cout << endl;
+	cout << "type   == ";
+	switch (lock.l_type) {
+		case F_RDLCK:
+			cout << "F_RDLCK";
+			break;
+			
+		case F_WRLCK:
+			cout << "F_WRLCK";
+			break;
+			
+		case F_UNLCK:
+			cout << "F_UNLCK";
+			break;
+			
+		default:
+			cout << lock.l_type;
+			break;
+	}
+	cout << endl;
+
+	cout << "whence == " << lock.l_whence << endl;
+	cout << "start  == " << lock.l_start << endl;
+	cout << "len    == " << lock.l_len << endl;
+	cout << "pid    == " << lock.l_pid << endl;
+	cout << endl;
+}
+
+// As best I can tell, fcntl(fd, F_SETLK, lock) and fcntl(fd, F_GETLK, lock)
+// are unimplemented in BeOS R5. Thus locking will have to wait for the new
+// kernel. I believe this function would work if fcntl() worked correctly.
+status_t
+StorageKit::lock(FileDescriptor file, Mode mode, FileLock *lock) {
+	return B_FILE_ERROR;
+
+/*
+	if (lock == NULL)
+		return B_BAD_VALUE;
+
+//	DumpLock(*lock);
+	short lock_type;
+	switch (mode) {
+		case READ:
+			lock_type = F_RDLCK;
+			break;
+			
+		case WRITE:
+		case READ_WRITE:
+		default:
+			lock_type = F_WRLCK;
+			break;
+	}
+
+	
+//	lock->l_type = F_UNLCK;
+	lock->l_type = lock_type;
+	lock->l_whence = SEEK_SET;
+	lock->l_start = 0;				// Beginning of file...
+	lock->l_len = 0;				// ...to end of file
+	lock->l_pid = 0;				// Don't really care :-)
+
+//	DumpLock(*lock);
+	::fcntl(file, F_GETLK, lock);
+//	DumpLock(*lock);
+	if (lock->l_type != F_UNLCK) {
+		return errno;
+	} 
+	
+//	lock->l_type = F_RDLCK;
+	lock->l_type = lock_type;
+//	DumpLock(*lock);
+	
+	errno = 0;
+	
+	return (::fcntl(file, F_SETLK, lock) == 0) ? B_OK : PosixErrnoToBeOSError();
+*/
+}
+
+// As best I can tell, fcntl(fd, F_SETLK, lock) and fcntl(fd, F_GETLK, lock)
+// are unimplemented in BeOS R5. Thus locking will have to wait for the new
+// kernel. I believe this function would work if fcntl() worked correctly.
 status_t
 StorageKit::unlock(FileDescriptor file, FileLock *lock) {
+	return B_FILE_ERROR;
+
+/*
 	if (lock == NULL)
-//		throw new StorageKit::Error(-1, "NULL FileLock passed to StorageKit::unlock()");
 		return B_BAD_VALUE;
 	
 	lock->l_type = F_UNLCK;
 	
-	if ( ::fcntl(file, F_SETLK, lock) != 0 )
-		return B_BAD_VALUE;
-//		ThrowError();
-}
-
-// This doesn't work right yet
-status_t
-StorageKit::lock(FileDescriptor file, Mode mode, FileLock *lock) {
-	if (lock == NULL)
-		//throw new StorageKit::Error(-1, "NULL FileLock passed to StorageKit::lock()");
-		return B_BAD_VALUE;
-
-/*	cout << "l_type == " << lock->l_type << endl;
-	::fcntl(file, F_GETLK, lock);
-	if (lock->l_type != F_UNLCK) {
-		cout << "l_type == " << lock->l_type << endl;
-		return B_BUSY;
-	} */
-	
-	short lock_type;
-	switch (mode) {
-		READ:
-			lock_type = F_RDLCK;
-			break;
-			
-		WRITE:
-			lock_type = F_WRLCK;
-			break;
-			
-		READ_WRITE:
-			lock_type = F_RDLCK & F_WRLCK;
-			break;
-	}
-	
-	lock->l_type = lock_type;
-	
-	if ( ::fcntl(file, F_SETLK) != 0 )
-//		return B_ERROR;
-		ThrowError();
+	return (::fcntl(file, F_SETLK, lock) == 0) ? B_OK : PosixErrnoToBeOSError() ;
+*/
 }
 
 status_t
