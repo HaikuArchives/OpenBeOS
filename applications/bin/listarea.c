@@ -8,7 +8,7 @@
 //
 //  File:        listimage.c
 //  Author:      Daniel Reinhold (danielre@users.sf.net)
-//  Description: lists image info for all currently running teams
+//  Description: lists area info for all currently running teams
 //
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
