@@ -11,6 +11,24 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <TLS.h>
+
+/* XXX - fix this correctly... */
+static int32 h_errno_tls;
+
+/* These should probably be moved to a seperate file as they
+ * are unique to the library as a whole...
+ */
+
+void _init()
+{
+	h_errno_tls = tls_allocate();
+}
+
+void _fini()
+{
+}
+
 struct net_settings {
 	int dummy;
 };
@@ -34,6 +52,11 @@ _EXPORT int herror()
 	return 0;
 }
 
+_EXPORT int *_h_errnop()
+{
+	return tls_address(h_errno_tls);
+}
+
 
 _EXPORT int _socket_interrupt()
 {
@@ -47,12 +70,15 @@ _EXPORT int _netconfig_find()
 	return 0;
 }
 
+/* This is a terrible hack :(
+ * We should really get these settings values by parsing $HOME/config/settings/network file, which
+ * will make both R5 and BONE compatible
+ */
 
 _EXPORT char * find_net_setting(struct net_settings * ncw, const char * heading, const char * name, char * value, unsigned nbytes)
 {
-	// *HACK*
-	// We should really get these settings values by parsing $HOME/config/settings/network file, which
-	// will make both R5 and BONE compatible
+	  
+	printf("find_net_setting\n");
 	
 	if (strcmp(heading, "GLOBAL") != 0)
 		return NULL;
@@ -72,12 +98,14 @@ _EXPORT char * find_net_setting(struct net_settings * ncw, const char * heading,
 
 _EXPORT status_t set_net_setting(struct net_settings * ncw, const char * heading, const char * name, const char * value)
 {
+	printf("set_net_setting\n");
 	return B_UNSUPPORTED;
 }
 
 
 _EXPORT int gethostname(char * name, size_t length)
 {
+	printf("gethostname\n");
 	if (find_net_setting(NULL, "GLOBAL", "HOSTNAME", name, length) == NULL)
 		return B_ERROR;
 	
@@ -87,6 +115,7 @@ _EXPORT int gethostname(char * name, size_t length)
 
 _EXPORT int getusername(char * name, uint length)
 {
+	printf("getusername\n");
 	if (find_net_setting(NULL, "GLOBAL", "USERNAME", name, length) == NULL)
 		return B_ERROR;
 	
@@ -96,6 +125,7 @@ _EXPORT int getusername(char * name, uint length)
 
 _EXPORT int getpassword(char * pwd, uint length)
 {
+	printf("getpassword\n");
 	if (find_net_setting(NULL, "GLOBAL", "PASSWORD", pwd, length) == NULL)
 		return B_ERROR;
 	
