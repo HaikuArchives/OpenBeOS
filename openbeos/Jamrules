@@ -128,7 +128,7 @@ rule Server
 rule UnitTest
 {
 	# Test <name> : <sources> : <dest> ;
-	SetupIncludes ;
+#	SetupIncludes ;
 	UseCppUnitHeaders ;
 	SetupObjectsDir ;
 	MakeLocateObjects $(>) ;
