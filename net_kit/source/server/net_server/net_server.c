@@ -44,7 +44,7 @@ static int32 if_thread(void *data)
 	while ((status = read(i->devid, buffer, len)) >= B_OK) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
 		/* Hmm, not sure about this... */
-		if ((i->flags & IFF_UP) == 0) {
+		if ((i->if_flags & IFF_UP) == 0) {
 			m_freem(mb);
 			continue;
 		}
@@ -74,13 +74,13 @@ static int32 rx_thread(void *data)
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
 
-		if ((i->flags & IFF_UP) == 0) {
+		if ((i->if_flags & IFF_UP) == 0) {
 			m_freem(m);
 			continue;
 		}
 		
 		if (i->input)
-                	i->input(m);
+			i->input(m);
 		else
 			printf("%s%d: no input function!\n", i->name, i->unit);
         }
@@ -165,15 +165,15 @@ void net_server_add_device(ifnet *ifn)
 	if (ifn->devid < 0) {
 		/* pseudo device... */
 		if (pdevices)
-			ifn->next = pdevices;
+			ifn->if_next = pdevices;
 		else
-			ifn->next = NULL;
+			ifn->if_next = NULL;
 		pdevices = ifn;
 	} else {
 		if (devices)
-			ifn->next = devices;
+			ifn->if_next = devices;
 		else
-			ifn->next = NULL;
+			ifn->if_next = NULL;
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
@@ -205,7 +205,7 @@ static void start_devices(void)
 	d = devices;
 	while (d) {
 		d->start(d);
-		d = d->next;
+		d = d->if_next;
 	}
 }
 
@@ -265,15 +265,15 @@ static void list_devices(void)
 	while (d) {
 		printf("%2d  %s%d       %4ld ", i++, d->name, d->unit, d->if_mtu);
 		printf("                 ");
-		if (d->flags & IFF_UP)
+		if (d->if_flags & IFF_UP)
 			printf(" UP");
-		if (d->flags & IFF_RUNNING)
+		if (d->if_flags & IFF_RUNNING)
 			printf(" RUNNING");
-		if (d->flags & IFF_PROMISC)
+		if (d->if_flags & IFF_PROMISC)
 			printf(" PROMISCUOUS");
-		if (d->flags & IFF_BROADCAST)
+		if (d->if_flags & IFF_BROADCAST)
 			printf(" BROADCAST");
-		if (d->flags & IFF_MULTICAST)
+		if (d->if_flags & IFF_MULTICAST)
 			printf(" MULTICAST");
 		printf("\n");
 		if (d->if_addrlist) {
@@ -286,7 +286,7 @@ static void list_devices(void)
 			}
 		}
 
-		d = d->next; 
+		d = d->if_next; 
 	}
 }
 
@@ -297,7 +297,7 @@ static void close_devices(void)
 		kill_thread(d->rx_thread);
 		kill_thread(d->tx_thread);
 		close(d->devid);
-		d = d->next;
+		d = d->if_next;
 	}
 }
 
@@ -863,7 +863,7 @@ int main(int argc, char **argv)
 			printf("waiting on thread for %s%d\n", d->name, d->unit);
 			wait_for_thread(d->rx_thread, &status);
 		}
-		d = d->next; 
+		d = d->if_next; 
 	}
 
 	return 0;
