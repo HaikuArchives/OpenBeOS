@@ -9,8 +9,6 @@
 
 #include "pools.h"
 
-static struct pool_ctl *mbpool;
-static struct pool_ctl *clpool;
 /* MBuf's are all of a single size, MSIZE bytes. If we have more data
  * than can be fitted we can add a single "MBuf cluster" which is of
  * fixed size MCLBYTES. 
@@ -18,6 +16,7 @@ static struct pool_ctl *clpool;
  * the storage provided within the MBuf, but rather all data will go 
  * directly into an added cluster.
  */
+
 #define MSIZE				256 /* total size of structure */
 #define MCLSHIFT			11
 #define MCLBYTES			1 << MCLSHIFT
@@ -184,7 +183,18 @@ enum {
                 (n)->m_cksum = 0; \
         }
 
+#define _MEXTREMOVE(m) do { \
+	if ((m)->m_flags & M_CLUSTER) { \
+		pool_put(clpool, (m)->m_ext.ext_buf); \
+	} \
+	(m)->m_flags &= ~(M_CLUSTER|M_EXT); \
+	(m)->m_ext.ext_size = 0; \
+	} while (0)
+	
 #define MFREE(m, n) \
+	if ((m)->m_flags & M_EXT) { \
+		_MEXTREMOVE(m); \
+	} \
 	(n) = (m)->m_next; \
 	pool_put(mbpool, m);
 
@@ -208,6 +218,16 @@ enum {
 	(to)->m_data = (to)->m_pktdat; \
 	}
 
+#define MCLGET(m) do { \
+	(m)->m_ext.ext_buf = pool_get(clpool); \
+	if ((m)->m_ext.ext_buf == NULL) \
+		return NULL; \
+	if ((m)->m_ext.ext_buf != NULL) { \
+		(m)->m_data = (m)->m_ext.ext_buf; \
+		(m)->m_flags |= M_EXT|M_CLUSTER; \
+		(m)->m_ext.ext_size = MCLBYTES; \
+	} \
+	} while (0)
 
 /* Functions! */
 void mbinit(void);
@@ -216,6 +236,9 @@ struct mbuf *m_gethdr(int type);
 struct mbuf *m_getclr(int type);
 
 struct mbuf *m_prepend(struct mbuf *m, size_t len);
+struct mbuf *m_devget(char *buf, int totlen, int off0,
+                        /*struct ifnet *ifp,*/
+                        void (*copy)(const void *, void *, size_t));
 
 struct mbuf *m_free(struct mbuf *mfree);
 void m_freem(struct mbuf *m);
@@ -225,5 +248,14 @@ void dump_freelist(void);
 
 /* Stats structure */
 /* XXX - add me! */
+
+#ifdef _NET_STACK_
+
+static struct pool_ctl *mbpool;
+static struct pool_ctl *clpool;
+
+int max_linkhdr;		/* largest link level header */
+
+#endif /* _NET_STACK_ */
 
 #endif /* OBOS_MBUF_H */

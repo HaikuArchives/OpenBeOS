@@ -18,10 +18,12 @@ int ethernet_input(struct mbuf *buf)
 {
 	ethernet_header *eth = mtod(buf, ethernet_header *);
 	char srca[17], dsta[17];
+	uint16 proto = ntohs(eth->type);
 	
-	if (eth->type < 1500) {
-		printf("It's an 802.x encapsulated packet\n");
-		return 0;
+	if (proto < 1500) {
+		eth802_header *e8 = mtod(buf, eth802_header*);
+		proto = htons(e8->type);
+		printf("It's an 802.x encapsulated packet - type %04x\n", ntohs(e8->type));
 	}
 	sprintf(dsta, "%02x:%02x:%02x:%02x:%02x:%02x", 
 			eth->dest.addr[0], eth->dest.addr[1],
@@ -33,7 +35,7 @@ int ethernet_input(struct mbuf *buf)
 			eth->src.addr[3], eth->src.addr[5]);						
 	printf("Ethernet packet from %s to %s: proto ", srca, dsta);
 	
-	switch (ntohs(eth->type)) {
+	switch (proto) {
 		case PROT_ARP:
 			printf("ARP\n");
 			break;

@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <kernel/OS.h>
+#include <string.h>
+
+#define _NET_STACK_
 
 #include "mbuf.h"
 #include "pools.h"
@@ -87,4 +90,73 @@ struct mbuf *m_prepend(struct mbuf *m, size_t len)
 	return (m);
 }
 
+
+struct mbuf *m_devget(char *buf, int totlen, int off0,
+			/*struct ifnet *ifp,*/
+			void (*copy)(const void *, void *, size_t))
+{
+        struct mbuf *m;
+        struct mbuf *top = NULL, **mp = &top;
+        int off = off0, len;
+        char *cp;
+        char *epkt;
+
+        cp = buf;
+        epkt = cp + totlen;
+        if (off) {
+                /*
+                 * If 'off' is non-zero, packet is trailer-encapsulated,
+                 * so we have to skip the type and length fields.
+                 */
+                cp += off + 2 * sizeof(uint16);
+                totlen -= 2 * sizeof(uint16);
+        }
+        MGETHDR(m, MT_DATA);
+        if (m == NULL)
+                return (NULL);
+        //m->m_pkthdr.rcvif = ifp;
+        m->m_pkthdr.len = totlen;
+        m->m_len = MHLEN;
+
+        while (totlen > 0) {
+                if (top != NULL) {
+                        MGET(m, MT_DATA);
+                        if (m == NULL) {
+                                m_freem(top);
+                                return (NULL);
+                        }
+                        m->m_len = MLEN;
+                }
+                len = min(totlen, epkt - cp);
+                if (len >= MINCLSIZE) {
+                        MCLGET(m);
+                        if (m->m_flags & M_EXT)
+                                m->m_len = len = min(len, MCLBYTES);
+                        else
+                                len = m->m_len;
+                } else {
+                        /*
+                         * Place initial small packet/header at end of mbuf.
+                         */
+                        if (len < m->m_len) {
+                                if (top == NULL &&
+                                    len + max_linkhdr <= m->m_len)
+                                        m->m_data += max_linkhdr;
+                                m->m_len = len;
+                        } else
+                                len = m->m_len;
+                }
+                if (copy)
+                        copy(cp, mtod(m, caddr_t), (size_t)len);
+                else
+                        memmove(mtod(m, caddr_t), cp, (size_t)len);
+                cp += len;
+                *mp = m;
+                mp = &m->m_next;
+                totlen -= len;
+                if (cp == epkt)
+                        cp = buf;
+        }
+        return (top);
+}
 

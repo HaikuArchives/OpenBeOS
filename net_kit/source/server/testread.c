@@ -67,14 +67,8 @@ int main(int argc, char **argv)
 		printf("Unable to set promiscuous. %s\n", strerror(status));
 		
 	while ((status = read(dev, buffer, len)) >= B_OK) {
-		if (status <= MLEN) {
-			struct mbuf *mb = m_gethdr(MT_HEADER);
-			memcpy(mtod(mb, void *), buffer, len);
-			ethernet_input(mb);
-		} else {
-			printf("status = %d, MLEN = %d\n", status, MLEN);
-			dump_buffer(buffer);
-		}
+		struct mbuf *mb = m_devget(buffer, len, 0, NULL);
+		ethernet_input(mb);
 	}
 	
 	close (dev);
