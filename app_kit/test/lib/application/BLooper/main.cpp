@@ -21,6 +21,7 @@
 
 // Local Includes --------------------------------------------------------------
 #include "IsMessageWaitingTest.h"
+#include "RemoveHandlerTest.h"
 
 // Local Defines ---------------------------------------------------------------
 
@@ -41,6 +42,7 @@ Test* addonTestFunc(void)
 	TestSuite* tests = new TestSuite("BLooper");
 
 	tests->addTest(TIsMessageWaitingTest::Suite());
+	tests->addTest(TRemoveHandlerTest::Suite());
 
 	return tests;
 }
