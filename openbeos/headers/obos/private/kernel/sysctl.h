@@ -82,3 +82,4 @@ int user_sysctl(int *, uint, void *, size_t *, void *, size_t);
 int sysctl(int *, uint, void *, size_t *, void *, size_t);
 
 #endif /* _SYS_SYSCTL_H */
+
