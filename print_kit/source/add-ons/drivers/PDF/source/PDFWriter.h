@@ -92,7 +92,7 @@ class PDFWriter : public PrinterDriver
 		void		DrawString(char *string, float deltax, float deltay);
 		void		DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		void		SetClippingRects(BRect *rects, uint32 numRects);
-		void        Op21(BPicture *picture, int32 a, int32 b, int32 c, int32 d);
+		status_t    ClipToPicture(BPicture *picture, BPoint point, uint32 unknown);
 		void		PushState();
 		void		PopState();
 		void		EnterStateChange();
@@ -188,10 +188,17 @@ class PDFWriter : public PrinterDriver
 		State			*fState;
 		int32           fStateDepth;
 		BList           fFontCache;
+		enum {
+			kDrawingMode,
+			kClippingMode
+		}				fMode;
 
 		inline float tx(float x)    { return fState->x0 + fState->scale*x; }
 		inline float ty(float y)    { return fState->height - (fState->y0 + fState->scale*y); }
 		inline float scale(float f) { return fState->scale * f; }
+
+		inline bool IsDrawing() const  { return fMode == kDrawingMode; }
+		inline bool IsClipping() const { return fMode == kClippingMode; }
 
 		bool StoreTranslatorBitmap(BBitmap *bitmap, char *filename, uint32 type);
 
@@ -200,6 +207,9 @@ class PDFWriter : public PrinterDriver
 
 		void SetColor(rgb_color toSet);
 		void SetColor();
+		
+		void StrokeOrClip();
+		void FillOrClip();
 	};
 
 
@@ -212,6 +222,9 @@ class DrawShape : public BShapeIterator {
 	inline PDF *Pdf()			{ return fWriter->fPdf; }
 	inline float tx(float x)	{ return fWriter->tx(x); }
 	inline float ty(float y)	{ return fWriter->ty(y); }
+
+	inline bool IsDrawing() const  { return fWriter->IsDrawing(); }
+	inline bool IsClipping() const { return fWriter->IsClipping(); }
 	
 public:
 	DrawShape(PDFWriter *writer, bool stroke);
@@ -246,6 +259,7 @@ void	_FillShape(void *p, BShape *shape);
 void	_DrawString(void *p, char *string, float deltax, float deltay);
 void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 void	_SetClippingRects(void *p, BRect *rects, uint32 numRects);
+status_t	_ClipToPicture(void *p, BPicture *picture, BPoint point, uint32 unknown);
 void	_PushState(void *p);
 void	_PopState(void *p);
 void	_EnterStateChange(void *p);
@@ -274,7 +288,6 @@ void	_SetFontFace(void *p, int32 flags);
 // undefined or undocumented operation handlers...
 void	_op0(void *p);
 void	_op19(void *p);
-void	_op21(void *p, BPicture *picture, int32 a, int32 b, int32 c, int32 d);
 void	_op45(void *p);
 void	_op47(void *p);
 void	_op48(void *p);
