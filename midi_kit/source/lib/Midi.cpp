@@ -21,7 +21,6 @@ BMidi::BMidi() {
 }
 
 BMidi::~BMidi() {
-	status_t ret;
 	status_t exit_value;
 	write_port(_inflow_port,MSG_CODE_TERMINATE_THREAD,NULL,0);
 	wait_for_thread(_inflow_thread_id,&exit_value);
@@ -247,19 +246,14 @@ void BMidi::SprayTempoChange(int32 bpm, uint32 time) const {
 //-----------------------------------------------------------------------------
 // The Inflow Thread
 void BMidi::_Inflow() {
-	thread_id sender_id;
 	BMidiEvent e;
 	int32 code;
 	size_t len;
 	while(true) {
 		len = read_port(_inflow_port,&code,&e,sizeof(e));
-		if (len < 0 || len != sizeof(e)) {
-			continue;
-		}
-		if(code == MSG_CODE_TERMINATE_THREAD) {
-			return;
-		}
-		
+		if (len < 0) continue; // ignore errors
+		if(code == MSG_CODE_TERMINATE_THREAD) return;
+		if (len != sizeof(e)) continue; // ignore data in wrong size
 		// Otherwise we process an event.
 		switch(e.opcode) {
 		case BMidiEvent::OP_NONE:
@@ -330,9 +324,11 @@ void BMidi::_Inflow() {
 }
 
 int32 BMidi::_RunThread(void * data) {
-	((BMidi *)data)->Run();
+	((BMidi *)data)->Run(); 
+	return 0;
 }
 
 int32 BMidi::_InflowThread(void * data) {
 	((BMidi *)data)->_Inflow();
+	return 0;
 }
