@@ -1,4 +1,5 @@
 #ifndef __sk_statable_h__
+#define __sk_statable_h__
 
 #include <sys/types.h>
 #include <sys/stat.h>
