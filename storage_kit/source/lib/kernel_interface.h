@@ -213,6 +213,11 @@ status_t create_link(const char *path, const char *linkToPath,
 	an error code is returned. */
 ssize_t read_link(const char *path, char *result, int size);
 
+/*!	Similar to the first version. Instead of a path name, a file descriptor
+	of the symbolic link is supplied.
+*/
+ssize_t read_link(FileDescriptor fd, char *result, int size);
+
 
 //------------------------------------------------------------------------------
 // Miscellaneous Functions

@@ -43,6 +43,165 @@
 // For convenience:
 struct LongDIR : DIR { char _buffer[B_FILE_NAME_LENGTH]; };
 
+
+const char *kEntryRefToPathToolPaths[] = {
+	"tools/EntryRefToPath",
+	"../tools/EntryRefToPath",
+	"../../tools/EntryRefToPath",
+	"storage_kit/tools/EntryRefToPath",
+	"../../../tools/EntryRefToPath",
+	"open-beos/storage_kit/tools/EntryRefToPath",
+	"OpenBeOS/storage_kit/tools/EntryRefToPath",
+	"/boot/home/config/lib/EntryRefToPath",
+	"/boot/home/config/bin/EntryRefToPath",
+};
+const int kEntryRefToPathToolPathCount
+	= sizeof(kEntryRefToPathToolPaths) / sizeof(char*);
+static char *entryRefToPathToolPath = NULL;
+
+struct InitEntryRefToPathToolPath {
+	InitEntryRefToPathToolPath()
+	{
+		// Try to find our EntryRefToPath program
+		const char *path = NULL;
+		for (int i = 0; !path && i < kEntryRefToPathToolPathCount; i++) {
+			int fd = ::open(kEntryRefToPathToolPaths[i], O_RDONLY);
+			if (fd != -1) {
+				::close(fd);
+				path = (char *)kEntryRefToPathToolPaths[i];
+			}
+		}
+		if (path) {
+			if (StorageKit::is_absolute_path(path)) {
+				entryRefToPathToolPath = new char[strlen(path) + 1];
+				strcpy(entryRefToPathToolPath, path);
+			} else {
+				char buffer[B_PATH_NAME_LENGTH];
+				if (char *cwd = getcwd(buffer, B_PATH_NAME_LENGTH)) {
+					entryRefToPathToolPath
+						= new char[strlen(cwd) + 1 + strlen(path) + 1];
+					strcpy(entryRefToPathToolPath, cwd);
+					strcat(entryRefToPathToolPath, "/");
+					strcat(entryRefToPathToolPath, path);
+				}
+			}
+		}
+printf("InitEntryRefToPathToolPath() done: `%s'\n", entryRefToPathToolPath);
+	}
+
+	~InitEntryRefToPathToolPath()
+	{
+		delete[] entryRefToPathToolPath;
+	}
+
+} _InitEntryRefToPathToolPath;
+
+
+// invoke_command
+/*! Invokes a command with the supplied parameters and returns its
+	output.
+	\param command the command (may already contain some parameters)
+	\param params the parameter list (may be NULL)
+	\param result a buffer for the output
+	\param size the size of the buffer
+	\return the number of bytes read, if everything went fine,
+			an error code otherwise
+*/
+static
+ssize_t
+invoke_command( const char *command, const char *params, char *result, int size ) {
+	if (command == NULL || result == NULL || size < 1)
+		return B_BAD_VALUE;
+
+	// Create our command line
+	char cmd[strlen(command) + (params ? strlen(params) : 0) + 10];
+	if (params)
+		sprintf(cmd, "%s %s", command, params);
+	else
+		strcpy(cmd, command);
+
+	// Invoke the command, grabbing a pipe to its stdout
+	errno = B_OK;
+	FILE* file = popen(cmd, "r");
+
+	// If the command succeeded, read everything piped out to us
+	if (file != NULL && (int)file != -1) {
+		char *pos = result;
+		int bytes = 0;
+		int bytesLeft = size-1;	// Leave room for the NULL
+
+		// Do buffered reads just in case
+		while (!feof(file) && bytesLeft > 0) {
+			bytes = fread(pos, 1, bytesLeft, file);
+			pos += bytes;
+			bytesLeft -= bytes;
+		}
+		pos[0] = 0;	// Null terminate the string we just read
+		
+//		printf("bytes == %d\n", pos-result);
+
+		pclose(file);
+
+		return size - 1 - bytesLeft;
+	}
+	
+	result[0] = 0;
+	return -13;
+	
+}
+
+// invoke_EntryRefToPath_tool
+/*! Invokes the EntryRefToPath tool with the supplied parameters and returns its
+	output.
+	\param params the parameter list
+	\param result a buffer for the output
+	\param size the size of the buffer
+	\return \c B_OK, if everything went fine, an error code otherwise
+*/
+static
+status_t
+invoke_EntryRefToPath_tool( const char *params, char *result, int size ) {
+	if (params == NULL || result == NULL || size < 1)
+		return B_BAD_VALUE;
+
+	// A list of possible relative pathnames to our EntryRefToPath program
+	const char *app_path = entryRefToPathToolPath;
+	
+	if (app_path == NULL) {
+		result[0] = 0;
+		return B_ERROR;
+	}
+	
+	ssize_t bytesRead = invoke_command(app_path, params, result, size);
+			
+	// If nothing is read from the pipe, then the call must have
+	// failed, because EntryRefToPipe will *always* print out
+	// at least one character. Unfortunately, we have to check
+	// this because popen() doesn't seem to think it's an error
+	// when the given command cannot be executed (we still get
+	// a valid pipe instead of an error code).
+	if (bytesRead > 0) {
+		// Check for an error. The first character will *always* be
+		// a '/' character if there's no error (because the pathname
+		// is absolute). If there's no error, we're done.
+		if (result[0] != '/') {
+			status_t status;
+//				printf("+result = '%s'\n", result);
+			if (sscanf(result, "%ld\n%s", &status, NULL) < 1) {
+				status = -12;
+			}
+			result[0] = 0;
+			return status;
+		} else {
+			return B_OK;
+		}
+	}
+	
+	result[0] = 0;
+	return -13;
+}
+
+
 //------------------------------------------------------------------------------
 // File Functions
 //------------------------------------------------------------------------------
@@ -724,17 +883,30 @@ ssize_t
 StorageKit::read_link( const char *path, char *result, int size ) {
 	if (result == NULL || size < 1)
 		return B_BAD_VALUE;
-		
-	int len = ::readlink(path, result, size-1);
+	// Don't null terminate, when the buffer is too small. That would make
+	// things more difficult. BTW: readlink() returns the actual length of
+	// the link contents and so do we.
+	int len = ::readlink(path, result, size);
 	if (len == -1) {
 		result[0] = 0;		// Null terminate
 		return errno;	
 	} else {
-		result[len] = 0;	// Null terminate
+		if (len < size)
+			result[len] = 0;	// Null terminate
 		return len;
 	}
-	
 }
+
+ssize_t
+StorageKit::read_link( FileDescriptor fd, char *result, int size )
+{
+	ssize_t error = (result ? B_OK : B_BAD_VALUE);
+	// no way to implement it :-(
+	if (error == B_OK)
+		error = B_ERROR;
+	return error;
+}
+
 
 //------------------------------------------------------------------------------
 // Miscellaneous Functions
@@ -749,135 +921,14 @@ StorageKit::entry_ref_to_path( const struct entry_ref *ref, char *result, int si
 	}
 }
 
-const char *kEntryRefToPathToolPaths[] = {
-	"tools/EntryRefToPath",
-	"../tools/EntryRefToPath",
-	"../../tools/EntryRefToPath",
-	"storage_kit/tools/EntryRefToPath",
-	"../../../tools/EntryRefToPath",
-	"open-beos/storage_kit/tools/EntryRefToPath",
-	"OpenBeOS/storage_kit/tools/EntryRefToPath",
-	"/boot/home/config/lib/EntryRefToPath",
-	"/boot/home/config/bin/EntryRefToPath",
-};
-const int kEntryRefToPathToolPathCount
-	= sizeof(kEntryRefToPathToolPaths) / sizeof(char*);
-static char *entryRefToPathToolPath = NULL;
-
-struct InitEntryRefToPathToolPath {
-	InitEntryRefToPathToolPath()
-	{
-		// Try to find our EntryRefToPath program
-		const char *path = NULL;
-		for (int i = 0; !path && i < kEntryRefToPathToolPathCount; i++) {
-			int fd = ::open(kEntryRefToPathToolPaths[i], O_RDONLY);
-			if (fd != -1) {
-				::close(fd);
-				path = (char *)kEntryRefToPathToolPaths[i];
-			}
-		}
-		if (path) {
-			if (StorageKit::is_absolute_path(path)) {
-				entryRefToPathToolPath = new char[strlen(path) + 1];
-				strcpy(entryRefToPathToolPath, path);
-			} else {
-				char buffer[B_PATH_NAME_LENGTH];
-				if (char *cwd = getcwd(buffer, B_PATH_NAME_LENGTH)) {
-					entryRefToPathToolPath
-						= new char[strlen(cwd) + 1 + strlen(path) + 1];
-					strcpy(entryRefToPathToolPath, cwd);
-					strcat(entryRefToPathToolPath, "/");
-					strcat(entryRefToPathToolPath, path);
-				}
-			}
-		}
-printf("InitEntryRefToPathToolPath() done: `%s'\n", entryRefToPathToolPath);
-	}
-
-	~InitEntryRefToPathToolPath()
-	{
-		delete[] entryRefToPathToolPath;
-	}
-
-} _InitEntryRefToPathToolPath;
-
-
 status_t
 StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size ) {
-//	printf("device = %ld \n", device);
-//	printf("dir    = %lld \n", directory);
-//	printf("name   = '%s' \n", name);
-
-
 	if (result == NULL || size < 1)
 		return B_BAD_VALUE;
 
-	// A list of possible relative pathnames to our EntryRefToPath program
-	const char *app_path = entryRefToPathToolPath;
-	
-	if (app_path == NULL) {
-		result[0] = 0;
-		return B_ERROR;
-	}
-	
-	
-	// Attempt to invoke our EntryRefToPath program using the
-	// various pathnames from above. If one succeeds, it will
-	// return B_OK and the others will not be tried.
-	char cmd[B_PATH_NAME_LENGTH + 30 + B_FILE_NAME_LENGTH];
-
-	// Create our command line
-	sprintf(cmd, "%s %ld %lld %s", app_path, device, directory, name);
-
-	// Invoke the command, grabbing a pipe to its stdout
-	errno = B_OK;
-	FILE* file = popen(cmd, "r");
-
-	// If the command succeeded, read everything piped out to us
-	if (file != NULL && (int)file != -1) {
-		char *pos = result;
-		int bytes = 0;
-		int bytesLeft = size-1;	// Leave room for the NULL
-
-		// Do buffered reads just in case
-		while (!feof(file) && bytesLeft > 0) {
-			bytes = fread(pos, 1, bytesLeft, file);
-			pos += bytes;
-			bytesLeft -= bytes;
-		}
-		pos[0] = 0;	// Null terminate the string we just read
-		
-//		printf("bytes == %d\n", pos-result);
-
-		pclose(file);
-			
-		// If nothing is read from the pipe, then the call must have
-		// failed, because EntryRefToPipe will *always* print out
-		// at least one character. Unfortunately, we have to check
-		// this because popen() doesn't seem to think it's an error
-		// when the given command cannot be executed (we still get
-		// a valid pipe instead of an error code).
-		if (bytesLeft < size-1) {
-			// Check for an error. The first character will *always* be
-			// a '/' character if there's no error (because the pathname
-			// is absolute). If there's no error, we're done.
-			if (result[0] != '/') {
-				status_t status;
-//				printf("+result = '%s'\n", result);
-				if (sscanf(result, "%ld\n%s", &status, NULL) < 1) {
-					status = -12;
-				}
-				result[0] = 0;
-				return status;
-			} else {
-				return B_OK;
-			}
-		}
-	}
-	
-	result[0] = 0;
-	return -13;
-	
+	char params[30 + B_FILE_NAME_LENGTH];
+	sprintf(params, "%ld %lld %s", device, directory, name);
+	return invoke_EntryRefToPath_tool(params, result, size);
 }
 
 status_t
