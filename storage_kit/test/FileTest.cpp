@@ -1,8 +1,10 @@
 // FileTest.cpp
 
+#include <Directory.h>
 #include <Entry.h>
 #include <File.h>
-#include <SupportKit.h>		
+#include <Path.h>
+//#include <SupportKit.h>		
 
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
@@ -160,11 +162,30 @@ FileTest::InitTest1()
 	};
 
 	// 5. BFile(BEntry *, uint32)
-	// Can't be tested until BDirectory is implemented.
+	struct Tester4 : public Tester {
+		virtual void test(const InitTestCase& tc) const
+		{
+			if (tc.filename) {
+				BPath path(tc.filename);
+				CPPUNIT_ASSERT( path.InitCheck() == B_OK );
+				BPath dirPath;
+				CPPUNIT_ASSERT( path.GetParent(&dirPath) == B_OK );
+				BDirectory dir(dirPath.Path());
+				CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
+				BFile file(&dir, path.Leaf(),
+						   tc.rwmode
+						   | (tc.createFile * B_CREATE_FILE)
+						   | (tc.failIfExists * B_FAIL_IF_EXISTS)
+						   | (tc.eraseFile * B_ERASE_FILE));
+				testInit(tc, file);
+			}
+		}
+	};
 
 	Tester1().testAll();
 	Tester2().testAll();
 	Tester3().testAll();
+	Tester4().testAll();
 }
 
 // InitTest2
@@ -258,11 +279,32 @@ FileTest::InitTest2()
 	};
 
 	// 5. BFile(BEntry *, uint32)
-	// Can't be tested until BDirectory is implemented.
+	struct Tester4 : public Tester {
+		virtual void test(const InitTestCase& tc) const
+		{
+			if (tc.filename) {
+				BPath path(tc.filename);
+				CPPUNIT_ASSERT( path.InitCheck() == B_OK );
+				BPath dirPath;
+				CPPUNIT_ASSERT( path.GetParent(&dirPath) == B_OK );
+				BDirectory dir(dirPath.Path());
+				CPPUNIT_ASSERT( dir.InitCheck() == B_OK );
+				BFile file;
+				status_t result = file.SetTo(&dir, path.Leaf(),
+					tc.rwmode
+					| (tc.createFile * B_CREATE_FILE)
+					| (tc.failIfExists * B_FAIL_IF_EXISTS)
+					| (tc.eraseFile * B_ERASE_FILE));
+				CPPUNIT_ASSERT( result == tc.initCheck );
+				testInit(tc, file);
+			}
+		}
+	};
 
 	Tester1().testAll();
 	Tester2().testAll();
 	Tester3().testAll();
+	Tester4().testAll();
 }
 
 // RWAbleTest
