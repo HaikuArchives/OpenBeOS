@@ -162,6 +162,9 @@ status_t PrinterSettings::GetDefaults(BMessage *msg)
 	if (prefs->LoadSettings(settings) == B_OK) {
 		// yes, copy the settings into message
 		*msg = *settings;
+		delete prefs;
+		delete settings;
+		return B_OK;
 	}
 
 	// set default value if property not set
