@@ -45,7 +45,11 @@ static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices *
 image_id arpid;
 #endif
 
-int ether_dev_start(ifnet *dev);
+int ether_input(struct mbuf *buf);
+int ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
+		 struct rtentry *rt0);
+int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data);
+int ether_dev_attach(ifnet *dev);
 int ether_dev_stop(ifnet *dev);
 
 #define DRIVER_DIRECTORY "/dev/net"
@@ -55,12 +59,14 @@ uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 static void open_device(char *driver, char *devno)
 {
 	struct ether_device *ed;
+	struct ifnet *ifn;
 	char path[PATH_MAX];
 	int dev;
 	status_t status = -1;
+	struct sockaddr_dl *sdl;
+	struct ifaddr *ifa;
 	
 	sprintf(path, "%s/%s/%s", DRIVER_DIRECTORY, driver, devno);
-	printf("open_device: %s\n", path);
 	dev = open(path, O_RDWR);
 	if (dev < B_OK) {
 		printf("Unable to open %s, %ld [%s]\n", path,
@@ -87,7 +93,17 @@ static void open_device(char *driver, char *devno)
 		return;	
 
 	memset(ed, 0, sizeof(*ed));
+	ifn = &ed->ifn;
 
+	/* get the MAC address... */
+	status = ioctl(dev, IF_GETADDR, &ed->e_addr, 6);
+	if (status < B_OK) {
+		printf("Failed to get a MAC address, ignoring %s\n", ifn->if_name);
+		close(dev);
+		free(ed);
+		return;
+	}
+	
 	ed->devid = dev;
 	ed->ed_devid = dev;	/* we use this to match... */
 	ed->ed_name = strdup(driver);
@@ -95,11 +111,25 @@ static void open_device(char *driver, char *devno)
 	ed->ed_type = IFT_ETHER;
 	ed->ed_rx_thread = -1;
 	ed->ed_tx_thread = -1;
-	ed->ed_txq = NULL;
-	ed->ed_if_addrlist = NULL;
 	ed->ed_hdrlen = 14;
 	ed->ed_addrlen = 6;
-	ed->ed_start = &ether_dev_start;
+	ifn->if_mtu = ETHERMTU;
+
+	ifn->input = &ether_input;
+	ifn->output = &ether_output;
+	ifn->stop = &ether_dev_stop;
+	ifn->ioctl = &ether_ioctl;
+
+	/* Add the MAC address to our list of addresses... */
+	for (ifa = ifn->if_addrlist; ifa; ifa = ifa->ifa_next) {
+		if ((sdl = (struct sockaddr_dl*)ifa->ifa_addr) &&
+		    sdl->sdl_family == AF_LINK) {
+			sdl->sdl_type = IFT_ETHER;
+			sdl->sdl_alen = ifn->if_addrlen;
+			memcpy(LLADDR(sdl), &ed->e_addr, ifn->if_addrlen);
+			break;
+		}
+	}	
 
 	ed->next = NULL; /* we get added at the end of the list */
 	/* we maintain our own list of devices as well as the global list */
@@ -284,7 +314,7 @@ int ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
 	struct rtentry *rt;
 	int error = 0;
 
-	if ((ifp->flags & (IFF_UP | IFF_RUNNING)) != (IFF_UP | IFF_RUNNING))
+	if ((ifp->if_flags & (IFF_UP | IFF_RUNNING)) != (IFF_UP | IFF_RUNNING))
 		senderr(ENETDOWN);
 
 	if ((rt = rt0) != NULL) {
@@ -394,9 +424,7 @@ int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 	struct ether_device *ed = (struct ether_device*)ifp;
 	struct ifaddr *ifa = (struct ifaddr*)data;
 
-printf("ether_ioctl!\n");
-
-	if ((ifp->flags & IFF_UP) == 0 &&
+	if ((ifp->if_flags & IFF_UP) == 0 &&
 	    (ifp->rx_thread > 0 || ifp->tx_thread > 0)) {
 		/* shutdown our threads and remove the IFF_RUNNING flag... */
 		if (ifp->rx_thread > 0)
@@ -404,12 +432,12 @@ printf("ether_ioctl!\n");
 		if (ifp->tx_thread > 0)
 			kill_thread(ifp->tx_thread);
 		ifp->rx_thread = ifp->tx_thread = -1;
-		ifp->flags &= ~IFF_RUNNING;
+		ifp->if_flags &= ~IFF_RUNNING;
 	}
 
 	switch (cmd) {
 		case SIOCSIFADDR:
-			ifp->flags |= IFF_UP;
+			ifp->if_flags |= IFF_UP;
 			switch (ifa->ifa_addr->sa_family) {
 				case AF_INET:
 					ed->i_addr = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
@@ -427,14 +455,14 @@ printf("ether_ioctl!\n");
 			printf("unhandled call to ethernet_ioctl\n");
 	}
 
-	if ((ifp->flags & IFF_UP) &&
+	if ((ifp->if_flags & IFF_UP) &&
 	    (ifp->rx_thread == -1 || ifp->tx_thread == -1)) {
 		/* start our threads and add the IFF_RUNNING flag... */
 		if (ifp->rx_thread < 0)
 			start_rx_thread(ifp);
 		if (ifp->tx_thread < 0)
 			start_tx_thread(ifp);
-		ifp->flags |= IFF_RUNNING;
+		ifp->if_flags |= IFF_RUNNING;
 	}
 
 	return 0;
@@ -442,7 +470,7 @@ printf("ether_ioctl!\n");
 
 int ether_dev_stop(ifnet *dev)
 {
-	dev->flags &= ~IFF_UP;
+	dev->if_flags &= ~IFF_UP;
 
 	/* should find better ways of doing this... */
 	kill_thread(dev->rx_thread);
@@ -451,7 +479,7 @@ int ether_dev_stop(ifnet *dev)
 	return 0;
 }
 
-int ether_dev_start(ifnet *dev)
+int ether_dev_attach(ifnet *dev)
 {
 	status_t status;
 	struct ether_device *ed = (struct ether_device *)dev;
@@ -463,32 +491,10 @@ printf("ether_dev_start %s\n", dev->if_name);
 	if (!ed || dev->if_type != IFT_ETHER)
 		return -1;
 
-#ifndef _KERNEL_MODE
-	if (!arp) {
-		char path[PATH_MAX];
-		getcwd(path, PATH_MAX);
-		strcat(path, "/" ARP_MODULE_PATH);
-
-		arpid = load_add_on(path);
-		if (arpid > 0) {
-			status_t rv = get_image_symbol(arpid, "arp_module_info",
-								B_SYMBOL_TYPE_DATA, (void**)&arp);
-			if (rv < 0) {
-				printf("Failed to get access to ARP!\n");
-				return rv;
-			}
-		} else { 
-			printf("Failed to load the arp module...\n");
-			return -1;
-		}
-	}
-	arp->init();
-#endif
-
 	/* try to get the MAC address */
 	status = ioctl(dev->devid, IF_GETADDR, &ed->e_addr, 6);
 	if (status < B_OK) {
-		printf("Failed to get a MAC address, ignoring %s%d\n", dev->name, dev->unit);
+		printf("Failed to get a MAC address, ignoring %s\n", dev->if_name);
 		return -1;
 	}
 
@@ -508,7 +514,8 @@ printf("ether_dev_start %s\n", dev->if_name);
 	dev->stop = &ether_dev_stop;
 	dev->ioctl = &ether_ioctl;
 	
-	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_BROADCAST|IFF_MULTICAST);
+	dev->if_flags |= (IFF_RUNNING|IFF_BROADCAST|IFF_MULTICAST);
+printf("done attaching %s\n", dev->if_name);
 	
 	return 0;
 }
@@ -521,6 +528,26 @@ static int ether_init(void)
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
 	add_protosw(proto, NET_LAYER2);
+
+	if (!arp) {
+		char path[PATH_MAX];
+		getcwd(path, PATH_MAX);
+		strcat(path, "/" ARP_MODULE_PATH);
+
+		arpid = load_add_on(path);
+		if (arpid > 0) {
+			status_t rv = get_image_symbol(arpid, "arp_module_info",
+								B_SYMBOL_TYPE_DATA, (void**)&arp);
+			if (rv < 0) {
+				printf("Failed to get access to ARP!\n");
+				return rv;
+			}
+		} else { 
+			printf("Failed to load the arp module...\n");
+			return -1;
+		}
+	}
+	arp->init();
 
 	return 0;
 }

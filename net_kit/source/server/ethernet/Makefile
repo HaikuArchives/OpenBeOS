@@ -16,14 +16,14 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	$(CC) $(KCFLAGS) $(INCLUDES) -c ethernet.c
-	$(CC) $(KLDFLAGS) $(KLOBJS) -o ethernet ethernet.o
+	@$(CC) $(KCFLAGS) $(INCLUDES) -c ethernet.c
+	@$(CC) $(KLDFLAGS) $(KLOBJS) -o ethernet ethernet.o
 
 installkernel:  kernel
-	cp ethernet /boot/home/config/add-ons/kernel/network/interface/ethernet
+	@cp ethernet /boot/home/config/add-ons/kernel/network/interface/ethernet
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
