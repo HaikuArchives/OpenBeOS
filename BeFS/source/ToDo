@@ -1,4 +1,4 @@
-BFS - ToDo, April 18th, 2002
+BFS - ToDo, April 19th, 2002
 -----
 
 BlockAllocator
@@ -32,7 +32,8 @@ Journal
 BPlusTree
 
  - BPlusTree::Remove() could trigger CachedNode::Free() to go through the free nodes list and free all pages at the end of the data stream
- - inserting/removing duplicates is not yet implemented
+ - removing duplicates is not yet implemented
+ - duplicate_array::Insert() should do a binary search to speed up finding the value if there are more than a certain number (e.g. 8) of entries
 
 
 Indices

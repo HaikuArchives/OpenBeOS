@@ -46,7 +46,7 @@ enum bplustree_types {
 	BPLUSTREE_DOUBLE_TYPE	= 6
 };
 
-struct bplustree_duplicate_array;
+struct duplicate_array;
 
 struct bplustree_node {
 	off_t	left_link;
@@ -66,12 +66,14 @@ struct bplustree_node {
 	void Initialize();
 	uint8 CountDuplicates(off_t offset,bool isFragment) const;
 	off_t DuplicateAt(off_t offset,bool isFragment,int8 index) const;
-	inline bplustree_duplicate_array *FragmentAt(int8 index);
+	inline duplicate_array *FragmentAt(int8 index);
+	inline duplicate_array *DuplicateArray();
 
 	static inline uint8 LinkType(off_t link);
-	static inline off_t MakeType(uint8 type, off_t link);
+	static inline off_t MakeLink(uint8 type, off_t link, uint32 fragmentIndex = 0);
 	static inline bool IsDuplicate(off_t link);
 	static inline off_t FragmentOffset(off_t link);
+	static inline uint32 FragmentIndex(off_t link);
 };
 
 //#define BPLUSTREE_NODE 0
@@ -81,7 +83,7 @@ struct bplustree_node {
 #define NUM_FRAGMENT_VALUES 7
 #define NUM_DUPLICATE_VALUES 125
 
-struct bplustree_duplicate_array {
+struct duplicate_array {
 	off_t	value_count;
 	off_t	values[0];
 	
@@ -146,7 +148,7 @@ class CachedNode {
 		void Unset();
 
 		status_t Free(Transaction *transaction, off_t offset);
-		bplustree_node *Allocate(Transaction *transaction,off_t *offset);
+		status_t Allocate(Transaction *transaction,bplustree_node **node,off_t *offset);
 		status_t WriteBack(Transaction *transaction);
 
 		bplustree_node *Node() const { return fNode; }
@@ -198,7 +200,7 @@ class BPlusTree {
 		status_t	FindKey(bplustree_node *node, const uint8 *key, uint16 keyLength, uint16 *index = NULL, off_t *next = NULL);
 		status_t	SeekDown(Stack<node_and_key> &stack, const uint8 *key, uint16 keyLength);
 
-		status_t	FindFreeDuplicateFragment(bplustree_node *node, CachedNode *cached, off_t *_offset, bplustree_duplicate_array **_array);
+		status_t	FindFreeDuplicateFragment(bplustree_node *node, CachedNode *cached, off_t *_offset, bplustree_node **_fragment,uint32 *_index);
 		status_t	InsertDuplicate(Transaction *transaction,CachedNode *cached,bplustree_node *node,uint16 index,off_t value);
 		void		InsertKey(bplustree_node *node, uint16 index, uint8 *key, uint16 keyLength, off_t value);
 		status_t	SplitNode(bplustree_node *node, off_t nodeOffset, bplustree_node *other, off_t otherOffset, uint16 *_keyIndex, uint8 *key, uint16 *_keyLength, off_t *_value);
@@ -373,10 +375,17 @@ bplustree_node::IsLeaf() const
 }
 
 
-inline bplustree_duplicate_array *
+inline duplicate_array *
 bplustree_node::FragmentAt(int8 index)
 {
-	return (bplustree_duplicate_array *)((off_t *)this + index * (NUM_FRAGMENT_VALUES + 1));
+	return (duplicate_array *)((off_t *)this + index * (NUM_FRAGMENT_VALUES + 1));
+}
+
+
+inline duplicate_array *
+bplustree_node::DuplicateArray()
+{
+	return (duplicate_array *)&this->overflow_link;
 }
 
 
@@ -387,9 +396,9 @@ bplustree_node::LinkType(off_t link)
 }
 
 inline off_t
-bplustree_node::MakeType(uint8 type,off_t link)
+bplustree_node::MakeLink(uint8 type,off_t link,uint32 fragmentIndex)
 {
-	return ((off_t)type << 62) | link;
+	return ((off_t)type << 62) | (link & 0x3ffffffffffffc00LL) | (fragmentIndex & 0x3ff);
 }
 
 inline bool 
@@ -402,6 +411,12 @@ inline off_t
 bplustree_node::FragmentOffset(off_t link)
 {
 	return link & 0x3ffffffffffffc00LL;
+}
+
+inline uint32
+bplustree_node::FragmentIndex(off_t link)
+{
+	return (uint32)(link & 0x3ff);
 }
 
 #endif	/* B_PLUS_TREE_H */
