@@ -667,9 +667,14 @@ static status_t core_std_ops(int32 op, ...)
 	switch(op) {
 		case B_MODULE_INIT:
 			load_driver_symbols(CORE_MODULE_PATH);
+
+			start_stack();
 			break;
+
 		case B_MODULE_UNINIT:
+			// the stack is keeping loaded, so don't stop it
 			break;
+
 		default:
 			return B_ERROR;
 	}
@@ -758,10 +763,9 @@ static struct core_module_info core_info = {
 	net_sysctl,
 	writeit,
 	readit,
-	soselect,
-	sodeselect,
 	sosetopt,
-	sogetopt
+	sogetopt,
+	set_socket_event_callback
 };
 
 _EXPORT module_info *modules[] = {
