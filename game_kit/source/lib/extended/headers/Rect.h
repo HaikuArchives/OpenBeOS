@@ -816,7 +816,7 @@ inline StorageType Rect<StorageType>::Height() const
 // Type Definitions
 // ------------------------------------------------
 
-typedef Rect<float> BeRect;
+// typedef Rect<float> BRect;
 typedef Rect<int32> XRect;
 
 
