@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title> free_cookie </title>
+	</head>
+  <body>
+     
+	<h1> free_cookie -- Free file resources </h1>
+		<br>
+		Called to free the resources allocated when a file is initially opened with a call to 
+		<a href='open.html'>open</a>. This function must be called once and only once after all
+		calls to <a href='open.html'>open</a> have been matched with calls to 
+		<a href='close.html'>close</a>, and should free all the resources related to the 
+		file.
+		
+		<br>
+     
+	<h2>Declaration</h2>
+
+		<!-- int free_cookie(void *pVolume, void *pNode, void *pCookie); -->
+     
+		<table cellspacing='0' cellpadding='0' border='0'>
+			<tr>
+				<td align='left'><code>		int free_cookie (		</code></td>	<!-- "rtype func_name (" -->
+				<td align='left'><code>		&nbsp;							</code></td>	<!-- const -->
+				<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+				<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+				<td align='left'><code>		pVolume,						</code></td>	<!-- VARIABLE_NAME, -->
+				<td align='left'></td>																			<!-- (last line only) -->
+			</tr>
+			<tr>
+				<td align='left'></td>																			<!-- (first line only) -->
+				<td align='left'><code>												</code></td>	<!-- const -->
+				<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+				<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+				<td align='left'><code>		pNode,						</code></td>	<!-- variable name -->
+				<td align='left'></td>																			<!-- (last line only) -->
+			</tr>
+			<tr>
+				<td align='left'></td>																			<!-- (first line only) -->
+				<td align='left'><code>												</code></td>	<!-- const -->
+				<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+				<td align='right'><code>	&nbsp;							</code></td>	<!-- *, **, &, etc -->
+				<td align='left'><code>		pCookie						</code></td>	<!-- variable name -->
+				<td align='left'><code>		&nbsp; );						</code></td>	<!-- closing parens -->
+			</tr>
+
+			</tr>
+		</table>	
+
+
+	<h2>Parameters</h2>
+		<b>Input:</b><br>
+		<code> pVolume </code> -- Pointer to the file system specific data structure returned by <a href='mount.html'>mount</a><br>
+		<code> pNode </code> -- Pointer to the node for given file <br>
+		<code> pCookie </code> -- Pointer for the cookie of the given file <br>
+		<br>
+
+	
+	<h2>Return</h2>
+		<code> B_OK </code> -- The function returned successfully <br>
+   
+		<h2>Notes</h2>
+			This description derived from the sources for OpenBFS and AtheosFS, as well as
+			parts of <i>Practical Filesystem Design</i> by Dominic Giampoalo<br>
+			<br>
+     
+</body>
+</html>

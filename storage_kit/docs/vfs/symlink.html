@@ -1,0 +1,34 @@
+<!-- saved from url=(0022)http://internet.e-mail -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>symlink</title>
+</head>
+  <body>
+       
+<h1>symlink - Create a Symbolic Link</h1>
+Create a symbolic link<br>
+       
+<h2>Declaration</h2>
+ 
+<pre wrap="">int symlink( void* pVolume, void* pParent, const char* pzName, const char* pzNewPath );</pre>
+       
+<h2>Parameters</h2>
+<b>Input:</b><br>
+   pVolume - pointer to a volume structure<br>
+pParent - context of parent in which file is to be created<br>
+pzName - name of file<br>
+pzNewPath - new name of file<br>
+        
+<h2>Return</h2>
+    B_OK - Operation completed<br>
+ EINVAL - Invalid parameter<br>
+ ENOMEM - Not enough memory to complete operation<br>
+ENOENT - File doesn't exist<br>
+     
+<h2>Notes</h2>
+This definition was devised using the source for the AtheOS file system driver 
+ (downloadable from bebits.com)<br>
+       
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!-- saved from url=(0022)http://internet.e-mail -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>readdir</title>
+</head>
+  <body>
+   
+<h1>readdir - Read a Directory Entry</h1>
+  <br>
+ Reads the next entry from the directory<br>
+   
+<h2>Declaration</h2>
+  int readdir ( void* pVolume, void* pNode, void* pCookie, long* pnNum, struct 
+dirent* psFileInfo, size_t nBufSize );<br>
+  <br>
+   
+<h2>Parameters</h2>
+<b>Input:</b><br>
+ pVolume - pointer to a volume structure<br>
+  pNode - pointer to a valid node structure representing a file on the volume<br>
+  pCookie - 'magic cookie' to be used for other directory calls<br>
+ nBufSize - size of psFileInfo buffers<br>
+<br>
+<b>Output:</b><br>
+ pnNum - number of entries read<br>
+ psFileInfo - File information structure(s) returned by call<br>
+
+	
+	<br>
+   
+<h2>Return</h2>
+  B_OK - Operation completed <br>
+ ENOENT - End of directory listing<br>
+ EINVAL - invalid parameter<br>
+ <br>
+ 
+<h2>Notes</h2>
+ It is possible to return multiple entries by passng in a buffer which can 
+hold multiple file info structures.<br>
+ <br>
+ This definition was devised using the source for the AtheOS file system
+driver  (downloadable from bebits.com)<br>
+   
+</body>
+</html>

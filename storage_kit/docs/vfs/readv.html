@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title> readv </title>
+	</head>
+  <body>
+     
+		<h1> readv -- vector read </h1>
+			<br>
+			Performs a scattered read of the given file into an array of iovec structures:
+<pre><code>iovec {
+  void *pData;   // Pointer to a chunk of memory to read to or write from
+  int  nLen;     // Length of said chunk of memory
+}
+</code></pre>
+			<br>
+			 
+		<h2>Declaration</h2>
+
+			<!-- int readv(void *pVolume, void *pNode, void *pCookie, off_t nPos, const iovec *pIOVector, 
+							size_t nCount, size_t *pnLength); -->
+			 
+			<table cellspacing='0' cellpadding='0' border='0'>
+				<tr>
+					<td align='left'><code>		int readv (		</code></td>	<!-- "rtype func_name (" -->
+					<td align='left'><code>		&nbsp;							</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		pVolume,						</code></td>	<!-- VARIABLE_NAME, -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>												</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		pNode,						</code></td>	<!-- variable name -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>												</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		pCookie,						</code></td>	<!-- variable name -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>												</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; off_t				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		nPos,						</code></td>	<!-- variable name -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>		&nbsp; const									</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; iovec				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		pIOVector,						</code></td>	<!-- variable name -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>												</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; size_t				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		nSize,						</code></td>	<!-- variable name -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>												</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; size_t				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		pnLength						</code></td>	<!-- variable name -->
+					<td align='left'><code>		&nbsp; );						</code></td>	<!-- closing parens -->
+				</tr>
+
+				</tr>
+			</table>	
+
+
+		<h2>Parameters</h2>
+			<b>Input:</b><br>
+			<code> pVolume </code> -- Pointer to the file system specific volume structure returned by <a href='mount.html'>mount</a> <br>
+			<code> pNode </code> -- Pointer to the node of the file <br>
+			<code> pCookie </code> -- Pointer to the cookie for the file <br>
+			<code> nPos </code> -- Offset from the beginning of the file from which to begin reading <br>
+			<code> nCount </code> -- Number of bytes to read (?)<br>
+			<br>
+
+			<b>Output:</b><br>
+			<code> pIOVector </code> -- Pointer to an array of iovec structures in which to read data from the file <br>
+			<code> pnLen </code> -- [input] Pointer to the length (in bytes) of the array pointed to by pIOVec (?); 
+								[output] Pointer to the number of bytes actually read into the iovec structures pointed to by
+									pIOVector
+
+		<br>      
+		
+		<h2>Return</h2>
+			<code> B_OK </code> -- The function returned successfully <br>
+		 
+			<h2>Notes</h2>
+				This description derived from the sources for OpenBFS and AtheosFS, as well as
+				parts of <i>Practical Filesystem Design</i> by Dominic Giampoalo<br>
+				<br>
+			 
+	</body>
+</html>

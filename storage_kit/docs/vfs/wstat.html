@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title> wstat </title>
+	</head>
+  <body>
+     
+		<h1> wstat -- Write statistical information about a file </h1>
+			<br>
+			Updates a file with data from a POSIX style stat structure
+			<br>
+			 
+		<h2>Declaration</h2>
+
+			<!-- int wfsstat(void *pVolume, void *pNode, struct stat *psStat, long nMask); -->
+			 
+			<table cellspacing='0' cellpadding='0' border='0'>
+				<tr>
+					<td align='left'><code>		int rstat (		</code></td>	<!-- "rtype func_name (" -->
+					<td align='left'><code>		&nbsp;							</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		pVolume,						</code></td>	<!-- VARIABLE_NAME, -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>												</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; void				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		pNode,						</code></td>	<!-- variable name -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>		&nbsp; struct										</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; stat				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;*							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		psStat						</code></td>	<!-- variable name -->
+					<td align='left'></td>																			<!-- (last line only) -->
+				</tr>
+				<tr>
+					<td align='left'></td>																			<!-- (first line only) -->
+					<td align='left'><code>												</code></td>	<!-- const -->
+					<td align='left'><code>		&nbsp; long				</code></td>	<!-- return type -->
+					<td align='right'><code>	&nbsp;							</code></td>	<!-- *, **, &, etc -->
+					<td align='left'><code>		nMask						</code></td>	<!-- variable name -->
+					<td align='left'><code>		&nbsp; );						</code></td>	<!-- closing parens -->
+				</tr>
+
+				</tr>
+			</table>	
+
+
+		<h2>Parameters</h2>
+			<b>Input:</b><br>
+			<code> pVolume </code> -- File system specific volume structure returned by <a href='mount.html'>mount</a> <br>
+			<code> pNode </code> -- Pointer to the node of the file <br>
+			<code> psStat </code> -- Pointer to a POSIX style stat structure to use for updating the file's statistical information <br>
+			<code> nMask </code> -- Bitmask specifying which attributes to modifiy <br>
+			<br>
+
+		<h2>Return</h2>
+			<code> B_OK </code> -- The function completed successfully <br>
+		 
+			<h2>Notes</h2>
+				This description derived from the sources for OpenBFS and AtheosFS, as well as
+				parts of <i>Practical Filesystem Design</i> by Dominic Giampoalo<br>
+				<br>
+			 
+	</body>
+</html>
