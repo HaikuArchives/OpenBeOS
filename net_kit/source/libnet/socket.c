@@ -227,3 +227,29 @@ int listen(int sock, int backlog)
 	return la.rv;
 }
 
+int accept(int sock, struct sockaddr *name, uint32 *namelen)
+{
+	struct accept_args aa;
+	
+	aa.rv = 0;
+	aa.name = name;
+	aa.namelen = namelen;
+	
+	ioctl(sock, NET_SOCKET_ACCEPT, &aa, sizeof(aa));
+	return aa.rv;
+}
+
+/* these are for compatibility with BeOS R5... */
+
+int herror()
+{
+	printf("herror() not yet supported.");
+	return 0;
+}
+
+int _socket_interrupt()
+{
+	printf("_socket_interrupt\n");
+	return 0;
+}
+

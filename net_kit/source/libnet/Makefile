@@ -4,7 +4,8 @@ LDFLAGS=-nostart -nostdlib -lroot -Wl,-soname=libnet.so
 INCLUDES=-I../server/include -I.
 
 ETC_FILES=	protocols \
-		networks
+		networks \
+		resolv.conf
 
 OBJS=	socket.o \
 	select.o \
@@ -51,6 +52,11 @@ installetc:
 	@for i in $(ETC_FILES); do \
 		if test -L /etc/$$i; then rm /etc/$$i; fi; \
 		ln -s `pwd`/$$i /etc/$$i; \
+	done;
+
+removeetc:
+	@for i in $(ETC_FILES); do \
+                if test -L /etc/$$i; then rm /etc/$$i; fi; \
 	done;
 
 libnet.so:	$(OBJS)

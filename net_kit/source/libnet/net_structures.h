@@ -79,6 +79,12 @@ struct getname_args {
 	uint32 *namelen;
 };
 
+struct accept_args {
+	int rv;
+	struct sockaddr *name;
+	uint32 *namelen;
+};
+
 /* To simplify the addition of ones it's an enum! */
 enum {
 	NET_SOCKET_CREATE = B_DEVICE_OP_CODES_END + 0x100,
