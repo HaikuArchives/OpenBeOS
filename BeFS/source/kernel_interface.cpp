@@ -13,19 +13,8 @@
 #include "BPlusTree.h"
 #include "Query.h"
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <string.h>
-#include <time.h>
-#include <ctype.h>
 #include <stdio.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <time.h>
-#include <malloc.h>
-//#include "dmalloc.h"
 
 // BeOS vnode layer stuff
 #include <KernelExport.h>
@@ -442,9 +431,16 @@ bfs_rstat(void *_ns, void *_node, struct stat *st)
 // 				reading/writing a file
 
 static int
-bfs_open(void *_ns, void *_node, int omode, void **cookie)
+bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 {
 	FUNCTION();
+
+	if (_ns == NULL || _node == NULL || _cookie == NULL)
+		return B_BAD_VALUE;
+
+	Inode *inode = (Inode *)_node;
+	if (!inode->CheckPermissions(OModeToAccess(omode)))
+		return B_NOT_ALLOWED;
 
 	// we could actually use a cookie to keep track of:
 	//	- the last block_run

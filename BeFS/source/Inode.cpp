@@ -54,6 +54,34 @@ Inode::InitCheck()
 }
 
 
+bool 
+Inode::CheckPermissions(int accessMode) const
+{
+	uid_t user = geteuid();
+	gid_t group = getegid();
+
+	// you never have write access to a read-only volume
+	if (accessMode & W_OK && fVolume->IsReadOnly())
+		return false;
+
+	// root users always have full access
+	if (user == 0)
+		return true;
+
+	// shift mode bits, to check directly against accessMode
+	mode_t mode = Mode();
+	if (user == Node()->uid)
+		mode >>= 6;
+	else if (group == Node()->gid)
+		mode >>= 3;
+
+	if (accessMode & ~(mode & S_IRWXO))
+		return false;
+
+	return true;
+}
+
+
 /**	Iterates through the small_data section of an inode.
  *	To start at the beginning of this section, you let smallData
  *	point to NULL, like:

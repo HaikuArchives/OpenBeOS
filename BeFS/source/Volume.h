@@ -21,6 +21,10 @@ extern "C" {
 
 class Inode;
 
+enum volume_flags {
+	VOLUME_READ_ONLY	= 0x0001
+};
+
 
 class Volume
 {
@@ -32,6 +36,7 @@ class Volume
 		status_t			Unmount();
 
 		bool				IsValidSuperBlock();
+		bool				IsReadOnly() const { return fFlags & VOLUME_READ_ONLY; }
 
 		block_run			Root() const { return fSuperBlock.root_dir; }
 		Inode				*RootNode() const { return fRootNode; }
@@ -63,6 +68,8 @@ class Volume
 		
 		Inode				*fRootNode;
 		Inode				*fIndicesNode;
+		
+		uint32				fFlags;
 };
 
 #endif	/* VOLUME_H */

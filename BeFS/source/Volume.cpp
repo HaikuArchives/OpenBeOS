@@ -21,7 +21,8 @@
 
 Volume::Volume(nspace_id id)
 	:
-	fID(id)
+	fID(id),
+	fFlags(0)
 {
 }
 
@@ -55,19 +56,28 @@ Volume::IsValidSuperBlock()
 status_t
 Volume::Mount(const char *deviceName,uint32 flags)
 {
-	// for now, just open the device read-only
-	fDevice = open(deviceName,O_RDONLY);
+	if (flags & B_MOUNT_READ_ONLY)
+		fFlags |= VOLUME_READ_ONLY;
 
-	status_t status = fDevice;
-	if (status < B_OK)
-		return status;
+	fDevice = open(deviceName,flags & B_MOUNT_READ_ONLY ? O_RDONLY : O_RDWR);
+	
+	// if we couldn't open the device, try read-only (don't rely on a specific error code)
+	if (fDevice < B_OK && (flags & B_MOUNT_READ_ONLY) == 0) {
+		fDevice = open(deviceName,O_RDONLY);
+		fFlags |= VOLUME_READ_ONLY;
+	}
+
+	if (fDevice < B_OK)
+		return fDevice;
 
 	char buffer[1024];
-		
 	if (read_pos(fDevice,0,buffer,sizeof(buffer)) != sizeof(buffer))
 		return B_IO_ERROR;
 
-	// Note: that does work only for x86!
+	status_t status = B_OK;
+
+	// Note: that does work only for x86, for PowerPC, the super block
+	// is located at offset 0!
 	memcpy(&fSuperBlock,buffer + 512,sizeof(disk_super_block));
 
 	if (IsValidSuperBlock()) {

@@ -109,6 +109,8 @@ class Inode : public CachedBlock
 
 		status_t InitCheck();
 
+		bool CheckPermissions(int accessMode) const;
+
 		status_t GetNextSmallData(small_data **smallData) const;
 		small_data *FindSmallData(const char *name) const;
 		const char *Name() const;
@@ -145,5 +147,17 @@ class AttributeIterator
 		TreeIterator *fIterator;
 		void		*fBuffer;
 };
+
+
+inline int OModeToAccess(int omode)
+{
+	omode &= O_RWMASK;
+	if (omode == O_RDONLY)
+		return R_OK;
+	else if (omode == O_WRONLY)
+		return W_OK;
+	
+	return R_OK | W_OK;
+}
 
 #endif	/* INODE_H */
