@@ -24,8 +24,14 @@
 //	Description:	BMessenger delivers messages to local or remote targets.
 //------------------------------------------------------------------------------
 
+// debugging
+//#define DBG(x) x
+#define DBG(x)
+#define OUT	printf
+
 // Standard Includes -----------------------------------------------------------
 #include <new>
+#include <stdio.h>
 
 // System Includes -------------------------------------------------------------
 #include <Application.h>
@@ -159,11 +165,11 @@ BMessenger::BMessenger(const BHandler *handler, const BLooper *looper,
 			// BHandler is given, check/retrieve the looper.
 			if (looper) {
 				if (handler->Looper() != looper)
-					error = B_BAD_VALUE;
+					error = B_MISMATCHED_VALUES;
 			} else {
 				looper = handler->Looper();
 				if (looper == NULL)
-					error = B_BAD_VALUE;
+					error = B_MISMATCHED_VALUES;
 			}
 			// set port, token,...
 			if (error == B_OK) {
@@ -246,10 +252,17 @@ BMessenger::Target(BLooper **looper) const
 {
 	BHandler *handler = NULL;
 	if (IsTargetLocal()) {
-		gDefaultTokens.GetToken(fHandlerToken, B_HANDLER_TOKEN,
-								(void**)&handler);
-		if (looper)
-			*looper = BLooper::LooperForPort(fPort);
+		if (!fPreferredTarget) {
+			gDefaultTokens.GetToken(fHandlerToken, B_HANDLER_TOKEN,
+									(void**)&handler);
+		}
+		if (looper) {
+			if (BLooper::sLooperListLock.Lock()) {
+				*looper = BLooper::LooperForPort(fPort);
+				BLooper::sLooperListLock.Unlock();
+			} else
+				*looper = NULL;
+		}
 	} else if (looper)
 		*looper = NULL;
 	return handler;
@@ -348,6 +361,7 @@ status_t
 BMessenger::SendMessage(BMessage *message, BHandler *replyTo,
 						bigtime_t timeout) const
 {
+DBG(OUT("BMessenger::SendMessage2(%.4s)\n", (char*)&message->what));
 	// TODO: Verify the reply behavior.
 	status_t error = (message ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
@@ -356,6 +370,7 @@ BMessenger::SendMessage(BMessage *message, BHandler *replyTo,
 		error = message->_send_(fPort, fHandlerToken, fPreferredTarget,
 								timeout, wantsReply, replyMessenger);
 	}
+DBG(OUT("BMessenger::SendMessage2() done: %lx\n", error));
 	return error;
 }
 
