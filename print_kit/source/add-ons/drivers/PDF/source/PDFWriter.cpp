@@ -122,6 +122,7 @@ playbackHandlers[] = {
 PDFWriter::PDFWriter()
 	:	PrinterDriver()
 {
+	fEmbedMaxFontSize = 256 * 1024;
 }
 
 PDFWriter::~PDFWriter()
