@@ -25,6 +25,9 @@
 #include "net_device.h"
 #include "net_server/core_module.h"
 
+#define start_rx_thread	core->start_rx_thread
+#define start_tx_thread	core->start_tx_thread
+
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
 static struct core_module_info *core = NULL;
