@@ -628,6 +628,7 @@ KernelLd obos_shell :
 	<$(SOURCE_GRIST)!apps!shell>script.o
 	<$(SOURCE_GRIST)!apps!shell>shell_vars.o
 	<$(SOURCE_GRIST)!apps!shell>statements.o
+	<$(SOURCE_GRIST)!apps!shell>shell_history.o
 	libc.so
 	libm.so
 	:
