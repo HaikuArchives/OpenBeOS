@@ -87,7 +87,7 @@ def usage(code, msg=''):
 
 
 
-def calculate_diff(filespec, contextlines):
+def calculate_diff(dir, filespec, contextlines):
     try:
         file, oldrev, newrev = string.split(filespec, ',')
     except ValueError:
@@ -128,11 +128,16 @@ def calculate_diff(filespec, contextlines):
         del lines[DIFF_HEAD_LINES:-DIFF_TAIL_LINES]
         lines.insert(DIFF_HEAD_LINES,
                      '[...%d lines suppressed...]\n' % removedlines)
-    return string.join(lines, '')
+    proj = os.environ['CVSROOT'] 
+    proj = proj[string.rfind(proj, "cvsroot/"):]
+    proj = proj[string.find(proj, "/"):]
+    cvsbrowser = "CVS Browser:\nhttp://cvs.sourceforge.net/cgi-bin/viewcvs.cgi" + proj + "/" + dir + "/" + file + "\n"
+    lines.insert(1, cvsbrowser) 
+    return string.join(lines, '') 
 
 
 
-def blast_mail(mailcmd, filestodiff, contextlines):
+def blast_mail(mailcmd, dir, filestodiff, contextlines):
     # cannot wait for child process or that will cause parent to retain cvs
     # lock for too long.  Urg!
     if not os.fork():
@@ -144,7 +149,7 @@ def blast_mail(mailcmd, filestodiff, contextlines):
         fp.write('\n')
         # append the diffs if available
         for file in filestodiff:
-            fp.write(calculate_diff(file, contextlines))
+            fp.write(calculate_diff(dir, file, contextlines))
             fp.write('\n')
         fp.close()
         # doesn't matter what code we return, it isn't waited on
@@ -208,7 +213,7 @@ def main():
                 L.append(s)
         specs = L
     print 'Generating notification message...'
-    blast_mail(mailcmd, specs[1:], contextlines)
+    blast_mail(mailcmd, specs[0], specs[1:], contextlines)
     print 'Generating notification message... done.'
 
 
