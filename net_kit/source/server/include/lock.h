@@ -22,9 +22,17 @@ struct benaphore {
 };
 
 typedef struct benaphore benaphore;
+
 // it may make sense to add a status field to the rw_lock to
 // be able to check if the semaphore could be locked
-typedef struct benaphore rw_lock;
+
+struct rw_lock {
+	sem_id		sem;
+	int32		count;
+	benaphore	writeLock;
+};
+
+typedef struct rw_lock rw_lock;
 
 
 #define INIT_BENAPHORE(lock,name) \
@@ -54,13 +62,15 @@ typedef struct benaphore rw_lock;
 	{ \
 		(lock).sem = create_sem(0, name); \
 		(lock).count = MAX_READERS; \
+		INIT_BENAPHORE((lock).writeLock, "r/w write lock"); \
 	}
 
 #define CHECK_RW_LOCK(lock) \
 	((lock).sem)
 
 #define UNINIT_RW_LOCK(lock) \
-	delete_sem((lock).sem)
+	delete_sem((lock).sem); \
+	UNINIT_BENAPHORE((lock).writeLock)
 
 #define ACQUIRE_READ_LOCK(lock) \
 	{ \
@@ -77,8 +87,10 @@ typedef struct benaphore rw_lock;
 #define ACQUIRE_WRITE_LOCK(lock) \
 	{ \
 		int32 readers = atomic_add(&(lock).count, -MAX_READERS); \
+		ACQUIRE_BENAPHORE((lock).writeLock); \
 		if (readers < MAX_READERS) \
 			acquire_sem_etc((lock).sem,readers <= 0 ? 1 : MAX_READERS - readers,0,0); \
+		RELEASE_BENAPHORE((lock).writeLock); \
 	}
 
 #define RELEASE_WRITE_LOCK(lock) \
