@@ -297,6 +297,7 @@ ResourceFile::InitContainer(ResourcesContainer &container)
 			_ReadHeader(parseInfo);
 			_ReadIndex(parseInfo);
 			_ReadInfoTable(parseInfo);
+			container.SetModified(false);
 		} catch (Exception exception) {
 			if (exception.Error() != B_OK)
 				error = exception.Error();
@@ -331,6 +332,7 @@ ResourceFile::ReadResource(ResourceItem &resource, bool force)
 			if (!fHostEndianess)
 				swap_data(resource.Type(), data, size, B_SWAP_ALWAYS);
 			resource.SetLoaded(true);
+			resource.SetModified(false);
 		}
 	}
 	return error;
