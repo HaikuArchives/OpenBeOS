@@ -53,7 +53,8 @@ public:
 		RANGE_FROM_MSG		= 'from',
 		RANGE_TO_MSG		= 'to__',
 		OK_MSG				= 'ok__',
-		CANCEL_MSG			= 'cncl'
+		CANCEL_MSG			= 'cncl',
+		DOC_INFO_MSG        = 'doci'
 	};
 			
 	// Virtual function overrides
@@ -67,6 +68,7 @@ private:
 	long 					fExitSem;
 	status_t				fResult;
 	BMessage				*fSetupMsg;
+	BMessage                fDocInfo;
 	BTextControl			*fCopies;		
 	BRadioButton			*fAll;
 	BRadioButton			*fRange;

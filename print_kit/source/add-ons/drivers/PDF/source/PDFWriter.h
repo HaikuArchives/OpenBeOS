@@ -41,6 +41,7 @@ THE SOFTWARE.
 
 #include "PrinterDriver.h"
 #include "PictureIterator.h"
+#include "Fonts.h"
 
 #include "pdflib.h"
 
@@ -74,13 +75,6 @@ enum font_encoding
 	chinese_cns1_encoding,
 	chinese_gb1_encoding,
 	korean_encoding // not implemented yet
-};
-
-enum font_type 
-{
-	true_type_type,
-	type1_type,
-	unknown_type
 };
 
 class PDFWriter : public PrinterDriver, public PictureIterator
@@ -149,12 +143,12 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		bool		BeginsChar(char byte) { return (byte & 0xc0) != 0x80; }
 		void		ToUtf8(uint32 encoding, const char *string, BString &utf8);
 		void		ToUnicode(const char *string, BString &unicode);
+		void		ToPDFUnicode(const char *string, BString &unicode);
 		uint16		CodePointSize(const char *s);
 		void		DrawChar(uint16 unicode, const char *utf8, int16 size);
 		void		ClipChar(BFont* font, const char* unicode, const char *utf8, int16 size);
 		bool   		EmbedFont(const char* n);
 		status_t	DeclareFonts();
-		status_t	LookupFontFiles(BPath path);	
 
 		// BPicture playback handlers
 		void		Op(int number);
@@ -274,15 +268,6 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 			font_encoding encoding;
 		};
 
-		class FontFile 
-		{
-		public:
-			FontFile(char *n, int64 s, font_type t) : name(n), size(s), type(t) { }
-			BString   name;
-			int64     size;
-			font_type type;
-		};
-
 		class Pattern
 		{
 		public:
@@ -307,10 +292,10 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		State			*fState;
 		int32           fStateDepth;
 		BList           fFontCache;
-		BList           fFontFiles;
 		BList           fPatterns;
 		int64           fEmbedMaxFontSize;
 		BScreen         *fScreen;
+		Fonts           *fFonts;
 		
 		enum 
 		{
@@ -322,8 +307,13 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		inline float ty(float y)    { return fState->height - (fState->y0 + fState->scale*y); }
 		inline float scale(float f) { return fState->scale * f; }
 
+#if PATTERN_SUPPORT
 		inline bool MakesPattern()  { return Pass() == 0; }
 		inline bool MakesPDF()      { return Pass() == 1; }
+#else
+		inline bool MakesPattern()  { return false; }
+		inline bool MakesPDF()      { return true; }
+#endif
 		inline bool IsDrawing() const  { return fMode == kDrawingMode; }
 		inline bool IsClipping() const { return fMode == kClippingMode; }
 
@@ -341,6 +331,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		int  FindPattern();
 		void SetPattern();
 		
+		void CreateLinePath(BPoint start, BPoint end, float width);		
 		void StrokeOrClip();
 		void FillOrClip();
 		void Paint(bool stroke);

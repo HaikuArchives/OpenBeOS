@@ -45,18 +45,6 @@ THE SOFTWARE.
 #include "PDFWriter.h"
 #include "pdflib.h"
 
-#define fmin(x, y) ( (x < y) ? x : y);
-
-#define TRUETYPE_VERSION		0x00010000
-#define OPENTYPE_CFF_VERSION	'OTTO'
-
-#define TRUETTYPE_TABLE_NAME_TAG	'name'
-
-static uint16 ttf_get_uint16(FILE * ttf);
-static uint32 ttf_get_uint32(FILE *ttf);
-static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_size);
-static status_t psf_get_fontname(const char * path, char * fontname, size_t fn_size);
-
 // Constructor & destructor
 // ------------------------
 
@@ -65,6 +53,7 @@ PDFWriter::PDFWriter()
 {
 	fEmbedMaxFontSize = 250 * 1024;
 	fScreen = new BScreen();
+	fFonts = NULL;
 }
 
 
@@ -77,11 +66,6 @@ PDFWriter::~PDFWriter()
 	}
 	fFontCache.MakeEmpty();
 	
-	for (int i = 0; i < fFontFiles.CountItems(); i++) {
-		delete (FontFile*)fFontFiles.ItemAt(i);
-	}
-	fFontFiles.MakeEmpty();
-	
 	for (int i = 0; i < fPatterns.CountItems(); i++) {
 		delete (Pattern*)fPatterns.ItemAt(i);
 	}
@@ -91,6 +75,7 @@ PDFWriter::~PDFWriter()
 		CloseTransport();
 
 	delete fScreen;
+	delete fFonts;
 }
 
 
@@ -178,6 +163,13 @@ PDFWriter::BeginJob()
 	fPdf = PDF_new2(_ErrorHandler, NULL, NULL, NULL, this);	// set *this* as pdf cookie
 	if ( fPdf == NULL )
 		return B_ERROR;
+
+	fFonts = new Fonts();
+	fFonts->CollectFonts();
+	BMessage fonts;
+	if (B_OK == JobMsg()->FindMessage("fonts", &fonts)) {
+		fFonts->SetTo(&fonts);
+	}
 		
 	return InitWriter();
 }
@@ -203,6 +195,7 @@ status_t
 PDFWriter::InitWriter()
 {
 	char	buffer[512];
+	BString s;
 
 	const char * compatibility;
 	if (JobMsg()->FindString("pdf_compatibility", &compatibility) == B_OK) {
@@ -213,15 +206,35 @@ PDFWriter::InitWriter()
 	PDF_open_mem(fPdf, _WriteData);	// use callback to stream PDF document data to printer transport
 
 	PDF_set_parameter(fPdf, "flush", "heavy");
+
+	// set document info
+	BMessage doc;
+	if (JobMsg()->FindMessage("doc_info", &doc) == B_OK) {
+		char *name;
+		uint32 type;
+		int32 count;
+		for (int32 i = 0; doc.GetInfo(B_STRING_TYPE, i, &name, &type, &count) != B_BAD_INDEX; i++) {
+			if (type == B_STRING_TYPE) {
+				BString value;
+				if (doc.FindString(name, &value) == B_OK) {
+					BString s;
+					ToPDFUnicode(value.String(), s);
+					PDF_set_info(fPdf, name, s.String());
+				}
+			}
+		}
+	}
 		
 	// find job title 
-	if (JobFile()->ReadAttr("_spool/Description", B_STRING_TYPE, 0, buffer, sizeof(buffer)))
-	    PDF_set_info(fPdf, "Title", buffer);
-			
+	if (JobFile()->ReadAttr("_spool/Description", B_STRING_TYPE, 0, buffer, sizeof(buffer))) {
+	    ToPDFUnicode(buffer, s); PDF_set_info(fPdf, "Title", s.String());
+	}
+				
 	// find job creator
-	if (JobFile()->ReadAttr("_spool/MimeType", B_STRING_TYPE, 0, buffer, sizeof(buffer)))
-	    PDF_set_info(fPdf, "Creator", buffer);
-
+	if (JobFile()->ReadAttr("_spool/MimeType", B_STRING_TYPE, 0, buffer, sizeof(buffer))) {
+	    ToPDFUnicode(buffer, s); PDF_set_info(fPdf, "Creator", s.String());
+	}
+	
 	int32 compression;
 	if (JobMsg()->FindInt32("pdf_compression", &compression) == B_OK) {
 	    PDF_set_value(fPdf, "compress", compression);
@@ -254,6 +267,38 @@ PDFWriter::InitWriter()
 	fStateDepth = 0;
 
 	return B_OK;
+}
+
+
+// --------------------------------------------------
+status_t
+PDFWriter::DeclareFonts()
+{
+	char buffer[1024];
+	char *parameter_name;
+
+	for (int i = 0; i < fFonts->Length(); i++) {
+		FontFile* f = fFonts->At(i);
+		fprintf(fLog, "path= %s\n", f->Path());		
+		if (f->Type() == true_type_type) {
+			parameter_name = "FontOutline";
+		} else { // f->Type() == type1_type
+			if (strstr(f->Path(), ".afm"))
+				parameter_name = "FontAFM";
+			else if (strstr(f->Path(), ".pfm"))
+				parameter_name = "FontPFM";
+			else // should not reach here! 
+				continue;		
+		}
+#ifndef __POWERPC__						
+		snprintf(buffer, sizeof(buffer), "%s==%s", f->Name(), f->Path());
+#else
+		sprintf(buffer, "%s==%s", f->Name(), f->Path());
+#endif
+		fprintf(fLog, "%s: %s\n", parameter_name, buffer);
+	
+		PDF_set_parameter(fPdf, parameter_name, buffer);
+	}
 }
 
 
@@ -306,330 +351,6 @@ PDFWriter::EndPage()
 	
 	return B_OK;
 }
-
-
-#ifdef CODEWARRIOR
-	#pragma mark [TrueType fonts handling]
-#endif
-
-
-// --------------------------------------------------
-status_t 
-PDFWriter::DeclareFonts()
-{
-	BPath				path;
-	directory_which	*	which_dir;
-	directory_which		lookup_dirs[] =
-		{
-		B_BEOS_FONTS_DIRECTORY,
-		// B_COMMON_FONTS_DIRECTORY,	// seem to be the same directory than B_USER_FONTS_DIRECTORY!!!
-		B_USER_FONTS_DIRECTORY,
-		(directory_which) -1
-		};
-
-	which_dir = lookup_dirs;
-	while (*which_dir >= 0)
-		{
-		if ( find_directory(*which_dir, &path) == B_OK )
-			LookupFontFiles(path);
-
-		which_dir++;
-		};
-		
-	return B_OK;
-}
-
-
-// --------------------------------------------------
-status_t
-PDFWriter::LookupFontFiles(BPath path)
-{
-	BDirectory 	dir(path.Path());
-	BEntry 		entry;
-
-	if (dir.InitCheck() != B_OK)
-		return B_ERROR;
-
-	fprintf(fLog, "--- From %s\n", path.Path());
-	
-	dir.Rewind();
-	while (dir.GetNextEntry(&entry) >= 0) {
-		BPath 		name;
-		char 		fn[512];
-		font_type	ft = unknown_type; // to keep the compiler silent.
-		off_t 		size;
-		char		buffer[1024];
-		char *		parameter_name;
-		status_t	status;
-		
-		entry.GetPath(&name);
-		if (entry.IsDirectory())
-			// recursivly lookup in sub-directories...
-			LookupFontFiles(name);
-
-		if (! entry.IsFile())
-			continue;
-
-		fn[0] = 0;
-		parameter_name = NULL;
-		
-		// is it a truetype file?
-		status = ttf_get_fontname(name.Path(), fn, sizeof(fn));
-		if (status == B_OK ) {
-			ft = true_type_type;
-			parameter_name = "FontOutline";
-		} else {
-			// okay, maybe it's a postscript type file?
-			status = psf_get_fontname(name.Path(), fn, sizeof(fn));
-			if (status == B_OK) {
-				ft = type1_type;
-				if (strstr(name.Leaf(), ".afm"))
-					parameter_name = "FontAFM";
-				else if (strstr(name.Leaf(), ".pfm"))
-					parameter_name = "FontPFM";
-			}
-		} 
-
-		if (! parameter_name)
-			// not a font file...
-			continue;
-										
-		if (entry.GetSize(&size) != B_OK)
-			size = 1024*1024*1024;
-					
-		fFontFiles.AddItem(new FontFile(fn, size, ft));
-#ifndef __POWERPC__						
-		snprintf(buffer, sizeof(buffer), "%s==%s", fn, name.Path());
-#else
-		sprintf(buffer, "%s==%s", fn, name.Path());
-#endif
-		fprintf(fLog, "%s: %s\n", parameter_name, buffer);
-		
-		PDF_set_parameter(fPdf, parameter_name, buffer);
-	}	// while dir.GetNextEntry()...	
-
-	return B_OK;
-}
-
-
-// --------------------------------------------------
-static uint16 ttf_get_uint16(FILE * ttf)
-{
-    uint16 v;
-
-	if (fread(&v, 1, 2, ttf) != 2)
-		return 0;
-
-	return B_BENDIAN_TO_HOST_INT16(v);
-}
-
-
-// --------------------------------------------------
-static uint32 ttf_get_uint32(FILE *ttf)
-{
-    uint32 buf;
-
-    if (fread(&buf, 1, 4, ttf) != 4)
-		return 0;
-
-	return B_BENDIAN_TO_HOST_INT32(buf);
-}
-
-
-// --------------------------------------------------
-static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_size)
-{
-	FILE *		ttf;
-	status_t	status;
-	uint16		nb_tables, nb_records;
-	uint16		i;
-	uint32		tag;
-	uint32		checksum, table_offset, length;
-	uint32		strings_offset;
-	char		family_name[256];
-	char		face_name[256];
-	int			names_found;
-
-	status = B_ERROR;
-	
-	ttf = fopen(path, "rb");
-	if (! ttf) 
-		return status;
-
-    tag = ttf_get_uint32(ttf);		/* version */
-	switch(tag) {
-		case TRUETYPE_VERSION:
-		case OPENTYPE_CFF_VERSION:
-			break;
-			
-		default:
-			goto exit;
-	}
-
-    /* set up table directory */
-    nb_tables = ttf_get_uint16(ttf);
-
-	fseek(ttf, 12, SEEK_SET);
-	
-	table_offset = 0;	// quiet the compiler...
-
-    for (i = 0; i < nb_tables; ++i) {
-		tag				= ttf_get_uint32(ttf);
-		checksum		= ttf_get_uint32(ttf);
-		table_offset	= ttf_get_uint32(ttf);
-		length			= ttf_get_uint32(ttf);
-	    
-		if (tag == TRUETTYPE_TABLE_NAME_TAG)
-			break;
-	}
-
-	if (tag != TRUETTYPE_TABLE_NAME_TAG)
-		// Mandatory name table not found!
-		goto exit;
-		
-	// move to name table start
-	fseek(ttf, table_offset, SEEK_SET);
-		
-	ttf_get_uint16(ttf);	// name table format (must be 0!)
-    nb_records		= ttf_get_uint16(ttf);
-	strings_offset	= table_offset + ttf_get_uint16(ttf); // string storage offset is from table offset
-
-	//    offs = ttf->dir[idx].offset + tp->offsetStrings;
-
-	// printf("  pid   eid   lid   nid   len offset value\n");
-        //  65536 65536 65536 65536 65536 65536  ......
-
-	family_name[0] = 0;
-	face_name[0] = 0;
-	names_found = 0;
-
-	for (i = 0; i < nb_records; ++i) {
-		uint16	platform_id, encoding_id, language_id, name_id;
-		uint16	string_len, string_offset;
-
-		platform_id		= ttf_get_uint16(ttf);
-		encoding_id		= ttf_get_uint16(ttf);
-		language_id		= ttf_get_uint16(ttf);
-		name_id			= ttf_get_uint16(ttf);
-		string_len		= ttf_get_uint16(ttf);
-		string_offset	= ttf_get_uint16(ttf);
-
-		if ( name_id != 1 && name_id != 2 )
-			continue;
-
-		// printf("%5d %5d %5d %5d %5d %5d ", 
-		// 	platform_id, encoding_id, language_id, name_id, string_len, string_offset);
-
-		if (string_len != 0) {
-			long	pos;
-			char *	buffer;
-
-			pos = ftell(ttf);
-			fseek(ttf, strings_offset + string_offset, SEEK_SET);
-
-			buffer = (char *) malloc(string_len + 16);
-
-			fread(buffer, 1, string_len, ttf); 
-			buffer[string_len] = '\0';
-
-			fseek(ttf, pos, SEEK_SET);
-			
-			if ( (platform_id == 3 && encoding_id == 1) || // Windows Unicode
-				 (platform_id == 0) ) { // Unicode 
-				// dirty unicode -> ascii conversion
-				int k;
-
-				for (k=0; k < string_len/2; k++)
-					buffer[k] = buffer[2*k + 1];
-				buffer[k] = '\0';
-			}
-
-			// printf("%s\n", buffer);
-			
-			if (name_id == 1)
-				strncpy(family_name, buffer, sizeof(family_name));
-			else if (name_id == 2)
-				strncpy(face_name, buffer, sizeof(face_name));
-
-			names_found += name_id;
-
-			free(buffer);
-		}
-		// else
-			// printf("<null>\n");
-
-		if (names_found == 3)
-			break;
-	}
-		
-	if (names_found == 3) {
-#ifndef __POWERPC__
-		snprintf(fontname, fn_size, "%s-%s", family_name, face_name);
-#else
-		sprintf(fontname, "%s-%s", family_name, face_name);
-#endif
-		status = B_OK;
-	}
-		
-exit:
-	fclose(ttf);
-	return status;
-}
-
-
-// --------------------------------------------------
-static status_t psf_get_fontname(const char * path, char * fontname, size_t fn_size)
-{
-	FILE *		psf;
-	status_t	status;
-	int			i;
-	char		line[1024];
-	char * 		token;
-	char *		name;
-
-	// *.afm	search for "FontName <font_name_without_blank>" line
-	// *.pfa 	search for "/FontName /<font_name_without_blank> def" line
-
-	status = B_ERROR;
-	
-	psf = fopen(path, "r");
-	if (! psf) 
-		return status;
-
-	name = NULL;
-	
-	i = 0;
-	while ( fgets(line, sizeof(line), psf) != NULL ) {
-		i++;
-		if ( i > 64 )
-			// only check the first 64 lines of files...
-			break;
-		
-		token = strtok(line, " \r\n");
-		if (! token)
-			continue;
-			
-		if (strcmp(token, "FontName") == 0)
-			name = strtok(NULL, " \r\n");
-		else if (strcmp(token, "/FontName") == 0) {
-			name = strtok(NULL, " \r\n");
-			if (name)
-				name++;	// skip the '/'
-		}
-
-		if (name)
-			break;
-	}
-		
-	if (name) {
-		strncpy(fontname, name, fn_size);
-		status = B_OK;
-	}
-		
-	fclose(psf);
-	return status;
-}
-
 
 
 #ifdef CODEWARRIOR
@@ -766,7 +487,8 @@ PDFWriter::CreatePattern()
 void
 PDFWriter::SetPattern() 
 {
-	fprintf(fLog, "SetPattern\n");
+#if PATTERN_SUPPORT
+	fprintf(fLog, "SetPattern (bitmap version)\n");
 	if (MakesPattern()) {
 		if (FindPattern() == -1) CreatePattern();
 	} else {
@@ -779,6 +501,36 @@ PDFWriter::SetPattern()
 			fprintf(fLog, "error: pattern missing!");
 		}
 	}
+#else
+	fprintf(fLog, "SetPattern (color version)\n");
+	if (IsSame(fState->pattern, B_MIXED_COLORS)) {
+		rgb_color mixed;  // approximate mixed colors
+		mixed.red    = (fState->foregroundColor.red + fState->backgroundColor.red) / 2;
+		mixed.green  = (fState->foregroundColor.green + fState->backgroundColor.green) / 2;
+		mixed.blue   = (fState->foregroundColor.blue + fState->backgroundColor.blue) / 2;
+		mixed.alpha  = (fState->foregroundColor.alpha + fState->backgroundColor.alpha) / 2;
+		SetColor(mixed);
+	} else {
+		SetColor(fState->foregroundColor);
+	}
+#endif
+}
+
+
+// --------------------------------------------------
+void
+PDFWriter::CreateLinePath(BPoint start, BPoint end, float width) {
+	BPoint d = end - start; // calculate direction vector
+	float len = sqrt(d.x*d.x + d.y*d.y); // normalize to length of 1.0
+	d.x = d.x * width / len; d.y = d.y * width / len;
+	d.x /= 2; d.y /= 2;
+	BPoint r(-d.y, d.x); // rotate 90 degrees
+	// generate rectangle that represents the line with penSize width 
+	PDF_moveto(fPdf, tx(start.x + r.x), ty(start.y + r.y));
+	PDF_lineto(fPdf, tx(start.x - r.x), ty(start.y - r.y));
+	PDF_lineto(fPdf, tx(end.x - r.x),   ty(end.y - r.y));
+	PDF_lineto(fPdf, tx(end.x + r.x),   ty(end.y + r.y));
+	PDF_closepath(fPdf);
 }
 
 
@@ -1569,18 +1321,7 @@ PDFWriter::StrokeLine(BPoint start,	BPoint end)
 	SetColor();			
 	if (!MakesPDF()) return;
 	if (IsClipping()) {
-		BPoint d = start - end; // calculate direction vector
-		double len = sqrt(d.x*d.x + d.y*d.y); // normalize to length of 1
-		d.x = d.x * fState->penSize / len; d.y = d.y * fState->penSize / len;
-		d.x /= 2; d.y /= 2;
-		BPoint r(d.y, d.x); // rotate 90 degrees
-//		start += d; end -= d; // increase length of line by penSize
-		// generate rectangle that represents the line with width penSize
-		PDF_moveto(fPdf, tx(start.x + r.x), ty(start.y + r.y));
-		PDF_lineto(fPdf, tx(start.x - r.x), ty(start.y - r.y));
-		PDF_lineto(fPdf, tx(end.x - r.x),   ty(end.y - r.y));
-		PDF_lineto(fPdf, tx(end.x + r.x),   ty(end.y + r.y));
-		PDF_closepath(fPdf);
+		CreateLinePath(start, end, fState->penSize);
 	} else {
 		PDF_moveto(fPdf, tx(start.x), ty(start.y));
 		PDF_lineto(fPdf, tx(end.x),   ty(end.y));

@@ -2,7 +2,7 @@
 
 PDF Writer printer driver.
 
-Copyright (c) 2001 OpenBeOS. 
+Copyright (c) 2002 OpenBeOS. 
 
 Authors: 
 	Philippe Houdoin
@@ -29,8 +29,8 @@ THE SOFTWARE.
 
 */
 
-#ifndef PAGESETUPWINDOW_H
-#define PAGESETUPWINDOW_H
+#ifndef FONTSWINDOW_H
+#define FONTSWINDOW_H
 
 #include <InterfaceKit.h>
 #include <Message.h>
@@ -42,15 +42,13 @@ THE SOFTWARE.
 #include "Utils.h"
 #include "Fonts.h"
 
-class MarginView;
-
-class PageSetupWindow : public HWindow 
+class FontsWindow : public HWindow 
 {
 public:
 	// Constructors, destructors, operators...
 
-							PageSetupWindow(BMessage *msg, const char *printerName = NULL);
-							~PageSetupWindow();
+							FontsWindow(Fonts* fonts);
+							~FontsWindow();
 
 	typedef HWindow 		inherited;
 
@@ -58,36 +56,24 @@ public:
 	enum {
 		OK_MSG				= 'ok__',
 		CANCEL_MSG			= 'cncl',
-		FONTS_MSG			= 'font'
+		EMBED_MSG           = 'mbed',
+		SUBST_MSG           = 'subs'
 	};
 			
 	// Virtual function overrides
 public:	
 	virtual void 			MessageReceived(BMessage *msg);
 	virtual bool 			QuitRequested();
-	status_t 				Go();
+	void                    Quit();
 
-	// From here, it's none of your business! ;-)
 private:
-	long 					fExitSem;
-	status_t 				fResult;
-	BMessage *				fSetupMsg;
-	BMenuField *			fPageSizeMenu;
-	BMenuField *			fOrientationMenu;
-	BMenuField *			fPDFCompatibilityMenu;
-	BSlider *				fPDFCompressionSlider;
-	Fonts *                 fFonts;
-		
-	void					UpdateSetupMessage();
+	Fonts*                  fFonts;	
+	BListView*              fList;
 
-	MarginView * 			fMarginView;
-	
-	// used for saving settings 
-	BString					fPrinterDirName;
-
-	//private class constants
-	static const int kMargin = 10;
-	static const int kOffset = 200;
+	void                    FillFontList();
+	void                    EmptyFontList();
+	void                    SetItemText(BStringItem* i, FontFile* f);
+	friend class EmbedFont;
 };
 
 #endif

@@ -39,6 +39,7 @@ THE SOFTWARE.
 
 #include "MarginView.h"
 #include "PrinterSettings.h"
+#include "FontsWindow.h"
 
 // static global variables
 static struct 
@@ -138,6 +139,14 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	
 	// Load pdf compatability
 	fSetupMsg->FindString("pdf_compatibility", &setting_value);
+
+	// Load font settings
+	fFonts = new Fonts();
+	fFonts->CollectFonts();
+	BMessage fonts;
+	if (fSetupMsg->FindMessage("fonts", &fonts) == B_OK) {
+		fFonts->SetTo(&fonts);
+	}
 	
 	// add a *dialog* background
 	r = Bounds();
@@ -306,6 +315,14 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	button->MoveTo(x - w - 8, y);
 	panel->AddChild(button);
 
+	// add a "Fonts" button	
+	button 	= new BButton(r, NULL, "Fonts", new BMessage(FONTS_MSG), 
+		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
+	button->GetPreferredSize(&w, &h);
+	button->ResizeToPreferred();
+	button->MoveTo(r.left + 8, y);
+	panel->AddChild(button);
+
 	// add a separator line...
 	BBox * line = new BBox(BRect(r.left, y - 9, r.right, y - 8), NULL,
 		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM );
@@ -320,6 +337,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 PageSetupWindow::~PageSetupWindow()
 {
 	delete_sem(fExitSem);
+	delete fFonts;
 }
 
 
@@ -393,6 +411,15 @@ PageSetupWindow::UpdateSetupMessage()
 		}	
 	}
 
+	BMessage fonts;
+	if (B_OK == fFonts->Archive(&fonts)) {
+		if (fSetupMsg->HasMessage("fonts")) {
+			fSetupMsg->ReplaceMessage("fonts", &fonts);
+		} else {
+			fSetupMsg->AddMessage("fonts", &fonts);
+		}
+	}
+
 	// save the settings to be new defaults
 	PrinterSettings *ps = new PrinterSettings(fPrinterDirName.String());
 	if (ps->InitCheck() == B_OK) {
@@ -458,6 +485,9 @@ PageSetupWindow::MessageReceived(BMessage *msg)
 			}
 			break;
 
+		case FONTS_MSG:
+			(new FontsWindow(fFonts))->Show();
+			break;
 	
 		default:
 			inherited::MessageReceived(msg);

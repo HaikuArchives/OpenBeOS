@@ -163,24 +163,21 @@ PrinterSettings::GetDefaults(BMessage *msg)
 	if (prefs->LoadSettings(settings) == B_OK) {
 		// yes, copy the settings into message
 		*msg = *settings;
-		delete prefs;
-		delete settings;
-		return B_OK;
+	} else {
+		// set default value if property not set
+		msg->AddInt64("xres", XRES);
+		msg->AddInt64("yres", YRES);
+		msg->AddInt32("orientation", ORIENTATION);
+		msg->AddRect("paper_rect", PAPER_RECT);
+		msg->AddRect("printable_rect", PRINT_RECT);
+		msg->AddFloat("scaling", RES);
+		msg->AddString("pdf_compatibility", PDF_COMPATIBILITY);
+		msg->AddInt32("pdf_compression", PDF_COMPRESSION);
+		msg->AddInt32("units", UNITS);
+		
+		// create pdf_printer_settings file
+		prefs->SaveSettings(msg);
 	}
-
-	// set default value if property not set
-	msg->AddInt64("xres", XRES);
-	msg->AddInt64("yres", YRES);
-	msg->AddInt32("orientation", ORIENTATION);
-	msg->AddRect("paper_rect", PAPER_RECT);
-	msg->AddRect("printable_rect", PRINT_RECT);
-	msg->AddFloat("scaling", RES);
-	msg->AddString("pdf_compatibility", PDF_COMPATIBILITY);
-	msg->AddInt32("pdf_compression", PDF_COMPRESSION);
-	msg->AddInt32("units", UNITS);
-	
-	// create pdf_printer_settings file
-	prefs->SaveSettings(msg);
 
 	delete prefs;
 	delete settings;

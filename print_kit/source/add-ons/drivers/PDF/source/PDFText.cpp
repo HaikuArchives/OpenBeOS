@@ -281,6 +281,23 @@ PDFWriter::ToUnicode(const char *string, BString &unicode)
 
 
 // --------------------------------------------------
+void 
+PDFWriter::ToPDFUnicode(const char *string, BString &unicode)
+{
+	// PDFlib requires BOM at begin and two 0 at end of string
+	char marker[3] = { 0xfe, 0xff, 0}; // byte order marker
+	BString s;
+	ToUnicode(string, s);
+	unicode << marker; 
+	int32 len = s.Length()+2; 
+	char* buf = unicode.LockBuffer(len + 2); // reserve space for two additional '\0'
+	memcpy(&buf[2], s.String(), s.Length());
+	buf[len] = buf[len+1] = 0;
+	unicode.UnlockBuffer(len + 2);
+}
+
+
+// --------------------------------------------------
 uint16 
 PDFWriter::CodePointSize(const char* s)
 {
@@ -461,14 +478,14 @@ bool
 PDFWriter::EmbedFont(const char* name)
 {
 	static FontFile* cache = NULL;
-	if (cache && cache->name.Compare(name)) return cache->size < fEmbedMaxFontSize;
+	if (cache && strcmp(cache->Name(), name) == 0) return cache->Embed();
 	
-	const int n = fFontFiles.CountItems();
+	const int n = fFonts->Length();
 	for (int i = 0; i < n; i++) {
-		FontFile* f = (FontFile*)fFontFiles.ItemAt(i);
-		if (f->name.Compare(name) == 0) {
+		FontFile* f = fFonts->At(i);
+		if (strcmp(f->Name(), name) == 0) {
 			cache = f;
-			return f->size < fEmbedMaxFontSize;
+			return f->Embed(); // Size() < fEmbedMaxFontSize;
 		}
 	}
 	return false;

@@ -2,7 +2,7 @@
 
 PDF Writer printer driver.
 
-Copyright (c) 2001 OpenBeOS. 
+Copyright (c) 2002 OpenBeOS. 
 
 Authors: 
 	Philippe Houdoin
@@ -29,8 +29,8 @@ THE SOFTWARE.
 
 */
 
-#ifndef PAGESETUPWINDOW_H
-#define PAGESETUPWINDOW_H
+#ifndef DOCINFOWINDOW_H
+#define DOCINFOWINDOW_H
 
 #include <InterfaceKit.h>
 #include <Message.h>
@@ -40,17 +40,13 @@ THE SOFTWARE.
 #include <Path.h>
 #include <String.h>
 #include "Utils.h"
-#include "Fonts.h"
 
-class MarginView;
-
-class PageSetupWindow : public HWindow 
+class DocInfoWindow : public HWindow 
 {
 public:
 	// Constructors, destructors, operators...
 
-							PageSetupWindow(BMessage *msg, const char *printerName = NULL);
-							~PageSetupWindow();
+							DocInfoWindow(BMessage *doc_info);
 
 	typedef HWindow 		inherited;
 
@@ -58,36 +54,18 @@ public:
 	enum {
 		OK_MSG				= 'ok__',
 		CANCEL_MSG			= 'cncl',
-		FONTS_MSG			= 'font'
 	};
 			
 	// Virtual function overrides
 public:	
 	virtual void 			MessageReceived(BMessage *msg);
 	virtual bool 			QuitRequested();
-	status_t 				Go();
 
-	// From here, it's none of your business! ;-)
 private:
-	long 					fExitSem;
-	status_t 				fResult;
-	BMessage *				fSetupMsg;
-	BMenuField *			fPageSizeMenu;
-	BMenuField *			fOrientationMenu;
-	BMenuField *			fPDFCompatibilityMenu;
-	BSlider *				fPDFCompressionSlider;
-	Fonts *                 fFonts;
-		
-	void					UpdateSetupMessage();
-
-	MarginView * 			fMarginView;
-	
-	// used for saving settings 
-	BString					fPrinterDirName;
-
-	//private class constants
-	static const int kMargin = 10;
-	static const int kOffset = 200;
+	BMessage               *fDocInfo;
+	BView                  *fTable;
+	void                    BuildTable();
+	void                    ReadFieldsFromTable();
 };
 
 #endif

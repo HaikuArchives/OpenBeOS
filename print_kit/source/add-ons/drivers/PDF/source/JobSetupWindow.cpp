@@ -35,6 +35,7 @@ THE SOFTWARE.
 
 #include "PrinterDriver.h"
 #include "JobSetupWindow.h"
+#include "DocInfoWindow.h"
 
 // --------------------------------------------------
 JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
@@ -71,6 +72,12 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	msg->FindInt32("copies",     &copies);
 	msg->FindInt32("first_page", &firstPage);
 	msg->FindInt32("last_page",  &lastPage);
+	if (B_OK != msg->FindMessage("doc_info", &fDocInfo)) {
+		fDocInfo.AddString("Author", "");
+		fDocInfo.AddString("Subject", "");
+		fDocInfo.AddString("Keywords", "");
+	}
+	
 	allPages = firstPage == 1 && lastPage == MAX_INT32;
 
 	r = Bounds();
@@ -195,12 +202,20 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	ok->MoveTo(x, ok->Frame().top);	// put the ok bottom at bottom right corner
 	panel->AddChild(ok);
 
-	// add a "Cancel button	
+	// add a "Cancel" button	
 	cancel 	= new BButton(BRect(x, y, x + 100, y + 20), NULL, "Cancel", new BMessage(CANCEL_MSG), B_FOLLOW_RIGHT | B_FOLLOW_TOP);
 	cancel->ResizeToPreferred();
 	cancel->GetPreferredSize(&w, &h);
 	cancel->MoveTo(x - w - kMargin, y);	// put cancel button left next the ok button
 	panel->AddChild(cancel);
+
+	// add a "DocInfo" button	
+	BButton *button = new BButton(r, NULL, "Doc Info", new BMessage(DOC_INFO_MSG), 
+		B_FOLLOW_RIGHT | B_FOLLOW_TOP);
+	button->GetPreferredSize(&w, &h);
+	button->ResizeToPreferred();
+	button->MoveTo(8, y);
+	panel->AddChild(button);
 
 	// Finally, add our panel to window
 	AddChild(panel);
@@ -232,6 +247,11 @@ JobSetupWindow::UpdateJobMessage()
 	fSetupMsg->ReplaceInt32("copies", copies);
 	fSetupMsg->ReplaceInt32("first_page", from);
 	fSetupMsg->ReplaceInt32("last_page", to);
+	if (fSetupMsg->HasMessage("doc_info")) {
+		fSetupMsg->ReplaceMessage("doc_info", &fDocInfo);
+	} else {
+		fSetupMsg->AddMessage("doc_info", &fDocInfo);
+	}
 }
 
 
@@ -269,6 +289,10 @@ JobSetupWindow::MessageReceived(BMessage *msg)
 		case RANGE_FROM_MSG:
 		case RANGE_TO_MSG:
 			fRange->SetValue(B_CONTROL_ON);
+			break;
+
+		case DOC_INFO_MSG:
+			(new DocInfoWindow(&fDocInfo))->Show();
 			break;
 
 		default:

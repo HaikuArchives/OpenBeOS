@@ -114,9 +114,11 @@ StatusWindow::MessageReceived(BMessage *msg)
 			break;
 		case 'page':
 			fPage = "";
+#if PATTERN_SUPPORT
 			if (fPass == 0) 
 				fPage << "Collecting Patterns Page: " << ++fPageCount;
-			else				
+			else
+#endif				
 				fPage << "Generating Page: " << ++fPageCount;
 			if (fPageCount == fPages) {
 				fPass ++;
