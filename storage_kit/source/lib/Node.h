@@ -8,7 +8,7 @@
 #define __sk_node_h__
 
 #include <Statable.h>
-#include "kernel_interface.h"
+#include <StorageDefs.Private.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {

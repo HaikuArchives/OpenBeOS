@@ -8,6 +8,7 @@
 #include <Node.h>
 #include <errno.h>
 #include <fs_attr.h> // for struct attr_info
+#include "kernel_interface.h"
 
 BNode::BNode() : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fCStatus(B_NO_INIT) {
 }
@@ -373,7 +374,7 @@ status_t
 BNode::InitAttrDir() {
 	if (fCStatus == B_OK && fAttrFd == StorageKit::NullFd) {
 		//fAttrDir = StorageKit::open_attr_dir(fFd);
-		fAttrFd = StorageKit::open_attr_dir(fFd);
+		return StorageKit::open_attr_dir(fFd, fAttrFd);
 	}
 
 	return fCStatus;	
