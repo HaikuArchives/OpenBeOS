@@ -143,7 +143,7 @@ ifq *start_ifq(void)
 	ifq *nifq = NULL;
 	
 	nifq = (ifq*)malloc(sizeof(*nifq));
-	memset(nifq, 0, sizeof(*ifq));
+	memset(nifq, 0, sizeof(*nifq));
 	
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
