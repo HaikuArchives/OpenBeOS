@@ -370,3 +370,10 @@ Description: The sniffer rules description in the BeBook deviates considerably
                ranges (negative values, or begin > end) or 0 <= priority <= 1.
 
 
+OS:          BeOS R5
+Module:      BMimeType
+Location:    GuessMimeType(const entry_ref *, BMimeType *)
+Description: When passing an uninitialized entry_ref, B_OK and
+             "application/octet-stream" are returned.
+
+
