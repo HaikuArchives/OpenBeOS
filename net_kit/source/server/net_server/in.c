@@ -7,10 +7,10 @@
 #endif
 
 #include "netinet/in.h"
+#include "netinet/in_var.h"
 #include "sys/socketvar.h"
 #include "net/if.h"
 #include "sys/sockio.h"
-#include "netinet/in_var.h"
 #include "net/route.h"
 
 extern struct ifnet **ifnet_addrs;

@@ -66,7 +66,6 @@ static status_t core_std_ops(int32 op, ...);
 static int start_stack(void);
 static int stop_stack(void);
 static void add_protosw(struct protosw *[], int layer);
-static struct in_ifaddr *get_primary_addr(void);
 static struct net_module *module_list = NULL;
 /* Wider scoped prototypes */
 int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
@@ -893,7 +892,6 @@ int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 	for (dp=domains; dp; dp= dp->dom_next)
 		if (dp->dom_family == family)
 			goto found;
-	printf("net_sysctl: EPROTOOPT (domain)\n");
 	return EINVAL; //EPROTOOPT;
 found:
 	for (pr=dp->dom_protosw; pr; pr = pr->dom_next) {
@@ -901,7 +899,6 @@ found:
 			return ((*pr->pr_sysctl)(name+2, namelen -2, oldp, oldlenp, newp, newlen));
 		}
 	}
-	printf("net_sysctl: EPROTOOPT (protocol)\n");
 	return EINVAL;//EPROTOOPT;
 }
 
