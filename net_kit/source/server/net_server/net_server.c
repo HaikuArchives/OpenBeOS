@@ -57,7 +57,7 @@ static int32 rx_thread(void *data)
 
 	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
         while ((status = read(i->dev, buffer, len)) >= B_OK && count < 10) {
-                struct mbuf *mb = m_devget(buffer, len, 0, i, NULL);
+                struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
                 global_modules[prot_table[NS_ETHER]].mod->input(mb);
 		count++;
 		len = 2048;
@@ -73,6 +73,7 @@ static int32 tx_thread(void *data)
 	char buffer[2048];
 	size_t len = 0;
 	status_t status;
+	int txc = 0;
 
 	printf("%s%d: starting tx_thread...\n", i->name, i->unit);	
 	while (1) {
@@ -92,7 +93,7 @@ static int32 tx_thread(void *data)
 
 		m_copydata(m, 0, len, buffer);
 
-printf("TXMIT: %ld bytes to dev %d\n",len ,i->dev);
+printf("TXMIT %d: %ld bytes to dev %d\n", txc++, len ,i->dev);
 		m_freem(m);
 		/* this is soooooooo useful, but not currently needed */
 		//dump_buffer(buffer, len);
@@ -333,7 +334,6 @@ int main(int argc, char **argv)
 {
 	status_t status;
 	int i;
-	struct sockaddr sa, sb;
 
 	mbinit();
 	localhash = nhash_make();
@@ -357,32 +357,16 @@ int main(int argc, char **argv)
 	init_devices();
 	start_devices();
 
+	if (ndevs == 0) {
+		printf("\nFATAL: no devices configured!\n");
+		exit(-1);
+	}
+
 /* These 2 printf's are just for "pretty" display... */
 printf("\n");
 
 	list_devices();
 	list_modules();
-
-	sa.sa_family = AF_INET;
-	sa.sa_len = 4;
-	sa.sa_data[0] = 192;
-	sa.sa_data[1] = 168;
-	sa.sa_data[2] = 0;
-	sa.sa_data[3] = 1;
-
-	sb.sa_family = AF_INET;
-	sb.sa_len = 4;
-	sb.sa_data[0] = 192;
-	sb.sa_data[1] = 168;
-	sb.sa_data[2] = 0;
-	sb.sa_data[3] = 133;
-
-	/* dirst hack to get us sending a request! */
-	global_modules[prot_table[NS_ARP]].mod->lookup(&sb, &sa);
-snooze(10000);
-        global_modules[prot_table[NS_ARP]].mod->lookup(&sb, &sa);
-snooze(10000);
-        global_modules[prot_table[NS_ARP]].mod->lookup(&sb, &sa);
 
 printf("\n");
 
