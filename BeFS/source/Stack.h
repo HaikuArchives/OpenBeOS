@@ -32,9 +32,11 @@ template<class T> class Stack
 			if (fUsed >= fMax)
 			{
 				fMax += 16;
-				fArray = (T *)realloc(fArray,fMax * sizeof(T));
-				if (fArray == NULL)
+				T *newArray = (T *)realloc(fArray,fMax * sizeof(T));
+				if (newArray == NULL)
 					return B_NO_MEMORY;
+
+				fArray = newArray;
 			}
 			fArray[fUsed++] = value;
 			return B_OK;

@@ -814,6 +814,7 @@ void
 Equation::CalculateScore(Index &index)
 {
 	// As always, these values could be tuned and refined.
+	// And the code could also need some real world testing :-)
 
 	// do we have to operate on a "foreign" index?
 	if (fOp == OP_UNEQUAL || index.SetTo(fAttribute) < B_OK) {

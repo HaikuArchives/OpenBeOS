@@ -28,11 +28,12 @@
 //#include "dmalloc.h"
 
 // BeOS vnode layer stuff
+#include <KernelExport.h>
 #ifndef _IMPEXP_KERNEL
 #	define _IMPEXP_KERNEL
 #endif
+
 extern "C" {
-//	#include <KernelExport.h>
 	#include <fsproto.h>
 	#include <lock.h>
 	#include <cache.h>
