@@ -550,43 +550,43 @@
 				</task>
 			</class>
 			<class name="BMessageFilter">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BMessageFilter(uint32 what, filter_hook func = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BMessageFilter(message_delivery delivery, message_source source, filter_hook func = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BMessageFilter(message_delivery delivery, message_source source, uint32 what, filter_hook func = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BMessageFilter(const BMessageFilter& filter);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BMessageFilter(const BMessageFilter* filter);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual ~BMessageFilter();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BMessageFilter& operator=(const BMessageFilter &from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual filter_result Filter(BMessage* message, BHandler** target);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					message_delivery MessageDelivery() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					message_source MessageSource() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					uint32 Command() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					bool FiltersAnyCommand() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BLooper* Looper() const;
 				</task>
 			</class>
@@ -715,94 +715,94 @@
 		</section>
 		<section name="BHandler">
 			<class name="BHandler">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BHandler(const char* name = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BHandler(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual ~BHandler();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* message);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BLooper* Looper() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					void SetName(const char* name);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					const char* Name() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void SetNextHandler(BHandler* handler);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BHandler* NextHandler() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void AddFilter(BMessageFilter* filter);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual bool RemoveFilter(BMessageFilter* filter);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void SetFilterList(BList* filters);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BList* FilterList();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					bool LockLooper();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t LockLooperWithTimeout(bigtime_t timeout);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					void UnlockLooper();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StartWatching(BMessenger, uint32 what);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StartWatchingAll(BMessenger);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StopWatching(BMessenger, uint32 what);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StopWatchingAll(BMessenger);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StartWatching(BHandler* , uint32 what);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StartWatchingAll(BHandler* );
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StopWatching(BHandler* , uint32 what);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t StopWatchingAll(BHandler* );
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void SendNotices(uint32 what, const BMessage* = 0);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					bool IsWatched() const;
 				</task>
 			</class>
