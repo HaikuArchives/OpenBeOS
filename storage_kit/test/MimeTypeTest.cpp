@@ -12,6 +12,7 @@
 #include <MimeTypeTest.h>
 #include <Path.h>			// Only needed for entry_ref dumps
 #include <StorageKit.h>
+#include <String.h>
 
 #include "Test.StorageKit.h"
 #include "TestApp.h"
@@ -108,10 +109,8 @@ MimeTypeTest::Suite() {
 	// Ingo						   
 	suite->addTest( new TC("BMimeType::Initialization Test",
 						   &MimeTypeTest::InitTest) );
-//	suite->addTest( new TC("BMimeType::Validity Test",
-//						   &MimeTypeTest::ValidityTest) );
-//	suite->addTest( new TC("BMimeType::MIME String Test",
-//						   &MimeTypeTest::StringTest) );
+	suite->addTest( new TC("BMimeType::MIME String Test",
+						   &MimeTypeTest::StringTest) );
 
 	return suite;
 }		
@@ -821,6 +820,23 @@ MimeTypeTest::PreferredAppTest() {
 
 }
 
+// init_long_types
+static
+void
+init_long_types(char *notTooLongType, char *tooLongType)
+{
+	const int notTooLongLength = B_MIME_TYPE_LENGTH;
+	const int tooLongLength = notTooLongLength + 1;
+	strcpy(notTooLongType, "image/");
+	memset(notTooLongType + strlen(notTooLongType), 'a',
+		   notTooLongLength - strlen(notTooLongType));
+	notTooLongType[notTooLongLength] = '\0';
+	strcpy(tooLongType, "image/");
+	memset(tooLongType + strlen(tooLongType), 'a',
+		   tooLongLength - strlen(tooLongType));
+	tooLongType[tooLongLength] = '\0';
+}
+
 // InitTest
 void
 MimeTypeTest::InitTest()
@@ -834,21 +850,12 @@ MimeTypeTest::InitTest()
 
 	// We test only a few types here. Exhausting testing is done in
 	// ValidityTest().
-	const int notTooLongLength = B_MIME_TYPE_LENGTH;
-	const int tooLongLength = notTooLongLength + 1;
 	const char *validType	= "image/gif";
 	const char *validType2	= "application/octet-stream";
 	const char *invalidType	= "invalid type";
-	char notTooLongType[notTooLongLength + 1];
-	char tooLongType[tooLongLength + 1];
-	strcpy(notTooLongType, "image/");
-	memset(notTooLongType + strlen(notTooLongType), 'a',
-		   notTooLongLength - strlen(notTooLongType));
-	notTooLongType[notTooLongLength] = '\0';
-	strcpy(tooLongType, "image/");
-	memset(tooLongType + strlen(tooLongType), 'a',
-		   tooLongLength - strlen(tooLongType));
-	tooLongType[tooLongLength] = '\0';
+	char notTooLongType[B_MIME_TYPE_LENGTH + 3];
+	char tooLongType[B_MIME_TYPE_LENGTH + 3];
+	init_long_types(notTooLongType, tooLongType);
 
 	// default constructor
 	nextSubTest();
@@ -1019,25 +1026,171 @@ MimeTypeTest::InitTest()
 	}
 }
 
-// ValidityTest
-void
-MimeTypeTest::ValidityTest()
-{
-	// tests:
-	// * IsValid() (static/non static)
-}
-
 // StringTest
 void
 MimeTypeTest::StringTest()
 {
 	// tests:
+	// * IsValid() (static/non static)
 	// * Type()
 	// * IsSupertypeOnly()
 	// * GetSupertype()
 	// * Contains()
 	// * operator==()
+
+	char notTooLongType[B_MIME_TYPE_LENGTH + 3];
+	char tooLongType[B_MIME_TYPE_LENGTH + 3];
+	init_long_types(notTooLongType, tooLongType);
+	struct mime_type_test {
+		const char	*type;
+		bool		super_type;
+		status_t	error;
+	};
+	mime_type_test tests[] = {
+		// valid types
+		{ "application",					true,	B_OK, },
+		{ "application/octet-stream",		false,	B_OK, },
+		{ "audio",							true,	B_OK, },
+		{ "audio/x-aiff",					false,	B_OK, },
+		{ "image",							true,	B_OK, },
+		{ "image/gif",						false,	B_OK, },
+		{ "message",						true,	B_OK, },
+		{ "message/rfc822",					false,	B_OK, },
+		{ "multipart",						true,	B_OK, },
+		{ "multipart/mixed",				false,	B_OK, },
+		{ "text",							true,	B_OK, },
+		{ "text/plain",						false,	B_OK, },
+		{ "video",							true,	B_OK, },
+		{ "video/x-msvideo",				false,	B_OK, },
+		{ "unknown",						true,	B_OK, },
+		{ "unknown/mime-type",				false,	B_OK, },
+		{ "$%&./`'~*+#|!^",					false,	B_OK, },
+		// invalid types
+		{ "",								false,	B_BAD_VALUE, },
+		{ "application/",					false,	B_BAD_VALUE, },
+		{ "audio/",							false,	B_BAD_VALUE, },
+		{ "image/",							false,	B_BAD_VALUE, },
+		{ "message/",						false,	B_BAD_VALUE, },
+		{ "multipart/",						false,	B_BAD_VALUE, },
+		{ "text/",							false,	B_BAD_VALUE, },
+		{ "video/",							false,	B_BAD_VALUE, },
+		{ "unknown/",						false,	B_BAD_VALUE, },
+		{ "/gif",							false,	B_BAD_VALUE, },
+		{ "image/very/nice",				false,	B_BAD_VALUE, },
+		{ "tex t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla in",					false,	B_BAD_VALUE, },
+		{ "tex\tt/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla\tin",					false,	B_BAD_VALUE, },
+		{ "tex\nt/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla\nin",					false,	B_BAD_VALUE, },
+		{ "tex<t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla<in",					false,	B_BAD_VALUE, },
+		{ "tex>t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla>in",					false,	B_BAD_VALUE, },
+		{ "tex@t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla@in",					false,	B_BAD_VALUE, },
+		{ "tex,t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla,in",					false,	B_BAD_VALUE, },
+		{ "tex;t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla;in",					false,	B_BAD_VALUE, },
+		{ "tex:t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla:in",					false,	B_BAD_VALUE, },
+		{ "tex\"t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla\"in",					false,	B_BAD_VALUE, },
+		{ "tex(t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla(in",					false,	B_BAD_VALUE, },
+		{ "tex)t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla)in",					false,	B_BAD_VALUE, },
+		{ "tex[t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla[in",					false,	B_BAD_VALUE, },
+		{ "tex]t/pla]in",					false,	B_BAD_VALUE, },
+		{ "tex?t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla?in",					false,	B_BAD_VALUE, },
+		{ "tex=t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla=in",					false,	B_BAD_VALUE, },
+		{ "tex\\t/plain",					false,	B_BAD_VALUE, },
+		{ "text/pla\\in",					false,	B_BAD_VALUE, },
+		// (not) too long types
+		{ notTooLongType,					false,	B_OK, },
+		{ tooLongType,						false,	B_BAD_VALUE, },
+	};
+	int32 testCount = sizeof(tests) / sizeof(mime_type_test);
+	// test loop
+	for (int32 i = 0; i < testCount; i++) {
+		nextSubTest();
+		mime_type_test &test = tests[i];
+		BMimeType type(test.type);
+		CHK(type.InitCheck() == test.error);
+		bool valid = (test.error == B_OK);
+		bool validSuper = (valid && test.super_type);
+		// Type()
+		if (valid)
+			CHK(string(type.Type()) == test.type);
+		else
+			CHK(type.Type() == NULL);
+		// IsValid(), IsSuperTypeOnly()
+		CHK(type.IsValid() == valid);
+		CHK(type.IsSupertypeOnly() == validSuper);
+		CHK(BMimeType::IsValid(test.type) == valid);
+		// GetSupertype()
+		if (valid && !validSuper) {
+			BMimeType super;
+			CHK(type.GetSupertype(&super) == B_OK);
+			CHK(super.InitCheck() == B_OK);
+			CHK(super.Contains(&type) == true);
+			BString typeString(test.type);
+			BString superString(typeString.String(),
+								typeString.FindFirst('/'));
+			CHK(superString == super.Type());
+		} else {
+			BMimeType super;
+			CHK(type.GetSupertype(&super) == B_BAD_VALUE);
+		}
+		// Contains(), ==
+		for (int32 k = 0; k < testCount; k++) {
+			mime_type_test &test2 = tests[k];
+			BMimeType type2(test2.type);
+			CHK(type2.InitCheck() == test2.error);
+			bool valid2 = (test2.error == B_OK);
+			bool validSuper2 = (valid && test2.super_type);
+			bool equal = (!strcmp(test.type, test2.type));
+			// ==
+			if (valid || valid2) {
+				CHK((type == type2) == equal);
+				CHK((type == test2.type) == equal);
+			} else {
+				CHK((type == type2) == false);
+				CHK((type == test2.type) == false);
+			}
+			// Contains()
+			if (valid || valid2) {
+				if (equal)
+					CHK(type.Contains(&type2) == true);
+				else if (validSuper && valid2 && !validSuper2) {
+					BMimeType super2;
+					CHK(type2.GetSupertype(&super2) == B_OK);
+					bool contains = string(super2.Type()) == type.Type();
+					CHK(type.Contains(&type2) == contains);
+				} else
+					CHK(type.Contains(&type2) == false);
+			} else
+				CHK(type.Contains(&type2) == false);
+		}
+	}
+	// bad args
+	nextSubTest();
+	{
+		BMimeType type("image/gif");
+// R5: crashes when passing NULL
+#if !SK_TEST_R5
+		CHK(BMimeType::IsValid(NULL) == false);
+		CHK(type.GetSupertype(NULL) == B_BAD_VALUE);
+		CHK(type.Contains(NULL) == false);
+#endif
+		CHK((type == NULL) == false);
+	}
 }
+
 
 /* Ingo's functions:
 
@@ -1052,14 +1205,14 @@ MimeTypeTest::StringTest()
 +	status_t InitCheck() const;
 
 	// string access
-	const char *Type() const;
-	bool IsValid() const;
-	static bool IsValid(const char *mimeType);
-	bool IsSupertypeOnly() const;
-	status_t GetSupertype(BMimeType *superType) const;
-	bool Contains(const BMimeType *type) const;
-	bool operator==(const BMimeType &type) const;
-	bool operator==(const char *type) const;
++	const char *Type() const;
++	bool IsValid() const;
++	static bool IsValid(const char *mimeType);
++	bool IsSupertypeOnly() const;
++	status_t GetSupertype(BMimeType *superType) const;
++	bool Contains(const BMimeType *type) const;
++	bool operator==(const BMimeType &type) const;
++	bool operator==(const char *type) const;
 
 	// MIME database monitoring
 	static status_t StartWatching(BMessenger target);

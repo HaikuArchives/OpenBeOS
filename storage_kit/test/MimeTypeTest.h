@@ -40,7 +40,6 @@ public:
 	void PreferredAppTest();
 
 	void InitTest();
-	void ValidityTest();
 	void StringTest();
 
 	//------------------------------------------------------------
