@@ -1,3 +1,14 @@
+# Include BuildConfig
+{
+	local buildConfig = [ GLOB $(OBOS_TOP) : BuildConfig ] ;
+	if ! $(buildConfig)
+	{
+		EXIT "No BuildConfig!"
+			 "Run ./configure in the source tree's root directory first!" ;
+	}
+	include $(buildConfig) ;
+}
+
 # Determine if we're building on PPC or x86
 # Determine mimetype of executable
 # Cross compiling can come later
@@ -15,56 +26,8 @@ if $(METROWERKS) {
 	OBOS_TARGET_DIR ?= "x86" ;
 }
 
-
 KERNEL_CCFLAGS ?= "-Wall -Wno-multichar -Wmissing-prototypes -finline -nostdinc" ;
 KERNEL_CCFLAGS += "-fno-builtin -D$(OBOS_TARGET_DEFINE) " ;
-
-# temporary solution to the GCC path issue. Find the one that applies and
-# remove the comments.
-# Basic R5 beos
-GCC_PATH = /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 ;
-
-# Newer BeOS versions might prefer this path
-# GCC_PATH = /boot/develop/tools/gnupro/lib/gcc-lib/i586-pc-beos/2.95.3 ;
-# Linux (on mccall's box anyway)
-#GCC_PATH = /usr/lib/gcc-lib/i486-suse-linux/2.95.3 ;
-
-# This is a proposal for autodetecting the GCC path.
-#
-#if $(GCC_PATH)
-#{
-#	# The user set the path manually. No need for automatic detection.
-#}
-#else if $(OS) = BEOS
-#{
-#	local gccversion = [ Command "gcc --version" ] ;
-#	local gccdir = [ Command 
-#		"ls -d1 /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/$(gccversion) 2> /dev/null"
-#	] ;
-#	if ! $(gccdir[1])
-#	{
-#		EXIT "GCC path not found." ;
-#	}
-#	GCC_PATH = $(gccdir) ;
-#}
-#else if $(UNIX)
-#{
-#	local gccversion = [ Command "gcc --version" ] ;
-#	local gccdir = [ Command 
-#		"ls -d1 /usr/lib/gcc-lib/*/$(gccversion) 2> /dev/null"
-#		"ls -d1 /usr/local/lib/gcc-lib/*/$(gccversion) 2> /dev/null"
-#	] ;
-#	if ! $(gccdir[1])
-#	{
-#		EXIT "GCC path not found." ;
-#	}
-#	GCC_PATH = $(gccdir) ;
-#}
-#else
-#{
-#	EXIT Good joke! Building OBOS under $(OS), eh? ;
-#}
-
 
 AR = ar r ;
 OPTIM = -O2 ;
