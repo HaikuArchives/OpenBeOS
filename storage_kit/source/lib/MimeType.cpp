@@ -212,6 +212,7 @@ BMimeType::GetIcon(BBitmap *icon, icon_size) const
 	return NOT_IMPLEMENTED;
 }
 
+// GetPreferredApp
 //! Fetches the signature of the MIME type's preferred application from the MIME database
 /*! The preferred app is the application that's used to access a file when, for example, the user
 	double-clicks the file in a Tracker window. Unless the file identifies in its attributes a
@@ -251,6 +252,7 @@ BMimeType::GetFileExtensions(BMessage *extensions) const
 	return NOT_IMPLEMENTED;
 }
 
+// GetShortDescription
 //! Fetches the MIME type's short description from the MIME database
 /*! The string pointed to by \c description must be long enough to
 	hold the short description; a length of \c B_MIME_TYPE_LENGTH+1 is
@@ -269,6 +271,7 @@ BMimeType::GetShortDescription(char *description) const
 	return NOT_IMPLEMENTED;
 }
 
+// GetLongDescription
 //! Fetches the MIME type's long description from the MIME database
 /*! The string pointed to by \c description must be long enough to
 	hold the long description; a length of \c B_MIME_TYPE_LENGTH+1 is
@@ -301,6 +304,7 @@ BMimeType::SetIcon(const BBitmap *icon, icon_size)
 	return NOT_IMPLEMENTED;
 }
 
+// SetPreferredApp
 //! Sets the preferred application for the MIME type
 /*! The preferred app is the application that's used to access a file when, for example, the user
 	double-clicks the file in a Tracker window. Unless the file identifies in its attributes a
@@ -340,6 +344,7 @@ BMimeType::SetFileExtensions(const BMessage *extensions)
 	return NOT_IMPLEMENTED;
 }
 
+// SetShortDescription
 //! Sets the short description field for the MIME type
 /*! The string pointed to by \c description must be of
 	length less than or equal to \c B_MIME_TYPE_LENGTH characters.
@@ -358,6 +363,7 @@ BMimeType::SetShortDescription(const char *description)
 	return NOT_IMPLEMENTED;
 }
 
+// SetLongDescription
 //! Sets the long description field for the MIME type
 /*! The string pointed to by \c description must be of
 	length less than or equal to \c B_MIME_TYPE_LENGTH characters.
@@ -416,6 +422,22 @@ BMimeType::IsValid(const char *string)
 }
 
 // GetAppHint
+//! Fetches an \c entry_ref that serves as a hint as to where the MIME type's preferred application might live
+/*! The app hint is a path that identifies the executable that should be used when launching an application
+	that has this signature. For example, when Tracker needs to launch an app of type \c "application/YourAppHere",
+	it asks the database for the application hint. This hint is converted to an \c entry_ref before it is passed
+	to the caller. Of course, the path may not point to an application, or it might point to an application
+	with the wrong signature (and so on); that's why this is merely a hint.
+
+	The \c entry_ref pointed to by \c ref must be pre-allocated.
+
+	\param ref Pointer to a pre-allocated \c entry_ref into which the location of the app hint is copied. If
+	                   the function fails, the contents of the \c entry_ref are undefined.
+	\return
+	- B_OK: Success
+	- B_ENTRY_NOT_FOUND: No app hint exists for the given type
+	- "error code": Failure
+*/
 status_t
 BMimeType::GetAppHint(entry_ref *ref) const
 {
@@ -423,6 +445,23 @@ BMimeType::GetAppHint(entry_ref *ref) const
 }
 
 // SetAppHint
+//! Sets the app hint field for the MIME type
+/*! The app hint is a path that identifies the executable that should be used when launching an application
+	that has this signature. For example, when Tracker needs to launch an app of type \c "application/YourAppHere",
+	it asks the database for the application hint. This hint is converted to an \c entry_ref before it is passed
+	to the caller. Of course, the path may not point to an application, or it might point to an application
+	with the wrong signature (and so on); that's why this is merely a hint.
+
+	The \c entry_ref pointed to by \c ref must be pre-allocated. It must be a valid \c entry_ref (i.e. 
+	<code>entry_ref(-1, -1, "some_file")</code> will trigger an error), but it need not point to an existing file, nor need
+	it actually point to an application. That's not to say that it shouldn't; such an \c entry_ref would
+	render the app hint useless.
+
+	\param ref Pointer to a pre-allocated \c entry_ref containting the location of the new app hint
+	\return
+	- B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::SetAppHint(const entry_ref *ref)
 {
