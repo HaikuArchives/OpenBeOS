@@ -31,6 +31,7 @@ int ifioctl(struct socket *so, int cmd, caddr_t data)
 
 	switch(cmd) {
 		case SIOCGIFFLAGS:
+			/* get interface flags */
 			ifr->ifr_flags = ifp->flags;
 			break;
 		case SIOCGIFMETRIC:
@@ -128,22 +129,6 @@ void *protocol_address(struct ifnet *ifa, int family)
 		}
 	}
 	return NULL;
-}
-
-/*
- * Trim a mask in a sockaddr
- */
-void in_socktrim(struct sockaddr_in *ap)
-{
-	char *cplim = (char *) &ap->sin_addr;
-	char *cp = (char *) (&ap->sin_addr + 1);
-
-	ap->sin_len = 0;
-	while (--cp >= cplim)
-		if (*cp) {
-			(ap)->sin_len = cp - (char *) (ap) + 1;
-			break;
-		}
 }
 
 #define equal(a1, a2) \

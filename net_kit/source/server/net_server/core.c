@@ -480,6 +480,8 @@ void add_protosw(struct protosw *prt[], int layer)
 			prt[p->pr_protocol] = p;
 		if (layer == NET_LAYER1 && p->layer == NET_LAYER2)
 			prt[p->pr_protocol] = p;
+		if (layer == NET_LAYER2 && p->layer == NET_LAYER3)
+			prt[p->pr_protocol] = p;
 	}
 }
 

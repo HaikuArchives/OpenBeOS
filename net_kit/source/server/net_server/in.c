@@ -16,6 +16,22 @@ struct in_ifaddr *get_primary_addr(void)
 	return in_ifaddr;
 }
 
+/*
+ * Trim a mask in a sockaddr
+ */
+void in_socktrim(struct sockaddr_in *ap)
+{
+	char *cplim = (char *) &ap->sin_addr;
+	char *cp = (char *) (&ap->sin_addr + 1);
+
+	ap->sin_len = 0;
+	while (--cp >= cplim)
+		if (*cp) {
+			(ap)->sin_len = cp - (char *) (ap) + 1;
+			break;
+		}
+}
+
 int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
 		int scrub)
 {
@@ -92,7 +108,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 	struct sockaddr_in oldaddr;
 	int error, hostIsNew, maskIsNew;
 	long i;
-	
+
 	if (ifp) /* we need to find the in_ifaddr */
 		for (ia = in_ifaddr;ia; ia = ia->ia_next)
 			if (ia->ia_ifp == ifp)
