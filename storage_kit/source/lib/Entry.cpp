@@ -160,10 +160,16 @@ BEntry::Exists() const {
 
 /*! Gets a stat structure for the Entry */
 status_t
-BEntry::GetStat(struct stat *st) const{
+BEntry::GetStat(struct stat *result) const{
 	if (fCStatus != B_OK)
 		return fCStatus;
-
+		
+	entry_ref ref;
+	status_t status = StorageKit::find_dir(fDir, fName, ref);
+	if (status != B_OK)
+		return status;
+		
+	return StorageKit::get_stat(ref, result);
 };
 
 /*! Reinitializes the BEntry to the path or directory path combination,
