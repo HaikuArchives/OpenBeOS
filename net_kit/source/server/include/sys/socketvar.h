@@ -37,6 +37,7 @@ struct socket {
 	int16 so_linger;	/* dreaded linger value */
 	int16 so_state;		/* socket state */
 	caddr_t so_pcb;		/* pointer to the control block */
+	sem_id so_timeo;         /* our wait channel */
 
 	struct protosw *so_proto; /* pointer to protocol module */
 
@@ -47,7 +48,6 @@ struct socket {
 	int16 so_q0len;
 	int16 so_qlen;
 	int16 so_qlimit;
-	int16 so_timeo;
 	uint16 so_error;
 	pid_t so_pgid;
 	uint32 so_oobmark;
@@ -101,8 +101,9 @@ struct socket {
                 (sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
-#define sorwakeup(so)   { sowakeup((so), &(so)->so_rcv); }
-
+#define sorwakeup(so)   sowakeup((so), &(so)->so_rcv)
+/* we don't handle upcall for sockets */
+#define sowwakeup(so)   sowakeup((so), &(so)->so_snd)
 
 /* Function prototypes */
 int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
@@ -140,5 +141,14 @@ int     soo_ioctl(void *sp, int cmd, caddr_t data);
 int     soclose(void *sp);
 int     sodisconnect(struct socket *);
 void    sofree(struct socket *);
+void    soisconnected (struct socket *so);
+void    soisconnecting (struct socket *so);
+void    soisdisconnected (struct socket *so);
+void    soisdisconnecting (struct socket *so);
+void    soqinsque (struct socket *head, struct socket *so, int q);
+int     soqremque (struct socket *so, int q);
+
+int     nsleep(sem_id chan, char *msg, int timeo);
+void    wakeup(sem_id chan);
 
 #endif /* SYS_SOCKETVAR_H */
