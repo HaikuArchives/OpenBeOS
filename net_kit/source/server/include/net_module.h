@@ -3,6 +3,9 @@
  * net_server
  */
 
+#ifndef OBOS_NET_MODULE_H
+#define OBOS_NET_MODULE_H
+
 #include <kernel/OS.h>
 #include <image.h>
 
@@ -12,24 +15,22 @@
 #include "net/if.h"
 #include "net/route.h"
 
-#ifndef OBOS_NET_MODULE_H
-#define OBOS_NET_MODULE_H
-
 #ifdef _KERNEL_MODE
 #include <module.h>
-#endif
 
-typedef struct loaded_net_module 	loaded_net_module;
+#endif
 
 struct device_info {
 	char *name;
-	int (*init)(void);
+	int (*init)(struct core_module_info *);
 };
 
 struct protocol_info {
 	char *name;
-	void (*init)(void);
+	void (*init)(struct core_module_info *);
 };
+
+typedef struct loaded_net_module   loaded_net_module;
 
 /* each net_module MUST define exactly ONE of these, completely 
  * filled in, and it MUST be called net_module_data
@@ -53,11 +54,12 @@ typedef struct net_module {
 } net_module;
 
 #ifndef _KERNEL_MODE
+
 struct loaded_net_module {
 	struct loaded_net_module *next;
-        struct net_module *mod;
-        image_id iid;
-        int32 ref_count;
+	struct net_module *mod;
+	image_id iid;
+	int32 ref_count;
 };
 
 #else
@@ -77,12 +79,6 @@ enum {
 	NET_LAYER3,	/* transport layer */
 	NET_LAYER4	/* socket layer */
 };
-
-
-struct protosw *pffindproto(int domain, int protocol, int type);
-struct protosw *pffindtype(int domain, int type);
-void add_protosw(struct protosw *[], int layer);
-struct in_ifaddr *get_primary_addr(void);
 
 #endif /* OBOS_NET_MODULE_H */
 
