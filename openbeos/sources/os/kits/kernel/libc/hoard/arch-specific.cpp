@@ -35,28 +35,33 @@ extern "C" {
 #include <syscalls.h>
 #include <atomic.h>
 
+sem_id create_sem(int count, const char *name);
+int    delete_sem(sem_id id);
+int    acquire_sem(sem_id id);
+int    release_sem(sem_id id);
+
 int hoardGetThreadID (void)
 {
-  return sys_get_current_thread_id();
+  return kern_get_current_thread_id();
 }
 
 
 void hoardLockInit (hoardLockType &lock)
 {
  	lock.ben = 0;
-	lock.sem = sys_sem_create(1, "a hoard lock");
+	lock.sem = create_sem(1, "a hoard lock");
 }
 
 
 void hoardLock (hoardLockType &lock)
 {
-  if((atomic_add(&(lock.ben), 1)) >= 1) sys_sem_acquire(lock.sem, 1);
+  if((atomic_add(&(lock.ben), 1)) >= 1) acquire_sem(lock.sem);
 }
 
 
 void hoardUnlock (hoardLockType &lock)
 {
-  if((atomic_add(&(lock.ben), -1)) > 1) sys_sem_release(lock.sem, 1);
+  if((atomic_add(&(lock.ben), -1)) > 1) release_sem(lock.sem);
 }
 
 int hoardGetPageSize (void)
