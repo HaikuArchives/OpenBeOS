@@ -14,7 +14,6 @@
 
 uint32 sb_max = SB_MAX; /* hard value, recompile needed to alter :( */
 
-
 /*
  * Allot mbufs to a sockbuf.
  * Attempt to scale mbmax so that mbcnt doesn't become limiting
@@ -252,5 +251,40 @@ int sbwait(struct sockbuf *sb)
 	if (sb->sb_pop > 0)
 		rv = acquire_sem(sb->sb_pop);
 	return (int)rv;
+}
+
+void sbinsertoob(struct sockbuf *sb, struct mbuf *m0)
+{
+struct mbuf *m;
+struct mbuf **mp;
+
+        if (m0 == NULL)
+		return;
+	for (mp = &sb->sb_mb; (m = *mp) != NULL; mp = &((*mp)->m_nextpkt)) {
+again:
+		switch (m->m_type) {
+			case MT_OOBDATA:
+				continue;  /* WANT next train */
+			case MT_CONTROL:
+				if ((m = m->m_next) != NULL)
+					goto again; /* inspect THIS 
+					             * train further */
+		}
+		break;
+	}
+	/*
+	 * Put the first mbuf on the queue.
+	 * Note this permits zero length records.
+	 */
+	sballoc(sb, m0);
+	m0->m_nextpkt = *mp;
+	*mp = m0;
+	m = m0->m_next;
+	m0->m_next = 0;
+	if (m && (m0->m_flags & M_EOR)) {
+		m0->m_flags &= ~M_EOR;
+		m->m_flags |= M_EOR;
+	}
+	sbcompress(sb, m, m0);
 }
 

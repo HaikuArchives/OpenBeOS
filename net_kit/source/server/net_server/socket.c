@@ -141,9 +141,11 @@ int socreate(int dom, void *sp, int type, int proto)
 	so->so_type = type;
 	so->so_proto = prm;
 	so->so_rcv.sb_pop = create_sem(0, "so_rcv sem");
+	so->so_timeo      = create_sem(0, "so_timeo");
 
 #ifdef _KERNEL_MODE
 	set_sem_owner(so->so_rcv.sb_pop, B_SYSTEM_TEAM);
+	set_sem_owner(so->so_timeo, B_SYSTEM_TEAM);
 #endif
 
 	error = prm->pr_userreq(so, PRU_ATTACH, NULL, (struct mbuf *)proto, NULL);
@@ -764,6 +766,9 @@ void sofree(struct socket *so)
 	}
 
 	if (so->so_head) {
+		if (!soqremque(so, 0) && ! soqremque(so, 1)) {
+			printf("sofree: Couldn't remove the queues!\n");
+		}
 		/* we need to handle this! */
 		so->so_head = NULL;
 	}
@@ -783,4 +788,124 @@ void sowakeup(struct socket *so, struct sockbuf *sb)
 		release_sem(sb->sb_pop);
 	}
 }	
+
+void soqinsque(struct socket *head, struct socket *so, int q)
+{
+	struct socket **prev;
+	so->so_head = head;
+	if (q == 0) {
+		head->so_q0len++;
+		so->so_q0 = 0;
+		for (prev = &(head->so_q0); *prev; )
+			prev = &((*prev)->so_q0);
+	} else {
+		head->so_qlen++;
+		so->so_q = NULL;
+		for (prev = &(head->so_q); *prev; )
+			prev = &((*prev)->so_q);
+	}
+	*prev = so;
+}
+
+int soqremque(struct socket *so, int q)
+{
+	struct socket *head, *prev, *next;
+
+	head = so->so_head;
+	prev = head;
+	for (;;) {
+		next = q ? prev->so_q : prev->so_q0;
+		if (next == so)
+			break;
+		if (next == NULL)
+			return 0;
+		prev = next;
+	}
+	if (q == 0) {
+		prev->so_q0 = next->so_q0;
+		head->so_q0len--;
+	} else {
+		prev->so_q = next->so_q;
+		head->so_qlen--;
+	}
+	next->so_q0 = next->so_q = 0;
+	next->so_head = 0;
+	return 1;
+}
+
+void socantsendmore(struct socket *so)
+{
+	so->so_state |= SS_CANTSENDMORE;
+	sowwakeup(so);
+}
+
+void socantrcvmore(struct socket *so)
+{
+	so->so_state |= SS_CANTRCVMORE;
+	sorwakeup(so);
+}
+
+void soisconnecting(struct socket *so)
+{
+	so->so_state &= ~(SS_ISCONNECTED|SS_ISDISCONNECTING);
+	so->so_state |= SS_ISCONNECTING;
+}
+
+void soisconnected(struct socket *so)
+{
+	struct socket *head = so->so_head;
+
+	so->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING);
+	so->so_state |= SS_ISCONNECTED;
+	if (head && soqremque(so, 0)) {
+		soqinsque(head, so, 1);
+		sorwakeup(head);
+		wakeup(head->so_timeo);
+	} else {
+		wakeup(so->so_timeo);
+		sorwakeup(so);
+		sowwakeup(so);
+	}
+}
+
+void soisdisconnected(struct socket *so)
+{
+	so->so_state &= ~(SS_ISCONNECTING|SS_ISCONNECTED|SS_ISDISCONNECTING);
+	so->so_state |= (SS_CANTRCVMORE|SS_CANTSENDMORE|SS_ISDISCONNECTED);
+	wakeup(so->so_timeo);
+	sowwakeup(so);
+	sorwakeup(so);
+}
+
+int nsleep(sem_id chan, char *msg, int timeo)
+{
+	status_t rv;
+#ifdef _KERNEL_MODE
+	struct thread_rec str;
+#endif
+
+	printf("nsleep: %s\n", msg);
+
+	if (timeo > 0)
+		rv = acquire_sem_etc(chan, 1, B_TIMEOUT|B_CAN_INTERRUPT, timeo);
+	else
+		rv = acquire_sem_etc(chan, 1, B_CAN_INTERRUPT, 0);
+
+	if (rv == B_TIMED_OUT)
+		return EWOULDBLOCK;
+#ifdef _KERNEL_MODE
+	if (has_sigal_pending(&str) == 0)
+		return 0;
+	/* we should check the signal mask here... */
+#endif
+	return EINTR;
+}
+
+void wakeup(sem_id chan)
+{
+	/* we should release as many as are waiting...
+	 * the number 100 is just something that shuld be large enough...
+	 */
+	release_sem_etc(chan, 100, B_DO_NOT_RESCHEDULE);
+}
 
