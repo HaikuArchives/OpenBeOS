@@ -836,7 +836,7 @@ bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, s
  */
 
 static int
-bfs_close(void * _ns, void * _node, void * /*cookie*/)
+bfs_close(void *_ns, void *_node, void * /*cookie*/)
 {
 	FUNCTION();
 	
@@ -844,13 +844,19 @@ bfs_close(void * _ns, void * _node, void * /*cookie*/)
 		return B_BAD_VALUE;
 
 	// trim the preallocated blocks here
+	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
-	status_t status = inode->Trim();
+	Transaction transaction(volume,inode->BlockNumber());
+
+	status_t status = inode->Trim(&transaction);
 	if (status < B_OK)
 		FATAL(("Could not trim preallocated blocks!"));
 
 	// ToDo: update indices (size & co.)
+
+	if (status == B_OK)
+		transaction.Done();
 
 	return B_OK;
 }

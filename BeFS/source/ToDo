@@ -1,4 +1,4 @@
-BFS - ToDo, April 10th, 2002
+BFS - ToDo, April 18th, 2002
 -----
 
 BlockAllocator
@@ -13,7 +13,8 @@ BlockAllocator
 DataStream
 
  - growing/shrinking the stream size is not implemented for the double indirect range
- - if something fails, the stream is not trimmed back
+ - only files are trimmed back (in bfs_close()), but every inode has a preallocated stream...
+
 
 Queries
 
@@ -32,6 +33,7 @@ BPlusTree
 
  - BPlusTree::Remove() could trigger CachedNode::Free() to go through the free nodes list and free all pages at the end of the data stream
  - inserting/removing duplicates is not yet implemented
+
 
 Indices
 

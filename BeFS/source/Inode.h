@@ -174,7 +174,7 @@ class Inode : public CachedBlock {
 
 		status_t SetFileSize(Transaction *transaction,off_t size);
 		status_t Append(Transaction *transaction,off_t bytes);
-		status_t Trim();
+		status_t Trim(Transaction *transaction);
 
 		// create/remove inodes
 		status_t Remove(Transaction *transaction,const char *name, bool isDirectory = false);

@@ -1078,13 +1078,21 @@ Inode::SetFileSize(Transaction *transaction, off_t size)
 	if (size < 0)
 		return B_BAD_VALUE;
 
-	if (size == Node()->data.size)
+	off_t oldSize = Node()->data.size;
+
+	if (size == oldSize)
 		return B_OK;
 
 	// should the data stream grow or shrink?
 	status_t status;
-	if (size > Node()->data.size)
+	if (size > oldSize) {
 		status = GrowStream(transaction,size);
+		if (status < B_OK) {
+			// if the growing of the stream fails, the whole operation
+			// fails, so we should shrink the stream to its former size
+			ShrinkStream(transaction,oldSize);
+		}
+	}
 	else
 		status = ShrinkStream(transaction,size);
 
@@ -1103,10 +1111,9 @@ Inode::Append(Transaction *transaction,off_t bytes)
 
 
 status_t 
-Inode::Trim()
+Inode::Trim(Transaction *transaction)
 {
-	// ToDo: implement me! -> have to do ShrinkStream() first...
-	return B_OK;
+	return ShrinkStream(transaction,Size());
 }
 
 
