@@ -19,16 +19,9 @@
 	const uint32 MENU_COLOR_DEFAULT		= 'mcod';
 	
 //font
-	const uint32 FONT_MSG 				= 'foms';
-	const uint32 FONT_SIZE_MSG 			= 'fosi';
-	const uint32 FONT_SIZE_NINE			= 'fsi9';
-	const uint32 FONT_SIZE_TEN			= 'fs10';
-	const uint32 FONT_SIZE_ELEVEN		= 'fs11';
-	const uint32 FONT_SIZE_TWELVE		= 'fs12';
-	const uint32 FONT_SIZE_FOURTEEN		= 'fs14';
-	const uint32 FONT_SIZE_EIGHTEEN		= 'fs18';
+	const uint32 MENU_FONT_FAMILY		= 'mffm';
+	const uint32 MENU_FONT_STYLE		= 'mfst';
+	const uint32 MENU_FONT_SIZE			= 'mfsz';
 	
 //seperator	
-	const uint32 SEP_ZERO 				= 'sep0';
-	const uint32 SEP_ONE 				= 'sep1';
-	const uint32 SEP_TWO 				= 'sep2';
+	const uint32 MENU_SEP_TYPE			= 'mstp';
