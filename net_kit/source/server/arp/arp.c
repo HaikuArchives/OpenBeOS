@@ -18,6 +18,17 @@
 #include "ethernet/ethernet.h"
 #include "netinet/in_var.h"
 
+
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#include "net_server/core_module.h"
+#include "arp_module.h"
+
+struct core_module_info *core = NULL;
+struct timer clean_timer;
+
+#endif
+
 loaded_net_module *global_modules;
 int *prot_table;
 
@@ -41,8 +52,13 @@ static int arp_maxtries = 5;    /* max tries before a pause */
 static int32 arp_inuse = 0;	/* how many entries do we have? */
 static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 
-static net_timer_id arpq_timer;
+#ifndef _KERNEL_MODE
 extern struct in_ifaddr *primary_addr;
+static net_timer_id arpq_timer;
+#else
+static struct in_ifaddr *primary_addr;
+static timer arpq_timer;
+#endif
 
 #if ARP_DEBUG
 void walk_arp_cache(void)
@@ -262,14 +278,24 @@ int arp_input(struct mbuf *buf, int hdrlen)
 
 
 out:
+#ifndef _KERNEL_MODE
 	m_freem(buf);
+#else
+	core->m_freem(buf);
+#endif
+
 	return 0;
 }
 
 #define satosin(sa)     ((struct sockaddr_in *)(sa))
 static void arp_send_request(arp_q_entry *aqe)
 {
+#ifndef _KERNEL_MODE
 	struct mbuf *buf = m_gethdr(MT_DATA);
+#else
+	struct mbuf *buf = core->m_gethdr(MT_DATA);
+#endif
+
 	struct ethernetarp *arppkt = mtod(buf, struct ethernetarp *);
 	struct sockaddr_in *sin = (struct sockaddr_in*)&aqe->tgt;
 
@@ -282,7 +308,11 @@ static void arp_send_request(arp_q_entry *aqe)
 		return;
 
 	if (sin->sin_family != AF_INET) {
+#ifndef _KERNEL_MODE
 		m_freem(buf);
+#else
+		core->m_freem(buf);
+#endif
 		return;
 	}
 
@@ -322,10 +352,15 @@ static void arp_send_request(arp_q_entry *aqe)
 	IFQ_ENQUEUE(aqe->rt->rt_ifp->txq, buf);
 }
 
+#ifndef _KERNEL_MODE
 static void arp_cleanse(void *data)
+#else
+static int32 arp_cleanse(struct timer *t)
+#endif
 {
 	arp_cache_entry *ace = arpcache;
 	arp_cache_entry *temp;
+printf("arp_cleanse!!\n");
 
 	acquire_sem(arpc_lock);
 	while (ace) {
@@ -364,7 +399,11 @@ static void arp_cleanse(void *data)
 #endif
 }
 
+#ifndef _KERNEL_MODE
 static void arpq_run(void *data)
+#else
+static int32 arpq_run(struct timer *t)
+#endif
 {
 	arp_q_entry *aqe = arp_lookup_q;
 	arp_q_entry *temp;
@@ -404,7 +443,11 @@ static void arpq_run(void *data)
 	}
 
 	if (!arp_lookup_q)
+#ifndef _KERNEL_MODE
 		net_remove_timer(arpq_timer);
+#else
+		cancel_timer(&arpq_timer);
+#endif
 
 	release_sem(arpq_lock);
 
@@ -413,10 +456,25 @@ static void arpq_run(void *data)
 #endif
 }
 
+#ifndef _KERNEL_MODE
 int arp_init(loaded_net_module *ln, int *pt)
+#else
+int arp_init(void)
+#endif
 {
+#ifndef _KERNEL_MODE
 	global_modules = ln;
 	prot_table = pt;
+#else
+	int rv;
+dprintf("arp_init!\n");
+
+	if (!core)
+		get_module(CORE_MODULE_PATH, (module_info**)&core);
+
+	primary_addr = core->get_primary_addr();
+dprintf("primary_addr = %p\n", primary_addr);
+#endif
 
 	if (!arphash)
 		arphash = nhash_make();
@@ -433,13 +491,30 @@ int arp_init(loaded_net_module *ln, int *pt)
 	arpq_lock = create_sem(1, "arp_q_lock");
 	arpc_lock = create_sem(1, "arp cache lock");
 
+#ifdef _KERNEL_MODE
+	set_sem_owner(arpq_lock, B_SYSTEM_TEAM);
+	set_sem_owner(arpc_lock, B_SYSTEM_TEAM);
+
+	rv = add_timer(&clean_timer, arp_cleanse, 
+			arp_prune * USECS_PER_SEC,
+			B_PERIODIC_TIMER);
+
+	if (rv != B_OK) {
+		dprintf("arp_init: add_timer failed %d [%s]\n",
+			rv, strerror(rv));
+	} 
+
+dprintf("I've added a timer to run every %d seconds...\n", arp_prune);
+#else
 	/* now, start the cleanser... */
 	net_add_timer(&arp_cleanse, NULL, arp_prune * USECS_PER_SEC);
+#endif
 
 	return 0;
 }
 
-static int arp_resolve(struct mbuf *buf, struct rtentry *rt, struct sockaddr *tgt, 
+static int arp_resolve(struct mbuf *buf, struct rtentry *rt, 
+		       struct sockaddr *tgt, 
 		       void *dptr, void (*callback)(int, struct mbuf *))
 {
 	arp_cache_entry *ace = NULL;
@@ -492,10 +567,17 @@ static int arp_resolve(struct mbuf *buf, struct rtentry *rt, struct sockaddr *tg
 		arp_send_request(aqe);
 	}
 
+#ifndef _KERNEL_MODE
 	arpq_timer = net_add_timer(&arpq_run, NULL, arp_noflood * USECS_PER_SEC);
-
+#else
+	add_timer(&arpq_timer, arpq_run, arp_noflood * USECS_PER_SEC, 
+		B_PERIODIC_TIMER);
+#endif
+ 
 	return ARP_LOOKUP_QUEUED;
 }
+
+#ifndef _KERNEL_MODE
 
 net_module net_module_data = {
 	"ARP module",
@@ -513,3 +595,36 @@ net_module net_module_data = {
 	NULL
 };
 
+#else /* kernel stuff */
+
+static status_t arp_ops(int32 op, ...)
+{
+	switch(op) {
+		case B_MODULE_INIT:
+			return arp_init();
+		case B_MODULE_UNINIT:
+			/* write a close function... */
+			break;
+		default:
+			return B_ERROR;
+	}
+	return B_OK;
+}
+
+static struct arp_module_info my_module = {
+	{
+		ARP_MODULE_PATH,
+		B_KEEP_LOADED,
+		arp_ops
+	},
+
+	arp_input,
+	arp_resolve
+};
+
+_EXPORT module_info *modules[] = {
+	(module_info *)&my_module,
+	NULL
+};
+
+#endif /* _KERNEL_MODE */
