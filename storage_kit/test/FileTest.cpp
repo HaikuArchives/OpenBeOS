@@ -7,75 +7,41 @@
 #include "Test.StorageKit.h"	// For "shell" global variable
 #include "FileTest.h"
 
-// FileTestCaller
-//
-// a TestCaller that cleans up after the test is finished
-
-template <typename Fixture,
-		  typename ExpectedException = class CppUnit::NoExceptionExpected>
-struct FileTestCaller
-	: public CppUnit::TestCaller<Fixture, ExpectedException> {
-	FileTestCaller(std::string name, TestMethod test)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test) {}
-	FileTestCaller(std::string name, TestMethod test, Fixture& fixture)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test,
-														  fixture) {}
-	FileTestCaller(std::string name, TestMethod test, Fixture* fixture)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test,
-														  fixture) {}
-
-	void setUp()
-	{
-		FileTest::execCommand("touch ", FileTest::existingFilename);
-	}
-
-	void tearDown ()
-	{
-		// cleanup
-		for (int32 i = 0;
-			 i < sizeof(FileTest::allFilenames) / sizeof(const char*);
-			 i++) {
-			FileTest::execCommand("rm -f ", FileTest::allFilenames[i]);
-		}
-		if (shell.BeVerbose()) {
-			printf("\n");
-		}
-	}
-};
-
-
-
-// FileTest
-
-// constructor
-FileTest::FileTest()
-	: CppUnit::TestCase(),
-	  subTestNumber(0)
-{
-}
-
 // Suite
 FileTest::Test*
 FileTest::Suite()
 {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
+	typedef CppUnit::TestCaller<FileTest> TC;
 	
-	suite->addTest( new FileTestCaller<FileTest>("BFile::Init Test 1", &FileTest::InitTest1) );
-	suite->addTest( new FileTestCaller<FileTest>("BFile::Init Test 2", &FileTest::InitTest2) );
-	suite->addTest( new FileTestCaller<FileTest>("BFile::IsRead-/IsWriteable Test", &FileTest::RWAbleTest) );
-	suite->addTest( new FileTestCaller<FileTest>("BFile::Read/Write Test", &FileTest::RWTest) );
-	suite->addTest( new FileTestCaller<FileTest>("BFile::Position Test", &FileTest::PositionTest) );
-	suite->addTest( new FileTestCaller<FileTest>("BFile::Size Test", &FileTest::SizeTest) );
-	suite->addTest( new FileTestCaller<FileTest>("BFile::Assignment Test", &FileTest::AssignmentTest) );
+	suite->addTest( new TC("BFile::Init Test 1", &FileTest::InitTest1) );
+	suite->addTest( new TC("BFile::Init Test 2", &FileTest::InitTest2) );
+	suite->addTest( new TC("BFile::IsRead-/IsWriteable Test",
+						   &FileTest::RWAbleTest) );
+	suite->addTest( new TC("BFile::Read/Write Test", &FileTest::RWTest) );
+	suite->addTest( new TC("BFile::Position Test", &FileTest::PositionTest) );
+	suite->addTest( new TC("BFile::Size Test", &FileTest::SizeTest) );
+	suite->addTest( new TC("BFile::Assignment Test",
+						   &FileTest::AssignmentTest) );
 	
 	return suite;
 }		
 
 // setUp
-void FileTest::setUp() {}
+void FileTest::setUp()
+{
+	BasicTest::setUp();
+	execCommand(string("touch ") + existingFilename);
+}
 
 // tearDown
-void FileTest::tearDown()	{}
+void FileTest::tearDown()
+{
+	BasicTest::tearDown();
+	// cleanup
+	for (int32 i = 0; i < allFilenameCount; i++)
+		execCommand(string("rm -rf ") + allFilenames[i]);
+}
 
 // InitTest1
 void
@@ -108,7 +74,7 @@ FileTest::InitTest1()
 		{
 			CPPUNIT_ASSERT( file.InitCheck() == tc.initCheck );
 			if (tc.removeAfterTest)
-				execCommand("rm ", tc.filename);
+				execCommand(string("rm ") + tc.filename);
 		}
 	};
 
@@ -200,7 +166,7 @@ FileTest::InitTest2()
 			file.Unset();
 			CPPUNIT_ASSERT( file.InitCheck() == B_NO_INIT );
 			if (tc.removeAfterTest)
-				execCommand("rm ", tc.filename);
+				execCommand(string("rm ") + tc.filename);
 		}
 	};
 
@@ -369,7 +335,7 @@ FileTest::RWTest()
 	for (int32 i = 0; i < 256; i++)
 		CPPUNIT_ASSERT( readBuffer[i] == (char)i );
 	file.Unset();
-	execCommand("rm -f ", testFilename1);
+	execCommand(string("rm -f ") + testFilename1);
 	// same procedure, just using ReadAt()/WriteAt()
 	nextSubTest();
 	file.SetTo(testFilename1, B_WRITE_ONLY | B_CREATE_FILE | B_ERASE_FILE);
@@ -394,7 +360,7 @@ FileTest::RWTest()
 	for (int32 i = 0; i < 256; i++)
 		CPPUNIT_ASSERT( readBuffer[i] == (char)i );
 	file.Unset();
-	execCommand("rm -f ", testFilename1);
+	execCommand(string("rm -f ") + testFilename1);
 	// write past the end of a file
 	nextSubTest();
 	file.SetTo(testFilename1, B_WRITE_ONLY | B_CREATE_FILE | B_ERASE_FILE);
@@ -463,7 +429,7 @@ FileTest::RWTest()
 		CPPUNIT_ASSERT( readBuffer[i] == 42 );
 	file.Unset();
 
-	execCommand("rm -f ", testFilename1);
+	execCommand(string("rm -f ") + testFilename1);
 }
 
 // PositionTest
@@ -510,7 +476,7 @@ FileTest::PositionTest()
 	CPPUNIT_ASSERT( file.Position() == 166 );			// fails with R5
 */
 	file.Unset();
-	execCommand("rm -f ", testFilename1);
+	execCommand(string("rm -f ") + testFilename1);
 }
 
 // SizeTest
@@ -583,7 +549,7 @@ FileTest::SizeTest()
 	CPPUNIT_ASSERT( file.GetSize(&size) == B_OK );
 	CPPUNIT_ASSERT( size == 0 );
 	file.Unset();
-	execCommand("rm -f ", testFilename1);
+	execCommand(string("rm -f ") + testFilename1);
 }
 
 // AssignmentTest
@@ -683,29 +649,6 @@ FileTest::AssignmentTest()
 	}
 }
 
-// nextSubTest
-void
-FileTest::nextSubTest()
-{
-	if (shell.BeVerbose()) 
-		printf("[%ld]", subTestNumber++);
-}
-
-// Calls system() with the concatenated string of command and parameter.
-// Probably one of the exec*() functions serves the same purpose, but
-// I don't have the reference at hand.
-// execCommand
-void
-FileTest::execCommand(const char *command, const char *parameter)
-{
-	if (command && parameter) {
-		char *cmdLine = new char[strlen(command) + strlen(parameter) + 1];
-		strcpy(cmdLine, command);
-		strcat(cmdLine, parameter);
-		system(cmdLine);
-		delete[] cmdLine;
-	}
-}
 
 
 // some filenames to be used in tests
@@ -717,6 +660,8 @@ const char *FileTest::allFilenames[]		=  {
 	FileTest::nonExistingFilename,
 	FileTest::testFilename1,
 };
+const int32 FileTest::allFilenameCount
+	= sizeof(allFilenames) / sizeof(const char*);
 
 // test cases for the init tests
 const FileTest::InitTestCase FileTest::initTestCases[] = {

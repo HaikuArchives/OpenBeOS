@@ -11,27 +11,23 @@
 #include <Path.h>
 #include "Test.StorageKit.h"
 
-// first parameter is equal to the second or third
-template<typename A, typename B, typename C>
-inline
-bool
-equals(const A &a, const B &b, const C &c)
-{
-	return (a == b || a == c);
-}
-
+// Suite
 CppUnit::Test*
 PathTest::Suite() {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
+	typedef CppUnit::TestCaller<PathTest> TC;
 		
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Init Test1", &PathTest::InitTest1) );
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Init Test2", &PathTest::InitTest2) );
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Append Test", &PathTest::AppendTest) );
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Leaf Test", &PathTest::LeafTest) );
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Parent Test", &PathTest::ParentTest) );
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Comparison Test", &PathTest::ComparisonTest) );
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Assignment Test", &PathTest::AssignmentTest) );
-	suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Flattenable Test", &PathTest::FlattenableTest) );
+	suite->addTest( new TC("BPath::Init Test1", &PathTest::InitTest1) );
+	suite->addTest( new TC("BPath::Init Test2", &PathTest::InitTest2) );
+	suite->addTest( new TC("BPath::Append Test", &PathTest::AppendTest) );
+	suite->addTest( new TC("BPath::Leaf Test", &PathTest::LeafTest) );
+	suite->addTest( new TC("BPath::Parent Test", &PathTest::ParentTest) );
+	suite->addTest( new TC("BPath::Comparison Test",
+						   &PathTest::ComparisonTest) );
+	suite->addTest( new TC("BPath::Assignment Test",
+						   &PathTest::AssignmentTest) );
+	suite->addTest( new TC("BPath::Flattenable Test",
+						   &PathTest::FlattenableTest) );
 		
 	return suite;
 }		
@@ -40,20 +36,14 @@ PathTest::Suite() {
 void
 PathTest::setUp()
 {
-	fValidCWD = getcwd(fCurrentWorkingDir, B_PATH_NAME_LENGTH);
-	fSubTestNumber = 0;
+	BasicTest::setUp();
 }
 	
 // This function called after *each* test added in Suite()
 void
 PathTest::tearDown()
 {
-	if (shell.BeVerbose())
-		printf("\n");
-	if (fValidCWD)
-		chdir(fCurrentWorkingDir);
-	else
-		chdir("/");
+	BasicTest::tearDown();
 }
 
 // InitTest1
@@ -1375,15 +1365,5 @@ PathTest::FlattenableTest()
 //					== B_BAD_VALUE );
 	path.Unset();
 	
-}
-
-
-	
-// nextSubTest
-void
-PathTest::nextSubTest()
-{
-	if (shell.BeVerbose())
-		printf("[%ld]", fSubTestNumber++);
 }
 

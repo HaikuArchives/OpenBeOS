@@ -3,14 +3,15 @@
 #ifndef __sk_path_test_h__
 #define __sk_path_test_h__
 
-#include <cppunit/TestCase.h>
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
 
 #include <StorageDefs.h>
 #include <SupportDefs.h>
 
-class PathTest : public CppUnit::TestCase
+#include "BasicTest.h"
+
+class PathTest : public BasicTest
 {
 public:
 	static CppUnit::Test* Suite();
@@ -32,14 +33,6 @@ public:
 	void ComparisonTest();
 	void AssignmentTest();
 	void FlattenableTest();
-	
-	// helper functions
-
-	void nextSubTest();
-
-	int32 fSubTestNumber;
-	char fCurrentWorkingDir[B_PATH_NAME_LENGTH];
-	bool fValidCWD;
 };
 
 

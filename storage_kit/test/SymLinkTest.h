@@ -5,15 +5,14 @@
 
 #include <SupportDefs.h>
 
-#include <cppunit/TestCase.h>
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
 
-class SymLinkTest : public CppUnit::TestCase
+#include "BasicTest.h"
+
+class SymLinkTest : public BasicTest
 {
 public:
-	SymLinkTest();
-
 	static Test* Suite();
 
 	// This function called before *each* test added in Suite()
@@ -37,15 +36,6 @@ public:
 	void AssignmentTest();
 
 
-	// helper functions
-
-	void nextSubTest();
-
-	static void execCommand(const char *command, const char *parameter);
-	static void execCommand(const char *command, const char *parameter1,
-							const char *parameter2);
-	
-			int32				subTestNumber;
 	static	const char *		existingFilename;
 	static	const char *		existingSuperFilename;
 	static	const char *		existingRelFilename;
@@ -76,6 +66,7 @@ public:
 	static	const char *		cyclicLinkname1;
 	static	const char *		cyclicLinkname2;
 	static	const char *		allFilenames[];
+	static	const int32 		allFilenameCount;
 };
 
 #endif	// __sk_sym_link_test_h__

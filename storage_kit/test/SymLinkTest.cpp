@@ -1,6 +1,5 @@
 // SymLinkTest.cpp
 
-#include <set>
 #include <errno.h>
 #include <stdio.h>
 #include <string>
@@ -16,195 +15,52 @@
 #include "Test.StorageKit.h"
 #include "SymLinkTest.h"
 
-// == for struct stat
-bool
-operator==(const struct stat &st1, const struct stat &st2)
-{
-	return (
-		st1.st_dev == st2.st_dev
-		&& st1.st_ino == st2.st_ino
-		&& st1.st_mode == st2.st_mode
-		&& st1.st_nlink == st2.st_nlink
-		&& st1.st_uid == st2.st_uid
-		&& st1.st_gid == st2.st_gid
-		&& st1.st_size == st2.st_size
-		&& st1.st_blksize == st2.st_blksize
-		&& st1.st_atime == st2.st_atime
-		&& st1.st_mtime == st2.st_mtime
-		&& st1.st_ctime == st2.st_ctime
-		&& st1.st_crtime == st2.st_crtime
-	);
-}
-
-// first parameter is equal to the second or third
-template<typename A, typename B, typename C>
-inline
-bool
-equals(const A &a, const B &b, const C &c)
-{
-	return (a == b || a == c);
-}
-
-// A little helper class for tests, that works like a set of strings, that
-// are marked tested or untested.
-class TestSet {
-public:
-	typedef set<string> nameset;
-
-public:
-	TestSet()
-	{
-	}
-
-	void add(string name)
-	{
-		if (fTestedNames.find(name) == fTestedNames.end())
-			fUntestedNames.insert(name);
-	}
-
-	void remove(string name)
-	{
-		if (fUntestedNames.find(name) != fUntestedNames.end())
-			fUntestedNames.erase(name);
-		else if (fTestedNames.find(name) != fTestedNames.end())
-			fTestedNames.erase(name);
-	}
-
-	void clear(string name)
-	{
-		fUntestedNames.clear();
-		fTestedNames.clear();
-	}
-
-	void rewind()
-	{
-		fUntestedNames.insert(fTestedNames.begin(), fTestedNames.end());
-		fTestedNames.clear();
-	}
-
-	bool test(string name, bool dump = true)
-	{
-		bool result = (fUntestedNames.find(name) != fUntestedNames.end());
-		if (result) {
-			fUntestedNames.erase(name);
-			fTestedNames.insert(name);
-		} else if (dump) {
-			// dump untested
-			printf("TestSet::test(`%s')\n", name.c_str());
-			printf("untested:\n");
-			for (nameset::iterator it = fUntestedNames.begin();
-				 it != fUntestedNames.end();
-				 ++it) {
-				printf("  `%s'\n", it->c_str());
-			}
-		}
-		return result;
-	}
-
-	bool testDone()
-	{
-		return (fUntestedNames.empty());
-	}
-
-private:
-	nameset	fUntestedNames;
-	nameset	fTestedNames;
-};
-
-
-// SymLinkTestCaller
-//
-// a TestCaller that cleans up after the test is finished
-
-template <typename Fixture,
-		  typename ExpectedException = class CppUnit::NoExceptionExpected>
-struct SymLinkTestCaller
-	: public CppUnit::TestCaller<Fixture, ExpectedException> {
-	SymLinkTestCaller(std::string name, TestMethod test)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test) {}
-	SymLinkTestCaller(std::string name, TestMethod test, Fixture& fixture)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test,
-														  fixture) {}
-	SymLinkTestCaller(std::string name, TestMethod test, Fixture* fixture)
-		: CppUnit::TestCaller<Fixture, ExpectedException>(name, test,
-														  fixture) {}
-
-	void setUp()
-	{
-		fValidCWD = getcwd(fCurrentWorkingDir, B_PATH_NAME_LENGTH);
-		SymLinkTest::execCommand("touch ", SymLinkTest::existingFilename);
-		SymLinkTest::execCommand("mkdir ", SymLinkTest::existingDirname);
-		SymLinkTest::execCommand("mkdir ",
-								   SymLinkTest::existingSubDirname);
-		SymLinkTest::execCommand("ln -s ", SymLinkTest::existingDirname,
-								   SymLinkTest::dirLinkname);
-		SymLinkTest::execCommand("ln -s ", SymLinkTest::existingFilename,
-								   SymLinkTest::fileLinkname);
-		SymLinkTest::execCommand("ln -s ", SymLinkTest::existingRelDirname,
-								   SymLinkTest::relDirLinkname);
-		SymLinkTest::execCommand("ln -s ", SymLinkTest::existingRelFilename,
-								   SymLinkTest::relFileLinkname);
-		SymLinkTest::execCommand("ln -s ", SymLinkTest::nonExistingDirname,
-								   SymLinkTest::badLinkname);
-		SymLinkTest::execCommand("ln -s ", SymLinkTest::cyclicLinkname1,
-								   SymLinkTest::cyclicLinkname2);
-		SymLinkTest::execCommand("ln -s ", SymLinkTest::cyclicLinkname2,
-								   SymLinkTest::cyclicLinkname1);
-	}
-
-	void tearDown ()
-	{
-		// cleanup
-		if (fValidCWD)
-			chdir(fCurrentWorkingDir);
-		else
-			chdir("/");
-		for (int32 i = 0;
-			 i < sizeof(SymLinkTest::allFilenames) / sizeof(const char*);
-			 i++) {
-			SymLinkTest::execCommand("rm -rf ",
-									   SymLinkTest::allFilenames[i]);
-		}
-		if (shell.BeVerbose())
-			printf("\n");
-	}
-
-	char fCurrentWorkingDir[B_PATH_NAME_LENGTH];
-	bool fValidCWD;
-};
-
-
-
-// SymLinkTest
-
-// constructor
-SymLinkTest::SymLinkTest()
-	: CppUnit::TestCase(),
-	  subTestNumber(0)
-{
-}
-
 // Suite
 SymLinkTest::Test*
 SymLinkTest::Suite()
 {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
+	typedef CppUnit::TestCaller<SymLinkTest> TC;
 	
-	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Init Test 1", &SymLinkTest::InitTest1) );
-	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Init Test 2", &SymLinkTest::InitTest2) );
-	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::ReadLink Test", &SymLinkTest::ReadLinkTest) );
-	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::MakeLinkedPath Test", &SymLinkTest::MakeLinkedPathTest) );
-	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::IsAbsolute Test", &SymLinkTest::IsAbsoluteTest) );
-	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Assignment Test", &SymLinkTest::AssignmentTest) );
+	suite->addTest( new TC("BSymLink::Init Test 1", &SymLinkTest::InitTest1) );
+	suite->addTest( new TC("BSymLink::Init Test 2", &SymLinkTest::InitTest2) );
+	suite->addTest( new TC("BSymLink::ReadLink Test",
+						   &SymLinkTest::ReadLinkTest) );
+	suite->addTest( new TC("BSymLink::MakeLinkedPath Test",
+						   &SymLinkTest::MakeLinkedPathTest) );
+	suite->addTest( new TC("BSymLink::IsAbsolute Test",
+						   &SymLinkTest::IsAbsoluteTest) );
+	suite->addTest( new TC("BSymLink::Assignment Test",
+						   &SymLinkTest::AssignmentTest) );
 	
 	return suite;
 }		
 
 // setUp
-void SymLinkTest::setUp() {}
+void SymLinkTest::setUp()
+{
+	BasicTest::setUp();
+	execCommand(string("touch ") + existingFilename);
+	execCommand(string("mkdir ") + existingDirname);
+	execCommand(string("mkdir ") + existingSubDirname);
+	execCommand(string("ln -s ") + existingDirname + " " + dirLinkname);
+	execCommand(string("ln -s ") + existingFilename + " " + fileLinkname);
+	execCommand(string("ln -s ") + existingRelDirname + " " + relDirLinkname);
+	execCommand(string("ln -s ") + existingRelFilename + " "
+				+ relFileLinkname);
+	execCommand(string("ln -s ") + nonExistingDirname + " " + badLinkname);
+	execCommand(string("ln -s ") + cyclicLinkname1 + " " + cyclicLinkname2);
+	execCommand(string("ln -s ") + cyclicLinkname2 + " " + cyclicLinkname1);
+}
 
 // tearDown
-void SymLinkTest::tearDown()	{}
+void SymLinkTest::tearDown()
+{
+	BasicTest::tearDown();
+	// cleanup
+	for (int32 i = 0; i < allFilenameCount; i++)
+		execCommand(string("rm -rf ") + allFilenames[i]);
+}
 
 
 // InitTest1
@@ -1078,52 +934,6 @@ SymLinkTest::AssignmentTest()
 
 
 
-// nextSubTest
-void
-SymLinkTest::nextSubTest()
-{
-	if (shell.BeVerbose())
-		printf("[%ld]", subTestNumber++);
-}
-
-// Calls system() with the concatenated string of command and parameter.
-// Probably one of the exec*() functions serves the same purpose, but
-// I don't have the reference at hand.
-// execCommand
-void
-SymLinkTest::execCommand(const char *command, const char *parameter)
-{
-	if (command && parameter) {
-		char *cmdLine = new char[strlen(command) + strlen(parameter) + 1];
-		strcpy(cmdLine, command);
-		strcat(cmdLine, parameter);
-		system(cmdLine);
-		delete[] cmdLine;
-	}
-}
-
-// Calls system() with the concatenated string of command, parameter1,
-// " " and parameter2.
-// Probably one of the exec*() functions serves the same purpose, but
-// I don't have the reference at hand.
-// execCommand
-void
-SymLinkTest::execCommand(const char *command, const char *parameter1,
-						   const char *parameter2)
-{
-	if (command && parameter1 && parameter2) {
-		char *cmdLine = new char[strlen(command) + strlen(parameter1)
-								 + 1 + strlen(parameter2) + 1];
-		strcpy(cmdLine, command);
-		strcat(cmdLine, parameter1);
-		strcat(cmdLine, " ");
-		strcat(cmdLine, parameter2);
-		system(cmdLine);
-		delete[] cmdLine;
-	}
-}
-
-
 // some filenames to be used in tests
 const char *SymLinkTest::existingFilename		= "/tmp/existing-file";
 const char *SymLinkTest::existingSuperFilename	= "/tmp";
@@ -1179,4 +989,5 @@ const char *SymLinkTest::allFilenames[]			=  {
 	SymLinkTest::cyclicLinkname1,
 	SymLinkTest::cyclicLinkname2,
 };
-
+const int32 SymLinkTest::allFilenameCount
+	= sizeof(allFilenames) / sizeof(const char*);
