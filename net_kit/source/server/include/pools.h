@@ -28,6 +28,7 @@ struct free_blk {
 };
 
 #define POOL_USES_BENAPHORES 0
+#define POOL_DEBUG_NAME_SZ	32
 
 struct pool_ctl {
 	struct pool_mem *list;
@@ -39,12 +40,15 @@ struct pool_ctl {
 #else
 	rw_lock lock;
 #endif
+	int debug;
+	char name[POOL_DEBUG_NAME_SZ];
 };
 
 status_t pool_init(pool_ctl **p, size_t sz);
 char *pool_get(pool_ctl *p);
 void pool_put(pool_ctl *p, void *ptr);
 void pool_destroy(pool_ctl *p);
+void pool_debug(struct pool_ctl *p, char *name);
 
 void pool_debug_walk(pool_ctl *p);
 

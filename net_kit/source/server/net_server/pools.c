@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "pools.h"
 #include "net_misc.h"
 
@@ -36,6 +37,14 @@ void pool_debug_walk(struct pool_ctl *p)
 	#endif
 }
 
+void pool_debug(struct pool_ctl *p, char *name)
+{
+	p->debug = 1;
+	if (strlen(name) < POOL_DEBUG_NAME_SZ)
+		strncpy(p->name, name, strlen(name));
+	else
+		strncpy(p->name, name, POOL_DEBUG_NAME_SZ);
+}
 
 static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 {
@@ -172,8 +181,14 @@ char *pool_get(struct pool_ctl *p)
 
 	if (p->freelist) {
 		/* woohoo, just grab a block! */
+
 		rv = p->freelist;
 
+		if (p->debug)
+			printf("%s: allocating %p, setting freelist to %p\n",
+				p->name, p->freelist, 
+				((struct free_blk*)rv)->next);
+	
 		p->freelist = ((struct free_blk*)rv)->next;
 
 		#if POOL_USES_BENAPHORES
@@ -241,8 +256,17 @@ void pool_put(struct pool_ctl *p, void *ptr)
 	#endif
 
 	((struct free_blk*)ptr)->next = p->freelist;
+
+	if (p->debug) {
+		printf("%s: adding %p, setting next = %p\n",
+			p->name, ptr, p->freelist);
+	}
+	
 	p->freelist = ptr;
 
+	if (p->debug)
+		printf("%s: freelist = %p\n", p->name, p->freelist);
+	
 	#if POOL_USES_BENAPHORES
 		RELEASE_BENAPHORE(p->lock);
 	#else
