@@ -92,6 +92,11 @@ void ThrowError() {
 
 status_t
 StorageKit::open( const char *path, Mode mode, FileDescriptor &result ) {
+	if (path == NULL) {
+		result = -1;
+		return B_BAD_VALUE;
+	}
+
 	// Choose the proper posix flags
 	int posix_flags;
 	switch (mode) { 
@@ -133,18 +138,27 @@ StorageKit::dup(StorageKit::FileDescriptor file) {
 ssize_t
 StorageKit::read_attr ( StorageKit::FileDescriptor file, const char *attribute, 
 				 uint32 type, off_t pos, void *buf, size_t count ) {
-  return fs_read_attr ( file, attribute, type, pos, buf, count );
+	if (attribute == NULL || buf == NULL)
+		return B_BAD_VALUE;
+			
+	return fs_read_attr ( file, attribute, type, pos, buf, count );
 }
 
 ssize_t
 StorageKit::write_attr ( StorageKit::FileDescriptor file, const char *attribute, 
 				  uint32 type, off_t pos, const void *buf, 
 				  size_t count ) {
-  return fs_write_attr ( file, attribute, type, pos, buf, count );
+	if (attribute == NULL || buf == NULL)
+		return B_BAD_VALUE;
+			
+	return fs_write_attr ( file, attribute, type, pos, buf, count );
 }
 
 status_t
 StorageKit::remove_attr ( StorageKit::FileDescriptor file, const char *attr ) {
+	if (attr == NULL)
+		return B_BAD_VALUE;	
+
 	// fs_remove_attr is supposed to set errno properly upon failure,
 	// but currently does not appear to. It isn't set consistent
 	// with what is returned by R5::BNode::RemoveAttr(), and it isn't
@@ -161,23 +175,29 @@ StorageKit::open_attr_dir( FileDescriptor file ) {
 void
 StorageKit::rewind_attr_dir( Dir *dir )
 {
-	fs_rewind_attr_dir( dir );
+	if (dir != NULL)
+		fs_rewind_attr_dir( dir );
 }
 
 StorageKit::DirEntry*
 StorageKit::read_attr_dir( Dir* dir ) {
-	return fs_read_attr_dir( dir );
+	return (dir == NULL) ? NULL : fs_read_attr_dir( dir );
 }
 
 status_t
 StorageKit::close_attr_dir ( Dir* dir )
 {
+	if (dir == NULL)
+		return B_BAD_VALUE;
 	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
 }
 
 status_t
 StorageKit::stat_attr( FileDescriptor file, const char *name, AttrInfo *ai )
 {
+	if (name == NULL || ai == NULL)
+		return B_BAD_VALUE;
+		
 	return (fs_stat_attr( file, name, ai ) == -1) ? errno : B_OK ;
 }
 
