@@ -37,8 +37,8 @@ int sockets_init(kernel_args *ka);
 int socreate(int, struct socket **, int, int);
 void sofree(struct socket *);
 
-static ssize_t so_read(struct file_descriptor *, void *, off_t, ssize_t);
-static ssize_t so_write(struct file_descriptor *, const void *, off_t, ssize_t);
+static ssize_t so_read(struct file_descriptor *, void *, off_t, size_t *);
+static ssize_t so_write(struct file_descriptor *, const void *, off_t, size_t *);
 static int so_close(struct file_descriptor *,int, struct ioctx *);
 //static int so_ioctl(struct file_descriptor *, ulong, void *, size_t);
 
@@ -111,15 +111,17 @@ int socreate(int dom, struct socket **so, int type, int proto)
 	return 0;
 }
 
-static ssize_t so_read(struct file_descriptor *f, void *buf, off_t pos, ssize_t len)
+static ssize_t so_read(struct file_descriptor *f, void *buf, off_t pos, size_t *len)
 {
 	dprintf("so_read\n");
+	*len = 0;
 	return 0;
 }
 
-static ssize_t so_write(struct file_descriptor *f, const void *buf, off_t pos, ssize_t len)
+static ssize_t so_write(struct file_descriptor *f, const void *buf, off_t pos, size_t *len)
 {
 	dprintf("so_write\n");
+	*len = 0;
 	return 0;
 }
 
