@@ -1,8 +1,8 @@
 /*
 
-DUNWindow for OpenBeOS
+DUNWindow by Sikosis (beos@gravity24hr.com)
 
-Author: Sikosis ( sikosis@bemail.org )
+(C) 2002 OpenBeOS under MIT license
 
 */
 
@@ -19,8 +19,9 @@ Author: Sikosis ( sikosis@bemail.org )
 #include <OutlineListView.h>
 #include <stdio.h>
 #include <TextControl.h>
-#include "interface/Window.h"
-#include "interface/View.h"
+#include <TextView.h>
+#include <Window.h>
+#include <View.h>
 
 #include "DUN.h"
 #include "DUNWindow.h"
@@ -38,13 +39,13 @@ const uint32 MENU_DELETE_CURRENT = 'MDel';
 
 // DUNWindow -- constructor for DUNWindow Class
 DUNWindow::DUNWindow(BRect frame) : BWindow (frame, "OBOS Dial-up Networking", B_TITLED_WINDOW, B_NOT_RESIZABLE , 0) {
-   _InitWindow();
+   InitWindow();
    Show();
 }
 // ------------------------------------------------------------------------------- //
 
 // DUNWindow::_InitWindow -- Initialization Commands here
-void DUNWindow::_InitWindow(void) {
+void DUNWindow::InitWindow(void) {
    BRect r;
    r = Bounds();
    
@@ -78,6 +79,14 @@ void DUNWindow::_InitWindow(void) {
    menudelete->SetTarget(be_app);
    
    connectionmenufield = new BMenuField(mfld1,"connection_menu","",conmenufield,B_FOLLOW_LEFT | B_FOLLOW_TOP, B_WILL_DRAW | B_NAVIGABLE);
+   
+   
+   // Displays - <Create a connection profile to continue.> on the main window
+   BRect tvCPLocation(40,43,300,10);
+   tvConnectionProfile = new BTextView(r, "Connection Profile", tvCPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   tvConnectionProfile->SetText("<Create a connection profile to continue.>");
+   
+   
         
    // Outline List View - Fake ones really as we're only using them as an indicator.
    BListItem *conitem;
@@ -110,6 +119,7 @@ void DUNWindow::_InitWindow(void) {
    bottomframe->SetLabel("Connection");
            
    // Add our Objects to the Window
+  
    AddChild(modembutton);
    AddChild(disconnectbutton);
    AddChild(connectbutton);
@@ -121,7 +131,8 @@ void DUNWindow::_InitWindow(void) {
    AddChild(topframe);
    AddChild(middleframe);
    AddChild(bottomframe);
-   AddChild(connectionmenufield);
+   AddChild(tvConnectionProfile);
+   //AddChild(connectionmenufield);
 
      
    // Disable Buttons that need to be
