@@ -2,6 +2,8 @@
 #include "PDFWriter.h"
 #include "Bookmark.h"
 #include "Scanner.h"
+#include "Report.h"
+
 
 Bookmark::Definition::Definition(int level, BFont* font)
 	: fLevel(level)
@@ -32,6 +34,7 @@ Bookmark::Bookmark(PDFWriter* writer)
 	}
 }
 
+
 bool Bookmark::Find(BFont* font, int& level) const
 {
 	font_family family;
@@ -51,19 +54,21 @@ bool Bookmark::Find(BFont* font, int& level) const
 	return false;
 }
 
+
 void Bookmark::AddDefinition(int level, BFont* font)
 {
-	ASSERT(level > 0);
+	ASSERT(1 <= level && level <= kMaxBookmarkLevels);
 	if (!Find(font, level)) {
 		fDefinitions.AddItem(new Definition(level, font));
 	}
 }
 
+
 void Bookmark::AddBookmark(const char* text, BFont* font)
 {
 	int level;
 	if (Find(font, level)) {
-		fprintf(fWriter->fLog, "Bookmark: %s\n", text);
+		REPORT(kInfo, fWriter->fPage, "Bookmark '%s' at level %d", text, level);
 		int bookmark;
 		BString ucs2;
 		
@@ -96,35 +101,74 @@ Size       = float.
 String     = '"' string '"'.
 */
 
+bool Bookmark::Exists(const char* f, const char* s) const {
+	font_family family;
+	font_style  style;
+	uint32      flags;
+	int32       nFamilies;
+	int32       nStyles;
+	
+	nFamilies = count_font_families();
+	
+	for (int32 i = 0; i < nFamilies; i ++) {
+		if (get_font_family(i, &family, &flags) == B_OK && strcmp(f, family) == 0) {
+			nStyles = count_font_styles(family);
+			for (int32 j = 0; j < nStyles; j++) {
+				if (get_font_style(family, j, &style, &flags) == B_OK && strcmp(s, style) == 0) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+
 bool Bookmark::Read(const char* name) {
 	Scanner scnr(name);
-#define BAILOUT goto Error	
 	if (scnr.InitCheck() == B_OK) {
 		BString s; float f; bool ok;
 		ok = scnr.ReadName(&s) && scnr.ReadFloat(&f);
-		if (!ok || strcmp(s.String(), "Bookmarks") != 0 || f != 1.0) BAILOUT;
+		if (!ok || strcmp(s.String(), "Bookmarks") != 0 || f != 1.0) {
+			REPORT(kError, 0, "Bookmarks (line %d, column %d): '%s' not a bookmarks file or wrong version!", scnr.Line(), scnr.Column(), name);
+			return false;
+		}
 		
 		while (!scnr.IsEOF()) {
 			float   level, size;
 			BString family, style;
-			ok = scnr.ReadFloat(&level) && scnr.ReadString(&family) &&
-				scnr.ReadString(&style) && scnr.ReadFloat(&size) &&
-				level >= 1.0 && level <= 10.0;
+			if (!(scnr.ReadFloat(&level) && level >= 1.0 && level <= 10.0)) {
+				REPORT(kError, 0, "Bookmarks (line %d, column %d): Invalid level", scnr.Line(), scnr.Column());
+				return false;
+			}
+			if (!scnr.ReadString(&family)) {
+				REPORT(kError, 0, "Bookmarks (line %d, column %d): Invalid font family", scnr.Line(), scnr.Column());
+				return false;
+			}
+			if (!scnr.ReadString(&style)) {
+				REPORT(kError, 0, "Bookmarks (line %d, column %d): Invalid font style", scnr.Line(), scnr.Column());
+				return false;
+			}
+			if (!scnr.ReadFloat(&size)) {
+				REPORT(kError, 0, "Bookmarks (line %d, column %d): Invalid font size", scnr.Line(), scnr.Column());
+				return false;
+			}
 			
-			if (!ok) BAILOUT;
+			if (Exists(family.String(), style.String())) {
+				BFont font;
+				font.SetFamilyAndStyle(family.String(), style.String());
+				font.SetSize(size);
 			
-			BFont font;
-			font.SetFamilyAndStyle(family.String(), style.String());
-			font.SetSize(size);
-			
-			AddDefinition((int)level, &font);
+				AddDefinition((int)level, &font);
+			} else {
+				REPORT(kWarning, 0, "Bookmarks (line %d, column %d): Font %s-%s not available!", scnr.Line(), scnr.Column(), family.String(), style.String());
+			}
 			
 			scnr.SkipSpaces();
 		}
 		return true;
+	} else {
+		REPORT(kError, 0, "Bookmarks: Could not open bookmarks file '%d'", name);
 	}
-
-#undef BAILOUT	
-Error:	
 	return false;
 }

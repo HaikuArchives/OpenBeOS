@@ -30,15 +30,16 @@ THE SOFTWARE.
 */
 
 #include "StatusWindow.h"
+#include "Report.h"
 #include <Message.h>
 #include <Box.h>
 
 
 // --------------------------------------------------
 StatusWindow::StatusWindow(int32 passes, int32 pages, PrinterDriver *pd) 
-	:	HWindow(BRect(100, 100, 400, 185), "PDF Writer", 
+	:	HWindow(BRect(100, 100, 700, 600/*400, 185*/), "PDF Writer", 
 			B_TITLED_WINDOW, 
-			B_NOT_RESIZABLE|B_NOT_ZOOMABLE|B_NOT_CLOSABLE,
+			B_NOT_RESIZABLE|B_NOT_ZOOMABLE|B_NOT_CLOSABLE|B_FRAME_EVENTS,
 			B_CURRENT_WORKSPACE, 'cncl') 
 {
 	fPass = 0;
@@ -46,6 +47,8 @@ StatusWindow::StatusWindow(int32 passes, int32 pages, PrinterDriver *pd)
 	fPrinterDriver = pd;
 	fPageCount = 0;
 //	fPopyCount = 0;
+	fReportIndex = 0;
+	fCloseSem = -1;
 	BRect r(0, 0, Frame().Width(), Frame().Height());
 
 	// view for the background color
@@ -69,10 +72,10 @@ StatusWindow::StatusWindow(int32 passes, int32 pages, PrinterDriver *pd)
 	panel->AddChild(copyStatus);
 */	
 	r.Set(10, 12, Frame().Width()-5, 22);
-	fPageLabel = new BStringView(r, "page_text", "Page");
+	fPageLabel = new BStringView(r, "page_text", "Page", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP);
 	fPanel->AddChild(fPageLabel);
 
-	r.Set(10, 15, Frame().Width()-10, 10);
+	r.Set(10, 15, 300-10, 10);
 	fPageStatus = new BStatusBar(r, "pageStatus");
 	fPageStatus->SetMaxValue(pages * passes);
 	fPageStatus->SetBarHeight(12);
@@ -84,13 +87,24 @@ StatusWindow::StatusWindow(int32 passes, int32 pages, PrinterDriver *pd)
 //						 B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP );
 //	panel->AddChild(line);
 
-	// add a "Cancel button
+	// add a "Cancel" button
 	int32 x = 110;
 	int32 y = 55;
 	fCancel 	= new BButton(BRect(x, y, x + 100, y + 20), NULL, "Cancel", 
-				new BMessage('cncl'), B_FOLLOW_RIGHT | B_FOLLOW_TOP);
+				new BMessage('cncl'), B_FOLLOW_NONE, B_WILL_DRAW | B_FRAME_EVENTS);
 	fCancel->ResizeToPreferred();
 	fPanel->AddChild(fCancel);
+
+	BRect b(0, 90/*y + fCancel->Bounds().Height()+5*/, Bounds().right-B_V_SCROLL_BAR_WIDTH, Bounds().bottom);
+	BRect t(b);
+	t.OffsetTo(0, 0);
+	fReport = new BTextView(b, "", t, B_FOLLOW_TOP_BOTTOM | B_FOLLOW_LEFT_RIGHT);
+	fReport->SetStylable(true);
+	fReport->MakeEditable(false);
+	fPanel->AddChild(new BScrollView("", fReport, B_FOLLOW_ALL, 0, false, true));
+//	fPanel->AddChild(fReport);
+
+	ResizeTo(300, 85);
 
 	Show();
 }
@@ -109,8 +123,13 @@ StatusWindow::MessageReceived(BMessage *msg)
 			break;
 */
 		case 'cncl':
-			fPrinterDriver->StopPrinting();
-			fCancel->SetEnabled(false);
+			if (fCloseSem == -1) {
+				fPrinterDriver->StopPrinting();
+				fCancel->SetEnabled(false);
+			} else {
+				fCancel->SetEnabled(false);
+				release_sem(fCloseSem);
+			}
 			break;
 		case 'page':
 			fPage = "";
@@ -126,8 +145,70 @@ StatusWindow::MessageReceived(BMessage *msg)
 			}
 			fPageLabel->SetText(fPage.String());
 			fPageStatus->Update(1);
+			UpdateReport();
 			break;
 		default:
 			inherited::MessageReceived(msg);
 	}
+}
+
+
+void StatusWindow::UpdateReport() {
+	Report* r = Report::Instance();
+	const int32 n = r->CountItems();
+	const bool update = fReportIndex < n;
+	if (update && fReportIndex == 0) {
+		SetFlags(Flags() & ~(B_NOT_RESIZABLE));
+		ResizeTo(600, 500);
+	}
+	while (fReportIndex < n) {
+		ReportRecord* rr = r->ItemAt(fReportIndex ++);
+		const char* label = NULL;
+		rgb_color color = {0, 0, 0, 255};
+		switch (rr->Kind()) {
+			case kInfo:    label = "Info";    color.green = 255; break;
+			case kWarning: label = "Warning"; color.red = 255; color.green=255; break;
+			case kError:   label = "Error";   color.red = 255; break;
+			case kDebug:   label = "Debug";   color.blue = 255; break;
+		}
+
+		int32 cur = fReport->TextLength()-1;
+		fReport->Insert(fReport->TextLength(), label, strlen(label));
+		int32 end = fReport->TextLength();
+		fReport->SetFontAndColor(cur, end, NULL, 0, &color);
+
+		char page[80];
+		if (rr->Page() > 0) {
+			sprintf(page, " (Page %d)", (int)rr->Page());
+			int32 len = strlen(page);
+			fReport->Insert(fReport->TextLength(), page, len);
+		}
+
+		fReport->Insert(fReport->TextLength(), ": ", 2);
+
+		fReport->Insert(fReport->TextLength(), rr->Desc(), strlen(rr->Desc()));		
+		fReport->Insert(fReport->TextLength(), "\n", 1);
+	}
+	
+	if (update) {
+		fReport->ScrollToOffset(fReport->TextLength());
+		fReport->Invalidate();
+	}
+}
+
+void StatusWindow::WaitForClose() {
+	fCloseSem = create_sem(0, "close_sem");
+	
+	Lock();
+		Report* r = Report::Instance();
+		char b[80];
+		sprintf(b, "%d Infos, %d Warnings, %d Errors", r->Count(kInfo), r->Count(kWarning), r->Count(kError)); 
+		fPageLabel->SetText(b);
+		fCancel->SetLabel("Close");
+		fCancel->SetEnabled(true);
+		UpdateReport();
+	Unlock();
+	
+	acquire_sem(fCloseSem);
+	delete_sem(fCloseSem);
 }

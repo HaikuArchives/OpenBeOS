@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include "Bezier.h"
 #include "PDFLinePathBuilder.h"
 #include "Log.h"
+#include "Report.h"
 
 #ifdef CODEWARRIOR
 	#pragma mark [BShape drawing support routines]
@@ -85,7 +86,7 @@ void
 DrawShape::CreateBezierPath(BPoint *curve) {
 	Bezier bezier(curve, 4);
 	const int n = BezierPoints(curve, 4)-1;
-	LOG((Log(), "BezierPoints %d\n", n));
+	REPORT(kDebug, 0, "BezierPoints %d", n);
 	for (int i = 0; i <= n; i ++) {
 		fSubPath.AddPoint(bezier.PointAt(i / (float) n));
 	}
@@ -105,9 +106,9 @@ DrawShape::EndSubPath()
 status_t 
 DrawShape::IterateBezierTo(int32 bezierCount, BPoint *control)
 {
-	LOG((Log(), "BezierTo\n"));
+	REPORT(kDebug, 0, "BezierTo");
 	for (int32 i = 0; i < bezierCount; i++, control += 3) {
-		LOG((Log(), "    (%f %f) (%f %f) (%f %f)\n", tx(control[0].x), ty(control[0].y), tx(control[1].x), ty(control[1].y), tx(control[2].x), ty(control[2].y)));
+		REPORT(kDebug, 0,"    (%f %f) (%f %f) (%f %f)", tx(control[0].x), ty(control[0].y), tx(control[1].x), ty(control[1].y), tx(control[2].x), ty(control[2].y));
 		if (TransformPath()) {
 			BPoint p[4] = { fCurrentPoint, control[0], control[1], control[2] };
 			CreateBezierPath(p);
@@ -127,8 +128,8 @@ DrawShape::IterateBezierTo(int32 bezierCount, BPoint *control)
 status_t 
 DrawShape::IterateClose(void)
 {
-	LOG((Log(), "IterateClose %s\n", IsDrawing() ? (fStroke ? "stroke" : "fill") : "clip"));
-	if (fDrawn) LOG((Log(), ">>> IterateClose called multiple times!"));
+	REPORT(kDebug, 0, "IterateClose %s", IsDrawing() ? (fStroke ? "stroke" : "fill") : "clip");
+	if (fDrawn) REPORT(kDebug, 0, ">>> IterateClose called multiple times!");
 	if (TransformPath())
 		fSubPath.Close();
 	else
@@ -163,10 +164,10 @@ DrawShape::Draw()
 status_t 
 DrawShape::IterateLineTo(int32 lineCount, BPoint *linePoints)
 {
-	LOG((Log(), "IterateLineTo %d\n", (int)lineCount));
+	REPORT(kDebug, 0, "IterateLineTo %d", (int)lineCount);
 	BPoint *p = linePoints;
 	for (int32 i = 0; i < lineCount; i++) {
-		LOG((Log(), "(%f, %f) ", p->x, p->y));
+		REPORT(kDebug, 0, "(%f, %f) ", p->x, p->y);
 
 		if (TransformPath()) {
 			fSubPath.AddPoint(*p);
@@ -176,7 +177,6 @@ DrawShape::IterateLineTo(int32 lineCount, BPoint *linePoints)
 		fCurrentPoint = *p;
 		p++;
 	}
-	LOG((Log(), "\n"));
 	return B_OK;
 }
 
@@ -185,7 +185,7 @@ DrawShape::IterateLineTo(int32 lineCount, BPoint *linePoints)
 status_t 
 DrawShape::IterateMoveTo(BPoint *point)
 {
-	LOG((Log(), "IterateMoveTo "));
+	REPORT(kDebug, 0, "IterateMoveTo ");
 	if (!TransformPath()) {
 		PDF_moveto(Pdf(), tx(point->x), ty(point->y)); 
 	} else {
@@ -193,7 +193,7 @@ DrawShape::IterateMoveTo(BPoint *point)
 		fSubPath.MakeEmpty();
 		fSubPath.AddPoint(*point);
 	}
-	LOG((Log(), "(%f, %f)\n", point->x, point->y));
+	REPORT(kDebug, 0, "(%f, %f)", point->x, point->y);
 	fCurrentPoint = *point;
 	return B_OK;
 }

@@ -48,6 +48,9 @@ extern "C" {
 };	
 
 
+class StatusWindow;
+
+
 /**
  * Class PrinterDriver
  */
@@ -79,7 +82,7 @@ public:
 	inline BNode			*PrinterNode()	{ return fPrinterNode; }
 	inline BMessage			*JobMsg()		{ return fJobMsg; }
 	inline BDataIO			*Transport()	{ return fTransport; }
-	inline BWindow     		*Status()       { return fStatusWindow; }
+	inline StatusWindow		*Status()       { return fStatusWindow; }
 	inline int32            Pass() const    { return fPass; }
 	
 	// publics status code
@@ -93,7 +96,7 @@ private:
 	BFile					*fJobFile;
 	BNode					*fPrinterNode;
 	BMessage				*fJobMsg;
-	BWindow    		        *fStatusWindow;
+	StatusWindow	        *fStatusWindow;
 
 	volatile Orientation	fOrientation;
 	

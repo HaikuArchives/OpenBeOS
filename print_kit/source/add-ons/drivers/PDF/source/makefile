@@ -48,6 +48,7 @@ SRCS= \
 	PrinterSettings.cpp \
 	PrinterSetupWindow.cpp \
 	RegExp.cpp \
+	Report.cpp \
 	Scanner.cpp \
 	StatusWindow.cpp \
 	SubPath.cpp \

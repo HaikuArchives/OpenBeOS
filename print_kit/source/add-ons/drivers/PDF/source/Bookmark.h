@@ -23,6 +23,7 @@ class Bookmark {
 
 	int                fLevels[kMaxBookmarkLevels+1];
 
+	bool Exists(const char* family, const char* style) const;
 	bool Find(BFont* font, int &level) const;
 
 public:

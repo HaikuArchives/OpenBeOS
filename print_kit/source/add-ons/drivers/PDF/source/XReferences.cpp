@@ -32,6 +32,7 @@ THE SOFTWARE.
 #include "Scanner.h"
 #include "PDFWriter.h"
 #include "XReferences.h"
+#include "Report.h"
 
 
 // Pattern
@@ -199,6 +200,14 @@ void XRefDefs::Matches(const char* s, XMatchResult* r, bool all) {
 }
 
 
+class AutoDelete {
+	XRefDef* fDefs;
+public:
+	AutoDelete(XRefDef* defs) : fDefs(defs) { }
+	~AutoDelete()                           { delete fDefs; }
+	void Release()                          { fDefs = NULL; }
+};
+
 /*
 FileFormat: Definition.
 Line comment starts with: '#'
@@ -216,30 +225,35 @@ CrossReferences 1.0
 */
 
 bool XRefDefs::Read(const char* name) {
-	#define BAILOUT goto Error
-
 	Scanner scnr(name);
-	XRefDef* def = NULL;
+
 	if (scnr.InitCheck() == B_OK) {
 
-		BString s; float f; bool ok;
-		ok = scnr.ReadName(&s) && scnr.ReadFloat(&f);
-		if (!ok || strcmp(s.String(), "CrossReferences") != 0 || f != 1.0) BAILOUT;
+		BString s; float f;
+		bool ok = scnr.ReadName(&s) && scnr.ReadFloat(&f);
+		if (!ok || strcmp(s.String(), "CrossReferences") != 0 || f != 1.0) {
+			REPORT(kError, 0, "XRefs (line %d, column %d): '%s' not a cross references file or wrong version!", scnr.Line(), scnr.Column(), name);
+			return false;
+		}
 		
 		while (!scnr.IsEOF()) {
-			def = new XRefDef();
+			XRefDef* def = new XRefDef();
+			AutoDelete autoDelete(def);
 			BString pattern;
 
 			// Links: Pattern {"," Pattern}.
 			do {
-				if (!scnr.ReadString(&pattern)) BAILOUT;
+				if (!scnr.ReadString(&pattern)) {
+					REPORT(kError, 0, "XRefs (line %d, column %d): Could not parse 'link' pattern", scnr.Line(), scnr.Column());
+					return false;
+				}
 				LinkPattern* link = new LinkPattern(pattern.String());
 				if (link->InitCheck() == B_OK) {
 					def->AddLink(link);
 				} else {
-					// ERROR: Invalid RegExp
 					delete link;
-					BAILOUT;
+					REPORT(kError, 0, "XRefs (line %d, column %d): Invalid RegExp '%s'", pattern.String(), scnr.Line(), scnr.Column());
+					return false;
 				}
 			} while (scnr.NextChar(','));
 
@@ -248,38 +262,40 @@ bool XRefDefs::Read(const char* name) {
 
 				// Dests: Pattern {"," Pattern}.
 				do {
-					if (!scnr.ReadString(&pattern)) BAILOUT;
+					if (!scnr.ReadString(&pattern)) {
+						REPORT(kError, 0, "XRefs (line %d, column %d): Could not parse 'destination' pattern", scnr.Line(), scnr.Column());
+						return false;
+					}
 					DestPattern* dest = new DestPattern(pattern.String());
 					if (dest->InitCheck() == B_OK) {
 						def->AddDest(dest);
 					} else {
-						// ERROR: Invalid RegExp
 						delete dest;
-						BAILOUT;
+						REPORT(kError, 0, "XRefs (line %d, column %d): Invalid RegExp '%s'", scnr.Line(), scnr.Column(), pattern.String());
+						return false;
 					}
 				} while (scnr.NextChar(','));
 
 				// "."
 				if (!scnr.NextChar('.')) {
-					// ERROR: '.' expected.
-					BAILOUT;
+					REPORT(kError, 0, "XRefs (line %d, column %d): '.' expected at end of definition", scnr.Line(), scnr.Column());
+					return false;
 				}
 			} else {
-				// ERROR: '->' expected.
-				BAILOUT;
+				REPORT(kError, 0, "XRefs (line %d, column %d): '->' expected", scnr.Line(), scnr.Column());
+				return false;
 			}
 
-			this->Add(def); def = NULL;
+			this->Add(def); 
+			autoDelete.Release();
+			
 			scnr.SkipSpaces();
 		}
 		return true;
-	}
-
-Error:	
-	delete def;
+	} else {
+		REPORT(kError, 0, "XRefs: Could not open cross references file '%d'", name);
+	}	
 	return false;	
-
-#undef BAILOUT	
 }
 
 
@@ -393,7 +409,7 @@ bool LocalLink::Link(XRefDef* def, MatchResult* result) {
 			fEndPos       = p - fUtf8->String();
 			return false;
 		} else {
-			// WARNING: Destination not found!!!
+			REPORT(kWarning, fLinkPage, "Destination for link '%s' not found!", label.String());
 		}
 	}
 	return true;
@@ -413,6 +429,8 @@ void LocalLink::DetectLink(int start) {
 
 void LocalLink::CreateLink(float llx, float lly, float urx, float ury) {
 	if (fDestPage != fLinkPage) {
+		BString s(&fUtf8->String()[fStartPos], fEndPos-fStartPos+1);
+		REPORT(kInfo, fLinkPage, "Link '%s' to page %d", s.String(), fDestPage);
 		PDF_add_locallink(fWriter->fPdf, llx, lly, urx, ury, fDestPage, "retain");
 	}
 }

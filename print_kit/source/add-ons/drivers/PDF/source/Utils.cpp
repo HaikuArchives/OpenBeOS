@@ -102,7 +102,7 @@ kAbout =
 "\n"
 "\tPhilippe Houdoin - Project Leader\n"
 "\tSimon Gauvin - GUI Design\n"
-"\tMichael Pfeiffer - PDF Generation\n"
+"\tMichael Pfeiffer - PDF Generation, Configuration, Interactive Features\n"
 "\tCelerick Stephens - Documentation\n"
 ;
 

@@ -53,12 +53,17 @@ private:
 //	BStatusBar *fCopyStatus;
 	BButton *fCancel;
 	PrinterDriver *fPrinterDriver;
+	int32      fReportIndex;
+	BTextView* fReport;
+	sem_id     fCloseSem;
 
+	void UpdateReport();
 public:
 	typedef HWindow inherited;
 	
 	StatusWindow(int32 passes, int32 pages, PrinterDriver *pd);
 	
 	void MessageReceived(BMessage *msg);
+	void WaitForClose();
 };
 #endif

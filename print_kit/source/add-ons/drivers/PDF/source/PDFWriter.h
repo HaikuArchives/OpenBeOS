@@ -48,11 +48,6 @@ THE SOFTWARE.
 
 #include "pdflib.h"
 
-#define SCALE 8.3333f
-#define SCREEN 72.0f
-#define LETTER_WIDTH 8.5
-#define LETTER_HEIGHT 11
-
 #define RAD2DEGREE(r) (180.0 * r / PI)
 #define DEGREE2RAD(d) (PI * d / 180.0)
 
@@ -86,6 +81,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		status_t	BeginPage(BRect paperRect, BRect printRect);
 		status_t	EndPage();
 
+		void        SetAttribute(const char* name, const char* value);
 		bool        LoadBookmarkDefinitions(const char* name);
 		bool        LoadXRefsDefinitions(const char* name);
 		void        RecordDests(const char* s);

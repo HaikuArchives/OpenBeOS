@@ -3,5 +3,5 @@
 #include <string.h>
 #include <stdio.h>
 
-#define PATTERN_SUPPORT 0
-#define LOGGING 1
+#define PATTERN_SUPPORT 1
+#define LOGGING 0

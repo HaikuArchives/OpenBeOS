@@ -35,7 +35,7 @@ THE SOFTWARE.
 #include "Bookmark.h"
 #include "PDFWriter.h"
 #include "Log.h"
-
+#include "Report.h"
 
 Link::Link(PDFWriter* writer, BString* utf8, BFont* font)
 	: fWriter(writer)
@@ -52,7 +52,7 @@ void
 Link::CreateLink(BPoint end)
 {
 	if (fFont->Rotation() != 0.0) {
-		LOG((fWriter->fLog, "Warning: Can not create link for rotated font!\n"));
+		REPORT(kWarning, fWriter->fPage, "Warning: Can not create link for rotated font!");
 		return;
 	}
 	
@@ -108,7 +108,17 @@ char* WebLink::fURLPrefix[] = {
 // TODO: check for valid characters in url
 bool
 WebLink::IsValidCodePoint(const char* cp, int cps) {
-	return ' ' < *cp && cps == 1; 
+	if (cps == 1) {
+		char c = *cp;
+		switch (c) {
+			case '$': case '-': case '_': case '@': 
+			case '.': case '&': case '+': case '/':
+				return true;
+			default:
+				return isalpha(c) || isdigit(c);		
+		}
+	}
+	return false;
 }
 
 
@@ -169,13 +179,13 @@ WebLink::DetectUrlWithPrefix(int start)
 bool
 WebLink::IsValidStart(const char* cp)
 {
-	return *cp != '.' && *cp != '@' && isalpha(*cp);
+	return *cp != '.' && *cp != '@' && IsValidCodePoint(cp, 1);
 }
 
 bool
 WebLink::IsValidChar(const char* cp)
 {
-	return !isspace(*cp); // isalnum(*cp) || *cp == '-' || *cp == '.' || *cp == '@';
+	return IsValidCodePoint(cp, 1); // !isspace(*cp); // isalnum(*cp) || *cp == '-' || *cp == '.' || *cp == '@';
 }
 
 // TODO: add better url detection (ie. "e.g." is detected as "http://e.g")
@@ -197,9 +207,7 @@ WebLink::DetectUrlWithoutPrefix(int start)
 		int numDots = 0, numAts = 0;
 		int end = start;
 		int prev = end;
-		int length = 0;
 		while (utf8[end] && IsValidChar(&utf8[end])) {
-			length ++;
 			if (utf8[end] == '.') numDots ++;
 			else if (utf8[end] == '@') numAts ++;
 			prev = end; end += fWriter->CodePointSize(&utf8[end]);
@@ -216,11 +224,12 @@ WebLink::DetectUrlWithoutPrefix(int start)
 		}
 		
 		fStartPos = start; fEndPos = prev;
+		int32 length = fEndPos - fStartPos;
 
 		if (numAts == 1) {
 			fKind = kMailtoKind;
 			return true;
-		} else if (numDots >= 2 && length > numDots && numAts == 0) {
+		} else if (numDots >= 2 && length > 2*numDots+1 && numAts == 0) {
 			if (strncmp(&utf8[start], "ftp", 3) == 0) fKind = kFtpKind;
 			else fKind = kHttpKind;
 			return true;
@@ -266,6 +275,7 @@ WebLink::CreateLink(float llx, float lly, float urx, float ury)
 		url.Append(fUtf8->ByteAt(i), 1);
 	}		
 
+	REPORT(kInfo, fWriter->fPage, "Web link '%s'", url.String());
 	// XXX: url should be in 7-bit ascii encoded!
 	PDF_add_weblink(fWriter->fPdf, llx, lly, urx, ury, url.String());
 }
@@ -362,7 +372,7 @@ void TextLine::Flush() {
 	}	 
 
 	const char* c = line.String();
-	fprintf(fWriter->fLog, "==== TextLine\n\t\t'%s'\n", c);
+//	fprintf(fWriter->fLog, "==== TextLine\n\t\t'%s'\n", c);
 
 	if (!fWriter->MakesPDF()) {
 		if (fWriter->fCreateXRefs) fWriter->RecordDests(c);

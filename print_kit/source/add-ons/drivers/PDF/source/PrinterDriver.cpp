@@ -42,6 +42,7 @@ THE SOFTWARE.
 #include "JobSetupWindow.h"
 #include "StatusWindow.h"
 #include "PrinterSettings.h"
+#include "Report.h"
 
 // Private prototypes
 // ------------------
@@ -129,6 +130,9 @@ PrinterDriver::PrintJob
 		copies = 1;
 	}
 	
+	// force creation of Report object
+	Report::Instance();
+
 	// show status window
 	fStatusWindow = new StatusWindow(passes, pfh.page_count, this);
 
@@ -157,10 +161,16 @@ PrinterDriver::PrintJob
 	delete fJobMsg;
 	
 	// close status window
+	if (Report::Instance()->CountItems() != 0) {
+		fStatusWindow->WaitForClose();
+	}
 	if (fStatusWindow->Lock()) {
 		fStatusWindow->Quit();
 	}
 
+	// delete Report object
+	Report::Instance()->Free();
+	
 	return status;
 }
 
