@@ -46,17 +46,17 @@ struct tcphdr {
 	tcp_seq th_ack;         /*ack number */
 	
 #if B_HOST_IS_BENDIAN
-	uint8 th_x2:4,          /* unused */
-	      th_off:4;         /* data offset */
-#else
 	uint8 th_off:4,
 	      th_x2:4;
+#else
+	uint8 th_x2:4,          /* unused */
+	      th_off:4;         /* data offset */
 #endif
-	uint16 th_flags;        /* ACK, FIN, PUSH, RST, SYN, URG */
+	uint8  th_flags;        /* ACK, FIN, PUSH, RST, SYN, URG */
 	uint16 th_win;          /* advertised window */
 	uint16 th_sum;          /* checksum */
 	uint16 th_urp;          /* urgent offset */
-};
+} _PACKED;
 
 #define	TH_FIN	  0x01
 #define	TH_SYN	  0x02
