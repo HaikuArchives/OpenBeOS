@@ -6,7 +6,6 @@
 #include <resource.h>
 #include <errors.h>
 #include <OS.h>
-#include <sem.h>
 #include <stdlib.h>
 
 #define THREADS    5

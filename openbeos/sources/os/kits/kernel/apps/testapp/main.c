@@ -204,7 +204,7 @@ int main(int argc, char **argv)
 	}
 #endif
 
-#if 0
+#if 1
 	{
 		port_test();
 	}
@@ -442,13 +442,13 @@ static void port_test(void)
 	printf("porttest: port_count(test_p1) = %d\n", sys_port_count(test_p1));
 
 	printf("porttest: port_write() on 1 with timeout of 1 sec (blocks 1 sec)\n");
-	sys_port_write_etc(test_p1, 1, &testdata, sizeof(testdata), PORT_FLAG_TIMEOUT, 1000000);
+	sys_port_write_etc(test_p1, 1, &testdata, sizeof(testdata), B_TIMEOUT, 1000000);
 	printf("porttest: port_write() on 2 with timeout of 1 sec (wont block)\n");
-	res = sys_port_write_etc(test_p2, 777, &testdata, sizeof(testdata), PORT_FLAG_TIMEOUT, 1000000);
+	res = sys_port_write_etc(test_p2, 777, &testdata, sizeof(testdata), B_TIMEOUT, 1000000);
 	printf("porttest: res=%d, %s\n", res, res == 0 ? "ok" : "BAD");
 
 	printf("porttest: port_read() on empty port 4 with timeout of 1 sec (blocks 1 sec)\n");
-	res = sys_port_read_etc(test_p4, &dummy, &dummy2, sizeof(dummy2), PORT_FLAG_TIMEOUT, 1000000);
+	res = sys_port_read_etc(test_p4, &dummy, &dummy2, sizeof(dummy2), B_TIMEOUT, 1000000);
 	printf("porttest: res=%d, %s\n", res, res == ERR_PORT_TIMED_OUT ? "ok" : "BAD");
 
 	printf("porttest: spawning thread for port 1\n");
