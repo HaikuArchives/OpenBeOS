@@ -159,7 +159,12 @@ Inode::GetTree(BPlusTree **tree)
 			RETURN_ERROR(B_NO_MEMORY);
 
 		*tree = fTree;
-		RETURN_ERROR(fTree->InitCheck());
+		status_t status = fTree->InitCheck();
+		if (status < B_OK) {
+			delete fTree;
+			fTree = NULL;
+		}
+		RETURN_ERROR(status);
 	}
 	RETURN_ERROR(B_BAD_VALUE);
 }
