@@ -24,21 +24,6 @@ CORE_C:=	$(CORE_OBJS:.o=.c)
 
 all:	$(TARGET)
 
-kernel:
-	@if test -e socket.o; then rm *.o; fi
-	for obj in $(CORE_C); do \
-		$(CC) $(CFLAGS) $(INCLUDES) -c $$obj || exit 1;  \
-	done
-	@$(CC) $(LDFLAGS) -o core $(CORE_OBJS)
-	@$(CC) $(LDFLAGS) -Wl,-M=core.xMAP *.o
-
-installkernel: kernel
-	@cp core /boot/home/config/add-ons/kernel/network/core
-	@if test -e $(XMAP_DIR)/core.xMAP; then rm $(XMAP_DIR)/core.xMAP; fi
-	@if ! test -L $(XMAP_DIR)/core.xMAP; then \
-		ln -s `pwd`/core.xMAP $(XMAP_DIR); \
-	fi
-
 clean:
 	@rm -f $(TARGET)
 	@rm -f *.o
@@ -49,5 +34,5 @@ $(TARGET): $(CORE_OBJS)
 .SUFFIXES: .c .o
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
 

@@ -1,6 +1,10 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ethernet
-TGT=../modules/interface/$(TARGET)
+ifeq ($(USERLAND), true)
+        TGT=../modules/interface/$(TARGET)
+else
+        TGT=$(TARGET)
+endif  
 LOBJS=
 OBJS=ethernet.o
 XMAP_DIR=/boot/home/config/add-ons/kernel/drivers/dev/net

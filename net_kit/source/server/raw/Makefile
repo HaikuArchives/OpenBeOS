@@ -1,14 +1,12 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=raw
-TGT=../modules/protocol/$(TARGET)
+ifeq ($(USERLAND), true)
+        TGT=../modules/protocol/$(TARGET)
+else
+        TGT=$(TARGET)
+endif 
 LOBJS=
 OBJS=$(TARGET).o
-
-CFLAGS+=-D_NETWORK_STACK
-
-KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
-KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=
 
 all:	$(TARGET)
 
@@ -17,15 +15,8 @@ clean:
 	@if test -e $(OBJS); then rm $(OBJS); fi
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
-kernel:
-	@$(CC) $(CFLAGS) $(INCLUDES) -c $(TARGET).c
-	@$(CC) $(LDFLAGS) -o $(TARGET) $(TARGET).o
-
-installkernel:	kernel
-	@cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)
-
 $(TARGET): $(OBJS)
-	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

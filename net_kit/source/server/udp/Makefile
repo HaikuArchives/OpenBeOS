@@ -1,6 +1,10 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=udp
-TGT=../modules/protocol/$(TARGET)
+ifeq ($(USERLAND), true)
+        TGT=../modules/protocol/$(TARGET)
+else
+        TGT=$(TARGET)
+endif 
 LOBJS=../net_server/cksum.o
 OBJS=udp.o
 
@@ -11,15 +15,8 @@ clean:
 	@if test -e $(OBJS); then rm $(OBJS); fi
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
-kernel:
-	@$(CC) $(CFLAGS) $(INCLUDES) -c udp.c
-	@$(CC) $(LDFLAGS) $(LOBJS) -o udp udp.o
-
-installkernel:	kernel
-	@cp udp /boot/home/config/add-ons/kernel/network/protocol/udp
-
 udp: $(OBJS)
-	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
