@@ -1105,6 +1105,9 @@ int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie
 
 static int checkevent(struct socket *so)
 {
+	if (! so->event_callback)	// no event callback registered for this socket
+		return B_OK;
+
 	if (soreadable(so))
 		// notify socket readable event
 		so->event_callback(so, 1, so->event_callback_cookie);
