@@ -1,20 +1,43 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=../net_srv
 LOBJS=	../util/*.o
-SOCKET_OBJS = 	socket.o \
+CORE_OBJS:= 	socket.o \
 		sockbuf.o \
 		inpcb.o \
 		radix.o \
-		route.o
+		route.o \
+		mbuf.o \
+		if.o \
+		misc.o \
+		cksum.o \
+		nhash.o \
+		pools.o \
+		net_server.o
+
+CORE_C:=	$(CORE_OBJS:.o=.c)
+
+KCFLAGS=-nostart -no-fpic -D_KERNEL_MODE
+KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
+
 
 all:	$(TARGET)
+
+kernel:
+	if test -e socket.o; then rm *.o; fi
+	for obj in $(CORE_C); do \
+		$(CC) $(KCFLAGS) $(INCLUDES) -c $$obj;  \
+	done
+	$(CC) $(KLDFLAGS) -o core $(CORE_OBJS)
+	
+installkernel: kernel
+	cp core /boot/home/config/add-ons/kernel/network/core
 
 clean:
 	@rm -f $(TARGET)
 	@rm -f *.o
 
-$(TARGET): $(SOCKET_OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) $(SOCKET_OBJS) -o $(TARGET) net_server.c
+$(TARGET): $(CORE_OBJS) net_timer.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(CORE_OBJS) -o $(TARGET) net_timer.o
 
 .SUFFIXES: .c .o
 

@@ -8,6 +8,7 @@
 
 #include "sys/socket.h"
 #include "sys/socketvar.h"
+#include "sys/sockio.h"
 #include "pools.h"
 #include "netinet/in_pcb.h"
 #include "net_module.h"
@@ -42,6 +43,7 @@ static benaphore sockets_lock;
 
 int sockets_init(void)
 {
+	dprintf("sockets_init\n");
 	if (!spool)
 		pool_init(&spool, sizeof(struct socket));
 
@@ -116,31 +118,31 @@ int uiomove(caddr_t cp, int n, struct uio *uio)
 	return (error);
 }
 
-
-static int get_sock(int fd, struct sock_fd **sfd)
+int initsocket(void **aso)
 {
-	struct sock_fd *f = sockets;
-	while (f) {
-		if (f->fd == fd)
-			break;
-		f = f->next;
-		if (f == sockets) {
-			f = NULL;
-			break;
-		}
-	}
-	*sfd = f;
-	if (f)
-		return 0;
-	return EBADF; /* is this correct? */
+	struct socket *so = (struct socket*)pool_get(spool);
+	dprintf("core_module: initsocket %p!\n", so);
+
+	if (so == NULL)
+		return ENOMEM;
+
+	memset(so, 0, sizeof(*so));
+
+	*aso = (void*)so;
+
+	return 0;
 }
 
-
-int socreate(int dom, struct socket **aso, int type, int proto)
+int socreate(int dom, void *aso, int type, int proto)
 {
 	net_module *prm = NULL; /* protocol module */
-	struct socket *so;
+	struct socket *so = (struct socket*)aso;
 	int error;
+
+dprintf("core_module: socreate!\n");
+
+	if (so == NULL)
+		return EINVAL;
 	
 	if (proto)
 		prm = pffindproto(dom, proto, type);
@@ -153,14 +155,11 @@ int socreate(int dom, struct socket **aso, int type, int proto)
 	if (prm->sock_type != type)
 		return EPROTOTYPE;
 	
-	so = (struct socket*)pool_get(spool);
-	memset(so, 0, sizeof(struct socket));
 	so->so_type = type;
 	so->so_proto = prm;
 	so->so_rcv.sb_pop = create_sem(0, "so_rcv sem");
 
 	error = prm->userreq(so, PRU_ATTACH, NULL, (struct mbuf *)proto, NULL);
-	*aso = so;
 
 	return error;
 }
@@ -209,10 +208,10 @@ int sendit(int sock, struct msghdr *mp, int flags, size_t *retsize)
 	struct mbuf *control;
 	int len;
 	int error;
-
+/*
 	if ((error = get_sock(sock, &sfd)) != 0)
 		return error;
-
+*/
 	auio.uio_iov = mp->msg_iov;
 	auio.uio_iovcnt = mp->msg_iovlen;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -438,10 +437,10 @@ int recvit(int s, struct msghdr *mp, caddr_t namelenp, int *retsize)
 	struct mbuf *control = NULL;
 	struct mbuf *from = NULL;
 	int error = 0, i, len = 0;
-
+/*
 	if ((error = get_sock(s, &sfd)) != 0)
 		return error;
-
+*/
 	auio.uio_iov = mp->msg_iov;
 	auio.uio_iovcnt = mp->msg_iovlen;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -689,6 +688,70 @@ release:
 	return error;
 }
 
+int soo_ioctl(void *sp, int cmd, caddr_t data)
+{
+	struct socket *so = (struct socket*)sp;
+
+	switch (cmd) {
+		case FIONBIO:
+			if (*(int*)data)
+				so->so_state |= SS_NBIO;
+			else
+				so->so_state &= ~SS_NBIO;
+			return 0;
+		case FIONREAD:
+			/* how many bytes do we have waiting... */
+			//*(int*)data = so->so_rcv.sb_cc;
+			return 0;
+	}
+
+//	if (IOCGROUP(cmd) == 'i')
+		/* call ifioctl... */
+	
+
+	return 0;
+}
+
+int soclose(void *sp)
+{
+	struct socket *so = (struct socket*)sp;
+	int error = 0;
+
+	if (so->so_pcb == NULL)
+		goto discard;
+
+	if (so->so_state & SS_ISCONNECTED) {
+		if ((so->so_state & SS_ISDISCONNECTING) == 0) {
+//			error = sodisconnect(so);
+			if (error)
+				goto drop;
+		}
+	}
+
+drop:
+	if (so->so_pcb) {
+		int error2 = (*so->so_proto->userreq)(so, PRU_DETACH, NULL, NULL, NULL);
+		if (error2 == 0)
+			error = error2;
+	}
+discard:
+	sofree(so);
+
+	return error;
+}
+
+int sofree(struct socket *so)
+{
+	if (so->so_pcb)
+		return;
+
+	if (so->so_head) {
+		/* we need to handle this! */
+		so->so_head = NULL;
+	}
+	pool_put(spool, so);
+	return 0;
+}
 
 void sowakeup(struct socket *so, struct sockbuf *sb)
 {
@@ -775,10 +838,10 @@ int bind(int sock, struct sockaddr *name, size_t namelen)
 	int error;
 	struct mbuf *nam;
 	struct sock_fd *sfd;
-
+/*
 	if ((error = get_sock(sock, &sfd)))
 		return error;
-
+*/
 	nam = m_get(MT_SONAME);
 	nam->m_len = namelen;
 	memcpy(mtod(nam, char*), name, namelen);

@@ -16,6 +16,7 @@
 
 #ifdef _KERNEL_MODE
 #include <driver_settings.h>
+#include "core_module.h"
 #endif
 
 #include "if.h"	/* for ifnet definition */
@@ -424,13 +425,39 @@ net_module *pffindproto(int domain, int protocol, int type)
         return NULL;
 }
 
-void server_shutdown(void)
+int start_stack(void)
 {
+#ifdef _KERNEL_MODE
+	dprintf("core network module: Starting network stack...\n");
+#endif
+	mbinit();
+	sockets_init();
+	inpcb_init();
+	route_init();
+
+	find_modules();
+	init_devices();
+#ifdef _KERNEL_MODE
+	dprintf("core network module: init complete...\n");
+#endif
+
+	return 0;
+}
+
+int stop_stack(void)
+{
+#ifdef _KERNEL_MODE
+	dprintf("core network module: Stopping network stack!\n");
+#endif	
+
 	sockets_shutdown();
 
 	close_devices();
 
+#ifndef _KERNEL_MODE
 	net_shutdown_timer();
+#endif
+	return 0;
 }
 
 #ifndef _KERNEL_MODE
@@ -449,19 +476,14 @@ void _main(void)
 	printf( "Net Server Test App!\n"
 		"====================\n\n");
 
-	mbinit();
+	start_stack();
 
-	sockets_init();
-	inpcb_init();
-
+#ifndef _KERNEL_MODE
 	if (net_init_timer() < B_OK)
 		printf("timer service won't work!\n");
+#endif
 
-	devices = NULL;
-	pdevices = NULL;
 	dev_lock = create_sem(1, "device lock");
-
-	route_init();
 
 	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
 	if (!global_modules) {
@@ -472,9 +494,6 @@ void _main(void)
 		return;
 #endif
 	}
-
-	find_modules();
-	init_devices();
 
 	if (ndevs == 0) {
 		printf("\nFATAL: no devices configured!\n");
@@ -554,183 +573,39 @@ void _main(void)
 
 #ifdef _KERNEL_MODE
 
-const char *PublishedDeviceNames [] =
+static status_t core_std_ops(int32 op, ...) 
 {
-	"net/socket",
+	dprintf("core_std_ops\n");
+	switch(op) {
+		case B_MODULE_INIT:
+			return start_stack();
+			break;
+		case B_MODULE_UNINIT:
+			return stop_stack();
+		default:
+			return B_ERROR;
+	}
+	return B_OK;
+}
+
+static struct core_module_info core_info = {
+	{
+		CORE_MODULE_PATH,
+		B_KEEP_LOADED,
+		core_std_ops
+	},
+
+	soo_ioctl,
+
+	initsocket,
+	socreate,
+	soclose
+};
+
+_EXPORT module_info *modules[] = {
+	(module_info*) &core_info,
 	NULL
 };
 
-/* device stuff */
-/* do we inti ourselves? If we're in safe mode we'll decline so if things
- * screw up we can boot and delete the broken driver!
- * After my experiences earlier - a good idea!
- *
- * Also we'll turn on the serial debugger to aid in our debugging
- * experience.
- */
-status_t init_hardware (void)
-{
-	bool safemode = false;
-	void *sfmptr;
-
-	/* get a pointer to the driver settings... */
-	sfmptr = load_driver_settings(B_SAFEMODE_DRIVER_SETTINGS);
-
-	/* only use the pointer if it's valid */
-	if (sfmptr != NULL) {
-		/* we got a pointer, now get setting... */
-		safemode = get_driver_boolean_parameter(sfmptr, 
-			B_SAFEMODE_SAFE_MODE, false, false);
-		/* now get rid of settings */
-		unload_driver_settings(sfmptr);
-	}
-	if (safemode) {
-		dprintf("net_srv: init_hardware: declining offer to join the party.\n");
-		return B_ERROR;
-	}
-
-	/* XXX - remove me when debugging is no longer required! */
-	set_dprintf_enabled(true);
-
-	return B_OK;
-}
-
-status_t init_driver (void)
-{
-	/* do we need to do anything here? */
-	dprintf("net_srv: init_driver: returning OK!\n");
-	return B_OK;
-}
-
-void uninit_driver (void)
-{
-	dprintf("net_srv: uninit_driver: uninit_driver\n");
-	/* shutdown core server */
-}
-
-const char** publish_devices()
-{
-	return PublishedDeviceNames;
-}
-
-static status_t openbeos_net_server_open(const char *devName, 
-				uint32 flags,
-				void **cpp)
-{
-	struct sock_fd *sfd;
-
-	dprintf("net_srv: _open: called!\n");
-	if (cpp == NULL) {
-		dprintf("net_srv: _open: NULL cookie pointer!\n");
-		return B_BAD_ADDRESS;
-	}
-
-	*cpp = NULL; /* make sure we return NULL in case of error */
-
-	if (devName == NULL) {
-		dprintf("net_srv: _open: NULL device name???\n");
-		return B_BAD_ADDRESS;
-	}
-
-	if (strcmp(devName, PublishedDeviceNames[0]) != 0) {
-		dprintf("net_srv: _open: device name doesn't match! %s\n", devName);
-		return B_NAME_NOT_FOUND;
-	}
-
-	dprintf("net_srv: _open: all OK, trying to init server!\n");
-
-	if (devices == NULL)
-		_main();
-
-	/* OK, so here we now need to allocate a socket structure that
-	 * we return as the cookie!
-	 */
-	sfd = make_sock_fd();
-	if (sfd == NULL) {
-		dprintf("net_srv: _open: failed to create internal socket structure\n");
-		return B_DEV_NO_MEMORY;
-	}
-	*cpp = (void*)sfd;
-	
-	dprintf("Server Init complete.\n");
-	return B_OK;
-}
-
-static status_t openbeos_net_server_close(void *cookie)
-{
-	struct sock_fd *sfd = (struct sock_fd *)cookie;
-
-	dprintf("net_srv: _close: close sfd->fd %d\n", sfd->fd);
-
-	release_sock_fd(sfd);
-
-	return B_OK;
-}
-
-static status_t openbeos_net_server_free(void *cookie)
-{
-	dprintf("net_srv: _free\n");
-	return B_OK;
-}
-
-static status_t openbeos_net_server_control(void *cookie,
-				uint32 op,
-				void *data,
-				size_t len)
-{
-	dprintf("net_srv: _control:\n");
-	return B_OK;
-}
-
-static status_t openbeos_net_server_read(void *cookie,
-				off_t position,
-				void *buffer,
-				size_t *readlen)
-{
-	dprintf("net_srv: _read\n");
-	return B_OK;
-}
-
-static status_t openbeos_net_server_write(void *cookie,
-				off_t position,
-				const void *buffer,
-				size_t *writelen)
-{
-	dprintf("net_srv: _write\n");
-	return B_OK;
-}	
-	
-device_hooks openbeos_net_server_hooks =
-{
-	openbeos_net_server_open,
-	openbeos_net_server_close,
-	openbeos_net_server_free,
-	openbeos_net_server_control,
-	openbeos_net_server_read,
-	openbeos_net_server_write,
-	NULL, /* We don't implement the select hooks. */
-	NULL,
-	NULL, /* Don't implement the scattered buffer read and write. */
-	NULL
-};
-
-device_hooks* find_device (const char* DeviceName)
-{
-	int rv;
-	dprintf("net_srv: find_device: %s\n", DeviceName);
-
-	if (DeviceName == NULL)
-		return NULL;
-
-	if ((rv = strcmp(DeviceName, PublishedDeviceNames[0])) != 0) {
-		dprintf("net_srv: find_device: wasn't us...\n");
-		dprintf("'%s' vs '%s' = %d\n", DeviceName,
-			PublishedDeviceNames[0], rv);
-		return NULL;
-	}
-
-	dprintf("net_srv: find_device: It was us!\n");
-	return &openbeos_net_server_hooks;
-}
 #endif /* _KERNEL_MODE */
 
