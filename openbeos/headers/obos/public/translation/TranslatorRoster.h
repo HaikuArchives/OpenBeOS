@@ -225,7 +225,7 @@ private:
 		
 	// used to maintain binary combatibility with
 	// past and future versions of this object
-	int32 fReservedTranslators[5];
+	int32 fUnused[5];
 	virtual	void ReservedTranslatorRoster1();
 	virtual	void ReservedTranslatorRoster2();
 	virtual	void ReservedTranslatorRoster3();
