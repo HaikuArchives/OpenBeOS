@@ -140,19 +140,12 @@ char *pool_get(struct pool_ctl *p)
 	#if POOL_USES_BENAPHORES
 		ACQUIRE_BENAPHORE(p->lock);
 	#else
-		ACQUIRE_READ_LOCK(p->lock);
+		ACQUIRE_WRITE_LOCK(p->lock);
 	#endif
 
 	if (p->freelist) {
 		/* woohoo, just grab a block! */
 		rv = p->freelist;
-		
-		#if !POOL_USES_BENAPHORES
-			RELEASE_READ_LOCK(p->lock);
-
-			/* we need to hold the write lock for that piece of code */
-			ACQUIRE_WRITE_LOCK(p->lock);
-		#endif
 
 		p->freelist = ((struct free_blk*)rv)->next;
 
@@ -162,12 +155,16 @@ char *pool_get(struct pool_ctl *p)
 			RELEASE_WRITE_LOCK(p->lock);
 		#endif
 		return rv;
-	}
+	}		
+	#if !POOL_USES_BENAPHORES
+		RELEASE_WRITE_LOCK(p->lock);
+		ACQUIRE_READ_LOCK(p->lock);
+	#endif
 
 	/* no free blocks, try to allocate of the top of the memory blocks
 	** we must hold the global pool lock while iterating through the list!
 	*/
-	
+
 	do {
 		ACQUIRE_BENAPHORE(mp->lock);
 

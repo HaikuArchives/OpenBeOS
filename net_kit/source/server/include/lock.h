@@ -86,8 +86,9 @@ typedef struct rw_lock rw_lock;
 
 #define ACQUIRE_WRITE_LOCK(lock) \
 	{ \
-		int32 readers = atomic_add(&(lock).count, -MAX_READERS); \
+		int32 readers; \
 		ACQUIRE_BENAPHORE((lock).writeLock); \
+		readers = atomic_add(&(lock).count, -MAX_READERS); \
 		if (readers < MAX_READERS) \
 			acquire_sem_etc((lock).sem,readers <= 0 ? 1 : MAX_READERS - readers,0,0); \
 		RELEASE_BENAPHORE((lock).writeLock); \
