@@ -75,16 +75,14 @@ BStatable::IsSymLink() const
 status_t 
 BStatable::GetNodeRef(node_ref *ref) const
 {
+	status_t error = (ref ? B_OK : B_BAD_VALUE);
 	struct stat statData;
-	status_t error;
-
-	error = GetStat(&statData);
-	
-	if(error == B_OK) {
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK) {
 		ref->device  = statData.st_dev;
 		ref->node = statData.st_ino;
 	}
-
 	return error;
 }
 	
@@ -95,15 +93,13 @@ BStatable::GetNodeRef(node_ref *ref) const
 status_t 
 BStatable::GetOwner(uid_t *owner) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	*owner = statData.st_uid;
-  }
-
-  return error;
+	status_t error = (owner ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		*owner = statData.st_uid;
+	return error;
 }
 
 /*!	\brief Sets the owner of the node.
@@ -132,15 +128,13 @@ BStatable::SetOwner(uid_t owner)
 status_t
 BStatable::GetGroup(gid_t *group) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	*group = statData.st_gid;
-  }
-
-  return error;
+	status_t error = (group ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		*group = statData.st_gid;
+	return error;
 }
 
 /*!	\brief Sets the group owner of the node.
@@ -169,15 +163,13 @@ BStatable::SetGroup(gid_t group)
 status_t
 BStatable::GetPermissions(mode_t *perms) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	*perms = (statData.st_mode & S_IUMSK);
-  }
-
-  return error;
+	status_t error = (perms ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		*perms = (statData.st_mode & S_IUMSK);
+	return error;
 }
 
 /*!	\brief Sets the permissions of the node.
@@ -206,15 +198,13 @@ BStatable::SetPermissions(mode_t perms)
 status_t
 BStatable::GetSize(off_t *size) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	*size = statData.st_size;
-  }
-
-  return error;
+	status_t error = (size ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		*size = statData.st_size;
+	return error;
 }
 
 /*!	\brief Returns the last time the node was modified.
@@ -224,15 +214,13 @@ BStatable::GetSize(off_t *size) const
 status_t
 BStatable::GetModificationTime(time_t *mtime) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	*mtime = statData.st_mtime;
-  }
-
-  return error;
+	status_t error = (mtime ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		*mtime = statData.st_mtime;
+	return error;
 }
 
 /*!	\brief Sets the last time the node was modified.
@@ -261,15 +249,13 @@ BStatable::SetModificationTime(time_t mtime)
 status_t
 BStatable::GetCreationTime(time_t *ctime) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	*ctime = statData.st_crtime;
-  }
-
-  return error;
+	status_t error = (ctime ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		*ctime = statData.st_crtime;
+	return error;
 }
 
 /*!	\brief Sets the time the node was created.
@@ -299,15 +285,13 @@ BStatable::SetCreationTime(time_t ctime)
 status_t
 BStatable::GetAccessTime(time_t *atime) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	*atime = statData.st_atime;
-  }
-
-  return error;
+	status_t error = (atime ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		*atime = statData.st_atime;
+	return error;
 }
 
 /*!	\brief Sets the time the node was accessed.
@@ -338,19 +322,13 @@ BStatable::SetAccessTime(time_t atime)
 status_t
 BStatable::GetVolume(BVolume *vol) const
 {
-  struct stat statData;
-  status_t error;
-
-  error = GetStat(&statData);
-  if (error == B_OK) {
-	if(vol != 0) {
-//	  vol->SetTo(statData.st_dev);
-	} else {
-//	  vol = new BVolume(statData.st_dev);
-	}
-  }
-
-  return error;
+	status_t error = (vol ? B_OK : B_BAD_VALUE);
+	struct stat statData;
+	if (error == B_OK)
+		error = GetStat(&statData);
+	if (error == B_OK)
+		error = vol->SetTo(statData.st_dev);
+	return error;
 }
 
 void BStatable::_OhSoStatable1() {}
