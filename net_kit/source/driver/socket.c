@@ -251,8 +251,12 @@ static status_t net_socket_close(void *cookie)
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: net_socket_close(%p)\n", nsc);
 #endif
-	if (nsc->socket)
-		return core->soclose(nsc->socket);
+
+	if (nsc->socket) {
+		core->soclose(nsc->socket);
+		nsc->socket = NULL;
+	};
+	
 	return B_OK;
 }
 
@@ -263,6 +267,8 @@ static status_t net_socket_free(void *cookie)
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: net_socket_free\n");
 #endif
+
+	free(cookie);
 	return B_OK;
 }
 
