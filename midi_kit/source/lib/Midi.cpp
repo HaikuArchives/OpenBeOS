@@ -79,7 +79,6 @@ BList * BMidi::Connections() const {
 }
 
 void BMidi::SnoozeUntil(uint32 time) const {
-
 }
 
 void BMidi::SprayNoteOff(uchar chan, uchar note, uchar vel,

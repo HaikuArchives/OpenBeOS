@@ -8,8 +8,8 @@ int main(int argc, char * argv[]) {
 		cerr << "Must supply a filename (*.mid)!" << endl;
 		return 1;
 	}
-	BMidiText text;
-	BMidiStore store;
+	BMidiText * text = new BMidiText();
+	BMidiStore * store = new BMidiStore();
 	BEntry entry(argv[1],true);
 	if(!entry.Exists()) {
 		cerr << "File does not exist." << endl;
@@ -17,11 +17,14 @@ int main(int argc, char * argv[]) {
 	}
 	entry_ref e_ref;
 	entry.GetRef(&e_ref);
-	store.Import(&e_ref);
-	store.Connect(&text);
-	store.Start();
-	snooze(10000000);
-	store.Stop();
+	store->Import(&e_ref);
+	store->Connect(text);
+	store->Start();
+	snooze(100000000);
+	store->Stop();
 	
+	store->Disconnect(text);
+	delete store;
+	delete text;
 	return 0;
 }

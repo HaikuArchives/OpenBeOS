@@ -16,16 +16,22 @@
 
 BMidiStore::BMidiStore() {
 	_evt_list = new BList();
+	_tempo = 60;
+	_cur_evt = 0;
 }
 
 BMidiStore::~BMidiStore() {
+	int32 num_items = _evt_list->CountItems();
+	for(int i = num_items - 1; i >= 0; i--) {
+		delete (BMidiEvent *)_evt_list->RemoveItem(i);
+	}
 	delete _evt_list;
 }
 
 void BMidiStore::NoteOff(uchar chan, uchar note, uchar vel, uint32 time) {
 }
     	                 
-void BMidiStore::NoteOn(uchar chan, uchar note, uchar velo, uint32 time) {
+void BMidiStore::NoteOn(uchar chan, uchar note, uchar vel, uint32 time) {
 }
 
 void BMidiStore::KeyPressure(uchar chan, uchar note, uchar pres,
@@ -62,7 +68,6 @@ void BMidiStore::AllNotesOff(bool just_chan, uint32 time) {
 }
 
 status_t BMidiStore::Import(const entry_ref * ref) {
-	cout.flush();
 	BEntry file_entry(ref,true);
 	BPath file_path;
 	file_entry.GetPath(&file_path);
@@ -72,6 +77,9 @@ status_t BMidiStore::Import(const entry_ref * ref) {
 	}
 	inf.seekg(0,ios::end);
 	uint32 file_len = inf.tellg();
+	if(file_len < 16) {
+		return B_BAD_MIDI_DATA;
+	}
 	inf.seekg(ios::beg);
 	uint8 * data = new uint8[file_len];
 	if(data == NULL) {
@@ -97,21 +105,27 @@ status_t BMidiStore::Import(const entry_ref * ref) {
 	d += 2;
 	PACK_2_U8_TO_U16(d,tracks);
 	d += 2;
-	PACK_2_U8_TO_U16(d,tracks);
+	PACK_2_U8_TO_U16(d,division);
 	d += 2;
 	status_t ret;
-	switch(format) {
-	case 0:
-		ret = _DecodeFormat0Tracks(d,tracks,file_len-(data-d));
-		break;
-	case 1:
-		return B_ERROR;
-	case 2:
-		return B_ERROR;
-	default:
-		return B_BAD_MIDI_DATA;
+	try {
+		switch(format) {
+		case 0:
+			_DecodeFormat0Tracks(d,tracks,file_len-(data-d));
+			break;
+		case 1:
+			_DecodeFormat1Tracks(d,tracks,file_len-(data-d));
+			break;
+		case 2:
+			_DecodeFormat2Tracks(d,tracks,file_len-(data-d));
+			break;
+		default:
+			return B_BAD_MIDI_DATA;
+		}
+	} catch(status_t err) {
+		return err;
 	}
-	return ret;
+	return B_OK;
 }
 
 status_t BMidiStore::Export(const entry_ref * ref, int32 format) {
@@ -126,18 +140,20 @@ void BMidiStore::SortEvents(bool force) {
 }
 
 uint32 BMidiStore::CountEvents() const {
-	return 0;
+	return _evt_list->CountItems();
 }
 
 uint32 BMidiStore::CurrentEvent() const {
-	return 0;
+	return _cur_evt;
 }
 
 void BMidiStore::SetCurrentEvent(uint32 event_num) {
+	_cur_evt = event_num;
 }
 
 uint32 BMidiStore::DeltaOfEvent(uint32 event_num) const {
-	return 0;
+	BMidiEvent * e = (BMidiEvent *)_evt_list->ItemAt(event_num);
+	return e->time - _start_time;
 }
 
 uint32 BMidiStore::EventAtDelta(uint32 time) const {
@@ -145,36 +161,332 @@ uint32 BMidiStore::EventAtDelta(uint32 time) const {
 }
 
 uint32 BMidiStore::BeginTime() const {
-	return 0;
+	return _start_time;
 }
 
 void BMidiStore::SetTempo(int32 bpm) {
+	_tempo = bpm;
 }
 
 int32 BMidiStore::Tempo() const {
-	return 0;
+	return _tempo;
 }
 
 void BMidiStore::Run() {
 	while(KeepRunning()) {
-		SprayNoteOn(1,1,1,B_NOW);
-		snooze(1000000);
+		BMidiEvent * e = (BMidiEvent *)_evt_list->ItemAt(_cur_evt);
+		if(e == NULL) {
+			return;
+		}
+		uint32 cur_time = e->time;
+		uint32 now = B_NOW;
+		while(e->time == cur_time) {
+			BMidiEvent::Data & d = e->data;
+			switch(e->opcode) {
+			case BMidiEvent::OP_NOTE_OFF:
+				SprayNoteOff(d.note_off.channel,
+					d.note_off.note, d.note_off.velocity,now);
+				break;
+			case BMidiEvent::OP_NOTE_ON:
+				SprayNoteOn(d.note_on.channel,
+					d.note_on.note,d.note_on.velocity,now);
+				break;
+			case BMidiEvent::OP_KEY_PRESSURE:
+				SprayKeyPressure(d.key_pressure.channel,
+					d.key_pressure.note,d.key_pressure.pressure,now);
+				break;
+			case BMidiEvent::OP_CONTROL_CHANGE:
+				SprayControlChange(d.control_change.channel,
+					d.control_change.number,d.control_change.value,now);
+				break;
+			case BMidiEvent::OP_PROGRAM_CHANGE:
+				SprayProgramChange(d.program_change.channel,
+					d.program_change.number,now);
+				break;
+			case BMidiEvent::OP_CHANNEL_PRESSURE:
+				SprayChannelPressure(d.channel_pressure.channel,
+					d.channel_pressure.pressure,now);
+				break;
+			case BMidiEvent::OP_PITCH_BEND:
+				SprayPitchBend(d.pitch_bend.channel,
+					d.pitch_bend.lsb,d.pitch_bend.msb,now);
+				break;
+			case BMidiEvent::OP_SYSTEM_EXCLUSIVE:
+				SpraySystemExclusive(d.system_exclusive.data,
+					d.system_exclusive.length,now);
+				break;
+			case BMidiEvent::OP_SYSTEM_COMMON:
+				SpraySystemCommon(d.system_common.status,
+					d.system_common.data1,d.system_common.data2,now);
+				break;
+			case BMidiEvent::OP_SYSTEM_REAL_TIME:
+				SpraySystemRealTime(d.system_real_time.status,now);
+				break;
+			case BMidiEvent::OP_TEMPO_CHANGE:
+				SprayTempoChange(d.tempo_change.beats_per_minute,now);
+				_tempo = d.tempo_change.beats_per_minute;
+				break;
+			case BMidiEvent::OP_ALL_NOTES_OFF:
+				break;
+			default:
+				break;
+			}
+			_cur_evt++;
+			e = (BMidiEvent *)_evt_list->ItemAt(_cur_evt);
+			if(e == NULL) {
+				return;
+			}
+		}
+		uint32 beat_len = 6000000 / _tempo;
+		uint32 next_time = e->time;
+		snooze((next_time - cur_time) * beat_len);
 	}
 }
 
 //-----------------------------------------------------------------------------
 //
-status_t BMidiStore::_DecodeFormat0Tracks(uint8 * data, uint16 tracks,
+void BMidiStore::_DecodeFormat0Tracks(uint8 * data, uint16 tracks,
 	uint32 len) {
-	cout << "Decoding " << tracks << " tracks" << endl;
+	uint8 * last_byte = data + len;
+	if(tracks != 1) {
+		throw B_BAD_MIDI_DATA;
+	}
 	uint8 * d = data;
-	uint32 hdr_id;
-	uint32 hdr_len;
-	PACK_4_U8_TO_U32(d,hdr_id);
+	if(strncmp((const char *)d,"MTrk",4) != 0) {
+		throw B_BAD_MIDI_DATA;
+	}
 	d += 4;
-	PACK_4_U8_TO_U32(d,hdr_len);
+	uint32 trk_len;
+	PACK_4_U8_TO_U32(d,trk_len);
 	d += 4;
-	cout << "Header id: " << hdr_id << endl;
-	cout << "Header len: " << hdr_len << endl;
-	return B_OK;
+	uint32 time = 0;
+	try {
+		while(d < last_byte) {
+			uint32 evt_dtime = _GetVarLength(&d,last_byte);
+			time += evt_dtime;
+			BMidiEvent * event = new BMidiEvent();
+			bool track_end = _GetEvent(&d,last_byte,event);
+			if(track_end) {
+				break;
+			}
+			event->time = time;
+			_evt_list->AddItem(event);
+		}
+	} catch(status_t e) {
+		if(e == B_OK) {
+			return;
+		}
+		throw e;
+	}
+}
+
+void BMidiStore::_DecodeFormat1Tracks(uint8 * data, uint16 tracks,
+	uint32 len) {
+	return;	
+}
+
+
+void BMidiStore::_DecodeFormat2Tracks(uint8 * data, uint16 tracks,
+	uint32 len) {	
+	return;
+}
+
+bool BMidiStore::_GetEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
+#define CHECK_DATA(_d) if((_d) > max_d) throw B_BAD_MIDI_DATA;
+#define INC_DATA(_d) CHECK_DATA(_d); d = _d;
+	uint8 tmp8;
+	uint16 tmp16;
+	uint32 tmp32;
+	uint8 * d = *data;
+	if(d == NULL) {
+		throw B_BAD_MIDI_DATA;
+	}
+	if(d[0] == 0xff) {
+		INC_DATA(d+1);
+		uint32 len;
+		if(d[0] == 0x0) {
+			INC_DATA(d+1);
+			if(d[0] == 0x00) {
+				// Sequence number!
+				INC_DATA(d+1);
+			} else if(d[0] == 0x02) {
+				// Sequence number!
+				INC_DATA(d+3);
+			} else {
+				throw B_BAD_MIDI_DATA;
+			}
+		} else if(d[0] > 0x00 && d[0] < 0x0a) {
+			INC_DATA(d+1);
+			len = _GetVarLength(&d,max_d);
+			INC_DATA(d+len);
+		} else if(d[0] == 0x2f) {
+			INC_DATA(d+1);
+			if(d[0] == 0x00) {
+				INC_DATA(d+1);
+				return true; // End of track.
+			} else {
+				throw B_BAD_MIDI_DATA;
+			}
+		} else if(d[0] == 0x51) {
+			INC_DATA(d+1);
+			if(d[0] == 0x03) {
+				event->opcode = BMidiEvent::OP_TEMPO_CHANGE;
+				INC_DATA(d+1);
+				CHECK_DATA(d+2);
+				uint32 mspb = (uint32)d[0] << 16 |
+					(uint32)d[1] << 8 | (uint32)d[2];
+				uint32 bpm = 60000000 / mspb;
+				event->data.tempo_change.beats_per_minute = bpm;
+				INC_DATA(d+3);
+			} else {
+				throw B_BAD_MIDI_DATA;
+			}
+		} else if(d[0] == 0x54) {
+			INC_DATA(d+1);
+			if(d[0] == 0x05) {
+				INC_DATA(d+1);
+				// SMPTE start time.
+				// hour = d[0];
+				// minute = d[1];
+				// second = d[2];
+				// frame = d[3];
+				// fraction = d[4];
+				INC_DATA(d+5);
+			} else {
+				throw B_BAD_MIDI_DATA;
+			}
+		} else if(d[0] == 0x58) {
+			INC_DATA(d+1);
+			if(d[0] == 0x04) {
+				INC_DATA(d+1);
+				// Time signature.
+				// numerator = d[0];
+				// denominator = d[1];
+				// midi clocks = d[2];
+				// 32nd notes in a quarter = d[3];
+				INC_DATA(d+4);
+			} else {
+				throw B_BAD_MIDI_DATA;
+			}
+		} else if(d[0] == 0x59) {
+			INC_DATA(d+1);
+			if(d[0] == 0x02) {
+				INC_DATA(d+1);
+				// Key signature.
+				// sf = d[0];
+				// minor = d[1];
+				INC_DATA(d+2);
+			} else {
+				throw B_BAD_MIDI_DATA;
+			}
+		} else if(d[0] == 0x7f) {
+			INC_DATA(d+1);
+			uint32 len = _GetVarLength(&d,max_d);
+			INC_DATA(d+len);
+		} else if(d[0] == 0x20) {
+			INC_DATA(d+1);
+			if(d[0] == 0x01) {
+				INC_DATA(d+2);
+			} else {
+				throw B_BAD_MIDI_DATA;
+			}
+		} else if(d[0] == 0x21) {
+			INC_DATA(d+1);
+			if(d[0] == 0x01) {
+				INC_DATA(d+2);
+			}
+		} else {
+			throw B_BAD_MIDI_DATA;
+		}
+	} else if(d[0] == 0xf0) {
+		INC_DATA(d+1);
+		// Manufacturer ID = d[0];
+		while(d[0] != 0xf7) {
+			// Read data eliding the msb.
+			INC_DATA(d+1);
+		}
+	} else if((d[0] & 0xf0) == 0x80) {
+		event->opcode = BMidiEvent::OP_NOTE_OFF;
+		event->data.note_off.channel = d[0] & 0x0f;
+		INC_DATA(d+1);
+		event->data.note_off.note = d[0];
+		INC_DATA(d+1);
+		event->data.note_off.velocity = d[0];
+		INC_DATA(d+1);
+	} else if((d[0] & 0xf0) == 0x90) {
+		event->opcode = BMidiEvent::OP_NOTE_ON;
+		event->data.note_on.channel = d[0] & 0x0f;
+		INC_DATA(d+1);
+		event->data.note_on.note = d[0];
+		INC_DATA(d+1);
+		event->data.note_on.velocity = d[0];
+		INC_DATA(d+1);
+	} else if((d[0] & 0xf0) == 0xa0) {
+		event->opcode = BMidiEvent::OP_KEY_PRESSURE;
+		event->data.key_pressure.channel = d[0] & 0x0f;
+		INC_DATA(d+1);
+		event->data.key_pressure.note = d[0];
+		INC_DATA(d+1);
+		event->data.key_pressure.pressure = d[0];
+		INC_DATA(d+1);
+	} else if((d[0] & 0xf0) == 0xb0) {
+		event->opcode = BMidiEvent::OP_CONTROL_CHANGE;
+		event->data.control_change.channel = d[0] & 0x0f;
+		INC_DATA(d+1);
+		event->data.control_change.number = d[0];
+		INC_DATA(d+1);
+		event->data.control_change.value = d[0];
+		INC_DATA(d+1);
+	} else if((d[0] & 0xf0) == 0xc0) {
+		event->opcode = BMidiEvent::OP_PROGRAM_CHANGE;
+		event->data.program_change.channel = d[0] & 0x0f;
+		INC_DATA(d+1);
+		event->data.program_change.number = d[0];
+		INC_DATA(d+1);
+	} else if((d[0] & 0xf0) == 0xd0) {
+		event->opcode = BMidiEvent::OP_CHANNEL_PRESSURE;
+		event->data.channel_pressure.channel = d[0] & 0x0f;
+		INC_DATA(d+1);
+		event->data.channel_pressure.pressure = d[0];
+		INC_DATA(d+1);
+	} else if((d[0] & 0xf0) == 0xe0) {
+		event->opcode = BMidiEvent::OP_PITCH_BEND;
+		event->data.pitch_bend.channel = d[0] & 0x0f;
+		INC_DATA(d+1);
+		event->data.pitch_bend.lsb = d[0];
+		INC_DATA(d+1);
+		event->data.pitch_bend.msb = d[0];
+		INC_DATA(d+1);
+	} else {
+		cerr << "Unsupported Code:0x" << hex << (int)d[0] << endl;
+		INC_DATA(d+1);
+		return event;
+	}
+	*data = d;
+	return false;
+#undef INC_DATA
+#undef CHECK_DATA
+}
+
+uint32 BMidiStore::_GetVarLength(uint8 ** data, uint8 * max_d) {
+	uint32 val;
+	uint8 bytes = 1;
+	uint8 byte = 0;
+	uint8 * d = *data;
+	val = *d;
+	d++;
+	if(val & 0x80) {
+		val &= 0x7f;
+		do {
+			if(d > max_d) {
+				throw B_BAD_MIDI_DATA;
+			}
+			byte = *d;
+			val = (val << 7) + byte & 0x7f;
+			bytes++;
+			d++;
+		} while(byte & 0x80);
+	}
+	*data = d;
+	return val;
 }

@@ -12,13 +12,17 @@ CFLAGS=-g
 SRCS=\
 lib/Midi.cpp \
 lib/MidiStore.cpp \
-lib/MidiText.cpp
+lib/MidiText.cpp \
+lib/MidiEvent.cpp
 OBJS=$(SRCS:.cpp=.o)
 
 #
 # Dependencies
 #
 all: all_static
+
+tests: all
+	make -C tests
 
 all_dynamic: libmidi.so
 
