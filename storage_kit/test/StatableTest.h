@@ -1,228 +1,123 @@
+// StatableTest.h
+
 #ifndef __sk_statable_test_h__
 #define __sk_statable_test_h__
 
-#include <cppunit/TestCase.h>
-#include <cppunit/TestCaller.h>
-#include <cppunit/TestSuite.h>
+#include <list>
+#include <string>
 
-#include <Statable.h>
-#include <Entry.h>
+#include "BasicTest.h"
 
-#define STATABLE BEntry
-// Also test with STATBLE set to BNode
+// TestEntries
 
-class StatableTest : public CppUnit::TestCase
+template <typename C>
+struct TestEntries
+{
+	~TestEntries()
+	{
+		delete_all();
+	}
+
+	void delete_all()
+	{
+		for (list<C*>::iterator it = entries.begin();
+			 it != entries.end();
+			 it++) {
+			// Arghh, BStatable has no virtual destructor!
+			// Workaround: try to cast to one of the subclasses
+			if (BNode *node = dynamic_cast<BNode*>(*it))
+				delete node;
+			else if (BEntry *entry = dynamic_cast<BEntry*>(*it))
+				delete entry;
+			else
+				delete *it;
+		}
+		clear();
+	}
+
+	void clear()
+	{
+		entries.clear();
+		entryNames.clear();
+		rewind();
+	}
+
+	void add(C *entry, string entryName)
+	{
+		entries.push_back(entry);
+		entryNames.push_back(entryName);
+	}
+
+	bool getNext(C *&entry, string &entryName)
+	{
+		bool result = (entryIt != entries.end()
+					   && entryNameIt != entryNames.end());
+		if (result) {
+			entry = *entryIt;
+			entryName = *entryNameIt;
+			entryIt++;
+			entryNameIt++;
+		}
+		return result;
+	}
+	
+	void rewind()
+	{
+		entryIt = entries.begin();
+		entryNameIt = entryNames.begin();
+	}
+
+	list<C*>					entries;
+	list<string>				entryNames;
+	list<C*>::iterator			entryIt;
+	list<string>::iterator		entryNameIt;
+};
+
+typedef TestEntries<BStatable> TestStatables;
+
+
+// StatableTest
+
+class StatableTest : public BasicTest
 {
 public:
-	static Test* Suite() {
-		CppUnit::TestSuite *suite = new CppUnit::TestSuite();
-		
-		suite->addTest( new CppUnit::TestCaller<PathTest>("BStatable::IsFile()", &StatableTest::IsFile) );
+	template<typename DerivedClass>
+	static inline void AddBaseClassTests(const char *prefix,
+										 CppUnit::TestSuite *suite);
 
-		suite->addTest( new CppUnit::TestCaller<PathTest>("BStatable::IsLink()", &StatableTest::IsLink) );
-
-		suite->addTest( new CppUnit::TestCaller<PathTest>("BStatable::IsDirectory()", &StatableTest::IsDirectory) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetStat()", &StatableTest::GetStat ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetNodeRef()", &StatableTest::GetNodeRef ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetOwner()", &StatableTest::GetOwner ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::SetOwner()", &StatableTest::SetOwner ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetGroup()", &StatableTest::GetGroup ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::SetGroup()", &StatableTest::SetGroup ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetPermissiions()", &StatableTest::GetPermissions ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetSize()", &StatableTest::GetSize ) );
-
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetModificationTime()", &StatableTest::GetModificationTime ) );
-		
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::SetModificationTime()", &StatableTest::SetModificationTime ) );
-		
-		suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetCreationTime()", &StatableTest::GetCreationTime ) );
-
-	suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::SetCreationTime()", &StatableTest::SetCreationTime ) );
-
-	suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetAccessTime()", &StatableTest::GetAccessTime ) );
-
-	suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::SetAccessTime()", &StatableTest::SetAccessTime ) );
-
-	suite->addTest( new CppUnut::TestCaller<PathTest>("BStatable::GetVolume()", &StatableTest::GetVolume ) );
-
-		return suite;
-	}
+	virtual void CreateROStatables(TestStatables& testEntries) = 0;
+	virtual void CreateRWStatables(TestStatables& testEntries) = 0;
+	virtual void CreateUninitializedStatables(TestStatables& testEntries) = 0;
 
 	// This function called before *each* test added in Suite()
-	void setUp() {}
+	void setUp();
 	
 	// This function called after *each* test added in Suite()
-	void tearDown()	{}
+	void tearDown();
 
-	void IsFile() {
-		STATABLE folder("/", false);
-		STATABLE link("/system/", false);
-		STATABLE file("/system/Tracker", false);
-		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
-
-		CPPUNIT_ASSERT( folder.IsFile() == false ); 
-		CPPUNIT_ASSERT( link.IsFile() == false );
-		CPPUNIT_ASSERT( file.IsFile() == true );
-		CPPUNIT_ASSERT( f404.IsFile() == false );
-	}
-
-	void IsDirectory() {
-		STATABLE folder("/", false);
-		STATABLE link("/system/", false);
-		STATABLE file("/system/Tracker", false);
-		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
-
-		CPPUNIT_ASSERT( folder.IsDirectory() == true ); 
-		CPPUNIT_ASSERT( link.IsDirectory() == false );
-		CPPUNIT_ASSERT( file.IsDirectory() == false );
-		CPPUNIT_ASSERT( f404.IsDirectory() == false );
-	}
-
-	void IsLink() {
-		STATABLE folder("/", false);
-		STATABLE link("/system/", false);
-		STATABLE file("/system/Tracker", false);
-		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
-
-		CPPUNIT_ASSERT( folder.IsSymLink() == false ); 
-		CPPUNIT_ASSERT( link.IsSymLink() == true );
-		CPPUNIT_ASSERT( file.IsSymLink() == false );
-		CPPUNIT_ASSERT( f404.IsSymLink() == false );
-	}
-
-	void GetStat() {
-  		STATABLE folder("/", false);
-		STATABLE link("/system/", false);
-		STATABLE file("/system/Tracker", false);
-		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
-		
-		struct stat folderStat;
-		struct stat linkStat;
-		struct stat fileStat;
-		struct stat f404Stat;
-		
-		CPPUNIT_ASSERT( folder.GetStat(&folderStat) == B_OK );
-		CPPUNIT_ASSERT( link.GetStat(&linkStat) == B_OK );
-		CPPUNIT_ASSERT( file.GetStat(&fileStat) == B_OK );
-		CPPUNIT_ASSERT( f404.GetStat(&f404Stat) == B_BAD_VALUE );
-
-		CPPUNIT_ASSERT( S_ISREG(folderStat.st_mode) == true );
-		CPPUNIT_ASSERT( S_ISLNK(linkStat.st_mode) == true );
-		CPPUNIT_ASSERT( S_ISREG(fileStat.st_mode) == true );
-	}
-
-	void GetNodeRef() {
-  		STATABLE folder("/", false);
-		STATABLE link("/system/", false);
-		STATABLE file("/system/Tracker", false);
-		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
-		
-		node_ref folderNode;
-		node_ref linkNode;
-		node_ref fileNode;
-		node_ref f404Node;
-		
-		CPPUNIT_ASSERT( folder.GetNodeRef(&folderNode) == B_OK );
-		CPPUNIT_ASSERT( link.GetNodeRef(&linkNode) == B_OK );
-		CPPUNIT_ASSERT( file.GetNodeRef(&fileNode) == B_OK );
-		CPPUNIT_ASSERT( f404.GetNodeRef(&f404Node) == B_BAD_VALUE );
-
-		
-	}
-	
-	void GetOwner()
-	{
-  		STATABLE folder("/", false);
-		STATABLE link("/system/", false);
-		STATABLE file("/system/Tracker", false);
-		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
-
-		uid_t folderOwner;
-		uid_t linkOwner;
-		uid_t fileOwner;
-		uid_t f404Owner;
-		
-		CPPUNIT_ASSERT( folder.GetOwner( &folderOwner ) == B_OK );
-		CPPUNIT_ASSERT( link.GetOwner( &linkOwner ) == B_OK );
-		CPPUNIT_ASSERT( file.GetOwner( &fileOwner ) == B_OK );
-		CPPUNIT_AsSERT( f404.GetOwner( &f404Owner ) == B_BAD_VALUE );
-	}
-	  
-	void SetOwner()
-	{ 
-	}
-	
-	void GetGroup()
-	{
-  		STATABLE folder("/", false);
-		STATABLE link("/system/", false);
-		STATABLE file("/system/Tracker", false);
-		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
-
-		gid_t folderGroup;
-		gid_t linkGroup;
-		gid_t fileGroup;
-		gid_t f404Group;
-		
-		CPPUNIT_ASSERT( folder.GetGroup( &folderGroup ) == B_OK );
-		CPPUNIT_ASSERT( link.GetGroup( &linkGroup ) == B_OK );
-		CPPUNIT_ASSERT( file.GetGroup( &fileGroup ) == B_OK );
-		CPPUNIT_AsSERT( f404.GetGroup( &f404Group ) == B_BAD_VALUE );
-	}
-
-	void SetGroup()
-	{
-	}
-	
-	void GetPermissions()
-    {
-	}
-
-	void SetPermissions()
-	{
-	}
-
-	void GetSize()
-	{
-	}
-	
-	void GetModificationTime()
-	{
-	}
-	
-	void SetModificationTime()
-    {
-	}
-	
-	
-	void GetCreationTime()
-	{
-	}
-	
-	void SetCreationTime()
-	{
-	}
-	
-	void GetAccessTime()
-	{
-	}
-
-	void SetAccessTime()
-	{
-	}
-
-	void GetVolume()
-	{
-	}
-
+	void GetStatTest();
+	void IsXYZTest();
+	void GetXYZTest();
+	void SetXYZTest();
 };
+
+// AddBaseClassTests
+template<typename DerivedClass>
+inline void
+StatableTest::AddBaseClassTests(const char *prefix, CppUnit::TestSuite *suite)
+{
+	typedef CppUnit::TestCaller<DerivedClass> TC;
+	string p(prefix);
+
+	suite->addTest( new TC(p + "BStatable::GetStat Test",
+						   &StatableTest::GetStatTest) );
+	suite->addTest( new TC(p + "BStatable::IsXYZ Test",
+						   &StatableTest::IsXYZTest) );
+	suite->addTest( new TC(p + "BStatable::GetXYZ Test",
+						   &StatableTest::GetXYZTest) );
+	suite->addTest( new TC(p + "BStatable::SetXYZ Test",
+						   &StatableTest::SetXYZTest) );
+}
+
 
 #endif	// __sk_statable_test_h__
