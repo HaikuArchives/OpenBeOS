@@ -40,6 +40,7 @@ printf("Invalid BRect: "); rect.PrintToStream();
 	bottomchild=NULL;
 
 	visible=new BRegion(Bounds());
+	full=new BRegion(Bounds());
 	invalid=NULL;
 
 	serverwin=srvwin;
@@ -77,6 +78,7 @@ Layer::Layer(BRect rect, const char *layername)
 	bottomchild=NULL;
 
 	visible=new BRegion(Bounds());
+	full=new BRegion(Bounds());
 	invalid=NULL;
 
 	serverwin=NULL;
@@ -95,12 +97,17 @@ Layer::Layer(BRect rect, const char *layername)
 Layer::~Layer(void)
 {
 #ifdef DEBUG_LAYERS
-	cout << "Layer Destructor for " << name->String() << endl << flush;
+printf("Layer Destructor for %s\n",name->String());
 #endif
 	if(visible)
 	{
 		delete visible;
 		visible=NULL;
+	}
+	if(full)
+	{
+		delete full;
+		full=NULL;
 	}
 	if(invalid)
 	{
@@ -210,12 +217,12 @@ if(bottomchild)
 	
 	if(layer->parent==NULL)
 	{
-		cout << "ERROR: RemoveChild(): View doesn't have a parent\n" << flush;
+		printf("ERROR: RemoveChild(): View doesn't have a parent\n");
 		return;
 	}
 	if(layer->parent!=this)
 	{
-		cout << "ERROR: RemoveChild(): View is not a child of this layer\n" << flush;
+		printf("ERROR: RemoveChild(): View is not a child of this layer\n");
 		return;
 	}
 
@@ -283,9 +290,9 @@ Layer *Layer::GetChildAt(BPoint pt, bool recursive=false)
 	Layer *child;
 	if(recursive)
 	{
-		for(child=topchild; child!=NULL; child=child->lowersibling)
+		for(child=bottomchild; child!=NULL; child=child->uppersibling)
 		{
-			if(child->topchild!=NULL)
+			if(child->bottomchild!=NULL)
 				child->GetChildAt(pt,true);
 			
 			if(child->hidecount>0)
@@ -297,7 +304,7 @@ Layer *Layer::GetChildAt(BPoint pt, bool recursive=false)
 	}
 	else
 	{
-		for(child=topchild; child!=NULL; child=child->lowersibling)
+		for(child=bottomchild; child!=NULL; child=child->uppersibling)
 		{
 			if(child->hidecount>0)
 				continue;
@@ -437,7 +444,7 @@ void Layer::Invalidate(BRect rect)
 	// Make our own section dirty and pass it on to any children, if necessary....
 	// YES, WE ARE SHARING DIRT! Mudpies anyone? :D
 
-	if(Bounds().Intersects(rect))
+	if(Frame().Intersects(rect))
 	{
 		
 		// Clip the rectangle to the visible region of the layer
@@ -461,7 +468,7 @@ void Layer::Invalidate(BRect rect)
 
 void Layer::RequestDraw(void)
 {
-/*	if(visible==NULL || hidecount>0)
+	if(visible==NULL || hidecount>0)
 		return;
 
 	if(serverwin)
@@ -479,12 +486,13 @@ void Layer::RequestDraw(void)
 		if(lay->IsDirty())
 			lay->RequestDraw();
 	}
-*/
+
 }
 
 bool Layer::IsDirty(void) const
 {
-	return is_dirty;
+//	return is_dirty;
+	return (!invalid)?true:false;
 }
 
 void Layer::ShowLayer(void)
@@ -551,7 +559,7 @@ void Layer::MoveBy(float x, float y)
 
 //	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
 //		lay->MoveBy(x,y);
-	Invalidate(Bounds());
+	Invalidate(Frame());
 }
 
 void Layer::ResizeBy(float x, float y)
@@ -574,10 +582,17 @@ void Layer::ResizeBy(float x, float y)
 
 void Layer::RebuildRegions(bool include_children=true)
 {
+	if(full)
+		full->Include(Bounds());
+	else
+		full=new BRegion(Bounds());
+
 	if(visible)
 		visible->Include(Bounds());
 	else
 		visible=new BRegion(Bounds());
+
+	// Remove child footprints from visible region here
 
 	if(include_children)
 	{
@@ -772,11 +787,11 @@ RootLayer::~RootLayer(void)
 {
 }
 
-void RootLayer::SetVisible(bool is_visible)
+void RootLayer::SetVisible(bool fVisible)
 {
-	if(visible!=is_visible)
+	if(is_visible!=fVisible)
 	{
-		visible=is_visible;
+		is_visible=fVisible;
 /*		if(visible)
 		{
 			updater_id=spawn_thread(UpdaterThread,name->String(),B_NORMAL_PRIORITY,this);
@@ -789,7 +804,7 @@ void RootLayer::SetVisible(bool is_visible)
 
 bool RootLayer::IsVisible(void) const
 {
-	return visible;
+	return is_visible;
 }
 
 int32 RootLayer::UpdaterThread(void *data)
@@ -801,7 +816,7 @@ int32 RootLayer::UpdaterThread(void *data)
 
 	while(1)
 	{
-		if(!root->visible)
+		if(!root->is_visible)
 		{
 			return 0;
 			exit_thread(1);
@@ -827,6 +842,7 @@ void RootLayer::RequestDraw(void)
 printf("Root::RequestDraw: invalid rects: %ld\n",invalid->CountRects());
 #endif
 
+	// Redraw the base
 	for(int32 i=0; invalid->CountRects();i++)
 	{
 		if(invalid->RectAt(i).IsValid())
@@ -844,7 +860,8 @@ printf("Root::RequestDraw:FillRect, color %u,%u,%u,%u\n",bgcolor.red,bgcolor.gre
 	delete invalid;
 	invalid=NULL;
 	is_dirty=false;
-	
+
+	// force redraw of all dirty windows	
 	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
 	{
 		if(lay->IsDirty())
