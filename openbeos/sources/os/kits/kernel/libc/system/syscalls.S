@@ -97,3 +97,5 @@ SYSCALL2(sys_atomic_or, 68)
 SYSCALL2(sys_atomic_set, 69)
 SYSCALL3(sys_test_and_set, 70)
 SYSCALL6(sys_sysctl, 71)
+SYSCALL3(sys_socket, 72)
+
