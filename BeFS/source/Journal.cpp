@@ -147,7 +147,7 @@ Journal::ReplayLog()
 
 		status_t status = ReplayLogEntry(&start);
 		if (status < B_OK) {
-			FATAL(("replaying log entry from %u failed: %s\n",start,status));
+			FATAL(("replaying log entry from %u failed: %s\n",start,strerror(status)));
 			return B_ERROR;
 		}
 		start = start % fLogSize;
@@ -195,7 +195,7 @@ Journal::blockNotify(off_t blockNumber,size_t numBlocks,void *arg)
 		update = true;
 	}
 	journal->fUsed -= logEntry->length;
-		
+
 	journal->fEntriesLock.Lock();
 	logEntry->Remove();
 	journal->fEntriesLock.Unlock();
@@ -205,6 +205,8 @@ Journal::blockNotify(off_t blockNumber,size_t numBlocks,void *arg)
 	// update the super block, and change the disk's state, if necessary
 
 	if (update) {
+		journal->fVolume->LogStart() = superBlock.log_start;
+
 		if (superBlock.log_start == superBlock.log_end)
 			superBlock.flags = SUPER_BLOCK_DISK_CLEAN;
 
@@ -224,12 +226,16 @@ Journal::WriteLogEntry()
 		return B_OK;
 
 	// Make sure there is enough space in the log.
-	// ToDo: We currently call this function once for every log entry
-	// that's written to disk, which might not be necessary - but
-	// we may want to do this at other places, too.
+	// If that fails for whatever reason, panic!
 	force_cache_flush(fVolume->Device(),false);
-	while (TransactionSize() > FreeLogBlocks())
+	int32 tries = fLogSize / 2 + 1;
+	while (TransactionSize() > FreeLogBlocks() && tries-- > 0)
 		force_cache_flush(fVolume->Device(),true);
+
+	if (tries <= 0) {
+		fVolume->Panic();
+		return B_BAD_DATA;
+	}
 
 	off_t logOffset = fVolume->ToBlock(fVolume->Log());
 	off_t logStart = fVolume->LogEnd();
