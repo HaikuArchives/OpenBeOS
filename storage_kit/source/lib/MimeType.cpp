@@ -745,6 +745,7 @@ BMimeType::SetSnifferRule(const char *rule)
 	(not checked)
 	- 0 <= Priority <= 1
 	- 0 <= Range begin <= Range end
+	- Rules of the form "() | () | ..." are invalid.
 
 	Examples:
 	- 1.0 ('ABCD')
@@ -753,9 +754,7 @@ BMimeType::SetSnifferRule(const char *rule)
 	- 0.8 [0:3] ('ABCD' | 'abcd')
 	  The file must contain the string "ABCD" or "abcd" starting somewhere in
 	  the first four bytes. The rule priority is 0.8.
-	- 0.5 [0:3] ('ABCD' | 'abcd') | [13] ('EFGH')
-	  0.5 ([0:3] 'ABCD' | [0:3] 'abcd' | [13] 'EFGH')
-	  Both rules are equivalent.
+	- 0.5 ([0:3] 'ABCD' | [0:3] 'abcd' | [13] 'EFGH')
 	  The file must contain the string "ABCD" or "abcd" starting somewhere in
 	  the first four bytes or the string "EFGH" at position 13. The rule
 	  priority is 0.5.
@@ -787,6 +786,21 @@ BMimeType::CheckSnifferRule(const char *rule, BString *parseError)
 }
 
 // GuessMimeType
+/*!	\brief Guesses a MIME type for the entry referred to by the given
+	entry_ref.
+	This version of GuessMimeType() combines the features of the other
+	versions: First the data of the given file are checked (sniffed). Only
+	if the result of this operation is inconclusive, i.e.
+	"application/octet-stream", the filename is examined for extensions.
+
+	\param ref Pointer to the entry_ref referring to the entry.
+	\param result Pointer to a pre-allocated BMimeType which is set to the
+		   resulting MIME type.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a ref or \a result.
+	- \c B_NAME_NOT_FOUND: \a ref refers to an abstract entry.
+*/
 status_t
 BMimeType::GuessMimeType(const entry_ref *file, BMimeType *result)
 {
@@ -794,6 +808,15 @@ BMimeType::GuessMimeType(const entry_ref *file, BMimeType *result)
 }
 
 // GuessMimeType
+/*!	\brief Guesses a MIME type for the supplied chunk of data.
+	\param buffer Pointer to the data buffer.
+	\param length Size of the buffer in bytes.
+	\param result Pointer to a pre-allocated BMimeType which is set to the
+		   resulting MIME type.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a buffer or \a result.
+*/
 status_t
 BMimeType::GuessMimeType(const void *buffer, int32 length, BMimeType *result)
 {
@@ -801,6 +824,18 @@ BMimeType::GuessMimeType(const void *buffer, int32 length, BMimeType *result)
 }
 
 // GuessMimeType
+/*!	\brief Guesses a MIME type for the given filename.
+	Only the filename itself is taken into consideration (in particular its
+	name extension), not the entry it refers to. I.e. an entry with that name
+	doesn't need to exist at all.
+
+	\param filename The filename.
+	\param result Pointer to a pre-allocated BMimeType which is set to the
+		   resulting MIME type.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a ref or \a result.
+*/
 status_t
 BMimeType::GuessMimeType(const char *filename, BMimeType *result)
 {
