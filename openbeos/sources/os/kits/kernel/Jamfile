@@ -39,6 +39,7 @@ KernelLd kernel
 
 	libbus.a
 	libfs.a
+	libaddons_fs.a
 	libvm.a
 	lib$(OBOS_ARCH).a
 	libdrivers.a
