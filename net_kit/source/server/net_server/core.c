@@ -58,7 +58,11 @@ static int init_done = 0;
 
 /* Forward prototypes... */
 /* Private for this file */
+#ifdef _KERNEL_MODE
 static status_t core_std_ops(int32 op, ...);
+#else
+#define core_std_ops NULL
+#endif
 static int start_stack(void);
 static int stop_stack(void);
 static void add_protosw(struct protosw *[], int layer);
@@ -992,7 +996,7 @@ static int stop_stack(void)
 	return 0;
 }
 
-
+#ifdef _KERNEL_MODE
 static status_t core_std_ops(int32 op, ...) 
 {
 	switch(op) {
@@ -1011,7 +1015,6 @@ static status_t core_std_ops(int32 op, ...)
 }
 
 
-#ifdef _KERNEL_MODE
 _EXPORT module_info *modules[] = {
 	(module_info*) &core_info,
 	NULL
