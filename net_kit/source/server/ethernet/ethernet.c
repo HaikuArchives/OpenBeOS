@@ -12,31 +12,31 @@
 #include "net_module.h"
 #include "protocols.h"
 #include "netinet/in_var.h"
-
+#include "sys/protosw.h"
 #include "ethernet/ethernet.h"
+#include "arp/arp_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_device.h"
 #include "net_server/core_module.h"
-#include "arp/arp_module.h"
+
 
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
 static struct core_module_info *core = NULL;
-static struct arp_module_info *arp = NULL;
 
 /* forward prototypes */
 int ether_dev_start(ifnet *dev);
 int ether_dev_stop(ifnet *dev);
 #endif
 
-static loaded_net_module *net_modules;
-static int *prot_table;
+static struct arp_module_info *arp = NULL;
+struct protosw *proto[IPPROTO_MAX];
 static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices */
 
 #ifndef _KERNEL_MODE
-static net_module *arp = NULL; /* shortcut to arp module */
+image_id arpid;
 #endif
 
 int ether_dev_start(ifnet *dev);
@@ -45,18 +45,6 @@ int ether_dev_stop(ifnet *dev);
 #define DRIVER_DIRECTORY "/dev/net"
 
 uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-
-static int convert_proto(uint16 p)
-{
-	switch (p) {
-		case ETHER_ARP:
-			return NS_ARP;
-		case ETHER_IPV4:
-			return NS_IPV4;
-		default:
-			return -1;
-	}
-}
 
 static void open_device(char *driver, char *devno)
 {
@@ -181,32 +169,32 @@ static void find_devices(void)
 static void dump_ether_details(struct mbuf *buf)
 {
 	ethernet_header *eth = mtod(buf, ethernet_header *);
-	uint16 proto = ntohs(eth->type);
 
-        printf("Ethernet packet from ");
-        print_ether_addr(&eth->src);
-        printf(" to ");
-        print_ether_addr(&eth->dest);
+	printf("Ethernet packet from ");
+	print_ether_addr(&eth->src);
+	printf(" to ");
+	print_ether_addr(&eth->dest);
 
-        if (buf->m_flags & M_BCAST)
-                printf(" BCAST");
+	if (buf->m_flags & M_BCAST)
+		printf(" BCAST");
 
-        printf(" proto ");
-        switch (proto) {
-                case ETHER_ARP:
-                        printf("ARP\n");
-                        break;
-                case ETHER_RARP:
-                        printf("RARP\n");
-                        break;
-                case ETHER_IPV4:
-                        printf("IPv4\n");
-                        break;
-                case ETHER_IPV6:
-                        printf("IPv6\n");
-                default:
-                        printf("unknown (%04x)\n", proto);
-        }
+	printf(" proto ");
+	switch (eth->type) {
+		case ETHER_ARP:
+			printf("ARP\n");
+			break;
+		case ETHER_RARP:
+			printf("RARP\n");
+			break;
+		case ETHER_IPV4:
+			printf("IPv4\n");
+			break;
+		case ETHER_IPV6:
+			printf("IPv6\n");
+			break;
+		default:
+			printf("unknown (%04x)\n", eth->type);
+	}
 }
 #endif
 
@@ -214,18 +202,20 @@ static void dump_ether_details(struct mbuf *buf)
 int ether_input(struct mbuf *buf)
 {
 	ethernet_header *eth = mtod(buf, ethernet_header *);
-	int plen = ntohs(eth->type); /* remove one call to ntohs() */
 	int len = sizeof(ethernet_header);
-	int fproto = convert_proto(plen);
+
+	eth->type = ntohs(eth->type);
 
 	if (memcmp((void*)&eth->dest, (void*)&ether_bcast, 6) == 0)
 		buf->m_flags |= M_BCAST;
 		
-	if (plen < 1500) {
+	if (eth->type < 1500) {
 		eth802_header *e8 = mtod(buf, eth802_header*);
-		printf("It's an 802.x encapsulated packet - type %04x\n", ntohs(e8->type));
-		fproto = convert_proto(ntohs(e8->type));
+		e8->type = ntohs(e8->type);
+		printf("It's an 802.x encapsulated packet - type %04x\n", e8->type);
 		len = sizeof(eth802_header);
+dump_buffer(mtod(buf, void*), len);
+		eth->type = e8->type;
 	}
 
 #if SHOW_DEBUG	
@@ -237,17 +227,23 @@ int ether_input(struct mbuf *buf)
 	core->m_adj(buf, len);
 #endif
 	
-/*
-	if (fproto >= 0 && net_modules[prot_table[fproto]].mod->input) {
-		return net_modules[prot_table[fproto]].mod->input(buf, 0);
-	} else {
-		printf("Failed to determine a valid protocol fproto = %d\n", fproto);
+	switch(eth->type) {
+		case ETHER_ARP:
+			return arp->input(buf, 0);
+		case ETHER_IPV4:
+			if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
+				return proto[IPPROTO_IP]->pr_input(buf, 0);
+			else
+				printf("proto[%d] = %p, not called...\n", IPPROTO_IP,
+					proto[IPPROTO_IP]);
+			break;
+		default:
+			printf("Couldn't process unknown protocol %04x\n", eth->type);
 	}
-*/
+
 #ifndef _KERNEL_MODE
 	m_freem(buf);
 #else
-	dprintf("input routines not called...\n");
 	core->m_freem(buf);
 #endif
 
@@ -421,8 +417,23 @@ int ether_dev_start(ifnet *dev)
 		return -1;
 
 #ifndef _KERNEL_MODE
-	if (!arp && net_modules[prot_table[NS_ARP]].mod)
-		arp = net_modules[prot_table[NS_ARP]].mod;
+	if (!arp) {
+		char path[PATH_MAX];
+		getcwd(path, PATH_MAX);
+		strcat(path, "/" ARP_MODULE_PATH);
+		arpid = load_add_on(path);
+		if (arpid > 0) {
+			status_t rv = get_image_symbol(arpid, "arp_module_info",
+								B_SYMBOL_TYPE_DATA, (void**)&arp);
+			if (rv < 0) {
+				printf("Failed to get access to ARP!\n");
+				return rv;
+			}
+		} else { 
+			printf("Failed to load the arp module...\n");
+			return -1;
+		}
+	}
 #endif
 
 	sprintf(tname, "%s%d", dev->name, dev->unit); /* make name */
@@ -502,6 +513,10 @@ int ether_dev_start(ifnet *dev)
 static int ether_init(void)
 {
 	find_devices();
+
+	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
+	add_protosw(proto, NET_LAYER2);
+
 	return 0;
 }
 
@@ -520,6 +535,10 @@ static int k_init(void)
 	get_module(ARP_MODULE_PATH, (module_info **)&arp);
 
 	find_devices();
+
+	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
+
+	core->add_protosw(proto, NET_LAYER2);
 
 	return 0;
 }

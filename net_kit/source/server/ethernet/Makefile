@@ -6,13 +6,14 @@ OBJS=ethernet.o
 
 KCFLAGS=-Wall -no-fpic -D_KERNEL_MODE
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=
+KLOBJS=../net_server/misc.o
 
 all:    $(TARGET)
 
 clean:
-	@if test -e $(TGT); then rm $(TGT) *.o; fi
-	@if test -e $(TARGET); then rm $(TARGET) *.o; fi
+	@if test -e $(TGT); then rm $(TGT) ; fi
+	@if test -e $(OBJS); then rm $(OBJS); fi
+	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
 	$(CC) $(KCFLAGS) $(INCLUDES) -c ethernet.c
