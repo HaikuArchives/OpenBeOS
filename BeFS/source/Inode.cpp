@@ -572,9 +572,11 @@ Inode::ReadAttribute(const char *name,int32 type,off_t pos,uint8 *buffer,size_t 
 	Inode *attribute;
 	status_t status = GetAttribute(name,&attribute);
 	if (status == B_OK) {
+		attribute->Lock().Lock();
 		status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
+		attribute->Lock().Unlock();
+
 		ReleaseAttribute(attribute);
-		RETURN_ERROR(status);
 	}
 
 	RETURN_ERROR(status);
@@ -626,6 +628,8 @@ Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t
 	}
 
 	if (attribute != NULL) {
+		attribute->Lock().LockWrite();
+
 		// save the old attribute data (if this fails, oldLength will reflect it)
 		if (hasIndex) {
 			oldLength = BPLUSTREE_MAX_KEY_LENGTH;
@@ -633,6 +637,8 @@ Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t
 				oldData = oldBuffer;
 		}
 		status = attribute->WriteAt(transaction,pos,buffer,_length);
+
+		attribute->Lock().UnlockWrite();
 		ReleaseAttribute(attribute);
 	}
 
