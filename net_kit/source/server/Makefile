@@ -6,7 +6,7 @@ KERNELDIRS=net_server arp ethernet icmp ipv4 loop udp
 #LDFLAGS=-p
 
 # for a normal build use these 2 lines
-CFLAGS=-O2 -g -Wall
+CFLAGS=-O2 -g -Wall -D_NETWORK_STACK
 LDFLAGS=-nostdlib -L/boot/beos/system/lib -L/boot/develop/lib/x86 -lroot -lbe /boot/develop/lib/x86/start_dyn.o
 
 # Uncomment these to build a device driver!
