@@ -64,8 +64,33 @@ struct sockaddr_in {
 #define INADDR_ANY              __IPADDR(0x00000000)
 #define INADDR_LOOPBACK         __IPADDR(0x7f000001)
 
-#define IN_CLASSD(i)		(((uint32)(i) & __IPADDR(0xf0000000)) == \
-				__IPADDR(0xe0000000))
+#define IN_CLASSA(i)            (((uint32)(i) & __IPADDR(0x80000000)) == \
+                                 __IPADDR(0x00000000))
+#define IN_CLASSA_NET           __IPADDR(0xff000000)
+#define IN_CLASSA_NSHIFT        24
+#define IN_CLASSA_HOST          __IPADDR(0x00ffffff)
+#define IN_CLASSA_MAX           128
+
+#define IN_CLASSB(i)            (((uint32)(i) & __IPADDR(0xc0000000)) == \
+                                 __IPADDR(0x80000000))
+#define IN_CLASSB_NET           __IPADDR(0xffff0000)
+#define IN_CLASSB_NSHIFT        16
+#define IN_CLASSB_HOST          __IPADDR(0x0000ffff)
+#define IN_CLASSB_MAX           65536
+
+#define IN_CLASSC(i)            (((uint32)(i) & __IPADDR(0xe0000000)) == \
+                                 __IPADDR(0xc0000000))
+#define IN_CLASSC_NET           __IPADDR(0xffffff00)
+#define IN_CLASSC_NSHIFT        8
+#define IN_CLASSC_HOST          __IPADDR(0x000000ff)
+
+#define IN_CLASSD(i)            (((uint32)(i) & __IPADDR(0xf0000000)) == \
+                                 __IPADDR(0xe0000000))
+/* These ones aren't really net and host fields, but routing needn't know. */
+#define IN_CLASSD_NET           __IPADDR(0xf0000000)
+#define IN_CLASSD_NSHIFT        28
+#define IN_CLASSD_HOST          __IPADDR(0x0fffffff)
+
 
 #define IN_MULTICAST(i)		IN_CLASSD(i)
 

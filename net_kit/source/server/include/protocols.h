@@ -39,7 +39,8 @@ enum {
 	NS_PPPOE,
 	NS_SERIAL,
 	NS_LOOP,
-	NS_SOCKET
+	NS_SOCKET,
+	NS_ROUTE
 };
 
 
