@@ -412,11 +412,10 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 			return core->sogetpeername(nsc->socket, args->addr, &args->addrlen);
 		}
 
-/*
-		case NET_STACK_RESTART:
+		case NET_STACK_STOP:
 			core->stop();
 			return B_OK;
-*/
+
 		case B_SET_BLOCKING_IO:
 			nsc->open_flags &= ~O_NONBLOCK;
 			return B_OK;
