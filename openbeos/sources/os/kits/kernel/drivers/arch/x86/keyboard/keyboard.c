@@ -6,7 +6,7 @@
 #include <debug.h>
 #include <memheap.h>
 #include <int.h>
-#include <sem.h>
+#include <OS.h>
 #include <string.h>
 #include <lock.h>
 #include <devfs.h>

@@ -8,7 +8,7 @@
 
 #include "ide_private.h"
 #include <arch/cpu.h>
-#include <sem.h>
+#include <OS.h>
 #include <debug.h>
 #include "ide_raw.h"
 #include "partition.h"
@@ -16,7 +16,7 @@
 #include <types.h>
 #include <ktypes.h>
 #include <errors.h>
-
+#include <thread.h>
 
 // ATA register bits
 

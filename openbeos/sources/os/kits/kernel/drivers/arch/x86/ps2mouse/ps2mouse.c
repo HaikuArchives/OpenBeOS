@@ -52,7 +52,6 @@
 #include <debug.h>
 #include <devfs.h>
 #include <arch/int.h>
-#include <sem.h>
 #include <string.h>
 
 #define _PS2MOUSE_
