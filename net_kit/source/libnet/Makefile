@@ -1,11 +1,16 @@
 CFLAGS=-fPIC -DPIC -O2 -g -Wall
-LDFLAGS=-nostart -nostdlib -lroot
+LDFLAGS=-nostart -nostdlib -lroot -Wl,-soname=libnet.so
+INCLUDES=-I../include -I.
 
 all:	libnet.so
 
 clean:	
-	@rm *.so
+	if test -e libnet.so; then rm libnet.so; fi
+	if test -e libnet.o; then rm libnet.o; fi
 
-libnet.so:
-	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) -o libnet.so libnet.c
+libnet.so:	libnet.o
+	$(CC) $(LDFLAGS) -o libnet.so libnet.o
+
+.c.o:
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
