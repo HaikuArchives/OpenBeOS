@@ -159,18 +159,50 @@ Inode::CheckPermissions(int accessMode) const
 //	#pragma mark -
 
 
+void 
+Inode::AddIterator(AttributeIterator *iterator)
+{
+	if (fSmallDataLock.Lock() < B_OK)
+		return;
+
+	fIterators.Add(iterator);
+
+	fSmallDataLock.Unlock();
+}
+
+
+void 
+Inode::RemoveIterator(AttributeIterator *iterator)
+{
+	if (fSmallDataLock.Lock() < B_OK)
+		return;
+
+	fIterators.Remove(iterator);
+
+	fSmallDataLock.Unlock();
+}
+
+
+/**	Tries to free up "bytes" space in the small_data section by moving
+ *	attributes to real files. Used for system attributes like the name.
+ *	You need to hold the fSmallDataLock when you call this method
+ */
+
 status_t
 Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,int32 bytes)
 {
 	while (bytes > 0) {
 		small_data *item = Node()->small_data_start,*max = NULL;
-		for (;!item->IsLast(Node());item = item->Next()) {
+		int32 index = 0,maxIndex = 0;
+		for (;!item->IsLast(Node());item = item->Next(),index++) {
 			// should not remove those
 			if (*item->Name() == FILE_NAME_NAME || !strcmp(name,item->Name()))
 				continue;
 
-			if (max == NULL || max->Size() < item->Size())
+			if (max == NULL || max->Size() < item->Size()) {
+				maxIndex = index;
 				max = item;
+			}
 
 			// remove the first one large enough to free the needed amount of bytes
 			if (bytes < item->Size())
@@ -195,37 +227,31 @@ Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,int32 byt
 
 		ReleaseAttribute(attribute);
 
-		if (status < B_OK)
-			// ToDo: remove the attribute file!
-			RETURN_ERROR(status);
+		if (status < B_OK) {
+			Vnode vnode(fVolume,Attributes());
+			Inode *attributes;
+			if (vnode.Get(&attributes) < B_OK
+				|| attributes->Remove(transaction,name) < B_OK) {
+				FATAL(("Could not remove newly created attribute!\n"));
+			}
 
-		RemoveSmallData(transaction,NULL,max);
+			RETURN_ERROR(status);
+		}
+
+		RemoveSmallData(max,maxIndex);
 	}
 	return B_OK;
 }
 
 
-/**	Removes the given attribute from the small_data section.
- *	Note that you need to write back the inode yourself after having called
- *	that method.
+/**	Private function which removes the given attribute from the small_data
+ *	section.
+ *	You need to hold the fSmallDataLock when you call this method
  */
 
-status_t
-Inode::RemoveSmallData(Transaction *transaction,const char *name,small_data *item)
+status_t 
+Inode::RemoveSmallData(small_data *item,int32 index)
 {
-	// search for the small_data item if it's not given
-	if (item == NULL) {
-		if (name == NULL)
-			return B_BAD_VALUE;
-
-		item = Node()->small_data_start;
-		while (!item->IsLast(Node()) && strcmp(item->Name(),name))
-			item = item->Next();
-
-		if (item->IsLast(Node()))
-			return B_ENTRY_NOT_FOUND;
-	}
-
 	small_data *next = item->Next();
 	if (!next->IsLast(Node())) {
 		// find the last attribute
@@ -246,7 +272,41 @@ Inode::RemoveSmallData(Transaction *transaction,const char *name,small_data *ite
 	} else
 		memset(item,0,item->Size());
 
+	// update all current iterators
+	AttributeIterator *iterator = NULL;
+	while ((fIterators.Next(iterator)) != NULL)
+		iterator->Update(index,-1);
+
 	return B_OK;
+}
+
+
+/**	Removes the given attribute from the small_data section.
+ *	Note that you need to write back the inode yourself after having called
+ *	that method.
+ */
+
+status_t
+Inode::RemoveSmallData(Transaction *transaction,const char *name)
+{
+	if (name == NULL)
+		return B_BAD_VALUE;
+
+	SimpleLocker locker(fSmallDataLock);
+
+	// search for the small_data item
+
+	small_data *item = Node()->small_data_start;
+	int32 index = 0;
+	while (!item->IsLast(Node()) && strcmp(item->Name(),name)) {
+		item = item->Next();
+		index++;
+	}
+
+	if (item->IsLast(Node()))
+		return B_ENTRY_NOT_FOUND;
+
+	return RemoveSmallData(item,index);
 }
 
 
@@ -274,9 +334,14 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 	if (spaceNeeded > fVolume->InodeSize() - sizeof(bfs_inode))
 		return B_DEVICE_FULL;
 
+	SimpleLocker locker(fSmallDataLock);
+
 	small_data *item = Node()->small_data_start;
-	while (!item->IsLast(Node()) && strcmp(item->Name(),name))
+	int32 index = 0;
+	while (!item->IsLast(Node()) && strcmp(item->Name(),name)) {
 		item = item->Next();
+		index++;
+	}
 
 	// is the attribute already in the small_data section?
 	// then just replace the data part of that one
@@ -293,16 +358,21 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 			// make room for the new attribute if needed (and we are forced to do so)
 			if (force
 				&& ((uint8 *)last + length - item->data_size) > ((uint8 *)Node() + fVolume->InodeSize())) {
-				// ToDo: we're lazy here and requesting the full difference between
-				// the old size and the new size - we could also take the free bytes
-				// at the end of the section into account...
-				if (MakeSpaceForSmallData(transaction,name,length - item->data_size) < B_OK)
+				// We also take the free space at the end of the small_data section
+				// into account, and request only what's really needed
+				uint32 needed = length - item->data_size -
+						(uint32)((uint8 *)Node() + fVolume->InodeSize() - (uint8 *)last);
+
+				if (MakeSpaceForSmallData(transaction,name,needed) < B_OK)
 					return B_ERROR;
 				
 				// reset our pointers
 				item = Node()->small_data_start;
-				while (!item->IsLast(Node()) && strcmp(item->Name(),name))
+				index = 0;
+				while (!item->IsLast(Node()) && strcmp(item->Name(),name)) {
 					item = item->Next();
+					index++;
+				}
 
 				last = item;
 				while (!last->IsLast(Node()))
@@ -330,7 +400,7 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 
 		// Could not replace the old attribute, so remove it to let
 		// let the calling function create an attribute file for it
-		if (RemoveSmallData(transaction,name,item) < B_OK)
+		if (RemoveSmallData(item,index) < B_OK)
 			return B_ERROR;
 
 		return B_DEVICE_FULL;
@@ -349,8 +419,11 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 
 		// get new last item!
 		item = Node()->small_data_start;
-		while (!item->IsLast(Node()))
+		index = 0;
+		while (!item->IsLast(Node())) {
 			item = item->Next();
+			index++;
+		}
 	}
 
 	memset(item,0,spaceNeeded);
@@ -365,6 +438,11 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 	if (!item->IsLast(Node()))
 		memset(item,0,(uint8 *)Node() + fVolume->InodeSize() - (uint8 *)item);
 
+	// update all current iterators
+	AttributeIterator *iterator = NULL;
+	while ((fIterators.Next(iterator)) != NULL)
+		iterator->Update(index,1);
+	
 	return B_OK;
 }
 
@@ -375,9 +453,10 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
  *		small_data *data = NULL;
  *		while (inode->GetNextSmallData(&data) { ... }
  *
- *	This function is reentrant and don't allocate any memory;
+ *	This function is reentrant and doesn't allocate any memory;
  *	you can safely stop calling it at any point (you don't need
  *	to iterate through the whole list).
+ *	You need to hold the fSmallDataLock when you call this method
  */
 
 status_t
@@ -404,6 +483,11 @@ Inode::GetNextSmallData(small_data **smallData) const
 }
 
 
+/**	Finds the attribute "name" in the small data section, and
+ *	returns a pointer to it (or NULL if it doesn't exist).
+ *	You need to hold the fSmallDataLock when you call this method
+ */
+
 small_data *
 Inode::FindSmallData(const char *name) const
 {
@@ -419,6 +503,8 @@ Inode::FindSmallData(const char *name) const
 const char *
 Inode::Name() const
 {
+	SimpleLocker locker(fSmallDataLock);
+
 	small_data *smallData = NULL;
 	while (GetNextSmallData(&smallData) == B_OK) {
 		if (*smallData->Name() == FILE_NAME_NAME && smallData->name_size == FILE_NAME_NAME_LENGTH)
@@ -458,21 +544,26 @@ Inode::ReadAttribute(const char *name,int32 type,off_t pos,uint8 *buffer,size_t 
 	if (pos < 0)
 		pos = 0;
 
-	// search in the small_data section
-	small_data *smallData = FindSmallData(name);
-	if (smallData != NULL) {
-		size_t length = *_length;
-		if (pos > smallData->data_size) {
-			*_length = 0;
+	// search in the small_data section (which has to be locked first)
+	{
+		SimpleLocker locker(fSmallDataLock);
+
+		small_data *smallData = FindSmallData(name);
+		if (smallData != NULL) {
+			size_t length = *_length;
+			if (pos > smallData->data_size) {
+				*_length = 0;
+				return B_OK;
+			}
+			if (length + pos > smallData->data_size)
+				length = smallData->data_size - pos;
+	
+			memcpy(buffer,smallData->Data() + pos,length);
+			*_length = length;
 			return B_OK;
 		}
-		if (length + pos > smallData->data_size)
-			length = smallData->data_size - pos;
-
-		memcpy(buffer,smallData->Data() + pos,length);
-		*_length = length;
-		return B_OK;
 	}
+
 	// search in the attribute directory
 	Inode *attribute;
 	status_t status = GetAttribute(name,&attribute);
@@ -506,6 +597,8 @@ Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t
 	if (GetAttribute(name,&attribute) < B_OK) {
 		// save the old attribute data
 		if (hasIndex) {
+			fSmallDataLock.Lock();
+
 			small_data *smallData = FindSmallData(name);
 			if (smallData != NULL) {
 				oldLength = smallData->data_size;
@@ -513,6 +606,7 @@ Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t
 					oldLength = BPLUSTREE_MAX_KEY_LENGTH;
 				memcpy(oldData = oldBuffer,smallData->Data(),oldLength);
 			}
+			fSmallDataLock.Unlock();
 		}
 
 		// if the attribute doesn't exist yet (as a file), try to put it in the
@@ -567,6 +661,8 @@ Inode::RemoveAttribute(Transaction *transaction,const char *name)
 
 	// update index for attributes in the small_data section
 	if (hasIndex) {
+		fSmallDataLock.Lock();
+
 		small_data *smallData = FindSmallData(name);
 		if (smallData != NULL) {
 			uint32 length = smallData->data_size;
@@ -574,6 +670,7 @@ Inode::RemoveAttribute(Transaction *transaction,const char *name)
 				length = BPLUSTREE_MAX_KEY_LENGTH;
 			index.Update(transaction,name,0,smallData->Data(),length,NULL,0,ID());
 		}
+		fSmallDataLock.Unlock();
 	}
 
 	status_t status = RemoveSmallData(transaction,name);
@@ -666,15 +763,9 @@ Inode::CreateAttribute(Transaction *transaction,const char *name,uint32 type,Ino
 	if (vnode.Get(&attributes) < B_OK)
 		return B_ERROR;
 
+	// Inode::Create() locks the inode if we provide the "id" parameter
 	vnode_id id;
-	status_t status = Inode::Create(transaction,attributes,name,S_ATTR | 0666,0,type,&id);
-	if (status == B_OK) {
-		// since Inode::Create() lets the created inode open if "id" is specified,
-		// we don't need to call Vnode::Keep() here
-		Vnode vnode(fVolume,id);
-		return vnode.Get(attribute);
-	}
-	return status;
+	return Inode::Create(transaction,attributes,name,S_ATTR | 0666,0,type,&id,attribute);
 }
 
 
@@ -1239,6 +1330,7 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 		// when we are here, we need to grow into the double indirect
 		// range - but that's not yet implemented, so bail out!
 
+		// ToDo: implement growing into the double indirect range, please!
 		FATAL(("growing in the double indirect range is not yet implemented!\n"));
 		RETURN_ERROR(B_ERROR);
 	}
@@ -1301,7 +1393,7 @@ Inode::ShrinkStream(Transaction *transaction, off_t size)
 	data_stream *data = &Node()->data;
 
 	if (data->max_double_indirect_range > size) {
-		// ToDo: implement me, please!
+		// ToDo: implement shrinking the double indirect range, please!
 		FATAL(("the double indirect range cannot yet be shrinked...\n"));
 	}
 	if (data->max_indirect_range > size) {
@@ -1379,7 +1471,7 @@ Inode::Trim(Transaction *transaction)
 
 
 status_t
-Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
+Inode::Remove(Transaction *transaction,const char *name,off_t *_id,bool isDirectory)
 {
 	if (!strcmp(name,".") || !strcmp(name,".."))
 		return B_NOT_ALLOWED;
@@ -1392,6 +1484,9 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 	off_t id;
 	if (tree->Find((uint8 *)name,(uint16)strlen(name),&id) < B_OK)
 		return B_ENTRY_NOT_FOUND;
+
+	if (_id)
+		*_id = id;
 
 	Vnode vnode(fVolume,id);
 	Inode *inode;
@@ -1461,7 +1556,7 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
  */
 
 status_t 
-Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mode, int omode, uint32 type, off_t *id)
+Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mode, int omode, uint32 type, off_t *_id, Inode **_inode)
 {
 	block_run parentRun = parent ? parent->BlockRun() : block_run::Run(0,0,0);
 	Volume *volume = transaction->fVolume;
@@ -1501,10 +1596,13 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 			}
 
 			// only keep the vnode in memory if the vnode_id pointer is provided
-			if (id) {
-				*id = offset;
+			if (_id) {
+				*_id = offset;
 				vnode.Keep();
 			}
+			if (_inode)
+				*_inode = inode;
+
 			return B_OK;
 		}
 	} else if (parent && (mode & S_ATTR_DIR) == 0)
@@ -1584,6 +1682,7 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 
 	// add a link to the inode from the parent, depending on its type
 	if (tree && tree->Insert(transaction,name,volume->ToBlock(run)) < B_OK) {
+		put_vnode(volume->ID(),inode->ID());
 		RETURN_ERROR(B_ERROR);
 	} else if (parent && mode & S_ATTR_DIR) {
 		parent->Attributes() = run;
@@ -1592,15 +1691,13 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 
 	allocator.Keep();
 
-	// if there is no parent, we don't have to notify as this will only be the case
-	// for the root node, and the root index directory
-	if (parent)
-		notify_listener(B_ENTRY_CREATED,volume->ID(),parent->ID(),0,inode->ID(),name);
-
-	if (id != NULL)
-		*id = inode->ID();
+	if (_id != NULL)
+		*_id = inode->ID();
 	else
 		put_vnode(volume->ID(),inode->ID());
+
+	if (_inode != NULL)
+		*_inode = inode;
 
 	return B_OK;
 }
@@ -1611,12 +1708,13 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 
 AttributeIterator::AttributeIterator(Inode *inode)
 	:
-	fCurrentSmallData(NULL),
+	fCurrentSmallData(0),
 	fInode(inode),
 	fAttributes(NULL),
 	fIterator(NULL),
 	fBuffer(NULL)
 {
+	inode->AddIterator(this);
 }
 
 
@@ -1626,13 +1724,14 @@ AttributeIterator::~AttributeIterator()
 		put_vnode(fAttributes->GetVolume()->ID(),fAttributes->ID());
 
 	delete fIterator;
+	fInode->RemoveIterator(this);
 }
 
 
 status_t 
 AttributeIterator::Rewind()
 {
-	fCurrentSmallData = NULL;
+	fCurrentSmallData = 0;
 
 	if (fIterator != NULL)
 		fIterator->Rewind();
@@ -1646,28 +1745,43 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 {
 	// read attributes out of the small data section
 
-	if (fCurrentSmallData == NULL || !fCurrentSmallData->IsLast(fInode->Node())) {
-		if (fCurrentSmallData == NULL)
-			fCurrentSmallData = fInode->Node()->small_data_start;
-		else
-			fCurrentSmallData = fCurrentSmallData->Next();
+	if (fCurrentSmallData >= 0) {
+		small_data *item = fInode->Node()->small_data_start;
 
-		// skip name attribute
-		if (!fCurrentSmallData->IsLast(fInode->Node())
-			&& fCurrentSmallData->name_size == FILE_NAME_NAME_LENGTH
-			&& *fCurrentSmallData->Name() == FILE_NAME_NAME)
-			fCurrentSmallData = fCurrentSmallData->Next();
+		fInode->SmallDataLock().Lock();
 
-		if (!fCurrentSmallData->IsLast(fInode->Node())) {
-			strncpy(name,fCurrentSmallData->Name(),B_FILE_NAME_LENGTH);
-			*_type = fCurrentSmallData->type;
-			*_length = fCurrentSmallData->name_size;
-			*_id = (vnode_id)((uint8 *)fCurrentSmallData - (uint8 *)fInode->Node()->small_data_start);
+		int32 i = 0;
+		for (;;item = item->Next()) {
+			if (item->IsLast(fInode->Node()))
+				break;
 
-			return B_OK;
+			if (item->name_size == FILE_NAME_NAME_LENGTH
+				&& *item->Name() == FILE_NAME_NAME)
+				continue;
+
+			if (i++ == fCurrentSmallData)
+				break;
 		}
+
+		if (!item->IsLast(fInode->Node())) {
+			strncpy(name,item->Name(),B_FILE_NAME_LENGTH);
+			*_type = item->type;
+			*_length = item->name_size;
+			*_id = (vnode_id)fCurrentSmallData;
+
+			fCurrentSmallData = i;
+		}
+		else {
+			// stop traversing the small_data section
+			fCurrentSmallData = -1;
+		}
+
+		fInode->SmallDataLock().Unlock();
+
+		if (fCurrentSmallData != -1)
+			return B_OK;
 	}
-	
+
 	// read attributes out of the attribute directory
 
 	if (fInode->Attributes().IsZero())
@@ -1707,5 +1821,14 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 	}
 
 	return status;
+}
+
+
+void 
+AttributeIterator::Update(uint16 index, int8 change)
+{
+	// fCurrentSmallData points already to the next item
+	if (index < fCurrentSmallData)
+		fCurrentSmallData += change;
 }
 

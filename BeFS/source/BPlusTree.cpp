@@ -221,8 +221,7 @@ BPlusTree::BPlusTree(Transaction *transaction,Inode *stream,int32 nodeSize)
 	:
 	fStream(NULL),
 	fHeader(NULL),
-	fCachedHeader(this),
-	fFirstIterator(NULL)
+	fCachedHeader(this)
 {
 	SetTo(transaction,stream);
 }
@@ -232,8 +231,7 @@ BPlusTree::BPlusTree(Inode *stream)
 	:
 	fStream(NULL),
 	fHeader(NULL),
-	fCachedHeader(this),
-	fFirstIterator(NULL)
+	fCachedHeader(this)
 {
 	SetTo(stream);
 }
@@ -246,8 +244,7 @@ BPlusTree::BPlusTree()
 	fCachedHeader(this),
 	fNodeSize(BPLUSTREE_NODE_SIZE),
 	fAllowDuplicates(true),
-	fStatus(B_NO_INIT),
-	fFirstIterator(NULL)
+	fStatus(B_NO_INIT)
 {
 }
 
@@ -425,7 +422,8 @@ BPlusTree::UpdateIterators(off_t offset,uint16 keyIndex,int8 change)
 	if (fIteratorLock.Lock() < B_OK)
 		return;
 
-	for (TreeIterator *iterator = fFirstIterator;iterator;iterator = iterator->fNext)
+	TreeIterator *iterator = NULL;
+	while ((iterator = fIterators.Next(iterator)) != NULL)
 		iterator->Update(offset,keyIndex,change);
 
 	fIteratorLock.Unlock();
@@ -438,8 +436,7 @@ BPlusTree::AddIterator(TreeIterator *iterator)
 	if (fIteratorLock.Lock() < B_OK)
 		return;
 
-	iterator->fNext = fFirstIterator;
-	fFirstIterator = iterator;
+	fIterators.Add(iterator);
 
 	fIteratorLock.Unlock();
 }
@@ -451,16 +448,7 @@ BPlusTree::RemoveIterator(TreeIterator *iterator)
 	if (fIteratorLock.Lock() < B_OK)
 		return;
 
-	// search list for the correct iterator to remove
-	TreeIterator *last = NULL,*entry;
-	for (entry = fFirstIterator;iterator != entry;entry = entry->fNext)
-		last = entry;
-	if (iterator == entry) {
-		if (last)
-			last->fNext = iterator->fNext;
-		else
-			fFirstIterator = iterator->fNext;
-	}
+	fIterators.Remove(iterator);
 
 	fIteratorLock.Unlock();
 }
@@ -1744,7 +1732,7 @@ TreeIterator::Update(off_t offset, uint16 keyIndex, int8 change)
 	// Adjust fCurrentKey to point to the same key as before.
 	// Note, that if a key is inserted at the current position
 	// it won't be included in this tree transition.
-	if (keyIndex >= fCurrentKey)
+	if (keyIndex <= fCurrentKey)
 		fCurrentKey += change;
 
 	// ToDo: duplicate handling!

@@ -292,15 +292,22 @@ class SimpleLock {
 		{
 		}
 
-		status_t Lock(bigtime_t time = 250)
+		status_t Lock(bigtime_t time = 500)
 		{
 			int32 turn = atomic_add(&fLock,1);
 			if (turn != 0) {
-				int32 tries = 20;
-				while (turn != fLock && tries-- > 0)
+				while (turn != fLock)
 					snooze(time);
-				if (turn != fLock)
-					return B_TIMED_OUT;
+
+				// ToDo: the lock cannot fail currently! We may want
+				// to change this - the following code does not work
+				// correctly...
+
+				//int32 tries = 40;
+				//while (turn != fLock && tries-- > 0)
+				//	snooze(time);
+				//if (turn != fLock)
+				//	return B_TIMED_OUT;
 			}
 			return B_OK;
 		}
@@ -314,30 +321,24 @@ class SimpleLock {
 		vint32	fLock;		
 };
 
-// a convenience class to lock the SimpleLock
+// A convenience class to lock the SimpleLock, note the
+// different timing compared to the direct call
 
 class SimpleLocker {
 	public:
-		SimpleLocker(SimpleLock &lock)
+		SimpleLocker(SimpleLock &lock,bigtime_t time = 1000)
 			: fLock(lock)
 		{
-			fStatus = lock.Lock();
-		}
-		
-		~SimpleLocker()
-		{
-			if (fStatus == B_OK)
-				fLock.Unlock();
+			lock.Lock(time);
 		}
 
-		status_t IsLocked()
+		~SimpleLocker()
 		{
-			return fStatus;
+			fLock.Unlock();
 		}
 
 	private:
 		SimpleLock	&fLock;
-		status_t	fStatus;
 };
 
 #endif	/* LOCK_H */

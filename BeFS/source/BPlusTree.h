@@ -12,6 +12,7 @@
 
 #include "bfs.h"
 #include "Journal.h"
+#include "Chain.h"
 
 
 //****************** on-disk structures ********************
@@ -226,7 +227,7 @@ class BPlusTree {
 		bool		fAllowDuplicates;
 		status_t	fStatus;
 		SimpleLock	fIteratorLock;
-		TreeIterator *fFirstIterator;
+		Chain<TreeIterator> fIterators;
 };
 
 
@@ -258,9 +259,10 @@ class TreeIterator {
 		bool		fIsFragment;
 
 	private:
+		friend Chain<TreeIterator>;
 		friend BPlusTree;
-		void Update(off_t offset,uint16 keyIndex,int8 change);
 
+		void Update(off_t offset,uint16 keyIndex,int8 change);
 		TreeIterator *fNext;
 };
 

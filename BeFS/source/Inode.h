@@ -27,10 +27,12 @@ extern "C" {
 #include "Volume.h"
 #include "Journal.h"
 #include "Lock.h"
+#include "Chain.h"
 
 
 class BPlusTree;
 class TreeIterator;
+class AttributeIterator;
 
 
 enum inode_type {
@@ -117,9 +119,11 @@ class Inode : public CachedBlock {
 		Inode(Volume *volume,vnode_id id,bool empty = false,uint8 reenter = 0);
 		~Inode();
 
-		ReadWriteLock &Lock() { return fLock; }
 		bfs_inode *Node() const { return (bfs_inode *)fBlock; }
 		vnode_id ID() const { return fVolume->ToVnode(fBlockNumber); }
+
+		ReadWriteLock &Lock() { return fLock; }
+		SimpleLock &SmallDataLock() { return fSmallDataLock; }
 
 		mode_t Mode() const { return Node()->mode; }
 		int32 Flags() const { return Node()->flags; }
@@ -142,7 +146,7 @@ class Inode : public CachedBlock {
 
 		// small_data access methods
 		status_t MakeSpaceForSmallData(Transaction *transaction,const char *name, int32 length);
-		status_t RemoveSmallData(Transaction *transaction,const char *name,small_data *item = NULL);
+		status_t RemoveSmallData(Transaction *transaction,const char *name);
 		status_t AddSmallData(Transaction *transaction,const char *name,uint32 type,const uint8 *data,size_t length,bool force = false);
 		status_t GetNextSmallData(small_data **smallData) const;
 		small_data *FindSmallData(const char *name) const;
@@ -174,8 +178,8 @@ class Inode : public CachedBlock {
 		status_t Trim(Transaction *transaction);
 
 		// create/remove inodes
-		status_t Remove(Transaction *transaction,const char *name, bool isDirectory = false);
-		static status_t Create(Transaction *transaction,Inode *parent,const char *name,int32 mode,int omode,uint32 type,off_t *id = NULL);
+		status_t Remove(Transaction *transaction,const char *name,off_t *_id = NULL,bool isDirectory = false);
+		static status_t Create(Transaction *transaction,Inode *parent,const char *name,int32 mode,int omode,uint32 type,off_t *_id = NULL,Inode **_inode = NULL);
 
 		// index maintaining helper
 		void UpdateOldSize() { fOldSize = Size(); }
@@ -184,6 +188,13 @@ class Inode : public CachedBlock {
 		off_t OldLastModified() { return fOldLastModified; }
 
 	private:
+		friend AttributeIterator;
+
+		status_t RemoveSmallData(small_data *item,int32 index);
+
+		void AddIterator(AttributeIterator *iterator);
+		void RemoveIterator(AttributeIterator *iterator);
+
 		status_t FreeStreamArray(Transaction *transaction, block_run *array, uint32 arrayLength, off_t size, off_t &offset, off_t &max);
 		status_t GrowStream(Transaction *transaction,off_t size);
 		status_t ShrinkStream(Transaction *transaction,off_t size);
@@ -193,6 +204,9 @@ class Inode : public CachedBlock {
 		ReadWriteLock	fLock;
 		off_t			fOldSize;			// we need those values to ensure we will remove
 		off_t			fOldLastModified;	// the correct keys from the indices
+
+		mutable SimpleLock	fSmallDataLock;
+		Chain<AttributeIterator> fIterators;
 };
 
 
@@ -248,10 +262,17 @@ class AttributeIterator {
 		status_t GetNext(char *name,size_t *length,uint32 *type,vnode_id *id);
 
 	private:
-		small_data	*fCurrentSmallData;
+		int32		fCurrentSmallData;
 		Inode		*fInode, *fAttributes;
 		TreeIterator *fIterator;
 		void		*fBuffer;
+
+	private:
+		friend Chain<AttributeIterator>;
+		friend Inode;
+
+		void Update(uint16 index,int8 change);
+		AttributeIterator *fNext;
 };
 
 

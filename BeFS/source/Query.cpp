@@ -763,42 +763,49 @@ Equation::Match(Inode *inode)
 		// then for attributes in the small_data section, and finally for the
 		// real attributes
 		Inode *attribute;
+		
+		inode->SmallDataLock().Lock();
 		small_data *smallData = inode->FindSmallData(fAttribute);
-
 		if (smallData != NULL) {
 			buffer = smallData->Data();
 			type = smallData->type;
 			size = smallData->data_size;
-		} else if (inode->GetAttribute(fAttribute,&attribute) == B_OK) {
-			buffer = (uint8 *)&value;
-			type = attribute->Node()->type;
-			size = attribute->Size();
-
-			if (size > INODE_FILE_NAME_LENGTH)
-				size = INODE_FILE_NAME_LENGTH;
-
-			if (attribute->ReadAt(0,buffer,&size) < B_OK) {
-				inode->ReleaseAttribute(attribute);
-				return B_IO_ERROR;
-			}
-			inode->ReleaseAttribute(attribute);
+			inode->SmallDataLock().Unlock();
 		} else {
-			// there is no matching attribute, we will just bail out if we
-			// already know that our value is not of a string type.
-			// If not, it will be converted to a string - and then be compared with "".
-			// That's why we have to call ConvertValue() here - but it will be
-			// a cheap call for the next time
-			// Should we do this only for OP_UNEQUAL?
-			if (fType != 0 && fType != B_STRING_TYPE)
-				return NO_MATCH;
+			// needed to unlock the small_data section as fast as possible
+			inode->SmallDataLock().Unlock();
 
-			if (ConvertValue(B_STRING_TYPE) < B_OK)
-				RETURN_ERROR(B_BAD_VALUE);
-
-			value.String[0] = '\0';	// create an empty string
-			buffer = (uint8 *)&value;
-			type = fType;
-			size = fSize;
+			if (inode->GetAttribute(fAttribute,&attribute) == B_OK) {
+				buffer = (uint8 *)&value;
+				type = attribute->Node()->type;
+				size = attribute->Size();
+	
+				if (size > INODE_FILE_NAME_LENGTH)
+					size = INODE_FILE_NAME_LENGTH;
+	
+				if (attribute->ReadAt(0,buffer,&size) < B_OK) {
+					inode->ReleaseAttribute(attribute);
+					return B_IO_ERROR;
+				}
+				inode->ReleaseAttribute(attribute);
+			} else {
+				// there is no matching attribute, we will just bail out if we
+				// already know that our value is not of a string type.
+				// If not, it will be converted to a string - and then be compared with "".
+				// That's why we have to call ConvertValue() here - but it will be
+				// a cheap call for the next time
+				// Should we do this only for OP_UNEQUAL?
+				if (fType != 0 && fType != B_STRING_TYPE)
+					return NO_MATCH;
+	
+				if (ConvertValue(B_STRING_TYPE) < B_OK)
+					RETURN_ERROR(B_BAD_VALUE);
+	
+				value.String[0] = '\0';	// create an empty string
+				buffer = (uint8 *)&value;
+				type = fType;
+				size = fSize;
+			}
 		}
 	}
 	// prepare own value for use, if it is possible to convert it

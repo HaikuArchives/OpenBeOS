@@ -307,7 +307,7 @@ bfs_initialize(const char *deviceName, void *parms, size_t len)
 {
 	FUNCTION_START(("deviceName = %s, parameter len = %ld\n",deviceName,len));
 
-	// ToDo: implement me!
+	// ToDo: implement bfs_initialize()!
 
 	return B_ERROR;
 }
@@ -318,7 +318,7 @@ bfs_sync(void *ns)
 {
 	FUNCTION();
 
-	// ToDo: implement me!
+	// ToDo: implement bfs_sync()!
 
 	return B_ERROR;
 }
@@ -394,13 +394,8 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 	uint32 type;
 	size_t length;
 	vnode_id id;
-	while ((status = iterator.GetNext(name,&length,&type,&id)) == B_OK) {
-		if (inode->RemoveAttribute(&transaction,name) == B_OK) {
-			// ToDo: Changes in the small_data section should update the
-			// AttributeIterator, so that this wouldn't be necessary
-			iterator.Rewind();
-		}
-	}
+	while ((status = iterator.GetNext(name,&length,&type,&id)) == B_OK)
+		inode->RemoveAttribute(&transaction,name);
 
 	if ((status = volume->Free(&transaction,inode->BlockRun())) == B_OK) {
 		transaction.Done();
@@ -546,7 +541,7 @@ bfs_setflags(void *ns, void *node, void *cookie, int flags)
 {
 	FUNCTION_START(("node = %p, flags = %d",node,flags));
 
-	// ToDo: implement me!
+	// ToDo: implement bfs_setflags()!
 
 	return B_OK;
 }
@@ -575,7 +570,7 @@ bfs_fsync(void *ns, void *node)
 {
 	FUNCTION();
 
-	// ToDo: implement me?!
+	// ToDo: implement bfs_fsync()?!
 
 	return B_ERROR;
 }
@@ -706,8 +701,11 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 	Transaction transaction(volume,directory->BlockNumber());
 
 	status = Inode::Create(&transaction,directory,name,S_FILE | (mode & S_IUMSK),omode,0,vnid);
-	if (status == B_OK)
+	if (status == B_OK) {
 		transaction.Done();
+
+		notify_listener(B_ENTRY_CREATED,volume->ID(),directory->ID(),0,*vnid,name);
+	}
 
 	return status;
 }
@@ -718,7 +716,7 @@ bfs_symlink(void *ns, void *dir, const char *name, const char *path)
 {
 	FUNCTION();
 
-	// ToDo: implement me!
+	// ToDo: implement bfs_symlink()!
 
 	return B_ERROR;
 }
@@ -729,7 +727,7 @@ bfs_link(void *ns, void *dir, const char *name, void *node)
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
 
-	// ToDo: implement me?!?
+	// ToDo: implement bfs_link()?!?
 
 	return B_ERROR;
 }
@@ -752,9 +750,12 @@ bfs_unlink(void *_ns, void *_directory, const char *name)
 
 	Transaction transaction(volume,directory->BlockNumber());
 
-	if ((status = directory->Remove(&transaction,name)) == B_OK)
+	off_t id;
+	if ((status = directory->Remove(&transaction,name,&id)) == B_OK) {
 		transaction.Done();
 
+		notify_listener(B_ENTRY_REMOVED,volume->ID(),directory->ID(),0,id,NULL);
+	}
 	return status;
 }
 
@@ -829,21 +830,27 @@ bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const c
 		if (status < B_OK)
 			RETURN_ERROR(status);
 	}
-	
+
 	status = newTree->Insert(&transaction,(const uint8 *)newName,strlen(newName),id);
 	if (status == B_NAME_IN_USE) {
+		// If there is already a file with that name, we have to remove
+		// it, as long it's not a directory with files in it
 		off_t clobber;
 		if (newTree->Find((const uint8 *)newName,strlen(newName),&clobber) < B_OK)
 			return B_NAME_IN_USE;
+		if (clobber == id)
+			return B_BAD_VALUE;
 
 		Vnode vnode(volume,clobber);
 		Inode *other;
 		if (vnode.Get(&other) < B_OK)
 			return B_NAME_IN_USE;
 
-		status = newDirectory->Remove(&transaction,newName,other->IsDirectory());
+		status = newDirectory->Remove(&transaction,newName,NULL,other->IsDirectory());
 		if (status < B_OK)
 			return status;
+
+		notify_listener(B_ENTRY_REMOVED,volume->ID(),newDirectory->ID(),0,clobber,NULL);
 
 		status = newTree->Insert(&transaction,(const uint8 *)newName,strlen(newName),id);
 	}
@@ -882,6 +889,8 @@ bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const c
 				status = inode->WriteBack(&transaction);
 				if (status == B_OK)	{
 					transaction.Done();
+
+					notify_listener(B_ENTRY_MOVED,volume->ID(),oldDirectory->ID(),newDirectory->ID(),id,newName);
 					return B_OK;
 				}
 			}
@@ -1123,9 +1132,16 @@ bfs_mkdir(void *_ns, void *_directory, const char *name, int mode)
 
 	Transaction transaction(volume,directory->BlockNumber());
 
-	status = Inode::Create(&transaction,directory,name,S_DIRECTORY | (mode & S_IUMSK),0,0);
-	if (status == B_OK)
+	// Inode::Create() locks the inode if we pass the "id" parameter, but we
+	// need it anyway
+	off_t id;
+	status = Inode::Create(&transaction,directory,name,S_DIRECTORY | (mode & S_IUMSK),0,0,&id);
+	if (status == B_OK) {
+		put_vnode(volume->ID(),id);
 		transaction.Done();
+
+		notify_listener(B_ENTRY_CREATED,volume->ID(),directory->ID(),0,id,name);
+	}
 
 	return status;
 }
@@ -1139,13 +1155,18 @@ bfs_rmdir(void *_ns, void *_directory, const char *name)
 	if (_ns == NULL || _directory == NULL || name == NULL || *name == '\0')
 		return B_BAD_VALUE;
 
+	Volume *volume = (Volume *)_ns;
 	Inode *directory = (Inode *)_directory;
 
-	Transaction transaction(directory->GetVolume(),directory->BlockNumber());
+	Transaction transaction(volume,directory->BlockNumber());
 
-	status_t status = directory->Remove(&transaction,name,true);
-	if (status == B_OK)
+	off_t id;
+	status_t status = directory->Remove(&transaction,name,&id,true);
+	if (status == B_OK) {
 		transaction.Done();
+
+		notify_listener(B_ENTRY_REMOVED,volume->ID(),directory->ID(),0,id,NULL);
+	}
 
 	return status;
 }
@@ -1352,8 +1373,11 @@ bfs_remove_attr(void *_ns, void *_node, const char *name)
 	Transaction transaction(volume,inode->BlockNumber());
 
 	status = inode->RemoveAttribute(&transaction,name);
-	if (status == B_OK)
+	if (status == B_OK) {
 		transaction.Done();
+
+		notify_listener(B_ATTR_CHANGED,volume->ID(),0,0,inode->ID(),name);
+	}
 
 	RETURN_ERROR(status);
 }
@@ -1364,7 +1388,8 @@ bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 {
 	FUNCTION_START(("name = \"%s\",to = \"%s\"\n",oldname,newname));
 
-	// ToDo: implement me!
+	// ToDo: implement bfs_rename_attr()!
+	// Does anybody need this? :-)
 
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
@@ -1379,13 +1404,18 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 	if (inode == NULL || inode->Node() == NULL)
 		RETURN_ERROR(B_ERROR);
 	
-	small_data *smallData = inode->FindSmallData((const char *)name);
-	if (smallData != NULL) {
-		attrInfo->type = smallData->type;
-		attrInfo->size = smallData->data_size;
-
-		return B_OK;
+	small_data *smallData = NULL;
+	if (inode->SmallDataLock().Lock() == B_OK)
+	{
+		if ((smallData = inode->FindSmallData((const char *)name)) != NULL) {
+			attrInfo->type = smallData->type;
+			attrInfo->size = smallData->data_size;
+		}
+		inode->SmallDataLock().Unlock();
 	}
+	if (smallData != NULL)
+		return B_OK;
+
 	// search in the attribute directory
 	Inode *attribute;
 	status_t status = inode->GetAttribute(name,&attribute);
@@ -1421,8 +1451,11 @@ bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *bu
 	Transaction transaction(volume,inode->BlockNumber());
 
 	status = inode->WriteAttribute(&transaction,name,type,pos,(const uint8 *)buffer,_length);
-	if (status == B_OK)
+	if (status == B_OK) {
 		transaction.Done();
+
+		notify_listener(B_ATTR_CHANGED,volume->ID(),0,0,inode->ID(),name);
+	}
 
 	return status;
 }
@@ -1570,7 +1603,6 @@ bfs_remove_index(void *_ns, const char *name)
 	Transaction transaction(volume,volume->Indices());
 
 	status_t status = indices->Remove(&transaction,name);
-
 	if (status == B_OK)
 		transaction.Done();
 
@@ -1583,7 +1615,14 @@ bfs_rename_index(void *ns, const char *oldname, const char *newname)
 {
 	FUNCTION_START(("from = %s, to = %s\n",oldname,newname));
 
-	// ToDo: implement me!
+	// ToDo: implement bfs_rename_index()?!
+	// Well, renaming an index doesn't make that much sense, as you
+	// would also need to remove every file in it (or the index
+	// would contain wrong data)
+	// But in that case, you can better remove the old one, and
+	// create a new one...
+	// There is also no way to call this function from a userland
+	// application.
 
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
