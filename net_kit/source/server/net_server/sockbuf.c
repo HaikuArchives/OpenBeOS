@@ -292,3 +292,21 @@ again:
 	sbcompress(sb, m, m0);
 }
 
+/*
+ * Lock a sockbuf already known to be locked;
+ * return any error returned from sleep (EINTR).
+ */
+int sb_lock(struct sockbuf *sb)
+{
+	int error;
+
+	while (sb->sb_flags & SB_LOCK) {
+		sb->sb_flags |= SB_WANT;
+		error = nsleep(sb->sb_sleep, "sb_lock", 0);
+		if (error)
+			return (error);
+	}
+	sb->sb_flags |= SB_LOCK;
+	return (0);
+}
+

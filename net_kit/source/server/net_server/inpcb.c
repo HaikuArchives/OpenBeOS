@@ -237,13 +237,12 @@ struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 	return match;
 }
 
-/* XXX - This needs a LOT of work! */
 int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 {
 	struct in_ifaddr *ia = NULL;
 	struct sockaddr_in *ifaddr = NULL;
 	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
-
+	
 	if (nam->m_len != sizeof(*sin)) {
 		printf("in_pcbconnect: EINVAL\n");
 		return EINVAL;

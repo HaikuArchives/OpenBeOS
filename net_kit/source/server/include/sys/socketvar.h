@@ -18,6 +18,7 @@ struct  sockbuf {
 	struct  mbuf *sb_mb;	/* the mbuf chain */
 	int16   sb_flags;		/* flags, see below */
 	int32   sb_timeo;		/* timeout for read/write */
+	sem_id  sb_sleep;       /* our sleep sem */
 	sem_id	sb_pop;			/* sem to wait on... */
 };
 
@@ -39,7 +40,7 @@ struct socket {
 	int16 so_linger;	/* dreaded linger value */
 	int16 so_state;		/* socket state */
 	caddr_t so_pcb;		/* pointer to the control block */
-	sem_id so_timeo;         /* our wait channel */
+	sem_id so_timeo;          /* our wait channel */
 
 	struct protosw *so_proto; /* pointer to protocol module */
 
@@ -117,6 +118,27 @@ struct socket {
 	 (((so)->so_state & SS_ISCONNECTED) || \
 	  (((so)->so_proto->pr_flags & PR_CONNREQUIRED) == 0) || \
 	 ((so)->so_state & SS_CANTSENDMORE) || (so)->so_error))
+
+#define M_WAITOK     0x0000
+#define M_NOWAIT     0x0001
+
+/*
+ * Set lock on sockbuf sb; sleep if lock is already held.
+ * Unless SB_NOINTR is set on sockbuf, sleep is interruptible.
+ * Returns error without lock if sleep is interrupted.
+ */
+#define sblock(sb, wf) ((sb)->sb_flags & SB_LOCK ? \
+                (((wf) == M_WAITOK) ? sb_lock(sb) : EWOULDBLOCK) : \
+                ((sb)->sb_flags |= SB_LOCK), 0)
+
+/* release lock on sockbuf sb */
+#define sbunlock(sb) { \
+        (sb)->sb_flags &= ~SB_LOCK; \
+        if ((sb)->sb_flags & SB_WANT) { \
+                (sb)->sb_flags &= ~SB_WANT; \
+                wakeup((sb)->sb_sleep); \
+        } \
+}
 
 #define sorwakeup(so)   sowakeup((so), &(so)->so_rcv)
 /* we don't handle upcall for sockets */
@@ -198,6 +220,7 @@ void    soqinsque (struct socket *head, struct socket *so, int q);
 int     soqremque (struct socket *so, int q);
 int     sorflush(struct socket *so);
 
+int     sb_lock(struct sockbuf *sb);
 int     nsleep(sem_id chan, char *msg, int timeo);
 void    wakeup(sem_id chan);
 

@@ -25,6 +25,8 @@
 #include "core_module.h"
 #endif
 
+#define   SBLOCKWAIT(f)   (((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
+
 // Private prototypes
 static int checkevent(struct socket *so);
 
@@ -128,6 +130,8 @@ int socreate(int dom, void *sp, int type, int proto)
 	struct socket *so = (struct socket*)sp;
 	int error;
 
+printf("socreate: (%d, %d, %d)\n", dom, type, proto);
+
 	if (so == NULL) {
 		printf("socreate: EINVAL\n");
 		return EINVAL;
@@ -150,12 +154,26 @@ int socreate(int dom, void *sp, int type, int proto)
 	
 	so->so_type = type;
 	so->so_proto = prm;
-	so->so_rcv.sb_pop = create_sem(0, "so_rcv.sb_pop sem");
-	so->so_timeo      = create_sem(0, "so_timeo");
-
+	/* Our sem's... don't like using so many here - find another way :( */
+	so->so_rcv.sb_pop   = create_sem(0, "so_rcv.sb_pop sem");
+	so->so_snd.sb_pop   = create_sem(0, "so_snd.sb_pop sem");
+	so->so_timeo        = create_sem(0, "so_timeo sem");
+	so->so_rcv.sb_sleep = create_sem(0, "so_rcv.sb_sleep sem");
+	so->so_snd.sb_sleep = create_sem(0, "so_snd.sb_sleep sem");
+	
+	if (so->so_rcv.sb_pop < 0 ||
+	    so->so_rcv.sb_sleep < 0 ||
+	    so->so_snd.sb_pop < 0 ||
+	    so->so_snd.sb_sleep < 0 ||
+	    so->so_timeo< 0)
+		return ENOMEM;
+	    
 #ifdef _KERNEL_MODE
-	set_sem_owner(so->so_rcv.sb_pop, B_SYSTEM_TEAM);
-	set_sem_owner(so->so_timeo, B_SYSTEM_TEAM);
+	set_sem_owner(so->so_rcv.sb_pop,   B_SYSTEM_TEAM);
+	set_sem_owner(so->so_snd.sb_pop,   B_SYSTEM_TEAM);
+	set_sem_owner(so->so_timeo,        B_SYSTEM_TEAM);
+	set_sem_owner(so->so_rcv.sb_sleep, B_SYSTEM_TEAM);
+	set_sem_owner(so->so_snd.sb_pop,   B_SYSTEM_TEAM);
 #endif
 
 	error = prm->pr_userreq(so, PRU_ATTACH, NULL, (struct mbuf *)proto, NULL);
@@ -237,6 +255,8 @@ int soconnect(void *sp, caddr_t data, int len)
 	struct mbuf *nam = m_get(MT_SONAME);
 	int error;
 
+printf("soconnect...\n");
+
 	if (!nam)
 		return ENOMEM;
 
@@ -259,6 +279,29 @@ int soconnect(void *sp, caddr_t data, int len)
 	else
 		error = so->so_proto->pr_userreq(so, PRU_CONNECT,
 		                                 NULL, nam, NULL);
+
+	if (error) {
+		goto bad;
+	}
+	
+	if ((so->so_state & SS_NBIO) && (so->so_state && SS_ISCONNECTING)) {
+		m_freem(nam);
+		return EINPROGRESS;
+	}
+	
+	while ((so->so_state & SS_ISCONNECTING) && so->so_error == 0)
+		if ((error = nsleep(so->so_timeo, "soconnect", 0)))
+			break;
+	
+	if (error == 0) {
+		error = so->so_error;
+		so->so_error = 0;
+	}
+
+bad:
+	so->so_state &= ~SS_ISCONNECTING;
+	m_freem(nam);
+
 	return error;
 }
 
@@ -421,7 +464,8 @@ int sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *t
 
 #define snderr(errno)	{ error = errno; /* unlock */ goto release; } 
 restart:
-	/* XXX - lock here! */
+	if (error = sblock(&so->so_snd, SBLOCKWAIT(flags)))
+		goto out;
 	
 	/* Main Loop! We should loop here until resid == 0 */
 	do { 
@@ -457,10 +501,12 @@ restart:
 
 		if (space < resid + clen && uio && 
 		    (atomic || space < so->so_snd.sb_lowat || space < clen)) {
-			if (so->so_state & SS_NBIO) /* non blocking set */
+			if ((so->so_state & SS_NBIO)) { /* non blocking set */
+				printf("so->so_state & SS_NBIO (%d)\n", so->so_state & SS_NBIO);
 				snderr(EWOULDBLOCK);
+			}
 			/* free lock - we're waiting on send buffer space */
-			/* XXX - unlcok */
+			sbunlock(&so->so_snd);
 			error = sbwait(&so->so_snd);
 			if (error)
 				goto out;
@@ -543,7 +589,7 @@ nopages:
 	} while (resid);
 
 release:
-	/* unlock */
+	sbunlock(&so->so_snd);
 out:
 	if (top)
 		m_freem(top);
@@ -676,7 +722,8 @@ bad:
 		(*pr->pr_userreq)(so, PRU_RCVD, NULL, NULL, NULL);
 		
 restart:
-	/* XXX - locking */
+	if (error = sblock(&so->so_rcv, SBLOCKWAIT(flags)))
+		return error;
 	m = so->so_rcv.sb_mb;
 	/*
 	 * If we have less data than requested, block awaiting more
@@ -722,9 +769,12 @@ restart:
 		if (uio->uio_resid == 0)
 			goto release;
 		if ((so->so_state & SS_NBIO) || (flags & MSG_DONTWAIT)) {
+			printf("so->so_state & SS_NBIO (%d) || flags & MSG_DONTWAIT (%d)\n",
+			       so->so_state & SS_NBIO, flags & MSG_DONTWAIT);
 			error = EWOULDBLOCK;	
 			goto release;
 		}
+		sbunlock(&so->so_rcv);
 		error = sbwait(&so->so_rcv);
 		if (error)
 			return error;
@@ -856,7 +906,7 @@ dontblock:
 				break;
 			error = sbwait(&so->so_rcv);
 			if (error) {
-				/* sbunlock */
+				sbunlock(&so->so_rcv);
 				return 0;
 			}
 			if ((m = so->so_rcv.sb_mb))
@@ -877,13 +927,14 @@ dontblock:
 	}
 	if (orig_resid == uio->uio_resid && orig_resid &&
 		(flags & MSG_EOR) == 0 && (so->so_state & SS_CANTRCVMORE) == 0) {
-		/* sbunlock */
+		sbunlock(&so->so_rcv);
 		goto restart;
 	}
 	if (flagsp)
 		*flagsp |= flags;
 
 release:
+	sbunlock(&so->so_rcv);
 	return error;
 }
 
@@ -1242,7 +1293,7 @@ void sowakeup(struct socket *so, struct sockbuf *sb)
 	sb->sb_flags &= ~SB_SEL;
 	if (sb->sb_flags & SB_WAIT) {
 		sb->sb_flags &= ~SB_WAIT;
-		release_sem(sb->sb_pop);
+		release_sem_etc(sb->sb_pop, 1, B_CAN_INTERRUPT);
 	}
 	checkevent(so);
 }	
@@ -1360,8 +1411,10 @@ int nsleep(sem_id chan, char *msg, int timeo)
 	else
 		rv = acquire_sem_etc(chan, 1, B_CAN_INTERRUPT, 0);
 
-	if (rv == B_TIMED_OUT)
+	if (rv == B_TIMED_OUT) {
+		printf ("nsleep: EWOULDBLOCK\n");
 		return EWOULDBLOCK;
+	}
 	if (rv == B_INTERRUPTED)
 		return EINTR;
 	return 0;
