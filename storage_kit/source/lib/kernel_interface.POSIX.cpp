@@ -15,33 +15,13 @@
 #include "LibBeAdapter.h"
 
 #include <algobase.h>
-#include <fcntl.h>
-#include <unistd.h>
-
 #include <fsproto.h>
-
-#include <stdio.h>
-	// open, close
-	
-#include <errno.h>
-	// errno
-
+#include <errno.h>		// errno
 #include <new>
-#include <string.h>
-	// strerror()
-	
-#include <fs_attr.h>
-	//  BeOS's C-based attribute functions
-
-#include <Entry.h>
-	// entry_ref
-	
-#include <image.h>
-	// used by get_app_path()
-
-#include <utime.h>
-	// for utime() and struct utimbuf
-
+#include <fs_attr.h>	//  BeOS's C-based attribute functions
+#include <Entry.h>		// entry_ref
+#include <image.h>		// used by get_app_path()
+#include <utime.h>		// for utime() and struct utimbuf
 #include <OS.h>
 
 // This is just for cout while developing; shouldn't need it
