@@ -549,11 +549,17 @@ static int tcp_module_init(void *cpp)
 
 static int tcp_module_stop(void)
 {
+	net_remove_timer(slowtim);
+	net_remove_timer(fasttim);
+
 #ifndef _KERNEL_MODE
 	unload_add_on(ipid);
 #else
 	put_module(IPV4_MODULE_PATH);
 #endif
+
+	remove_protocol(&my_proto);
+	
 	return 0;
 }
 	

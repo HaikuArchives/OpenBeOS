@@ -348,6 +348,12 @@ static int udp_module_init(void *cpp)
 	return 0;
 }
 
+static int udp_module_stop(void)
+{
+	remove_protocol(&my_proto);
+	return 0;
+}
+
 _EXPORT struct kernel_net_module_info protocol_info = {
 	{
 		UDP_MODULE_PATH,
@@ -355,7 +361,7 @@ _EXPORT struct kernel_net_module_info protocol_info = {
 		udp_ops
 	},
 	udp_module_init,
-	NULL
+	udp_module_stop
 };
 
 #ifdef _KERNEL_MODE
