@@ -27,9 +27,10 @@
 
 #define   SBLOCKWAIT(f)   (((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
 
-// Private prototypes
+/* Private prototypes */
 static int checkevent(struct socket *so);
 
+/* Static global objects... */
 static pool_ctl *spool;
 static benaphore sockets_lock;
 
@@ -464,7 +465,7 @@ int sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *t
 
 #define snderr(errno)	{ error = errno; /* unlock */ goto release; } 
 restart:
-	if (error = sblock(&so->so_snd, SBLOCKWAIT(flags)))
+	if ((error = sblock(&so->so_snd, SBLOCKWAIT(flags))))
 		goto out;
 	
 	/* Main Loop! We should loop here until resid == 0 */
@@ -718,7 +719,7 @@ bad:
 	}
 	if (mp)
 		*mp = NULL;
-	if (so->so_state & SS_ISCONFIRMING && uio->uio_resid)
+	if ((so->so_state & SS_ISCONFIRMING) && uio->uio_resid)
 		(*pr->pr_userreq)(so, PRU_RCVD, NULL, NULL, NULL);
 		
 restart:
