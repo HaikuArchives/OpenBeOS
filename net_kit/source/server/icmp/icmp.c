@@ -4,30 +4,30 @@
 #include <stdio.h>
 
 #include "net_misc.h"
+#include "sys/socket.h"
 #include "netinet/in_systm.h"
 #include "netinet/ip.h"
 #include "netinet/ip_icmp.h"
-#include "net_module.h"
 #include "protocols.h"
-#include "sys/socket.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
 #include "netinet/icmp_var.h"
 
+#include "core_module.h"
+#include "net_module.h"
+#include "core_funcs.h"
 #include "raw/raw_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
+
+#define ICMP_MODULE_PATH	"network/protocol/icmp"
+#else
+#define ICMP_MODULE_PATH	"modules/protocol/icmp"
+#endif
 
 static struct core_module_info *core = NULL;
 static struct raw_module_info *raw = NULL;
-#define ICMP_MODULE_PATH	"network/protocol/icmp"
-#else
-static struct raw_module_info *raw = NULL;
-#define ICMP_MODULE_PATH	"modules/protocol/icmp"
-#endif
 
 struct protosw* proto[IPPROTO_MAX];
 
@@ -150,8 +150,9 @@ struct protosw my_proto = {
 
 #ifndef _KERNEL_MODE
 
-static void icmp_protocol_init(void)
+static void icmp_protocol_init(struct core_module_info *cp)
 {
+	core = cp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 }
@@ -172,8 +173,8 @@ static status_t icmp_ops(int32 op, ...)
 			if (!core)
 				return B_ERROR;
 			
-			core->add_domain(NULL, AF_INET);
-			core->add_protocol(&my_proto, AF_INET);			
+			add_domain(NULL, AF_INET);
+			add_protocol(&my_proto, AF_INET);			
 
 			return B_OK;
 		case B_MODULE_UNINIT:

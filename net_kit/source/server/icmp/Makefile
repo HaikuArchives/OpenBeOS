@@ -2,12 +2,13 @@ INCLUDES=-I. -I.. -I../include
 TARGET=icmp
 INSTALL_DIR=../modules/protocol
 TGT=$(INSTALL_DIR)/$(TARGET)
-LOBJS=../_APP_
+LOBJS=../net_server/cksum.o
 OBJS=icmp.o
+
+CFLAGS+=-D_NETWORK_STACK
 
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=../net_server/cksum.o
 
 all:	$(TGT)
 
@@ -18,13 +19,13 @@ clean:
 
 kernel:
 	@$(CC) $(KCFLAGS) $(INCLUDES) -c icmp.c
-	@$(CC) $(KLDFLAGS) $(KLOBJS) -o icmp icmp.o
+	@$(CC) $(KLDFLAGS) $(LOBJS) -o icmp icmp.o
 
 installkernel:	kernel
 	@cp icmp /boot/home/config/add-ons/kernel/network/protocol/icmp
 
 $(TGT): $(OBJS)
-	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
