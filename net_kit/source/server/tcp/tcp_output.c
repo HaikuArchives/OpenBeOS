@@ -38,8 +38,10 @@ void tcp_setpersist(struct tcpcb *tp)
 {
 	int t = ((tp->t_srtt >> 2) + tp->t_rttvar) >> 1;
 	
-	if (tp->t_timer[TCPT_REXMT])
-		printf("tcp_output REXMT\n");
+	if (tp->t_timer[TCPT_REXMT]) {
+		printf("PANIC: tcp_output REXMT\n");
+		return;
+	}
 	/* Start/reset the persistance timer */
 	TCPT_RANGESET(tp->t_timer[TCPT_PERSIST],
 	              t * tcp_backoff[tp->t_rxtshift],
@@ -60,10 +62,11 @@ int tcp_mss(struct tcpcb *tp, uint offer)
 	
 	inp = tp->t_inpcb;
 	ro = &inp->inp_route;
-	
+
 	if ((rt = ro->ro_rt) == NULL) {
 		/* don't have a route, get one if we can */
 		if (inp->faddr.s_addr != INADDR_ANY) {
+			memset(&ro->ro_dst, 0, sizeof(ro->ro_dst));
 			ro->ro_dst.sa_family = AF_INET;
 			ro->ro_dst.sa_len = sizeof(ro->ro_dst);
 			((struct sockaddr_in *)&ro->ro_dst)->sin_addr = inp->faddr;
@@ -420,7 +423,6 @@ send:
 	((struct ip*)ti)->ip_len = m->m_pkthdr.len;
 	((struct ip*)ti)->ip_ttl = tp->t_inpcb->inp_ip.ip_ttl;
 	((struct ip*)ti)->ip_tos = tp->t_inpcb->inp_ip.ip_tos;
-printf("tcp_output: calling ip_output to %08lx\n", tp->t_inpcb->inp_ip.ip_dst.s_addr);
 	error = ipm->output(m, tp->t_inpcb->inp_options, &tp->t_inpcb->inp_route,
 	                    so->so_options & SO_DONTROUTE, NULL);
 	

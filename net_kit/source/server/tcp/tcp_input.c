@@ -432,15 +432,13 @@ findpcb:
 		++tcpstat.tcps_pcbhashmiss;
 	}
 	if (inp == NULL) {
-		printf("inp is NULL\n");
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+		printf("tcp_input: dropwithreset: inp is NULL, line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 	
 	tp = intotcpcb(inp);
 	if (tp == NULL) {
-		printf("tp is NULL\n");
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+		printf("tcp_input: dropwithreset: tp is NULL, line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 
@@ -457,16 +455,13 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 
 	so = inp->inp_socket;
 	if (so->so_options & (SO_DEBUG|SO_ACCEPTCONN)) {
-		printf("SO_ACCEPTCONN\n");
 		if (so->so_options & SO_DEBUG) {
 			ostate = tp->t_state;
 			tcp_saveti = *ti;
 		}
 		if (so->so_options & SO_ACCEPTCONN) {
-			printf("calling sonewconn...\n");
 			so = sonewconn(so, 0);
 			if (so == NULL) {
-				printf("tcp_input: sonewconn = NULL\n");
 				goto drop;
 			}
 			/*
@@ -647,7 +642,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto drop;
 			}
 			if (tiflags & TH_ACK) {
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+				printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto dropwithreset;
 			}
 			if ((tiflags & TH_SYN) == 0) {
@@ -726,13 +721,13 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				if (tiflags & TH_SYN) {
 					tcpstat.tcps_badsyn++;
 					printf("SYN + ACK in a reply\n");
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+					printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 					goto dropwithreset;
 				}
 				if (SEQ_LEQ(ti->ti_ack, tp->snd_una) ||
 				    SEQ_GT(ti->ti_ack, tp->snd_max)) {
 				    printf("SEQ outside of boundaries...\n");
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+					printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 					goto dropwithreset;
 				}
 			}
@@ -755,7 +750,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		    	(SEQ_LEQ(ti->ti_ack, tp->iss) ||
 		     	SEQ_GT(ti->ti_ack, tp->snd_max))) {
 		     	printf("SYN_SENT but ACK was not for our request!\n");
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+				printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto dropwithreset;
 			}
 			if (tiflags & TH_RST) {
@@ -798,7 +793,6 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				tp->t_state = TCPS_SYN_RECEIVED;
 
 trimthenstep6:
-printf("tcp_input: trimthenstep6\n");
 			/*
 			 * Advance ti->ti_seq to correspond to first data byte.
 			 * If data, trim to stay within window,
@@ -905,7 +899,7 @@ printf("tcp_input: trimthenstep6\n");
 	    tp->t_state > TCPS_CLOSE_WAIT && ti->ti_len) {
 		tp = tcp_close(tp);
 		tcpstat.tcps_rcvafterclose++;
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+		printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 
@@ -972,7 +966,6 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 	 *	Close the tcb.
 	 */
 	if (tiflags & TH_RST) {
-		printf("tcp_input: TH_RST %d\n", __LINE__);
 		switch (tp->t_state) {
 			case TCPS_SYN_RECEIVED:
 				so->so_error = ECONNREFUSED;
@@ -1003,7 +996,7 @@ close:
 	 */
 	if (tiflags & TH_SYN) {
 		tp = tcp_drop(tp, ECONNRESET);
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+		printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		goto dropwithreset;
 	}
 
@@ -1011,7 +1004,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 	 * If the ACK bit is off we drop the segment and return.
 	 */
 	if ((tiflags & TH_ACK) == 0) {
-		printf("tcp_input: no ack flag...\n");
+		printf("tcp_input: drop: no ack flag...\n");
 		goto drop;
 	}
 
@@ -1028,7 +1021,7 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 		case TCPS_SYN_RECEIVED:
 			if (SEQ_GT(tp->snd_una, ti->ti_ack) ||
 			    SEQ_GT(ti->ti_ack, tp->snd_max)) {
-printf("tcp_input: dropwithreset: line %d\n", __LINE__);
+				printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 				goto dropwithreset;
 			}
 			tcpstat.tcps_connects++;
@@ -1249,7 +1242,6 @@ printf("tcp_input: dropwithreset: line %d\n", __LINE__);
 	}
 
 step6:
-printf("step6\n");
 	/*
 	 * Update window information.
 	 * Don't look at window if no ACK: TAC's send garbage on first SYN.
@@ -1412,8 +1404,6 @@ dodata:							/* XXX */
 	return;
 
 dropafterack:
-	printf("tcp_input: dropafterack\n");
-
 	/*
 	 * Generate an ACK dropping incoming segment if it occupies
 	 * sequence space, where the ACK reflects our state.
@@ -1426,7 +1416,6 @@ dropafterack:
 	return;
 
 dropwithreset:
-	printf("tcp_input: dropwithreset\n");
 	/*
 	 * Generate a RST, dropping incoming segment.
 	 * Make ACK acceptable to originator of segment.
@@ -1448,7 +1437,6 @@ dropwithreset:
 	return;
 
 drop:
-printf("tcp_input: drop %d\n", __LINE__);
 	/*
 	 * Drop space held by incoming segment and return.
 	 */

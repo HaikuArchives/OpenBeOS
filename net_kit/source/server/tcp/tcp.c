@@ -131,8 +131,6 @@ struct tcpcb *tcp_close(struct tcpcb *tp)
 	struct mbuf *m;
 	struct rtentry *rt;
 
-printf("tcp_close\n");
-	
 	/* did we send enough data to get some meaningful iformation?
 	 * If we did save it in the routing entry.
 	 * We define enough as being the sendpipesize (default 8k) x 16
@@ -187,7 +185,6 @@ printf("tcp_close\n");
 	/* free our reassembly queue */
 	t = tp->seg_next;
 	while (t != (struct tcpiphdr*)tp) {
-printf("freeing reassembly q\n");
 		t = (struct tcpiphdr*)t->ti_next;
 		m = REASS_MBUF((struct tcpiphdr*)t->ti_prev);
 		remque(t->ti_prev);
@@ -195,7 +192,7 @@ printf("freeing reassembly q\n");
 	}
 	if (tp->t_template)
 		(void)m_free(dtom(tp->t_template));
-printf("tcp_close:cleaning up\n");
+
 	pool_put(tcppool, tp);
 	inp->inp_ppcb = NULL;
 	soisdisconnected(so);
@@ -203,7 +200,7 @@ printf("tcp_close:cleaning up\n");
 		tcp_last_inpcb = &tcb;
 	in_pcbdetach(inp);
 	tcpstat.tcps_closed++;
-printf("tcp_close: done\n");
+
 	return NULL;
 }
 
@@ -211,8 +208,6 @@ struct tcpcb *tcp_drop(struct tcpcb *tp, int error)
 {
 	struct socket *so = tp->t_inpcb->inp_socket;
 
-printf("tcp_drop\n");
-	
 	if (TCPS_HAVERCVDSYN(tp->t_state)) {
 		tp->t_state = TCPS_CLOSED;
 		(void) tcp_output(tp);
@@ -426,7 +421,6 @@ int tcp_userreq(struct socket *so, int req, struct mbuf *m,
 				tp->t_state = TCPS_LISTEN;
 			break;
 		case PRU_CONNECT:
-			printf("tcp: PRU_CONNECT\n");
 			if (inp->lport == 0) {
 				error = in_pcbbind(inp, NULL);
 				if (error)
