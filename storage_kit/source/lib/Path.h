@@ -11,6 +11,8 @@
 #include <sys/types.h>
 #include <SupportDefs.h>
 
+#include "Error.h"
+
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
@@ -20,8 +22,14 @@ class BDirectory;
 class BEntry;
 struct entry_ref;
 
-/*! A pathname wrapper class that manages conversion to and from various means of expressing pathnames, as
-	well as any necessary resource allocation and deallocation. */
+//! Pathname wrapper
+/*! <b>BPath</b> - A pathname wrapper class that manages conversion to and from various means of expressing pathnames, as
+	well as any necessary resource allocation and deallocation.
+	@see <a href="http://www.opensource.org/licenses/mit-license.html">MIT License</a>
+	@author <a href="mailto:tylerdauwalder@users.sf.net">Tyler Dauwalder</a>
+	@author Be Inc.
+	@version 0
+*/
 class BPath /*: BFlattenable */ {
 public:
 
@@ -112,8 +120,12 @@ public:
 	/*! Returns true if code is B_REF_TYPE, and false otherwise. */
 	virtual bool AllowsTypeCode(type_code code) const;
 	
-	/*! Initializes the BPath with the flattened entry_ref data that's found in buffer. The type code must be B_REF_TYPE. */
+	/*! Initializes the BPath with the flattened entry_ref data that's found in buffer.
+		The type code must be B_REF_TYPE.*/
 	virtual status_t Unflatten(type_code c, const void *buf, ssize_t size);
+
+	/*! Checks a path string to see if normalization is required. */
+	bool MustNormalize(const char *path);
 	
 private:
 	/*! Currently unused. */
@@ -128,6 +140,7 @@ private:
 	/*! Currently unused. */
 	uint32 _warData[4];
 	
+	
 	/*! (Probably used to free fName, but I'm not sure yet) */
 	status_t clear();	
 	
@@ -136,6 +149,13 @@ private:
 	
 	/*! (I'm not sure what this is yet) */ 
 	status_t fCStatus;
+
+	class EBadPathInput : public StorageKit::Error {
+	public:
+		EBadPathInput(const char *message) : StorageKit::Error(0, message) { }
+	};
+
+
 	
 };
 
