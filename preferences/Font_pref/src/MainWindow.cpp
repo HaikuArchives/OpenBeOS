@@ -1,10 +1,20 @@
+/*! \file MainWindow.cpp
+ *  \brief Code for the main window.
+ *
+ *  Displays the main window.
+ *
+*/
+
 #ifndef MAIN_WINDOW_H
 	
 	#include "MainWindow.h"
 
 #endif
 
-
+/**
+ * Constructor.
+ * @param frame The size to make the window.
+ */
 MainWindow::MainWindow(BRect frame)
 				: BWindow(frame, "Fonts", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE ){
 				
@@ -44,12 +54,19 @@ MainWindow::MainWindow(BRect frame)
 	
 }
 
+/**
+ * Runs when the user quits the application.
+ */
 bool MainWindow::QuitRequested()
 {
 	be_app->PostMessage(B_QUIT_REQUESTED);
 	return(true);
 }
 
+/**
+ * Handles messages sent to the class.
+ * @param message The message to be handled.
+ */
 void MainWindow::MessageReceived(BMessage *message){
 
 	char msg[100];
@@ -169,6 +186,10 @@ void MainWindow::MessageReceived(BMessage *message){
 	
 }
 
+/**
+ * Sets the size of the test text when a new size is picked.
+ * @param theView The FontSelectionView that is affected.
+ */
 void MainWindow::updateSize(FontSelectionView *theView){
 
 	BFont workingFont;
@@ -179,6 +200,10 @@ void MainWindow::updateSize(FontSelectionView *theView){
 		
 }//updateSize
 
+/**
+ * Updates the test text to the selected font.
+ * @param theView The FontSelectionView that is affected.
+ */
 void MainWindow::updateFont(FontSelectionView *theView){
 
 	BFont workingFont;
@@ -192,6 +217,10 @@ void MainWindow::updateFont(FontSelectionView *theView){
 	
 }//updateFont
 
+/**
+ * Updates the test text to the selected style.
+ * @param theView The FontSelectionView that is affected.
+ */
 void MainWindow::updateStyle(FontSelectionView *theView){
 
 	BFont workingFont;

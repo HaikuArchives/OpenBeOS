@@ -1,9 +1,17 @@
+/*! \file ButtonView.cpp
+ *  \brief Code for the ButtonView.
+ */
+ 
 #ifndef BUTTON_VIEW_H
 
 	#include "ButtonView.h"
 
 #endif
 
+/**
+ * Constructor
+ * @param rect The size of the view.
+ */
 ButtonView::ButtonView(BRect rect)
 	   	   : BView(rect, "ButtonView", B_FOLLOW_ALL, B_WILL_DRAW)
 {
@@ -49,12 +57,18 @@ ButtonView::ButtonView(BRect rect)
 	
 }
 
+/**
+ * Returns the state of the revert button.
+ */
 bool ButtonView::RevertState(){
 
 	return revertButton->IsEnabled();
 	
 }//RevertState
 
+/**
+ * Sets the state of the revert button.
+ */
 void ButtonView::SetRevertState(bool b){
 
 	revertButton->SetEnabled(b);

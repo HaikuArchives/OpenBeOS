@@ -1,3 +1,8 @@
+/*! \file MainWindow.h
+    \brief Header for the MainWindow class.
+    
+*/
+
 #ifndef MAIN_WINDOW_H
 
 	#define MAIN_WINDOW_H
@@ -52,13 +57,25 @@
 			
 		private:
 		
+			/**
+			 * The panel that shows the font selection views.
+			 */
 			FontView *fontPanel;
+			
+			/**
+			 * The panel that holds the default, revert and rescan buttons.
+			 */
+			ButtonView *buttonView;
+			
+			/**
+			 * The panel that holds the sliders for adjusting the cache sizes.
+			 */
+			CacheView *cachePanel;
+	
 			void updateSize(FontSelectionView *theView);
 			void updateFont(FontSelectionView *theView);
 			void updateStyle(FontSelectionView *theView);
-			ButtonView *buttonView;
-			CacheView *cachePanel;
-	
+			
 	};
 
 #endif

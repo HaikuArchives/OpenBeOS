@@ -1,3 +1,7 @@
+/*! \file FontView.h
+    \brief Header for the FontView class.
+    
+*/
 
 #ifndef FONT_VIEW_H
 

@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= Fonts_pref
+NAME= Fonts
 
 # specify the type of binary
 #	APP:	Application
@@ -39,7 +39,7 @@ SRCS= ButtonView.cpp \
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS=
+RSRCS=Resource.rsrc
 
 # @<-src@ 
 #%}

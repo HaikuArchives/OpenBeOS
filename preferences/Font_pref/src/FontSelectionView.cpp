@@ -1,3 +1,7 @@
+/*! \file FontSelectionView.cpp
+    \brief Header for the FontSelectionView class.
+    
+*/
 
 #ifndef FONT_SELECTION_VIEW_H
 	
@@ -5,6 +9,12 @@
 
 #endif
 
+/**
+ * Constructor
+ * @param rect The size of the view.
+ * @param name The name of the view.
+ * @param type The type of the view: plain, italic, etc.
+ */
 FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
 	   	   : BView(rect, name, B_FOLLOW_ALL, B_WILL_DRAW)
 {
@@ -94,6 +104,10 @@ FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
 		
 }
 
+/**
+ * Emptys the menu so it can be rebuilt.
+ * @param m The menu to empty.
+ */
 void FontSelectionView::emptyMenu(BPopUpMenu *m){
 
 	int32 cnt;
@@ -129,6 +143,9 @@ void FontSelectionView::emptyMenu(BPopUpMenu *m){
 
 }//emptyMenu
 
+/**
+ * Emptys both the font and the size menus.
+ */
 void FontSelectionView::emptyMenus(){
 
 	//empty font menu
@@ -139,6 +156,9 @@ void FontSelectionView::emptyMenus(){
 	
 }//emptyMenus
 
+/**
+ * Builds the font and size menus.
+ */
 void FontSelectionView::buildMenus(){
 
 	int32 numFamilies;
@@ -186,8 +206,9 @@ void FontSelectionView::buildMenus(){
 			}//for
 			
 			fontList->AddItem(new BMenuItem((tmpStyleMenu), new BMessage(setFontChangedMessage)));
+			
 			if(markFamily){
-					
+				
 				tmpStyleMenu->Superitem()->SetMarked(true);
 						
 			}//if
@@ -214,6 +235,10 @@ void FontSelectionView::buildMenus(){
 	
 }//buildMenus
 
+/**
+ * Writes the test text in the given font.
+ * @param fnt The font to write the test text in.
+ */
 void FontSelectionView::SetTestTextFont(BFont *fnt){
 
 	testText->SetFont(fnt, B_FONT_ALL);
@@ -221,6 +246,9 @@ void FontSelectionView::SetTestTextFont(BFont *fnt){
 	
 }//SetTextTextFont
 
+/**
+ * Gets the current font.
+ */
 BFont FontSelectionView::GetTestTextFont(){
 
 	BFont rtrnFont;
@@ -231,12 +259,19 @@ BFont FontSelectionView::GetTestTextFont(){
 
 }//SetTextTextFont
 
+/**
+ * Gets the selected size.
+ */
 float FontSelectionView::GetSelectedSize(){
 
 	return minSizeIndex + sizeList->IndexOf(sizeList->FindMarked());
 
 }//GetSelectedSize
 
+/**
+ * Gets the selected font_family.
+ * @param family The selected font_family.
+ */
 void FontSelectionView::GetSelectedFont(font_family *family){
 
 	int numFamilies = count_font_families();
@@ -259,6 +294,10 @@ void FontSelectionView::GetSelectedFont(font_family *family){
 	 
 }//GetSelectedFont
 
+/**
+ * Gets the selected style.
+ * @param style The selected style.
+ */
 void FontSelectionView::GetSelectedStyle(font_style *style){
 
 	int numFamilies = count_font_families();
@@ -299,6 +338,11 @@ void FontSelectionView::GetSelectedStyle(font_style *style){
 	 
 }//GetSelectedStyle
 
+/**
+ * If a style is selected, this function is called to update the font menu,
+ * in case the selected style is from a non selected font.  It also marks the
+ * selected style, and unmarks all other styles.
+ */
 void FontSelectionView::UpdateFontSelectionFromStyle(){
 
 	int i = 0;
@@ -326,6 +370,9 @@ void FontSelectionView::UpdateFontSelectionFromStyle(){
 	
 }//UpdateFontSelection
 
+/**
+ * Updates the font menu based on the user selection.
+ */
 void FontSelectionView::UpdateFontSelection(){
 
 	int i = 0;
@@ -353,7 +400,11 @@ void FontSelectionView::UpdateFontSelection(){
 
 }//UpdateFontSelection
 
-//This methd needs rewriting BADLY - it's horribly written
+/**
+ * Updates the font and size menus based on the given font.
+ * @param fnt The font to set the menus to.
+ * \note This methd needs rewriting BADLY - it's horribly written
+ */
 void FontSelectionView::UpdateFontSelection(BFont *fnt){
 
 	int i = 0;
@@ -409,6 +460,9 @@ void FontSelectionView::UpdateFontSelection(BFont *fnt){
 	
 }//UpdateFontSelection
 
+/**
+ * Resets the test text to the default font.
+ */
 void FontSelectionView::resetToDefaults(){
 
 	//Update menus
@@ -419,6 +473,9 @@ void FontSelectionView::resetToDefaults(){
 	
 }//resetToDefaults
 
+/**
+ * Resets the test text to the original font.
+ */
 void FontSelectionView::revertToOriginal(){
 
 	//Update menus

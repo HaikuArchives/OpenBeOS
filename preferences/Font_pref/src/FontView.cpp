@@ -1,9 +1,18 @@
+/*! \file FontView.cpp
+    \brief Header for the FontView class.
+    
+*/
+
 #ifndef FONT_VIEW_H
 
 	#include "FontView.h"
 
 #endif
 
+/**
+ * Constructor.
+ * @param rect The size of the view.
+ */
 FontView::FontView(BRect rect)
 	   	   : BView(rect, "FontView", B_FOLLOW_ALL, B_WILL_DRAW)
 {
@@ -27,6 +36,10 @@ FontView::FontView(BRect rect)
 	
 }
 
+/**
+ * Calls each FontSelectionView's buildMenus() function to build the
+ * font and size menus.
+ */
 void FontView::buildMenus(){
 
 	plainSelectionView->buildMenus();
@@ -35,6 +48,10 @@ void FontView::buildMenus(){
 
 }//buildMenus
 
+/**
+ * Calls each FontSelectionView's emptyMenus() function to clear the
+ * font and size menus.
+ */
 void FontView::emptyMenus(){
 
 	plainSelectionView->emptyMenus();
@@ -43,6 +60,10 @@ void FontView::emptyMenus(){
 
 }//buildMenus
 
+/**
+ * Calls each FontSelectionView's resetToDefaults() function to reset
+ * the font and size menus to the default font.
+ */
 void FontView::resetToDefaults(){
 
 	plainSelectionView->resetToDefaults();
@@ -51,6 +72,10 @@ void FontView::resetToDefaults(){
 
 }//resetToDefaults
 
+/**
+ * Calls each FontSelectionView's revertToOriginal() function to reset
+ * the font and size menus to the original font.
+ */
 void FontView::revertToOriginal(){
 
 	plainSelectionView->revertToOriginal();
