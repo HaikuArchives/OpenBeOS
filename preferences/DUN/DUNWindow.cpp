@@ -85,31 +85,43 @@ void DUNWindow::InitWindow(void) {
    BRect CPLocation(40,43,300,10);
    tvConnectionProfile = new BTextView(r, "Connection Profile", CPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvConnectionProfile->SetText("<Create a connection profile to continue.>");
+   tvConnectionProfile->MakeSelectable(false);
+   tvConnectionProfile->MakeEditable(false);
    
    // Displays - Call waiting may be enabled.
    BRect CWLocation(40,113,300,10);
    tvCallWaiting = new BTextView(r, "Call waiting", CWLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvCallWaiting->SetText("Call waiting may be enabled.");
+   tvCallWaiting->MakeSelectable(false);
+   tvCallWaiting->MakeEditable(false);
    
    // Displays - No Connection
    BRect NCLocation(21,168,300,10);
    tvConnection = new BTextView(r, "No Connection", NCLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvConnection->SetText("No Connection");
+   tvConnection->MakeSelectable(false);
+   tvConnection->MakeEditable(false);
    
    // Display - Time Online ie. 00:00:00
    BRect TOLocation(249,168,300,10);
    tvTimeOnline = new BTextView(r, "Time Online", TOLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvTimeOnline->SetText("00:00:00");
+   tvTimeOnline->MakeSelectable(false);
+   tvTimeOnline->MakeEditable(false);
    
    // Display - TextView of Local IP address
    BRect TextLIPLocation(21,186,300,10);
    tvLIP = new BTextView(r, "Local IP address", TextLIPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvLIP->SetText("Local IP address:");
+   tvLIP->MakeSelectable(false);
+   tvLIP->MakeEditable(false);
    
    // Display - Local IP address
    BRect LIPLocation (264,186,300,10);
    tvLocalIPAddress = new BTextView(r, "None", LIPLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvLocalIPAddress->SetText("None");
+   tvLocalIPAddress->MakeSelectable(false);
+   tvLocalIPAddress->MakeEditable(false);
         
    // Outline List View - Fake ones really as we're only using them as an indicator.
    BListItem *conitem;
