@@ -4868,64 +4868,64 @@
 		</section>
 		<section name="Miscellaneous">
 			<class name="BAlert">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BAlert(const char *title, const char *text, const char *button1, const char *button2 = NULL, const char *button3 = NULL, button_width width = B_WIDTH_AS_USUAL, alert_type type = B_INFO_ALERT);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BAlert(const char *title, const char *text, const char *button1, const char *button2, const char *button3, button_width width, button_spacing spacing, alert_type type = B_INFO_ALERT);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BAlert(BMessage *data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					~BAlert();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					static BArchivable *Instantiate(BMessage *data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual status_t Archive(BMessage *data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					void SetShortcut(int32 button_index, char key);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					char Shortcut(int32 button_index) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					int32 Go();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					status_t Go(BInvoker *invoker);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage *an_event);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BButton* ButtonAt(int32 index) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					BTextView* TextView() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage *msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void DispatchMessage(BMessage* msg, BHandler* handler);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual void Quit();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					virtual bool QuitRequested();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="false">
 					static BPoint AlertPosition(float width, float height);
 				</task>
 			</class>
