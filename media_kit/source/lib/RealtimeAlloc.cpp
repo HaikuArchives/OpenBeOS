@@ -16,6 +16,10 @@ struct rtm_pool
 {
 };
 
+extern "C" {
+	rtm_pool * _rtm_pool; 
+};
+
 status_t rtm_create_pool(rtm_pool ** out_pool, size_t total_size, const char * name)
 {
 	BROKEN();

@@ -10,6 +10,20 @@
 
 #include "SampleConverter.h"
 
+extern "C" {
+// used by BeOS R5 legacy.media_addon and mixer.media_addon
+void convertBufferFloatToShort(float *out, short *in, int32 count);
+void convertBufferFloatToShort(float *out, short *in, int32 count)
+{
+	MediaKitPrivate::SampleConverter::convert(
+		out,
+		media_raw_audio_format::B_AUDIO_FLOAT,
+		in,
+		media_raw_audio_format::B_AUDIO_SHORT,
+		count);
+}
+};
+
 namespace MediaKitPrivate {
 
 status_t 
