@@ -27,7 +27,7 @@ struct core_module_info {
 	int (*sbappendaddr)(struct sockbuf *, struct sockaddr *, 
 		 				struct mbuf *, struct mbuf *);
 	void (*sowakeup)(struct socket *, struct sockbuf *);
-	int (*soisconnected)(struct socket *);
+	void (*soisconnected)(struct socket *);
 	 
 	/* pcb options */
 	int (*in_pcballoc)(struct socket *, struct inpcb *);
@@ -68,7 +68,7 @@ struct core_module_info {
 	int (*soclose)(void *);
 	int (*sobind)(void *, caddr_t, int);
 	int (*solisten)(void *, int);
-	int (*soconnect)(void *, struct mbuf *);
+	int (*soconnect)(void *, caddr_t, int);
 	int (*recvit)(void *, struct msghdr *, caddr_t, int *);
 	int (*sendit)(void *, struct msghdr *, int, int *);
 	int (*soo_ioctl)(void *, int, caddr_t);

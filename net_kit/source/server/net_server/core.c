@@ -36,17 +36,10 @@
 #include "sys/domain.h"
 #include "sys/protosw.h"
 #include "net/route.h"
+#include "net_malloc.h"
 
 #include "core_module.h"
 #include "net_device.h"
-
-#ifdef USE_DEBUG_MALLOC
-#define malloc dbg_malloc
-#define free dbg_free
-#endif
-
-static int nmods = 0;
-int prot_table[255];
 
 struct ifnet *devices = NULL;
 struct ifnet *pdevices = NULL;		/* pseudo devices - loopback etc */
@@ -89,7 +82,7 @@ static int32 rx_thread(void *data)
 	struct mbuf *m;
 
 	while (1) {
-		acquire_sem(i->rxq->pop);
+		acquire_sem_etc(i->rxq->pop, 1, B_CAN_INTERRUPT|B_DO_NOT_RESCHEDULE, 0);
 		IFQ_DEQUEUE(i->rxq, m);
 		if (i->input)
 			i->input(m);
@@ -113,7 +106,7 @@ static int32 tx_thread(void *data)
 #endif
 
 	while (1) {
-		acquire_sem(i->txq->pop);
+		acquire_sem_etc(i->txq->pop,1,B_CAN_INTERRUPT|B_DO_NOT_RESCHEDULE, 0);
 		IFQ_DEQUEUE(i->txq, m);
 
 		if (m->m_flags & M_PKTHDR) 
@@ -149,10 +142,10 @@ ifq *start_ifq(void)
 {
 	ifq *nifq = NULL;
 	
-#if SHOW_MALLOC_USAGE
-	dprintf("core.c: start_ifq: malloc(%ld)\n", sizeof(*nifq));
-#endif
 	nifq = (ifq*)malloc(sizeof(*nifq));
+
+printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
+	nifq, (char*)nifq + sizeof(*nifq));
 
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
@@ -239,56 +232,6 @@ void net_server_add_device(ifnet *ifn)
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
-}
-
-/* For all the devices we need to, here we start the threads
- * they'll use for the rx/tx operations...
- */
-static void start_device_threads(void)
-{
-	ifnet *d = devices;
-	char tname[32];
-	int priority = B_NORMAL_PRIORITY;
-printf("start_device_threads:\n");
-	acquire_sem(dev_lock);
-
-	while (d) {
-		sprintf(tname, "%s_rx_thread", d->if_name);
-		if (d->if_type == IFT_ETHER) {
-			d->rx_thread = spawn_kernel_thread(if_thread, tname, priority,
-							d);
-		} else {
-			d->rxq = start_ifq();
-			d->rx_thread = spawn_kernel_thread(rx_thread, tname, priority,
-							d);
-		}
-		if (d->rx_thread < 0) {
-			dprintf("Failed to start the rx_thread for %s\n", d->if_name);
-			continue;
-		} else {
-			resume_thread(d->rx_thread);
-		}
-		d->txq = start_ifq();
-		if (!d->txq) {
-			kill_thread(d->rx_thread);
-			continue;
-		}
-
-		sprintf(tname, "%s_tx_thread", d->if_name);
-		d->tx_thread = spawn_kernel_thread(tx_thread, tname,
-										priority, d);
-		if (d->tx_thread < 0) {
-			dprintf("Failed to start the tx_thread for %s%d\n", d->if_name);
-			kill_thread(d->tx_thread);
-			continue;
-		} else {
-			resume_thread(d->tx_thread);
-		}
-
-		d = d->next; 
-	}
-
-	release_sem(dev_lock);
 }
 
 static void merge_devices(void)
@@ -427,10 +370,11 @@ void add_domain(struct domain *dom, int fam)
 		switch (fam) {
 			case AF_INET:
 				/* ok, add it... */
-#if SHOW_MALLOC_USAGE
-	dprintf("core.c: add_domain: malloc(%ld)\n", sizeof(*ndm));
-#endif
 				ndm = (struct domain*)malloc(sizeof(*ndm));
+
+printf("%s, %d: malloc %p -> %p\n", __FILE__, __LINE__,
+	ndm, (char*)ndm + sizeof(*ndm));
+
 				*ndm = af_inet_domain;
 				if (dm)
 					dm->dom_next = ndm;
@@ -652,7 +596,7 @@ int start_stack(void)
 {
 	/* have we already been started??? */
 	if (domains != NULL)
-		return;
+		return -1;
 		
 	domains = NULL;
 	protocols = NULL;
@@ -678,8 +622,6 @@ int start_stack(void)
 	start_devices();
 
 	list_devices();
-printf("start_device_threads\n");
-	//start_device_threads();
 
 	return 0;
 }
