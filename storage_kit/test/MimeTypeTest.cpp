@@ -16,6 +16,7 @@
 static const char *testDir				= "/tmp/mimeTestDir";
 static const char *mimeDatabaseDir		= "/boot/home/config/settings/beos_mime";
 static const char *testType				= "text/StorageKit-Test";
+// Descriptions
 static const char *testDescr			= "Just a test, nothing more :-)";
 static const char *testDescr2			= "Another amazing test string";
 static const char *longDescr			= 
@@ -24,10 +25,14 @@ static const char *longDescr			=
 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
-
-
-#define CHK CPPUNIT_ASSERT
-#define RES DecodeResult
+// Signatures
+static const char *testSig				= "application/x-vnd.obos.mime-type-test";
+static const char *testSig2				= "application/x-vnd.obos.mime-type-test-2";
+static const char *longSig				= "application/x-vnd.obos.mime-type-test-long."
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
 
 // Suite
 CppUnit::Test*
@@ -39,6 +44,8 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::LongDescriptionTest) );
 	suite->addTest( new TC("BMimeType::Short Description Test",
 						   &MimeTypeTest::ShortDescriptionTest) );
+	suite->addTest( new TC("BMimeType::Preferred App Test",
+						   &MimeTypeTest::PreferredAppTest) );
 
 	return suite;
 }		
@@ -48,7 +55,7 @@ MimeTypeTest::Suite() {
 class MimeTypeTest::MimeTypeApp : public BApplication {
 public:
 	MimeTypeApp()
-		: BApplication("application/x-vnd.obos.mime-type-test"),
+		: BApplication(testSig),
 		  fAppThread(B_ERROR)
 	{
 		Unlock();
@@ -106,26 +113,13 @@ MimeTypeTest::setUp()
 	// local mime database which we'll use for certain OpenBeOS tests
 	execCommand(string("mkdir ") + testDir
 				+ " ; copyattr -d -r -- " + mimeDatabaseDir + "/* " + testDir
-				); */
-	
+				); */	
 	// Setup our application
 	fApplication = new MimeTypeApp;
 	if (fApplication->Init() != B_OK) {
 		fprintf(stderr, "Failed to initialized application.\n");
 		delete fApplication;
 		fApplication = NULL;
-	}
-	// Install our test type
-	{
-		BMimeType mime(testType);
-		status_t err;
-//		printf("%s %s valid\n", testType, (mime.IsValid() ? "is" : "is NOT"));
-//		printf("%s %s installed\n", testType, (mime.IsInstalled() ? "is" : "is NOT"));
-		err = mime.InitCheck();
-		if (!err) 
-			err = mime.Install();
-		if (err || !mime.IsInstalled())
-			fprintf(stderr, "Failed to install test type \"%s\"\n", testType);
 	}
 	
 }
@@ -143,21 +137,23 @@ MimeTypeTest::tearDown()
 		err = mime.Delete();
 	if (err)
 		fprintf(stderr, "Failed to unistall test type \"%s\"\n", testType);
-
 	// Terminate the Application
 	if (fApplication) {
 		fApplication->Terminate();
 		delete fApplication;
 		fApplication = NULL;
 	}
-
 	BasicTest::tearDown();
 }
+
+// Short Description
 
 void
 MimeTypeTest::ShortDescriptionTest() {
 	DescriptionTest(&BMimeType::GetShortDescription, &BMimeType::SetShortDescription);
 }
+
+// Long Description
 
 void
 MimeTypeTest::LongDescriptionTest() {
@@ -208,7 +204,7 @@ MimeTypeTest::DescriptionTest(GetDescriptionFunc getDescr, SetDescriptionFunc se
 		CHK((mime.*getDescr)(NULL) != B_OK);		// R5 == B_BAD_ADDRESS
 		CHK(!mime.IsInstalled());
 		CHK((mime.*setDescr)(NULL) != B_OK);		// R5 == Installs (but doesn't set), B_ENTRY_NOT_FOUND
-			// Note that a subsequent install followed by a setDescr() call with a
+			// Note that a subsequent uninstall followed by a SetShortDescription() call with a
 			// valid description succeeds and installs, but DOES NOT actually set.
 			// I don't know why, but I'd just suggest not passing NULLs to the
 			// R5 versions.
@@ -261,3 +257,109 @@ MimeTypeTest::DescriptionTest(GetDescriptionFunc getDescr, SetDescriptionFunc se
 
 }
 
+
+// Preferred App
+
+void
+MimeTypeTest::PreferredAppTest() {
+	char str[B_MIME_TYPE_LENGTH+1];
+	sprintf(str, "%s", testSig);
+
+	// Uninitialized
+	nextSubTest();
+	{
+		BMimeType mime;
+		CPPUNIT_ASSERT(mime.InitCheck() == B_NO_INIT);
+		CPPUNIT_ASSERT(mime.GetPreferredApp(str) != B_OK);	// R5 == B_BAD_VALUE
+		CPPUNIT_ASSERT(mime.SetPreferredApp(str) != B_OK);	// R5 == B_BAD_VALUE
+	}	
+	// Non-installed type
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Make sure the type isn't installed
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		CHK(!mime.IsInstalled());
+		CHK(mime.GetPreferredApp(str) != B_OK);		// R5 == B_ENTRY_NOT_FOUND
+		CHK(!mime.IsInstalled());
+		CHK(mime.SetPreferredApp(testSig) == B_OK);	// R5 == Installs (but doesn't set), B_OK
+		CHK(mime.IsInstalled());
+		CHK(mime.GetPreferredApp(str) == B_OK);
+		CHK(strcmp(str, testSig) == 0);
+	}
+	// Non-installed type, NULL params
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Make sure the type isn't installed
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		CHK(!mime.IsInstalled());
+		CHK(mime.GetPreferredApp(NULL) != B_OK);		// R5 == B_ENTRY_NOT_FOUND
+		CHK(!mime.IsInstalled());
+		CHK(mime.SetPreferredApp(NULL) != B_OK);		// R5 == Installs (but doesn't set), B_ENTRY_NOT_FOUND
+		CHK(mime.IsInstalled());
+		CHK(mime.GetPreferredApp(str) == B_ENTRY_NOT_FOUND);
+	}
+	// Installed type, NULL params
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);
+		CHK(mime.IsInstalled());
+		CHK(mime.GetPreferredApp(NULL) != B_OK);		// R5 == B_BAD_ADDRESS
+		CHK(mime.SetPreferredApp(NULL) != B_OK);		// R5 == B_ENTRY_NOT_FOUND
+		CHK(mime.GetPreferredApp(NULL) != B_OK);		// R5 == B_BAD_ADDRESS
+	}
+	// Installed type
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);
+		// Get() with no description installed
+		CHK(mime.IsInstalled());
+		CHK(mime.GetPreferredApp(str) == B_ENTRY_NOT_FOUND);	// R5 == B_ENTRY_NOT_FOUND
+		// Initial Set()/Get()
+		CHK(mime.SetPreferredApp(testSig) == B_OK);
+		CHK(mime.GetPreferredApp(str) == B_OK);
+		CHK(strcmp(str, testSig) == 0);
+		// Followup Set()/Get()
+		CHK(mime.SetPreferredApp(testSig2) == B_OK);
+		CHK(mime.GetPreferredApp(str) == B_OK);
+		CHK(strcmp(str, testSig2) == 0);		
+	}
+	// Installed Type, Signature Too Long
+	nextSubTest();
+	{
+		CHK(strlen(longDescr) > (B_MIME_TYPE_LENGTH+1));
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);
+		// Initial Set()/Get()
+		CHK(mime.SetPreferredApp(longSig) != B_OK);		// R5 == B_BAD_VALUE
+		CHK(mime.GetPreferredApp(str) == B_ENTRY_NOT_FOUND);
+		// Followup Set()/Get()
+		CHK(mime.SetPreferredApp(testSig) == B_OK);
+		CHK(mime.SetPreferredApp(longSig) != B_OK);		// R5 == B_BAD_VALUE
+		CHK(mime.GetPreferredApp(str) == B_OK);
+		CHK(strcmp(str, testSig) == 0);		
+	}
+
+}

@@ -28,6 +28,7 @@ public:
 	//------------------------------------------------------------
 	void LongDescriptionTest();
 	void ShortDescriptionTest();
+	void PreferredAppTest();
 
 	//------------------------------------------------------------
 	// Helper functions
