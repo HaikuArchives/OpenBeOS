@@ -17,6 +17,7 @@ namespace OpenBeOS {
 #endif
 
 // constructor
+//! Creates an uninitialized BFile.
 BFile::BFile()
 	 : BNode(),
 	   BPositionIO(),
@@ -25,6 +26,7 @@ BFile::BFile()
 }
 
 // copy constructor
+//! Creates a copy of the supplied BFile.
 /*! If \a file is uninitialized, the newly constructed BFile will be, too.
 	\param file the BFile object to be copied
 */
@@ -37,7 +39,9 @@ BFile::BFile(const BFile &file)
 }
 
 // constructor
-/*! \param ref the entry_ref referring to the file
+/*! \brief Creates a BFile and initializes it to the file referred to by
+		   the supplied entry_ref and according to the specified open mode.
+	\param ref the entry_ref referring to the file
 	\param openMode the mode in which the file should be opened
 	\see SetTo() for values for \a openMode
 */
@@ -50,7 +54,9 @@ BFile::BFile(const entry_ref *ref, uint32 openMode)
 }
 
 // constructor
-/*! \param entry the BEntry referring to the file
+/*! \brief Creates a BFile and initializes it to the file referred to by
+		   the supplied BEntry and according to the specified open mode.
+	\param entry the BEntry referring to the file
 	\param openMode the mode in which the file should be opened
 	\see SetTo() for values for \a openMode
 */
@@ -63,7 +69,9 @@ BFile::BFile(const BEntry *entry, uint32 openMode)
 }
 
 // constructor
-/*! \param path the file's path name 
+/*! \brief Creates a BFile and initializes it to the file referred to by
+		   the supplied path name and according to the specified open mode.
+	\param path the file's path name 
 	\param openMode the mode in which the file should be opened
 	\see SetTo() for values for \a openMode
 */
@@ -76,7 +84,10 @@ BFile::BFile(const char *path, uint32 openMode)
 }
 
 // constructor
-/*! \param dir the BDirectory, relative to which the file's path name is
+/*! \brief Creates a BFile and initializes it to the file referred to by
+		   the supplied path name relative to the specified BDirectory and
+		   according to the specified open mode.
+	\param dir the BDirectory, relative to which the file's path name is
 		   given
 	\param path the file's path name relative to \a dir
 	\param openMode the mode in which the file should be opened
@@ -91,14 +102,23 @@ BFile::BFile(BDirectory *dir, const char *path, uint32 openMode)
 }
 
 // destructor
-/*! If the file is properly initialized, the file's file descriptor is closed.
+//! Frees all allocated resources.
+/*!	If the file is properly initialized, the file's file descriptor is closed.
 */
 BFile::~BFile()
 {
+	// Also called by the BNode destructor, but we rather try to avoid
+	// problems with calling virtual functions in the base class destructor.
+	// Depending on the compiler implementation an object may be degraded to
+	// an object of the base class after the destructor of the derived class
+	// has been executed.
+	close_fd();
 }
 
 // SetTo
-/*! \param ref the entry_ref referring to the file
+/*! \brief Re-initializes the BFile to the file referred to by the
+		   supplied entry_ref and according to the specified open mode.
+	\param ref the entry_ref referring to the file
 	\param openMode the mode in which the file should be opened
 	\a openMode must be a bitwise or of exactly one of the flags
 	- \c B_READ_ONLY: The file is opened read only.
@@ -128,6 +148,7 @@ BFile::~BFile()
 status_t
 BFile::SetTo(const entry_ref *ref, uint32 openMode)
 {
+	Unset();
 	char path[B_PATH_NAME_LENGTH];
 	status_t error = (ref ? B_OK : B_BAD_VALUE);
 	if (error == B_OK)
@@ -139,7 +160,9 @@ BFile::SetTo(const entry_ref *ref, uint32 openMode)
 }
 
 // SetTo
-/*! \param entry the BEntry referring to the file
+/*! \brief Re-initializes the BFile to the file referred to by the
+		   supplied BEntry and according to the specified open mode.
+	\param entry the BEntry referring to the file
 	\param openMode the mode in which the file should be opened
 	\return
 	- \c B_OK: Everything went fine.
@@ -158,6 +181,7 @@ BFile::SetTo(const entry_ref *ref, uint32 openMode)
 status_t
 BFile::SetTo(const BEntry *entry, uint32 openMode)
 {
+	Unset();
 	entry_ref ref;
 	status_t error = (entry ? B_OK : B_BAD_VALUE);
 	if (error == B_OK)
@@ -169,7 +193,9 @@ BFile::SetTo(const BEntry *entry, uint32 openMode)
 }
 
 // SetTo
-/*!	\param path the file's path name 
+/*! \brief Re-initializes the BFile to the file referred to by the
+		   supplied path name and according to the specified open mode.
+	\param path the file's path name 
 	\param openMode the mode in which the file should be opened
 	\return
 	- \c B_OK: Everything went fine.
@@ -186,9 +212,9 @@ BFile::SetTo(const BEntry *entry, uint32 openMode)
 status_t
 BFile::SetTo(const char *path, uint32 openMode)
 {
+	Unset();
 	status_t result = B_OK;
 	int newFd = -1;
-	Unset();	
 	if (path) {
 		// analyze openMode
 		// Well, it's a bit schizophrenic to re-compose openFlags, but to use
@@ -238,7 +264,10 @@ BFile::SetTo(const char *path, uint32 openMode)
 }
 
 // SetTo
-/*! \param dir the BDirectory, relative to which the file's path name is
+/*! \brief Re-initializes the BFile to the file referred to by the
+		   supplied path name relative to the specified BDirectory and
+		   according to the specified open mode.
+	\param dir the BDirectory, relative to which the file's path name is
 		   given
 	\param path the file's path name relative to \a dir
 	\param openMode the mode in which the file should be opened
@@ -258,6 +287,7 @@ BFile::SetTo(const char *path, uint32 openMode)
 status_t
 BFile::SetTo(const BDirectory *dir, const char *path, uint32 openMode)
 {
+	Unset();
 	status_t error = (dir && path ? B_OK : B_BAD_VALUE);
 	BEntry entry;
 	if (error == B_OK)
@@ -268,14 +298,9 @@ BFile::SetTo(const BDirectory *dir, const char *path, uint32 openMode)
 	return error;
 }
 
-// Unset
-//void
-//BFile::Unset()
-//{
-//}
-
 // IsReadable
-/*! \return
+//! Returns whether the file is readable.
+/*!	\return
 	- \c true, if the BFile has been initialized properly and the file has
 	  been been opened for reading,
 	- \c false, otherwise.
@@ -289,7 +314,8 @@ BFile::IsReadable() const
 }
 
 // IsWritable
-/*! \return
+//!	Returns whether the file is writable.
+/*!	\return
 	- \c true, if the BFile has been initialized properly and the file has
 	  been opened for writing,
 	- \c false, otherwise.
@@ -303,7 +329,8 @@ BFile::IsWritable() const
 }
 
 // Read
-/*! \param buffer the buffer the data from the file shall be written to
+//!	Reads a number of bytes from the file into a buffer.
+/*!	\param buffer the buffer the data from the file shall be written to
 	\param size the number of bytes that shall be read
 	\return the number of bytes actually read or an error code
 */
@@ -317,7 +344,9 @@ BFile::Read(void *buffer, size_t size)
 }
 
 // ReadAt
-/*! \param location the position (in bytes) within the file from which the
+/*!	\brief Reads a number of bytes from a certain position within the file
+		   into a buffer.
+	\param location the position (in bytes) within the file from which the
 		   data shall be read
 	\param buffer the buffer the data from the file shall be written to
 	\param size the number of bytes that shall be read
@@ -333,7 +362,8 @@ BFile::ReadAt(off_t location, void *buffer, size_t size)
 }
 
 // Write
-/*! \param buffer the buffer containing the data to be written to the file
+//!	Writes a number of bytes from a buffer into the file.
+/*!	\param buffer the buffer containing the data to be written to the file
 	\param size the number of bytes that shall be written
 	\return the number of bytes actually written or an error code
 */
@@ -347,7 +377,9 @@ BFile::Write(const void *buffer, size_t size)
 }
 
 // WriteAt
-/*! \param location the position (in bytes) within the file at which the data
+/*!	\brief Writes a number of bytes from a buffer at a certain position
+		   into the file.
+	\param location the position (in bytes) within the file at which the data
 		   shall be written
 	\param buffer the buffer containing the data to be written to the file
 	\param size the number of bytes that shall be written
@@ -363,7 +395,8 @@ BFile::WriteAt(off_t location, const void *buffer, size_t size)
 }
 
 // Seek
-/*! It is allowed to seek past the end of the file. A subsequent call to
+//!	Seeks to another read/write position within the file.
+/*!	It is allowed to seek past the end of the file. A subsequent call to
 	Write() will pad the file with undefined data. Seeking before the
 	beginning of the file will fail and the behavior of subsequent Read()
 	or Write() invocations will be undefined.
@@ -387,6 +420,7 @@ BFile::Seek(off_t offset, uint32 seekMode)
 }
 
 // Position
+//!	Returns the current read/write position within the file.
 /*!	\return
 	- the current read/write position relative to the beginning of the file
 	- \c B_ERROR, after a Seek() before the beginning of the file
@@ -402,6 +436,7 @@ BFile::Position() const
 }
 
 // SetSize
+//!	Sets the size of the file.
 /*!	If the file is shorter than \a size bytes it will be padded with
 	unspecified data to the requested size. If it is larger, it will be
 	truncated.
@@ -431,6 +466,7 @@ BFile::SetSize(off_t size)
 }
 
 // =
+//!	Assigns another BFile to this BFile.
 /*!	If the other BFile is uninitialized, this one will be too. Otherwise it
 	will refer to the same file using the same mode, unless an error occurs.
 	\param file the original BFile
@@ -468,6 +504,8 @@ void BFile::_ReservedFile5() {}
 void BFile::_ReservedFile6() {}
 
 // close_fd
+/*!	\todo Remove this method.
+*/
 void
 BFile::close_fd()
 {
