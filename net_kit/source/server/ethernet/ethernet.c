@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <kernel/OS.h>
+#include <unistd.h>
 
 #include "net_misc.h"
 #include "protocols.h"
@@ -16,7 +17,6 @@ static loaded_net_module *net_modules;
 static int *prot_table;
 
 uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-
 
 static int convert_proto(uint16 p)
 {
@@ -35,7 +35,6 @@ static int convert_proto(uint16 p)
 int ethernet_input(struct mbuf *buf)
 {
 	ethernet_header *eth = mtod(buf, ethernet_header *);
-	char srca[17], dsta[17];
 	uint16 proto = ntohs(eth->type);
 	int len = sizeof(ethernet_header);
 	int fproto = convert_proto(proto);
@@ -50,15 +49,10 @@ int ethernet_input(struct mbuf *buf)
 		len = sizeof(eth802_header);
 	}
 	
-	sprintf(dsta, "%02x:%02x:%02x:%02x:%02x:%02x", 
-			eth->dest.addr[0], eth->dest.addr[1],
-			eth->dest.addr[2], eth->dest.addr[3],
-			eth->dest.addr[3], eth->dest.addr[5]);
-	sprintf(srca, "%02x:%02x:%02x:%02x:%02x:%02x", 
-			eth->src.addr[0], eth->src.addr[1],
-			eth->src.addr[2], eth->src.addr[3],
-			eth->src.addr[3], eth->src.addr[5]);						
-	printf("Ethernet packet from %s to %s:", srca, dsta);
+	printf("Ethernet packet from ");
+	print_ether_addr(&eth->src);
+	printf(" to ");
+	print_ether_addr(&eth->dest);
 
 	if (buf->m_flags & M_BCAST)	
 		printf(" BCAST");
@@ -82,11 +76,12 @@ int ethernet_input(struct mbuf *buf)
 			printf("unknown (%04x)\n", proto);
 	}
 
-	if (fproto >= 0)
-		net_modules[prot_table[fproto]].mod->input(buf);
-	else 
-		printf("Failed to determine a valid Ethernet protocol\n");
-	
+	if (fproto >= 0 && net_modules[prot_table[fproto]].mod->input) {
+		return net_modules[prot_table[fproto]].mod->input(buf);
+	} else {
+		printf("Failed to determine a valid protocol fproto = %d\n", fproto);
+	}
+
 	printf("\n");
 	
 	m_freem(buf);
@@ -103,11 +98,31 @@ int ether_init(loaded_net_module *ln, int *pt)
 
 int ether_dev_init(ifnet *dev)
 {
-	if (dev->type == IFD_ETHERNET)
-		/* we're interested and will be used */
+	status_t status;
+	int on = 1;
+
+	if (dev->type != IFD_ETHERNET)
 		return 0;
 
-	return -1;
+        status = ioctl(dev->dev, IF_INIT, NULL, 0);
+        if (status < B_OK) {
+                printf("Failed to init the card at %s!\n", dev->name);
+                return 0;
+        }
+
+        /* try to get the MAC address */
+        status = ioctl(dev->dev, IF_GETADDR, &dev->mac, 6);
+        if (status < B_OK) {
+                printf("Failed to get a MAC address, ignoring %s\n", dev->name);
+                return 0;
+        }
+        status = ioctl(dev->dev, IF_SETPROMISC, &on, 1);
+        if (status < B_OK) {
+		/* not a hanging offence */
+                printf("failed to set %s to promiscuous\n", dev->name);
+        }
+		
+	return 1;
 }
 
 net_module net_module_data = {
