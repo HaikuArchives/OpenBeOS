@@ -2,12 +2,10 @@
 # This just removes all object files, archives, and executables
 # generable by running "jam" this directory.
 rm source/lib/*.o
-rm source/lib/*.a
+rm source/lib/*.so
 rm cppunit/cppunit.a
 rm cppunit/src/*.o
 rm test/Test.StorageKit.OpenBeOS
 rm test/Test.StorageKit.R5
 rm test/*.o
-rm tools/*.o
-rm tools/EntryRefToPath
 
