@@ -21,7 +21,7 @@
 
 #include "AddPrinterDialog.h"
 #include "PrinterListView.h"
-#include "print_server.h"
+#include "pr_server.h"
 #include "Globals.h"
 #include "Messages.h"
 

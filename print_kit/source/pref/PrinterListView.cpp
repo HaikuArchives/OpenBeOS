@@ -18,7 +18,7 @@
  */
 
 #include "PrinterListView.h"
-#include "print_server.h"
+#include "pr_server.h"
 
 #include "Messages.h"
 #include "Globals.h"
@@ -78,7 +78,7 @@ PrinterItem::PrinterItem(const BMessenger& thePrinter)
 	if (sIcon == NULL)
 	{
 		sIcon = new BBitmap(BRect(0,0,B_LARGE_ICON-1,B_LARGE_ICON-1), B_CMAP8);
-		BMimeType type(B_PSRV_PRINTER_FILETYPE);
+		BMimeType type(PSRV_PRINTER_FILETYPE);
 		type.GetIcon(sIcon, B_LARGE_ICON);
 	}
 
