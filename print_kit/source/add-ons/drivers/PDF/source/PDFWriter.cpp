@@ -67,13 +67,13 @@ playbackHandlers[] = {
 		_FillEllipse,			// 12	FillEllipse(void *user, BPoint center, BPoint radii)
 		_StrokePolygon,			// 13	StrokePolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
 		_FillPolygon,			// 14	FillPolygon(void *user, int32 numPoints, BPoint *points, bool isClosed)
-		_StrokeShape,			// 15	*reserved*
-		_FillShape,				// 16	*reserved*
+		_StrokeShape,			// 15	StrokeShape(void *user, BShape *shape)
+		_FillShape,				// 16	FillShape(void *user, BShape *shape)
 		_DrawString,			// 17	DrawString(void *user, char *string, float deltax, float deltay)
 		_DrawPixels,			// 18	DrawPixels(void *user, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
 		_op19,					// 19	*reserved*
 		_SetClippingRects,		// 20	SetClippingRects(void *user, BRect *rects, uint32 numRects)
-		_ClipToPicture,			// 21	*reserved*
+		_ClipToPicture,			// 21	ClipToPicture(void *user, BPicture *picture, BPoint pt, uint32 unknown)
 		_PushState,				// 22	PushState(void *user)
 		_PopState,				// 23	PopState(void *user)
 		_EnterStateChange,		// 24	EnterStateChange(void *user)
@@ -234,7 +234,13 @@ PDFWriter::InitWriter()
 	if (JobFile()->ReadAttr("_spool/MimeType", B_STRING_TYPE, 0, buffer, sizeof(buffer)))
 	    PDF_set_info(fPdf, "Creator", buffer);
 
-    PDF_set_value(fPdf, "compress", 9);
+	const char * compatibility;
+	if (JobMsg()->FindString("pdf_compatibility", &compatibility) == B_OK)
+		PDF_set_parameter(fPdf, "compatibility", compatibility);
+		
+	int32 compression;
+	if (JobMsg()->FindInt32("pdf_compression", &compression) == B_OK)
+	    PDF_set_value(fPdf, "compress", compression);
 
     // PDF_set_parameter(fPdf, "warning", "false");
 
@@ -300,11 +306,8 @@ PDFWriter::EndPage()
 
 
 #ifdef CODEWARRIOR
-	#pragma mark [Privates routines]
+	#pragma mark [PDFlib callbacks]
 #endif
-
-// Private routines
-// ----------------
 
 // --------------------------------------------------
 size_t 
@@ -323,6 +326,79 @@ PDFWriter::ErrorHandler(int	type, const char *msg)
 	fprintf(fLog, ">>>> ErrorHandler %d: %s\n", type, msg);
 }
 
+#ifdef CODEWARRIOR
+	#pragma mark [Generic drawing support routines]
+#endif
+
+
+// --------------------------------------------------
+void 
+PDFWriter::SetColor(rgb_color color) 
+{
+	if (fState->currentColor.red != color.red || 
+		fState->currentColor.blue != color.blue || 
+		fState->currentColor.green != color.green || 
+		fState->currentColor.alpha != color.alpha) {
+		fState->currentColor = color;
+		float red   = color.red / 255.0;
+		float green = color.green / 255.0;
+		float blue  = color.blue / 255.0;
+		PDF_setcolor(fPdf, "both", "rgb", red, green, blue, 0.0);	
+	}
+}
+
+// --------------------------------------------------
+void 
+PDFWriter::StrokeOrClip() {
+	if (IsDrawing()) {
+		PDF_stroke(fPdf);
+	} else {
+		PDF_clip(fPdf);
+	}
+}
+
+// --------------------------------------------------
+void 
+PDFWriter::FillOrClip() {
+	if (IsDrawing()) {
+		PDF_fill(fPdf);
+	} else {
+		PDF_clip(fPdf);
+	}
+}
+
+// --------------------------------------------------
+static bool 
+IsSame(pattern p1, pattern p2) {
+	char *a = (char*)p1.data;
+	char *b = (char*)p2.data;
+	return strncmp(a, b, 8) == 0;
+}
+
+// --------------------------------------------------
+void 
+PDFWriter::SetColor() {
+	if (IsSame(fState->pattern, B_SOLID_HIGH)) {
+		SetColor(fState->foregroundColor);
+	} else if (IsSame(fState->pattern, B_SOLID_LOW)) {
+		SetColor(fState->backgroundColor);
+	} else if (IsSame(fState->pattern, B_MIXED_COLORS)) {
+		rgb_color mixed; // XXX
+		mixed.red    = (fState->foregroundColor.red + fState->backgroundColor.red) / 2; 
+		mixed.green  = (fState->foregroundColor.green + fState->backgroundColor.green) / 2; 
+		mixed.blue   = (fState->foregroundColor.blue + fState->backgroundColor.blue) / 2; 
+		mixed.alpha  = (fState->foregroundColor.alpha + fState->backgroundColor.alpha) / 2; 
+		SetColor(mixed);
+	} else {
+		SetColor(fState->foregroundColor);
+	}
+}
+
+
+#ifdef CODEWARRIOR
+	#pragma mark [Image drawing support routines]
+#endif
+
 // --------------------------------------------------
 void *
 PDFWriter::CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
@@ -335,12 +411,14 @@ PDFWriter::CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 fla
 	uint8	*out;
 	int32	maskWidth;
 	uint8	shift;
-	bool	alpha;	
+	bool	alpha;
+	rgb_color	transcolor = B_TRANSPARENT_COLOR;
 
 	int32	width = src.IntegerWidth() + 1;
 	int32	height = src.IntegerHeight() + 1;
 		
-	if (pixelFormat != 8)	// B_RGB32 ?
+	if (pixelFormat != B_RGB32 &&
+		pixelFormat != B_RGBA32)
 		return NULL;
 
 	// Image Mask
@@ -361,7 +439,11 @@ PDFWriter::CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 fla
 			{
 //			fprintf(fLog, "(%d, %d) %d %d %d\n", x, y, (mout - mask), (int)shift, (int)*(in+3));
 			// For each pixel
-			if (in[3] < 128) {
+			
+			if ((pixelFormat == B_RGBA32 && in[3] < 128) ||
+			    (pixelFormat == B_RGB32 && in[0] == transcolor.blue &&
+			    in[1] == transcolor.green && in[2] == transcolor.red &&
+			    in[3] == transcolor.alpha) ) {
 				out[0] |= (1 << shift);
 				alpha = true;
 			}			
@@ -390,7 +472,7 @@ PDFWriter::ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 
 	uint8	*out;
 	int32	x, y;
 	
-	if (pixelFormat != 8)	// B_RGB32 ?
+	if (pixelFormat != B_RGB32)
 		return NULL;
 
 	BBitmap *	bm = new BBitmap(BRect(0, 0, src.Width(), src.Height()), B_RGB32);
@@ -425,6 +507,7 @@ PDFWriter::ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 
 	return bm;
 }
 
+// --------------------------------------------------
 bool 
 PDFWriter::StoreTranslatorBitmap(BBitmap *bitmap, char *filename, uint32 type)
 {
@@ -441,28 +524,9 @@ PDFWriter::StoreTranslatorBitmap(BBitmap *bitmap, char *filename, uint32 type)
 	return res;
 }
 
-// BPicture::Play() handlers
-
-// --------------------------------------------------
-void PDFWriter::Op(int number)
-{
-	fprintf(fLog, "Unhandled operand %d\n", number);
-}
-
-
-// --------------------------------------------------
-status_t
-PDFWriter::ClipToPicture(BPicture *picture, BPoint point, uint32 unknown)
-{
-	fprintf(fLog, "ClipToPicture at (%f, %f) unknown = %d\n", point.x, point.y, unknown);
-	if (fMode == kDrawingMode) {
-		fMode = kClippingMode;
-		picture->Play(playbackHandlers, 50, this);
-		fMode = kDrawingMode;
-	} else {
-		fprintf(fLog, "Nested call of ClipToPicture not implemented yet!\n");
-	}
-}
+#ifdef CODEWARRIOR
+	#pragma mark [BShape drawing support routines]
+#endif
 
 
 // --------------------------------------------------
@@ -522,23 +586,16 @@ DrawShape::IterateMoveTo(BPoint *point)
 	return B_OK;
 }
 
-// --------------------------------------------------
-void PDFWriter::StrokeShape(BShape *shape)
-{
-	fprintf(fLog, "StrokeShape\n");
-	SetColor();			
-	DrawShape iterator(this, true);
-	iterator.Iterate(shape);
-}
+#ifdef CODEWARRIOR
+	#pragma mark -- BPicture playback handlers
+#endif
 
+// BPicture::Play() handlers
 
 // --------------------------------------------------
-void PDFWriter::FillShape(BShape *shape)
+void PDFWriter::Op(int number)
 {
-	fprintf(fLog, "FillShape\n");
-	SetColor();			
-	DrawShape iterator(this, false);
-	iterator.Iterate(shape);
+	fprintf(fLog, "Unhandled operand %d\n", number);
 }
 
 
@@ -748,6 +805,41 @@ PDFWriter::FillPolygon(int32 numPoints, BPoint *points, bool isClosed)
 	PDF_closepath(fPdf);
 	FillOrClip();
 	fprintf(fLog, "\n");
+}
+
+
+// --------------------------------------------------
+void PDFWriter::StrokeShape(BShape *shape)
+{
+	fprintf(fLog, "StrokeShape\n");
+	SetColor();			
+	DrawShape iterator(this, true);
+	iterator.Iterate(shape);
+}
+
+
+// --------------------------------------------------
+void PDFWriter::FillShape(BShape *shape)
+{
+	fprintf(fLog, "FillShape\n");
+	SetColor();			
+	DrawShape iterator(this, false);
+	iterator.Iterate(shape);
+}
+
+
+// --------------------------------------------------
+void
+PDFWriter::ClipToPicture(BPicture *picture, BPoint point, uint32 unknown)
+{
+	fprintf(fLog, "ClipToPicture at (%f, %f) unknown = %ld\n", point.x, point.y, unknown);
+	if (fMode == kDrawingMode) {
+		fMode = kClippingMode;
+		picture->Play(playbackHandlers, 50, this);
+		fMode = kDrawingMode;
+	} else {
+		fprintf(fLog, "Nested call of ClipToPicture not implemented yet!\n");
+	}
 }
 
 #if 0
@@ -1290,76 +1382,6 @@ PDFWriter::SetFontFace(int32 flags)
 	fState->fontChanged = true;
 }
 
-
-
-
-// Private routines
-// ----------------
-
-
-// --------------------------------------------------
-void 
-PDFWriter::SetColor(rgb_color color) 
-{
-	if (fState->currentColor.red != color.red || 
-		fState->currentColor.blue != color.blue || 
-		fState->currentColor.green != color.green || 
-		fState->currentColor.alpha != color.alpha) {
-		fState->currentColor = color;
-		float red   = color.red / 255.0;
-		float green = color.green / 255.0;
-		float blue  = color.blue / 255.0;
-		PDF_setcolor(fPdf, "both", "rgb", red, green, blue, 0.0);	
-	}
-}
-
-// --------------------------------------------------
-void 
-PDFWriter::StrokeOrClip() {
-	if (IsDrawing()) {
-		PDF_stroke(fPdf);
-	} else {
-		PDF_clip(fPdf);
-	}
-}
-
-// --------------------------------------------------
-void 
-PDFWriter::FillOrClip() {
-	if (IsDrawing()) {
-		PDF_fill(fPdf);
-	} else {
-		PDF_clip(fPdf);
-	}
-}
-
-// --------------------------------------------------
-static bool 
-IsSame(pattern p1, pattern p2) {
-	char *a = (char*)p1.data;
-	char *b = (char*)p2.data;
-	return strncmp(a, b, 8) == 0;
-}
-
-// --------------------------------------------------
-void 
-PDFWriter::SetColor() {
-	if (IsSame(fState->pattern, B_SOLID_HIGH)) {
-		SetColor(fState->foregroundColor);
-	} else if (IsSame(fState->pattern, B_SOLID_LOW)) {
-		SetColor(fState->backgroundColor);
-	} else if (IsSame(fState->pattern, B_MIXED_COLORS)) {
-		rgb_color mixed; // XXX
-		mixed.red    = (fState->foregroundColor.red + fState->backgroundColor.red) / 2; 
-		mixed.green  = (fState->foregroundColor.green + fState->backgroundColor.green) / 2; 
-		mixed.blue   = (fState->foregroundColor.blue + fState->backgroundColor.blue) / 2; 
-		mixed.alpha  = (fState->foregroundColor.alpha + fState->backgroundColor.alpha) / 2; 
-		SetColor(mixed);
-	} else {
-		SetColor(fState->foregroundColor);
-	}
-}
-
 #ifdef CODEWARRIOR
 	#pragma mark [Redirectors to instance callbacks/handlers]
 #endif
@@ -1389,7 +1411,7 @@ void	_DrawString(void *p, char *string, float deltax, float deltay)							{ retu
 void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data)
 						{ return ((PDFWriter *) p)->DrawPixels(src, dest, width, height, bytesPerRow, pixelFormat, flags, data); }
 void	_SetClippingRects(void *p, BRect *rects, uint32 numRects)								{ return ((PDFWriter *) p)->SetClippingRects(rects, numRects); }
-status_t	_ClipToPicture(void * p, BPicture *picture, BPoint point, uint32 unknown)				{ return ((PDFWriter *) p)->ClipToPicture(picture, point, unknown); }
+void	_ClipToPicture(void * p, BPicture *picture, BPoint point, uint32 unknown)				{ return ((PDFWriter *) p)->ClipToPicture(picture, point, unknown); }
 void	_PushState(void *p)  																	{ return ((PDFWriter *) p)->PushState(); }
 void	_PopState(void *p)  																	{ return ((PDFWriter *) p)->PopState(); }
 void	_EnterStateChange(void *p) 															{ return ((PDFWriter *) p)->EnterStateChange(); }

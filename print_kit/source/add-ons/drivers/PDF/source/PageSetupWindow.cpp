@@ -65,6 +65,8 @@ static struct {
 	{NULL, 0}
 };
 
+static	const char * pdf_compatibility[] = {"1.2", "1.3", "1.4", NULL};
+
 
 PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	:	BWindow(BRect(0,0,200,200), "Page Setup", B_TITLED_WINDOW_LOOK,
@@ -84,7 +86,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	
 #define MARGIN 6
 
-	// ---- Ok, build a default job setup user interface
+	// ---- Ok, build a default page setup user interface
 	BRect		r;
 	BBox		*panel;
 	BButton		*button;
@@ -94,13 +96,13 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	float       width, height;
 	int32       orient;
 	
-	if (B_OK == msg->FindRect("paper_rect", &r)) {
+	if (B_OK == fSetupMsg->FindRect("paper_rect", &r)) {
 		width = r.Width(); height = r.Height();
 	} else {
 		width = a4_width; height = a4_height;
 	}		
 	
-	// if (B_OK != msg->FindInt32("orientation", &orient)) orient = 0;
+	// if (B_OK != fSetupMsg->FindInt32("orientation", &orient)) orient = 0;
 	orient = PrinterDriver::PORTRAIT_ORIENTATION;
 	
 	r = Bounds();
@@ -116,7 +118,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	BMenu* m = new BMenu("popupmenu");
 	m->SetRadioMode(true);
 	BMenuField * mf = new BMenuField(BRect(x, y, x + 200, y + 20), "page_size", 
-		"Page Size", m);
+		"Page Size:", m);
 	fPageSizeMenu = mf;
 	mf->ResizeToPreferred();
 	mf->GetPreferredSize(&w, &h);
@@ -137,7 +139,8 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 		}
 	}
 	mf->Menu()->SetLabelFromMarked(true);
-	if (!item) item = m->ItemAt(0);
+	if (!item)
+		item = m->ItemAt(0);
 	item->SetMarked(true);
 	mf->MenuItem()->SetLabel(item->Label());
 
@@ -146,7 +149,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	 
 	m = new BMenu("orientation");
 	m->SetRadioMode(true);
-	mf = new BMenuField(BRect(x, y, x + 200, y + 20), "orientation", "Orientation", m);
+	mf = new BMenuField(BRect(x, y, x + 200, y + 20), "orientation", "Orientation:", m);
 	fOrientationMenu = mf;
 	mf->ResizeToPreferred();
 	panel->AddChild(mf);
@@ -160,9 +163,58 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 		if (orient == orientation[i].orientation) item = mi;
 	}
 	mf->Menu()->SetLabelFromMarked(true);
-	if (!item) m->ItemAt(0);
+	if (!item)
+		item = m->ItemAt(0);
 	item->SetMarked(true);
 	mf->MenuItem()->SetLabel(item->Label());
+
+	// add PDF comptibility  menu
+	y += h + MARGIN;
+	 
+	m = new BMenu("pdf_compatibility");
+	m->SetRadioMode(true);
+	mf = new BMenuField(BRect(x, y, x + 200, y + 20), "pdf_compatibility", "PDF Compatibility:", m);
+	fPDFCompatibilityMenu = mf;
+	mf->ResizeToPreferred();
+	panel->AddChild(mf);
+	r.top += h;
+
+	item = NULL;
+	for (int i = 0; pdf_compatibility[i] != NULL; i++) {
+		const char * setting_value;
+		
+		BMenuItem* mi = new BMenuItem(pdf_compatibility[i], NULL);
+		m->AddItem(mi);
+		
+		if ( (fSetupMsg->FindString("pdf_compatibility", &setting_value) == B_OK) &&
+			 strcmp(setting_value, pdf_compatibility[i]) == 0)
+			item = mi;
+	}
+	mf->Menu()->SetLabelFromMarked(true);
+	if (!item)
+		item = m->ItemAt(1);	// "1.3" by default
+	item->SetMarked(true);
+	mf->MenuItem()->SetLabel(item->Label());
+
+	// add PDF compression slider
+	y += h + MARGIN;
+
+	BSlider * slider = new BSlider(BRect(x, y, panel->Bounds().right - MARGIN, y + 20), "pdf_compression",
+								"Compression:",
+								NULL, 0, 9);
+	fPDFCompressionSlider = slider;
+
+	panel->AddChild(slider);
+					
+	slider->SetLimitLabels("None", "Best");
+	slider->SetHashMarks(B_HASH_MARKS_BOTTOM);
+	slider->ResizeToPreferred();
+	slider->GetPreferredSize(&w, &h);
+	
+	int32 compression;
+	if (fSetupMsg->FindInt32("pdf_compression", &compression) != B_OK)
+		compression = 6;
+	slider->SetValue(compression);
 	
 	// add a "OK" button, and make it default
 	button 	= new BButton(r, NULL, "OK", new BMessage(OK_MSG), 
@@ -193,6 +245,20 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 }
 
 
+PageSetupWindow::~PageSetupWindow()
+{
+	delete_sem(fExitSem);
+}
+
+
+bool 
+PageSetupWindow::QuitRequested()
+{
+	release_sem(fExitSem);
+	return true;
+}
+
+
 void 
 PageSetupWindow::UpdateSetupMessage() 
 {
@@ -204,6 +270,19 @@ PageSetupWindow::UpdateSetupMessage()
 		msg->FindInt32("orientation", &orientation);
 		fSetupMsg->ReplaceInt32("orientation", 0);
 	}
+
+	item = fPDFCompatibilityMenu->Menu()->FindMarked();
+	if (item) {
+		if (fSetupMsg->HasString("pdf_compatibility"))
+			fSetupMsg->ReplaceString("pdf_compatibility", item->Label());
+		else
+			fSetupMsg->AddString("pdf_compatibility", item->Label());
+	}
+			
+	if (fSetupMsg->HasInt32("pdf_compression"))
+		fSetupMsg->ReplaceInt32("pdf_compression", fPDFCompressionSlider->Value());
+	else
+		fSetupMsg->AddInt32("pdf_compression", fPDFCompressionSlider->Value());
 
 	item = fPageSizeMenu->Menu()->FindMarked();
 	if (item) {
@@ -220,20 +299,6 @@ PageSetupWindow::UpdateSetupMessage()
 		r.InsetBy(10,10);
 		fSetupMsg->ReplaceRect("printable_rect", r);
 	}
-}
-
-
-PageSetupWindow::~PageSetupWindow()
-{
-	delete_sem(fExitSem);
-}
-
-
-bool 
-PageSetupWindow::QuitRequested()
-{
-	release_sem(fExitSem);
-	return true;
 }
 
 

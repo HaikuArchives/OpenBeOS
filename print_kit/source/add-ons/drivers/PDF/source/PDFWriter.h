@@ -67,7 +67,7 @@ class PDFWriter : public PrinterDriver
 		size_t		WriteData(void *data, size_t size);
 		void		ErrorHandler(int type, const char *msg);
 		
-		// private methods
+		// Image support
 		void		*CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		BBitmap		*ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 
@@ -92,7 +92,7 @@ class PDFWriter : public PrinterDriver
 		void		DrawString(char *string, float deltax, float deltay);
 		void		DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		void		SetClippingRects(BRect *rects, uint32 numRects);
-		status_t    ClipToPicture(BPicture *picture, BPoint point, uint32 unknown);
+		void    	ClipToPicture(BPicture *picture, BPoint point, uint32 unknown);
 		void		PushState();
 		void		PopState();
 		void		EnterStateChange();
@@ -117,8 +117,6 @@ class PDFWriter : public PrinterDriver
 		void		SetFontFlags(int32 flags);
 		void		SetFontShear(float shear);
 		void		SetFontFace(int32 flags);
-
-	
 		
 	private:
 	
@@ -234,7 +232,6 @@ public:
 	status_t IterateMoveTo(BPoint *point);
 };
 
-
 // PDFLib C callbacks class instance redirectors
 size_t	_WriteData(PDF *p, void *data, size_t size);
 void	_ErrorHandler(PDF *p, int type, const char *msg);
@@ -259,7 +256,7 @@ void	_FillShape(void *p, BShape *shape);
 void	_DrawString(void *p, char *string, float deltax, float deltay);
 void	_DrawPixels(void *p, BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 void	_SetClippingRects(void *p, BRect *rects, uint32 numRects);
-status_t	_ClipToPicture(void *p, BPicture *picture, BPoint point, uint32 unknown);
+void	_ClipToPicture(void *p, BPicture *picture, BPoint point, uint32 unknown);
 void	_PushState(void *p);
 void	_PopState(void *p);
 void	_EnterStateChange(void *p);

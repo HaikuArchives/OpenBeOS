@@ -58,10 +58,12 @@ public:
 private:
 	long 					fExitSem;
 	status_t 				fResult;
-	BMessage				*fSetupMsg;
-	BMenuField				*fPageSizeMenu;
-	BMenuField				*fOrientationMenu;
-	
+	BMessage *				fSetupMsg;
+	BMenuField *			fPageSizeMenu;
+	BMenuField *			fOrientationMenu;
+	BMenuField *			fPDFCompatibilityMenu;
+	BSlider *				fPDFCompressionSlider;
+		
 	void					UpdateSetupMessage();
 };
 
