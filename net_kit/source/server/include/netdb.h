@@ -53,6 +53,17 @@ struct  protoent {
         int     p_proto;        /* protocol # */
 };
 
+struct addrinfo {
+	int ai_flags;               /* input flags */
+	int ai_family;              /* protocol family for socket */
+	int ai_socktype;            /* socket type */
+	int ai_protocol;            /* protocol for socket */
+	socklen_t ai_addrlen;       /* length of socket-address */
+	struct sockaddr *ai_addr;   /* socket-address for socket */
+	char *ai_canonname;         /* canonical name for service location (iff req) */
+	struct addrinfo *ai_next;   /* pointer to next in list */
+};
+
 
 struct hostent *gethostbyname(const char *hostname);
 struct hostent *gethostbyaddr(const char *hostname, int len, int type);
@@ -77,6 +88,14 @@ struct protoent *getprotobyname (const char *);
 struct protoent *getprotobynumber (int);
 struct hostent  *gethostbyname2 (const char *, int);
 struct servent  *getservbyport (int, const char *);
+
+int              getaddrinfo (const char *, const char *,
+                              const struct addrinfo *, 
+                              struct addrinfo **);
+void             freeaddrinfo (struct addrinfo *);
+int              getnameinfo (const struct sockaddr *, socklen_t,
+                              char *, size_t, char *, size_t,
+                              int);
 
 void sethostent (int);
 void setnetent (int);
@@ -144,16 +163,6 @@ void endservent (void);
 #define EAI_BADHINTS    -12     /* invalid value for hints */
 #define EAI_PROTOCOL    -13     /* resolved protocol is unknown */
 
-struct addrinfo {
-	int ai_flags;               /* input flags */
-	int ai_family;              /* protocol family for socket */
-	int ai_socktype;            /* socket type */
-	int ai_protocol;            /* protocol for socket */
-	socklen_t ai_addrlen;       /* length of socket-address */
-	struct sockaddr *ai_addr;   /* socket-address for socket */
-	char *ai_canonname;         /* canonical name for service location (iff req) */
-	struct addrinfo *ai_next;   /* pointer to next in list */
-};
 
 /*
  * Flags for getrrsetbyname()
