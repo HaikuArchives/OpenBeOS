@@ -9,7 +9,7 @@
 */
 
 
-#include <be_prim.h>
+#include <SupportDefs.h>
 
 
 typedef void (*net_timer_hook)(void *);
