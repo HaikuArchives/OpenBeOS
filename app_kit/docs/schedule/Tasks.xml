@@ -941,7 +941,7 @@
 			</class>
 		</section>
 		<section name="Roster">
-			<class name="BRoster" owner="">
+			<class name="BRoster" owner="Joe Banafato">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BRoster();
 				</task>
