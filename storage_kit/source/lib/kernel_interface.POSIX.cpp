@@ -55,6 +55,9 @@ status_t PosixErrnoToBeOSError() {
 		case EAGAIN:
 			return B_BUSY;
 			
+		case EEXIST:
+			return B_FILE_EXISTS;
+			
 		default:
 			return errno;		
 	}	
@@ -108,7 +111,8 @@ StorageKit::open( const char *path, OpenFlags flags, FileDescriptor &result ) {
 
 	// Open file and return the proper error code
 	result = ::open(path, flags);
-	return (result == -1) ? errno : B_OK ;
+//	return (result == -1) ? errno : B_OK ;
+	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
 }
 
 
@@ -126,13 +130,105 @@ StorageKit::open( const char *path, OpenFlags flags, CreationFlags creationFlags
 
 	// Open/Create the file and return the proper error code
 	result = ::open(path, flags | O_CREAT, creationFlags);
-	return (result == -1) ? errno : B_OK ;
+//	return (result == -1) ? errno : B_OK ;
+	return (result == -1) ? PosixErrnoToBeOSError() : B_OK ;
 }
 
 status_t
 StorageKit::close(StorageKit::FileDescriptor file) {
 	return (::close(file) == -1) ? errno : B_OK ;
 }
+
+/*! \param fd the file descriptor
+	\param buf the buffer to be read into
+	\param len the number of bytes to be read
+	\return the number of bytes actually read or an error code
+*/
+ssize_t
+StorageKit::read(StorageKit::FileDescriptor fd, void *buf, ssize_t len)
+{
+	ssize_t result = (buf == NULL || len < 0 ? B_BAD_VALUE : B_OK);
+	if (result == B_OK) {
+		result = ::read(fd, buf, len);
+		if (result == -1)
+			result = PosixErrnoToBeOSError();
+	}
+	return result;
+}
+
+/*! \param fd the file descriptor
+	\param buf the buffer to be read into
+	\param pos file position from which to be read
+	\param len the number of bytes to be read
+	\return the number of bytes actually read or an error code
+*/
+ssize_t
+StorageKit::read(StorageKit::FileDescriptor fd, void *buf, off_t pos,
+				 ssize_t len)
+{
+	ssize_t result = (buf == NULL || pos < 0 || len < 0 ? B_BAD_VALUE : B_OK);
+	if (result == B_OK) {
+		result = ::read_pos(fd, pos, buf, len);
+		if (result == -1)
+			result = PosixErrnoToBeOSError();
+	}
+	return result;
+}
+
+/*! \param fd the file descriptor
+	\param buf the buffer containing the data to be written
+	\param len the number of bytes to be written
+	\return the number of bytes actually written or an error code
+*/
+ssize_t
+StorageKit::write(StorageKit::FileDescriptor fd, const void *buf, ssize_t len)
+{
+	ssize_t result = (buf == NULL || len < 0 ? B_BAD_VALUE : B_OK);
+	if (result == B_OK) {
+		result = ::write(fd, buf, len);
+		if (result == -1)
+			result = PosixErrnoToBeOSError();
+	}
+	return result;
+}
+
+/*! \param fd the file descriptor
+	\param buf the buffer containing the data to be written
+	\param pos file position to which to be written
+	\param len the number of bytes to be written
+	\return the number of bytes actually written or an error code
+*/
+ssize_t
+StorageKit::write(StorageKit::FileDescriptor fd, const void *buf, off_t pos,
+				  ssize_t len)
+{
+	ssize_t result = (buf == NULL || pos < 0 || len < 0 ? B_BAD_VALUE : B_OK);
+	if (result == B_OK) {
+		result = ::write_pos(fd, pos, buf, len);
+		if (result == -1)
+			result = PosixErrnoToBeOSError();
+	}
+	return result;
+}
+
+/*! \param fd the file descriptor
+	\param pos the relative new position of the read/write pointer in bytes
+	\param mode \c SEEK_SET/\c SEEK_END/\c SEEK_CUR to indicate that \a pos
+		   is relative to the file's beginning/end/current read/write pointer
+	\return the new position of the read/write pointer relative to the
+			beginning of the file, or an error code
+*/
+off_t
+StorageKit::seek(StorageKit::FileDescriptor fd, off_t pos,
+				 StorageKit::SeekMode mode)
+{
+	off_t result = ::lseek(fd, pos, mode);
+	if (result == -1)
+		result = PosixErrnoToBeOSError();
+	return result;
+}
+
+
 
 StorageKit::FileDescriptor
 StorageKit::dup(StorageKit::FileDescriptor file) {
@@ -346,6 +442,13 @@ StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
 			
 		case WSTAT_GID:
 			result = ::fchown(file, 0xFFFFFFFF, s.st_gid);
+			break;
+
+		case WSTAT_SIZE:
+			// For enlarging files the truncate() behavior seems to be not
+			// precisely defined, but with a bit of luck it might come pretty
+			// close to what we need.
+			result = ::ftruncate(file, s.st_size);
 			break;
 			
 		// These would all require a call to utime(char *filename, ...), but

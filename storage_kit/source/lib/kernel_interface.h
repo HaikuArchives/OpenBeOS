@@ -43,6 +43,7 @@ typedef uint32 StatMember;
 typedef attr_info AttrInfo;
 typedef int OpenFlags;			// open() flags
 typedef mode_t CreationFlags;	// open() mode
+typedef int SeekMode;			// lseek() mode
 
 // Constants -- POSIX versions
 const Dir NullDir = NULL;
@@ -89,6 +90,21 @@ status_t open( const char *path, OpenFlags flags, CreationFlags creationFlags,
 
 /*! Closes a previously open()ed file. */
 status_t close( FileDescriptor file );
+
+//! Reads data from a file into a buffer.
+ssize_t read(FileDescriptor fd, void *buf, ssize_t len);
+
+//! Reads data from a certain position in a file into a buffer.
+ssize_t read(FileDescriptor fd, void *buf, off_t pos, ssize_t len);
+
+//! Writes data from a buffer into a file.
+ssize_t write(FileDescriptor fd, const void *buf, ssize_t len);
+
+//! Writes data from a buffer to a certain position in a file.
+ssize_t write(FileDescriptor fd, const void *buf, off_t pos, ssize_t len);
+
+//! Moves a file's read/write pointer.
+off_t seek(FileDescriptor fd, off_t pos, SeekMode mode);
 
 /*! Returns a new file descriptor that refers to the same file as
 	that specified, or -1 if unsuccessful. Remember to call close
