@@ -73,7 +73,9 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
       serverlink->Attach(&p.x,sizeof(float));
       serverlink->Attach(&p.y,sizeof(float));
       serverlink->Attach(&buttons,sizeof(int32));
-      serverlink->Flush();
+
+      // prevent server crashes from hanging the Input Server
+      serverlink->Flush(1000000);
       }break;
    case B_MOUSE_UP:{
 		BPoint p;
@@ -90,7 +92,9 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
 		serverlink->Attach(&p.x,sizeof(float));
 		serverlink->Attach(&p.y,sizeof(float));
 		serverlink->Attach(&mod, sizeof(uint32));
-		serverlink->Flush();
+
+        // prevent server crashes from hanging the Input Server
+        serverlink->Flush(1000000);
       }break;
    case B_MOUSE_DOWN:{
 		BPoint p;
@@ -111,7 +115,9 @@ filter_result RouterInputFilter::Filter(BMessage *message, BList *outList){
 		serverlink->Attach(&mod, sizeof(uint32));
 		serverlink->Attach(&buttons, sizeof(uint32));
 		serverlink->Attach(&clicks, sizeof(uint32));
-		serverlink->Flush();
+
+        // prevent server crashes from hanging the Input Server
+        serverlink->Flush(1000000);
       }break;
 
    // Should be some Mouse Down and Up code here ..

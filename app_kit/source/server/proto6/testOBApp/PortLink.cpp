@@ -25,10 +25,6 @@ num_attachments	- internal variable which is used to track which "slot"
 #include <stdio.h>
 #include <malloc.h>
 
-#ifdef OPENBEOS
-namespace OpenBeOS {
-#endif
-
 //#define PLDEBUG
 
 // Internal data storage class for holding attached data whilst it is waiting
@@ -80,7 +76,7 @@ void PortLink::SetPort(port_id port)
 	target=port;
 }
 
-void PortLink::Flush(void)
+void PortLink::Flush(bigtime_t timeout=B_INFINITE_TIMEOUT)
 {
 	// Fires a message off to the target, complete with attachments. NOTE:
 	// the recipient must delete all attachments, being the PortLink object assumes
@@ -91,15 +87,21 @@ void PortLink::Flush(void)
 	if(num_attachments>0)
 	{
 		FlattenData(&msgbuffer,&size);
+		
 		// Dump message to port, reset attachments, and clean up
-		write_port(target,opcode,msgbuffer,size);
+		if(timeout!=B_INFINITE_TIMEOUT)
+			write_port_etc(target,opcode,msgbuffer,size,B_TIMEOUT, timeout);
+		else
+			write_port(target,opcode,msgbuffer,size);
 		MakeEmpty();
 	}
 	else
-		write_port(target,opcode,NULL,0);
-
-//	if(size>0)
-//		delete msgbuffer;
+	{
+		if(timeout!=B_INFINITE_TIMEOUT)
+			write_port_etc(target,opcode,NULL,0,B_TIMEOUT, timeout);
+		else
+			write_port(target,opcode,NULL,0);
+	}
 }
 
 int8* PortLink::FlushWithReply(int32 *code, status_t *status, ssize_t *buffersize, bigtime_t timeout=B_INFINITE_TIMEOUT)
@@ -168,7 +170,6 @@ int8* PortLink::FlushWithReply(int32 *code, status_t *status, ssize_t *buffersiz
 		{
 			*status=*buffersize;
 			return NULL;
-			//return *buffersize;
 		}
 		if(*buffersize>0)
 			buffer=(int8*)new int8[*buffersize];
@@ -429,7 +430,3 @@ bool PortLinkData::Set(void *data, size_t size)
 	}
 	return false;
 }
-
-#ifdef OPENBEOS
-}
-#endif

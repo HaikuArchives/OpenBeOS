@@ -201,7 +201,7 @@ printf("ViewDriver::MouseUp\t");
 //-----------------------------------------------------------------------
 
 VDWindow::VDWindow(void)
-	: BWindow(BRect(100,60,740,540),"OBOS App Server, P5",B_TITLED_WINDOW,
+	: BWindow(BRect(100,60,740,540),"OBOS App Server, P6",B_TITLED_WINDOW,
 		B_NOT_ZOOMABLE | B_NOT_RESIZABLE)
 {
 	view=new VDView(Bounds());
