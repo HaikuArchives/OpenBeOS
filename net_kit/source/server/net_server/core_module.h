@@ -30,29 +30,42 @@ struct core_module_info {
 	void (*pool_destroy)(pool_ctl *p);
 
 	/* socket functions - called "internally" */
-	int (*soreserve)(struct socket *, uint32, uint32);
-	int (*sbappendaddr)(struct sockbuf *, struct sockaddr *, 
+	struct socket *(*sonewconn)(struct socket *, int);
+	int  (*soreserve)(struct socket *, uint32, uint32);
+	int  (*sbreserve)(struct sockbuf *, uint32);
+	void (*sbappend)(struct sockbuf *, struct mbuf *);
+	int  (*sbappendaddr)(struct sockbuf *, struct sockaddr *, 
 		 				struct mbuf *, struct mbuf *);
+	void (*sbdrop)(struct sockbuf *, int);
 	void (*sbflush)(struct sockbuf *sb);
 	void (*sowakeup)(struct socket *, struct sockbuf *);
 	void (*soisconnected)(struct socket *);
+	void (*soisconnecting)(struct socket*);
 	void (*soisdisconnected)(struct socket *);
 	void (*soisdisconnecting)(struct socket *);
+	void (*sohasoutofband)(struct socket *so);
+	void (*socantrcvmore)(struct socket*);
 	void (*socantsendmore)(struct socket *);
 	
 	/* pcb options */
-	int (*in_pcballoc)(struct socket *, struct inpcb *);
+	int  (*in_pcballoc)(struct socket *, struct inpcb *);
 	void (*in_pcbdetach)(struct inpcb *); 
-	int (*in_pcbbind)(struct inpcb *, struct mbuf *);
-	int (*in_pcbconnect)(struct inpcb *, struct mbuf *);
-	int (*in_pcbdisconnect)(struct inpcb *);
+	int  (*in_pcbbind)(struct inpcb *, struct mbuf *);
+	int  (*in_pcbconnect)(struct inpcb *, struct mbuf *);
+	int  (*in_pcbdisconnect)(struct inpcb *);
 	struct inpcb * (*in_pcblookup)(struct inpcb *, 
 	    struct in_addr, uint16, struct in_addr, uint16, int);
-	int (*in_control)(struct socket *, int, caddr_t,
+	int  (*in_control)(struct socket *, int, caddr_t,
 	    struct ifnet *);
+	void (*in_losing)(struct inpcb *);
+	int  (*in_localaddr)(struct in_addr);
+	struct rtentry *(*in_pcbrtentry)(struct inpcb *);
+	void (*in_setsockaddr)(struct inpcb *, struct mbuf *);
+	void (*in_setpeeraddr)(struct inpcb *, struct mbuf *);
 	
 	/* mbuf routines... */
 	struct mbuf * (*m_gethdr)(int);
+	struct mbuf * (*m_get)(int);
 	void (*m_adj)(struct mbuf*, int);
 	struct mbuf * (*m_prepend)(struct mbuf*, int);
 	struct mbuf *(*m_pullup)(struct mbuf *, int);
@@ -108,8 +121,8 @@ struct core_module_info {
 	int (*readit)(void*, struct iovec *, int *);
 	int (*sosetopt)(void *, int, int, const void *, size_t);
 	int (*sogetopt)(void *, int, int, void *, size_t *);
-	
 	int (*set_socket_event_callback)(void *, socket_event_callback, void *);
+
 };
 
 #ifdef _KERNEL_MODE

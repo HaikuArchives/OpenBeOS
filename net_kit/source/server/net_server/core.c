@@ -45,7 +45,7 @@ struct ifnet *devices = NULL;
 struct ifnet *pdevices = NULL;		/* pseudo devices - loopback etc */
 int ndevs = 0;
 sem_id dev_lock;
- 
+
 #define NETWORK_INTERFACES	"network/interface"
 #define NETWORK_PROTOCOLS	"network/protocol"
 
@@ -87,7 +87,7 @@ static int32 rx_thread(void *data)
 		if (i->input)
 			i->input(m);
 		else
-			dprintf("%s%d: no input function!\n", i->name, i->unit);
+			dprintf("%s%d: no input function!\n", i->name, i->if_unit);
 	}
 	dprintf("%s: terminating rx_thread\n", i->if_name);
 	return 0;
@@ -115,7 +115,7 @@ static int32 tx_thread(void *data)
 			len = m->m_len;
 
 		if (len > i->if_mtu) {
-			dprintf("%s%d: tx_thread: packet was too big!\n", i->name, i->unit);
+			dprintf("%s%d: tx_thread: packet was too big!\n", i->name, i->if_unit);
 			m_freem(m);
 			continue;
 		}
@@ -212,7 +212,7 @@ void net_server_add_device(ifnet *ifn)
 	if (!ifn)
 		return;
 
-	sprintf(dname, "%s%d", ifn->name, ifn->unit);
+	sprintf(dname, "%s%d", ifn->name, ifn->if_unit);
 	ifn->if_name = strdup(dname);
 
 	if (ifn->if_type != IFT_ETHER) {
@@ -273,7 +273,7 @@ static void list_devices(void)
 		"=== ============ ==== ================= ===========================\n");
 	
 	while (d) {
-		dprintf("%2d  %s%d       %4ld ", i++, d->name, d->unit, d->if_mtu);
+		dprintf("%2d  %s%d       %4ld ", i++, d->name, d->if_unit, d->if_mtu);
 		dprintf("                 ");
 		if (d->if_flags & IFF_UP)
 			dprintf(" UP");
@@ -498,7 +498,9 @@ static void find_protocol_modules(void)
 	}
 
 	while (read_next_module_name(ml, name, &sz) == B_OK) {
+		dprintf("module: %s\n", name);
 		rv = get_module(name, &dmi);
+		dprintf("\tOK\n");
 		sz = B_PATH_NAME_LENGTH;
 	}
 
@@ -541,6 +543,7 @@ struct protosw *pffindtype(int domain, int type)
 {
 	struct domain *d;
 	struct protosw *p;
+printf("pffindtype: %d, %d\n", domain, type);
 
 	for (d = domains; d; d = d->dom_next) {
 		if (d->dom_family == domain)
@@ -548,10 +551,12 @@ struct protosw *pffindtype(int domain, int type)
 	}
 	return NULL;
 found:
-
+printf("Found domain: %s\n", d->dom_name);
 	for (p=d->dom_protosw; p; p = p->dom_next) {
-		if (p->pr_type && p->pr_type == type) 
+		if (p->pr_type && p->pr_type == type) {
+			printf("Found protocol: %s\n", p->name);
 			return p;
+		}
 	}
 	return NULL;
 }
@@ -617,6 +622,9 @@ found:
 
 int start_stack(void)
 {
+dprintf("start_stack\n");
+
+
 	/* have we already been started??? */
 	if (domains != NULL)
 		return -1;
@@ -625,13 +633,13 @@ int start_stack(void)
 	protocols = NULL;
 	devices = NULL;
 	pdevices = NULL;
-	
+dprintf("find_protocol_domains...\n");	
 	find_protocol_modules();
 	
 	walk_domains();
 	
 	domain_init();
-	
+printf("domain_init complete...\n");	
 	mbinit();
 	sockets_init();
 	inpcb_init();
@@ -643,7 +651,7 @@ int start_stack(void)
 
 	find_interface_modules();
 	//start_devices();
-
+dprintf("stack has been started!\n");
 	return 0;
 }
 
@@ -666,13 +674,11 @@ static status_t core_std_ops(int32 op, ...)
 	 */
 	switch(op) {
 		case B_MODULE_INIT:
-			load_driver_symbols(CORE_MODULE_PATH);
-
-			start_stack();
+			load_driver_symbols("core");
 			break;
-
 		case B_MODULE_UNINIT:
 			// the stack is keeping loaded, so don't stop it
+			dprintf("core: B_MODULE_UNINIT\n");
 			break;
 
 		default:
@@ -701,13 +707,20 @@ static struct core_module_info core_info = {
 	pool_put,
 	pool_destroy,
 	
+	sonewconn,
 	soreserve,
+	sbreserve,
+	sbappend,
 	sbappendaddr,
+	sbdrop,
 	sbflush,
 	sowakeup,
 	soisconnected,
 	soisdisconnected,
+	soisconnecting,
 	soisdisconnecting,
+	sohasoutofband,
+	socantrcvmore,
 	socantsendmore,
 	
 	in_pcballoc,
@@ -717,8 +730,14 @@ static struct core_module_info core_info = {
 	in_pcbdisconnect,
 	in_pcblookup,
 	in_control,
+	in_losing,
+	in_localaddr,
+	in_pcbrtentry,
+	in_setsockaddr,
+	in_setpeeraddr,
 
 	m_gethdr,
+	m_get,
 	m_adj,
 	m_prepend,
 	m_pullup,

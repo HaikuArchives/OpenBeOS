@@ -286,7 +286,7 @@ void if_attach(struct ifnet *ifp)
 	if (!ifp)
 		return;
 
-	sprintf(dname, "%s%d", ifp->name, ifp->unit);
+	sprintf(dname, "%s%d", ifp->name, ifp->if_unit);
 	printf("adding device %s\n", dname);
 	ifp->if_name = strdup(dname);
 	
