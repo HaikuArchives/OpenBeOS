@@ -116,11 +116,12 @@
 			revert = true;
 			menuBar->ctlAsShortcutItem->SetMarked(true);
 			menuBar->altAsShortcutItem->SetMarked(false);
+			// This might not be the same for all keyboards
 			set_modifier_key(B_LEFT_COMMAND_KEY, 0x5c);
 			set_modifier_key(B_RIGHT_COMMAND_KEY, 0x60);
 			set_modifier_key(B_LEFT_CONTROL_KEY, 0x5d);
 			set_modifier_key(B_RIGHT_OPTION_KEY, 0x5f);
-			//AppDefs.h
+
 			be_roster->Broadcast(new BMessage(B_MODIFIERS_CHANGED));
 			Update();
 			break;
@@ -129,10 +130,12 @@
 			revert = true;
 			menuBar->altAsShortcutItem->SetMarked(true);
 			menuBar->ctlAsShortcutItem->SetMarked(false);
+			// This might not be the same for all keyboards
 			set_modifier_key(B_LEFT_COMMAND_KEY, 0x5d);
 			set_modifier_key(B_RIGHT_COMMAND_KEY, 0x5f);
 			set_modifier_key(B_LEFT_CONTROL_KEY, 0x5c);
 			set_modifier_key(B_RIGHT_OPTION_KEY, 0x60);
+			
 			be_roster->Broadcast(new BMessage(B_MODIFIERS_CHANGED));
 			Update();
 			break;
