@@ -55,7 +55,7 @@ struct proc {
 	int state;
 	int pending_signals;
 	void *ioctx;
-	aspace_id myAspace_id;
+	aspace_id aspace_id;
 	vm_address_space *aspace;
 	vm_address_space *kaspace;
 	struct thread *main_thread;
