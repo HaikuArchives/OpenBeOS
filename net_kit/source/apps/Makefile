@@ -23,7 +23,7 @@ all:	$(TGTS)
 	done;
 
 clean:
-	@rm $(TGTS) *.o
+	@rm -f $(TGTS) *.o
 	@for i in $(SUBDIRS); do \
 		(cd $$i && $(MAKE) clean) || exit 1; \
 	done;
