@@ -185,6 +185,12 @@ void
 ResourcesContainer::SetModified(bool modified)
 {
 	fIsModified = modified;
+	// If unmodified, set the resource item's modified flag as well.
+	if (!modified) {
+		int32 count = CountResources();
+		for (int32 i = 0; i < count; i++)
+			ResourceAt(i)->SetModified(false);
+	}
 }
 
 // IsModified
