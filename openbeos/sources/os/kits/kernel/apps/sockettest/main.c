@@ -9,7 +9,7 @@
 #include <resource.h>
 #include <Errors.h>
 #include <socket.h>
-//#include <ioctl.h>
+#include <sys/ioctl.h>
 
 /* XXX - temporary hack until socket.h is fully included */
 #define PF_INET 0
@@ -45,16 +45,14 @@ int main(int argc, char **argv)
 	fd[0] = socket(PF_INET, SOCK_DGRAM, 0);
 	printf("new socket = fd %d\n", fd[0]);
 	
-/*
 	printf("trying ioctl to set non blocking: ");
 	rc = ioctl(fd[0], FIONBIO, &on, sizeof(on));
 	if (rc == 0) {
 		printf("OK\n");
 	} else {
 		printf("failed\n");
-		printf("Error was %s\n", strerror(rc));
+		printf("Error was %s\n", strerror(errno));
 	}
-*/
 
 	close(fd[0]);
 		

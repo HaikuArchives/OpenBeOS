@@ -9,6 +9,7 @@
 #include <resource.h>
 #include <Errors.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 
 #define FORTUNES "/boot/etc/fortunes"
 
@@ -35,16 +36,14 @@ int main(int argc, char **argv)
 	fd[0] = open(FORTUNES, O_RDONLY, 0);
 	printf("new fd %d\n", fd[0]);
 	
-#if 0
 	printf("Trying ioctl to set non-blocking: ");
 	rc = ioctl(fd[0], FIONBIO, &on, sizeof(on));
 	if (rc == EINVAL) {
 		printf("OK\n");
 	} else {
 		printf("failed\n");
-		printf("error was %s\n", strerror(rc));
+		printf("error was %s\n", strerror(errno));
 	}
-#endif
 	
 	close(fd[0]);
 	
