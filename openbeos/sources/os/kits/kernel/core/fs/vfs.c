@@ -84,8 +84,8 @@ static int vfs_unmount(char *path, bool kernel);
 static int vfs_open(char *path, stream_type st, int omode, bool kernel);
 static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
 
-static ssize_t vfs_read(struct file_descriptor *, void *, off_t, ssize_t);
-static ssize_t vfs_write(struct file_descriptor *, const void *, off_t, ssize_t);
+static ssize_t vfs_read(struct file_descriptor *, void *, off_t, size_t *);
+static ssize_t vfs_write(struct file_descriptor *, const void *, off_t, size_t *);
 static int vfs_ioctl(struct file_descriptor *, int, void *buf, size_t len);
 static int vfs_close(struct file_descriptor *, int, struct ioctx *);
 static void vfs_free_fd(struct file_descriptor *);
@@ -429,7 +429,7 @@ void vfs_vnode_release_ref(void *v)
 int vfs_remove_vnode(fs_id fsid, vnode_id vnid)
 {
 	struct vnode *v;
-dprintf("vfs_remove_vnode\n");
+
 	mutex_lock(&vfs_vnode_mutex);
 
 	v = lookup_vnode(fsid, vnid);
@@ -809,7 +809,6 @@ int vfs_test(void)
 #if 1
 
 	fd = sys_open("/boot", STREAM_TYPE_DIR, 0);
-	dprintf("fd = %d\n", fd);
 	sys_close(fd);
 
 	fd = sys_open("/boot", STREAM_TYPE_DIR, 0);
@@ -1188,7 +1187,7 @@ static int vfs_fsync(int fd, bool kernel)
 	return err;
 }
 
-static ssize_t vfs_read(struct file_descriptor *f, void *buf, off_t pos, ssize_t len)
+static ssize_t vfs_read(struct file_descriptor *f, void *buf, off_t pos, size_t *len)
 {
 	struct vnode *v;
 	int err;
@@ -1196,7 +1195,6 @@ static ssize_t vfs_read(struct file_descriptor *f, void *buf, off_t pos, ssize_t
 #if MAKE_NOIZE
 	dprintf("vfs_read: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x, kernel %d\n", fd, buf, pos, len, kernel);
 #endif
-
 	v = f->vnode;
 	err = v->mount->fs->calls->fs_read(v->mount->fscookie, v->priv_vnode, f->cookie, buf, pos, len);
 
@@ -1206,7 +1204,7 @@ err:
 	return err;
 }
 
-static ssize_t vfs_write(struct file_descriptor *f, const void *buf, off_t pos, ssize_t len)
+static ssize_t vfs_write(struct file_descriptor *f, const void *buf, off_t pos, size_t *len)
 {
 	struct vnode *v;
 	int err;
@@ -2088,7 +2086,6 @@ int vfs_bootstrap_all_filesystems(void)
 		char buf[SYS_MAX_NAME_LEN];
 
 		while((len = sys_read(fd, buf, 0, sizeof(buf))) > 0) {
-			dprintf("loading '%s' fs module\n", buf);
 			vfs_load_fs_module(buf);
 		}
 		sys_close(fd);

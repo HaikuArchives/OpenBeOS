@@ -49,8 +49,8 @@ struct devfs_stream {
 			struct devfs_cookie *jar_head;
 		} dir;
 		struct stream_dev {
-			dev_ident ident;
-			struct dev_calls *calls;
+			void * ident;
+			device_hooks *calls;
 			struct devfs_part_map *part_map;
 		} dev;
 	} u;
@@ -84,7 +84,7 @@ struct devfs_cookie {
 			struct devfs_vnode *ptr;
 		} dir;
 		struct cookie_dev {
-			dev_cookie dcookie;
+			void *dcookie;
 		} dev;
 	} u;
 };
@@ -587,7 +587,7 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 		case STREAM_TYPE_DEVICE:
 			// call the device call, but unlock the devfs first
 			mutex_unlock(&fs->lock);
-			err = v->stream.u.dev.calls->dev_open(v->stream.u.dev.ident, &cookie->u.dev.dcookie);
+			err = v->stream.u.dev.calls->open(v->name, oflags, &cookie->u.dev.dcookie);
 			mutex_lock(&fs->lock);
 			break;
 		default:
@@ -612,7 +612,7 @@ static int devfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		// pass the call through to the underlying device
-		err = v->stream.u.dev.calls->dev_close(cookie->u.dev.dcookie);
+		err = v->stream.u.dev.calls->close(cookie->u.dev.dcookie);
 	} else {
 		err = 0;
 	}
@@ -629,7 +629,7 @@ static int devfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		// pass the call through to the underlying device
-		v->stream.u.dev.calls->dev_freecookie(cookie->u.dev.dcookie);
+		v->stream.u.dev.calls->free(cookie->u.dev.dcookie);
 	}
 
 	if(cookie)
@@ -643,14 +643,14 @@ static int devfs_fsync(fs_cookie _fs, fs_vnode _v)
 	return 0;
 }
 
-static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, size_t *len)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 	struct devfs_cookie *cookie = _cookie;
 	bool is_locked = false;
 	ssize_t err = 0;
-
+	
 	TRACE(("devfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
 	switch(cookie->s->type) {
@@ -659,11 +659,12 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 			is_locked = true;
 
 			if(cookie->u.dir.ptr == NULL) {
-				err = 0;
+				*len = 0;
+				err = ENOENT;
 				break;
 			}
 
-			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
+			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > *len) {
 				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
@@ -687,12 +688,12 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 				if( pos > part_map->size )
 					return 0;
 					
-				len = min( len, part_map->size - pos );
+				*len = min(*len, part_map->size - pos );
 				pos += part_map->offset;
 			}
 			
 			// pass the call through to the device
-			err = v->stream.u.dev.calls->dev_read(cookie->u.dev.dcookie, buf, pos, len);
+			err = v->stream.u.dev.calls->read(cookie->u.dev.dcookie, pos, buf, len);
 			break;
 		}
 		default:
@@ -705,11 +706,12 @@ err:
 	return err;
 }
 
-static ssize_t devfs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t devfs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, const void *buf, 
+                           off_t pos, size_t *len)
 {
 	struct devfs_vnode *v = _v;
 	struct devfs_cookie *cookie = _cookie;
-
+	
 	TRACE(("devfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
@@ -722,13 +724,13 @@ static ssize_t devfs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, cons
 			if( pos > part_map->size )
 				return 0;
 
-			len = min( len, part_map->size - pos );
+			*len = min(*len, part_map->size - pos);
 			pos += part_map->offset;
 		}
 		
-		return v->stream.u.dev.calls->dev_write(cookie->u.dev.dcookie, buf, pos, len);
+		return v->stream.u.dev.calls->write(cookie->u.dev.dcookie, pos, buf, len);
 	} else {
-		return ERR_VFS_READONLY_FS;
+		return EROFS;
 	}
 }
 
@@ -762,7 +764,8 @@ static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 			mutex_unlock(&fs->lock);
 			break;
 		case STREAM_TYPE_DEVICE:
-			err = v->stream.u.dev.calls->dev_seek(cookie->u.dev.dcookie, pos, st);
+			dprintf("seek not supported!\n");
+			//err = v->stream.u.dev.calls->dev_seek(cookie->u.dev.dcookie, pos, st);
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
@@ -788,12 +791,13 @@ static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, 
 			return devfs_set_partition( fs, v, cookie, buf, len );
 		}
 
-		return v->stream.u.dev.calls->dev_ioctl(cookie->u.dev.dcookie, op, buf, len);
+		return v->stream.u.dev.calls->control(cookie->u.dev.dcookie, op, buf, len);
 	} else {
 		return ERR_INVALID_ARGS;
 	}
 }
 
+/*
 static int devfs_canpage(fs_cookie _fs, fs_vnode _v)
 {
 	struct devfs_vnode *v = _v;
@@ -868,7 +872,7 @@ static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 		return ERR_NOT_ALLOWED;
 	}
 }
-
+*/
 static int devfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
 {
 	return ERR_VFS_READONLY_FS;
@@ -958,9 +962,9 @@ static struct fs_calls devfs_calls = {
 	&devfs_seek,
 	&devfs_ioctl,
 
-	&devfs_canpage,
-	&devfs_readpage,
-	&devfs_writepage,
+	NULL,
+	NULL,
+	NULL,
 
 	&devfs_create,
 	&devfs_unlink,
@@ -978,7 +982,7 @@ int bootstrap_devfs(void)
 	return vfs_register_filesystem("devfs", &devfs_calls);
 }
 
-int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *calls)
+int devfs_publish_device(const char *path, void *ident, device_hooks *calls)
 {
 	int err = 0;
 	int i, last;
@@ -1072,5 +1076,3 @@ err:
 	mutex_unlock(&thedevfs->lock);
 	return err;
 }
-
-

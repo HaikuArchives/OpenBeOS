@@ -611,7 +611,7 @@ static int bootfs_fsync(fs_cookie _fs, fs_vnode _v)
 	return 0;
 }
 
-static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, size_t *len)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
@@ -625,11 +625,12 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	switch(cookie->s->type) {
 		case STREAM_TYPE_DIR: {
 			if(cookie->u.dir.ptr == NULL) {
-				err = 0;
+				*len = 0;
+				err = ENOENT;
 				break;
 			}
 
-			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
+			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > *len) {
 				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
@@ -644,7 +645,7 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 			break;
 		}
 		case STREAM_TYPE_FILE:
-			if(len <= 0) {
+			if(*len <= 0) {
 				err = 0;
 				break;
 			}
@@ -653,19 +654,20 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 				pos = cookie->u.file.pos;
 			}
 			if(pos >= cookie->s->u.file.len) {
-				err = 0;
+				*len = 0;
+				/* XXX - we should set an error here */
 				break;
 			}
-			if(pos + len > cookie->s->u.file.len) {
+			if(pos + *len > cookie->s->u.file.len) {
 				// trim the read
-				len = cookie->s->u.file.len - pos;
+				*len = cookie->s->u.file.len - pos;
 			}
-			err = user_memcpy(buf, cookie->s->u.file.start + pos, len);
+			err = user_memcpy(buf, cookie->s->u.file.start + pos, *len);
 			if(err < 0) {
 				goto err;
 			}
-			cookie->u.file.pos = pos + len;
-			err = len;
+			cookie->u.file.pos = pos + *len;
+			err = 0;
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
@@ -676,9 +678,9 @@ err:
 	return err;
 }
 
-static ssize_t bootfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t bootfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, size_t *len)
 {
-	TRACE(("bootfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+	TRACE(("bootfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, *len));
 
 	return ERR_VFS_READONLY_FS;
 }
