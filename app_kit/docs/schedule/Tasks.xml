@@ -5791,44 +5791,44 @@
 		</section>
 	</group>
 	<group name="Integration">
-		<section name="BArchivable">
+		<section name="Archiving">
 			<class name="BArchivable">
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					BArchivable();
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					BArchivable(BMessage* from);
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					~BArchivable();
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					virtual status_t Archive(BMessage* into, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					static BArchivable* Instantiate(BMessage* from);
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					virtual status_t Perform(perform_code d, void* arg); ???
 				</task>
 			</class>
-			<functions name="BArchivable">
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+			<functions name="Archiving Functions">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					BArchivable* instantiate_object(BMessage* from, image_id* id);
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					BArchivable* instantiate_object(BMessage* from);
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					bool validate_instantiation(BMessage* from, const char* class_name);
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="true">
 					instantiation_func find_instantiation_func(const char* class_name, const char* sig);
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="true">
 					instantiation_func find_instantiation_func(const char* class_name);
 				</task>
-				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
+				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="false" tspec="true">
 					instantiation_func find_instantiation_func(BMessage* archive_data);
 				</task>
 			</functions>
