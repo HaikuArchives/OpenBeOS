@@ -50,7 +50,7 @@ Font_pref::Font_pref()
 	 */
 	BRect MainWindowRect;
 	
-	MainWindowRect.Set(100, 80, 460, 350);
+	MainWindowRect.Set(100, 80, 450, 350);
 	Main = new MainWindow(MainWindowRect);
 	
 	Main->Show();

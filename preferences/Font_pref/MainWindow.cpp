@@ -12,9 +12,11 @@ MainWindow::MainWindow(BRect frame)
 	BTabView *tabView; 
 	BTab *tab; 
 	BBox *topLevelView;
+	double buttonViewHeight = 38.0;
 	
 	r = Bounds(); 
-	r.InsetBy(5,5); 
+	r.InsetBy(0, 10); 
+	r.bottom -= buttonViewHeight;
 	
 	tabView = new BTabView(r, "tab_view"); 
 	tabView->SetViewColor(216,216,216,0); 
@@ -31,8 +33,14 @@ MainWindow::MainWindow(BRect frame)
 	tab->SetLabel("Obliterate");
 	*/
 	
+	r = Bounds();
+	r.top = r.bottom - buttonViewHeight;
+	
+	buttonView = new ButtonView(r);
+	
 	topLevelView = new BBox(Bounds(), "TopLevelView", B_FOLLOW_ALL, B_WILL_DRAW, B_NO_BORDER);
 	
+	AddChild(buttonView);
 	AddChild(tabView);
 	AddChild(topLevelView);
 	
@@ -91,6 +99,21 @@ void MainWindow::MessageReceived(BMessage *message){
 		case FIXED_STYLE_CHANGED_MSG:
 		
 			updateStyle(fontPanel->fixedSelectionView);
+			break;
+		
+		case RESCAN_FONTS_MSG:
+		
+			//Recan fonts
+			break;
+			
+		case RESET_FONTS_MSG:
+		
+			//reset fonts to defaults
+			break;
+			
+		case REVERT_MSG:
+		
+			//revert fonts to original
 			break;
 		
 		default:

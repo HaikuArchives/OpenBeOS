@@ -18,8 +18,8 @@ FontView::FontView(BRect rect)
 	y = viewSize.Height() / 25;
 	
 	plainSelectionView = new FontSelectionView(*(new BRect(x, y, (38.0 * x), (8.0 * y))), "Plain", PLAIN_FONT_SELECTION_VIEW);
-	boldSelectionView = new FontSelectionView(*(new BRect(x, (9 * y), (38 * x), (16 * y))), "Bold", BOLD_FONT_SELECTION_VIEW);
-	fixedSelectionView = new FontSelectionView(*(new BRect(x, (17 * y), (38 * x), (24 * y))), "Fixed", FIXED_FONT_SELECTION_VIEW);
+	boldSelectionView = new FontSelectionView(*(new BRect(x, (9.0 * y), (38.0 * x), (16.0 * y))), "Bold", BOLD_FONT_SELECTION_VIEW);
+	fixedSelectionView = new FontSelectionView(*(new BRect(x, (17.0 * y), (38.0 * x), (24.0 * y))), "Fixed", FIXED_FONT_SELECTION_VIEW);
 
 	AddChild(plainSelectionView);
 	AddChild(boldSelectionView);

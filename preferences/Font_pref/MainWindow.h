@@ -23,13 +23,19 @@
 		#include "FontView.h"
 		
 	#endif
+	
+	#ifndef BUTTON_VIEW_H
+	
+		#include "ButtonView.h"
+		
+	#endif
 		
 	#ifndef _BOX_H
 	
 		#include <Box.h>
 		
 	#endif
-
+	
 	class MainWindow : public BWindow{
 	
 		public:
@@ -44,6 +50,7 @@
 			void updateSize(FontSelectionView *theView);
 			void updateFont(FontSelectionView *theView);
 			void updateStyle(FontSelectionView *theView);
+			ButtonView *buttonView;
 	
 	};
 

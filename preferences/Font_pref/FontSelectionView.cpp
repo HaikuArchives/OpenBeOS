@@ -25,7 +25,7 @@ FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
 	uint32 setStyleChangedMessage = 'nul';
 	
 	x = viewSize.Width() / 37;
-	y = viewSize.Height() / 10;
+	y = viewSize.Height() / 8;
 	
 	minSizeIndex = 9;
 	maxSizeIndex = 12;
@@ -73,7 +73,7 @@ FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
 	fontListField->SetDivider(7 * x);
 	sizeListField = new BMenuField(*(new BRect((27 * x), y, (36 * x), (3 * y))), "fontField", "Size", sizeList);
 	sizeListField->SetDivider(31 * x);
-	testText = new BStringView(*(new BRect((8 * x), (5 * y), (36 * x), (8 * y))), "testText", "The quick brown fox jumped over the lazy dog.", B_FOLLOW_ALL, B_WILL_DRAW);
+	testText = new BStringView(*(new BRect((8 * x), (5 * y), (35 * x), (8 * y))), "testText", "The quick brown fox jumped over the lazy dog.", B_FOLLOW_ALL, B_WILL_DRAW);
 	testText->SetFont(&workingFont);
 	testTextBox = new BBox(*(new BRect((8 * x), (5 * y), (36 * x), (8 * y))), "TestTextBox", B_FOLLOW_ALL, B_WILL_DRAW, B_FANCY_BORDER);
 	
