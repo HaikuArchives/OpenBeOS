@@ -1,11 +1,11 @@
-INCLUDES=-I. -I.. -I../include
+INCLUDES=-I. -I../.. -I../../include
 TARGET=serial_ppp
 ifeq ($(USERLAND), true)
-        TGT=../modules/interface/$(TARGET)
+        TGT=../../modules/ppp/devices/$(TARGET)
 else
         TGT=$(TARGET)
 endif  
-LOBJS=../ppp/ppp_fcs.o
+LOBJS=../ppp_fcs.o
 OBJS=$(TARGET).o
 
 all:	$(TARGET)

@@ -1,6 +1,6 @@
-/* serial_ppp.c - async serial device
+/*
+ * serial_ppp.c - PPP async serial device
  *
- * This is intended to be used for PPP testing purposes only 
  */
 
 #include <kernel/OS.h>
@@ -11,14 +11,16 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdlib.h> 
+#include <errno.h>
 
-#include "sys/socket.h"
-#include "protocols.h"
-#include "netinet/in.h"
-#include "netinet/ip.h"
-#include "sys/socketvar.h"
-#include "sys/protosw.h"
-#include "sys/domain.h"
+//#include "sys/socket.h"
+//#include "protocols.h"
+//#include "netinet/in.h"
+//#include "netinet/ip.h"
+//#include "sys/socketvar.h"
+//#include "sys/protosw.h"
+//#include "sys/domain.h"
 #include "sys/sockio.h"
 #include "net/ppp_defs.h"
 #include "net/if_types.h"
@@ -27,30 +29,72 @@
 #include "core_module.h"
 #include "net_module.h"
 #include "core_funcs.h"
+#include "../fsm.h"
 #include "ppp/ppp_module.h"
+#include "ppp/ppp_device_module.h"
+
+#include "../ppp_device.h"
+#include "serial_ppp.h"
+
+#include "../ppp_funcs.h"
 
 #ifdef _KERNEL_
 #include <KernelExport.h>
 #define spawn_thread spawn_kernel_thread
 static status_t sppp_ops(int32 op, ...);
-#define ASERIAL_MODULE_PATH "network/interface/serial_ppp"
+#define SPPP_MODULE_PATH "network/ppp/devices/serial_ppp"
 #else
 #define sppp_ops NULL
-#define ASERIAL_MODULE_PATH "interface/serial_ppp"
+#define SPPP_MODULE_PATH "ppp/devices/serial_ppp"
 static image_id pppid = -1;
 #endif
 
 static struct core_module_info *core = NULL;
 static struct ppp_module_info *ppp = NULL;
-static struct protosw *proto[IPPROTO_MAX];
-static struct ifnet *me = NULL, *pppif = NULL;
-static struct ifq *pppq = NULL;
-static struct ifq *ppptq = NULL;
-static thread_id my_thread;
+static int serial_dev = 0;
 
-#define SERIAL_DEV "/dev/ports/serial2"
+#define SERIAL_PORT_PATH "/dev/ports"
+#define PPP_ALLSTATIONS 0xff     /* All-Stations broadcast address */
+#define PPP_UI          0x03     /* Unnumbered Information */
+#define PPP_FLAG        0x7e     /* Flag Sequence */
+#define PPP_ESCAPE      0x7d     /* Asynchronous Control Escape */
+#define PPP_TRANS       0x20     /* Asynchronous transparency modifier */
 
 #define MAX_DUMP_BYTES	128
+
+static char *matches[] = {
+	"serial",
+	"/dev/ports/serial",
+};
+
+static void add_matches(struct ppp_dev_match **existing, 
+                        struct ppp_device_module_info *ptr)
+{
+	struct ppp_dev_match *p, *m;
+	int i;
+	
+	if ((p = *existing) != NULL)
+		for (; p->next ; p = p->next)
+			continue;
+		
+	for (i=0; i < sizeof(matches) / sizeof(*matches);i++) {
+		m = (struct ppp_dev_match*)malloc(sizeof(*m));
+		if (!m)
+			return;
+		memset(m, 0, sizeof(*m));
+		m->mod = ptr;
+		m->match = matches[i];
+		m->mlen = strlen(matches[i]);
+		
+		if (p) {
+			p->next = m;
+			p = p->next;
+		} else {
+			*existing = m;
+			p = m;
+		}
+	}
+}
 
 static void pppdumpm(struct mbuf *m0)
 {
@@ -107,22 +151,30 @@ static int32 sppp_write(void *data)
 {
 	struct mbuf *m = NULL;
 	struct mbuf *m0 = NULL;
-	struct ifnet *ifp = (struct ifnet *)data;
+	struct serial_ppp_device *dev = (struct serial_ppp_device *)data;
+	struct ifnet *ifp = &dev->ifp;
 	char buffer[ifp->if_mtu];
 	int adds = 0;
 	char *bp, *cp;
 	uint16 fcs = 0;
 	int len, i, rv;
 	
+	if (!ifp->txq) {
+		printf("%s: no transmission q created!\n", ifp->if_name);
+		return -1;
+	}
+	
 	while (1) {
-		acquire_sem_etc(ppptq->pop, 1, B_CAN_INTERRUPT | B_DO_NOT_RESCHEDULE, 0);
-		IFQ_DEQUEUE(ppptq, m);
+		acquire_sem_etc(ifp->txq->pop, 1, B_CAN_INTERRUPT | B_DO_NOT_RESCHEDULE, 0);
+		IFQ_DEQUEUE(ifp->txq, m);
 		if (m) {
 			memset(&buffer, 0, ifp->if_mtu);
 			bp = &buffer[0];
 			
-			for (m0 = m ; m0->m_next ; m0 = m0->m_next)
+			for (m0 = m ; m0->m_next ; m0 = m0->m_next) {
 				continue;
+			}
+			
 			if (M_TRAILINGSPACE(m0) > 2) {
 				m0->m_len += 2;
 				if (m0->m_flags & M_PKTHDR)
@@ -130,9 +182,12 @@ static int32 sppp_write(void *data)
 			}
 			/* Prepend space for our framing headers (trailer we don't worry about) */
 			m = m_prepend(m, 2);
+			if (!m)
+				printf("sppp_write: m_prepend failed!\n");
 			len = 0;
-			for (m0 = m; m0 ; m0 = m0->m_next)
+			for (m0 = m; m0 ; m0 = m0->m_next) {
 				len += m0->m_len;
+			}
 
 			/* make sure we have a contiguous set of data */
 			m = m_pullup(m, len);
@@ -141,7 +196,9 @@ static int32 sppp_write(void *data)
 				continue;
 			}
 			
-//			pppdumpm(m);
+			printf(">>> ");
+			pppdumpm(m);
+
 			cp = mtod(m, char*);
 			*cp++ = 0xff;
 			*cp-- = 0x03;
@@ -168,7 +225,8 @@ static int32 sppp_write(void *data)
 			/* Add fcs and trailer byte */
 			buffer[len++] = 0x7e;
 			rv = write(ifp->devid, &buffer, len);
-//			printf("sppp_write: write gave %d\n", rv);
+			m_freem(m);
+			printf("sppp_write: write gave %d\n", rv);
 		}
 	}
 	return 0;
@@ -177,18 +235,23 @@ static int32 sppp_write(void *data)
 static int32 sppp_read(void *data)
 {
 	struct mbuf *m = NULL;
-	struct ifnet *ifp = (struct ifnet *)data;
+	struct serial_ppp_device *dev = (struct serial_ppp_device *)data;
+	struct ifnet *ifp = &dev->ifp;
 	uchar *bytes;
 	char rxb[32];
 	char tbuff[ifp->if_mtu];
 	int rv, complete = 0, i, pktlen = 0, esc_req = 0;
 	uint16 fcs;
+	struct ifq *pppq;
+	
+	if (!dev->ppp) {
+		printf("%s: not yet attached to a PPP device!\n", ifp->if_name);
+		return -1;
+	}
+	pppq = dev->ppp->sc_if.rxq;
+	
 	
 	while (1) {
-		m = m_gethdr(MT_HEADER);
-		if (!m)
-			break;
-		m_reserve(m, 5);
 recycle:
 		pktlen = 0;
 		esc_req = 0;
@@ -242,16 +305,19 @@ recycle:
 		pktlen -= 2; /* decrease length by header & trailer */
 		fcs = pppfcs16(PPP_INITFCS, (uchar*)&tbuff[1], pktlen);
 		if (fcs != PPP_GOODFCS) {
-			printf("FCS failed!\n");
+			printf("sppp_read: FCS failed!\nFailed packet was :");
 			pppdumpb(&tbuff[1], pktlen);
 			goto recycle;
 		}
 		/* pkt -4 as we don't want the address, UI or fcs to be copied over */
+		m = NULL;
 		m = m_devget(&tbuff[3], pktlen - 4, 0, ifp, NULL);
-
-		/* we have a valid packet... */
-//		pppdumpm(m);
-		IFQ_ENQUEUE(pppq, m);
+		if (m) {
+			/* we have a valid packet... */
+			printf("<<< ");
+			pppdumpm(m);
+			IFQ_ENQUEUE(pppq, m);
+		}
 		complete = 0;
 	}
 	return 0;
@@ -259,22 +325,27 @@ recycle:
 
 static int32 connect_thread(void *data)
 {
+	struct serial_ppp_device *dev = (struct serial_ppp_device *)data;
+	struct ifnet *ifp = &dev->ifp;
 	int rv;
 	struct termios options;
-	status_t status;
+	char path[PATH_MAX];
+	char thd_name[B_OS_NAME_LENGTH];
 	
+	sprintf(path, "%s/%s", SERIAL_PORT_PATH, ifp->if_name);	
 	/* sit in a blocking open until we have a connection... */
-	me->devid = open(SERIAL_DEV, O_RDWR);
-	if (me->devid < 0) {
-		printf("async serial: failed to open device %s\n", SERIAL_DEV);
+	ifp->devid = open(path, O_RDWR);
+	if (ifp->devid < 0) {
+		printf("serial_ppp: failed to open device %s\n", path);
+		printf("serial_ppp: error was %d [%s]\n", errno, strerror(errno));
 		return -1;
 	}
-	printf("async serial: connection (%d)!!!\n", me->devid);
+	printf("serial_ppp: connection (%d)!!!\n", ifp->devid);
 	
-	me->if_flags |= IFF_UP;
+	ifp->if_flags |= IFF_UP;
 	
 	/* OK, set up the port to use */
-	ioctl(me->devid, TCGETA, (char *)&options);
+	ioctl(ifp->devid, TCGETA, (char *)&options);
 
 	options.c_cflag &= ~CBAUD;
 	options.c_cflag |= B19200;
@@ -285,35 +356,39 @@ static int32 connect_thread(void *data)
 	options.c_cc[VMIN] = 0;
 	options.c_cc[VTIME] = 10;
 	
-	rv = ioctl(me->devid, TCSETA, &options);
+	rv = ioctl(ifp->devid, TCSETA, &options);
 	if (rv != 0) {
 		printf("async serial: tcsetattr gave an error!\n");
 		return(-1);
 	}
 	
-	if (ppp)
-		pppif = ppp->connection();
-	if (pppif) {
-		pppq = pppif->rxq;
-		ppptq = pppif->txq;
-	}
-	
 	printf("async serial: port setup completed\n");
 	
 	/* very simple, we'll spawn a read and write thread */
-	me->rx_thread = spawn_thread(sppp_read, "sppp_read", 
-	                             B_NORMAL_PRIORITY, me);
-	if (me->rx_thread > 0) {
-		resume_thread(me->rx_thread);
-		me->if_flags |= IFF_RUNNING;
+	sprintf(thd_name, "%s_write_thread", ifp->if_name);
+	ifp->txq = start_ifq();
+	ifp->tx_thread = spawn_thread(sppp_write, thd_name, 
+	                             B_NORMAL_PRIORITY, ifp);
+	if (ifp->tx_thread > 0) {
+		resume_thread(ifp->tx_thread);
 	}
-	me->tx_thread = spawn_thread(sppp_write, "sppp_write", 
-	                             B_NORMAL_PRIORITY, me);
-	if (me->tx_thread > 0) {
-		resume_thread(me->tx_thread);
+
+	/* This is here as the first thing it will do is try to send a
+	 * Config Request */
+printf("ppp = %p\n",ppp);
+	if (ppp) {
+		fsm_Open(dev->fsm);
+		fsm_Up(dev->fsm);
+	}
+
+	sprintf(thd_name, "%s_read_thread", ifp->if_name);
+	ifp->rx_thread = spawn_thread(sppp_read, thd_name, 
+	                             B_NORMAL_PRIORITY, ifp);
+	if (ifp->rx_thread > 0) {
+		resume_thread(ifp->rx_thread);
+		ifp->if_flags |= IFF_RUNNING;
 	}
 	
-	wait_for_thread(me->rx_thread, &status);	
 	return 0;
 }
 
@@ -356,45 +431,146 @@ static int sppp_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 	}
 	return error;
 }
-	
-static int sppp_init(void)
+
+
+
+static struct ifnet *sppp_create(char *data, int dlen)
 {
-	me = (struct ifnet*)malloc(sizeof(struct ifnet));
-	if (!me)
-		return -1;
-		
-	memset(me, 0, sizeof(*me));
-	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
+	struct serial_ppp_device *dev = (struct serial_ppp_device *)
+	                                malloc(sizeof(*dev));
+	if (!dev)
+		return NULL;
+	if (dlen < 1) {
+		free(dev);
+		return NULL;
+	}
 
-	me->devid = -1;
-	me->name = "sppp";
-	me->if_unit = 0;
-	me->if_type = IFT_RS232; /* not exactly... */
-	me->rx_thread = -1;
-	me->tx_thread = -1;
-	me->if_addrlen = 0;
-	me->if_hdrlen = 0;
-	me->if_flags = IFF_POINTOPOINT;
-	me->if_mtu = 1500;
-	me->stop = &sppp_dev_stop;
-	me->ioctl = &sppp_ioctl;
+	memset(dev, 0, sizeof(*dev));
+	dev->ifp.devid = -1;
+	dev->ifp.name = "serial";
+	dev->ifp.if_unit = serial_dev++;
+	dev->ifp.if_type = IFT_RS232; /* not exactly... */
+	dev->ifp.rx_thread = -1;
+	dev->ifp.tx_thread = -1;
+	dev->ifp.if_addrlen = 0;
+	dev->ifp.if_hdrlen = 0;
+	dev->ifp.if_flags = IFF_POINTOPOINT;
+	dev->ifp.if_mtu = 1500;
+	dev->ifp.stop = &sppp_dev_stop;
+	dev->ifp.ioctl = &sppp_ioctl;
+
+	/* This should be safer than strdup as apparently it
+	 * can be nasty in some cases.
+	 */
+	dev->path = (char*)malloc(strlen(data));
+	memcpy(dev->path, data, strlen(data));
 	
-	add_protosw(proto, NET_LAYER1);
-	if_attach(me);
+	if_attach(&dev->ifp);
 
-	my_thread = spawn_thread(connect_thread, "sppp_connect_thread",
-	                         B_NORMAL_PRIORITY, NULL);
-	if (my_thread > 0)
-		resume_thread(my_thread);
+	return &dev->ifp;	
+}
 
+static int sppp_start(struct ifnet *ifp)
+{
+	struct serial_ppp_device *dev = (struct serial_ppp_device*)ifp;
+	char thd_name[B_OS_NAME_LENGTH];
+	
+	/* If we're here it's because the following are true...
+	 *
+	 * we're being told the port is ready
+	 * the port is setup correctly
+	 * the port is ready (and waiting) for ppp
+	 */
+
+	/* Open as non-blocking so we just open */
+	ifp->devid = open(dev->path, O_RDWR | O_NONBLOCK);
+ 	if (ifp->devid < 0) {
+ 		printf("serial_ppp: Unable to open %s\n", dev->path);
+ 		return -1;
+ 	}
+ 	/* As we appear to have opened OK, turn on blocking again */
+ 	fcntl(ifp->devid, F_SETFL, 0);
+	ifp->if_flags |= IFF_UP;
+ 		
+	/* very simple, we'll spawn a write thread */
+	sprintf(thd_name, "%s_write_thread", ifp->if_name);
+	ifp->txq = start_ifq();
+	ifp->tx_thread = spawn_thread(sppp_write, thd_name, 
+	                             B_NORMAL_PRIORITY, ifp);
+	if (ifp->tx_thread > 0) {
+		resume_thread(ifp->tx_thread);
+	}
+
+	/* This is here as the first thing it will do is try to send a
+	 * Config Request.
+	 * Hopefully LCP was in Closed state so this will bring it to the
+	 * ReqSent state and cause a ConfigRequest to be sent, thus starting off
+	 * the LCP negotiation.
+	 */
+	if (ppp)
+		fsm_Open(dev->fsm);
+
+	/* now we spawn a read thread */
+	sprintf(thd_name, "%s_read_thread", ifp->if_name);
+	ifp->rx_thread = spawn_thread(sppp_read, thd_name, 
+	                             B_NORMAL_PRIORITY, ifp);
+	if (ifp->rx_thread > 0) {
+		resume_thread(ifp->rx_thread);
+		ifp->if_flags |= IFF_RUNNING;
+	}
+	
+	return 0;
+}	
+
+static void sppp_attach(struct ifnet *ifp, struct ppp_softc *ppp)
+{
+	struct serial_ppp_device *dev = (struct serial_ppp_device*)ifp;
+	dev->ppp = ppp;
+}
+
+static void sppp_attach_fsm(struct ifnet *ifp, struct fsm *fsm)
+{
+	struct serial_ppp_device *dev = (struct serial_ppp_device*)ifp;
+	dev->fsm = fsm;
+	/* as we're attached...signal an Up event to move the LCP to
+	 * the Closed state
+	 */
+	if (ppp)
+		fsm_Up(dev->fsm);
+	/* If we get an Open event from the user the LCP will move to ReqSent and
+	 * start things off...
+	 */
+}
+	
+/* remove a device */
+int sppp_remove(struct ifnet *ifp)
+{
+	printf("sppp_remove\n");
+	if_detach(ifp);
 	return 0;
 }
+	
+#ifdef USER
+static void set_core(struct core_module_info *cp)
+{
+	if (!core)
+		core = cp;
+}
+
+static void set_ppp(struct ppp_module_info *cp)
+{
+	if (!ppp)
+		ppp = cp;
+}
+
+#endif
 
 static int sppp_module_init(void *cpp)
 {
 	if (cpp)
 		core = cpp;
 
+printf("sppp_module_init\n");
 #ifndef _KERNEL_
 	if (!ppp) {
 		char path[PATH_MAX];
@@ -422,14 +598,27 @@ static int sppp_module_init(void *cpp)
 	if (!ppp)
 		printf("Failed to get the PPP module pointer!\n");
 	
-	sppp_init();
-	
 	return 0;
 }
 
+_EXPORT struct ppp_device_module_info ppp_device = {
+	"Serial PPP device",
+#ifdef USER
+	set_core,
+	set_ppp,
+#endif
+	add_matches,
+	sppp_create,
+	sppp_attach,
+	sppp_attach_fsm,
+	sppp_start,
+	NULL,                /* sppp_stop */
+	sppp_remove
+};
+
 _EXPORT struct kernel_net_module_info device_info = {
 	{
-		ASERIAL_MODULE_PATH,
+		SPPP_MODULE_PATH,
 		0,
 		sppp_ops
 	},
