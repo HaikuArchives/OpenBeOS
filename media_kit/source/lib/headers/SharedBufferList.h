@@ -20,7 +20,7 @@ struct _shared_buffer_list
 		// also used as a unique identifier of the group
 		sem_id			reclaim_sem; 
 	};
-	enum { MAX_BUFFER=512 };			// this is probably very evil
+	enum { MAX_BUFFER = 512 };			// this is probably very evil
 
 	sem_id		locker_sem;
 	int32		locker_atom;

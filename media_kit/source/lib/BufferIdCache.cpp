@@ -28,7 +28,7 @@ _buffer_id_cache::~_buffer_id_cache()
 	for (int i = 0; i < MAX_CACHED_BUFFER; i++)
 		if (info[i].buffer)
 			delete info[i].buffer;
-	TRACE("### _buffer_id_cache finished, %ld in_use, %ldu used, %ld hit, %ld missed\n",in_use,used,stat_hit,stat_missed);
+	TRACE("### _buffer_id_cache finished, %ld in_use, %ld used, %ld hit, %ld missed\n",in_use,used,stat_hit,stat_missed);
 }
 	
 BBuffer *
@@ -50,7 +50,7 @@ _buffer_id_cache::GetBuffer(media_buffer_id id)
 	
 	stat_missed++;
 
-	// remove used recently in_use 	
+	// remove last recently used
 	if (in_use == MAX_CACHED_BUFFER) {
 		int32 min_last_used = used;
 		int index = 0;
