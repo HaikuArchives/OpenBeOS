@@ -20,19 +20,18 @@
 //	DEALINGS IN THE SOFTWARE.
 //
 //	File Name:		CheckBox.h
-//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Author:			Marc Flerackers (mflerackers@androme.be)
 //	Description:	BCheckBox displays an on/off control.
 //------------------------------------------------------------------------------
 
-#ifndef	_CHECK_BOX_H
-#define	_CHECK_BOX_H
+#ifndef _CHECK_BOX_H
+#define _CHECK_BOX_H
 
 // Standard Includes -----------------------------------------------------------
 
 // System Includes -------------------------------------------------------------
 #include <BeBuild.h>
 #include <Control.h>
-
 // Project Includes ------------------------------------------------------------
 
 // Local Includes --------------------------------------------------------------
@@ -44,64 +43,65 @@
 
 // BCheckBox class -------------------------------------------------------------
 class BCheckBox : public BControl {
+
 public:
-						BCheckBox(	BRect frame,
-									const char *name,
-									const char *label,
-									BMessage *message,
-									uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, 
-									uint32 flags = B_WILL_DRAW | B_NAVIGABLE); 
-	virtual				~BCheckBox();
+					BCheckBox(BRect frame,
+							const char *name,
+							const char *label,
+							BMessage *message,
+							uint32 resizingMode = B_FOLLOW_LEFT | B_FOLLOW_TOP,
+							uint32 flags = B_WILL_DRAW | B_NAVIGABLE); 
+virtual				~BCheckBox();
 
-						BCheckBox(BMessage *data);
-	static	BArchivable	*Instantiate(BMessage *data);
-	virtual	status_t	Archive(BMessage *data, bool deep = true) const;
+/* Archiving */
+					BCheckBox(BMessage *archive);
+static	BArchivable	*Instantiate(BMessage *archive);
+virtual	status_t	Archive(BMessage *archive, bool deep = true) const;
 
-	virtual	void		Draw(BRect updateRect);
-	virtual	void		AttachedToWindow();
-	virtual	void		MouseDown(BPoint where);
+virtual	void		Draw(BRect updateRect);
+virtual	void		AttachedToWindow();
+virtual	void		MouseDown(BPoint point);
 
-	virtual void		MessageReceived(BMessage *msg);
-	virtual void		WindowActivated(bool state);
-	virtual	void		KeyDown(const char *bytes, int32 numBytes);
-	virtual	void		MouseUp(BPoint pt);
-	virtual	void		MouseMoved(BPoint pt, uint32 code, const BMessage *msg);
-	virtual	void		DetachedFromWindow();
-	virtual	void		SetValue(int32 value);
-	virtual void		GetPreferredSize(float *width, float *height);
-	virtual void		ResizeToPreferred();
-	virtual	status_t	Invoke(BMessage *msg = NULL);
-	virtual	void		FrameMoved(BPoint new_position);
-	virtual	void		FrameResized(float new_width, float new_height);
+virtual void		MessageReceived(BMessage *message);
+virtual void		WindowActivated(bool active);
+virtual	void		KeyDown(const char *bytes, int32 numBytes);
+virtual	void		MouseUp(BPoint point);
+virtual	void		MouseMoved(BPoint point, uint32 transit, const BMessage *message);
+virtual	void		DetachedFromWindow();
+virtual	void		SetValue(int32 value);
+virtual void		GetPreferredSize(float *width, float *height);
+virtual void		ResizeToPreferred();
+virtual	status_t	Invoke(BMessage *message = NULL);
+virtual	void		FrameMoved(BPoint newLocation);
+virtual	void		FrameResized(float width, float height);
 
-	virtual BHandler	*ResolveSpecifier(	BMessage *msg,
-											int32 index,
-											BMessage *specifier,
-											int32 form,
-											const char *property);
-	virtual status_t	GetSupportedSuites(BMessage *data);
+virtual BHandler	*ResolveSpecifier(BMessage *message,
+									int32 index,
+									BMessage *specifier,
+									int32 what,
+									const char *property);
+virtual status_t	GetSupportedSuites(BMessage *message);
 
-	virtual void		MakeFocus(bool state = true);
-	virtual void		AllAttached();
-	virtual void		AllDetached();
+virtual void		MakeFocus(bool focused = true);
+virtual void		AllAttached();
+virtual void		AllDetached();
 
-// Private or reserved ---------------------------------------------------------
-	virtual status_t	Perform(perform_code d, void *arg);
+virtual status_t	Perform(perform_code d, void *arg);
 
 private:
-	virtual	void		_ReservedCheckBox1();
-	virtual	void		_ReservedCheckBox2();
-	virtual	void		_ReservedCheckBox3();
 
-			BCheckBox	&operator=(const BCheckBox &);
+virtual	void		_ReservedCheckBox1();
+virtual	void		_ReservedCheckBox2();
+virtual	void		_ReservedCheckBox3();
 
-			bool		fOutlined;
-			bool		fPressed;
-			uint32		_reserved[1];
+		BCheckBox	&operator=(const BCheckBox &);
+
+		bool		fOutlined;
+		uint32		_reserved[2];
 };
 //------------------------------------------------------------------------------
 
-#endif	// _CHECK_BOX_H
+#endif // _CHECK_BOX_H
 
 /*
  * $Log $
@@ -109,4 +109,3 @@ private:
  * $Id  $
  *
  */
-

@@ -20,9 +20,9 @@
 //	DEALINGS IN THE SOFTWARE.
 //
 //	File Name:		Box.h
-//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Author:			Marc Flerackers (mflerackers@androme.be)
 //	Description:	BBox objects group views together and draw a border
-//					around them.
+//                  around them.
 //------------------------------------------------------------------------------
 
 #ifndef _BOX_H
@@ -44,53 +44,69 @@
 
 
 // BBox class ------------------------------------------------------------------
-class BBox : public BView{
+class BBox : public BView {
+
 public:
-						BBox(	BRect bounds, const char *name = NULL,
-								uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP,
-								uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
-								border_style border = B_FANCY_BORDER);
-	virtual 			~BBox(void);
+						BBox(BRect frame,
+							const char *name = NULL,
+							uint32 resizingMode = B_FOLLOW_LEFT | B_FOLLOW_TOP,
+							uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS |
+											B_NAVIGABLE_JUMP,
+							border_style border = B_FANCY_BORDER);
+virtual					~BBox();
 
-						BBox(BMessage *data);
-	static	BArchivable	*Instantiate(BMessage *data);
-	virtual	status_t	Archive(BMessage *data, bool deep = true) const;
+/* Archiving */
+						BBox(BMessage *archive);
+static	BArchivable		*Instantiate(BMessage *archive);
+virtual	status_t		Archive(BMessage *archive, bool deep = true) const;
 
-	virtual	void		SetBorder(border_style style);
-	border_style		Border() const;
-	void				SetLabel(const char *label);
-	status_t			SetLabel(BView *view_label);
-	const char			*Label() const;
-	BView				*LabelView() const;
+virtual	void			SetBorder(border_style border);
+		border_style	Border() const;
 
-	virtual	void		Draw(BRect bounds);
-	virtual	void		AttachedToWindow();
-	virtual	void		DetachedFromWindow();
-	virtual	void		AllAttached();
-	virtual	void		AllDetached();
-	virtual void		FrameResized(float new_width, float new_height);
-	virtual void		MessageReceived(BMessage *msg);
-	virtual	void		MouseDown(BPoint pt);
-	virtual	void		MouseUp(BPoint pt);
-	virtual	void		WindowActivated(bool state);
-	virtual	void		MouseMoved(BPoint pt, uint32 code, const BMessage *msg);
-	virtual	void		FrameMoved(BPoint new_position);
+		void			SetLabel(const char *string);
+		status_t		SetLabel(BView *viewLabel);
 
-	virtual BHandler	*ResolveSpecifier(	BMessage *msg, int32 index, BMessage *specifier,
-											int32 form, const char *property);
-	virtual void		ResizeToPreferred();
-	virtual void		GetPreferredSize(float *width, float *height);
-	virtual void		MakeFocus(bool state = true);
-	virtual status_t	GetSupportedSuites(BMessage *data);
+		const char		*Label() const;
+		BView			*LabelView() const;
 
-// Private or reserved ---------------------------------------------------------
-	virtual	status_t	Perform(perform_code d, void* arg);
+virtual	void			Draw(BRect updateRect);
+virtual	void			AttachedToWindow();
+virtual	void			DetachedFromWindow();
+virtual	void			AllAttached();
+virtual	void			AllDetached();
+virtual void			FrameResized(float width, float height);
+virtual void			MessageReceived(BMessage *message);
+virtual	void			MouseDown(BPoint point);
+virtual	void			MouseUp(BPoint point);
+virtual	void			WindowActivated(bool active);
+virtual	void			MouseMoved(BPoint point, uint32 transit,
+								   const BMessage *message);
+virtual	void			FrameMoved(BPoint newLocation);
+
+virtual BHandler		*ResolveSpecifier(BMessage *message,
+										int32 index,
+										BMessage *specifier,
+										int32 what,
+										const char *property);
+
+virtual void			ResizeToPreferred();
+virtual void			GetPreferredSize(float *width, float *height);
+virtual void			MakeFocus(bool focused = true);
+virtual status_t		GetSupportedSuites(BMessage *message);
+
+virtual status_t		Perform(perform_code d, void *arg);
 
 private:
-	virtual	void		_ReservedBox1();
-	virtual	void		_ReservedBox2();
 
-			BBox		&operator=(const BBox &);
+virtual	void			_ReservedBox1();
+virtual	void			_ReservedBox2();
+
+		BBox			&operator=(const BBox &);
+
+		void			InitObject(BMessage *data = NULL);
+		void			DrawPlain();
+		void			DrawFancy();
+		void			ClearAnyLabel();
 
 		char			*fLabel;
 		BRect			fBounds;
@@ -100,7 +116,7 @@ private:
 };
 //------------------------------------------------------------------------------
 
-#endif	// _BOX_H
+#endif // _BOX_H
 
 /*
  * $Log $
@@ -108,4 +124,3 @@ private:
  * $Id  $
  *
  */
-

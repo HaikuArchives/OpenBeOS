@@ -20,13 +20,12 @@
 //	DEALINGS IN THE SOFTWARE.
 //
 //	File Name:		Control.h
-//	Author:			Frans van Nispen (xlr8@tref.nl)
-//	Description:	BMessageFilter class creates objects that filter
-//					in-coming BMessages.  
+//	Author:			Marc Flerackers (mflerackers@androme.be)
+//	Description:	BControl is the base class for user-event handling objects.
 //------------------------------------------------------------------------------
 
-#ifndef	_CONTROL_H
-#define	_CONTROL_H
+#ifndef _CONTROL_H
+#define _CONTROL_H
 
 // Standard Includes -----------------------------------------------------------
 
@@ -34,7 +33,6 @@
 #include <BeBuild.h>
 #include <Invoker.h>
 #include <Message.h>	/* For convenience */
-#include <Rect.h>
 #include <View.h>
 
 // Project Includes ------------------------------------------------------------
@@ -42,92 +40,97 @@
 // Local Includes --------------------------------------------------------------
 
 // Local Defines ---------------------------------------------------------------
+enum {
+	B_CONTROL_OFF = 0,
+	B_CONTROL_ON = 1
+};
 
 // Globals ---------------------------------------------------------------------
 
 
 class BWindow;
 
-enum {
-	B_CONTROL_OFF = 0,
-	B_CONTROL_ON = 1
-};
-
 // BControl class --------------------------------------------------------------
 class BControl : public BView, public BInvoker {
+
 public:
-						BControl(BRect frame, const char *name,
-								 const char *label, BMessage *message,
-								 uint32 resizeMask, uint32 flags); 
-	virtual				~BControl();
-						BControl(BMessage *data);
+					BControl(BRect frame,
+						const char *name,
+						const char *label,
+						BMessage *message,
+						uint32 resizingMode,
+						uint32 flags);
+virtual				~BControl();
 
-	// from BView
-	static BArchivable*	Instantiate(BMessage *data);
-	virtual	status_t	Archive(BMessage *data, bool deep = true) const;
+					BControl(BMessage *archive);
+static BArchivable	*Instantiate(BMessage *archive);
+virtual status_t	Archive(BMessage *archive, bool deep = true) const;
 
-	virtual	void		WindowActivated(bool state);
-	virtual	void		AttachedToWindow();
-	virtual	void		MessageReceived(BMessage *msg);
-	virtual void		MakeFocus(bool state = true);
-	virtual	void		KeyDown(const char *bytes, int32 numBytes);
-	virtual	void		MouseDown(BPoint pt);
-	virtual	void		MouseUp(BPoint pt);
-	virtual	void		MouseMoved(BPoint pt, uint32 code, const BMessage *msg);
-	virtual	void		DetachedFromWindow();
+virtual void		WindowActivated(bool active);
+virtual void		AttachedToWindow();
+virtual void		MessageReceived(BMessage *message);
+virtual void		MakeFocus(bool focused = true);
+virtual void		KeyDown(const char *bytes, int32 numBytes);
+virtual	void		MouseDown(BPoint point);
+virtual	void		MouseUp(BPoint point);
+virtual	void		MouseMoved(BPoint point, uint32 transit, const BMessage *message);
+virtual	void		DetachedFromWindow();
 
-	// just BControl
-	virtual	void		SetLabel(const char *text);
-	const char			*Label() const;
+virtual void		SetLabel(const char *string);
+		const char	*Label() const;
 
-	virtual	void		SetValue(int32 value);
-	int32				Value() const;
+virtual void		SetValue(int32 value);
+		int32		Value() const;
 
-	virtual void		SetEnabled(bool on);
-	bool				IsEnabled() const;
+virtual void		SetEnabled(bool enabled);
+		bool		IsEnabled() const;
 
-	virtual	void		GetPreferredSize(float *width, float *height);
-	virtual void		ResizeToPreferred();
+virtual	void		GetPreferredSize(float *width, float *height);
+virtual void		ResizeToPreferred();
 
-	// from BInvoker
-	virtual	status_t	Invoke(BMessage *msg = NULL);
+virtual status_t	Invoke(BMessage *message = NULL);
+virtual BHandler	*ResolveSpecifier(BMessage *message,
+									int32 index,
+									BMessage *specifier,
+									int32 what,
+									const char *property);
+virtual status_t	GetSupportedSuites(BMessage *message);
 
-	virtual BHandler	*ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier,
-									int32 form, const char *property);
-	virtual status_t	GetSupportedSuites(BMessage *data);
+virtual void		AllAttached();
+virtual void		AllDetached();
 
-	virtual void		AllAttached();
-	virtual void		AllDetached();
-
-	virtual status_t	Perform(perform_code d, void *arg);
+virtual status_t	Perform(perform_code d, void *arg);
 
 protected:
-	bool				IsFocusChanging() const;
-	bool				IsTracking() const;
-	void				SetTracking(bool state);
 
-	void				SetValueNoUpdate(int32 value);
+		bool		IsFocusChanging() const;
+		bool		IsTracking() const;
+		void		SetTracking(bool state);
 
-  private:
-//these for future binary compatibility
-	virtual	void		_ReservedControl1();
-	virtual	void		_ReservedControl2();
-	virtual	void		_ReservedControl3();
-	virtual	void		_ReservedControl4();
+		void		SetValueNoUpdate(int32 value);
 
-			BControl	&operator=(const BControl &);
+private:
 
-	char				*fLabel;
-	int32				fValue;
-	bool				fEnabled;
-	bool				fFocusChanging;
-	bool				fTracking;
-	bool				fWantsNav;
-	uint32				_reserved[4];		// for future extension
+virtual	void		_ReservedControl1();
+virtual	void		_ReservedControl2();
+virtual	void		_ReservedControl3();
+virtual	void		_ReservedControl4();
+
+		BControl	&operator=(const BControl &);
+
+		void		InitData(BMessage *data = NULL);
+
+		char		*fLabel;
+		int32		fValue;
+		bool		fEnabled;
+		bool		fFocusChanging;
+		bool		fTracking;
+		bool		fWantsNav;
+		uint32		_reserved[4];
 };
 //------------------------------------------------------------------------------
 
-#endif	// _CONTROL_H
+#endif // _CONTROL_H
 
 /*
  * $Log $
@@ -135,4 +138,3 @@ protected:
  * $Id  $
  *
  */
-

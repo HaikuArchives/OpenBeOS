@@ -20,19 +20,17 @@
 //	DEALINGS IN THE SOFTWARE.
 //
 //	File Name:		Box.cpp
-//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Author:			Marc Flerackers (mflerackers@androme.be)
 //	Description:	BBox objects group views together and draw a border
-//					around them.
+//                  around them.
 //------------------------------------------------------------------------------
 
 // Standard Includes -----------------------------------------------------------
-#include <stdio.h>
+#include <string.h>
 
 // System Includes -------------------------------------------------------------
 #include <Box.h>
-#include <Control.h>
-#include <InterfaceDefs.h>
-#include <Window.h>
+#include <Errors.h>
 #include <Message.h>
 
 // Project Includes ------------------------------------------------------------
@@ -43,74 +41,78 @@
 
 // Globals ---------------------------------------------------------------------
 
-
 //------------------------------------------------------------------------------
-BBox::BBox(BRect frame, const char *name, uint32 resizeMask, uint32 flags,
+BBox::BBox(BRect frame, const char *name, uint32 resizingMode, uint32 flags,
 		   border_style border)
-	:	BView(frame, name, resizeMask, flags),
+	:	BView(frame, name, resizingMode, flags),
 		fLabel(NULL),
 		fStyle(border),
 		fLabelView(NULL)
 {
+	fBounds = Bounds();
+
 	SetFont(be_bold_font);
+	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 }
 //------------------------------------------------------------------------------
 BBox::~BBox()
 {
-	if (fLabelView)
-	{
-		fLabelView->RemoveSelf();
-	}
-
 	if (fLabel)
-	{
-		delete[] fLabel;
-	}
+		delete fLabel;
 }
 //------------------------------------------------------------------------------
-BBox::BBox(BMessage *data)
-	:	BView(data)
+BBox::BBox(BMessage *archive)
+	:	BView(archive)
 {
-	const char *label;
+	fBounds = Bounds();
+	fLabelView = NULL;
 
-	if (data->FindInt32("_style", (int32&)fStyle) != B_OK)
-	{
+	const char *string;
+
+	if (archive->FindString("_label", &string) != B_OK)
+		fLabel = NULL;
+	else
+		SetLabel(string);
+
+	int32 anInt32;
+
+	if (archive->FindInt32("_style", &anInt32) != B_OK)
 		fStyle = B_FANCY_BORDER;
-	}
-	if (data->FindString("_label", &label) != B_OK)
-	{
-		label = NULL;
-	}
-
-	SetLabel(label);
+	else
+		fStyle = (border_style)anInt32;
 }
 //------------------------------------------------------------------------------
-BArchivable* BBox::Instantiate(BMessage* data)
+BArchivable *BBox::Instantiate(BMessage *archive)
 {
-	if (!validate_instantiation(data,"BBox"))
-	{
+	if ( validate_instantiation ( archive, "BBox" ) )
+		return new BBox ( archive );
+	else
 		return NULL;
-	}
-
-	return new BBox(data);
 }
 //------------------------------------------------------------------------------
-status_t BBox::Archive(BMessage* data, bool deep) const
+status_t BBox::Archive(BMessage *archive, bool deep) const
 {
-	BView::Archive(data, deep);
+	status_t err = BView::Archive(archive, deep);
+
+	if (err != B_OK)
+		return err;
 
 	if (fLabel)
-	{
-		data->AddString("_label",fLabel);
-	}
-	data->AddInt32("_style", fStyle);
+		 err = archive->AddString("_label",fLabel);
 
-	return B_OK;
+	if (err != B_OK)
+		return err;
+
+	if (fStyle != B_FANCY_BORDER)
+		err = archive->AddInt32("_style", fStyle);
+
+	return err;
 }
 //------------------------------------------------------------------------------
-void BBox::SetBorder(border_style style)
+void BBox::SetBorder(border_style border)
 {
-	fStyle = style;
+	fStyle = border;
+
 	Invalidate();
 }
 //------------------------------------------------------------------------------
@@ -119,82 +121,93 @@ border_style BBox::Border() const
 	return fStyle;
 }
 //------------------------------------------------------------------------------
-void BBox::SetLabel(const char* label)
-{
+void BBox::SetLabel(const char *string)
+{ 
 	if (fLabel)
-		delete[] fLabel;
-	fLabel = new char[strlen(label)+1];
-	strcpy(fLabel, label);
+		delete fLabel;
+
+	fLabel = strdup(string);
+
+	// Update fBounds
+	fBounds = Bounds();
+
+	if (fLabel)
+	{
+		font_height fh;
+		GetFontHeight(&fh);
+
+		fBounds.top = (float)ceil((fh.ascent + fh.descent) / 2.0f);
+	}
 
 	Invalidate();
 }
 //------------------------------------------------------------------------------
-status_t BBox::SetLabel(BView* view_label)
+status_t BBox::SetLabel(BView *viewLabel)
 {
-	if (view_label){
-		fLabelView = view_label;
+	if (viewLabel)
+	{
+		if (fLabelView)
+			RemoveChild(fLabelView);
+
+		fLabelView = viewLabel;
 		AddChild(fLabelView);
-		fLabel = NULL;
+		
+		if(fLabel)
+		{
+			delete fLabel;
+			fLabel = NULL;
+		}
 	}
+
+	// Update fBounds
+	fBounds = Bounds();
+
+	if (fLabelView)
+		fBounds.top = (float)ceil(fLabelView->Frame().Height() / 2.0f);
+
 	Invalidate();
+
 	return B_OK;
 }
 //------------------------------------------------------------------------------
-const char* BBox::Label() const
+const char *BBox::Label() const
 {
 	return fLabel;
 }
 //------------------------------------------------------------------------------
-BView* BBox::LabelView() const
+BView *BBox::LabelView() const
 {
 	return fLabelView;
 }
 //------------------------------------------------------------------------------
-void BBox::Draw(BRect bounds)
+void BBox::Draw(BRect updateRect)
 {
-	BRect rect = Bounds();
-
-	SetLowColor(ViewColor());
-
-	BFont font;
-	GetFont(&font);
-	font_height fh;
-	font.GetHeight(&fh);
-
-	rect.top = (fh.ascent + fh.descent)/2.0f;
-
 	switch (fStyle)
 	{
 		case B_FANCY_BORDER:
-			SetHighColor(tint_color(ViewColor(), B_LIGHTEN_MAX_TINT));
-			rect.left++;	rect.top++;
-			StrokeRect(rect);
-			SetHighColor(tint_color(ViewColor(), B_DARKEN_3_TINT));
-			rect.OffsetBy(-1,-1);
-			StrokeRect(rect);
+			DrawFancy();
 			break;
 
 		case B_PLAIN_BORDER:
-			rect.top--;
-			SetHighColor(tint_color(ViewColor(), B_LIGHTEN_MAX_TINT));
-			StrokeLine(BPoint(rect.left, rect.bottom), BPoint(rect.left, rect.top));
-			StrokeLine(BPoint(rect.left+1.0f, rect.top), BPoint(rect.right, rect.top));
-			SetHighColor(tint_color(ViewColor(), B_DARKEN_3_TINT));
-			StrokeLine(BPoint(rect.left+1.0f, rect.bottom), BPoint(rect.right, rect.bottom));
-			StrokeLine(BPoint(rect.right, rect.bottom), BPoint(rect.right, rect.top+1.0f));
+			DrawPlain();
 			break;
 
 		default:
 			break;
 	}
 	
-	SetHighColor(tint_color(ui_color(B_PANEL_BACKGROUND_COLOR), B_DARKEN_MAX_TINT));
 	if (fLabel)
 	{
-		rect.Set(6.0f, 1.0f, 12.0f + font.StringWidth(fLabel),
-				 fh.ascent + fh.descent);
-		FillRect(rect, B_SOLID_LOW);
-		DrawString(fLabel, BPoint(10.0f, ceil(fh.ascent - fh.descent) + 1.0f ));
+		font_height fh;
+		GetFontHeight(&fh);
+
+		SetHighColor(ViewColor());
+
+		FillRect(BRect(6.0f, 1.0f, 12.0f + StringWidth(fLabel),
+			(float)ceil(fh.ascent + fh.descent))/*, B_SOLID_LOW*/);
+
+		SetHighColor(0, 0, 0);
+		DrawString(fLabel, BPoint(10.0f, (float)ceil(fh.ascent - fh.descent) + 1.0f ));
 	}
 }
 //------------------------------------------------------------------------------
@@ -202,31 +215,9 @@ void BBox::AttachedToWindow()
 {
 	if (Parent())
 	{
-		SetViewColor( Parent()->ViewColor() );
+		SetViewColor(Parent()->ViewColor());
+		SetLowColor(Parent()->ViewColor());
 	}
-	else
-	{
-		SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
-	}
-}
-//------------------------------------------------------------------------------
-void BBox::ResizeToPreferred()
-{
-	BView::ResizeToPreferred();
-}
-//------------------------------------------------------------------------------
-void BBox::GetPreferredSize(float* width, float* height)
-{
-	BRect r(0,0,99,99);
-
-	if (Parent())
-	{
-		r = Parent()->Bounds();
-		r.InsetBy(10,10);
-	}
-	
-	*width = r.Width();
-	*height = r.Height();
 }
 //------------------------------------------------------------------------------
 void BBox::DetachedFromWindow()
@@ -244,75 +235,123 @@ void BBox::AllDetached()
 	BView::AllDetached();
 }
 //------------------------------------------------------------------------------
-void BBox::FrameResized(float new_width, float new_height)
+void BBox::FrameResized(float width, float height)
 {
-	BView::FrameResized(new_width, new_height);
+	fBounds.right = Bounds().right;
+	fBounds.bottom = Bounds().bottom;
 }
 //------------------------------------------------------------------------------
-void BBox::MessageReceived(BMessage *msg)
+void BBox::MessageReceived(BMessage *message)
 {
-	BView::MessageReceived(msg);
+	BView::MessageReceived(message);
 }
 //------------------------------------------------------------------------------
-void BBox::MouseDown(BPoint pt)
+void BBox::MouseDown(BPoint point)
 {
-	BView::MouseDown(pt);
+	BView::MouseDown(point);
 }
 //------------------------------------------------------------------------------
-void BBox::MouseUp(BPoint pt)
+void BBox::MouseUp(BPoint point)
 {
-	BView::MouseUp(pt);
+	BView::MouseUp(point);
 }
 //------------------------------------------------------------------------------
-void BBox::WindowActivated(bool state)
+void BBox::WindowActivated(bool active)
 {
-	BView::WindowActivated(state);
+	BView::WindowActivated(active);
 }
 //------------------------------------------------------------------------------
-void BBox::MouseMoved(BPoint pt, uint32 code, const BMessage* msg)
+void BBox::MouseMoved(BPoint point, uint32 transit, const BMessage *message)
 {
-	BView::MouseMoved(pt, code, msg);
+	BView::MouseMoved(point, transit, message);
 }
 //------------------------------------------------------------------------------
-void BBox::FrameMoved(BPoint new_position)
+void BBox::FrameMoved(BPoint newLocation)
 {
-	BView::FrameMoved(new_position);
+	BView::FrameMoved(newLocation);
 }
 //------------------------------------------------------------------------------
-BHandler* BBox::ResolveSpecifier(BMessage* msg, int32 index,
-								 BMessage* specifier, int32 form,
-								 const char* property)
+BHandler *BBox::ResolveSpecifier(BMessage *message, int32 index,
+								 BMessage *specifier, int32 what,
+								 const char *property)
 {
-	return NULL;
+	return BView::ResolveSpecifier(message, index, specifier, what, property);
 }
 //------------------------------------------------------------------------------
-void BBox::MakeFocus(bool state)
+void BBox::ResizeToPreferred()
 {
-	BView::MakeFocus(state);
+	BView::ResizeToPreferred();
 }
 //------------------------------------------------------------------------------
-status_t BBox::GetSupportedSuites(BMessage* data)
+void BBox::GetPreferredSize(float *width, float *height)
 {
-	return B_OK;
+	BRect rect(0,0,99,99);
+
+	if (Parent())
+	{
+		rect = Parent()->Bounds();
+		rect.InsetBy(10,10);
+	}
+	
+	*width = rect.Width();
+	*height = rect.Height();
 }
 //------------------------------------------------------------------------------
-status_t BBox::Perform(perform_code d, void* arg)
+void BBox::MakeFocus(bool focused)
+{
+	BView::MakeFocus(focused);
+}
+//------------------------------------------------------------------------------
+status_t BBox::GetSupportedSuites(BMessage *message)
+{
+	return BView::GetSupportedSuites(message);
+}
+//------------------------------------------------------------------------------
+status_t BBox::Perform(perform_code d, void *arg)
 {
 	return B_ERROR;
 }
 //------------------------------------------------------------------------------
-void BBox::_ReservedBox1()
-{
-}
+void BBox::_ReservedBox1() {}
+void BBox::_ReservedBox2() {}
 //------------------------------------------------------------------------------
-void BBox::_ReservedBox2()
+BBox &BBox::operator=(const BBox &)
 {
-}
-//------------------------------------------------------------------------------
-BBox& BBox::operator=(const BBox&)
-{
-	// Assignment not allowed
 	return *this;
+}
+//------------------------------------------------------------------------------
+void BBox::InitObject(BMessage *data)
+{
+}
+//------------------------------------------------------------------------------
+void BBox::DrawPlain()
+{
+	BRect rect = fBounds;
+
+	rect.top--;
+	SetHighColor(tint_color(ViewColor(), B_LIGHTEN_MAX_TINT));
+	StrokeLine(BPoint(rect.left, rect.bottom), BPoint(rect.left, rect.top));
+	StrokeLine(BPoint(rect.left+1.0f, rect.top), BPoint(rect.right, rect.top));
+	SetHighColor(tint_color(ViewColor(), B_DARKEN_3_TINT));
+	StrokeLine(BPoint(rect.left+1.0f, rect.bottom), BPoint(rect.right, rect.bottom));
+	StrokeLine(BPoint(rect.right, rect.bottom), BPoint(rect.right, rect.top+1.0f));
+}
+//------------------------------------------------------------------------------
+void BBox::DrawFancy()
+{
+	BRect rect = fBounds;
+
+	SetHighColor(tint_color(ViewColor(), B_LIGHTEN_MAX_TINT));
+	rect.left++;
+	rect.top++;
+	StrokeRect(rect);
+	SetHighColor(tint_color(ViewColor(), B_DARKEN_3_TINT));
+	rect.OffsetBy(-1,-1);
+	StrokeRect(rect);
+}
+//------------------------------------------------------------------------------
+void BBox::ClearAnyLabel()
+{
 }
 //------------------------------------------------------------------------------
 
@@ -322,4 +361,3 @@ BBox& BBox::operator=(const BBox&)
  * $Id  $
  *
  */
-
