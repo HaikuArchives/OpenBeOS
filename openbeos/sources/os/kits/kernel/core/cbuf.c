@@ -10,6 +10,8 @@
 #include <cbuf.h>
 #include <arch/cpu.h>
 #include <errors.h>
+#include <debug.h>
+#include <int.h>
 
 #include <string.h>
 
