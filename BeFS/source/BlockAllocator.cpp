@@ -77,8 +77,11 @@ AllocationBlock::AllocationBlock(Volume *volume)
 status_t 
 AllocationBlock::SetTo(AllocationGroup &group, uint16 block)
 {
-	// 8 bits for every block
-	fNumBits = group.fNumBits - ((fVolume->BlockSize() << 3) * block);
+	// 8 blocks per byte
+	fNumBits = fVolume->BlockSize() << 3;
+	// the last group may have less bits in the last block
+	if (group.fNumBits < fNumBits * block + fNumBits)
+		fNumBits = group.fNumBits - block * fNumBits;
 
 	return CachedBlock::SetTo(group.fStart + block) != NULL ? B_OK : B_ERROR;
 }
@@ -290,10 +293,6 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 		if (start >= fGroups[group].fNumBits || fGroups[group].IsFull())
 			continue;
 
-//		printf("group %ld: num = %ld, start = %ld, firstFree = %ld, largest = %ld, largestFirst = %ld, isFull = %s\n",
-//				group,fGroups[group].fNumBits,fGroups[group].fStart,fGroups[group].fFirstFree,
-//				fGroups[group].fLargest,fGroups[group].fLargestFirst,fGroups[group].fIsFull);
-
 		if (i >= fNumGroups) {
 			// if the minimum is the same as the maximum, it's not necessary to
 			// search for in the allocation groups a second time
@@ -303,9 +302,9 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 			numBlocks = minimum;
 		}
 
-		// the wanted maximum is smaller than the largest free block in the group
+		// The wanted maximum is smaller than the largest free block in the group
 		// or already smaller than the minimum
-		// -> disabled because it's currently not maintained after the first allocation
+		// ToDo: disabled because it's currently not maintained after the first allocation
 		//if (numBlocks > fGroups[group].fLargest)
 		//	continue;
 
@@ -350,7 +349,9 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 				// adjust allocation size
 				if (numBlocks < maximum)
 					numBlocks = range;
-				// update first free block in group (doesn't have to be free)
+
+				// Update the allocation group info
+				// Note, the fFirstFree block doesn't have to be really free
 				if (rangeStart == fGroups[group].fFirstFree)
 					fGroups[group].fFirstFree = rangeStart + numBlocks;
 				fGroups[group].fFreeBits -= numBlocks;
@@ -457,6 +458,8 @@ BlockAllocator::Free(Transaction *transaction,block_run &run)
 	uint16 start = run.start;
 	uint16 length = run.length;
 
+	// doesn't use Volume::IsValidBlockRun() here because it can check better
+	// against the group size (the last group may have a different length)
 	if (group < 0 || group >= fNumGroups
 		|| start > fGroups[group].fNumBits
 		|| start + length > fGroups[group].fNumBits
@@ -499,3 +502,87 @@ BlockAllocator::Free(Transaction *transaction,block_run &run)
 	return B_OK;
 }
 
+#ifdef DEBUG
+#include "BPlusTree.h"
+
+status_t
+BlockAllocator::CheckBlockRun(block_run run)
+{
+	uint32 block = run.start / (fVolume->BlockSize() << 3);
+	uint32 start = run.start;
+	uint32 pos = 0;
+
+	AllocationBlock cached(fVolume);
+
+	for (;block < fBlocksPerGroup;block++) {
+		if (cached.SetTo(fGroups[run.allocation_group],block) < B_OK)
+			RETURN_ERROR(B_IO_ERROR);
+
+		start = start % cached.NumBlockBits();
+		while (pos < run.length && start + pos < cached.NumBlockBits()) {
+			if (!cached.IsUsed(start + pos)) {
+				PRINT(("block_run(%ld,%u,%u) is only partially allocated!\n",run.allocation_group,run.start,run.length));
+				fVolume->Panic();
+				return B_BAD_DATA;
+			}
+			pos++;
+		}
+		start = 0;
+	}
+	return B_OK;
+}
+
+
+status_t
+BlockAllocator::CheckInode(Inode *inode)
+{
+	status_t status = CheckBlockRun(inode->BlockRun());
+	if (status < B_OK)
+		return status;
+
+	// only checks the direct range for now...
+
+	data_stream *data = &inode->Node()->data;
+	for (int32 i = 0;i < NUM_DIRECT_BLOCKS;i++) {
+		if (data->direct[i].IsZero())
+			break;
+		
+		status = CheckBlockRun(data->direct[i]);
+		if (status < B_OK)
+			return status;
+	}
+	return B_OK;
+}
+
+
+status_t
+BlockAllocator::Check(Inode *inode)
+{
+	if (!inode || !inode->IsDirectory())
+		return B_BAD_VALUE;
+
+	BPlusTree *tree;
+	status_t status = inode->GetTree(&tree);
+	if (status < B_OK)
+		return status;
+
+	TreeIterator iterator(tree);
+	char key[BPLUSTREE_MAX_KEY_LENGTH];
+	uint16 length;
+	off_t offset;
+	while (iterator.GetNextEntry(key,&length,BPLUSTREE_MAX_KEY_LENGTH,&offset) == B_OK) {
+		Vnode vnode(fVolume,offset);
+		Inode *entry;
+		if (vnode.Get(&entry) < B_OK) {
+			FATAL(("could not get inode in tree at: %Ld\n",offset));
+			continue;
+		}
+		block_run run = entry->BlockRun();
+		PRINT(("check allocations of inode \"%s\" (%ld,%u,%u)\n",key,run.allocation_group,run.start,run.length));
+		status = CheckInode(entry);
+		if (status < B_OK)
+			return status;
+	}
+	return B_OK;
+}
+#endif	/* DEBUG */

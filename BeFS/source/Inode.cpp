@@ -904,7 +904,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 					offset = runBlockEnd - (run.length << fVolume->BlockShift());
 					//printf("reading from indirect block: %ld,%d\n",fRun.allocation_group,fRun.start);
 					//printf("### indirect-run[%ld] = (%ld,%d,%d), offset = %Ld\n",fCurrent,fRun.allocation_group,fRun.start,fRun.length,fRunFileOffset);
-					return B_OK;
+					return fVolume->IsValidBlockRun(run);
 				}
 			}
 			RETURN_ERROR(B_ERROR);
@@ -924,13 +924,13 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 				run = data->direct[current];
 				offset = runBlockEnd - (run.length << fVolume->BlockShift());
 				//printf("### run[%ld] = (%ld,%d,%d), offset = %Ld\n",fCurrent,fRun.allocation_group,fRun.start,fRun.length,fRunFileOffset);
-				return B_OK;
+				return fVolume->IsValidBlockRun(run);
 			}
 		}
 		//PRINT(("FindBlockRun() failed in direct range: size = %Ld, pos = %Ld\n",data->size,pos));
 		return B_ENTRY_NOT_FOUND;
 	}
-	return B_OK;
+	return fVolume->IsValidBlockRun(run);
 }
 
 

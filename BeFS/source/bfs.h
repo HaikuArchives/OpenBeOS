@@ -12,7 +12,7 @@
 
 #include <SupportDefs.h>
 
-#ifndef BEOS_VERSION_DANO
+#ifndef B_BAD_DATA
 #	define B_BAD_DATA B_ERROR
 #endif
 
@@ -26,7 +26,6 @@ struct block_run
 	inline bool operator==(const block_run &run) const;
 	inline bool operator!=(const block_run &run) const;
 	inline bool IsZero();
-	//inline bool IsValid(Volume *);
 	inline void SetTo(int32 group,uint16 start,uint16 length = 1);
 
 	inline static block_run Run(int32 group,uint16 start,uint16 length = 1);
@@ -205,37 +204,47 @@ round_up(uint32 data)
 	return (data + sizeof(off_t) - 1) & ~(sizeof(off_t) - 1);
 }
 
+
 /************************ block_run inline functions ************************/
 //	#pragma mark -
 
 
-inline bool block_run::operator==(const block_run &run) const
+inline bool
+block_run::operator==(const block_run &run) const
 {
 	return allocation_group == run.allocation_group
 		&& start == run.start
 		&& length == run.length;
 }
 
-inline bool block_run::operator!=(const block_run &run) const
+
+inline bool
+block_run::operator!=(const block_run &run) const
 {
 	return allocation_group != run.allocation_group
 		|| start != run.start
 		|| length != run.length;
 }
 
-inline bool block_run::IsZero()
+
+inline bool
+block_run::IsZero()
 {
 	return allocation_group == 0 && start == 0 && length == 0;
 }
 
-inline void block_run::SetTo(int32 _group,uint16 _start,uint16 _length)
+
+inline void
+block_run::SetTo(int32 _group,uint16 _start,uint16 _length)
 {
 	allocation_group = _group;
 	start = _start;
 	length = _length;
 }
 
-inline block_run block_run::Run(int32 group, uint16 start, uint16 length)
+
+inline block_run
+block_run::Run(int32 group, uint16 start, uint16 length)
 {
 	block_run run;
 	run.allocation_group = group;

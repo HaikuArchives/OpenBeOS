@@ -174,6 +174,21 @@ Volume::Unmount()
 }
 
 
+status_t
+Volume::IsValidBlockRun(block_run run)
+{
+	if (run.allocation_group < 0 || run.allocation_group > AllocationGroups()
+		|| run.start > (1LL << AllocationGroupShift())
+		|| run.length == 0
+		|| (uint32)run.length + run.start > (1LL << AllocationGroupShift())) {
+		Panic();
+		FATAL(("*** invalid run(%ld,%d,%d)\n",run.allocation_group,run.start,run.length));
+		return B_BAD_DATA;
+	}
+	return B_OK;
+}
+
+
 block_run 
 Volume::ToBlockRun(off_t block) const
 {

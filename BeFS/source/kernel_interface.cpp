@@ -224,6 +224,8 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 #endif
 
 	Volume *volume = new Volume(nsid);
+	if (volume == NULL)
+		return B_NO_MEMORY;
 
 	status_t status;
 	if ((status = volume->Mount(device,flags)) == B_OK) {
@@ -322,13 +324,17 @@ bfs_initialize(const char *deviceName, void *parms, size_t len)
 
 
 int 
-bfs_sync(void *ns)
+bfs_sync(void *_ns)
 {
 	FUNCTION();
+	if (_ns == NULL)
+		return B_BAD_VALUE;
 
-	// ToDo: implement bfs_sync()!
+	Volume *volume = (Volume *)_ns;
 
-	return B_OK;
+	// ToDo: flush the log here (once we have one)
+
+	return flush_device(volume->Device(),0);
 }
 
 
@@ -353,6 +359,9 @@ bfs_read_vnode(void *_ns, vnode_id id, char reenter, void **node)
 	}
 
 	Inode *inode = new Inode(volume,id,false,reenter);
+	if (inode == NULL)
+		return B_NO_MEMORY;
+
 	if (inode->InitCheck() == B_OK) {
 		*node = (void *)inode;
 		return B_OK;
@@ -584,8 +593,9 @@ bfs_fsync(void *ns, void *node)
 	FUNCTION();
 
 	// ToDo: implement bfs_fsync()?!
+	// currently follows the implementation in the dosfs
 
-	return B_OK;
+	return bfs_sync(ns);
 }
 
 

@@ -31,6 +31,12 @@ class BlockAllocator {
 
 		status_t AllocateBlocks(Transaction *transaction,int32 group, uint16 start, uint16 numBlocks, uint16 minimum, block_run &run);
 
+#ifdef DEBUG
+		status_t CheckBlockRun(block_run run);
+		status_t CheckInode(Inode *inode);
+		status_t Check(Inode *inode);
+#endif
+
 	private:
 		static status_t initialize(BlockAllocator *);
 
