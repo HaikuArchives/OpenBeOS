@@ -120,6 +120,7 @@ static struct in_ifaddr * ip_rtaddr(struct in_addr dst)
 			RTFREE(ipforward_rt.ro_rt);
 			ipforward_rt.ro_rt = NULL;
 		}
+		memset(&sin, 0, sizeof(*sin));
 		sin->sin_family = AF_INET;
 		sin->sin_len = sizeof(*sin);
 		sin->sin_addr = dst;
@@ -319,15 +320,13 @@ struct mbuf * ip_srcroute(void)
 	struct in_addr *p, *q;
 	struct mbuf *m;
 
-printf("ip_srcroute\n");
-	
-	if (ip_nhops == 0) {
-		printf("ipsrcroute: ip_nhops = 0\n");
+	if (ip_nhops == 0)
 		return NULL;
-	}
+
 	m = m_get(MT_SOOPTS);
 	if (!m)
 		return NULL;
+
 #define OPTSIZ (sizeof(ip_srcrt.nop) + sizeof(ip_srcrt.srcopt))
 
 	m->m_len = ip_nhops * sizeof(struct in_addr) + sizeof(struct in_addr) + OPTSIZ;
@@ -338,6 +337,7 @@ printf("ip_srcroute\n");
 	ip_srcrt.srcopt[IPOPT_OFFSET] = IPOPT_MINOFF;
 	memcpy(mtod(m, caddr_t) + sizeof(struct in_addr), &ip_srcrt.nop, OPTSIZ);
 	q = (struct in_addr*)(mtod(m, caddr_t) + sizeof(struct in_addr) + OPTSIZ);
+
 #undef OPTSIZ
 
 	while (p >= ip_srcrt.route) {
@@ -345,7 +345,6 @@ printf("ip_srcroute\n");
 	}
 	
 	*q = ip_srcrt.dst;
-printf("ip_srcroute finished\n");
 	return m;
 }
 
@@ -355,11 +354,10 @@ void ipv4_input(struct mbuf *m, int hdrlen)
 	struct in_ifaddr *ia = get_primary_addr();
 	int hlen;
 	
-//printf("ipv4_input\n");	
-
 #if SHOW_DEBUG
 	dump_ipv4_header(buf);
 #endif
+
 	if (!m)
 		return;
 	/* If we don't have a pointer to our IP addresses we can't go on */
@@ -432,7 +430,6 @@ void ipv4_input(struct mbuf *m, int hdrlen)
 
 	/* options processing */	
 	ip_nhops = 0;
-	printf("hlen = %d\n", hlen);
 	if (hlen > sizeof(struct ip) && ip_dooptions(m))
 		return;
 	
@@ -473,6 +470,13 @@ ours:
 	 */
 	/* XXX - add refragment here... */
 	ip->ip_len -= hlen;
+
+#if SHOW_ROUTE
+	/* This just shows which interface we're planning on using */
+	printf("Accepting packet to address %08lx via device %s from src addr %08lx\n",
+	       ntohl(ip->ip_dst.s_addr), m->m_pkthdr.rcvif->if_name, 
+	       ntohl(ip->ip_src.s_addr));
+#endif
 
 	ipstat.ips_delivered++;
 	if (proto[ip->ip_p] && proto[ip->ip_p]->pr_input) {
@@ -528,6 +532,7 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 		ro->ro_rt = NULL;
 	}
 	if (ro->ro_rt == NULL) {
+		memset(&ro->ro_dst, 0, sizeof(ro->ro_dst));
 		dst->sin_family = AF_INET;
 		dst->sin_len = sizeof(*dst);
 		dst->sin_addr = ip->ip_dst;
@@ -552,9 +557,7 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 			error = EHOSTUNREACH;
 			goto bad;
 		}
-#if SHOW_DEBUG
-		printf("Host is reachable...\n");
-#endif
+
 		ia = ifatoia(ro->ro_rt->rt_ifa);
 		ifp = ro->ro_rt->rt_ifp;
 		atomic_add(&ro->ro_rt->rt_use, 1);
@@ -566,8 +569,6 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 	 */
 	if (ip->ip_src.s_addr == INADDR_ANY)
 		ip->ip_src = IA_SIN(ia)->sin_addr;
-
-printf("in_broadcast...(%08lx)\n", dst->sin_addr.s_addr);
 
 	if ((in_broadcast(dst->sin_addr, ifp))) {
 		if ((ifp->if_flags & IFF_BROADCAST) == 0) {
@@ -588,12 +589,11 @@ printf("in_broadcast...(%08lx)\n", dst->sin_addr.s_addr);
 
 #if SHOW_ROUTE
 	/* This just shows which interface we're planning on using */
-	printf("Sending to address ");
-	printf("%08lx", ntohl(ip->ip_dst.s_addr));
-	printf(" via device %s using source ", ifp->if_name);
-	printf("%08lx\n", ntohl(ip->ip_src.s_addr));
+	printf("Sending to address %08lx via device %s using src addr %08lx\n",
+	       ntohl(ip->ip_dst.s_addr), ifp->if_name, ntohl(ip->ip_src.s_addr));
 #endif
 
+	/* if we're small enough, just send the thing! */
 	if (ip->ip_len <= ifp->if_mtu) {
 		ip->ip_len = htons(ip->ip_len);
 		ip->ip_off = htons(ip->ip_off);
@@ -605,6 +605,7 @@ printf("in_broadcast...(%08lx)\n", dst->sin_addr.s_addr);
 	}
 
 	/* Deal with fragmentation... */
+
 done:
 	if (ro == &iproute && /* we used our own variable */
 	    (flags & IP_ROUTETOIF) == 0 && /* we didn't route to an iterface */
