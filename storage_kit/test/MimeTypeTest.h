@@ -15,6 +15,8 @@ class TestApp;
 typedef status_t (BMimeType::*GetDescriptionFunc)(char* description) const;
 typedef status_t (BMimeType::*SetDescriptionFunc)(const char* description);
 
+class IconHelper;
+
 class MimeTypeTest : public BasicTest {
 public:
 	static CppUnit::Test* Suite();
@@ -29,6 +31,10 @@ public:
 	// Test functions
 	//------------------------------------------------------------
 	void AppHintTest();
+	void LargeIconTest();
+	void MiniIconTest();
+	void LargeIconForTypeTest();
+	void MiniIconForTypeTest();
 	void LongDescriptionTest();
 	void ShortDescriptionTest();
 	void PreferredAppTest();
@@ -41,6 +47,7 @@ public:
 	// Helper functions
 	//------------------------------------------------------------
 	void DescriptionTest(GetDescriptionFunc getDescr, SetDescriptionFunc setDescr);
+	void IconTest(IconHelper &helper);
 
 private:
 	TestApp	*fApplication;
