@@ -1,7 +1,10 @@
 /* icmp.c
  */
  
+#ifndef _KERNEL_MODE
 #include <stdio.h>
+#include <string.h>
+#endif
 
 #include "net_misc.h"
 #include "sys/socket.h"
@@ -448,6 +451,13 @@ static int icmp_protocol_stop(void)
 	return 0;
 }
 
+#ifndef _KERNEL_MODE
+void set_core(struct core_module_info *cp)
+{
+	core = cp;
+}
+#endif
+
 struct icmp_module_info protocol_info = {
 	{
 		{
@@ -458,6 +468,9 @@ struct icmp_module_info protocol_info = {
 		icmp_protocol_init,
 		icmp_protocol_stop
 	},
+#ifndef _KERNEL_MODE
+	set_core,
+#endif
 	icmp_error
 };
 

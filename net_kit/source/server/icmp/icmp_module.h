@@ -16,6 +16,10 @@
 struct icmp_module_info {
 	struct kernel_net_module_info info;
 
+#ifndef _KERNEL_MODE
+	void (*set_core)(struct core_module_info *);
+#endif
+
 	void (*error)(struct mbuf *, int, int, n_long, struct ifnet *);
 };
 
