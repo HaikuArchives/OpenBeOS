@@ -25,6 +25,11 @@ struct ifaddr **ifnet_addrs;
 static int if_index;
 static int if_indexlim;
 
+struct ifnet *get_interfaces(void)
+{
+	return devices;
+}
+
 void if_init(void)
 {
 	ifnet_addrs = NULL;
@@ -235,9 +240,9 @@ struct ifaddr *ifa_ifwithnet(struct sockaddr *addr)
 {
 	struct ifnet *ifp;
 	struct ifaddr *ifa;
-	ifaddr *ifa_maybe = 0;
-        uint af = addr->sa_family;
-        char *addr_data = addr->sa_data, *cplim;
+	struct ifaddr *ifa_maybe = NULL;
+	uint af = addr->sa_family;
+	char *addr_data = addr->sa_data, *cplim;
 
 	if (af == AF_LINK) {
 		struct sockaddr_dl *sdl = (struct sockaddr_dl *)addr;
