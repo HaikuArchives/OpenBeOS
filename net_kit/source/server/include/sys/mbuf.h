@@ -94,7 +94,7 @@ struct mbuf {
 #define m_ext		um_dat.MH.MH_dat.MH_ext
 #define m_pktdat	um_dat.MH.MH_dat.MH_databuf
 #define m_pkthdr	um_dat.MH.MH_pkthdr
-#define m_dat           um_dat.m_databuf
+#define m_dat       um_dat.m_databuf
 
 /* define a little macro that gives us the data pointer for an mbuf */
 #define mtod(m, t)		((t)((m)->m_data))
@@ -267,6 +267,16 @@ enum {
         ((m)->m_flags & M_EXT ? (m)->m_ext.ext_buf + (m)->m_ext.ext_size - \
             ((m)->m_data + (m)->m_len) : \
             &(m)->m_dat[MLEN] - ((m)->m_data + (m)->m_len))
+
+#define M_IS_CLUSTER(m)	((m)->m_flags & M_EXT)
+
+#define M_DATASTART(m)	\
+	(M_IS_CLUSTER(m) ? (m)->m_ext.ext_buf : \
+	    (m)->m_flags & M_PKTHDR ? (m)->m_pktdat : (m)->m_dat)
+
+#define M_DATASIZE(m)	\
+	(M_IS_CLUSTER(m) ? (m)->m_ext.ext_size : \
+	    (m)->m_flags & M_PKTHDR ? MHLEN: MLEN)
 
 /* Functions! */
 void mbinit(void);
