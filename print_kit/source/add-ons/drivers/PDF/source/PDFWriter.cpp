@@ -297,6 +297,7 @@ PDFWriter::InitWriter()
 			fCreateBookmarks = false;
 		}
 	}	
+	fprintf(fLog, "create_bookmarks %d\n", fCreateBookmarks);
 
 	fState = NULL;
 	fStateDepth = 0;
@@ -452,6 +453,8 @@ PDFWriter::LoadBookmarkDefinitions(const char* name)
 				(int)level, family.String(), style.String(), size));
 			
 			fBookmark->AddDefinition((int)level, &font);
+			
+			SkipSpaces(file);
 		}
 		
 		fclose(file);
