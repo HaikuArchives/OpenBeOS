@@ -377,3 +377,8 @@ Description: When passing an uninitialized entry_ref, B_OK and
              "application/octet-stream" are returned.
 
 
+OS:          BeOS R5
+Module:      BMimeType
+Location:    SetAttrInfo
+Description: Crashes when passed a NULL BMessage.
+
