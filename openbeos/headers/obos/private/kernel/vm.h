@@ -59,6 +59,10 @@ region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
 	addr size, int lock, int mapping, const char *upath, off_t offset);
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
 
+region_id find_region_by_name(const char *);
+region_id find_region_by_address (addr);
+int vm_resize_region (aspace_id, region_id, size_t);
+
 // XXX remove later
 void vm_test(void);
 
