@@ -47,12 +47,14 @@ struct inpcb {
 	struct route inp_route;	    /* the route to host */
 };
 
-int      in_pcballoc      (struct socket *, struct inpcb *head);
+int      in_pcballoc      (struct socket *, struct inpcb *);
 int      in_pcbbind       (struct inpcb *, struct mbuf *);
 int      in_pcbconnect    (struct inpcb *, struct mbuf *);
 void     in_pcbdetach     (struct inpcb *);
-int 	 in_pcbdisconnect (struct inpcb *inp);
-void     in_losing        (struct inpcb *inp);
+int      in_pcbdisconnect (struct inpcb *);
+void     in_losing        (struct inpcb *);
+void     in_setpeeraddr   (struct inpcb *, struct mbuf *);
+void     in_setsockaddr   (struct inpcb *, struct mbuf *);
 
 struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
 			   uint16 fport_a, struct in_addr laddr,
