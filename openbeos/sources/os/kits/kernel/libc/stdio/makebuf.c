@@ -56,7 +56,6 @@ __smakebuf(fp)
 	register int flags;
 	size_t size;
 	int couldbetty;
-
 	if (fp->_flags & __SNBF) {
 		fp->_bf._base = fp->_p = fp->_nbuf;
 		fp->_bf._size = 1;
@@ -96,6 +95,11 @@ __swhatbuf(fp, bufsize, couldbetty)
 		return (__SNPT);
 	}
 
+	/* XXX - we don't have stat working yet, so simply do
+	 * this to make sure we don't segfault due to buffer sizes!
+	 */
+	st.st_blksize = 0;
+	
 	/* could be a tty if it is a character device */
 	*couldbetty = S_ISCHR(st.st_mode);
 	if (st.st_blksize == 0) {

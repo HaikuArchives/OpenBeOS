@@ -69,10 +69,11 @@ __swrite(cookie, buf, n)
 	int n;
 {
 	register FILE *fp = cookie;
-
+	
 	if (fp->_flags & __SAPP)
 		(void) lseek(fp->_file, (off_t)0, SEEK_END);
 	fp->_flags &= ~__SOFF;	/* in case FAPPEND mode is set */
+
 	return (write(fp->_file, buf, n));
 }
 
