@@ -243,6 +243,8 @@ struct mbuf *m_devget(char *buf, int totlen, int off0,
 struct mbuf *m_free(struct mbuf *mfree);
 void m_freem(struct mbuf *m);
 
+void m_adj(struct mbuf *mp, int req_len);
+
 /* debug functions */
 void dump_freelist(void);
 

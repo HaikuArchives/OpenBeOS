@@ -147,9 +147,9 @@ struct mbuf *m_devget(char *buf, int totlen, int off0,
                                 len = m->m_len;
                 }
                 if (copy)
-                        copy(cp, mtod(m, caddr_t), (size_t)len);
+                        copy(cp, mtod(m, void *), (size_t)len);
                 else
-                        memmove(mtod(m, caddr_t), cp, (size_t)len);
+                        memmove(mtod(m, void *), cp, (size_t)len);
                 cp += len;
                 *mp = m;
                 mp = &m->m_next;
@@ -158,5 +158,35 @@ struct mbuf *m_devget(char *buf, int totlen, int off0,
                         cp = buf;
         }
         return (top);
+}
+
+void m_adj(struct mbuf *mp, int req_len)
+{
+	struct mbuf *m;
+	int len = req_len;
+
+	if ((m = mp) == NULL)
+		return;
+
+	if (len >= 0) {
+		/* trim from the head */
+		while (m!= NULL && len > 0) {
+			if (m->m_len <= len) {
+				/* this whole mbuf isn't enough... */
+				len -= m->m_len;
+				m->m_len = 0;
+				m = m->m_next;
+			} else {
+				/* this mbuf just needs trimming */
+				m->m_len -= len;
+				m->m_data += len;
+				len = 0;
+			}
+		}
+		m = mp;
+		if (mp->m_flags & M_PKTHDR)
+			m->m_pkthdr.len -= (req_len - len);
+	}
+	/* -ve case not yet implemented */
 }
 
