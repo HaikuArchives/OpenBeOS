@@ -211,14 +211,12 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 	if ((flags & (IP_FORWARDING | IP_RAWOUTPUT)) == 0) {
 		ip->ip_v = IPVERSION;
 		ip->ip_off &= IP_DF;
-		ip->ip_id = htons(ip_id);
+		ip->ip_id = htons(ip_id++);
 		ip->ip_hl = hlen >> 2;
 		ipstat.ips_localout++;
 	} else
 		hlen = ip->ip_hl << 2;
 		
-printf("ip->ip_id = %d, ip_id(%p) = %d\n", ip->ip_id, &ip_id, ip_id);		
-
 	/* route the packet! */
 	if (!ro) {
 		ro = &iproute;
@@ -404,12 +402,9 @@ static int ipv4_ctloutput(int op, struct socket *so, int level,
 
 static void ipv4_init(void)
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
 	if (ip_id == 0)
-		ip_id = tv.tv_sec & 0xffff;
+		ip_id = real_time_clock() & 0xffff;
 
-printf("ip_id = %d\n", ip_id);
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
 #ifndef _KERNEL_MODE
