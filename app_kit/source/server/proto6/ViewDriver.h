@@ -133,6 +133,8 @@ protected:
 	// Region used to track of invalid areas for the Begin/EndLineArray functions
 	BRegion laregion;
 	rgb_color highcolor,lowcolor;
+	int32 bufferheight, bufferwidth;
+	int bufferdepth;
 };
 
 #endif

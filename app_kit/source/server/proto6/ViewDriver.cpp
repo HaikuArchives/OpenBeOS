@@ -493,7 +493,7 @@ void ViewDriver::Clear(rgb_color col)
 int32 ViewDriver::GetHeight(void)
 {
 	screenwin->Lock();
-	int32 h=framebuffer->Bounds().IntegerHeight();
+	int32 h=bufferheight;
 	screenwin->Unlock();
 
 	return h;
@@ -502,7 +502,7 @@ int32 ViewDriver::GetHeight(void)
 int32 ViewDriver::GetWidth(void)
 {
 	screenwin->Lock();
-	int32 w=framebuffer->Bounds().IntegerWidth();
+	int32 w=bufferwidth;
 	screenwin->Unlock();
 
 	return w;
@@ -510,7 +510,11 @@ int32 ViewDriver::GetWidth(void)
 
 int ViewDriver::GetDepth(void)
 {
-	return 0;
+	screenwin->Lock();
+	int d=bufferdepth;
+	screenwin->Unlock();
+
+	return d;
 }
 
 void ViewDriver::AddLine(BPoint pt1, BPoint pt2, rgb_color col)
