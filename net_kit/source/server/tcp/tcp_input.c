@@ -104,42 +104,9 @@ extern struct ipv4_module_info *ipm;
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
 
 extern struct core_module_info *core;
-#define pool_get            core->pool_get
-#define pool_put            core->pool_put
-#define m_get               core->m_get
-#define m_gethdr            core->m_gethdr
-#define m_pullup            core->m_pullup
-#define m_free              core->m_free
-#define m_freem             core->m_freem
-#define m_copydata          core->m_copydata
-#define m_copym             core->m_copym
-#define m_adj               core->m_adj
-#define m_prepend           core->m_prepend
-#define in_pcballoc         core->in_pcballoc
-#define in_pcbconnect       core->in_pcbconnect
-#define in_pcbdisconnect    core->in_pcbdisconnect
-#define in_pcbbind          core->in_pcbbind
-#define in_pcblookup        core->in_pcblookup
-#define in_localaddr        core->in_localaddr
-#define in_pcbdetach        core->in_pcbdetach
-#define in_control          core->in_control
-#define in_pcbrtentry       core->in_pcbrtentry
-#define soreserve           core->soreserve
-#define sbreserve           core->sbreserve
-#define sbappend            core->sbappend
-#define sbappendaddr        core->sbappendaddr
-#define sonewconn           core->sonewconn
-#define sowakeup            core->sowakeup
-#define soisconnected       core->soisconnected
-#define soisdisconnected    core->soisdisconnected
-#define soisdisconnecting   core->soisdisconnecting
-#define sohasoutofband      core->sohasoutofband
-#define socantrcvmore       core->socantrcvmore
-#define sbdrop              core->sbdrop
-#define sbflush             core->sbflush
-#define rtalloc             core->rtalloc
 #endif
 
 int	    tcprexmtthresh = 3;

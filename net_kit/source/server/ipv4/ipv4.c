@@ -26,32 +26,11 @@
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
-
-#define m_get               core->m_get
-#define m_free              core->m_free
-#define m_freem             core->m_freem
-#define m_adj               core->m_adj
-#define m_prepend           core->m_prepend
-#define m_pullup            core->m_pullup
-#define in_pcballoc         core->in_pcballoc
-#define in_pcbconnect       core->in_pcbconnect
-#define in_pcbdisconnect    core->in_pcbdisconnect
-#define in_pcbbind          core->in_pcbbind
-#define soreserve           core->soreserve
-#define sbappendaddr        core->sbappendaddr
-#define in_pcblookup        core->in_pcblookup
-#define sowakeup            core->sowakeup
-#define in_pcbdetach        core->in_pcbdetach
-#define rtfree              core->rtfree
-#define rtalloc             core->rtalloc
-#define ifa_ifwithdstaddr   core->ifa_ifwithdstaddr
-#define ifa_ifwithnet       core->ifa_ifwithnet
-#define in_broadcast        core->in_broadcast
-#define get_primary_addr    core->get_primary_addr
+#include "net_server/core_funcs.h"
 
 static struct core_module_info *core = NULL;
 
-#endif
+#endif	/* _KERNEL_MODE */
 
 struct protosw *proto[IPPROTO_MAX];
 struct in_ifaddr *in_ifaddr;

@@ -20,26 +20,13 @@
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
 
 static struct core_module_info *core = NULL;
-#define m_freem             core->m_freem
-#define m_adj               core->m_adj
-#define m_prepend           core->m_prepend
-#define in_pcballoc         core->in_pcballoc
-#define in_pcbconnect       core->in_pcbconnect
-#define in_pcbdisconnect	core->in_pcbdisconnect
-#define in_pcbbind			core->in_pcbbind
-#define soreserve			core->soreserve
-#define sbappendaddr		core->sbappendaddr
-#define in_pcblookup		core->in_pcblookup
-#define sowakeup			core->sowakeup
-#define in_pcbdetach		core->in_pcbdetach
-#define in_control          core->in_control
-#define soisconnected       core->soisconnected
 
 #define UDP_MODULE_PATH		"network/protocol/udp"
 
-#else
+#else	/* _KERNEL_MODE */
 #define UDP_MODULE_PATH	    "modules/protocol/udp"
 #endif
 

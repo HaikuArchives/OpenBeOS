@@ -163,7 +163,7 @@ else
 	return mss;
 }
 
-void tcp_quench(struct inpcb *inp, int errno)
+void tcp_quench(struct inpcb *inp, int error)
 {
 	struct tcpcb *tp = intotcpcb(inp);
 	

@@ -26,49 +26,20 @@
 #include "netinet/tcpip.h"
 
 #include "ipv4/ipv4_module.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
+#include "net_server/core_funcs.h"
 
 struct core_module_info *core = NULL;
-#define pool_init           core->pool_init
-#define pool_get            core->pool_get
-#define pool_put            core->pool_put
-#define add_protosw         core->add_protosw
-#define m_get               core->m_get
-#define m_gethdr            core->m_gethdr
-#define m_free              core->m_free
-#define m_freem             core->m_freem
-#define m_adj               core->m_adj
-#define m_prepend           core->m_prepend
-#define in_pcballoc         core->in_pcballoc
-#define in_pcblookup		core->in_pcblookup
-#define in_pcbconnect       core->in_pcbconnect
-#define in_pcbdisconnect	core->in_pcbdisconnect
-#define in_pcbbind			core->in_pcbbind
-#define in_losing           core->in_losing
-#define in_pcbdetach		core->in_pcbdetach
-#define in_control          core->in_control
-#define in_setsockaddr      core->in_setsockaddr
-#define in_setpeeraddr      core->in_setpeeraddr
-#define sbappend            core->sbappend
-#define sbappendaddr		core->sbappendaddr
-#define soreserve			core->soreserve
-#define sowakeup			core->sowakeup
-#define soisconnected       core->soisconnected
-#define soisconnecting      core->soisconnecting
-#define soisdisconnected    core->soisdisconnected
-#define soisdisconnecting   core->soisdisconnecting
-#define socantsendmore      core->socantsendmore
-#define sbflush             core->sbflush
-
 
 #define TCP_MODULE_PATH		"network/protocol/tcp"
 
 static timer slowtim;
 static timer fasttim;
 
-#else
+#else	/* _KERNEL_MODE */
 #include "net_timer.h"
 #define TCP_MODULE_PATH	    "modules/protocol/tcp"
 static image_id ipid = -1;
@@ -234,7 +205,7 @@ printf("tcp_close\n");
 	return NULL;
 }
 
-struct tcpcb *tcp_drop(struct tcpcb *tp, int errno)
+struct tcpcb *tcp_drop(struct tcpcb *tp, int error)
 {
 	struct socket *so = tp->t_inpcb->inp_socket;
 
@@ -247,9 +218,9 @@ printf("tcp_drop\n");
 	} else
 		tcpstat.tcps_conndrops++;
 	
-	if (errno == ETIMEDOUT && tp->t_softerror)
-		errno = tp->t_softerror;
-	so->so_error = errno;
+	if (error == ETIMEDOUT && tp->t_softerror)
+		error = tp->t_softerror;
+	so->so_error = error;
 	return tcp_close(tp);
 }
 
