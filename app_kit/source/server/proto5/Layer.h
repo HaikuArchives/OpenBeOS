@@ -94,8 +94,8 @@ public:
 	rgb_color GetColor(void) const;
 	
 	static int32 UpdaterThread(void *data);
-private:
 	rgb_color bgcolor;
+private:
 	thread_id updater_id;
 	bool visible;
 	DisplayDriver *driver;

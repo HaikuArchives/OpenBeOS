@@ -104,6 +104,7 @@ public:
 	virtual void StrokeBezier(BPoint *points, uint8 *pattern);
 	virtual void StrokeEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern);
 	virtual void StrokeLine(BPoint point, uint8 *pattern);
+	virtual void StrokeLine(BPoint pt1, BPoint pt2, rgb_color col);
 	virtual void StrokePolygon(int *x, int *y, int numpoints, bool is_closed);
 	virtual void StrokeRect(BRect rect,uint8 *pattern);
 	virtual void StrokeRect(BRect rect, rgb_color col);

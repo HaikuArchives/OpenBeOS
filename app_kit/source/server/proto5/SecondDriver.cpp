@@ -660,6 +660,10 @@ void SecondDriver::StrokeLine(BPoint point, uint8 *pattern){
    MovePenTo(point); // ends up in last position
 }
 
+void SecondDriver::StrokeLine(BPoint pt1, BPoint pt2, rgb_color col)
+{
+}
+
 /*******************************************************
 *   @description
 *******************************************************/

@@ -3,7 +3,7 @@
 		Code necessary to handle the Desktop, defined as the collection of workspaces.
 */
 
-//#define DEBUG_WORKSPACES
+#define DEBUG_WORKSPACES
 
 #include <List.h>
 #include <Path.h>
@@ -18,7 +18,6 @@
 #include "SecondDriver.h"
 #include "Desktop.h"
 #include "WindowBorder.h"
-#include "UpdateNode.h"
 
 class ServerWindow;
 class ServerBitmap;
@@ -55,7 +54,7 @@ public:
 	Workspace(BPath imagepath);
 	~Workspace();
 	void SetBGColor(rgb_color col);
-	rgb_color SetBGColor(void);
+	rgb_color BGColor(void);
 	thread_id tid;
 	
 	RootLayer *toplayer;
@@ -98,7 +97,7 @@ Workspace::Workspace(void)
 }
 
 Workspace::~Workspace(void)
-{
+ {
 	workspace_count--;
 	toplayer->PruneTree();
 }
@@ -107,9 +106,13 @@ void Workspace::SetBGColor(rgb_color col)
 {
 	bgcolor=col;
 	toplayer->SetColor(col);
+#ifdef DEBUG_WORKSPACES
+printf("Workspace::SetBGColor(%d,%d,%d,%d)\n",bgcolor.red,bgcolor.green,
+	bgcolor.blue,bgcolor.alpha);
+#endif
 }
 
-rgb_color Workspace::SetBGColor(void)
+rgb_color Workspace::BGColor(void)
 {
 	return bgcolor;
 }
@@ -173,16 +176,12 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	gfxdriver->SetScreen(pactive_workspace->screendata.spaces);
 
 	// Clear the screen
-	set_rgb_color(&(pactive_workspace->bgcolor),80,85,152);
-	gfxdriver->Clear(pactive_workspace->bgcolor);
+	set_rgb_color(&(pactive_workspace->toplayer->bgcolor),80,85,152);
+	gfxdriver->Clear(pactive_workspace->toplayer->bgcolor);
 	startup_cursor=new ServerCursor(default_cursor);
 	gfxdriver->SetCursor(startup_cursor);
 
 	pactive_workspace->toplayer->SetVisible(true);
-	upnode=new UpdateNode();
-	updatenode=upnode;
-//	if(upnode->InitCheck()==B_OK)
-//		upnode->Monitor(pactive_workspace->toplayer);
 #ifdef DEBUG_WORKSPACES
 printf("Desktop initialized\n");
 #endif
@@ -204,7 +203,6 @@ void shutdown_desktop(void)
 	delete gfxdriver;
 	delete workspacelock;
 	delete layerlock;
-	delete upnode;
 	delete startup_cursor;
 }
 
