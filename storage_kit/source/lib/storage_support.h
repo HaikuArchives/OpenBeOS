@@ -10,8 +10,6 @@
 #ifndef _sk_storage_support_h_
 #define _sk_storage_support_h_
 
-//! Private Storage Kit Namespace
-/*! Private Storage Kit Namespace */
 namespace StorageKit {
 
 //! Returns whether the supplied path is absolute.
