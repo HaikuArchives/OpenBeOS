@@ -101,9 +101,9 @@ static int32 tx_thread(void *data)
 	char buffer[2048];
 	size_t len = 0;
 	status_t status;
-//#if SHOW_DEBUG
+#if SHOW_DEBUG
 	int txc = 0;
-//#endif
+#endif
 
 	while (1) {
 		acquire_sem_etc(i->txq->pop,1,B_CAN_INTERRUPT|B_DO_NOT_RESCHEDULE, 0);
