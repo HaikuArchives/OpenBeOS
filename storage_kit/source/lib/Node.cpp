@@ -191,10 +191,12 @@ BNode::GetStat(struct stat *st) const {
 */
 status_t
 BNode::SetTo(const entry_ref *ref) {
-	char path[B_PATH_NAME_LENGTH];
+	char path[B_PATH_NAME_LENGTH + 1];
 	status_t error = (ref ? B_OK : B_BAD_VALUE);
-	if (error == B_OK)
-		error = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
+	if (error == B_OK) {
+		error = StorageKit::entry_ref_to_path(ref, path,
+											  B_PATH_NAME_LENGTH + 1);
+	}
 	if (error == B_OK)
 		error = SetTo(path);
 	fCStatus = error;

@@ -226,7 +226,7 @@ ssize_t read_link(FileDescriptor fd, char *result, int size);
 //------------------------------------------------------------------------------
 /*! Converts the given entry_ref into an absolute pathname, returning
 	the result in the string of length size pointed to by result (a size
-	of B_PATH_NAME_LENGTH is a good idea).
+	of B_PATH_NAME_LENGTH+1 is a good idea).
 	
 	Returns B_OK if successful.
 	
@@ -251,7 +251,7 @@ status_t dir_to_self_entry_ref(FileDescriptor dir, entry_ref *result);
 
 /*! Converts the given directory into an absolute pathname, returning the
 	result in the string of length size pointed to by result (a size of
-	B_PATH_NAME_LENGTH is a good idea).
+	B_PATH_NAME_LENGTH+1 is a good idea).
 	
 	Returns B_OK if successful.
 	

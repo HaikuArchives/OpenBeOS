@@ -344,10 +344,10 @@ StorageKit::get_stat(FileDescriptor file, Stat *s) {
 
 status_t
 StorageKit::get_stat(entry_ref &ref, Stat *result) {
-	char path[B_PATH_NAME_LENGTH];
+	char path[B_PATH_NAME_LENGTH + 1];
 	status_t status;
 	
-	status = StorageKit::entry_ref_to_path(&ref, path, B_PATH_NAME_LENGTH);
+	status = StorageKit::entry_ref_to_path(&ref, path, B_PATH_NAME_LENGTH + 1);
 	return (status != B_OK) ? status : StorageKit::get_stat(path, result);
 }		
 
@@ -894,11 +894,11 @@ StorageKit::get_canonical_path(const char *path, char *&result)
 {
 	status_t error = (path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
-		result = new(nothrow) char[B_PATH_NAME_LENGTH];
+		result = new(nothrow) char[B_PATH_NAME_LENGTH + 1];
 		if (!result)
 			error = B_NO_MEMORY;
 		if (error == B_OK) {
-			error = get_canonical_path(path, result, B_PATH_NAME_LENGTH);
+			error = get_canonical_path(path, result, B_PATH_NAME_LENGTH + 1);
 			if (error != B_OK) {
 				delete[] result;
 				result = NULL;
@@ -939,11 +939,12 @@ StorageKit::get_canonical_dir_path(const char *path, char *&result)
 {
 	status_t error = (path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
-		result = new(nothrow) char[B_PATH_NAME_LENGTH];
+		result = new(nothrow) char[B_PATH_NAME_LENGTH + 1];
 		if (!result)
 			error = B_NO_MEMORY;
 		if (error == B_OK) {
-			error = get_canonical_dir_path(path, result, B_PATH_NAME_LENGTH);
+			error = get_canonical_dir_path(path, result,
+										   B_PATH_NAME_LENGTH + 1);
 			if (error != B_OK) {
 				delete[] result;
 				result = NULL;

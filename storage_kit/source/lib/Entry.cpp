@@ -400,9 +400,10 @@ BEntry::SetTo(const entry_ref *ref, bool traverse)
 		return (fCStatus = B_BAD_VALUE);
 	}
 
-	char path[B_PATH_NAME_LENGTH];
+	char path[B_PATH_NAME_LENGTH + 1];
 
-	fCStatus = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
+	fCStatus = StorageKit::entry_ref_to_path(ref, path,
+											 B_PATH_NAME_LENGTH + 1);
 	return (fCStatus == B_OK) ? SetTo(path, traverse) : fCStatus ;
 }
 
@@ -412,8 +413,33 @@ status_t
 BEntry::SetTo(const char *path, bool traverse)
 {
 	Unset();
+	// check the argument
+	fCStatus = (path ? B_OK : B_BAD_VALUE);
+	if (fCStatus == B_OK)
+		fCStatus = StorageKit::check_path_name(path);
+	if (fCStatus == B_OK) {
+		// Get the path and leaf portions of the given path
+		char *pathStr, *leafStr;
+		pathStr = leafStr = NULL;
+		if (!StorageKit::split_path(path, pathStr, leafStr))
+			fCStatus = B_NO_MEMORY;
+		if (fCStatus == B_OK) {
+			// Open the directory
+			StorageKit::FileDescriptor dirFd;
+			fCStatus = StorageKit::open_dir(pathStr, dirFd);
+			if (fCStatus == B_OK) {
+				fCStatus = set(dirFd, leafStr, traverse);
+				if (fCStatus != B_OK)
+					StorageKit::close_dir(dirFd);		
+			}
+		}
+		delete [] pathStr;
+		delete [] leafStr;
+	}
 
+/*
 	if (path != NULL) {
+
 		// Get the path and leaf portions of the given path
 		char *pathStr, *leafStr;
 		pathStr = leafStr = NULL;
@@ -430,11 +456,30 @@ BEntry::SetTo(const char *path, bool traverse)
 				}
 			}
 		}
-		
 		delete [] pathStr;
 		delete [] leafStr;
+*/
+/*
+		// Get the path and leaf portions of the given path
+		BPath entryPath(path);
+		BPath dirPath;
+		fCStatus = entryPath.InitCheck();
+		if (fCStatus == B_OK)
+			fCStatus = entryPath.GetParent(&dirPath);
+		if (fCStatus == B_OK) {
+			// Open the directory
+			StorageKit::FileDescriptor dirFd;
+			fCStatus = StorageKit::open_dir(dirPath.Path(), dirFd);
+			if (fCStatus == B_OK) {
+				fCStatus = set(dirFd, entryPath.Leaf(), traverse);
+				if (fCStatus != B_OK)
+					StorageKit::close_dir(dirFd);		
+			}
+		}
 	} else
 		fCStatus = B_BAD_VALUE;
+*/
+
 	
 	return fCStatus;
 }

@@ -150,10 +150,12 @@ status_t
 BFile::SetTo(const entry_ref *ref, uint32 openMode)
 {
 	Unset();
-	char path[B_PATH_NAME_LENGTH];
+	char path[B_PATH_NAME_LENGTH + 1];
 	status_t error = (ref ? B_OK : B_BAD_VALUE);
-	if (error == B_OK)
-		error = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
+	if (error == B_OK) {
+		error = StorageKit::entry_ref_to_path(ref, path,
+											  B_PATH_NAME_LENGTH + 1);
+	}
 	if (error == B_OK)
 		error = SetTo(path, openMode);
 	set_status(error);
