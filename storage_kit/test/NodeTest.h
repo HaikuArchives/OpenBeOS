@@ -33,7 +33,7 @@ public:
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Dup Test", &NodeTest::DupTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Equality Test", &NodeTest::EqualityTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Assignment Test", &NodeTest::AssignmentTest) );
-//		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Locking Test", &NodeTest::LockTest) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Lock Test (NOTE: This fails with OpenBeOS Posix libraries)", &NodeTest::LockTest) );
 		
 		return suite;
 	}		
@@ -264,7 +264,12 @@ public:
 		BNode node;
 		
 		BNode node2("./");
-		CPPUNIT_ASSERT( DecodeResult(node2.Lock()) == B_OK );
+		CPPUNIT_ASSERT( node2.Lock() == B_OK );
+		
+		BNode node3("./");
+		CPPUNIT_ASSERT( node3.InitCheck() == B_BUSY );
+		
+		CPPUNIT_ASSERT( node2.Unlock() == B_OK );
 	
 	}
 	
