@@ -72,6 +72,12 @@ rule UserObject
 	}
 }
 
+# Override the default to give "prettier" command lines.
+actions Cc 
+{
+	$(CC) -c $(2) -O2 $(CCFLAGS) $(CCDEFS) $(CHDRS) -o $(1) ;
+}
+
 #-------------------------------------------------------------------------------
 # General High-level OBOS target rules
 #-------------------------------------------------------------------------------
@@ -111,25 +117,45 @@ rule Addon
 	LINKFLAGS on $(1) = $(LINKFLAGS) -nostart -Xlinker -soname=\"$(1)\" ;
 }
 
+rule MakeLocateObjects
+{
+	# MakeLocateObjects <gristed_sources_or_objects> ;
+	
+	local _objs = $(1:S=$(SUFOBJ)) ;
+	
+	for o in $(_objs)
+	{
+		local dir = $(o:D) ;
+		if $(dir) {
+			MakeLocate $(o) : [ FDirName $(LOCATE_TARGET) $(dir) ] ;
+		} else {
+			MakeLocate $(o) : $(LOCATE_TARGET) ;
+		}
+	}
+}
+
 rule StaticLibrary
 {
 	# SharedLibrary <name> : <sources> ;
 	
 	SetupIncludes ;
 	SetupObjectsDir ;
+	MakeLocateObjects $(2) ;
 	Library lib$(<).a : $(>) ;
-	MakeLocate lib$(<).so : $(OBOS_STLIB_DIR) ;
+	MakeLocate lib$(<).a : $(OBOS_STLIB_DIR) ;
 }
 
 rule SharedLibrary
 {
 	# SharedLibrary <name> : <sources> ;
+	local _lib = lib$(1).so ;
 	
 	SetupIncludes ;
 	SetupObjectsDir ;
-	Main lib$(<).so : $(>) ;
-	MakeLocate lib$(<).so : $(OBOS_SHLIB_DIR) ;
-	LINKFLAGS on lib$(<).so = $(LINKFLAGS) -nostart -Xlinker -soname=\"lib$(<).so\" ;
+	MakeLocateObjects $(2) ;
+	Main $(_lib) : $(2) ;
+	MakeLocate $(_lib) : $(OBOS_SHLIB_DIR) ;
+	LINKFLAGS on $(_lib) = $(LINKFLAGS) -nostart -Xlinker -soname=\"$(_lib)\" ;
 }
 
 rule LinkSharedOSLibs
@@ -244,29 +270,6 @@ actions Link bind NEEDLIBS
 	mimeset -f "$(1)" ;
 }
 
-
-
-rule Kernel
-{
-	# Kernel <kernelname> : <sourcefiles> ;
-
-	# Make object go into our objects hierarchy
-	SetupObjectsDir ;
-
- 	# Set compilation flags to 
-	CCFLAGS on $(>) += -isystem [ FDirName $(OBOS_TOP) my relative include path with spaces iso slashes ] ;
-
-	# We're generating an executable
-	Main $(<) : $(>) ;
-
-	# The end product should go into the kernel directory
-	MakeLocate $(<) : $(OBOS_KERNEL_DIR) ;
-
-	# Specify some extra options for the linker
-	LINKFLAGS on $(<) += -nostart -Xlinker -soname=\"$(<)\" ;
-}
-
-
 rule assemble
 {
 	DEPENDS $(1) : $(2) ;
@@ -275,46 +278,43 @@ rule assemble
 
 actions assemble
 {
-$(CC) -c $(2) $(OPTIM) $(KERNEL_CCFLAGS) -o $(1) ;
+$(CC) -c $(2) $(KERNEL_CCFLAGS) -o $(1) ;
 }
 
 ## Kernel stuff!
 
 rule SetupKernel
 {
-	# Usage SetupKernel ;
+	# Usage SetupKernel <sources_or_objects> : <extra_cc_flags>;
 
+	local _objs = $(1:S=$(SUFOBJ)) ;
+	
 	UsePublicHeaders kernel ;
 	UsePrivateHeaders kernel ;
 	UseArchHeaders $(OBOS_ARCH) ;
 
 	SetupObjectsDir ;
 	
-	SubDirCcFlags $(KERNEL_CCFLAGS) ;
+	CCFLAGS on $(_objs) = $(KERNEL_CCFLAGS) $(2) ;
+	C++FLAGS on $(_objs) = $(KERNEL_CCFLAGS) $(2) ;
 }
 
 rule KernelObjects
 {
-	SetupKernel ;
-
-	if $(2) {
-		SubDirCcFlags $(2) ;
-	}
+	SetupKernel $(1) : $(2) ;
 
 	Objects $(1) ;
 }
 
 rule KernelLd
 {
-	# KernelLd <name> : <objs> : <linkerscript> : <args> ;
+	# KernelLd <name> : <objs> : <linkerscript> : <args> : <gcc_off> ;
 
-	local _obj = [ FGristFiles $(1) ] ;
-
-	SetupKernel ;
+	SetupKernel $(2) ;
 	LINK on $(1) = ld ;
 
-	LINKFLAGS on $(1) = $(4) -nostdlib ;
-	if $(2) { LINKFLAGS on $(1) += --script=$(3) ; }
+	LINKFLAGS on $(1) = $(4) ;
+	if $(3) { LINKFLAGS on $(1) += --script=$(3) ; }
 
 	# Remove any preset LINKLIBS
 	LINKLIBS on $(1) =  ;
@@ -323,13 +323,13 @@ rule KernelLd
 	Clean clean : $(1) ;
 	Depends all : $(1) ;
 	Depends $(1) : $(2) ;
-	Depends all : $(_obj) ;
-	Depends $(_obj) : $(2) ;
 
 	MakeLocate $(1) : $(LOCATE_TARGET) ;
 
 	# Add libgcc.a - NB this should be detected not hard coded!
-	LINKLIBS on $(1) += "-L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc" ;
+	if ! $(5) {
+		LINKLIBS on $(1) += "-L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc" ;
+	}
 }
 
 actions KernelLd
@@ -346,12 +346,34 @@ rule KernelStaticLibrary
 	SetupKernel $(1) ;
 
 	if $(3) {
-		SubDirCcFlags $(3) ;
+		CCFLAGS on $(1) += $(3) ;
 	}
 
 	Library $(1) : $(2) ;
 }
- 
+
+rule KernelStaticLibraryObjects
+{
+	# Usage KernelStaticLibrary <name> : <sources> ;
+	# This is designed to take a set of sources and libraries and create
+	# a file called <name>
+
+	SetupKernel $(2) ;
+
+	# Show that we depend on the libraries we need
+	Clean clean : $(1) ;
+	Depends all : $(1) ;
+	Depends $(1) : $(2) ;
+
+	MakeLocate $(1) : $(LOCATE_TARGET) ;
+
+}
+
+actions KernelStaticLibraryObjects
+{
+ar -r $(1) $(2) ;
+}
+
 rule SystemMain
 {
 	# Just use as Main but this sets nothing special...
