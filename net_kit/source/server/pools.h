@@ -7,6 +7,8 @@
 #ifndef OBOS_POOLS_H
 #define OBOS_POOLS_H
 
+typedef struct pool_ctl	pool_ctl;
+
 struct pool_mem {
 	struct pool_mem *next;
 	area_id	aid;
@@ -28,12 +30,12 @@ struct pool_ctl {
 	sem_id lock;
 };
 
-void pool_init(struct pool_ctl **p, size_t sz);
-char *pool_get(struct pool_ctl *p);
-void pool_put(struct pool_ctl *p, void *ptr);
-void pool_destroy(struct pool_ctl *p);
+void pool_init(pool_ctl **p, size_t sz);
+char *pool_get(pool_ctl *p);
+void pool_put(pool_ctl *p, void *ptr);
+void pool_destroy(pool_ctl *p);
 
-void pool_debug_walk(struct pool_ctl *p);
+void pool_debug_walk(pool_ctl *p);
 
 #endif
 	
