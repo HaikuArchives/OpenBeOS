@@ -8,7 +8,7 @@
 #include <stack>
 
 // System Includes -------------------------------------------------------------
-#include <Autolock.h>
+#include "../support/headers/Autolock.h"
 
 // Project Includes ------------------------------------------------------------
 

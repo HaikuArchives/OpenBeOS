@@ -359,6 +359,16 @@ BMessageQueue::Unlock(void)
 
 
 /*
+ *  Method: BMessageQueue::IsLocked()
+ *    Descr: This member indicates whether the looper is locked
+ */
+bool
+BMessageQueue::IsLocked(void)
+{
+	return fLocker.IsLocked();
+}
+
+/*
  *  Method: BMessageQueue::NextMessage()
  *   Descr: This member removes the first BMessage on the queue and returns
  *          it to the caller.  If the queue is empty, NULL is returned.

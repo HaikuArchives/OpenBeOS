@@ -473,7 +473,7 @@ void Mangle(const char* name, BString& out)
 		out += 'Q';
 		if (count > 10)
 			out += '_';
-		out += count;
+		out << count;
 		if (count > 10)
 			out += '_';
 	}

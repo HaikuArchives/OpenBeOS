@@ -12,7 +12,7 @@
 #if defined(SYSTEM_TEST)
 #include <be/app/Handler.h>
 #else
-#include "../../../../lib/application/Handler.h"
+#include "../../../../source/lib/application/headers/Handler.h"
 #endif
 
 // Project Includes ------------------------------------------------------------

@@ -37,6 +37,7 @@ public:
 	
 	bool Lock(void);
 	void Unlock(void);
+	bool IsLocked(void);
 	
 	BMessage *NextMessage(void);
 

@@ -36,11 +36,16 @@
  */
 
 // Standard Includes -----------------------------------------------------------
+#include <stdio.h>
 
 // System Includes -------------------------------------------------------------
+#include "../headers/Autolock.h"
 #include <Looper.h>
 #include <Message.h>
 #include <MessageFilter.h>
+#include "../headers/MessageQueue.h"
+#include <Messenger.h>
+#include <PropertyInfo.h>
 
 // Project Includes ------------------------------------------------------------
 
@@ -49,8 +54,11 @@
 
 // Local Defines ---------------------------------------------------------------
 #define FILTER_LIST_BLOCK_SIZE	5
+#define DATA_BLOCK_SIZE			5
 
 // Globals ---------------------------------------------------------------------
+using BPrivate::gDefaultTokens;
+
 typedef bool (*find_loop_pred)(_loop_data_* data, void* data);
 _loop_data_* find_loop_data(_loop_data_* begin, _loop_data_* end,
 							find_loop_pred, void* data);
@@ -61,12 +69,26 @@ bool looper_pred(_loop_data_* looper, void* data);
 bool empty_slot_pred(_loop_data_* looper, void* data);
 bool copy_list_pred(_loop_data_* looper, void* data);
 
+port_id _get_looper_port_(const BLooper* looper);
+bool _use_preferred_target_(BMessage* msg) { return msg->fPreferred; }
+int32 _get_message_target_(BMessage* msg) { return msg->fTarget; }
+
 uint32			BLooper::sLooperID = B_ERROR;
 uint32			BLooper::sLooperListSize = 0;
 uint32			BLooper::sLooperCount = 0;
 _loop_data_*	BLooper::sLooperList = NULL;
 BLocker			BLooper::sLooperListLock;
 team_id			BLooper::sTeamID = B_ERROR;
+
+static property_info gLooperPropInfo[] =
+{
+};
+
+struct _loop_data_
+{
+	BLooper*	looper;
+	thread_id	thread;
+};
 
 //------------------------------------------------------------------------------
 BLooper::BLooper(const char* name, int32 priority, int32 port_capacity)
@@ -106,7 +128,7 @@ BLooper::BLooper(BMessage* data)
 //------------------------------------------------------------------------------
 BArchivable* BLooper::Instantiate(BMessage* data)
 {
-	if (validate_instantiation_data(data))
+	if (validate_instantiation(data, "BLooper"))
 	{
 		return new BLooper(data);
 	}
@@ -219,7 +241,7 @@ BMessage* BLooper::DetachCurrentMessage()
 	Lock();
 	BMessage* msg = fLastMessage;
 	fLastMessage = NULL;
-	fQueue.RemoveMessage(msg);
+	fQueue->RemoveMessage(msg);
 	Unlock();
 	return msg;
 }
@@ -246,7 +268,7 @@ bool BLooper::IsMessageWaiting() const
 	do
 	{
 		count = port_buffer_size_etc(fMsgPort, B_TIMEOUT, 0);
-	while (count == B_WOULD_BLOCK);
+	} while (count == B_WOULD_BLOCK);
 
 	return count > 0;
 }
@@ -258,8 +280,8 @@ void BLooper::AddHandler(BHandler* handler)
 	if (handler->Looper() == NULL)
 	{
 		fHandlers.AddItem(handler);
-		handler->SetNextHandler(this);
 		handler->SetLooper(this);
+		handler->SetNextHandler(this);
 		BList* Filters = handler->FilterList();
 		if (Filters)
 		{
@@ -344,7 +366,7 @@ thread_id BLooper::Run()
 		debugger("");
 	}
 
-	fTaskID = spawn_thread(_task0_, name, priority, this);
+	fTaskID = spawn_thread(_task0_, Name(), fInitPriority, this);
 
 	if (fTaskID == B_NO_MORE_THREADS || fTaskID == B_NO_MEMORY)
 	{
@@ -364,6 +386,18 @@ thread_id BLooper::Run()
 		return err;
 	}
 
+	_loop_data_* data = find_loop_data(sLooperList,
+									   sLooperList + sLooperCount,
+									   looper_pred, (void*)this);
+	if (!data)
+	{
+		debugger("");
+	}
+	else
+	{
+		data->thread = fTaskID;
+	}
+
 	return fTaskID;
 }
 //------------------------------------------------------------------------------
@@ -377,7 +411,7 @@ void BLooper::Quit()
 			name = "no-name";
 		}
 		printf("ERROR - you must Lock a looper before calling Quit(), "
-			   "team=%d, looper=%s", Team(), name);
+			   "team=%ld, looper=%s", Team(), name);
 	}
 
 	if (!fRunCalled || find_thread(NULL) == fTaskID)
@@ -405,7 +439,7 @@ void BLooper::Quit()
 		// There's a possibility that PostMessage() will return B_WILL_BLOCK
 		// because the port is full, so we'll wait a bit and re-post until
 		// we won't block.
-		while (err == B_WILL_BLOCK)
+		while (err == B_WOULD_BLOCK)
 		{
 			// TODO: test this value; it may be too short
 			snooze(10000);
@@ -554,6 +588,7 @@ BHandler* BLooper::ResolveSpecifier(BMessage* msg, int32 index,
 status_t BLooper::GetSupportedSuites(BMessage* data)
 {
 	// TODO: implement
+	return B_ERROR;
 }
 //------------------------------------------------------------------------------
 void BLooper::AddCommonFilter(BMessageFilter* filter)
@@ -650,6 +685,7 @@ BLooper::BLooper(const BLooper&)
 BLooper& BLooper::operator=(const BLooper& )
 {
 	// Looper copying not allowed
+	return *this;
 }
 //------------------------------------------------------------------------------
 BLooper::BLooper(int32 priority, port_id port, const char* name)
@@ -662,7 +698,7 @@ BLooper::BLooper(int32 priority, port_id port, const char* name)
 status_t BLooper::_PostMessage(BMessage* msg, BHandler* handler,
 							   BHandler* reply_to)
 {
-	BAutolock ListLock(sLooperListLock)
+	BAutolock ListLock(sLooperListLock);
 	if (!ListLock.IsLocked())
 	{
 		return B_BAD_VALUE;
@@ -777,8 +813,8 @@ status_t BLooper::_Lock(BLooper* loop, port_id port, bigtime_t timeout)
 			return B_BAD_VALUE;
 		}
 	
-		//	Bump the requested lock count (using fAtomicLock for this)
-		++loop->fAtomicLock;
+		//	Bump the requested lock count (using fAtomicCount for this)
+		++loop->fAtomicCount;
 
 		// sLooperListLock automatically released here
 	}
@@ -814,6 +850,7 @@ status_t BLooper::_LockComplete(BLooper* loop, int32 old, thread_id this_tid,
 								sem_id sem, bigtime_t timeout)
 {
 	// What is this for?  Hope I'm not missing something conceptually here ...
+	return B_ERROR;
 }
 //------------------------------------------------------------------------------
 void BLooper::InitData()
@@ -833,17 +870,17 @@ void BLooper::InitData()
 		sTeamID = info.team;
 	}
 
-	BAutoLock ListLock(sLooperListLock);
+	BAutolock ListLock(sLooperListLock);
 	AddLooper(this);
-	AddHandler(this);
 	Lock();
+	AddHandler(this);
 }
 //------------------------------------------------------------------------------
 void BLooper::InitData(const char* name, int32 priority, int32 port_capacity)
 {
 	fLockSem = create_sem(1, name);
 
-	if (fMsgPort >= 0)
+	if (fMsgPort <= 0)
 	{
 		fMsgPort = create_port(port_capacity, name ? name : "LooperPort");
 	}
@@ -883,13 +920,13 @@ void* BLooper::ReadRawFromPort(int32* msgcode, bigtime_t tout)
 	ssize_t buffersize;
 	ssize_t bytesread;
 
-	if (time == B_INFINITE_TIMEOUT)
+	if (tout == B_INFINITE_TIMEOUT)
 	{
 		buffersize = port_buffer_size(fMsgPort);
 	}
 	else
 	{
-		buffersize = port_buffer_size_etc(fMsgPort, 0, time);
+		buffersize = port_buffer_size_etc(fMsgPort, 0, tout);
 		if (buffersize == B_TIMED_OUT || buffersize == B_BAD_PORT_ID ||
 			buffersize == B_WOULD_BLOCK)
 		{
@@ -903,7 +940,7 @@ void* BLooper::ReadRawFromPort(int32* msgcode, bigtime_t tout)
 		fMsgBuffer = new int8[fMsgBufferSize];
 	}
 
-	if (time == B_INFINITE_TIMEOUT)
+	if (tout == B_INFINITE_TIMEOUT)
 	{
 		bytesread = read_port(fMsgPort, msgcode, msgbuffer, buffersize);
 	}
@@ -924,9 +961,10 @@ BMessage* BLooper::ReadMessageFromPort(bigtime_t tout)
 	void* msgbuffer = ReadRawFromPort(&msgcode, tout);
 
 	bmsg = ConvertToMessage(msgbuffer, msgcode);
-	if (buffersize > 0)
+
+	if (msgbuffer)
 	{
-		delete msgbuffer;
+		delete[] msgbuffer;
 	}
 
 	return bmsg;
@@ -934,7 +972,7 @@ BMessage* BLooper::ReadMessageFromPort(bigtime_t tout)
 //------------------------------------------------------------------------------
 BMessage* BLooper::ConvertToMessage(void* raw, int32 code)
 {
-	BMessage* bmsg = new BMessage(msgcode);
+	BMessage* bmsg = new BMessage(code);
 
 	if (raw != NULL)
 	{
@@ -1010,9 +1048,9 @@ void BLooper::task_looper()
 								Amazingly, we happen to have a global mapping
 								of BHandler pointers to int32s!
 					 */
-					 gDefaultTokens->GetToken(_get_message_target_(fLastMessage),
-					 						  B_HANDLER_TOKEN,
-					 						  (void**)&handler);
+					 gDefaultTokens.GetToken(_get_message_target_(fLastMessage),
+					 						 B_HANDLER_TOKEN,
+					 						 (void**)&handler);
 				}
 
 				if (!handler)
@@ -1025,7 +1063,7 @@ void BLooper::task_looper()
 				{
 					int32 index = 0;
 					// Make sure the current specifier is kosher
-					if (GetCurrentSpecifier(&index) == B_OK)
+					if (fLastMessage->GetCurrentSpecifier(&index) == B_OK)
 					{
 						handler = resolve_specifier(handler, fLastMessage);
 					}
@@ -1147,26 +1185,29 @@ void BLooper::UnlockFully()
 	// TODO: implement
 }
 //------------------------------------------------------------------------------
-void BLooper::AddLooper(BLooper* l)
+void BLooper::AddLooper(BLooper* loop)
 {
 	if (sLooperListLock.IsLocked())
 	{
 #if defined(CHECK_ADD_LOOPER)
 		// First see if it's already been added
-		if (!IsLooperValid(l))
+		if (!IsLooperValid(loop))
 #endif
 		{
 			_loop_data_* result = find_loop_data(sLooperList,
 												 sLooperList + sLooperCount,
 												 empty_slot_pred, NULL);
+
+			uint32& looperCount = sLooperCount;			// hokey debugging aids
+			uint32& looperListSize = sLooperListSize;
 			if (!result)
 			{
 				// No empty slots; time to expand
-				if (sLooperCount == sLooperListSize)
+				if (looperCount >= looperListSize)
 				{
 					// Allocate the expanded list
 					_loop_data_* temp =
-						new _loop_data_[sLooperListSize + DATA_BLOCK_SIZE];
+						new _loop_data_[looperListSize + DATA_BLOCK_SIZE];
 					if (!temp)
 					{
 						// Not good
@@ -1176,18 +1217,19 @@ void BLooper::AddLooper(BLooper* l)
 
 					// Transfer the existing data
 					memcpy(temp, sLooperList,
-						   sizeof (_loop_data*) * sLooperListSize);
+						   sizeof (_loop_data_*) * looperListSize);
 					delete[] sLooperList;
 					sLooperList = temp;
-					sLooperListSize += DATA_BLOCK_SIZE;
+					looperListSize += DATA_BLOCK_SIZE;
 				}
 
 				// Whether we expanded or not, the "new" one will be at the end
-				result = sLooperList[sLooperCount];
+				result = &sLooperList[looperCount];
 			}
 
-			result->looper = l;
-			++sLooperCount;
+			result->looper = loop;
+			result->thread = loop->fTaskID;
+			++looperCount;
 		}
 	}
 }
@@ -1221,13 +1263,14 @@ void BLooper::RemoveLooper(BLooper* l)
 		{
 			delete[] sLooperList;
 			sLooperList = NULL;
+			sLooperListSize = 0;
 		}
 	}
 }
 //------------------------------------------------------------------------------
 void BLooper::GetLooperList(BList* list)
 {
-	Autolock ListLock(sLooperListLock);
+	BAutolock ListLock(sLooperListLock);
 	if (ListLock.IsLocked())
 	{
 		find_loop_data(sLooperList, sLooperList + sLooperCount,
@@ -1290,12 +1333,12 @@ _loop_data_* find_loop_data(_loop_data_* begin, _loop_data_* end,
 //------------------------------------------------------------------------------
 bool looper_by_port_pred(_loop_data_* looper, void *data)
 {
-	return looper->looper.fMsgPort == (port_id)data;
+	return _get_looper_port_(looper->looper) == (port_id)data;
 }
 //------------------------------------------------------------------------------
 bool looper_by_tid_pred(_loop_data_* looper, void *data)
 {
-	return looper->looper.fTaskID == (thread_id)data;
+	return looper->thread == (thread_id)data;
 }
 //------------------------------------------------------------------------------
 bool looper_by_name_pred(_loop_data_* looper, void *data)
@@ -1323,6 +1366,11 @@ bool copy_list_pred(_loop_data_ *looper, void* data)
 
 	// Ride this train to the end
 	return false;
+}
+//------------------------------------------------------------------------------
+port_id _get_looper_port_(const BLooper* looper)
+{
+	return looper->fMsgPort;
 }
 //------------------------------------------------------------------------------
 

@@ -12,7 +12,7 @@
 
 // System Includes -------------------------------------------------------------
 #include <BeBuild.h>
-#include <Locker.h>
+#include "../support/headers/Locker.h"
 #include <SupportDefs.h>
 
 // Project Includes ------------------------------------------------------------

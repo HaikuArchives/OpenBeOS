@@ -10,7 +10,7 @@
 #if defined(SYSTEM_TEST)
 #include <be/app/MessageFilter.h>
 #else
-#include "../../../../lib/application/headers/MessageFilter.h"
+#include "../../../../source/lib/application/headers/MessageFilter.h"
 #endif
 
 // Project Includes ------------------------------------------------------------
