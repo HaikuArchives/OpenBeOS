@@ -9,9 +9,21 @@
 #include "net_module.h"
 #include "protocols.h"
 #include "sys/socket.h"
+#include "sys/protosw.h"
 
-static loaded_net_module *global_modules;
-static int *prot_table;
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#include "net_server/core_module.h"
+
+#define m_freem             core->m_freem
+static struct core_module_info *core = NULL;
+#define ICMP_MODULE_PATH	"network/protocol/icmp"
+#else
+#define ICMP_MODULE_PATH	"modules/protocol/icmp"
+#endif
+
+struct protosw* proto[IPPROTO_MAX];
+
 static struct route icmprt;
 
 #if SHOW_DEBUG
@@ -75,7 +87,7 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 				satosin(&rt.ro_dst)->sin_len = sizeof(rt.ro_dst);
 				satosin(&rt.ro_dst)->sin_addr = ip->src;
 			}
-			error = global_modules[prot_table[NS_IPV4]].mod->output(buf, NULL, &rt, 0, NULL);
+			error = proto[IPPROTO_IP]->pr_output(buf, NULL, &rt, 0, NULL);
 			if (error == 0)
 				icmprt = rt;
 			return error;
@@ -89,27 +101,80 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 	return 0;
 }
 
-static int icmp_init(loaded_net_module *ln, int *pt)
+static void icmp_init(void)
 {
-	global_modules = ln;
-	prot_table = pt;
 	memset(&icmprt, 0, sizeof(icmprt));
-	return 0;
+
+	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
+#ifndef _KERNEL_MODE
+	add_protosw(proto, NET_LAYER2);
+#else
+	core->add_protosw(proto, NET_LAYER2);
+#endif
 }
 
-net_module net_module_data = {
-	"ICMP Module",
-	NS_ICMP,
+struct protosw my_proto = {
+	"ICMP (v4)",
+	ICMP_MODULE_PATH,
+	0,
+	NULL,
+	IPPROTO_ICMP,
+	PR_ATOMIC | PR_ADDR,
 	NET_LAYER2,
-	0,      /* users can't create sockets in this module! */
-	0,
-	0,
-
+	
 	&icmp_init,
-	NULL,
 	&icmp_input,
+	NULL,//&icmp_output,
 	NULL,
+	
 	NULL,
 	NULL
 };
 
+#ifndef _KERNEL_MODE
+
+static void icmp_protocol_init(void)
+{
+	add_domain(NULL, AF_INET);
+	add_protocol(&my_proto, AF_INET);
+}
+
+struct protocol_info protocol_info = {
+	"ICMP (v4) Module",
+	&icmp_protocol_init
+};
+
+#else
+
+static status_t icmp_ops(int32 op, ...)
+{
+	switch(op) {
+		case B_MODULE_INIT:
+			if (!core)
+				get_module(CORE_MODULE_PATH, (module_info**)&core);
+			if (!core)
+				return B_ERROR;
+				
+			core->add_domain(NULL, AF_INET);
+			core->add_protocol(&my_proto, AF_INET);			
+			return B_OK;
+		case B_MODULE_UNINIT:
+			break;
+		default:
+			return B_ERROR;
+	}
+	return B_OK;
+}
+
+static module_info my_module = {
+	ICMP_MODULE_PATH,
+	B_KEEP_LOADED,
+	icmp_ops
+};
+
+_EXPORT module_info *modules[] = {
+	&my_module,
+	NULL
+};
+
+#endif
