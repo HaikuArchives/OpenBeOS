@@ -5,6 +5,9 @@
 
 #include <kernel/OS.h>
 
+/* shoudl bt in types.h */
+typedef uint32 socklen_t;
+
 /* These are the address/protocol families we'll be using... */
 /* NB these should be added to as required... */
 
