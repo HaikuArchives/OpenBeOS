@@ -734,7 +734,7 @@ static ssize_t devfs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, cons
 	}
 }
 
-static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
+static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, int st)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
@@ -753,13 +753,13 @@ static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
 					} else {
-						err = ERR_INVALID_ARGS;
+						err = ESPIPE;
 					}
 					break;
 				case SEEK_CUR:
 				case SEEK_END:
 				default:
-					err = ERR_INVALID_ARGS;
+					err = EINVAL;
 			}
 			mutex_unlock(&fs->lock);
 			break;
@@ -768,7 +768,7 @@ static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 			//err = v->stream.u.dev.calls->dev_seek(cookie->u.dev.dcookie, pos, st);
 			break;
 		default:
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 	}
 
 	return err;

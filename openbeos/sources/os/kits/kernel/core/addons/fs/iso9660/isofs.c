@@ -14,6 +14,7 @@
 #include <Errors.h>
 
 #include <string.h>
+#include <stdio.h>
 
 #include "isovol.h"
 
@@ -709,7 +710,7 @@ static ssize_t isofs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const v
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
+static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, int st)
 {
 	struct isofs *fs = _fs;
 #if ISOFS_TRACE
@@ -731,13 +732,13 @@ static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->dir_head;
 					} else {
-						err = ERR_INVALID_ARGS;
+						err = ESPIPE;
 					}
 					break;
 				case SEEK_CUR:
 				case SEEK_END:
 				default:
-					err = ERR_INVALID_ARGS;
+					err = EINVAL;
 			}
 			break;
 		case STREAM_TYPE_FILE:

@@ -17,6 +17,7 @@
 #include <cpu.h>
 #include <arch/cpu.h>
 #include <resource.h>
+#include <fd.h>
 
 #define _KERNEL_
 #include <sysctl.h>
@@ -75,7 +76,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_write((int)arg0, (const void *)arg1, (off_t)INT32TOINT64(arg2, arg3), (ssize_t)arg4);
 			break;
 		case SYSCALL_SEEK:
-			*call_ret = user_seek((int)arg0, (off_t)INT32TOINT64(arg1, arg2), (seek_type)arg3);
+			*call_ret = user_seek((int)arg0, (off_t)INT32TOINT64(arg1, arg2), (int)arg3);
 			break;
 		case SYSCALL_IOCTL:
 			*call_ret = user_ioctl((int)arg0, (int)arg1, (void *)arg2, (size_t)arg3);
@@ -277,6 +278,9 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_SOCKET:
 			*call_ret = socket((int)arg0, (int)arg1, (int)arg2, false);
+			break;
+		case SYSCALL_GETDTABLESIZE:
+			*call_ret = (get_current_ioctx(false))->table_size;//getdtablesize();
 			break;
 		default:
 			*call_ret = -1;

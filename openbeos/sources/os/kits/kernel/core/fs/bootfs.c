@@ -686,7 +686,7 @@ static ssize_t bootfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const 
 	return EROFS;
 }
 
-static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
+static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, int st)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
@@ -757,7 +757,7 @@ static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 static int bootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, void *buf, size_t len)
 {
 	TRACE(("bootfs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
-
+dprintf("bootfs_ioctl\n");
 	return ERR_INVALID_ARGS;
 }
 

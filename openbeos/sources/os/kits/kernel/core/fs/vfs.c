@@ -83,7 +83,7 @@ static mutex vfs_vnode_mutex;
 static int vfs_mount(char *path, const char *device, const char *fs_name, void *args, bool kernel);
 static int vfs_unmount(char *path, bool kernel);
 static int vfs_open(char *path, stream_type st, int omode, bool kernel);
-static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
+static int vfs_seek(int fd, off_t pos, int seek_type, bool kernel);
 
 static ssize_t vfs_read(struct file_descriptor *, void *, off_t, size_t *);
 static ssize_t vfs_write(struct file_descriptor *, const void *, off_t, size_t *);
@@ -1124,6 +1124,7 @@ static int vfs_open(char *path, stream_type st, int omode, bool kernel)
 	struct file_descriptor *f;
 	int err;
 
+dprintf("vfs_open: %s: omode = %d\n", path, omode);
 #if MAKE_NOIZE
 	dprintf("vfs_open: entry. path = '%s', omode %d, kernel %d\n", path, omode, kernel);
 #endif
@@ -1202,6 +1203,8 @@ static ssize_t vfs_read(struct file_descriptor *f, void *buf, off_t pos, size_t 
 #if MAKE_NOIZE
 	dprintf("vfs_read: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x, kernel %d\n", fd, buf, pos, len, kernel);
 #endif
+dprintf("vfs_read\n");
+
 	v = f->vnode;
 	err = v->mount->fs->calls->fs_read(v->mount->fscookie, v->priv_vnode, f->cookie, buf, pos, len);
 
@@ -1216,6 +1219,7 @@ static ssize_t vfs_write(struct file_descriptor *f, const void *buf, off_t pos, 
 	struct vnode *v;
 	int err;
 
+dprintf("vfs_write\n");
 #if MAKE_NOIZE
 	dprintf("vfs_write: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x\n", fd, buf, pos, len);
 #endif
@@ -1229,7 +1233,7 @@ err:
 	return err;
 }
 
-static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel)
+static int vfs_seek(int fd, off_t pos, int seek_type, bool kernel)
 {
 	struct vnode *v;
 	struct file_descriptor *f;
@@ -1241,7 +1245,7 @@ static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel)
 
 	f = get_fd(get_current_ioctx(kernel), fd);
 	if(!f) {
-		err = ERR_INVALID_HANDLE;
+		err = EBADF;
 		goto err;
 	}
 
@@ -1677,7 +1681,7 @@ int sys_fsync(int fd)
 	return vfs_fsync(fd, true);
 }
 
-int sys_seek(int fd, off_t pos, seek_type seek_type)
+int sys_seek(int fd, off_t pos, int seek_type)
 {
 	return vfs_seek(fd, pos, seek_type, true);
 }
@@ -1861,7 +1865,7 @@ int user_fsync(int fd)
 	return vfs_fsync(fd, false);
 }
 
-int user_seek(int fd, off_t pos, seek_type seek_type)
+int user_seek(int fd, off_t pos, int seek_type)
 {
 	return vfs_seek(fd, pos, seek_type, false);
 }

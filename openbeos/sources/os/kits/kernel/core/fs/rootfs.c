@@ -492,7 +492,7 @@ static ssize_t rootfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const 
 	return ERR_NOT_ALLOWED;
 }
 
-static int rootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
+static int rootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, int st)
 {
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *v = _v;
@@ -510,13 +510,13 @@ static int rootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 			if(pos == 0) {
 				cookie->ptr = v->stream.dir.dir_head;
 			} else {
-				err = ERR_INVALID_ARGS;
+				err = ESPIPE;
 			}
 			break;
 		case SEEK_CUR:
 		case SEEK_END:
 		default:
-			err = ERR_INVALID_ARGS;
+			err = EINVAL;
 	}
 
 	mutex_unlock(&fs->lock);
