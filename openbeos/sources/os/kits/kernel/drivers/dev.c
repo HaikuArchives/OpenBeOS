@@ -17,7 +17,6 @@
 int dev_init(kernel_args *ka)
 {
 	int fd;
-	int err;
 
 	dprintf("dev_init: entry\n");
 
