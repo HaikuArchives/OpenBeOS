@@ -67,10 +67,7 @@
 					void EndInvokeNotify();
 				</task>
 			</class>
-			<class name="BMessage" owner="">
-				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
-					uint32 what;
-				</task>
+			<class name="BMessage" owner="William Bull">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BMessage();
 				</task>
