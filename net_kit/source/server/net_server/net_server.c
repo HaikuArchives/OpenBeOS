@@ -37,9 +37,8 @@ static int32 if_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
 	status_t status;
-	char buffer[i->if_mtu];
-	size_t len = i->if_mtu;
-	int count = 0;
+	char buffer[i->if_mtu * 2];
+	size_t len = i->if_mtu * 2;
 
 	while ((status = read(i->devid, buffer, len)) >= B_OK) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
@@ -51,9 +50,9 @@ static int32 if_thread(void *data)
 		
 		if (i->input)
 			i->input(mb);
+			
 		atomic_add(&i->if_ipackets, 1);
-		count++;
-		len = i->if_mtu;
+		len = i->if_mtu * 2;
 	}
 	printf("%s: terminating if_thread\n", i->name);
 	return 0;
@@ -68,8 +67,7 @@ static int32 rx_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
 	struct mbuf *m;
-
-	printf("%s%d: starting rx_thread...\n", i->name, i->if_unit);
+	
 	while (1) {
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
@@ -83,7 +81,8 @@ static int32 rx_thread(void *data)
 			i->input(m);
 		else
 			printf("%s%d: no input function!\n", i->name, i->if_unit);
-        }
+
+	}
 	printf("%s%d: terminating rx_thread\n", i->name, i->if_unit);
 	return 0;
 }
@@ -96,11 +95,10 @@ static int32 tx_thread(void *data)
 	char buffer[2048];
 	size_t len = 0;
 	status_t status;
-//#if SHOW_DEBUG
+#if SHOW_DEBUG
 	int txc = 0;
-//#endif
+#endif
 
-	printf("%s%d: starting tx_thread...\n", i->name, i->if_unit);	
 	while (1) {
 		acquire_sem(i->txq->pop);
 		IFQ_DEQUEUE(i->txq, m);
@@ -111,18 +109,19 @@ static int32 tx_thread(void *data)
 			len = m->m_len;
 
 		if (len > i->if_mtu) {
-			printf("%s%d: tx_thread: packet was too big!\n", i->name, i->if_unit);
+			printf("%s: tx_thread: packet was too big!\n", i->if_name);
 			m_freem(m);
 			continue;
 		}
 
 		m_copydata(m, 0, len, buffer);
 
-//#if SHOW_DEBUG
-		printf("TXMIT %d: %ld bytes to dev  %s[%d]\n", txc++, len ,i->if_name, i->devid);
-//#endif
+#if SHOW_DEBUG
+		printf("TXMIT %d: %ld bytes to dev %s[%d]\n", txc++, len ,i->if_name, i->devid);
+#endif
 		m_freem(m);
 #if SHOW_DEBUG
+		printf("output: (%d bytes)\n", len);
 		dump_buffer(buffer, len);
 #endif
 		status = write(i->devid, buffer, len);
@@ -251,7 +250,7 @@ void start_tx_thread(ifnet *dev)
 		return;
 
 	sprintf(name, "%s_tx_thread", dev->if_name);
-	dev->tx_thread = spawn_thread(tx_thread, "net_tx_thread", priority, dev);
+	dev->tx_thread = spawn_thread(tx_thread, name, priority, dev);
 	if (dev->tx_thread < 0) {
 		printf("Failed to start the tx_thread for %s\n", dev->if_name);
 		dev->tx_thread = -1;
@@ -873,7 +872,7 @@ void tcp_test(void)
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sin_family = AF_INET;
-	sa.sin_port = htons(7772);
+	sa.sin_port = htons((real_time_clock() & 0xffff));
 	sa.sin_addr.s_addr = INADDR_ANY;
 	sa.sin_len = sizeof(sa);
 	
@@ -883,30 +882,45 @@ void tcp_test(void)
 	}
 
 	sa.sin_addr.s_addr = htonl(0xc0a80001);
-	sa.sin_port = htons(7);
+	sa.sin_port = htons(80);
 	
 	rv = soconnect(sp, (caddr_t)&sa, sizeof(sa));
 	if (rv < 0) {
 		err(rv, "Connect failed!!");
 	}
+	snooze(500000);
 
 	memset(&buffer, 0, 200);
-	strcpy(buffer, "Hello!\n");
+	strcpy(buffer, "GET / HTTP/1.0\n\n");
 	iov.iov_base = &buffer;
-	iov.iov_len = 7;
+	iov.iov_len = 16;
+
+	
 	rv = writeit(sp, &iov, flags);
 	if (rv < 0) {
 		err(rv, "writeit failed!!");
 	}
+	printf("writeit wrote %d bytes\n\n", rv);
 	
 	memset(&buffer, 0, 200);
 	iov.iov_len = 200;
-	rv = readit(sp, &iov, &flags);
-	printf("readit: rv = %d\n", rv);	
-	printf("%s\n", buffer);
+	iov.iov_base = &buffer;
+	while ((rv = readit(sp, &iov, &flags)) >= 0) {
+		if (rv < 0) { 
+			err (rv, "readit");
+			break;
+		} else
+			printf("%s", buffer);
+		if (rv == 0)
+			break;
+		/* PITA - have to keep resetting these... */
+		iov.iov_len = 200;
+		iov.iov_base = &buffer;
+		memset(&buffer, 0, 200);
+	}
 	
 	soclose(sp);
-	printf("TCP socket test completed...\n");
+	printf("\nTCP socket test completed...\n");
 }
 
 int main(int argc, char **argv)
@@ -932,17 +946,17 @@ int main(int argc, char **argv)
 	assign_addresses();
 	list_devices();
 
+/*
 	t = spawn_thread(create_sockets, "socket creation test",
 		B_NORMAL_PRIORITY, &qty);
 	if (t >= 0)
 		resume_thread(t);
 
-	/* try to get better output! */
 	wait_for_thread(t, &status);
-	
-	bind_test();
+*/	
+//	bind_test();
 	tcp_test();
-	big_socket_test();
+//	big_socket_test();
 	
 	printf("\n\n Tests completed!\n");
 	
