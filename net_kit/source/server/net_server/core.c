@@ -1017,7 +1017,9 @@ static status_t core_std_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
+#ifdef _KERNEL_MODE
 			load_driver_symbols("core");
+#endif
 			break;
 		case B_MODULE_UNINIT:
 			// the stack is keeping loaded, so don't stop it

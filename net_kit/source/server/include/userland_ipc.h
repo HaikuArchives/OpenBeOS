@@ -20,11 +20,20 @@ enum {
 	NET_STACK_NEW_CONNECTION,
 };
 
+#define MAX_NET_AREAS 5
+
+typedef struct {
+	area_id id;
+	uint8	*offset;
+} net_area_info;
+
 typedef struct {
 	int32	op;
-	int32	buffer;
+//	int32	buffer;
+	uint8	*data;
 	int32	length;
 	int32	result;
+	net_area_info	area[MAX_NET_AREAS];
 } net_command;
 
 #define CONNECTION_QUEUE_LENGTH 128
