@@ -24,7 +24,14 @@ void mbinit(void)
 {
         pool_init(&mbpool, 256);
         pool_init(&clpool, MCLBYTES);
-
+        
+        /* The max_linkhdr is the biggest link level header 
+         * we need to prepend to a packet before sending it.
+         *  
+         * Here we set it to 14, the size of an ethernet
+         * header (2 x 6-byte MAC address + 2-byte type)
+         */
+        max_linkhdr = 14;
 }
 
 struct mbuf *m_get(int type)
