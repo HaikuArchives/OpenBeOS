@@ -55,7 +55,8 @@ THE SOFTWARE.
 class DrawShape;
 class RotateShape;
 
-enum font_encoding {
+enum font_encoding 
+{
 	macroman_encoding,
 	// TrueType
 	tt_encoding0,
@@ -76,14 +77,15 @@ enum font_encoding {
 	korean_encoding // not implemented yet
 };
 
-enum font_type {
+enum font_type 
+{
 	true_type_type,
 	type1_type,
 	unknown_type
 };
 
 class PDFWriter : public PrinterDriver, public PictureIterator
-	{
+{
 	
 	friend class DrawShape;
 	friend class RotateShape;
@@ -106,6 +108,42 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		void		ErrorHandler(int type, const char *msg);
 		
 		// Image support
+		int32       BytesPerPixel(int32 pixelFormat);
+
+		bool        NeedsAlphaCheck(int32 pixelFormat);
+
+		inline bool IsTransparentRGB32(uint8* in);
+		inline bool IsTransparentRGBA32(uint8* in);
+		inline bool IsTransparentRGB32_BIG(uint8* in);
+		inline bool IsTransparentRGBA32_BIG(uint8* in);
+		//inline bool IsTransparentRGB24(uint8* in);
+		//inline bool IsTransparentRGB24_BIG(uint8* in);
+		//inline bool IsTransparentRGB16(uint8* in);
+		//inline bool IsTransparentRGB16_BIG(uint8* in);
+		inline bool IsTransparentRGB15(uint8* in);
+		inline bool IsTransparentRGB15_BIG(uint8* in);
+		inline bool IsTransparentRGBA15(uint8* in);
+		inline bool IsTransparentRGBA15_BIG(uint8* in);
+		inline bool IsTransparentCMAP8(uint8* in);
+		//inline bool IsTransparentGRAY8(uint8* in);
+		//inline bool IsTransparentGRAY1(uint8* in);
+
+		inline void ConvertFromRGB32(uint8* in, uint8* out);
+		inline void ConvertFromRGB32_BIG(uint8* in, uint8* out);
+		inline void ConvertFromRGBA32(uint8* in, uint8* out);
+		inline void ConvertFromRGBA32_BIG(uint8* in, uint8* out);
+		inline void ConvertFromRGB24(uint8* in, uint8* out);
+		inline void ConvertFromRGB24_BIG(uint8* in, uint8* out);
+		inline void ConvertFromRGB16(uint8* in, uint8* out);
+		inline void ConvertFromRGB16_BIG(uint8* in, uint8* out);
+		inline void ConvertFromRGB15(uint8* in, uint8* out);
+		inline void ConvertFromRGBA15_BIG(uint8* in, uint8* out);
+		inline void ConvertFromRGB15_BIG(uint8* in, uint8* out);
+		inline void ConvertFromRGBA15(uint8* in, uint8* out);
+		inline void ConvertFromCMAP8(uint8* in, uint8* out);
+		inline void ConvertFromGRAY8(uint8* in, uint8* out);
+		inline void ConvertFromGRAY1(uint8* in, uint8* out, int8 bit);
+
 		void		*CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		BBitmap		*ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 
@@ -169,7 +207,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		
 	private:
 	
-		class State {
+		class State 
+		{
 		public:
 			State			*prev;
 			BFont           beFont;
@@ -193,7 +232,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 			int32           fontSpacing;
 			
 			// initialize with defalt values
-			State() {
+			State() 
+			{
 				static rgb_color white    = {255, 255, 255, 255};
 				static rgb_color black    = {0, 0, 0, 255};
 				prev = NULL;
@@ -217,13 +257,15 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 				fontSpacing      = B_STRING_SPACING; 
 			}
 
-			State(State *prev) {
+			State(State *prev) 
+			{
 				*this = *prev;
 				this->prev = prev;
 			}
 		};
 
-		class Font {
+		class Font 
+		{
 		public:
 			Font(char *n, int f, font_encoding e) : name(n), font(f), encoding(e) { }
 			BString name;
@@ -231,7 +273,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 			font_encoding encoding;
 		};
 
-		class FontFile {
+		class FontFile 
+		{
 		public:
 			FontFile(char *n, int64 s, font_type t) : name(n), size(s), type(t) { }
 			BString   name;
@@ -247,7 +290,10 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		BList           fFontFiles;
 		int64           fEmbedMaxFontSize;
 		int             fPattern;
-		enum {
+		BScreen         *fScreen;
+		
+		enum 
+		{
 			kDrawingMode,
 			kClippingMode
 		}				fMode;
@@ -259,7 +305,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		inline bool IsDrawing() const  { return fMode == kDrawingMode; }
 		inline bool IsClipping() const { return fMode == kClippingMode; }
 
-		bool StoreTranslatorBitmap(BBitmap *bitmap, char *filename, uint32 type);
+		bool StoreTranslatorBitmap(BBitmap *bitmap, const char *filename, uint32 type);
 
 		void GetFontName(BFont *font, char *fontname, bool &embed, font_encoding encoding);
 		int FindFont(char *fontname, bool embed, font_encoding encoding);
@@ -281,7 +327,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 	};
 
 
-class DrawShape : public BShapeIterator {
+class DrawShape : public BShapeIterator
+{
 	PDFWriter *fWriter;
 	bool       fStroke;
 	bool       fDrawn;
