@@ -382,3 +382,63 @@ Module:      BMimeType
 Location:    SetAttrInfo
 Description: Crashes when passed a NULL BMessage.
 
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    GetInstalledTypes(BMessage*)
+Description: The set of types returned by this function is determined as follows:
+             + All *entries* (files, dirs, or symlinks) in the root MIME database
+               directory treated as MIME types, except those that begin with an
+               underscore; only dirs are treated as supertypes (unless the dir's
+               META:TYPE attribute is different than its filename, in which case
+               it's not treated as a supertype).
+             + For each supertype, all *entries* (files, dirs, or symlinks) in the
+               corresponding supertype subdirectory are treated as a MIME type, except
+               those that begin with an underscore.
+             + The MIME type for supertypes is taken from the name of the supertype
+               subdirectory.
+             + The MIME type for non-supertypes is take from the entry's META:TYPE
+               attribute. If the entry has no META:TYPE attribute, the MIME type is
+               derived by concatentating the name of the supertype directory to the
+               name of the entry, separated by a "/" character. Either way, the MIME
+               string returned is not checked to be valid.
+
+             
+OS:          BeOS R5
+Module:      BMimeType
+Location:    GetInstalledTypes(char *super, BMessage*)
+Description: The set of types returned by this function is determined as follows:
+             + All *entries* (files, dirs, or symlinks) in the MIME database directory
+               corresponding to the "super" argument are treated as subtypes, *except*
+               those whose filenames begin with an underscore. It does not matter if
+               the supertype directory has a META:TYPE attribute or not.
+             + The MIME type is taken from the entry's META:TYPE attribute. If the entry
+               has no such attribute, the MIME type is derived by concatentating the name
+               of the supertype directory (the directory's META:TYPE attribute is ignored
+               if present) to the name of the entry, separated by a "/" character. Either
+               way, the MIME string returned is not checked to be valid.
+               
+             
+OS:          BeOS R5
+Module:      BMimeType
+Location:    GetInstalledSupertypes(BMessage*)
+Description: The set of types returned by this function is determined as follows:
+             + All directories in the root MIME database directory are treated as
+               supertypes (even directories beginning with an underscore).
+             + The MIME type is derived from the directory name, which is not
+               checked to be a valid MIME string.
+             
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    GetWildcardApps()
+Description: This code:             
+               BMessage msg;  
+               status_t error = BMimeType::GetWildcardApps(&msg);
+             is the same as:
+               BMessage msg;
+               BMimeType mime("application/octet-stream");
+               status_t error = mime.InitCheck();
+               if (!error)
+                 error = mime.GetSupportingApps(&msg);
+
