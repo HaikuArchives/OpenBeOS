@@ -416,6 +416,18 @@ KernelLd false :
 
 KernelConfigSection config.$(OBOS_ARCH).ini : bin/false : false ;
 
+KernelLd true :
+	libglue2.o
+	<$(SOURCE_GRIST)!apps>true_main.o
+	libc.so
+	libm.so
+	:
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	;
+
+KernelConfigSection config.$(OBOS_ARCH).ini : bin/true : true ;
+
 KernelLd fibo :
 	libglue2.o
 	<$(SOURCE_GRIST)!apps>fibo_main.o
@@ -452,6 +464,8 @@ KernelLd ls :
 
 KernelConfigSection config.$(OBOS_ARCH).ini : bin/ls : ls ;
 
+
+
 # Note: shell is a built in target, thus we need the grist.
 KernelLd <$(SOURCE_GRIST)>shell :
 	libglue2.o
@@ -472,8 +486,43 @@ KernelLd <$(SOURCE_GRIST)>shell :
 
 KernelConfigSection config.$(OBOS_ARCH).ini : bin/shell : shell ;
 
-WriteKernelConfig config.$(OBOS_ARCH).ini : stage2 ;
+KernelLd mount :
+	libglue2.o
+	<$(SOURCE_GRIST)!apps!mount>main.o
+	libc.so
+	libm.so
+	:
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	;
 
+KernelConfigSection config.$(OBOS_ARCH).ini : bin/mount : mount ;
+
+KernelLd unmount :
+	libglue2.o
+	<$(SOURCE_GRIST)!apps!unmount>main.o
+	libc.so
+	libm.so
+	:
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	;
+
+KernelConfigSection config.$(OBOS_ARCH).ini : bin/unmount : unmount ;
+
+KernelLd testapp :
+	libglue2.o
+	<$(SOURCE_GRIST)!apps!testapp>main.o
+	libc.so
+	libm.so
+	:
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	;
+
+KernelConfigSection config.$(OBOS_ARCH).ini : bin/testapp : testapp ;
+
+WriteKernelConfig config.$(OBOS_ARCH).ini : stage2 ;
 
 SubInclude OBOS_TOP sources os kits kernel boot ;
 SubInclude OBOS_TOP sources os kits kernel core ;
