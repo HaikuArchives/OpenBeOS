@@ -15,13 +15,11 @@ Inode::Inode(Volume *volume,vnode_id id,uint8 reenter)
 	: CachedBlock(volume,volume->VnodeToBlock(id)),
 	fTree(NULL)
 {
-	dprintf("new inode!\n");
 }
 
 
 Inode::~Inode()
 {
-	dprintf("delete inode!\n");
 	delete fTree;
 }
 
@@ -54,6 +52,16 @@ Inode::InitCheck()
 }
 
 
+/**	Iterates through the small_data section of an inode.
+ *	To start at the beginning of this section, you let smallData
+ *	point to NULL, like:
+ *		small_data *data = NULL;
+ *		while (inode->GetNextSmallData(&data) { ... }
+ *
+ *	This function is reentrant and don't allocate any memory;
+ *	you can safely stop calling it at any point.
+ */
+
 status_t
 Inode::GetNextSmallData(small_data **smallData)
 {
@@ -78,6 +86,11 @@ Inode::GetNextSmallData(small_data **smallData)
 }
 
 
+/**	Gives the caller direct access to the b+tree for a given directory.
+ *	The tree is created on demand, but lasts until the inode is
+ *	deleted.
+ */
+
 status_t
 Inode::GetTree(BPlusTree **tree)
 {
@@ -97,6 +110,13 @@ Inode::GetTree(BPlusTree **tree)
 	return B_BAD_VALUE;
 }
 
+
+/** Finds the block_run where "pos" is located in the data_stream of
+ *	the inode.
+ *	If successful, "offset" will then be set to the file offset
+ *	of the block_run returned; so "pos - offset" is for the block_run
+ *	what "pos" is for the whole stream.
+ */
 
 status_t
 Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)

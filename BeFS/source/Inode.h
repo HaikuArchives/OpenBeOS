@@ -13,8 +13,11 @@
 #	include <stdio.h>
 #endif
 
+#ifndef _IMPEXP_KERNEL
+#	define _IMPEXP_KERNEL
+#endif
+
 extern "C" {
-	#define _IMPEXP_KERNEL
 	#include <lock.h>
 	#include <cache.h>
 }
