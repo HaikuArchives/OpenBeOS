@@ -42,7 +42,7 @@ void BitmapMenuItem::Draw(void)
 	if (IsMarked()) {
 		menu->MovePenTo(itemFrame.left + 2, itemFrame.bottom - 4);	
 		BRect checkFrame(0, 0, 12, 12);
-		dr.Set(itemFrame.left, itemFrame.top + 3, itemFrame.left + 12, itemFrame.top + 16);
+		dr.Set(itemFrame.left, itemFrame.top + 2, itemFrame.left + 12, itemFrame.top + 14);
 		menu->SetDrawingMode(B_OP_OVER);
 		menu->DrawBitmap(fCheckBmp, checkFrame, dr);
 		menu->SetDrawingMode(B_OP_COPY);
@@ -52,7 +52,7 @@ void BitmapMenuItem::Draw(void)
 	menu->DrawString(fName.String());
 	
 	BRect bitmapFrame = fBmp->Bounds();
-	dr.Set(itemFrame.left + 14, itemFrame.top + 3, itemFrame.left + 14 + bitmapFrame.right, itemFrame.top + 18);
+	dr.Set(itemFrame.left + 14, itemFrame.top + 2, itemFrame.left + 14 + bitmapFrame.right, itemFrame.top + 17);
 	menu->SetDrawingMode(B_OP_OVER);
 	menu->DrawBitmap(fBmp, bitmapFrame, dr);
 	menu->SetDrawingMode(B_OP_COPY);
