@@ -1041,7 +1041,7 @@
 			</class>
 		</section>
 		<section name="Clipboard">
-			<class name="BClipboard" owner="">
+			<class name="BClipboard" owner="Gabe Yoder">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BClipboard(const char* name, bool transient = false);
 				</task>
@@ -1090,7 +1090,7 @@
 			</class>
 		</section>
 		<section name="BCursor">
-			<class name="BCursor" owner="">
+			<class name="BCursor" owner="Gabe Yoder">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BCursor(const void* cursorData);
 				</task>
@@ -1109,7 +1109,7 @@
 			</class>
 		</section>
 		<section name="Scripting Support">
-			<class name="BPropertyInfo" owner="">
+			<class name="BPropertyInfo" owner="Jeremy Rand">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BPropertyInfo(property_info* p = NULL, value_info* ci = NULL, bool free_on_delete = false);
 				</task>
@@ -1236,7 +1236,7 @@
 					void PrintToStream() const;
 				</task>
 			</class>
-			<class name="BRect" owner="">
+			<class name="BRect" owner="Issac Yonemoto">
 				<task cases="false" fspec="false" impl="true" tests="false" tspec="false">
 					BRect();
 				</task>
@@ -2474,7 +2474,7 @@
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
 			</class>
-			<class name="BSlider" owner="">
+			<class name="BSlider" owner="Staffan Hellstrom">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BSlider(BRect frame, const char* name, const char* label, BMessage* message, int32 minValue, int32 maxValue, thumb_style thumbType = B_BLOCK_THUMB, uint32 resizingMode = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS);
 				</task>
@@ -4929,7 +4929,7 @@
 					static BPoint AlertPosition(float width, float height);
 				</task>
 			</class>
-			<class name="BDeskbar" owner="">
+			<class name="BDeskbar" owner="Jeremy Rand">
 				<task cases="false" fspec="false" impl="false" tests="false" tspec="false">
 					BDeskbar();
 				</task>
