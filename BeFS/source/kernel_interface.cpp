@@ -48,12 +48,16 @@ extern "C" {
 	static int bfs_mount(nspace_id nsid, const char *device, ulong flags,
 						void *parms, size_t len, void **data, vnode_id *vnid);
 	static int bfs_unmount(void *_ns);
-	
+
 	static int bfs_walk(void *_ns, void *_base, const char *file,
 						char **newpath, vnode_id *vnid);
 	
 	static int bfs_read_vnode(void *_ns, vnode_id vnid, char r, void **node);
 	static int bfs_release_vnode(void *_ns, void *_node, char r);
+
+	static int bfs_ioctl(void *ns, void *node, void *cookie, int cmd, void *buf,size_t len);
+	static int bfs_setflags(void *ns, void *node, void *cookie, int flags);
+
 	static int bfs_rstat(void *_ns, void *_node, struct stat *st);
 	static int bfs_open(void *_ns, void *_node, int omode, void **cookie);
 	static int bfs_read(void *_ns, void *_node, void *cookie, off_t pos,
@@ -108,6 +112,14 @@ extern "C" {
 	static int bfs_rename_index(void *ns, const char *oldname, const char *newname);
 	static int bfs_stat_index(void *ns, const char *name, struct index_info *indexInfo);
 
+	// query support
+	static int bfs_open_query(void *ns, const char *query, ulong flags,
+					port_id port, long token, void **cookie);
+	static int bfs_close_query(void *ns, void *cookie);
+	static int bfs_free_query_cookie(void *ns, void *node, void *cookie);
+	static int bfs_read_query(void *ns, void *cookie, long *num,
+					struct dirent *buf, size_t bufsize);
+
 #if 0
 	static int		bfs_remove_vnode(void *ns, void *node, char r);
 	static int		bfs_secure_vnode(void *ns, void *node);
@@ -159,8 +171,8 @@ vnode_ops fs_entry =  {
 	NULL, 						// write file
 	NULL,						// readv
 	NULL,						// writev
-	NULL,						// ioctl
-	NULL,						// setflags file
+	&bfs_ioctl,					// ioctl
+	&bfs_setflags,				// setflags file
 	&bfs_rstat,					// rstat
 	NULL, 						// wstat
 	NULL,						// fsync
@@ -194,10 +206,10 @@ vnode_ops fs_entry =  {
 	&bfs_rename_attr,			// rename attr
 	&bfs_stat_attr,				// stat attr
 
-	NULL,						// open query
-	NULL,						// close query
-	NULL,						// free query cookie
-	NULL						// read query
+	&bfs_open_query,			// open query
+	&bfs_close_query,			// close query
+	&bfs_free_query_cookie,		// free query cookie
+	&bfs_read_query				// read query
 };
 
 #define BFS_IO_SIZE 65536
@@ -257,7 +269,8 @@ bfs_rfsstat(void *_ns, struct fs_info *info)
 	Volume *volume = (Volume *)_ns;
 	
 	// File system flags.
-	info->flags = B_FS_IS_PERSISTENT | B_FS_IS_READONLY | B_FS_HAS_ATTR | B_FS_HAS_MIME;
+	info->flags = B_FS_IS_PERSISTENT | B_FS_IS_READONLY | B_FS_HAS_ATTR
+			| B_FS_HAS_MIME | B_FS_HAS_QUERY;
 
 	// whatever is appropriate here? Just use the same value as BFS (and iso9660) for now
 	info->io_size = BFS_IO_SIZE;
@@ -288,7 +301,7 @@ bfs_rfsstat(void *_ns, struct fs_info *info)
 static int
 bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id *vnid)
 {
-	FUNCTION_START(("bfs_walk(file = %s)\n",file));
+	FUNCTION_START(("file = %s\n",file));
 	Volume *volume = (Volume *)_ns;
 
 	Inode *directory = (Inode *)_directory;
@@ -320,7 +333,7 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id
 static int
 bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
 {
-	FUNCTION_START(("bfs_read_vnode(vnode_id = %Ld)\n",vnid));
+	FUNCTION_START(("vnode_id = %Ld\n",vnid));
 	Volume *volume = (Volume *)_ns;
 	
 	Inode *inode = new Inode(volume,vnid,reenter);
@@ -337,12 +350,28 @@ bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
 static int
 bfs_release_vnode(void *ns, void *_node, char reenter)
 {
-	FUNCTION_START(("bfs_release_vnode(node = %p)\n",_node));
+	FUNCTION_START(("node = %p\n",_node));
 	Inode *inode = (Inode *)_node;
 	
 	delete inode;
 
 	return B_NO_ERROR;
+}
+
+
+int 
+bfs_ioctl(void *ns, void *node, void *cookie, int cmd, void *buf, size_t len)
+{
+	FUNCTION_START(("node = %p, cmd = %d, buf = %p, len = %ld\n",node,cmd,buf,len));
+	return B_BAD_VALUE;
+}
+
+
+int 
+bfs_setflags(void *ns, void *node, void *cookie, int flags)
+{
+	FUNCTION_START(("node = %p, flags = %d",node,flags));
+	return B_OK;
 }
 
 // bfs_rstat - fill in stat struct
@@ -633,7 +662,7 @@ bfs_read_attrdir(void *_ns, void *node, void *_cookie, long *num, struct dirent 
 int
 bfs_remove_attr(void *ns, void *node, const char *name)
 {
-	FUNCTION_START(("bfs_remove_attr(name = \"%s\")\n",name));
+	FUNCTION_START(("name = \"%s\"\n",name));
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
@@ -641,7 +670,7 @@ bfs_remove_attr(void *ns, void *node, const char *name)
 int
 bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 {
-	FUNCTION_START(("bfs_rename_attr(name = \"%s\",to = \"%s\"\n)",oldname,newname));
+	FUNCTION_START(("name = \"%s\",to = \"%s\"\n",oldname,newname));
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
@@ -649,7 +678,7 @@ bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 int
 bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo)
 {
-	FUNCTION_START(("bfs_stat_attr(name = \"%s\")\n",name));
+	FUNCTION_START(("name = \"%s\"\n",name));
 
 	Inode *inode = (Inode *)_node;
 	if (inode == NULL || inode->Node() == NULL)
@@ -679,7 +708,7 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 int
 bfs_write_attr(void *ns, void *node, const char *name, int type,const void *buf, size_t *len, off_t pos)
 {
-	FUNCTION_START(("bfs_write_attr(name = \"%s\")\n",name));
+	FUNCTION_START(("name = \"%s\"\n",name));
 	RETURN_ERROR(B_ERROR);
 }
 
@@ -688,7 +717,7 @@ int
 bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, size_t *_length, off_t pos)
 {
 	Inode *inode = (Inode *)_node;
-	FUNCTION_START(("bfs_read_attr(id = %Ld, name = \"%s\", len = %ld)\n",inode->ID(),name,*_length));
+	FUNCTION_START(("id = %Ld, name = \"%s\", len = %ld\n",inode->ID(),name,*_length));
 	
 	if (inode == NULL || inode->Node() == NULL)
 		RETURN_ERROR(B_ERROR);
@@ -815,7 +844,7 @@ bfs_remove_index(void *ns, const char *name)
 int 
 bfs_rename_index(void *ns, const char *oldname, const char *newname)
 {
-	FUNCTION_START(("bfs_rename_index(from = %s,to = %s)\n",oldname,newname));
+	FUNCTION_START(("from = %s, to = %s\n",oldname,newname));
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
@@ -823,7 +852,7 @@ bfs_rename_index(void *ns, const char *oldname, const char *newname)
 int 
 bfs_stat_index(void *_ns, const char *name, struct index_info *indexInfo)
 {
-	FUNCTION_START(("bfs_stat_index(name = %s)\n",name));
+	FUNCTION_START(("name = %s\n",name));
 	if (_ns == NULL || name == NULL || indexInfo == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
@@ -842,6 +871,44 @@ bfs_stat_index(void *_ns, const char *name, struct index_info *indexInfo)
 	indexInfo->uid = node->uid;
 	indexInfo->gid = node->gid;
 
+	return B_OK;
+}
+
+
+//	#pragma mark -
+//	Query functions
+
+
+int 
+bfs_open_query(void *ns,const char *query,ulong flags,port_id port,long token,void **cookie)
+{
+	FUNCTION();
+	
+	PRINT(("query = %s, flags = %lu, port_id = %ld, token = %ld\n",query,flags,port,token));
+	return B_OK;
+}
+
+
+int
+bfs_close_query(void *ns, void *cookie)
+{
+	FUNCTION();
+	return B_OK;
+}
+
+
+int
+bfs_free_query_cookie(void *ns, void *node, void *cookie)
+{
+	FUNCTION();
+	return B_OK;
+}
+
+
+int bfs_read_query(void *ns,void *cookie,long *num,struct dirent *buf,size_t bufsize)
+{
+	FUNCTION();
+	*num = 0;
 	return B_OK;
 }
 

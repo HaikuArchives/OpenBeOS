@@ -7,6 +7,7 @@
 */
 
 #ifdef USER
+#	include <stdio.h>
 #	define __out printf
 #else
 #	define __out dprintf
@@ -33,9 +34,9 @@
 	#define FATAL(x) { __out("bfs: "); __out x; }
 	#define INFORM(x) { __out("bfs: "); __out x; }
 //	#define FUNCTION() __out("bfs: %s()\n",__FUNCTION__);
-//	#define FUNCTION_START(x) { __out("bfs: %s() ",__FUNCTION__); __out x; }
+	#define FUNCTION_START(x) { __out("bfs: %s() ",__FUNCTION__); __out x; }
 	#define FUNCTION() ;
-	#define FUNCTION_START(x) ;
+//	#define FUNCTION_START(x) ;
 	#define D(x) {x};
 #else
 	#define PRINT(x) ;

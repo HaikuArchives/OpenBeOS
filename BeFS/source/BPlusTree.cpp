@@ -399,8 +399,7 @@ BPlusTree::SeekDown(Stack<node_and_key> &stack,uint8 *key,uint16 keyLength)
 	while ((node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL) {
 		if (node->overflow_link == BPLUSTREE_NULL) {
 			// put the node on the stack
-			stack.Push(nodeAndKey);
-			return B_OK;
+			RETURN_ERROR(stack.Push(nodeAndKey));
 		}
 
 		off_t nextOffset;
@@ -532,7 +531,8 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 status_t
 BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 {
-	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
+	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
+		|| value == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
 	Stack<node_and_key> stack;
@@ -591,7 +591,8 @@ TreeIterator::Goto(int8 to)
 		RETURN_ERROR(B_BAD_VALUE);
 
 	Stack<off_t> stack;
-	stack.Push(fTree->fHeader->root_node_pointer);
+	if (stack.Push(fTree->fHeader->root_node_pointer) < B_OK)
+		RETURN_ERROR(B_NO_MEMORY);
 
 	CachedNode cached(fTree);
 	bplustree_node *node;
