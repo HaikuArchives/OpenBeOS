@@ -14,5 +14,6 @@ Node.cpp
 #NodeInfo.cpp
 Path.cpp
 Statable.cpp
+SymLink.cpp
 kernel_interface.POSIX.cpp ;
 
