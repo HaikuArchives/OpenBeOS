@@ -100,7 +100,6 @@ void sbflush(struct sockbuf *sb)
  */
 void sbrelease(struct sockbuf *sb)
 {
-
         sbflush(sb);
         sb->sb_hiwat = sb->sb_mbmax = 0;
 }
