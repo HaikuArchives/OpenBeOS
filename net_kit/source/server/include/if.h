@@ -26,14 +26,19 @@ enum {
 
 /* Interface flags */
 enum {
-	IFF_UP 		= 0x0001,
-	IFF_DOWN	= 0x0002,
-	IFF_PROMISC	= 0x0004,
-	IFF_RUNNING	= 0x0008,
-	IFF_MULTICAST	= 0x0010,
-	IFF_BROADCAST	= 0x0020,
+	IFF_UP          = 0x0001,
+	IFF_DOWN        = 0x0002,
+	IFF_PROMISC     = 0x0004,
+	IFF_RUNNING     = 0x0008,
+	IFF_MULTICAST   = 0x0010,
+	IFF_BROADCAST   = 0x0020,
 	IFF_POINTOPOINT = 0x0040,
-	IFF_LOOPBACK	= 0x0080
+	IFF_NOARP       = 0x0080, 
+	IFF_LOOPBACK	= 0x0100,
+	IFF_DEBUG       = 0x0200,
+	IFF_LINK0       = 0x0400,
+	IFF_LINK1       = 0x0800,
+	IFF_LINK2       = 0x1000
 };
 
 typedef struct ifq	ifq;
@@ -182,20 +187,21 @@ struct sockaddr_dl {
 struct ifreq {
 	char	ifr_name[IFNAMSIZ];	/* name of interface */
 	union {
-		struct sockaddr_in ifru_addr;
-		struct sockaddr_in ifru_dstaddr;
-		struct sockaddr_in ifru_broadaddr;
+		struct sockaddr ifru_addr;
+		struct sockaddr ifru_dstaddr;
+		struct sockaddr ifru_broadaddr;
 		uint16 ifru_flags;
 		int ifru_metric;
 		caddr_t ifru_data;
 	} ifr_ifru;
 };
-#define ifr_addr	ifr_ifru.ifru_addr
-#define ifr_dstaddr	ifr_ifru.ifru_dstaddr
+#define ifr_addr        ifr_ifru.ifru_addr
+#define ifr_dstaddr     ifr_ifru.ifru_dstaddr
 #define ifr_broadaddr	ifr_ifru.ifru_broadaddr
-#define ifr_flags	ifr_ifru.ifru_flags
-#define ifr_metric	ifr_ifru.ifru_metric
-#define	ifr_data	ifr_ifru.ifru_data
+#define ifr_flags       ifr_ifru.ifru_flags
+#define ifr_metric      ifr_ifru.ifru_metric
+#define ifr_mtu         ifr_ifru.ifru_metric /* sneaky overload :) */
+#define	ifr_data        ifr_ifru.ifru_data
 
 struct ifconf {
 	int ifc_len;	/* length of associated buffer */
@@ -225,6 +231,8 @@ struct	ifaddr *ifa_ifwithroute (int, struct sockaddr *,
                                         struct sockaddr *);
 struct	ifaddr *ifaof_ifpforaddr (struct sockaddr *, struct ifnet *);
 void	ifafree (struct ifaddr *);
+
+int     ifioctl(struct socket *so, int cmd, caddr_t data);
 
 
 #endif /* OBOS_IF_H */
