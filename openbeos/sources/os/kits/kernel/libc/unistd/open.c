@@ -5,10 +5,10 @@
 
 #include <unistd.h>
 #include <syscalls.h>
-
+#include <fcntl.h>
 
 int
-open(char const *path, int omode, ...)
+open(const char *path, int flags, mode_t omode)
 {
 	int retval;
 
