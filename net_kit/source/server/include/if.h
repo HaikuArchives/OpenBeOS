@@ -23,13 +23,21 @@ enum {
 	IFD_LOOPBACK
 };
 
+/* Interface flags */
+enum {
+	IFF_UP 		= 0x0001,
+	IFF_DOWN	= 0x0002,
+	IFF_PROMISC	= 0x0004,
+};
+
 typedef struct ifnet {
 	int dev;	/* device handle */
 	int id;		/* id within the stack's device list */
 	char *name;	/* name of driver */
 	int type;
 	ether_addr mac;	/* The ethernet address if there is one... */
-	
+	int flags;	/* flags */
+
 	thread_id rx_thread;	
 	thread_id tx_thread;
 } ifnet;

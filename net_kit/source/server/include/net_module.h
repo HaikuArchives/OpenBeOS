@@ -21,7 +21,7 @@ typedef struct net_module {
 	int proto;
 	int layer;
 
-	int (*init) (loaded_net_module *, int *);
+	int (*init) (loaded_net_module *, int *pt);
 	int (*dev_init) (ifnet *);
 	int (*input) (struct mbuf *);
 	int (*output) (struct mbuf*);

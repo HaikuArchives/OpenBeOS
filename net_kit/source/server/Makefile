@@ -2,7 +2,7 @@ OBJS=	mbuf.o \
 	pools.o \
 	nhash.o
 
-SUBDIRS=net_server ipv4 udp ethernet arp
+SUBDIRS=util net_server ipv4 udp ethernet arp 
 
 CFLAGS=-O0 -g -Wall -fPIC -DPIC
 INCLUDES=-I. -I./include
