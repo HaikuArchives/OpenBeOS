@@ -54,7 +54,6 @@ static void expand_array(net_hash *nh)
 	net_hash_entry **new_array;
 	int new_max = nh->max * 2 +1;
 	int i;
-printf("expanding the array!\n");
 
 	new_array = malloc(sizeof(net_hash_entry) * new_max);
 	memset(new_array, 0, sizeof(net_hash_entry) * new_max);
@@ -90,9 +89,10 @@ static net_hash_entry **find_entry(net_hash *nh, const void *key,
 
 	for (hep = &nh->array[hash & nh->max], he = *hep; he; 
 				hep = &he->next, he = *hep) {
-		if (he->hash == hash && he->klen == klen &&
-			memcmp(he->key, key, klen) == 0)
-			break;
+		if (he->hash == hash && he->klen == klen
+			&& memcmp(he->key, key, klen) == 0) {
+				break;
+		}
 	}
 
 	if (he || !val)
@@ -125,6 +125,7 @@ void nhash_set(net_hash *nh, const void *key, ssize_t klen, const void *val)
 	net_hash_entry **hep;
 	net_hash_entry *old;
 	hep = find_entry(nh, key, klen, val);
+
 	if (*hep) {
 		if (!val) {
 			/* delete it */
