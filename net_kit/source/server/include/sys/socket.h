@@ -30,10 +30,10 @@
 #define PF_IMPLINK      AF_IMPLINK
 
 /* Types of socket we can create (eventually) */
-#define SOCK_STREAM 	1
-#define SOCK_DGRAM	2
-#define SOCK_RAW	3
-#define SOCK_MISC	255
+#define SOCK_DGRAM     10
+#define SOCK_STREAM    11
+#define SOCK_RAW       12
+#define SOCK_MISC     255
 
 /*
  * Option flags per-socket.
@@ -77,7 +77,7 @@ struct linger {
 };
 
 struct sockaddr {
-	uint8	sa_len;
+	uint8	sa_len;	
 	uint8	sa_family;
 	uint8	sa_data[30];
 };
@@ -86,9 +86,9 @@ struct sockaddr {
 struct sockaddr_storage {
 	uint8       ss_len;         /* total length */
 	uint8       ss_family;      /* address family */
-	u_char      __ss_pad1[6];   /* align to quad */
+	uint8       __ss_pad1[6];   /* align to quad */
 	uint64      __ss_pad2;      /* force alignment for stupid compilers */
-	uchar       __ss_pad3[240]; /* pad to a total of 256 bytes */
+	uint8       __ss_pad3[240]; /* pad to a total of 256 bytes */
 };
 
 struct sockproto {
