@@ -15,13 +15,21 @@ void pool_debug_walk(struct pool_ctl *p)
 	
 	printf("%ld byte blocks allocated, but now free:\n\n", p->alloc_size);
 
-	ACQUIRE_READ_LOCK(p->lock);
+	#if POOL_USES_BENAPHORES
+		ACQUIRE_BENAPHORE(p->lock);
+	#else
+		ACQUIRE_READ_LOCK(p->lock);
+	#endif
 	ptr = p->freelist;	
 	while (ptr) {
 		printf("  %02d: %p\n", i++, ptr);
 		ptr = ((struct free_blk*)ptr)->next;
 	}
-	RELEASE_READ_LOCK(p->lock);
+	#if POOL_USES_BENAPHORES
+		RELEASE_BENAPHORE(p->lock);
+	#else
+		RELEASE_READ_LOCK(p->lock);
+	#endif
 }
 
 
@@ -44,14 +52,23 @@ static struct pool_mem *get_mem_block(struct pool_ctl *pool)
 	INIT_BENAPHORE(block->lock, "pool_mem_lock");
 
 	if (CHECK_BENAPHORE(block->lock) >= B_OK) {
-		ACQUIRE_WRITE_LOCK(pool->lock);
+		#if POOL_USES_BENAPHORES
+			ACQUIRE_BENAPHORE(pool->lock);
+		#else
+			ACQUIRE_WRITE_LOCK(pool->lock);
+		#endif
 
 		// insert block at the beginning of the pools
 		if (pool->list)
 			block->next = pool->list;
 
 		pool->list = block;
-		RELEASE_WRITE_LOCK(pool->lock);
+		
+		#if POOL_USES_BENAPHORES
+			RELEASE_BENAPHORE(pool->lock);
+		#else
+			RELEASE_WRITE_LOCK(pool->lock);
+		#endif
 
 		return block;
 	}
@@ -76,13 +93,21 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 	if (pool == NULL)
 		return B_NO_MEMORY;
 
-	if ((pool->lock = CREATE_RW_LOCK("pool_lock")) < B_OK) {
-		free(pool);
-		return B_ERROR;
-	}
+	#if POOL_USES_BENAPHORES
+		INIT_BENAPHORE(pool->lock, "pool_lock");
+		if (CHECK_BENAPHORE(pool->lock) < B_OK) {
+			free(pool);
+			return B_ERROR;
+		}
+	#else
+		if ((pool->lock = CREATE_RW_LOCK("pool_lock")) < B_OK) {
+			free(pool);
+			return B_ERROR;
+		}
+	#endif
 
 	// 4 puddles will always fit in one pool
-	pool->block_size = ROUND_TO_PAGE_SIZE(size * 4);
+	pool->block_size = ROUND_TO_PAGE_SIZE(size * 8);
 	pool->alloc_size = size;
 	pool->list = NULL;
 	pool->freelist = NULL;
@@ -90,7 +115,11 @@ status_t pool_init(struct pool_ctl **_newPool, size_t size)
 	/* now add a first block */
 	get_mem_block(pool);
 	if (!pool->list) {
-		DELETE_RW_LOCK(pool->lock);
+		#if POOL_USES_BENAPHORES
+			UNINIT_BENAPHORE(pool->lock);
+		#else
+			DELETE_RW_LOCK(pool->lock);
+		#endif
 		free(pool);
 		return B_NO_MEMORY;
 	}
@@ -107,19 +136,30 @@ char *pool_get(struct pool_ctl *p)
 	struct pool_mem *mp = p->list;
 	char *rv = NULL;
 
-	ACQUIRE_READ_LOCK(p->lock);
+	#if POOL_USES_BENAPHORES
+		ACQUIRE_BENAPHORE(p->lock);
+	#else
+		ACQUIRE_READ_LOCK(p->lock);
+	#endif
 
 	if (p->freelist) {
 		/* woohoo, just grab a block! */
 		rv = p->freelist;
 		
-		RELEASE_READ_LOCK(p->lock);
+		#if !POOL_USES_BENAPHORES
+			RELEASE_READ_LOCK(p->lock);
 
-		/* we need to hold the write lock for that piece of code */
-		ACQUIRE_WRITE_LOCK(p->lock);
+			/* we need to hold the write lock for that piece of code */
+			ACQUIRE_WRITE_LOCK(p->lock);
+		#endif
+
 		p->freelist = ((struct free_blk*)rv)->next;
 
-		RELEASE_WRITE_LOCK(p->lock);
+		#if POOL_USES_BENAPHORES
+			RELEASE_BENAPHORE(p->lock);
+		#else
+			RELEASE_WRITE_LOCK(p->lock);
+		#endif
 		return rv;
 	}
 
@@ -140,7 +180,11 @@ char *pool_get(struct pool_ctl *p)
 		RELEASE_BENAPHORE(mp->lock);
 	} while ((mp = mp->next) != NULL);
 
-	RELEASE_READ_LOCK(p->lock);
+	#if POOL_USES_BENAPHORES
+		RELEASE_BENAPHORE(p->lock);
+	#else
+		RELEASE_READ_LOCK(p->lock);
+	#endif
 
 	if (rv)
 		return rv;
@@ -164,12 +208,21 @@ char *pool_get(struct pool_ctl *p)
 
 void pool_put(struct pool_ctl *p, void *ptr)
 {
-	ACQUIRE_WRITE_LOCK(p->lock);
+	#if POOL_USES_BENAPHORES
+		ACQUIRE_BENAPHORE(p->lock);
+	#else
+		ACQUIRE_WRITE_LOCK(p->lock);
+	#endif
 	if (p->freelist) {
 		((struct free_blk*)ptr)->next = p->freelist;
 	}
 	p->freelist = ptr;
-	RELEASE_WRITE_LOCK(p->lock);
+	
+	#if POOL_USES_BENAPHORES
+		RELEASE_BENAPHORE(p->lock);
+	#else
+		RELEASE_WRITE_LOCK(p->lock);
+	#endif
 }
 
 
@@ -186,7 +239,11 @@ void pool_destroy(struct pool_ctl *p)
 		free(temp);
 	}
 
-	DELETE_RW_LOCK(p->lock);
+	#if POOL_USES_BENAPHORES
+		UNINIT_BENAPHORE(p->lock);
+	#else
+		DELETE_RW_LOCK(p->lock);
+	#endif
 	free(p);
 }
 

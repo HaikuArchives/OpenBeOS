@@ -27,12 +27,18 @@ struct free_blk {
 	char *next;
 };
 
+#define POOL_USES_BENAPHORES 1
+
 struct pool_ctl {
 	struct pool_mem *list;
 	char *freelist;
 	size_t alloc_size;
 	size_t block_size;
+#if POOL_USES_BENAPHORES
+	benaphore lock;
+#else
 	sem_id lock;
+#endif
 };
 
 status_t pool_init(pool_ctl **p, size_t sz);

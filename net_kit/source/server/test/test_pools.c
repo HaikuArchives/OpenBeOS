@@ -9,7 +9,7 @@
 #define SIZE			200
 #define INNER_LOOPS 	1000
 #define LOOPS			50
-#define PUDDLE_SIZE 	4096
+#define PUDDLE_SIZE 	256
 
 #define PRINT_SINGLE	0
 
