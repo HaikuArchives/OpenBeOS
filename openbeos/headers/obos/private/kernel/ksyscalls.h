@@ -77,8 +77,9 @@ enum {
 	SYSCALL_ATOMIC_AND,
 	SYSCALL_ATOMIC_OR,
 	SYSCALL_ATOMIC_SET,
-	SYSCALL_TEST_AND_SET,
-	SYSCALL_SYSCTL/* 70 */
+	SYSCALL_TEST_AND_SET,/* 70 */
+	SYSCALL_SYSCTL,
+	SYSCALL_SOCKET
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);
