@@ -250,9 +250,9 @@ Journal::WriteLogEntry()
 	// ToDo: We currently call this function once for every log entry
 	// that's written to disk, which might not be necessary - but
 	// we may want to do this at other places, too.
-	do {
+	force_cache_flush(fVolume->Device(),false);
+	while (TransactionSize() > FreeLogBlocks())
 		force_cache_flush(fVolume->Device(),true);
-	} while (TransactionSize() > FreeLogBlocks());
 
 	off_t logOffset = fVolume->ToBlock(fVolume->Log());
 	off_t logStart = fVolume->LogEnd();
