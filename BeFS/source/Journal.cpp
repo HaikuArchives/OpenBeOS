@@ -7,6 +7,7 @@
 
 #include "Journal.h"
 #include "Debug.h"
+#include "cpp.h"
 
 
 int32 gMaxCount = 0;

@@ -136,6 +136,42 @@ dump_bplustree_header(bplustree_header *header)
 }
 
 
+#define DUMPED_BLOCK_SIZE 16
+
+void
+dump_block(const char *buffer,int size)
+{
+	for(int i = 0;i < size;) {
+		int start = i;
+
+		for(;i < start+DUMPED_BLOCK_SIZE;i++) {
+			if (!(i % 4))
+				Print(" ");
+
+			if (i >= size)
+				Print("  ");
+			else
+				Print("%02x",*(unsigned char *)(buffer+i));
+		}
+		Print("  ");
+
+		for(i = start;i < start + DUMPED_BLOCK_SIZE;i++) {
+			if (i < size) {
+				char c = *(buffer+i);
+
+				if (c < 30)
+					Print(".");
+				else
+					Print("%c",c);
+			}
+			else
+				break;
+		}
+		Print("\n");
+	}
+}
+
+
 void
 dump_bplustree_node(bplustree_node *node,bplustree_header *header,Volume *volume)
 {
@@ -201,39 +237,4 @@ dump_bplustree_node(bplustree_node *node,bplustree_header *header,Volume *volume
 	}
 }
 
-
-#define DUMPED_BLOCK_SIZE 16
-
-void
-dump_block(const char *buffer,int size)
-{
-	for(int i = 0;i < size;) {
-		int start = i;
-
-		for(;i < start+DUMPED_BLOCK_SIZE;i++) {
-			if (!(i % 4))
-				Print(" ");
-
-			if (i >= size)
-				Print("  ");
-			else
-				Print("%02x",*(unsigned char *)(buffer+i));
-		}
-		Print("  ");
-
-		for(i = start;i < start + DUMPED_BLOCK_SIZE;i++) {
-			if (i < size) {
-				char c = *(buffer+i);
-
-				if (c < 30)
-					Print(".");
-				else
-					Print("%c",c);
-			}
-			else
-				break;
-		}
-		Print("\n");
-	}
-}
 

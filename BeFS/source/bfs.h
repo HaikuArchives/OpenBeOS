@@ -168,8 +168,8 @@ struct file_cookie {
 	int		open_mode;
 };
 
-// notify every 1/2 second if the file size has changed
-#define INODE_NOTIFICATION_INTERVAL	500000LL
+// notify every second if the file size has changed
+#define INODE_NOTIFICATION_INTERVAL	1000000LL
 
 //**************************************
 

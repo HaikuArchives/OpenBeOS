@@ -328,7 +328,7 @@ bfs_sync(void *ns)
 
 	// ToDo: implement bfs_sync()!
 
-	return B_ERROR;
+	return B_OK;
 }
 
 
@@ -585,7 +585,7 @@ bfs_fsync(void *ns, void *node)
 
 	// ToDo: implement bfs_fsync()?!
 
-	return B_ERROR;
+	return B_OK;
 }
 
 

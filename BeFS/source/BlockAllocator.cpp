@@ -59,13 +59,12 @@ class AllocationGroup {
 		AllocationGroup();
 
 		void AddFreeRange(int32 start,int32 blocks);
-		bool IsFull() const { return fIsFull; }
+		bool IsFull() const { return fFreeBits == 0; }
 
 		int32 fNumBits;
 		int32 fStart;
 		int32 fFirstFree,fLargest,fLargestFirst;
 		int32 fFreeBits;
-		bool fIsFull;
 };
 
 
@@ -152,7 +151,6 @@ AllocationGroup::AllocationGroup()
 	fFirstFree(-1),
 	fLargest(-1),
 	fLargestFirst(-1),
-	fIsFull(true),
 	fFreeBits(0)
 {
 }
@@ -173,8 +171,6 @@ AllocationGroup::AddFreeRange(int32 start, int32 blocks)
 	}
 
 	fFreeBits += blocks;
-	if (blocks)
-		fIsFull = false;
 }
 
 
@@ -355,11 +351,9 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 				if (numBlocks < maximum)
 					numBlocks = range;
 				// update first free block in group (doesn't have to be free)
-				if (rangeStart == fGroups[group].fFirstFree) {
+				if (rangeStart == fGroups[group].fFirstFree)
 					fGroups[group].fFirstFree = rangeStart + numBlocks;
-					if (fGroups[group].fFirstFree >= fGroups[group].fNumBits)
-						fGroups[group].fIsFull = true;
-				}
+				fGroups[group].fFreeBits -= numBlocks;
 
 				if (block != rangeBlock) {
 					// allocate the part that's in the current block
@@ -477,6 +471,7 @@ BlockAllocator::Free(Transaction *transaction,block_run &run)
 
 	if (fGroups[group].fFirstFree > start)
 		fGroups[group].fFirstFree = start;
+	fGroups[group].fFreeBits += length;
 
 	for (;block < fBlocksPerGroup;block++) {
 		if (cached.SetTo(fGroups[group],block) < B_OK)
