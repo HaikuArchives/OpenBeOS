@@ -10,7 +10,10 @@
 #include "protocols.h"
 #include "ethernet.h"
 #include "mbuf.h"
+
+/* These are a hack for now to get us working ! */
 #include "ipv4/ipv4.h"
+#include "arp/arp.h"
 
 uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -52,6 +55,7 @@ int ethernet_input(struct mbuf *buf)
 	switch (proto) {
 		case PROT_ARP:
 			printf("ARP\n");
+			arp_input(buf);
 			break;
 		case PROT_RARP:
 			printf("RARP\n");

@@ -1,12 +1,14 @@
 OBJS=	mbuf.o \
 	pools.o \
 	ipv4/ipv4.o \
-	ethernet/ethernet.o
+	ethernet/ethernet.o \
+	arp/arp.o
 
 LOBJS =	mbuf.o \
 	pools.o \
 	ipv4.o \
-	ethernet.o
+	ethernet.o \
+	arp.o
 
 CFLAGS=-O0 -g -Wall
 INCLUDES=-I. -I./include
