@@ -71,14 +71,7 @@ private:
 	uint32 _reservedData[8];
 
 private:
-	//! Closes the file's file descriptor.
-	virtual void close_fd();
-
-	//! Returns the file descriptor.
 	StorageKit::FileDescriptor get_fd() const;
-
-	//! Sets the BNode's status.
-	void set_status(status_t newStatus);
 
 private:
 	//! The file's open mode.

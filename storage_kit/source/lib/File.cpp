@@ -218,8 +218,8 @@ BFile::SetTo(const char *path, uint32 openMode)
 	int newFd = -1;
 	if (path) {
 		// analyze openMode
-		// Well, it's a bit schizophrenic to re-compose openFlags, but to use
-		// O_RWMASK to filter openMode.
+		// Well, it's a bit schizophrenic to convert the B_* style openMode
+		// to POSIX style openFlags, but to use O_RWMASK to filter openMode.
 		StorageKit::OpenFlags openFlags;
 		switch (openMode & O_RWMASK) {
 			case B_READ_ONLY:
@@ -504,36 +504,20 @@ void BFile::_ReservedFile4() {}
 void BFile::_ReservedFile5() {}
 void BFile::_ReservedFile6() {}
 
-// close_fd
-/*!	\todo Remove this method.
-*/
-void
-BFile::close_fd()
-{
-	BNode::close_fd();
-}
 
 // get_fd
-/*! To be used instead of accessing the BNode's private \c fFd member directly.
+/*!	Returns the file descriptor.
+	To be used instead of accessing the BNode's private \c fFd member directly.
 	\return the file descriptor, or -1, if not properly initialized.
 */
-int
+StorageKit::FileDescriptor
 BFile::get_fd() const
 {
 	return fFd;
-}
-
-// set_status
-/*! To be used instead of accessing the BNode's private \c fCStatus member
-	directly.
-*/
-void
-BFile::set_status(status_t newStatus)
-{
-	fCStatus = newStatus;
 }
 
 
 #ifdef USE_OPENBEOS_NAMESPACE
 };		// namespace OpenBeOS
 #endif
+
