@@ -904,13 +904,15 @@ SymLinkTest::MakeLinkedPathTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(relDirLink) == B_OK );
 	CPPUNIT_ASSERT( dir.InitCheck() == B_NO_INIT);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == B_NO_INIT );
+	CPPUNIT_ASSERT( equals(link.MakeLinkedPath(&dir, &path), B_NO_INIT,
+						   B_BAD_VALUE) );
 	link.Unset();
 	// relative link, badly initialized dir
 	nextSubTest();
 	CPPUNIT_ASSERT( link.SetTo(relDirLink) == B_OK );
 	CPPUNIT_ASSERT( dir.SetTo(nonExisting) == B_ENTRY_NOT_FOUND);
-	CPPUNIT_ASSERT( link.MakeLinkedPath(&dir, &path) == B_NO_INIT );
+	CPPUNIT_ASSERT( equals(link.MakeLinkedPath(&dir, &path), B_NO_INIT,
+						   B_BAD_VALUE) );
 	link.Unset();
 	path.Unset();
 	dir.Unset();

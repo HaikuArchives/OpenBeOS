@@ -196,7 +196,7 @@ DirectoryTest::Suite()
 	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::EntryIteration Test", &DirectoryTest::EntryIterationTest) );
 	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::Creation Test", &DirectoryTest::EntryCreationTest) );
 	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::Assignment Test", &DirectoryTest::AssignmentTest) );
-	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::CreateDirectory Test (NOTE: This fails with OpenBeOS Posix libraries)", &DirectoryTest::CreateDirectoryTest) );
+	suite->addTest( new DirectoryTestCaller<DirectoryTest>("BDirectory::CreateDirectory Test", &DirectoryTest::CreateDirectoryTest) );
 	
 	return suite;
 }		
@@ -1977,8 +1977,10 @@ DirectoryTest::CreateDirectoryTest()
 	// 3. error cases
 	// existing file/link
 	nextSubTest();
-	CPPUNIT_ASSERT( create_directory(existingFile, 0x1ff) == B_BAD_VALUE );
-	CPPUNIT_ASSERT( create_directory(fileLink, 0x1ff) == B_BAD_VALUE );
+	CPPUNIT_ASSERT( equals(create_directory(existingFile, 0x1ff), B_BAD_VALUE,
+						   B_NOT_A_DIRECTORY) );
+	CPPUNIT_ASSERT( equals(create_directory(fileLink, 0x1ff), B_BAD_VALUE,
+						   B_NOT_A_DIRECTORY) );
 	CPPUNIT_ASSERT( create_directory(dirLink, 0x1ff) == B_OK );
 	// bad args
 	nextSubTest();
