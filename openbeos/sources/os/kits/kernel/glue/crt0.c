@@ -29,7 +29,7 @@ int _start(struct uspace_prog_args_t *uspa)
 	register char *ap;
 	_call_ctors();
 
-	__stdio_init();
+//	__stdio_init();
 
 	if ((ap = uspa->argv[0])) {
 		if ((__progname = strrchr(ap, '/')) == NULL)
@@ -40,7 +40,7 @@ int _start(struct uspace_prog_args_t *uspa)
 	
 	retcode = main(uspa->argc, uspa->argv);
 
-	__stdio_deinit();
+//	__stdio_deinit();
 	sys_exit(retcode);
 	return 0;
 }
