@@ -6,7 +6,7 @@
 */
 #include <kernel.h>
 #include <queue.h>
-//#include <heap.h>
+#include <memheap.h>
 #include <errors.h>
 
 typedef struct queue_element {
