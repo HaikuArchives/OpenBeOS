@@ -28,11 +28,11 @@
 
 
 /* these are missing from KernelExport.h ... */
-//#define  B_SELECT_READ       1 
-//#define  B_SELECT_WRITE      2 
-//#define  B_SELECT_EXCEPTION  3 
+#define  B_SELECT_READ       1 
+#define  B_SELECT_WRITE      2 
+#define  B_SELECT_EXCEPTION  3 
 
-//extern void notify_select_event(selectsync * sync, uint32 ref); 
+extern void notify_select_event(selectsync *sync, uint32 ref); 
 
 //*****************************************************/
 // Debug output
@@ -81,10 +81,6 @@ typedef struct {
 	port_id		localPort,port;
 	area_id		area;
 
-	benaphore	bufferLock;
-	uint8		*buffer;
-	int32		bufferOffset,bufferSize;
-
 	sem_id		commandSemaphore;
 	net_command *commands;
 	int32		commandIndex,numCommands;
@@ -100,6 +96,9 @@ static net_command *get_command(net_stack_cookie *cookie,int32 *_index);
 static status_t execute_command(net_stack_cookie *cookie, int32 op, void *data, uint32 length);
 static status_t init_connection(void **_cookie);
 static void shutdown_connection(net_stack_cookie *cookie);
+
+/* R5 compatibility / select */
+static void r5_notify_select_event(selectsync * sync, uint32 ref);
 
 /* device hooks */
 static status_t net_stack_open(const char * name, uint32 flags, void ** cookie);
@@ -136,6 +135,9 @@ device_hooks gDriverHooks =
 	NULL,               /* -> readv entry pint */
 	NULL                /* writev entry point */
 };
+
+typedef void (*notify_select_event_function)(selectsync * sync, uint32 ref);
+notify_select_event_function gNotifySelectEvent = notify_select_event;
 
 port_id gStackPort = -1;
 
@@ -247,10 +249,8 @@ set_command_areas(net_command *command)
 		{
 			struct select_args *args = (struct select_args *)data;
 
-			get_area_from_address(&command->area[1],args->rbits);
-			get_area_from_address(&command->area[2],args->wbits);
-			get_area_from_address(&command->area[3],args->ebits);
-			get_area_from_address(&command->area[4],args->timeout);
+			/* shouldn't be even needed at all... */
+			get_area_from_address(&command->area[1],args->sync);
 			break;
 		}
 
@@ -282,6 +282,7 @@ execute_command(net_stack_cookie *cookie,int32 op,void *data,uint32 length)
 {
 	uint32 commandIndex;
 	net_command *command = get_command(cookie,&commandIndex);
+	int32 maxTries = 200;
 	status_t status;
 	ssize_t bytes;
 
@@ -312,6 +313,10 @@ execute_command(net_stack_cookie *cookie,int32 op,void *data,uint32 length)
 		// wait until we get the results back from our command
 		if ((status = acquire_sem(cookie->commandSemaphore)) == B_OK) {
 			if (command->op != 0) {
+				if (--maxTries <= 0) {
+					FATAL(("command is not freed after 200 tries!\n"));
+					return B_ERROR;
+				}
 				release_sem(cookie->commandSemaphore);
 				continue;
 			}
@@ -333,13 +338,6 @@ init_connection(void **_cookie)
 	net_stack_cookie *cookie = (net_stack_cookie *)malloc(sizeof(net_stack_cookie));
 	if (cookie == NULL)
 		return B_NO_MEMORY;
-
-	INIT_BENAPHORE(cookie->bufferLock,"net connection buffer");
-	if (CHECK_BENAPHORE(cookie->bufferLock) < B_OK) {
-		FATAL(("open: couldn't create semaphore: %s\n",strerror(cookie->bufferLock.sem)));
-		free(cookie);
-		return CHECK_BENAPHORE(cookie->bufferLock);
-	}
 
 	// create a new port and get a connection from the stack
 
@@ -395,10 +393,6 @@ init_connection(void **_cookie)
 	cookie->numCommands = connection.numCommands;
 	cookie->commandIndex = 0;
 
-	cookie->buffer = (uint8 *)cookie->commands + CONNECTION_COMMAND_SIZE;
-	cookie->bufferSize = connection.bufferSize;
-	cookie->bufferOffset = 0;
-
 	*_cookie = cookie;
 	return B_OK;
 }
@@ -407,11 +401,54 @@ init_connection(void **_cookie)
 static void
 shutdown_connection(net_stack_cookie *cookie)
 {
-	UNINIT_BENAPHORE(cookie->bufferLock);
 	delete_area(cookie->area);
 	delete_port(cookie->localPort);
 
 	free(cookie);
+}
+
+
+//	#pragma mark -
+//*****************************************************/
+// R5 select compatibility
+//*****************************************************/
+
+
+static void r5_notify_select_event(selectsync *sync, uint32 ref)
+{
+	struct r5_selectsync *rss = (struct r5_selectsync *)sync;
+
+	if (acquire_sem(rss->lock) != B_OK) {
+		/* if we can't acquire the lock, it's that select() is done,
+		   or whatever it can be, we can do anything more about it here...
+		*/
+		PRINT(("r5_notify_select_event(%p, %ld) done\n", sync, ref));
+		return;
+	};
+
+	switch (ref & 0x0F) {
+		case 1:
+			if (rss->rbits) { 
+				FD_SET((ref >> 8), rss->rbits);
+				rss->nfd++;
+			} 
+			break;
+		case 2: 
+			if (rss->wbits) {
+				FD_SET((ref >> 8), rss->wbits);
+				rss->nfd++;
+			} 
+			break;
+		case 3:
+			if (rss->ebits) {
+				FD_SET((ref >> 8), rss->ebits);
+				rss->nfd++;
+			}
+			break;
+	};
+
+	release_sem(rss->wait); /* wakeup r5_select() */
+	release_sem(rss->lock);
 }
 
 
@@ -476,6 +513,11 @@ net_stack_control(void *_cookie, uint32 op, void *data, size_t length)
 	if (cookie == NULL)
 		return B_BAD_VALUE;
 
+	// if we get this call via ioctl() we are obviously called from an
+	// R5 compatible libnet
+	if (op == NET_STACK_SELECT)
+		gNotifySelectEvent = r5_notify_select_event;
+
 	return execute_command(cookie,op,data,-1);
 }
 
@@ -521,6 +563,13 @@ net_stack_write(void *_cookie,off_t pos,const void *buffer,size_t *length)
 static status_t
 net_stack_select(void *_cookie,uint8 event,uint32 ref,selectsync *sync)
 {
+	struct select_args args;
+
+	args.ref = ref;
+	args.sync = sync;
+	// event has to be added to the args
+
+	//return execute_command(_cookie,NET_STACK_SELECT,&args,sizeof(args));
 	return B_ERROR;
 }
 
@@ -528,6 +577,7 @@ net_stack_select(void *_cookie,uint8 event,uint32 ref,selectsync *sync)
 static status_t
 net_stack_deselect(void *_cookie,uint8 event,selectsync *sync)
 {
+	//return execute_command(_cookie,NET_STACK_DESELECT,&args,sizeof(args));
 	return B_ERROR;
 }
 
