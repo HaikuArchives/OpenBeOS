@@ -30,27 +30,88 @@ THE SOFTWARE.
 */
 
 #include "StatusWindow.h"
-#include <StringView.h>
+#include <Message.h>
 #include <Box.h>
 
-StatusWindow::StatusWindow(const char *text, BRect rect) 
-	:	BWindow(rect, "PDF Writer", 
-			B_MODAL_WINDOW, 
+
+StatusWindow::StatusWindow(int32 pages, PrinterDriver *pd) 
+	:	BWindow(BRect(100, 100, 400, 185), "PDF Writer", 
+			B_TITLED_WINDOW, 
 			B_NOT_RESIZABLE|B_NOT_ZOOMABLE|B_NOT_CLOSABLE) 
 {
-
-	BRect r(0, 0, rect.Width(), rect.Height());
+	printerDriver = pd;
+	pageCount = 0;
+//	copyCount = 0;
+	BRect r(0, 0, Frame().Width(), Frame().Height());
 
 	// view for the background color
 	BView *panel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
 					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
 					B_PLAIN_BORDER);
 	AddChild(panel);
+/*
+	if (copies > 1) {
+		pages *= copies;
+	}
+	
+	r.Set(10, 0, Frame().Width(), 50);
+	copyLabel = new BStringView(r, "copy_text", "Copy");
+	panel->AddChild(copyLabel);
+	
+	r.Set(10, 55, Frame().Width()-20, 65);
+	copyStatus = new BStatusBar(r, "copyStatus");
+	copyStatus->SetMaxValue(copies);
+	copyStatus->SetBarHeight(12);
+	panel->AddChild(copyStatus);
+*/	
+	r.Set(10, 12, Frame().Width()-5, 22);
+	pageLabel = new BStringView(r, "page_text", "Page");
+	panel->AddChild(pageLabel);
 
-	BStringView *stringView = new BStringView(r, "status_text", 
-		"Generating PDF file...");
-	stringView->SetAlignment(B_ALIGN_CENTER);
-	panel->AddChild(stringView);
+	r.Set(10, 15, Frame().Width()-10, 10);
+	pageStatus = new BStatusBar(r, "pageStatus");
+	pageStatus->SetMaxValue(pages);
+	pageStatus->SetBarHeight(12);
+	panel->AddChild(pageStatus);
+
+	// Cancel button
+	// add a separator line...
+//	BBox *line = new BBox(BRect(r.left, 50, r.right, 51), NULL,
+//						 B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP );
+//	panel->AddChild(line);
+
+	// add a "Cancel button
+	int32 x = 110;
+	int32 y = 55;
+	cancel 	= new BButton(BRect(x, y, x + 100, y + 20), NULL, "Cancel", 
+				new BMessage('cncl'), B_FOLLOW_RIGHT | B_FOLLOW_TOP);
+	cancel->ResizeToPreferred();
+	panel->AddChild(cancel);
 
 	Show();
+}
+
+void StatusWindow::MessageReceived(BMessage *msg) 
+{
+	switch (msg->what) {
+/*
+		case 'copy':
+			copy = "";
+			copy << "Copy: " << ++copyCount;
+			copyLabel->SetText(copy.String());
+			copyStatus->Update(1);
+			break;
+*/
+		case 'cncl':
+			printerDriver->StopPrinting();
+			break;
+		case 'page':
+			page = "";
+			page << "Writing Page: " << ++pageCount;
+			pageLabel->SetText(page.String());
+			pageStatus->Update(1);
+			break;
+		default:
+			BWindow::MessageReceived(msg);
+	}
 }

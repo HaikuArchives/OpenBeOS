@@ -31,12 +31,29 @@ THE SOFTWARE.
 
 #ifndef STATUS_WINDOW_H
 #define STATUS_WINDOW_H
-#include <Window.h>
-#include <Rect.h>
-#include <String.h>
+#include <InterfaceKit.h>
+#include <SupportKit.h>
 
-class StatusWindow : public BWindow {
+//class PrinterDriver;
+#include "PrinterDriver.h"
+
+class StatusWindow : public BWindow 
+{
+private:
+//	BString copy;
+	BString page;
+	int32 pageCount;
+//	int copyCount;
+//	BStringView *copyLabel;
+	BStringView *pageLabel;
+	BStatusBar *pageStatus;
+//	BStatusBar *copyStatus;
+	BButton *cancel;
+	PrinterDriver *printerDriver;
+
 public:
-	StatusWindow(const char *text, BRect);
+	StatusWindow(int32 pages, PrinterDriver *pd);
+	
+	void MessageReceived(BMessage *msg);
 };
 #endif

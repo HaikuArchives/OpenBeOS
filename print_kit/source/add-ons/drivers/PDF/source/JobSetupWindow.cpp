@@ -81,7 +81,7 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 
 	const int kMargin = 6;
 
-	const char *kCopiesLabel				= "Copies:";
+	//const char *kCopiesLabel				= "Copies:";
 	const char *kCopiesLabelExtraSpace		= "Copies:##";
 	const char *kPagesRangeLabel			= "Pages:";
 	const char *kAllPagesLabel				= "All";
@@ -98,6 +98,9 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	
 	
 	// add a "copies" input field
+
+/* Simon: temporarily removed this code
+
 	sprintf(buffer, "%d", (int)copies);
 	fCopies = new BTextControl(BRect(x, y, x+100, y+20), "copies", kCopiesLabel,
 								buffer, new BMessage(NB_COPIES_MSG));
@@ -107,7 +110,7 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	panel->AddChild(fCopies);
 	
 	y += h + kMargin;	// "new line"
-	
+*/
 	// add a "pages" label
 	sv = new BStringView(BRect(x, y, x+100, y+20), "pages_range", kPagesRangeLabel);
 	panel->AddChild(sv);
@@ -144,10 +147,11 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	x += w + kMargin;
 	
 	// add a "from" field
-	if (allPages) 
+	if (allPages) { 
 		buffer[0] = 0;
-	else
+	} else {
 		sprintf(buffer, "%d", (int)firstPage);
+	}
 	fFrom = new BTextControl(BRect(x, y, x+100, y+20), "from_field", kFromLabel, buffer,
 							new BMessage(RANGE_FROM_MSG));
 	fFrom->SetAlignment(B_ALIGN_LEFT, B_ALIGN_RIGHT);
@@ -159,10 +163,11 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	x += w + kMargin;
 	
 	// add a "to" field
-	if (allPages) 
+	if (allPages) {
 		buffer[0] = 0;
-	else
+	} else {
 		sprintf(buffer, "%d", (int)lastPage);
+	} 
 	fTo = new BTextControl(BRect(x, y, x+100, y+20), "to_field", kToLabel, buffer,
 							new BMessage(RANGE_TO_MSG));
 	fTo->SetAlignment(B_ALIGN_LEFT, B_ALIGN_RIGHT);
@@ -204,11 +209,11 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	ResizeTo(ok->Frame().right + kMargin, ok->Frame().bottom + kMargin);
 }
 
-void 
-JobSetupWindow::UpdateJobMessage() 
+void JobSetupWindow::UpdateJobMessage() 
 {
-	int32 copies = atoi(fCopies->Text());
-	if (copies <= 0) copies = 1;
+//	int32 copies = atoi(fCopies->Text());
+//	if (copies <= 0) 
+	int32 copies = 1;
 
 	int32 from;
 	int32 to;
@@ -267,8 +272,7 @@ JobSetupWindow::MessageReceived(BMessage *msg)
 }
 			
 
-status_t 
-JobSetupWindow::Go()
+status_t JobSetupWindow::Go()
 {
 	MoveTo(300,300);
 	Show();
