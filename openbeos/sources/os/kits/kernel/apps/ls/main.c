@@ -29,7 +29,7 @@ static void display_l(const char *filename, struct file_stat *stat)
 			type = "UNKN";
 	}
 
-	printf("%s %12Ld %s\n", type, stat->size, filename);
+	printf("%s %12lld %s\n", type, stat->size, filename);
 }
 
 static void display(const char *filename, struct file_stat *stat)
