@@ -4,7 +4,7 @@
 #define NET_ROUTE_H
 
 #include "net/radix.h"
-
+#include "sys/socket.h" /* for AF_MAX */
 /*
  * A route consists of a destination address and a reference
  * to a routing entry.  These are often held by protocols
