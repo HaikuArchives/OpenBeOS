@@ -206,6 +206,21 @@ BMimeType::Delete()
 }
 
 // GetIcon
+//! Fetches the large or mini icon associated with the MIME type
+/*! The icon is copied into the \c BBitmap pointed to by \c icon. The bitmap must
+	be the proper size: \c 32x32 for the large icon, \c 16x16 for the mini icon.	
+	Additionally, the bitmap must be in the \c B_CMAP8 color space (8-bit color).
+	
+	\param icon Pointer to a pre-allocated \c BBitmap of proper size and colorspace into
+				which the icon is copied.
+	\param icon_size Value that specifies which icon to return. Currently \c B_LARGE_ICON
+					 and \c B_MINI_ICON are supported.
+	\return
+	- B_OK: Success
+	- B_ENTRY_NOT_FOUND: No icon of the given size exists for the given type
+	- "error code": Failure	
+
+*/
 status_t
 BMimeType::GetIcon(BBitmap *icon, icon_size) const
 {
@@ -298,6 +313,22 @@ BMimeType::GetSupportingApps(BMessage *signatures) const
 }
 
 // SetIcon
+//! Sets the large or mini icon for the MIME type
+/*! The icon is copied from the \c BBitmap pointed to by \c icon. The bitmap must
+	be the proper size: \c 32x32 for the large icon, \c 16x16 for the mini icon.	
+	Additionally, the bitmap must be in the \c B_CMAP8 color space (8-bit color).
+	
+	If you want to erase the current icon, pass \c NULL as the \c icon argument.
+	
+	\param icon Pointer to a pre-allocated \c BBitmap of proper size and colorspace
+				containing the new icon, or \c NULL to clear the current icon.
+	\param icon_size Value that specifies which icon to update. Currently \c B_LARGE_ICON
+					 and \c B_MINI_ICON are supported.
+	\return
+	- B_OK: Success
+	- "error code": Failure	
+
+*/
 status_t
 BMimeType::SetIcon(const BBitmap *icon, icon_size)
 {
