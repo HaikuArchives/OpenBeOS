@@ -53,14 +53,6 @@ sem_id dev_lock;
 #define NETWORK_INTERFACES	"network/interface"
 #define NETWORK_PROTOCOLS	"network/protocol"
 
-/* This is just a hack.  Don't know what a sensible figure is... */
-#define MAX_DEVICES 16
-#define MAX_NETMODULES	20
-
-#define RECV_MSGS	100
-
-struct in_ifaddr * get_primary_addr(void);
-
 static int32 if_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
@@ -69,16 +61,11 @@ static int32 if_thread(void *data)
 	size_t len = i->if_mtu;
 	int count = 0;
 
-	while ((status = read(i->devid, buffer, len)) >= B_OK && count < RECV_MSGS) {
+	while ((status = read(i->devid, buffer, len)) >= B_OK) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
 
-dprintf("if_thread: read %d bytes of data!\n", status);
-
-		if (i->input) {
-			dprintf("calling input\n");
+		if (i->input)
 			i->input(mb);
-			dprintf("input has returned\n");
-		}
 		
 		atomic_add(&i->if_ipackets, 1);
 		count++;
@@ -98,7 +85,6 @@ static int32 rx_thread(void *data)
 	ifnet *i = (ifnet *)data;
 	struct mbuf *m;
 
-	dprintf("%s: starting rx_thread...\n", i->if_name);
 	while (1) {
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
@@ -123,7 +109,6 @@ static int32 tx_thread(void *data)
 	int txc = 0;
 #endif
 
-	dprintf("%s: starting tx_thread...\n", i->if_name);	
 	while (1) {
 		acquire_sem(i->txq->pop);
 		IFQ_DEQUEUE(i->txq, m);
@@ -224,8 +209,7 @@ static void start_device_threads(void)
 	acquire_sem(dev_lock);
 
 	while (d) {
-		sprintf(tname, "%s%d_rx_thread", d->name, d->unit);
-dprintf("starting rx_thread...\n");
+		sprintf(tname, "%s_rx_thread", d->if_name);
 		if (d->if_type == IFT_ETHER) {
 			d->rx_thread = spawn_kernel_thread(if_thread, tname, priority,
 							d);
@@ -235,29 +219,27 @@ dprintf("starting rx_thread...\n");
 							d);
 		}
 		if (d->rx_thread < 0) {
-			dprintf("Failed to start the rx_thread for %s%d\n", d->name, d->unit);
+			dprintf("Failed to start the rx_thread for %s\n", d->if_name);
 			continue;
 		} else {
-dprintf("resuming rx_thread\n");
 			resume_thread(d->rx_thread);
 		}
-dprintf("starting tx_thread...\n");		
 		d->txq = start_ifq();
 		if (!d->txq) {
 			kill_thread(d->rx_thread);
 			continue;
 		}
 
-		d->tx_thread = spawn_kernel_thread(tx_thread, "net_tx_thread",
+		sprintf(tname, "%s_tx_thread", d->if_name);
+		d->tx_thread = spawn_kernel_thread(tx_thread, tname,
 										priority, d);
 		if (d->tx_thread < 0) {
-			dprintf("Failed to start the tx_thread for %s%d\n", d->name, d->unit);
+			dprintf("Failed to start the tx_thread for %s%d\n", d->if_name);
 			kill_thread(d->tx_thread);
 			continue;
 		} else {
 			resume_thread(d->tx_thread);
 		}
-dprintf("all done, %s has been started!\n", d->if_name);
 
 		d = d->next; 
 	}
@@ -356,11 +338,9 @@ static void start_devices(void)
 
 	d = devices;
 	while (d) {
-		dprintf("device (%s) = %p\n", d->if_name, d);
 		d->start(d);
 		d = d->next;
 	}
-	dprintf("Done starting devices!\n");
 }
 
 static void close_devices(void)
@@ -630,8 +610,6 @@ int start_stack(void)
 	if (domains != NULL)
 		return;
 		
-	dprintf("core network module: Starting network stack...\n");
-
 	domains = NULL;
 	protocols = NULL;
 	devices = NULL;
@@ -653,9 +631,7 @@ int start_stack(void)
 	set_sem_owner(dev_lock, B_SYSTEM_TEAM);
 
 	find_interface_modules();
-dprintf("finished finding interface modules...\n");
 	start_devices();
-
 	list_devices();
 	start_device_threads();
 
