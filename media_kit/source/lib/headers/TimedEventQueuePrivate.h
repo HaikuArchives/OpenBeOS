@@ -48,6 +48,10 @@ struct _event_queue_imp
 					BTimedEventQueue::time_direction direction,
 					bool inclusive,
 					int32 eventType);
+
+#if DEBUG
+	void		Dump() const;
+#endif
 					
 private:
 	struct event_queue_entry
