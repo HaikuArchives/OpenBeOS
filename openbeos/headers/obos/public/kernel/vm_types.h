@@ -1,5 +1,5 @@
-#ifndef _VM_TYPES_H
-#define _VM_TYPES_H
+#ifndef _PUBLIC_KERNEL_VM_TYPES_H
+#define _PUBLIC_KERNEL_VM_TYPES_H
 
 #include <kernel.h>
 #include <stage2.h>
@@ -179,5 +179,5 @@ enum {
 #define LOCK_KERNEL    0x2
 #define LOCK_MASK      0x3
 
-#endif
+#endif /* _PUBLIC_KERNEL_VM_TYPES_H */
 

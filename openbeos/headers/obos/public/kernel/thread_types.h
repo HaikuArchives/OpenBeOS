@@ -1,6 +1,10 @@
 #ifndef _THREAD_TYPES_H
 #define _THREAD_TYPES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stage2.h>
 #include <ktypes.h>
 #include <vm.h>
@@ -55,7 +59,7 @@ struct proc {
 	int state;
 	int pending_signals;
 	void *ioctx;
-	aspace_id aspace_id;
+	aspace_id _aspace_id;
 	vm_address_space *aspace;
 	vm_address_space *kaspace;
 	struct thread *main_thread;
@@ -115,5 +119,10 @@ struct proc_info {
 // XXX remove later
 int thread_test(void);
 #endif
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 
