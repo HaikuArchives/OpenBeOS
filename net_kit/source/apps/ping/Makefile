@@ -3,7 +3,7 @@ INCLUDES=-I../../server/include -I../../server
 CFLAGS=-g -Wall
 START_DYN=/boot/develop/lib/x86/start_dyn.o
 # Hard coded...need to fix
-LIBNET_PATH=/boot/home/openbeos/net_kit/source/libnet
+LIBNET_PATH=`pwd`/../../libnet
 LDFLAGS=-nostdlib -lroot -Wl,-rpath,$(LIBNET_PATH) -L$(LIBNET_PATH) -lnet $(START_DYN)
 OBJS=$(TARGET).o
 BINDIR=/boot/home/config/bin
@@ -18,8 +18,8 @@ $(TARGET):	$(OBJS)
 	@$(CC) $(LDFLAGS) $(OBJS) -o $(TARGET)
 
 install:
-	if test -L $(BINDIR)/$(TARGET); then rm $(BINDIR)/$(TARGET); fi
-	ln -s `pwd`/$(TARGET) $(BINDIR)
+	@if test -L $(BINDIR)/$(TARGET); then rm $(BINDIR)/$(TARGET); fi
+	@ln -s `pwd`/$(TARGET) $(BINDIR)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
