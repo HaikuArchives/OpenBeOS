@@ -101,22 +101,22 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_thread_snooze((bigtime_t)INT32TOINT64(arg0, arg1));
 			break;
 		case SYSCALL_SEM_CREATE:
-			*call_ret = user_sem_create((int)arg0, (const char *)arg1);
+			*call_ret = user_create_sem((int)arg0, (const char *)arg1);
 			break;
 		case SYSCALL_SEM_DELETE:
-			*call_ret = user_sem_delete((sem_id)arg0);
+			*call_ret = user_delete_sem((sem_id)arg0);
 			break;
 		case SYSCALL_SEM_ACQUIRE:
-			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, 0, 0, NULL);
+			*call_ret = user_acquire_sem_etc((sem_id)arg0, 1, 0, 0);
 			break;
 		case SYSCALL_SEM_ACQUIRE_ETC:
-			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (bigtime_t)INT32TOINT64(arg3, arg4), (int *)arg5);
+			*call_ret = user_acquire_sem_etc((sem_id)arg0, (int)arg1, (int)arg2, (bigtime_t)INT32TOINT64(arg3, arg4));
 			break;
 		case SYSCALL_SEM_RELEASE:
-			*call_ret = user_sem_release((sem_id)arg0, (int)arg1);
+			*call_ret = user_release_sem((sem_id)arg0);
 			break;
 		case SYSCALL_SEM_RELEASE_ETC:
-			*call_ret = user_sem_release_etc((sem_id)arg0, (int)arg1, (int)arg2);
+			*call_ret = user_release_sem_etc((sem_id)arg0, (int)arg1, (int)arg2);
 			break;
 		case SYSCALL_GET_CURRENT_THREAD_ID:
 			*call_ret = thread_get_current_thread_id();
@@ -226,13 +226,13 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_write_port_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg5, arg6));
 			break;
 		case SYSCALL_SEM_GET_COUNT:
-			*call_ret = user_sem_get_count((sem_id)arg0, (int32*)arg1);
+			*call_ret = user_get_sem_count((sem_id)arg0, (int32*)arg1);
 			break;
 		case SYSCALL_SEM_GET_SEM_INFO:
-			*call_ret = user_sem_get_sem_info((sem_id)arg0, (struct sem_info *)arg1);
+			*call_ret = user_get_sem_info((sem_id)arg0, (struct sem_info *)arg1);
 			break;
 		case SYSCALL_SEM_GET_NEXT_SEM_INFO:
-			*call_ret = user_sem_get_next_sem_info((proc_id)arg0, (uint32 *)arg1, (struct sem_info *)arg2);
+			*call_ret = user_get_next_sem_info((proc_id)arg0, (uint32 *)arg1, (struct sem_info *)arg2);
 			break;
 		case SYSCALL_SEM_SET_SEM_OWNER:
 			*call_ret = user_set_sem_owner((sem_id)arg0, (proc_id)arg1);

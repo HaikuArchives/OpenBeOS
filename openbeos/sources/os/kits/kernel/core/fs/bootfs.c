@@ -619,7 +619,6 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	ssize_t err = 0;
 
 	TRACE(("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
-dprintf("bootfs_read %s\n", v->name);
 
 	mutex_lock(&fs->lock);
 

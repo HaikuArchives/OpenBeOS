@@ -140,7 +140,7 @@ int sem_init(kernel_args *ka)
 	return 0;
 }
 
-sem_id sem_create_etc(int count, const char *name, proc_id owner)
+sem_id create_sem_etc(int count, const char *name, proc_id owner)
 {
 	int i;
 	int state;
@@ -205,17 +205,17 @@ out:
 	return retval;
 }
 
-sem_id sem_create(int count, const char *name)
+sem_id create_sem(int count, const char *name)
 {
-	return sem_create_etc(count, name, proc_get_kernel_proc_id());
+	return create_sem_etc(count, name, proc_get_kernel_proc_id());
 }
 
-int sem_delete(sem_id id)
+int delete_sem(sem_id id)
 {
-	return sem_delete_etc(id, 0);
+	return delete_sem_etc(id, 0);
 }
 
-int sem_delete_etc(sem_id id, int return_code)
+int delete_sem_etc(sem_id id, int return_code)
 {
 	int slot;
 	int state;
@@ -238,7 +238,7 @@ int sem_delete_etc(sem_id id, int return_code)
 	if(sems[slot].id != id) {
 		RELEASE_SEM_LOCK(sems[slot]);
 		int_restore_interrupts(state);
-		dprintf("sem_delete: invalid sem_id %d\n", id);
+		dprintf("delete_sem: invalid sem_id %d\n", id);
 		return ERR_INVALID_HANDLE;
 	}
 
@@ -320,12 +320,12 @@ static int sem_timeout(void *data)
 }
 
 
-int sem_acquire(sem_id id, int count)
+int acquire_sem(sem_id id)
 {
-	return sem_acquire_etc(id, count, 0, 0, NULL);
+	return acquire_sem_etc(id, 1, 0, 0);
 }
 
-int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *deleted_retcode)
+int acquire_sem_etc(sem_id id, int count, int flags, bigtime_t timeout)
 {
 	int slot = id % MAX_SEMS;
 	int state;
@@ -335,7 +335,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 		return ERR_SEM_NOT_ACTIVE;
 
 	if(id < 0) {
-		dprintf("sem_acquire_etc: invalid sem handle %d\n", id);
+		dprintf("acquire_sem_etc: invalid sem handle %d\n", id);
 		return ERR_INVALID_HANDLE;
 	}
 
@@ -346,12 +346,12 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 	GRAB_SEM_LOCK(sems[slot]);
 
 	if(sems[slot].id != id) {
-		dprintf("sem_acquire_etc: bad sem_id %d\n", id);
+		dprintf("acquire_sem_etc: bad sem_id %d\n", id);
 		err = ERR_INVALID_HANDLE;
 		goto err;
 	}
 
-	if(sems[slot].count - count < 0 && (flags & SEM_FLAG_TIMEOUT) != 0 && timeout <= 0) {
+	if(sems[slot].count - count < 0 && (flags & B_TIMEOUT) != 0 && timeout <= 0) {
 		// immediate timeout
 		err = ERR_SEM_TIMED_OUT;
 		goto err;
@@ -365,7 +365,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 
 		// do a quick check to see if the thread has any pending kill signals
 		// this should catch most of the cases where the thread had a signal
-		if((flags & SEM_FLAG_INTERRUPTABLE) && (t->pending_signals & SIG_KILL)) {
+		if((flags & B_CAN_INTERRUPT) && (t->pending_signals & SIG_KILL)) {
 			sems[slot].count += count;
 			err = ERR_SEM_INTERRUPTED;
 			goto err;
@@ -380,22 +380,27 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 		t->sem_errcode = NO_ERROR;
 		thread_enqueue(t, &sems[slot].q);
 
-		if((flags & SEM_FLAG_TIMEOUT) != 0) {
+		if((flags & (B_TIMEOUT | B_ABSOLUTE_TIMEOUT)) != 0) {
+			int the_timeout = timeout;
 //			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d\n",
 //				timeout, sem_id, t->id);
 			// set up an event to go off with the thread struct as the data
+			if (flags & B_ABSOLUTE_TIMEOUT)
+				the_timeout -= system_time();
+
 			args.blocked_sem_id = id;
 			args.blocked_thread = t->id;
 			args.sem_count = count;
+			
 			timer_setup_timer(&sem_timeout, &args, &timer);
-			timer_set_event(timeout, TIMER_MODE_ONESHOT, &timer);
+			timer_set_event(the_timeout, TIMER_MODE_ONESHOT, &timer);
 		}
 
 		RELEASE_SEM_LOCK(sems[slot]);
 		GRAB_THREAD_LOCK();
 		// check again to see if a kill signal is pending.
 		// it may have been delivered while setting up the sem, though it's pretty unlikely
-		if((flags & SEM_FLAG_INTERRUPTABLE) && (t->pending_signals & SIG_KILL)) {
+		if((flags & B_CAN_INTERRUPT) && (t->pending_signals & SIG_KILL)) {
 			struct thread_queue wakeup_queue;
 			// ok, so a tiny race happened where a signal was delivered to this thread while
 			// it was setting up the sem. We can only be sure a signal wasn't delivered
@@ -415,7 +420,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 		thread_resched();
 		RELEASE_THREAD_LOCK();
 
-		if((flags & SEM_FLAG_TIMEOUT) != 0) {
+		if((flags & B_TIMEOUT) != 0) {
 			if(t->sem_errcode != ERR_SEM_TIMED_OUT) {
 				// cancel the timer event, the sem may have been deleted or interrupted
 				// with the timer still active
@@ -424,8 +429,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 		}
 
 		int_restore_interrupts(state);
-		if(deleted_retcode != NULL)
-			*deleted_retcode = t->sem_deleted_retcode;
+
 		return t->sem_errcode;
 	}
 
@@ -436,13 +440,13 @@ err:
 	return err;
 }
 
-int sem_release(sem_id id, int count)
+int release_sem(sem_id id)
 {
-	return sem_release_etc(id, count, 0);
+	return release_sem_etc(id, 1, 0);
 }
 
 
-int sem_release_etc(sem_id id, int count, int flags)
+int release_sem_etc(sem_id id, int count, int flags)
 {
 	int slot = id % MAX_SEMS;
 	int state;
@@ -504,7 +508,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 		while((t = thread_dequeue(&release_queue)) != NULL) {
 			thread_enqueue_run_q(t);
 		}
-		if((flags & SEM_FLAG_NO_RESCHED) == 0) {
+		if((flags & B_DO_NOT_RESCHEDULE) == 0) {
 			thread_resched();
 		}
 		RELEASE_THREAD_LOCK();
@@ -519,7 +523,7 @@ outnolock:
 	return err;
 }
 
-int sem_get_count(sem_id id, int32* thread_count)
+int get_sem_count(sem_id id, int32* thread_count)
 {
 	int slot;
 	int state;
@@ -552,7 +556,7 @@ int sem_get_count(sem_id id, int32* thread_count)
 	return NO_ERROR;
 }
 
-int sem_get_sem_info(sem_id id, struct sem_info *info)
+int get_sem_info(sem_id id, struct sem_info *info)
 {
 	int state;
 	int slot;
@@ -588,7 +592,7 @@ int sem_get_sem_info(sem_id id, struct sem_info *info)
 	return NO_ERROR;
 }
 
-int sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info)
+int get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info)
 {
 	int state;
 	int slot;
@@ -692,7 +696,7 @@ int sem_interrupt_thread(struct thread *t)
 		return ERR_INVALID_ARGS;
 	if(t->sem_blocking < 0)
 		return ERR_INVALID_ARGS;
-	if((t->sem_flags & SEM_FLAG_INTERRUPTABLE) == 0)
+	if((t->sem_flags & B_CAN_INTERRUPT) == 0)
 		return ERR_SEM_NOT_INTERRUPTABLE;
 
 	slot = t->sem_blocking % MAX_SEMS;
@@ -768,7 +772,7 @@ int sem_delete_owned_sems(proc_id owner)
 			RELEASE_SEM_LIST_LOCK();
 			int_restore_interrupts(state);
 
-			sem_delete_etc(id, 0);
+			delete_sem_etc(id, 0);
 			count++;
 
 			state = int_disable_interrupts();
@@ -782,7 +786,7 @@ int sem_delete_owned_sems(proc_id owner)
 	return count;
 }
 
-sem_id user_sem_create(int count, const char *uname)
+sem_id user_create_sem(int count, const char *uname)
 {
 	if(uname != NULL) {
 		char name[SYS_MAX_OS_NAME_LEN];
@@ -796,78 +800,56 @@ sem_id user_sem_create(int count, const char *uname)
 			return rc;
 		name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-		return sem_create_etc(count, name, proc_get_current_proc_id());
+		return create_sem_etc(count, name, proc_get_current_proc_id());
 	} else {
-		return sem_create_etc(count, NULL, proc_get_current_proc_id());
+		return create_sem_etc(count, NULL, proc_get_current_proc_id());
 	}
 }
 
-int user_sem_delete(sem_id id)
+int user_delete_sem(sem_id id)
 {
-	return sem_delete(id);
+	return delete_sem(id);
 }
 
-int user_sem_delete_etc(sem_id id, int return_code)
+int user_delete_sem_etc(sem_id id, int return_code)
 {
-	return sem_delete_etc(id, return_code);
+	return delete_sem_etc(id, return_code);
 }
 
-int user_sem_acquire(sem_id id, int count)
+int user_acquire_sem(sem_id id)
 {
-	return user_sem_acquire_etc(id, count, 0, 0, NULL);
+	return user_acquire_sem_etc(id, 1, 0, 0);
 }
 
-int user_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *deleted_retcode)
+int user_acquire_sem_etc(sem_id id, int count, int flags, bigtime_t timeout)
 {
-	if(deleted_retcode != NULL && ((addr)deleted_retcode >= KERNEL_BASE && (addr)deleted_retcode <= KERNEL_TOP))
-		return ERR_VM_BAD_USER_MEMORY;
+	flags = flags | B_CAN_INTERRUPT;
 
-	flags = flags | SEM_FLAG_INTERRUPTABLE;
-
-	if(deleted_retcode == NULL) {
-		return sem_acquire_etc(id, count, flags, timeout, deleted_retcode);
-	} else {
-		int uretcode;
-		int rc, rc2;
-
-		rc = user_memcpy(&uretcode, deleted_retcode, sizeof(uretcode));
-		if(rc < 0)
-			return rc;
-
-		rc = sem_acquire_etc(id, count, flags, timeout, &uretcode);
-		if(rc < 0)
-			return rc;
-
-		rc2 = user_memcpy(deleted_retcode, &uretcode, sizeof(uretcode));
-		if(rc2 < 0)
-			return rc2;
-
-		return rc;
-	}
+	return acquire_sem_etc(id, count, flags, timeout);
 }
 
-int user_sem_release(sem_id id, int count)
+int user_release_sem(sem_id id)
 {
-	return sem_release(id, count);
+	return release_sem_etc(id, 1, 0);
 }
 
-int user_sem_release_etc(sem_id id, int count, int flags)
+int user_release_sem_etc(sem_id id, int count, int flags)
 {
-	return sem_release_etc(id, count, flags);
+	return release_sem_etc(id, count, flags);
 }
 
-int user_sem_get_count(sem_id uid, int32* uthread_count)
+int user_get_sem_count(sem_id uid, int32* uthread_count)
 {
 	int32 thread_count;
 	int rc, rc2;
-	rc  = sem_get_count(uid, &thread_count);
+	rc  = get_sem_count(uid, &thread_count);
 	rc2 = user_memcpy(uthread_count, &thread_count, sizeof(int32));
 	if(rc2 < 0)
 		return rc2;
 	return rc;
 }
 
-int user_sem_get_sem_info(sem_id uid, struct sem_info *uinfo)
+int user_get_sem_info(sem_id uid, struct sem_info *uinfo)
 {
 	struct sem_info info;
 	int rc, rc2;
@@ -875,14 +857,14 @@ int user_sem_get_sem_info(sem_id uid, struct sem_info *uinfo)
 	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	rc = sem_get_sem_info(uid, &info);
+	rc = get_sem_info(uid, &info);
 	rc2 = user_memcpy(uinfo, &info, sizeof(struct sem_info));
 	if(rc2 < 0)
 		return rc2;
 	return rc;
 }
 
-int user_sem_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *uinfo)
+int user_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *uinfo)
 {
 	struct sem_info info;
 	uint32 cookie;
@@ -894,7 +876,7 @@ int user_sem_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *
 	rc2 = user_memcpy(&cookie, ucookie, sizeof(uint32));
 	if(rc2 < 0)
 		return rc2;
-	rc = sem_get_next_sem_info(uproc, &cookie, &info);
+	rc = get_next_sem_info(uproc, &cookie, &info);
 	rc2 = user_memcpy(uinfo, &info, sizeof(struct sem_info));
 	if(rc2 < 0)
 		return rc2;
@@ -909,62 +891,16 @@ int user_set_sem_owner(sem_id uid, proc_id uproc)
 	return set_sem_owner(uid, uproc);
 }
 
-/* BeOS compatibility functions... */
-#define B_CAN_INTERRUPT          1
-#define B_DO_NOT_RESCHEDULE      2
-#define B_CHECK_PERMISSION       4
-#define B_TIMEOUT                8
-#define	B_RELATIVE_TIMEOUT       8
-#define B_ABSOLUTE_TIMEOUT      16
-
-sem_id create_sem(int count, const char *name)
-{
-	return sem_create_etc(count, name, proc_get_kernel_proc_id());
-}
-	
-int delete_sem(sem_id id)
-{
-	return sem_delete_etc(id, 0);
-}
-
-int acquire_sem(sem_id id)
-{
-	return sem_acquire_etc(id, 1, 0, 0, NULL);
-}
-
-int acquire_sem_etc(sem_id id, uint32 count, uint32 flags, bigtime_t timeout)
-{
-	int nuflags = 0;
-	bigtime_t nutimeout = timeout;
-
-	if(flags & B_CAN_INTERRUPT)
-		nuflags |= SEM_FLAG_INTERRUPTABLE;
-	if(flags & B_DO_NOT_RESCHEDULE)
-		nuflags |= SEM_FLAG_NO_RESCHED;
-	if(flags & B_RELATIVE_TIMEOUT)
-		nuflags |= SEM_FLAG_TIMEOUT;
-	if(flags & B_ABSOLUTE_TIMEOUT) {
-		nuflags |= SEM_FLAG_TIMEOUT;
-		nutimeout = timeout - system_time();
-		if(nutimeout < 0)
-			nutimeout = 0;
-	}
-	return sem_acquire_etc(id, count, nuflags, nutimeout, NULL);
-}
-
-int release_sem(sem_id id)
-{
-	return sem_release_etc(id, 1, 0);
-}
-
-int release_sem_etc(sem_id id, int32 count, uint32 flags)
-{
-	int nuflags = 0;
-
-	if(flags & B_DO_NOT_RESCHEDULE)
-		nuflags = SEM_FLAG_NO_RESCHED;
-
-	return sem_release_etc(id, count, nuflags);
-}
-
-
+//
+//	if(flags & B_CAN_INTERRUPT)
+//		nuflags |= B_CAN_INTERRUPT;
+//	if(flags & B_DO_NOT_RESCHEDULE)
+//		nuflags |= B_DO_NOT_RESCHEDULE;
+//	if(flags & B_RELATIVE_TIMEOUT)
+//		nuflags |= B_TIMEOUT;
+//	if(flags & B_ABSOLUTE_TIMEOUT) {
+//		nuflags |= B_TIMEOUT;
+//		nutimeout = timeout - system_time();
+//		if(nutimeout < 0)
+//			nutimeout = 0;
+//	}

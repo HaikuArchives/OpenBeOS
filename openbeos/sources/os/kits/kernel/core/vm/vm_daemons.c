@@ -31,7 +31,7 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 
 //	dprintf("scan_pages called on aspace 0x%x, id 0x%x, free_target %d\n", aspace, aspace->id, free_target);
 
-	sem_acquire(aspace->virtual_map.sem, READ_COUNT);
+	acquire_sem_etc(aspace->virtual_map.sem, READ_COUNT, 0, 0);
 
 	first_region = aspace->virtual_map.region_list;
 	while(first_region && (first_region->base + (first_region->size - 1)) < aspace->scan_va)
@@ -41,7 +41,7 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 		first_region = aspace->virtual_map.region_list;
 
 	if(!first_region) {
-		sem_release(aspace->virtual_map.sem, READ_COUNT);
+		release_sem_etc(aspace->virtual_map.sem, READ_COUNT, 0);
 		return;
 	}
 
@@ -117,7 +117,7 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 	}
 
 	aspace->scan_va = region ? (first_region->base + first_region->size) : aspace->virtual_map.base;
-	sem_release(aspace->virtual_map.sem, READ_COUNT);
+	release_sem_etc(aspace->virtual_map.sem, READ_COUNT, 0);
 
 //	dprintf("exiting scan_pages\n");
 }

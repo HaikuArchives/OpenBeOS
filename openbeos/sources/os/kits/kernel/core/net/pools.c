@@ -129,7 +129,7 @@ int32 pool_init(struct pool_ctl **_newPool, size_t size)
 	struct pool_ctl *pool = NULL;
 
 	if (init_sem == -1)
-		sem_create(1, "pool_init_sem");
+		create_sem(1, "pool_init_sem");
 
 	/* minimum block size is sizeof the free_blk structure */
 	if (size < sizeof(struct free_blk)) 

@@ -507,7 +507,7 @@ restart:
 			return ERR_NO_MEMORY;
 		} else {
 			mutex_unlock(&iospace_mutex);
-			sem_acquire(iospace_full_sem, 1);
+			acquire_sem(iospace_full_sem);
 			goto restart;
 		}
 	}
@@ -547,7 +547,7 @@ static int put_physical_page_tmap(addr va)
 		// no sense rescheduling on this one, there's likely a race in the waiting
 		// thread to grab the iospace_mutex, which would block and eventually get back to
 		// this thread. waste of time.
-		sem_release_etc(iospace_full_sem, 1, SEM_FLAG_NO_RESCHED);
+		release_sem_etc(iospace_full_sem, 1, B_DO_NOT_RESCHEDULE);
 	}
 
 	mutex_unlock(&iospace_mutex);
@@ -694,7 +694,7 @@ int vm_translation_map_module_init(kernel_args *ka)
 void vm_translation_map_module_init_post_sem(kernel_args *ka)
 {
 	mutex_init(&iospace_mutex, "iospace_mutex");
-	iospace_full_sem = sem_create(1, "iospace_full_sem");
+	iospace_full_sem = create_sem(1, "iospace_full_sem");
 }
 
 int vm_translation_map_module_init2(kernel_args *ka)

@@ -173,6 +173,7 @@ static unsigned int vnode_hash(void *_v, const void *_key, unsigned int range)
 #undef VHASH
 }
 
+/*
 static int init_vnode(struct vnode *v)
 {
 	v->next = NULL;
@@ -190,6 +191,7 @@ static int init_vnode(struct vnode *v)
 
 	return 0;
 }
+*/
 
 static void add_vnode_to_mount_list(struct vnode *v, struct fs_mount *mount)
 {
@@ -230,7 +232,7 @@ static struct vnode *create_new_vnode(void)
 	if(v == NULL)
 		return NULL;
 
-	init_vnode(v);
+	memset(v, 0, sizeof(struct vnode));//max_commit - old_store_commitment + commitment(v);
 	return v;
 }
 
@@ -780,12 +782,14 @@ int vfs_test(void)
 		sys_seek(fd, 0, SEEK_SET);
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
-			if(len < 0)
-				panic("readdir returned %Ld\n", (long long)len);
+//			if(len <= 0)
+//				panic("readdir returned %Ld\n", (long long)len);
 			if(len > 0)
 				dprintf("readdir returned name = '%s'\n", buf);
-			else
+			else {
+				dprintf("readdir returned %s\n", strerror(len));
 				break;
+			}
 		}
 	}
 
@@ -821,12 +825,14 @@ int vfs_test(void)
 		sys_seek(fd, 0, SEEK_SET);
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
-			if(len < 0)
-				panic("readdir returned %Ld\n", (long long)len);
+//			if(len < 0)
+//				panic("readdir returned %Ld\n", (long long)len);
 			if(len > 0)
-				dprintf("readdir returned name = '%s'\n", buf);
-			else
+				dprintf("sys_read returned name = '%s'\n", buf);
+			else {
+				dprintf("sys_read returned %s\n", strerror(len));
 				break;
+			}
 		}
 	}
 	sys_close(fd);
@@ -856,7 +862,7 @@ int vfs_test(void)
 
 #endif
 	dprintf("vfs_test() done\n");
-	panic("foo\n");
+//	panic("foo\n");
 	return 0;
 }
 

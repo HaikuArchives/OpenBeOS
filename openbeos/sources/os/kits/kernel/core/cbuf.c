@@ -180,12 +180,12 @@ void cbuf_free_chain(cbuf *buf)
 	head = buf;
 	_clear_chain(head, &last);
 
-	sem_acquire(free_list_sem, 1);
+	acquire_sem(free_list_sem);
 
 	last->next = cbuf_free_list;
 	cbuf_free_list = head;
 
-	sem_release(free_list_sem, 1);
+	release_sem(free_list_sem);
 }
 
 cbuf *cbuf_get_chain(size_t len)
@@ -198,12 +198,12 @@ cbuf *cbuf_get_chain(size_t len)
 	if(len == 0)
 		panic("cbuf_get_chain: passed size 0\n");
 
-	sem_acquire(free_list_sem, 1);
+	acquire_sem(free_list_sem);
 
 	while(chain_len < len) {
 		if(cbuf_free_list == NULL) {
 			// we need to allocate some more cbufs
-			sem_release(free_list_sem, 1);
+			release_sem(free_list_sem);
 			temp = allocate_cbuf_mem(ALLOCATE_CHUNK);
 			if(!temp) {
 				// no more ram
@@ -212,7 +212,7 @@ cbuf *cbuf_get_chain(size_t len)
 				return NULL;
 			}
 			cbuf_free_chain(temp);
-			sem_acquire(free_list_sem, 1);
+			acquire_sem(free_list_sem);
 			continue;
 		}
 
@@ -225,7 +225,7 @@ cbuf *cbuf_get_chain(size_t len)
 
 		chain_len += chain->len;
 	}
-	sem_release(free_list_sem, 1);
+	release_sem(free_list_sem);
 
 	// now we have a chain, fixup the first and last entry
 	chain->total_len = len;
@@ -836,7 +836,7 @@ int cbuf_init()
 	// add the debug command
 	dbg_add_command(&dbg_dump_cbuf_freelists, "cbuf_freelist", "Dumps the cbuf free lists");
 
-	free_list_sem = sem_create(1, "cbuf_free_list_sem");
+	free_list_sem = create_sem(1, "cbuf_free_list_sem");
 	if(free_list_sem < 0) {
 		panic("cbuf_init: error creating cbuf_free_list_sem\n");
 		return ERR_NO_MEMORY;

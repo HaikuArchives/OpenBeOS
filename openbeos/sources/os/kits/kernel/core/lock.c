@@ -28,7 +28,7 @@ int recursive_lock_create(recursive_lock *lock)
 		return ERR_INVALID_ARGS;
 	lock->holder = -1;
 	lock->recursion = 0;
-	lock->sem = sem_create(1, "recursive_lock_sem");
+	lock->sem = create_sem(1, "recursive_lock_sem");
 //	if(lock->sem < 0)
 //		return -1;
 	return NO_ERROR;
@@ -39,7 +39,7 @@ void recursive_lock_destroy(recursive_lock *lock)
 	if(lock == NULL)
 		return;
 	if(lock->sem > 0)
-		sem_delete(lock->sem);
+		delete_sem(lock->sem);
 	lock->sem = -1;
 }
 
@@ -49,7 +49,7 @@ bool recursive_lock_lock(recursive_lock *lock)
 	bool retval = false;
 	
 	if(thid != lock->holder) {
-		sem_acquire(lock->sem, 1);
+		acquire_sem(lock->sem);
 		
 		lock->holder = thid;
 		retval = true;
@@ -68,7 +68,7 @@ bool recursive_lock_unlock(recursive_lock *lock)
 	
 	if(--lock->recursion == 0) {
 		lock->holder = -1;
-		sem_release(lock->sem, 1);
+		release_sem(lock->sem);
 		retval = true;
 	}
 	return retval;
@@ -88,7 +88,7 @@ int mutex_init(mutex *m, const char *in_name)
 
 	m->count = 0;
 
-	m->sem = sem_create(0, name);
+	m->sem = create_sem(0, name);
 	if(m->sem < 0)
 		return m->sem;
 
@@ -101,19 +101,19 @@ void mutex_destroy(mutex *m)
 		return;
 
 	if(m->sem >= 0) {
-		sem_delete(m->sem);
+		delete_sem(m->sem);
 	}
 }
 
 void mutex_lock(mutex *m)
 {
 	if(atomic_add(&m->count, 1) >= 1)
-		sem_acquire(m->sem, 1);
+		acquire_sem(m->sem);
 }
 
 void mutex_unlock(mutex *m)
 {
 	if(atomic_add(&m->count, -1) > 1)
-		sem_release(m->sem, 1);
+		release_sem(m->sem);
 }
 

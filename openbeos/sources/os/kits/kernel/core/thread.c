@@ -339,7 +339,7 @@ static struct thread *create_thread_struct(const char *name)
 		char temp[64];
 
 		sprintf(temp, "thread_0x%x_retcode_sem", t->id);
-		t->return_code_sem = sem_create(0, temp);
+		t->return_code_sem = create_sem(0, temp);
 		if(t->return_code_sem < 0)
 			goto err1;
 	}
@@ -350,7 +350,7 @@ static struct thread *create_thread_struct(const char *name)
 	return t;
 
 err2:
-	sem_delete_etc(t->return_code_sem, -1);
+	delete_sem_etc(t->return_code_sem, -1);
 err1:
 	kfree(t);
 err:
@@ -360,7 +360,7 @@ err:
 static void delete_thread_struct(struct thread *t)
 {
 	if(t->return_code_sem >= 0)
-		sem_delete_etc(t->return_code_sem, -1);
+		delete_sem_etc(t->return_code_sem, -1);
 	kfree(t);
 }
 
@@ -853,7 +853,7 @@ static int get_death_stack(void)
 	unsigned int bit;
 	int state;
 
-	sem_acquire(death_stack_sem, 1);
+	acquire_sem(death_stack_sem);
 
 	// grap the thread lock, find a free spot and release
 	state = int_disable_interrupts();
@@ -900,7 +900,7 @@ static void put_death_stack_and_reschedule(unsigned int index)
 
 	death_stack_bitmap &= ~(1 << index);
 
-	sem_release_etc(death_stack_sem, 1, SEM_FLAG_NO_RESCHED);
+	release_sem_etc(death_stack_sem, 1, B_DO_NOT_RESCHEDULE);
 
 	thread_resched();
 }
@@ -942,7 +942,7 @@ int thread_init(kernel_args *ka)
 	memset(&dead_q, 0, sizeof(dead_q));
 
 	// allocate a snooze sem
-	snooze_sem = sem_create(0, "snooze sem");
+	snooze_sem = create_sem(0, "snooze sem");
 	if(snooze_sem < 0) {
 		panic("error creating snooze sem\n");
 		return snooze_sem;
@@ -1008,7 +1008,7 @@ int thread_init(kernel_args *ka)
 			death_stacks[i].in_use = false;
 		}
 	}
-	death_stack_sem = sem_create(num_death_stacks, "death_stack_noavail_sem");
+	death_stack_sem = create_sem(num_death_stacks, "death_stack_noavail_sem");
 
 	// set up some debugger commands
 	dbg_add_command(dump_thread_list, "threads", "list all threads");
@@ -1060,7 +1060,7 @@ int user_thread_snooze(bigtime_t time)
 
 void thread_snooze(bigtime_t time)
 {
-	sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT, time, NULL);
+	acquire_sem_etc(snooze_sem, 1, B_TIMEOUT, time);
 }
 
 // this function gets run by a new thread before anything else
@@ -1200,7 +1200,7 @@ void thread_exit(int retcode)
 		sem_id s = t->return_code_sem;
 
 		t->return_code_sem = -1;
-		sem_delete_etc(s, retcode);
+		delete_sem_etc(s, retcode);
 	}
 
 	death_stack = get_death_stack();
@@ -1316,7 +1316,7 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
 
-	rc = sem_acquire_etc(sem, 1, 0, 0, retcode);
+	rc = acquire_sem(sem);
 
 	/* This thread died the way it should, dont ripple a non-error up */
 	if (rc == ERR_SEM_DELETED)

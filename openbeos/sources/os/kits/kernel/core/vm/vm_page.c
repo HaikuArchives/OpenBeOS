@@ -75,7 +75,7 @@ static void enqueue_page(page_queue *q, vm_page *page)
 	q->count++;
 	if(q == &page_modified_queue) {
 		if(q->count == 1)
-			sem_release_etc(modified_pages_available, 1, SEM_FLAG_NO_RESCHED);
+			release_sem_etc(modified_pages_available, 1, B_DO_NOT_RESCHEDULE);
 	}
 }
 
@@ -113,7 +113,7 @@ static int pageout_daemon()
 	dprintf("pageout daemon starting\n");
 
 	for(;;) {
-		sem_acquire(modified_pages_available, 1);
+		acquire_sem(modified_pages_available);
 
 		dprintf("here\n");
 
@@ -266,7 +266,7 @@ int vm_page_init_postthread(kernel_args *ka)
 	thread_set_priority(tid, THREAD_LOWEST_PRIORITY);
 	thread_resume_thread(tid);
 
-	modified_pages_available = sem_create(0, "modified_pages_avail_sem");
+	modified_pages_available = create_sem(0, "modified_pages_avail_sem");
 #if 0
 	// create a kernel thread to schedule modified pages to write
 	tid = thread_create_kernel_thread("pageout daemon", &pageout_daemon, THREAD_MIN_RT_PRIORITY + 1);

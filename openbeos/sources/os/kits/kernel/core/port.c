@@ -108,9 +108,9 @@ static void _dump_port_info(struct port_entry *port)
 	dprintf("cap:  %d\n", port->capacity);
 	dprintf("head: %d\n", port->head);
 	dprintf("tail: %d\n", port->tail);
- 	sem_get_count(port->read_sem, &cnt);
+ 	get_sem_count(port->read_sem, &cnt);
  	dprintf("read_sem:  %d\n", cnt);
- 	sem_get_count(port->read_sem, &cnt);
+ 	get_sem_count(port->read_sem, &cnt);
 	dprintf("write_sem: %d\n", cnt);
 }
 
@@ -195,7 +195,7 @@ create_port(int32 queue_length, const char *name)
 	}
 
 	// create sem_r with owner set to -1
-	sem_r = sem_create_etc(0, temp_name, -1);
+	sem_r = create_sem_etc(0, temp_name, -1);
 	if (sem_r < 0) {
 		// cleanup
 		kfree(temp_name);
@@ -204,10 +204,10 @@ create_port(int32 queue_length, const char *name)
 	}
 
 	// create sem_w
-	sem_w = sem_create_etc(queue_length, temp_name, -1);
+	sem_w = create_sem_etc(queue_length, temp_name, -1);
 	if (sem_w < 0) {
 		// cleanup
-		sem_delete(sem_r);
+		delete_sem(sem_r);
 		kfree(temp_name);
 		kfree(q);
 		return sem_w;
@@ -255,8 +255,8 @@ create_port(int32 queue_length, const char *name)
 	dprintf("create_port(): ERR_PORT_OUT_OF_SLOTS\n");
 
 	// cleanup
-	sem_delete(sem_w);
-	sem_delete(sem_r);
+	delete_sem(sem_w);
+	delete_sem(sem_r);
 	kfree(temp_name);
 	kfree(q);
 
@@ -349,8 +349,8 @@ delete_port(port_id id)
 
 	// release the threads that were blocking on this port by deleting the sem
 	// read_port() will see the ERR_SEM_DELETED acq_sem() return value, and act accordingly
-	sem_delete(r_sem);
-	sem_delete(w_sem);
+	delete_sem(r_sem);
+	delete_sem(w_sem);
 
 	return NO_ERROR;
 }
@@ -419,7 +419,7 @@ _get_port_info(port_id id, struct port_info *info, size_t size)
 	info->owner 		= ports[slot].owner;
 	strncpy(info->name, ports[slot].name, min(strlen(ports[slot].name),SYS_MAX_OS_NAME_LEN-1));
 	info->capacity		= ports[slot].capacity;
-	sem_get_count(ports[slot].read_sem, &info->queue_count);
+	get_sem_count(ports[slot].read_sem, &info->queue_count);
 	info->total_count	= ports[slot].total_count;
 
 	RELEASE_PORT_LOCK(ports[slot]);
@@ -466,7 +466,7 @@ _get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info,
 				info->owner 		= ports[slot].owner;
 				strncpy(info->name, ports[slot].name, min(strlen(ports[slot].name),SYS_MAX_OS_NAME_LEN-1));
 				info->capacity		= ports[slot].capacity;
-				sem_get_count(ports[slot].read_sem, &info->queue_count);
+				get_sem_count(ports[slot].read_sem, &info->queue_count);
 				info->total_count	= ports[slot].total_count;
 				RELEASE_PORT_LOCK(ports[slot]);
 				slot++;
@@ -526,7 +526,7 @@ port_buffer_size_etc(port_id id,
 	// XXX - is it a race condition to acquire a sem just after we
 	// unlocked the port ?
 	// XXX: call an acquire_sem which does the release lock, restore int & block the right way
-	res = sem_acquire_etc(ports[slot].read_sem, 1, flags & (SEM_FLAG_TIMEOUT | SEM_FLAG_INTERRUPTABLE), timeout, NULL);
+	res = acquire_sem_etc(ports[slot].read_sem, 1, flags & (B_TIMEOUT | B_CAN_INTERRUPT), timeout);
 
 	GRAB_PORT_LOCK(ports[slot]);
 	if (res == ERR_SEM_DELETED) {
@@ -551,7 +551,7 @@ port_buffer_size_etc(port_id id,
 	len = ports[slot].msg_queue[t].data_len;
 	
 	// restore readsem
-	sem_release(ports[slot].read_sem, 1);
+	release_sem(ports[slot].read_sem);
 
 	RELEASE_PORT_LOCK(ports[slot]);
 	
@@ -583,7 +583,7 @@ port_count(port_id id)
 		return ERR_INVALID_HANDLE;
 	}
 	
-	sem_get_count(ports[slot].read_sem, &count);
+	get_sem_count(ports[slot].read_sem, &count);
 	// do not return negative numbers 
 	if (count < 0)
 		count = 0;
@@ -657,8 +657,7 @@ read_port_etc(port_id id,
 	// sem_id is cached in local variable up here
 	
 	// get 1 entry from the queue, block if needed
-	res = sem_acquire_etc(cached_semid, 1,
-						flags, timeout, NULL);
+	res = acquire_sem_etc(cached_semid, 1, flags, timeout);
 
 	// XXX: possible race condition if port read by two threads...
 	//      both threads will read in 2 different slots allocated above, simultaneously
@@ -716,7 +715,7 @@ read_port_etc(port_id id,
 			if ((err = cbuf_user_memcpy_from_chain(msg_buffer, msg_store, 0, siz) < 0))	{
 				// leave the port intact, for other threads that might not crash
 				cbuf_free_chain(msg_store);
-				sem_release(cached_semid, 1); 
+				release_sem(cached_semid); 
 				return err;
 			}
 		} else
@@ -726,7 +725,7 @@ read_port_etc(port_id id,
 	cbuf_free_chain(msg_store);
 
 	// make one spot in queue available again for write
-	sem_release(cached_semid, 1);
+	release_sem(cached_semid);
 
 	return siz;
 }
@@ -832,8 +831,8 @@ write_port_etc(port_id id,
 	
 	// get 1 entry from the queue, block if needed
 	// assumes flags
-	res = sem_acquire_etc(cached_semid, 1,
-						flags & (SEM_FLAG_TIMEOUT | SEM_FLAG_INTERRUPTABLE), timeout, NULL);
+	res = acquire_sem_etc(cached_semid, 1,
+						flags & (B_TIMEOUT | B_CAN_INTERRUPT), timeout);
 
 	// XXX: possible race condition if port written by two threads...
 	//      both threads will write in 2 different slots allocated above, simultaneously
@@ -896,11 +895,11 @@ write_port_etc(port_id id,
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
 
-	sem_get_count(ports[slot].read_sem, &c1);
-	sem_get_count(ports[slot].write_sem, &c2);
+	get_sem_count(ports[slot].read_sem, &c1);
+	get_sem_count(ports[slot].write_sem, &c2);
 
 	// release sem, allowing read (might reschedule)
-	sem_release(cached_semid, 1);
+	release_sem(cached_semid);
 
 	return NO_ERROR;
 }
@@ -1145,7 +1144,7 @@ int	user_get_next_port_info(proc_id uproc,
 
 ssize_t	user_port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout)
 {
-	return port_buffer_size_etc(port, flags | SEM_FLAG_INTERRUPTABLE, timeout);
+	return port_buffer_size_etc(port, flags | B_CAN_INTERRUPT, timeout);
 }
 
 int32 user_port_count(port_id port)
@@ -1171,7 +1170,7 @@ ssize_t	user_read_port_etc(port_id uport, int32 *umsg_code, void *umsg_buffer,
 		return ERR_VM_BAD_USER_MEMORY;
 
 	res = read_port_etc(uport, &msg_code, umsg_buffer, ubuffer_size, 
-						uflags | PORT_FLAG_USE_USER_MEMCPY | SEM_FLAG_INTERRUPTABLE, utimeout);
+						uflags | PORT_FLAG_USE_USER_MEMCPY | B_CAN_INTERRUPT, utimeout);
 
 	rc = user_memcpy(umsg_code, &msg_code, sizeof(int32));
 	if(rc < 0)
@@ -1193,6 +1192,6 @@ int	user_write_port_etc(port_id uport, int32 umsg_code, void *umsg_buffer,
 	if((addr)umsg_buffer >= KERNEL_BASE && (addr)umsg_buffer <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 	return write_port_etc(uport, umsg_code, umsg_buffer, ubuffer_size, 
-		uflags | PORT_FLAG_USE_USER_MEMCPY | SEM_FLAG_INTERRUPTABLE, utimeout);
+		uflags | PORT_FLAG_USE_USER_MEMCPY | B_CAN_INTERRUPT, utimeout);
 }
 

@@ -115,11 +115,11 @@ vm_address_space *vm_get_aspace_by_id(aspace_id aid)
 {
 	vm_address_space *aspace;
 
-	sem_acquire(aspace_hash_sem, READ_COUNT);
+	acquire_sem_etc(aspace_hash_sem, READ_COUNT, 0, 0);
 	aspace = hash_lookup(aspace_table, &aid);
 	if(aspace)
 		atomic_add(&aspace->ref_count, 1);
-	sem_release(aspace_hash_sem, READ_COUNT);
+	release_sem_etc(aspace_hash_sem, READ_COUNT, 0);
 
 	return aspace;
 }
@@ -128,11 +128,11 @@ vm_region *vm_get_region_by_id(region_id rid)
 {
 	vm_region *region;
 
-	sem_acquire(region_hash_sem, READ_COUNT);
+	acquire_sem_etc(region_hash_sem, READ_COUNT, 0, 0);
 	region = hash_lookup(region_table, &rid);
 	if(region)
 		atomic_add(&region->ref_count, 1);
-	sem_release(region_hash_sem, READ_COUNT);
+	release_sem_etc(region_hash_sem, READ_COUNT, 0);
 
 	return region;
 }
@@ -147,7 +147,7 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
-	sem_acquire(aspace->virtual_map.sem, READ_COUNT);
+	acquire_sem_etc(aspace->virtual_map.sem, READ_COUNT, 0, 0);
 
 	region = aspace->virtual_map.region_list;
 	while(region != NULL) {
@@ -158,7 +158,7 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 		region = region->aspace_next;
 	}
 
-	sem_release(aspace->virtual_map.sem, READ_COUNT);
+	release_sem_etc(aspace->virtual_map.sem, READ_COUNT, 0);
 	vm_put_aspace(aspace);
 	return id;
 }
@@ -302,8 +302,10 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr siz
 }
 
 // a ref to the cache holding this store must be held before entering here
-static int map_backing_store(vm_address_space *aspace, vm_store *store, void **vaddr,
-	off_t offset, addr size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name)
+static int map_backing_store(vm_address_space *aspace, vm_store *store, 
+                             void **vaddr, off_t offset, addr size, 
+                             int addr_type, int wiring, int lock, int mapping, 
+                             vm_region **_region, const char *region_name)
 {
 	vm_cache *cache;
 	vm_cache_ref *cache_ref;
@@ -360,16 +362,13 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 				int state = int_disable_interrupts();
 				acquire_spinlock(&max_commit_lock);
 
-				if(max_commit - old_store_commitment + commitment < offset + size) {
+				if (max_commit - old_store_commitment + commitment < offset + size) {
 					release_spinlock(&max_commit_lock);
 					int_restore_interrupts(state);
 					mutex_unlock(&cache_ref->lock);
 					err = ERR_VM_WOULD_OVERCOMMIT;
 					goto err1a;
 				}
-
-//				dprintf("map_backing_store: adding %d to max_commit\n",
-//					(commitment - old_store_commitment) - (offset + size - cache->committed_size));
 
 				max_commit += (commitment - old_store_commitment) - (offset + size - cache->virtual_size);
 				cache->virtual_size = offset + size;
@@ -387,7 +386,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 
 	vm_cache_acquire_ref(cache_ref, true);
 
-	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+	acquire_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0, 0);
 
 	// check to see if this aspace has entered DELETE state
 	if(aspace->state == VM_ASPACE_STATE_DELETION) {
@@ -424,21 +423,21 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 	vm_cache_insert_region(cache_ref, region);
 
 	// insert the region in the global region hash table
-	sem_acquire(region_hash_sem, WRITE_COUNT);
+	acquire_sem_etc(region_hash_sem, WRITE_COUNT, 0 ,0);
 	hash_insert(region_table, region);
-	sem_release(region_hash_sem, WRITE_COUNT);
+	release_sem_etc(region_hash_sem, WRITE_COUNT, 0);
 
 	// grab a ref to the aspace (the region holds this)
 	atomic_add(&aspace->ref_count, 1);
 
-	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+	release_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0);
 
 	*_region = region;
 
 	return NO_ERROR;
 
 err1b:
-	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+	release_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0);
 	vm_cache_release_ref(cache_ref);
 	goto err;
 err1a:
@@ -515,7 +514,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	cache->temporary = 1;
 	cache->scan_skip = 0;
 
-	dprintf("create_anonymous_region: calling map_backing store\n");
+//	dprintf("create_anonymous_region: calling map_backing store\n");
 
 	vm_cache_acquire_ref(cache_ref, true);
 	err = map_backing_store(aspace, store, address, 0, size, addr_type, wiring, lock, REGION_NO_PRIVATE_MAP, &region, name);
@@ -525,7 +524,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 		return err;
 	}
 
-	dprintf("create_anonymous_region: done calling map_backing store\n");
+//	dprintf("create_anonymous_region: done calling map_backing store\n");
 
 	cache_ref = store->cache->ref;
 	switch(wiring) {
@@ -613,7 +612,9 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			;
 	}
 	vm_put_aspace(aspace);
-	dprintf("create_anonymous_region: done\n");
+
+//	dprintf("create_anonymous_region: done\n");
+
 	if(region)
 		return region->id;
 	else
@@ -718,6 +719,7 @@ static region_id _vm_map_file(aspace_id aid, char *name, void **address, int add
 //	addr map_offset;
 	int err;
 
+
 	vm_address_space *aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
@@ -773,8 +775,9 @@ restart:
 	err = map_backing_store(aspace, store, address, offset, size, addr_type, 0, lock, mapping, &region, name);
 	vm_cache_release_ref(cache_ref);
 	vm_put_aspace(aspace);
-	if(err < 0)
+	if(err < 0) {
 		return err;
+	}
 
 	// modify the pointer returned to be offset back into the new region
 	// the same way the physical address in was offset
@@ -939,12 +942,12 @@ static void _vm_put_region(vm_region *region, bool aspace_locked)
 	vm_address_space *aspace;
 	bool removeit = false;
 
-	sem_acquire(region_hash_sem, WRITE_COUNT);
+	acquire_sem_etc(region_hash_sem, WRITE_COUNT, 0, 0);
 	if(atomic_add(&region->ref_count, -1) == 1) {
 		hash_remove(region_table, region);
 		removeit = true;
 	}
-	sem_release(region_hash_sem, WRITE_COUNT);
+	release_sem_etc(region_hash_sem, WRITE_COUNT, 0);
 
 	if(!removeit)
 		return;
@@ -953,7 +956,7 @@ static void _vm_put_region(vm_region *region, bool aspace_locked)
 
 	// remove the region from the aspace's virtual map
 	if(!aspace_locked)
-		sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+		acquire_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0, 0);
 	temp = aspace->virtual_map.region_list;
 	while(temp != NULL) {
 		if(region == temp) {
@@ -971,7 +974,7 @@ static void _vm_put_region(vm_region *region, bool aspace_locked)
 	if(region == aspace->virtual_map.region_hint)
 		aspace->virtual_map.region_hint = NULL;
 	if(!aspace_locked)
-		sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+		release_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0);
 
 	if(temp == NULL)
 		panic("vm_region_release_ref: region not found in aspace's region_list\n");
@@ -1405,9 +1408,9 @@ static void dump_aspace_list(int argc, char **argv)
 vm_address_space *vm_get_kernel_aspace(void)
 {
 	/* we can treat this one a little differently since it can't be deleted */
-	sem_acquire(aspace_hash_sem, READ_COUNT);
+	acquire_sem_etc(aspace_hash_sem, READ_COUNT, 0, 0);
 	atomic_add(&kernel_aspace->ref_count, 1);
-	sem_release(aspace_hash_sem, READ_COUNT);
+	release_sem_etc(aspace_hash_sem, READ_COUNT, 0);
 	return kernel_aspace;
 }
 
@@ -1436,12 +1439,12 @@ void vm_put_aspace(vm_address_space *aspace)
 //	vm_region *region;
 	bool removeit = false;
 
-	sem_acquire(aspace_hash_sem, WRITE_COUNT);
+	acquire_sem_etc(aspace_hash_sem, WRITE_COUNT, 0, 0);
 	if(atomic_add(&aspace->ref_count, -1) == 1) {
 		hash_remove(aspace_table, aspace);
 		removeit = true;
 	}
-	sem_release(aspace_hash_sem, WRITE_COUNT);
+	release_sem_etc(aspace_hash_sem, WRITE_COUNT, 0);
 
 	if(!removeit)
 		return;
@@ -1457,7 +1460,7 @@ void vm_put_aspace(vm_address_space *aspace)
 	(*aspace->translation_map.ops->destroy)(&aspace->translation_map);
 
 	kfree(aspace->name);
-	sem_delete(aspace->virtual_map.sem);
+	delete_sem(aspace->virtual_map.sem);
 	kfree(aspace);
 
 	return;
@@ -1503,13 +1506,13 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 	aspace->virtual_map.region_list = NULL;
 	aspace->virtual_map.region_hint = NULL;
 	aspace->virtual_map.change_count = 0;
-	aspace->virtual_map.sem = sem_create(WRITE_COUNT, "aspacelock");
+	aspace->virtual_map.sem = create_sem(WRITE_COUNT, "aspacelock");
 	aspace->virtual_map.aspace = aspace;
 
 	// add the aspace to the global hash table
-	sem_acquire(aspace_hash_sem, WRITE_COUNT);
+	acquire_sem_etc(aspace_hash_sem, WRITE_COUNT, 0, 0);
 	hash_insert(aspace_table, aspace);
-	sem_release(aspace_hash_sem, WRITE_COUNT);
+	release_sem_etc(aspace_hash_sem, WRITE_COUNT, 0);
 
 	return aspace->id;
 }
@@ -1528,10 +1531,10 @@ int vm_delete_aspace(aspace_id aid)
 
 	// put this aspace in the deletion state
 	// this guarantees that no one else will add regions to the list
-	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+	acquire_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0, 0);
 	if(aspace->state == VM_ASPACE_STATE_DELETION) {
 		// abort, someone else is already deleting this aspace
-		sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+		release_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0);
 		vm_put_aspace(aspace);
 		return NO_ERROR;
 	}
@@ -1547,7 +1550,7 @@ int vm_delete_aspace(aspace_id aid)
 	}
 
 	// unlock
-	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+	release_sem_etc(aspace->virtual_map.sem, WRITE_COUNT, 0);
 
 	// release two refs on the address space
 	vm_put_aspace(aspace);
@@ -1575,11 +1578,11 @@ vm_address_space *vm_aspace_walk_next(struct hash_iterator *i)
 {
 	vm_address_space *aspace;
 
-	sem_acquire(aspace_hash_sem, READ_COUNT);
+	acquire_sem_etc(aspace_hash_sem, READ_COUNT, 0, 0);
 	aspace = hash_next(aspace_table, i);
 	if(aspace)
 		atomic_add(&aspace->ref_count, 1);
-	sem_release(aspace_hash_sem, READ_COUNT);
+	release_sem_etc(aspace_hash_sem, READ_COUNT, 0);
 	return aspace;
 }
 
@@ -1717,17 +1720,17 @@ int vm_init_postsem(kernel_args *ka)
 	// since we're still single threaded and only the kernel address space exists,
 	// it isn't that hard to find all of the ones we need to create
 	vm_translation_map_module_init_post_sem(ka);
-	kernel_aspace->virtual_map.sem = sem_create(WRITE_COUNT, "kernel_aspacelock");
-	kernel_aspace->translation_map.lock.sem = sem_create(1, "recursive_lock");
+	kernel_aspace->virtual_map.sem = create_sem(WRITE_COUNT, "kernel_aspacelock");
+	kernel_aspace->translation_map.lock.sem = create_sem(1, "recursive_lock");
 
 	for(region = kernel_aspace->virtual_map.region_list; region; region = region->aspace_next) {
 		if(region->cache_ref->lock.sem < 0) {
-			region->cache_ref->lock.sem = sem_create(1, "cache_ref_mutex");
+			region->cache_ref->lock.sem = create_sem(1, "cache_ref_mutex");
 		}
 	}
 
-	region_hash_sem = sem_create(WRITE_COUNT, "region_hash_sem");
-	aspace_hash_sem = sem_create(WRITE_COUNT, "aspace_hash_sem");
+	region_hash_sem = create_sem(WRITE_COUNT, "region_hash_sem");
+	aspace_hash_sem = create_sem(WRITE_COUNT, "aspace_hash_sem");
 
 	return heap_init_postsem(ka);
 }
@@ -1827,10 +1830,10 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	map = &aspace->virtual_map;
 	atomic_add(&aspace->fault_count, 1);
 
-	sem_acquire(map->sem, READ_COUNT);
+	acquire_sem_etc(map->sem, READ_COUNT, 0, 0);
 	region = vm_virtual_map_lookup(map, address);
 	if(region == NULL) {
-		sem_release(map->sem, READ_COUNT);
+		release_sem_etc(map->sem, READ_COUNT, 0);
 		vm_put_aspace(aspace);
 		dprintf("vm_soft_fault: va 0x%lx not covered by region in address space\n", address);
 		return ERR_VM_PF_BAD_ADDRESS; // BAD_ADDRESS
@@ -1838,13 +1841,13 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 
 	// check permissions
 	if(is_user && (region->lock & LOCK_KERNEL) == LOCK_KERNEL) {
-		sem_release(map->sem, READ_COUNT);
+		release_sem_etc(map->sem, READ_COUNT, 0);
 		vm_put_aspace(aspace);
 		dprintf("user access on kernel region\n");
 		return ERR_VM_PF_BAD_PERM; // BAD_PERMISSION
 	}
 	if(is_write && (region->lock & LOCK_RW) == 0) {
-		sem_release(map->sem, READ_COUNT);
+		release_sem_etc(map->sem, READ_COUNT, 0);
 		vm_put_aspace(aspace);
 		dprintf("write access attempted on read-only region\n");
 		return ERR_VM_PF_BAD_PERM; // BAD_PERMISSION
@@ -1856,7 +1859,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	cache_offset = address - region->base + region->cache_offset;
 	vm_cache_acquire_ref(top_cache_ref, true);
 	change_count = map->change_count;
-	sem_release(map->sem, READ_COUNT);
+	release_sem_etc(map->sem, READ_COUNT, 0);
 
 	// see if this cache has a fault handler
 	if(top_cache_ref->cache->store->ops->fault) {
@@ -2027,7 +2030,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	TRACE;
 
 	err = 0;
-	sem_acquire(map->sem, READ_COUNT);
+	acquire_sem_etc(map->sem, READ_COUNT, 0, 0);
 	if(change_count != map->change_count) {
 		// something may have changed, see if the address is still valid
 		region = vm_virtual_map_lookup(map, address);
@@ -2055,7 +2058,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 
 	TRACE;
 
-	sem_release(map->sem, READ_COUNT);
+	release_sem_etc(map->sem, READ_COUNT, 0);
 
 	TRACE;
 
