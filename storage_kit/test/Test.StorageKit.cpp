@@ -9,6 +9,7 @@
 #include "EntryTest.h"
 #include "FileTest.h"
 #include "FindDirectoryTest.h"
+#include "MimeTypeTest.h"
 #include "NodeTest.h"
 #include "PathTest.h"
 #include "QueryTest.h"
@@ -24,6 +25,7 @@ int main(int argc, char *argv[]) {
 	shell.AddSuite( "BDirectory", &DirectoryTest::Suite );
 	shell.AddSuite( "BEntry", &EntryTest::Suite );
 	shell.AddSuite( "BFile", &FileTest::Suite );
+	shell.AddSuite( "BMimeType", &MimeTypeTest::Suite );
 	shell.AddSuite( "BNode", &NodeTest::Suite );
 	shell.AddSuite( "BPath", &PathTest::Suite );
 	shell.AddSuite( "BQuery", &QueryTest::Suite );

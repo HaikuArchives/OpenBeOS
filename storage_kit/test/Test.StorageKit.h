@@ -3,11 +3,30 @@
 
 #include <CppUnitShell.h>
 #include <cppunit/TestCase.h>
+#include <cppunit/TestSuite.h>
 #include <StorageDefs.h>
+
+#include <stdio.h>
 
 class BPath;
 
 namespace StorageKit {
+
+class TestSuite : public CppUnit::TestSuite {
+    virtual void run (CppUnit::TestResult *result) {
+    	setUp();
+    	CppUnit::TestSuite::run(result);
+    	tearDown();
+    }
+    
+	// This function called *once* before the entire suite of tests is run
+	virtual void setUp() {}
+	
+	// This function called *once* after the entire suite of tests is run
+	virtual void tearDown() {}   
+
+};
+
 
 class TestShell : public CppUnitShell {
 public:
