@@ -9,103 +9,104 @@
 
 #include <Node.h>
 #include <EntryList.h>
+#include <StorageDefs.h>
 #include "kernel_interface.h"
-
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
 
-//class	BEntry;
-//class	BFile;
-//class	BSymLink;
-//struct	entry_ref;
+class BSymLink;
 
-//! A directory in the filesystem
-/*! Provides an interface for manipulating directories and their contents. */
-class BDirectory : public BNode, BEntryList {
+/*!
+	\class BDirectory
+	\brief A directory in the filesystem
+	
+	Provides an interface for manipulating directories and their contents.
+
+	\author <a href='mailto:bonefish@users.sf.net'>Ingo Weinhold</a>
+	\author <a href="mailto:tylerdauwalder@users.sf.net">Tyler Dauwalder</a>
+	
+	\version 0.0.0
+*/
+class BDirectory : public BNode, public BEntryList {
 public:
-	/*! Creates and uninitialized Directory object */
 	BDirectory();
-
-	BDirectory(const BEntry *entry);
+	BDirectory(const BDirectory &dir);
 	BDirectory(const entry_ref *ref);
-
-	/*! Creates a Directory object that refers to the directory given by path */
+	BDirectory(const node_ref *nref);
+	BDirectory(const BEntry *entry);
 	BDirectory(const char *path);
+	BDirectory(const BDirectory *dir, const char *path);
 
-/*
+	virtual ~BDirectory();
 
-						BDirectory(const BDirectory *dir, const char *path);
-						BDirectory(const node_ref *ref);
-						BDirectory(const BDirectory &dir);
+	status_t SetTo(const entry_ref *ref);
+	status_t SetTo(const node_ref *nref);
+	status_t SetTo(const BEntry *entry);
+	status_t SetTo(const char *path);
+	status_t SetTo(const BDirectory *dir, const char *path);
 
-virtual					~BDirectory();
+	status_t GetEntry(BEntry *entry) const;
 
-		status_t		SetTo(const entry_ref *ref);
-		status_t		SetTo(const BEntry *entry);
-		status_t		SetTo(const char *path);
-		status_t		SetTo(const BDirectory *dir, const char *path);
-		status_t		SetTo(const node_ref *ref);
+	bool IsRootDirectory() const;
 
-*/
+	status_t FindEntry(const char *path, BEntry *entry,
+					   bool traverse = false) const;
 
-		status_t		GetEntry(BEntry *entry) const;
+	bool Contains(const char *path, int32 nodeFlags = B_ANY_NODE) const;
+	bool Contains(const BEntry *entry, int32 nodeFlags = B_ANY_NODE) const;
 
-/*
-		bool			IsRootDirectory() const;
+	status_t GetStatFor(const char *path, struct stat *st) const;
 
-		status_t		FindEntry(const char *path, BEntry *entry,
-								  bool traverse = false) const;
+	virtual status_t GetNextEntry(BEntry *entry, bool traverse = false);
+	virtual status_t GetNextRef(entry_ref *ref);
+	virtual int32 GetNextDirents(dirent *buf, size_t bufSize,
+								 int32 count = INT_MAX);
+	virtual status_t Rewind();
+	virtual int32 CountEntries();
 
-		bool			Contains(const char *path, 
-								 int32 node_flags = B_ANY_NODE) const;
-		bool			Contains(const BEntry *entry,
-								 int32 node_flags = B_ANY_NODE) const;
+	status_t CreateDirectory(const char *path, BDirectory *dir);
+	status_t CreateFile(const char *path, BFile *file,
+						bool failIfExists = false);
+	status_t CreateSymlink(const char *path, const char *linkToPath,
+						   BSymLink *link);
 
-		status_t		GetStatFor(const char *path, struct stat *st) const;
-*/
-
-virtual	status_t		GetNextEntry(BEntry *entry, bool traverse = false);
-virtual	status_t		GetNextRef(entry_ref *ref);
-virtual	int32			GetNextDirents(struct dirent *buf, size_t length,
-							int32 count = INT_MAX);
-virtual	status_t		Rewind();
-virtual	int32			CountEntries();
-
-/*
-		status_t		CreateDirectory(const char *path, BDirectory *dir);
-		status_t		CreateFile(const char *path, BFile *file, 
-								   bool failIfExists = false);
-		status_t		CreateSymLink(const char *path, const char *content,
-							BSymLink *link);
-
-		BDirectory &	operator=(const BDirectory &dir);
+	BDirectory &operator=(const BDirectory &dir);
 
 private:
+	virtual void _ReservedDirectory1();
+	virtual void _ReservedDirectory2();
+	virtual void _ReservedDirectory3();
+	virtual void _ReservedDirectory4();
+	virtual void _ReservedDirectory5();
+	virtual void _ReservedDirectory6();
 
-friend class		BEntry;
-friend class		BVolume;
+	uint32 _reservedData[7];
 
-virtual	void		_ErectorDirectory1();
-virtual	void		_ErectorDirectory2();
-virtual	void		_ErectorDirectory3();
-virtual	void		_ErectorDirectory4();
-virtual	void		_ErectorDirectory5();
-virtual	void		_ErectorDirectory6();
-		uint32		_erectorData[7];
+private:
+	virtual void close_fd();
+	status_t set_fd(int fd);
+	int get_fd() const;
+	void set_status(status_t newStatus);
 
-virtual void		close_fd();
-		status_t	set_fd(int fd);
-		
-*/
 
-//		int			fDirFd;
-		/*! The directory this object represents. This member replaces fDirFd from the R5
-			implementation. */
-		StorageKit::Dir fDir;
-	
+// As I see it, there is no need for this variable. BNode::fFd accessable
+// through set_fd()/get_fd() is fine. But probably I'm missing something --
+// perhaps about directory iteration?!
+//	int fDirFd;
+	/*! The directory this object represents. This member replaces fDirFd
+		from the R5 implementation. */
+	StorageKit::Dir fDir;
+
+	friend class BEntry;
 };
+
+
+// C functions
+
+status_t create_directory(const char *path, mode_t mode);
+
 
 #ifdef USE_OPENBEOS_NAMESPACE
 };		// namespace OpenBeOS
