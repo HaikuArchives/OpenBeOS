@@ -6,13 +6,44 @@
 #ifndef OBOS_PROTOCOLS_H
 #define OBOS_PROTOCOLS_H
 
-#define 	PROT_IPV4		0x0800
-#define		PROT_ARP		0x0806
-#define		PROT_RARP		0x8035
+/* define some protocol numbers unique to ethernet */
+enum {
+        ETHER_IPV4  = 0x0800,
+        ETHER_ARP   = 0x0806,
+	ETHER_RARP  = 0x8035,	 
+        ETHER_ATALK = 0x809b,      /* Appletalk */
+        ETHER_SNMP  = 0x814c,      /* SNMP */
+        ETHER_IPV6  = 0x86dd       /* IPv6 */
+};
 
-#define 	PROT_IPV6		0x86dd
+/* define the protocol numbers used by IPv4 */
+enum {
+	IP_ICMP = 1,
+	IP_IGMP = 2,
+	IP_TCP = 6,
+	IP_UDP = 17,
+	IP_ETHERIP = 97,	/* Ethernet within IP encapsulation */
+	IP_ENCAP = 98		/* Encapsulation header */
+};
 
-#define		PROT_UDP		17
+/* these are used when assigning slots in the protocol table, so they
+ * should tie in with IP numbers wherever possible, with other 
+ * protocols fitting in.
+ * These are used in the module definitions.
+ */
+enum {
+	NS_ICMP = 1,
+	NS_IGMP  = 2,
+	NS_TCP = 6,
+	NS_UDP = 17,
+	NS_ETHER=200,
+	NS_IPV4 = 201,
+	NS_IPV6 = 202,
+	NS_ATALK = 203,
+	NS_ARP = 204,
+	NS_RARP = 205
+};
+
 
 #endif /* OBOS_PROTOCOLS_H */
 

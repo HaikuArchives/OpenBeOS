@@ -10,12 +10,6 @@
 #include "mbuf.h"
 #include "net_misc.h"
 
-enum {
-	IP_ICMP = 1,
-	IP_TCP = 6,
-	IP_UDP = 17,
-};
-
 typedef struct ipv4_header {
 #if B_HOST_IS_BENDIAN
 	uint8	ver:4;

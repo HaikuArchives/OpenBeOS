@@ -1,47 +1,38 @@
 OBJS=	mbuf.o \
-	pools.o \
-	ipv4/ipv4.o \
-	ethernet/ethernet.o \
-	arp/arp.o \
-	udp/udp.o \
-	net_server/net_server.o
+	pools.o
 
-LOBJS =	mbuf.o \
-	pools.o \
-	ipv4.o \
-	ethernet.o \
-	arp.o
+SUBDIRS=ipv4 udp ethernet arp
 
-EXTRA_OBJS = net_server.o udp.o
-
-CFLAGS=-O0 -g -Wall
+CFLAGS=-O0 -g -Wall -fPIC -DPIC
 INCLUDES=-I. -I./include
-BUILDOPTS=-D_NO_MAIN
 
-all: test_mbuf testread net_srv
+all: net_srv subdirs
 
-test: test_mbuf
+test: 
 	@test_mbuf
-	@testread
+	@net_srv
 
-net_srv: udp.so
-	$(CC) $(CFLAGS) $(INCLUDES) -o net_srv $(LOBJS) net_server/net_server.c
-
-testread: $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o testread $(LOBJS) $(EXTRA_OBJS) testread.c
+net_srv: $(OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o net_srv $(OBJS) net_server/net_server.c
 
 test_mbuf: $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o test_mbuf $(LOBJS) $(EXTRA_OBJS) test_mbuf.c
+	$(CC) $(CFLAGS) $(INCLUDES) -o test_mbuf $(OBJS) test_mbuf.c
+
+subdirs: $(OBJS) net_srv
+	@if test -e _APP_; then rm _APP_; fi
+	@ln -s net_srv _APP_
+	@for i in $(SUBDIRS); do \
+		echo "Making $$i module"; \
+		(cd $$i && $(MAKE)) || exit 1; \
+	done;
+	@rm _APP_
 
 clean:
-	@rm *.o *.so test_mbuf testread net_server
+	@rm *.o modules/*.so test_mbuf testread net_server
 
-udp.so:
-	$(CC) $(CFLAGS) $(BUILDOPTS) $(INCLUDES) -nostart -o udp.so udp/udp.c
-	 
 .SUFFIXES:
-.SUFFIXES: .c .o .so
+.SUFFIXES: .c .o
 
 .c.o:
-	$(CC) $(CFLAGS) $(BUILDOPTS) $(INCLUDES) -c $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 

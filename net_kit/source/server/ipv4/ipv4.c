@@ -7,9 +7,10 @@
 
 #include "ipv4/ipv4.h"
 #include "protocols.h"
+#include "net_module.h"
 
-/* hack to get the thing working... */
-#include "udp/udp.h"
+loaded_net_module *net_modules;
+int *prot_table;
 
 static void dump_ipv4_addr(char *msg, ipv4_addr *ad)
 {
@@ -44,7 +45,7 @@ int ipv4_input(struct mbuf *buf)
 			break;
 		case IP_UDP:
 			printf("UDP\n");
-			run_input(PROT_UDP, buf);
+			net_modules[prot_table[ip->prot]].mod->input(buf);
 			break;
 		case IP_TCP:
 			printf("TCP\n");
@@ -55,3 +56,22 @@ int ipv4_input(struct mbuf *buf)
 
 	return 0; 
 }
+
+int ipv4_init(loaded_net_module *nm, int *tbl)
+{
+	net_modules = nm;
+	prot_table = tbl;
+
+	return 0;
+}
+
+net_module net_module_data = {
+	"IPv4 module",
+	NS_IPV4,
+	NET_LAYER2,
+
+	&ipv4_init,
+	NULL,
+	&ipv4_input,
+	NULL
+};

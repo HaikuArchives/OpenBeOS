@@ -17,20 +17,14 @@
 #include "include/if.h"	/* for ifnet definition */
 #include "net_server/net_server.h"
 #include "protocols.h"
+#include "net_module.h"
 
 /* horrible hack to get this building... */
 #include "ethernet/ethernet.h"
 
-typedef struct net_modules {
-	image_id iid;
-	int (*input)(struct mbuf *);
-	int proto;
-} net_modules;
-
-static net_modules *net_mod;
-static int nnmod = 0;
-
-#ifndef _NO_MAIN
+static loaded_net_module *global_modules;
+static int nmods = 0;
+static int prot_table[255];
 
 static ifnet *devices;
 static int ndevs = 0;
@@ -51,7 +45,7 @@ static int32 rx_thread(void *data)
 	printf("%s: starting rx_thread...\n", i->name);
         while ((status = read(i->dev, buffer, len)) >= B_OK && count < 10) {
                 struct mbuf *mb = m_devget(buffer, len, 0, NULL);
-                ethernet_input(mb);
+                global_modules[prot_table[NS_ETHER]].mod->input(mb);
 		count++;
 		len = 2048;
         }
@@ -164,26 +158,51 @@ static void close_devices(void)
 		close(devices[i].dev);
 	}
 }
-#endif /* _NO_MAIN */
 
-int run_input(int proto, struct mbuf *buf)
+static void find_modules(void)
 {
-	int i;
+	char path[PATH_MAX], cdir[PATH_MAX];
+	image_id u;
+	net_module *nm;
+	DIR *dir;
+	struct dirent *m;
+	status_t status;
 
-	for (i=0;i<nnmod;i++) {
-		if (net_mod[i].proto == proto)
-			return net_mod[i].input(buf);
+	getcwd(cdir, PATH_MAX);
+	sprintf(cdir, "%s/modules", cdir);
+	dir = opendir(cdir);
+
+	while ((m = readdir(dir)) != NULL) {
+		if (strcmp(m->d_name, ".") == 0 || strcmp(m->d_name, "..") == 0)
+                        continue;
+		/* ok so we try it... */
+		sprintf(path, "%s/%s", cdir, m->d_name);
+       		u = load_add_on(path);
+		if (u > 0) {
+			status = get_image_symbol(u, "net_module_data", B_SYMBOL_TYPE_DATA,
+						(void**)&nm);
+			if (status == B_OK) {
+				global_modules[nmods].iid = u;
+				global_modules[nmods].ref_count = 0;
+				global_modules[nmods].mod = nm;
+				printf("Added module: %s\n", global_modules[nmods].mod->name);
+				prot_table[nm->proto] = nmods;
+				if (nm->init)
+					nm->init(global_modules, (int*)&prot_table);
+				nmods++;
+			} else {
+				printf("Found %s, but not a net module.\n", m->d_name);
+			}
+		} else {
+			printf("unable to load %s\n", path);
+		}
 	}
-	return 0;
 }
 
-#ifndef _NO_MAIN
 int main(int argc, char **argv)
 {
-	image_id u;
 	status_t status;
 	int i;
-	char path[PATH_MAX], cdir[PATH_MAX];
 
 	mbinit();
 	printf( "Net Server Test App!\n"
@@ -195,32 +214,13 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
-	net_mod = malloc(sizeof(net_modules) * MAX_NETMODULES);
-	if (!net_mod) {
+	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
+	if (!global_modules) {
 		printf("Failed to malloc space for net modules list\n");
 		exit(-1);
 	}
 
-	getcwd(cdir, PATH_MAX);
-	sprintf(path, "%s/udp.so", cdir);
-	printf("Trying to load %s\n", path);
-	
-	/* dirty hack...proof of concept.... */
-	u = load_add_on(path);
-	if (u > 0) {
-		net_mod[nnmod].iid = u;
-		net_mod[nnmod].proto = PROT_UDP;
-		status = get_image_symbol(u, "udp_input", B_SYMBOL_TYPE_TEXT,
-				(void**)&net_mod[nnmod].input);
-		if (status < B_OK){
-			printf("Failed to get the udp_input symbol.\n");
-		}
-		nnmod++;
-		printf("Loaded UDP add-on succesfully!\n");
-	} else {
-		printf("Failed to load the udp add-on [%ld]! %s\n", u, strerror(u));
-	}
-
+	find_modules();
 
 	find_devices();
 /* These 2 printf's are just for "pretty" display... */
@@ -240,5 +240,4 @@ printf("\n");
 
 	return 0;
 }
-#endif /* _NO_MAIN */
  

@@ -253,10 +253,15 @@ void dump_freelist(void);
 
 #ifdef _NET_STACK_
 
-static struct pool_ctl *mbpool;
-static struct pool_ctl *clpool;
+struct pool_ctl *mbpool;
+struct pool_ctl *clpool;
 
 int max_linkhdr;		/* largest link level header */
+
+#else
+
+extern struct pool_ctl *mbpool;
+extern struct pool_ctl *clpool;
 
 #endif /* _NET_STACK_ */
 

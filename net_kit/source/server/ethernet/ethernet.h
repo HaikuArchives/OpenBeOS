@@ -15,15 +15,15 @@ typedef struct ethernet_header {
 } ethernet_header;
 
 typedef struct eth802_header {
-        ether_addr dest;
-        ether_addr src;
-		uint16 	length;	/* max value is 1500 */
-		uint8 	dsap;
-		uint8 	ssap;
-		uint8 	cntl;
-		uint8 	org1;
-		uint16 	org2;
-		uint16	type;
+	ether_addr dest;
+	ether_addr src;
+	uint16 	length;	/* max value is 1500 */
+	uint8 	dsap;
+	uint8 	ssap;
+	uint8 	cntl;
+	uint8 	org1;
+	uint16 	org2;
+	uint16	type;
 } eth802_header;
 
 int ethernet_input(struct mbuf *buf);

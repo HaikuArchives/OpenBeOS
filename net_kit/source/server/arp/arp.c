@@ -8,6 +8,10 @@
 #include "net_misc.h"
 #include "arp/arp.h"
 #include "protocols.h"
+#include "net_module.h"
+
+loaded_net_module *net_modules;
+int *protocol_table;
 
 /* unused presently, but useful to have around...*/
 /*
@@ -40,7 +44,7 @@ int arp_input(struct mbuf *buf)
 	printf("            : hardware type : %s\n",
 			ntohs(arp->hard_type) == 1 ? "ethernet" : "unknown");
 	printf("            : protocol type : %s\n",
-			ntohs(arp->prot) == PROT_IPV4 ? "IPv4" : "unknown");
+			ntohs(arp->prot) == ETHER_IPV4 ? "IPv4" : "unknown");
 	printf("            : hardware size : %d\n", arp->hard_size);
 	printf("            : protocol size : %d\n", arp->prot_size);
 	printf("            : op code       : ");
@@ -66,3 +70,23 @@ int arp_input(struct mbuf *buf)
 
 	return 0;
 }
+
+int arp_init(loaded_net_module *lm, int *pt)
+{
+	net_modules = lm;
+	protocol_table = pt;
+
+	return 0;
+}
+
+net_module net_module_data = {
+	"ARP module",
+	NS_ARP,
+	NET_LAYER1,
+
+	&arp_init,
+	NULL,
+	&arp_input,
+	NULL
+};
+

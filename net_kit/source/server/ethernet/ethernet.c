@@ -10,12 +10,25 @@
 #include "protocols.h"
 #include "ethernet.h"
 #include "mbuf.h"
+#include "net_module.h"
 
-/* These are a hack for now to get us working ! */
-#include "ipv4/ipv4.h"
-#include "arp/arp.h"
+static loaded_net_module *net_modules;
+static int *prot_table;
 
 uint8 ether_bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+
+static int convert_proto(uint16 p)
+{
+	switch (p) {
+		case ETHER_ARP:
+			return NS_ARP;
+		case ETHER_IPV4:
+			return NS_IPV4;
+		default:
+			return -1;
+	}
+}
 
 /* what should the return value be? */
 /* should probably also pass a structure that identifies the interface */
@@ -25,6 +38,7 @@ int ethernet_input(struct mbuf *buf)
 	char srca[17], dsta[17];
 	uint16 proto = ntohs(eth->type);
 	int len = sizeof(ethernet_header);
+	int fproto = convert_proto(proto);
 
 	if (memcmp((void*)&eth->dest, (void*)&ether_bcast, 6) == 0)
 		buf->m_flags |= M_BCAST;
@@ -53,26 +67,50 @@ int ethernet_input(struct mbuf *buf)
 	m_adj(buf, len);
 	
 	switch (proto) {
-		case PROT_ARP:
+		case ETHER_ARP:
 			printf("ARP\n");
-			arp_input(buf);
 			break;
-		case PROT_RARP:
+		case ETHER_RARP:
 			printf("RARP\n");
 			break;
-		case PROT_IPV4:
+		case ETHER_IPV4:
 			printf("IPv4\n");
-			ipv4_input(buf);
 			break;
-		case PROT_IPV6:
+		case ETHER_IPV6:
 			printf("IPv6\n");
 		default:
-			printf("unknown (%04x)\n", ntohs(eth->type));
+			printf("unknown (%04x)\n", proto);
 	}
-		
+
+	if (fproto >= 0)
+		net_modules[prot_table[fproto]].mod->input(buf);
+	else 
+		printf("Failed to determine a valid Ethernet protocol\n");
+	
 	printf("\n");
 	
 	m_freem(buf);
 	return 0;	
 }
+
+int ether_init(loaded_net_module *ln, int *pt)
+{
+	mbinit();
+
+	net_modules = ln;
+	prot_table = pt;
+
+	return 0;
+}
+
+net_module net_module_data = {
+	"Ethernet/802.x module",
+	NS_ETHER,
+	NET_LAYER1,
+
+	&ether_init,
+	NULL,
+	&ethernet_input,
+	NULL
+};
 
