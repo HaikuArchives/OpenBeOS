@@ -414,14 +414,14 @@ int route_output(struct mbuf *m, struct socket *so)
 					 */
 					if (info.rti_info[RTAX_IFA] && 
 					    (ifa = ifa_ifwithnet(info.rti_info[RTAX_IFA])) &&
-					    (ifp = ifa->ifn))
+					    (ifp = ifa->ifa_ifp))
 						ifa = ifaof_ifpforaddr(info.rti_info[RTAX_IFA] ?
 						                        info.rti_info[RTAX_IFA] : 
 						                        info.rti_info[RTAX_GATEWAY],
 						                       ifp);
 					else if ((info.rti_info[RTAX_IFA] && (ifa = ifa_ifwithaddr(info.rti_info[RTAX_IFA]))) ||
 					         (ifa = ifa_ifwithroute(rt->rt_flags, rt_key(rt), info.rti_info[RTAX_GATEWAY])))
-						ifp = ifa->ifn;
+						ifp = ifa->ifa_ifp;
 					if (ifa) {
 						struct ifaddr *oifa = rt->rt_ifa;
 						if (oifa != ifa) {
@@ -532,7 +532,7 @@ int sysctl_iflist(int af, struct walkarg *w)
 printf("sysctl_iflist\n");	
 
 	memset(&info, 0, sizeof(info));
-	for (ifp = interfaces; ifp; ifp = ifp->next) {
+	for (ifp = interfaces; ifp; ifp = ifp->if_next) {
 		if (w->w_arg && w->w_arg != ifp->if_index)
 			continue;
 		ifa = ifp->if_addrlist;
@@ -544,7 +544,7 @@ printf("sysctl_iflist\n");
 			
 			ifm = (struct if_msghdr*)w->w_tmem;
 			ifm->ifm_index = ifp->if_index;		
-			ifm->ifm_flags = ifp->flags;
+			ifm->ifm_flags = ifp->if_flags;
 			ifm->ifm_data = ifp->ifd;
 			ifm->ifm_addrs = info.rti_addrs;
 			if (memcpy(w->w_where, (caddr_t)ifm, len) == NULL)
@@ -562,7 +562,7 @@ printf("sysctl_iflist\n");
 				struct ifa_msghdr *ifam;
 				
 				ifam = (struct ifa_msghdr *)w->w_tmem;
-				ifam->ifam_index = ifa->ifn->if_index;
+				ifam->ifam_index = ifa->ifa_ifp->if_index;
 				ifam->ifam_flags = ifa->ifa_flags;
 				ifam->ifam_metric = ifa->ifa_metric;
 				ifam->ifam_addrs = info.rti_addrs;

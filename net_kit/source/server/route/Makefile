@@ -16,14 +16,14 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	$(CC) $(KCFLAGS) $(INCLUDES) -c $(TARGET).c
-	$(CC) $(KLDFLAGS) $(KLOBJS) -o $(TARGET) $(TARGET).o
+	@$(CC) $(KCFLAGS) $(INCLUDES) -c $(TARGET).c
+	@$(CC) $(KLDFLAGS) $(KLOBJS) -o $(TARGET) $(TARGET).o
 
 installkernel:	kernel
-	cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)
+	@cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)
 
 $(TARGET): $(OBJS)
 	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
