@@ -56,7 +56,7 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 {
 	struct ip *ip = mtod(buf, struct ip *);	
 	struct icmp *ic;
-	int icl = ip->ip_len - hdrlen;
+	int icl = ip->ip_len;
 	struct route rt;
 	int error = 0;
 	struct in_addr tmp;
@@ -69,7 +69,7 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 #endif
 
 	if (in_cksum(buf, icl, hdrlen) != 0) {
-		printf("Checksum failed!\n");
+		printf("icmp_input: checksum failed!\n");
 		m_freem(buf);
 		return 0;
 	}	
@@ -83,20 +83,10 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 			tmp = ip->ip_src;
 			ip->ip_src = ip->ip_dst;
 			ip->ip_dst = tmp;
-
-			if (satosin(&icmprt.ro_dst)->sin_addr.s_addr == ip->ip_src.s_addr)
-				rt = icmprt;
-			else {
-				/* fill in target structure... */
-				satosin(&rt.ro_dst)->sin_family = AF_INET;
-				satosin(&rt.ro_dst)->sin_len = sizeof(rt.ro_dst);
-				satosin(&rt.ro_dst)->sin_addr = ip->ip_src;
-			}
+			ip->ip_len += hdrlen;
+			
 			printf("icmp_output: replying...\n");
-			error = proto[IPPROTO_IP]->pr_output(buf, NULL, &rt, 0, NULL);
-			if (error == 0)
-				icmprt = rt;
-			return error;
+			return proto[IPPROTO_IP]->pr_output(buf, NULL, NULL, 0, NULL);
 			break;
 		}
 		case ICMP_ECHOREPLY:
@@ -105,7 +95,8 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 			break;
 	}
 
-	raw->input(buf, 0);
+	if (raw)
+		raw->input(buf, 0);
 
 	return 0;
 	m_freem(buf);
@@ -138,7 +129,7 @@ struct protosw my_proto = {
 	
 	&icmp_init,
 	&icmp_input,
-	NULL,//&icmp_output,
+	NULL,         /* pr_output, */
 	NULL,
 	NULL,         /* pr_sysctl */
 	NULL,         /* pr_ctloutput */
