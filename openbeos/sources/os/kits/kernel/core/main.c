@@ -18,7 +18,6 @@
 #include <port.h>
 #include <vfs.h>
 #include <dev.h>
-//#include <net/net.h>
 #include <cbuf.h>
 #include <elf.h>
 #include <cpu.h>
@@ -37,6 +36,7 @@ static kernel_args ka;
 
 static int main2(void *);
 
+int net_init(kernel_args *ka);
 
 int _start(kernel_args *oldka, int cpu);	/* keep compiler happy */
 int _start(kernel_args *oldka, int cpu_num)
@@ -126,7 +126,8 @@ static int main2(void *unused)
 	bus_init(&ka);
 	devs_init(&ka);
 	con_init(&ka);
-
+	net_init(&ka);
+	
 	//net_init_postdev(&ka);
 
 	/* remove this later, just a hack for right now */
