@@ -104,6 +104,9 @@ static net_hash_entry **find_entry(net_hash *nh, const void *key,
 	int hash = 0;
 	ssize_t i;
 
+	if (!nh)
+		return NULL;
+
 	for (p=key, i=klen; i; i--, p++) 
 		hash = hash * 33 + *p;
 
