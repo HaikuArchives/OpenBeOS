@@ -24,12 +24,6 @@
 #define _NET_IF_PPP_H_
 
 /*
- * Packet sizes
- */
-#define	PPP_MTU		1500	/* Default MTU (size of Info field) */
-#define PPP_MAXMRU	65000	/* Largest MRU we allow */
-
-/*
  * Bit definitions for flags.
  */
 #define SC_COMP_PROT      0x00000001	/* protocol compression (output) */
@@ -71,7 +65,7 @@
 
 struct npioctl {
     int		protocol;	/* PPP procotol, e.g. PPP_IP */
-    enum NPmode	mode;
+	int     on;
 };
 
 /* Structure describing a CCP configuration option, for PPPIOCSCOMPRESS */
@@ -127,7 +121,6 @@ struct ifpppcstatsreq {
 #define SIOCGPPPCSTATS       _IOWR('i', 122, struct ifpppcstatsreq)
 
 #ifdef _KERNEL_
-void pppattach (void);
 int  pppoutput (struct ifnet *, struct mbuf *, struct sockaddr *,
 		   struct rtentry *);
 void pppinput (struct mbuf *);

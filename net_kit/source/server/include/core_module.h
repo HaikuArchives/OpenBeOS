@@ -117,7 +117,8 @@ struct core_module_info {
 	/* ifnet functions */
 	struct ifaddr *(*ifa_ifwithdstaddr)(struct sockaddr *addr);
 	struct ifaddr *(*ifa_ifwithnet)(struct sockaddr *addr);
-	void (*if_attach)(struct ifnet *ifp);
+	void (*if_attach)(struct ifnet *);
+	void (*if_detach)(struct ifnet *);
 	struct ifaddr *(*ifa_ifwithaddr)(struct sockaddr *);
 	struct ifaddr *(*ifa_ifwithroute)(int, struct sockaddr *,
                                        struct sockaddr *);

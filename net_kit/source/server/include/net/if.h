@@ -263,6 +263,7 @@ struct	ifaddr *ifaof_ifpforaddr(struct sockaddr *, struct ifnet *);
 void	ifafree(struct ifaddr *);
 
 void    if_attach(struct ifnet *ifp);
+void    if_detach(struct ifnet *ifp);
 
 int     ifioctl(struct socket *so, int cmd, caddr_t data);
 int     ifconf(int cmd, caddr_t data);

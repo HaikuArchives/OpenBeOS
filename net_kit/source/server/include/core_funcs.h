@@ -39,6 +39,9 @@
 #   define m_reserve           core->m_reserve
 #   define m_devget            core->m_devget
 
+#	define if_attach           core->if_attach
+#   define if_detach           core->if_detach
+
 #	define in_pcballoc         core->in_pcballoc
 #	define in_pcbconnect       core->in_pcbconnect
 #	define in_pcbdisconnect    core->in_pcbdisconnect
@@ -46,7 +49,6 @@
 #	define in_pcblookup        core->in_pcblookup
 #	define in_pcbdetach        core->in_pcbdetach
 #	define in_pcbrtentry       core->in_pcbrtentry
-#	define if_attach           core->if_attach
 #   define in_canforward       core->in_canforward
 #	define in_localaddr        core->in_localaddr
 #	define in_losing           core->in_losing
