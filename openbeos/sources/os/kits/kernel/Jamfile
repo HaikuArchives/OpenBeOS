@@ -661,13 +661,21 @@ KernelLd digit :
         addons/drivers/dev/misc/digit
         ; 
 
-# Those files exist only under BeOS.
-if $(OS) = BEOS
+if $(OS) = BEOS 
 {
-	KernelConfigSection addons/drivers/dev/misc/speaker : elf32
-		: /boot/beos/system/add-ons/kernel/drivers/bin/speaker ;
-	KernelConfigSection addons/drivers/dev/net/tulip : elf32
-		: /boot/beos/system/add-ons/kernel/drivers/bin/tulip ;
+	KernelConfigSection addons/drivers/dev/misc/speaker 
+		: 
+		elf32 
+		:
+		/boot/beos/system/add-ons/kernel/drivers/bin/speaker 
+		;
+
+	KernelConfigSection addons/drivers/dev/net/tulip 
+		: 
+		elf32 
+		: 
+		/boot/beos/system/add-ons/kernel/drivers/bin/tulip 
+		;
 }
 
 KernelLd testdigit :
