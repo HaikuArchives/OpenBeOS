@@ -7,6 +7,7 @@ HDRS += "$(TOP)/cppunit/include" ;
 
 SOURCE_FILES =
 	TestUtils.cpp
+	BasicTest.cpp
 	DirectoryTest.cpp
 	EntryTest.cpp
 	FileTest.cpp
