@@ -81,6 +81,7 @@ enum {
 	SYSCALL_SYSCTL,
 	SYSCALL_SOCKET,
 	SYSCALL_GETDTABLESIZE,
+	SYSCALL_FSTAT
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

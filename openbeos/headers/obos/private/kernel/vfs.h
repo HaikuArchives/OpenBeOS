@@ -7,6 +7,7 @@
 
 #include <kernel.h>
 #include <stage2.h>
+#include <sys/stat.h>
 
 #define DEFAULT_FD_TABLE_SIZE	128
 #define MAX_FD_TABLE_SIZE		2048
@@ -65,8 +66,8 @@ struct fs_calls {
 	int (*fs_unlink)(fs_cookie fs, fs_vnode dir, const char *name);
 	int (*fs_rename)(fs_cookie fs, fs_vnode olddir, const char *oldname, fs_vnode newdir, const char *newname);
 
-	int (*fs_rstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat);
-	int (*fs_wstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat, int stat_mask);
+	int (*fs_rstat)(fs_cookie fs, fs_vnode v, struct stat *stat);
+	int (*fs_wstat)(fs_cookie fs, fs_vnode v, struct stat *stat, int stat_mask);
 };
 
 int vfs_init(kernel_args *ka);
@@ -117,8 +118,8 @@ int sys_seek(int fd, off_t pos, int seek_type);
 int sys_create(const char *path, stream_type stream_type);
 int sys_unlink(const char *path);
 int sys_rename(const char *oldpath, const char *newpath);
-int sys_rstat(const char *path, struct file_stat *stat);
-int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
+int sys_rstat(const char *path, struct stat *stat);
+int sys_wstat(const char *path, struct stat *stat, int stat_mask);
 char *sys_getcwd(char *buf, size_t size);
 int sys_setcwd(const char* path);
 int sys_dup(int fd);
@@ -138,8 +139,8 @@ int user_seek(int fd, off_t pos, int seek_type);
 int user_create(const char *path, stream_type stream_type);
 int user_unlink(const char *path);
 int user_rename(const char *oldpath, const char *newpath);
-int user_rstat(const char *path, struct file_stat *stat);
-int user_wstat(const char *path, struct file_stat *stat, int stat_mask);
+int user_rstat(const char *path, struct stat *stat);
+int user_wstat(const char *path, struct stat *stat, int stat_mask);
 int user_getcwd(char *buf, size_t size);
 int user_setcwd(const char* path);
 int user_dup(int fd);

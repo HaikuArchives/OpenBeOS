@@ -11,6 +11,7 @@
 #include <lock.h>
 #include <atomic.h>
 #include <memheap.h>
+#include <sys/stat.h>
 
 /* Types of file descriptors we can create */
 #define DTYPE_VNODE        1
@@ -34,7 +35,7 @@ struct fd_ops {
 	ssize_t (*fd_write)(struct file_descriptor *, const void *, off_t, size_t *);
 	int     (*fd_ioctl)(struct file_descriptor *, ulong, void *, size_t);
 //	int     (*fd_poll)(struct file_descriptor *, int);
-//	int     (*fd_stat)(struct file_descriptor *, ...); XXX - complete me :(
+	int     (*fd_stat)(struct file_descriptor *, struct stat *);
 	int     (*fd_close)(struct file_descriptor *, int, struct ioctx *);
 	void    (*fd_cleanup)(struct file_descriptor *);
 };
@@ -64,7 +65,7 @@ int sys_ioctl(int, ulong, void *, size_t);
  * The user_ioctl() function to interface with sys_ioctl()
  */
 int user_ioctl(int, ulong, void *, size_t);
-
+int user_fstat(int, struct stat *);
 
 static __inline struct ioctx *get_current_ioctx(bool kernel)
 {

@@ -12,27 +12,32 @@ extern "C" {
 #include <types.h>
 
 typedef uint16 mode_t;
-typedef int pid_t;
+typedef int    pid_t;
+typedef int    thread_id;
+typedef int    region_id;
+typedef int    aspace_id;
+typedef int    proc_id;
+typedef int    sem_id;
+typedef int    port_id;
+typedef int    image_id;
+typedef uint64 ino_t;
+typedef uint64 vnode_id;
+typedef uint32 fs_id;
+typedef uint16 nlink_t;
+typedef uint32 uid_t;
+typedef uint32 gid_t;
 
-typedef int thread_id;
-typedef int region_id;
-typedef int aspace_id;
-typedef int proc_id;
-typedef int sem_id;
-typedef int port_id;
-typedef int image_id;
 /* compat with beos (was int32 on beos) */
 typedef int status_t;
 
-typedef uint64 vnode_id;
-typedef uint32 fs_id;
 
-#ifdef _OBOS_TIME_T_
+#ifdef  _OBOS_TIME_T_
 typedef _OBOS_TIME_T_     time_t;
-#undef _OBOS_TIME_T_
+#undef  _OBOS_TIME_T_
 #endif /* _OBOS_TIME_T_ */
 
 typedef int64 bigtime_t;
+
 #ifndef NULL
 #define NULL 0
 #endif
