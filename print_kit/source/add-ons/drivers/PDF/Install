@@ -9,6 +9,9 @@ cd $launchdir
 cp encoding/* $HOME/config/settings/PDF\ Writer/
 
 mkdir /boot/home/config/settings/PDF\ Writer/bookmarks
-cp bookmarks/* mkdir /boot/home/config/settings/PDF\ Writer/bookmarks
+cp bookmarks/* /boot/home/config/settings/PDF\ Writer/bookmarks
+
+mkdir /boot/home/config/settings/PDF\ Writer/xrefs
+cp bookmarks/* /boot/home/config/settings/PDF\ Writer/xrefs
 
 alert --info "PDF Writer driver is installed"
