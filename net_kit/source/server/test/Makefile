@@ -1,11 +1,11 @@
-MBUF_OBJS=	../util/mbuf.o \
-	../util/pools.o \
-	../util/nhash.o
+MBUF_OBJS=	../net_server/mbuf.o \
+	../net_server/pools.o \
+	../net_server/nhash.o
 
-TIMER_OBJS = ../util/net_timer.o
+TIMER_OBJS = ../net_server/net_timer.o
 
-POOL_OBJS=	../util/pools.o
-HASH_OBJS=	../util/nhash.o ../util/pools.o
+POOL_OBJS=	../net_server/pools.o
+HASH_OBJS=	../net_server/nhash.o ../net_server/pools.o
 
 INCLUDES=-I. -I../include
 
