@@ -100,6 +100,8 @@ class Inode : public CachedBlock
 		int32 Flags() const { return Node()->flags; }
 		bool IsDirectory() const { return S_ISDIR(Node()->mode); }
 		bool IsSymLink() const { return S_ISLNK(Node()->mode); }
+		
+		off_t Size() const { return Node()->data.size; }
 
 		block_run Parent() const { return Node()->parent; }
 		block_run Attributes() const { return Node()->attributes; }
@@ -109,6 +111,7 @@ class Inode : public CachedBlock
 
 		status_t GetNextSmallData(small_data **smallData) const;
 		small_data *FindSmallData(const char *name) const;
+		const char *Name() const;
 
 		Inode *GetAttribute(const char *name);
 		void ReleaseAttribute(Inode *attribute);

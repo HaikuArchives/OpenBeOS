@@ -11,6 +11,7 @@
 #include "Inode.h"
 #include "Index.h"
 #include "BPlusTree.h"
+#include "Query.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -499,30 +500,28 @@ bfs_access(void *ns, void *node, int mode)
 }
 
 static int
-bfs_read_link(void *_ns, void *_node, char *buf, size_t *bufsize)
+bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize)
 {
 	FUNCTION();
 
-	status_t status = B_OK;
-	
 	Inode *inode = (Inode *)_node;
 	
-	if (inode->IsSymLink()) {
-		if (inode->Flags() & INODE_LONG_SYMLINK) {
-			status = inode->ReadAt(0, buf, bufsize);
-		} else {
-			size_t numBytes = strlen((char *)&inode->Node()->short_symlink);
-			if (numBytes > *bufsize)
-				memcpy(buf, inode->Node()->short_symlink, *bufsize);
-			else
-				memcpy(buf, inode->Node()->short_symlink, numBytes);
+	if (inode->IsSymLink())
+		RETURN_ERROR(B_BAD_VALUE);
 
-			*bufsize = numBytes;
-		}
+	if (inode->Flags() & INODE_LONG_SYMLINK)
+		RETURN_ERROR(inode->ReadAt(0, buffer, bufferSize));
+
+	size_t numBytes = strlen((char *)&inode->Node()->short_symlink);
+	if (numBytes > *bufferSize) {
+		FATAL(("link size is greater than buffer size, %ld > %ld\n",numBytes,*bufferSize));
+		numBytes = *bufferSize;
 	} else
-		status = B_BAD_VALUE;			
-	
-	RETURN_ERROR(status);
+		*bufferSize = numBytes;
+
+	memcpy(buffer, inode->Node()->short_symlink, numBytes);
+
+	return B_OK;
 }
 
 
@@ -933,11 +932,23 @@ bfs_stat_index(void *_ns, const char *name, struct index_info *indexInfo)
 
 
 int 
-bfs_open_query(void *ns,const char *query,ulong flags,port_id port,long token,void **cookie)
+bfs_open_query(void *ns,const char *expression,ulong flags,port_id port,long token,void **cookie)
 {
 	FUNCTION();
+	PRINT(("query = \"%s\", flags = %lu, port_id = %ld, token = %ld\n",expression,flags,port,token));
 	
-	PRINT(("query = %s, flags = %lu, port_id = %ld, token = %ld\n",query,flags,port,token));
+	Query *query = new Query((char *)expression);
+	if (query == NULL)
+		return B_NO_MEMORY;
+	
+	if (query->InitCheck() < B_OK) {
+		FATAL(("Could not parse query, stopped at: \"%s\"\n",query->Position()));
+		delete query;
+		return B_BAD_VALUE;
+	}
+
+	*cookie = (void *)query;
+	
 	return B_OK;
 }
 
@@ -954,14 +965,31 @@ int
 bfs_free_query_cookie(void *ns, void *node, void *cookie)
 {
 	FUNCTION();
+	
+	Query *query = (Query *)cookie;
+	delete query;
+
 	return B_OK;
 }
 
 
-int bfs_read_query(void *ns,void *cookie,long *num,struct dirent *buf,size_t bufsize)
+int
+bfs_read_query(void *ns,void *cookie,long *num,struct dirent *dirent,size_t bufferSize)
 {
 	FUNCTION();
-	*num = 0;
+	Volume *volume = (Volume *)ns;
+	Query *query = (Query *)cookie;
+	if (query == NULL || volume == NULL)
+		return B_BAD_VALUE;
+
+	status_t status = query->GetNext(volume,dirent,bufferSize);
+	if (status == B_OK)
+		*num = 1;
+	else if (status == B_ENTRY_NOT_FOUND)
+		*num = 0;
+	else
+		return status;
+
 	return B_OK;
 }
 

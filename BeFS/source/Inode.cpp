@@ -100,6 +100,18 @@ Inode::FindSmallData(const char *name) const
 }
 
 
+const char *
+Inode::Name() const
+{
+	small_data *smallData = NULL;
+	while (GetNextSmallData(&smallData) == B_OK) {
+		if (*smallData->Name() == FILE_NAME_NAME)
+			return (const char *)smallData->Data();
+	}
+	return NULL;
+}
+
+
 Inode *
 Inode::GetAttribute(const char *name)
 {
@@ -134,7 +146,9 @@ Inode::ReleaseAttribute(Inode *attribute)
 {
 	if (attribute == NULL)
 		return;
-	
+
+	// does it make sense to hold the attributes directory inode until here?
+	// probably not... perhaps we should better move that right into GetAttribute().
 	put_vnode(fVolume->ID(),attribute->ID());
 	put_vnode(fVolume->ID(),fVolume->ToVnode(Attributes()));
 }

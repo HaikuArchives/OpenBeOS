@@ -14,7 +14,7 @@
 // Oh no! C++ in the kernel! Are you nuts?
 //
 //	- no exceptions
-//	- no virtuals
+//	- (almost) no virtuals (well, the Query code now uses them)
 //	- it's basically only the C++ syntax, and type checking
 //	- since one tend to encapsulate everything in classes, it has a slightly
 //	  higher memory overhead
@@ -42,8 +42,8 @@ inline void operator delete[](void *ptr)
 	free(ptr);
 }
 
-// we're not using virtuals
-//extern "C" void pure_virtual();
+// now we're using virtuals
+extern "C" void __pure_virtual();
 
 extern nothrow_t _dontthrow;
 #define new new (_dontthrow)

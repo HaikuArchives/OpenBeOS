@@ -24,7 +24,8 @@ TYPE= DRIVER
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= Volume.cpp Inode.cpp Index.cpp BPlusTree.cpp cpp.cpp kernel_interface.cpp Debug.cpp
+SRCS= Volume.cpp Inode.cpp Index.cpp BPlusTree.cpp Query.cpp \
+	cpp.cpp kernel_interface.cpp Debug.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

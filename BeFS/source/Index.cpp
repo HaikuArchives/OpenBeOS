@@ -35,9 +35,11 @@ Index::~Index()
 status_t 
 Index::SetTo(const char *name)
 {
-	// doesn't support to be set to different indices right now
-	if (fNode != NULL)
-		return B_OK;
+	// remove the old node, if the index is set for the second time
+	if (fNode != NULL) {
+		put_vnode(fVolume->ID(),fNode->ID());
+		fNode = NULL;
+	}
 
 	Inode *indices = fVolume->IndicesNode();
 	if (indices == NULL)
