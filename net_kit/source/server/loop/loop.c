@@ -89,8 +89,6 @@ static int loop_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 {
 	int error = 0;
 
-printf("loop_ioctl\n");
-
 	switch(cmd) {
 		case SIOCSIFADDR:
 			ifp->if_flags |= IFF_UP;

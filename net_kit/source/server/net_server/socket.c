@@ -794,7 +794,7 @@ release:
 int soo_ioctl(void *sp, int cmd, caddr_t data)
 {
 	struct socket *so = (struct socket*)sp;
-printf("soo_ioctl:\n");
+
 	switch (cmd) {
 		case FIONBIO:
 			printf("soo_ioctl: FIONBIO\n");
@@ -820,7 +820,9 @@ printf("soo_ioctl:\n");
 		(struct mbuf*)cmd, (struct mbuf*)data, NULL);
 }
 
+#ifdef _KERNEL_MODE
 extern int notify_select_event(void *sync, uint32 ref);
+#endif
 
 /* Hmmm, we need to add code that can wait on an "event" and then
  * respond as required. Basiaclly if we accept data then we wake up the
@@ -875,13 +877,15 @@ int soselect(void *sp, uint8 which, uint32 ref, void *sync)
 	return 0;
 
 event:
+#ifdef _KERNEL_MODE
 	notify_select_event(sync, ref);
+#endif
 	return 1;
 }
 
 int sodeselect(void *sp, uint8 which, void *sync)
 {
-	struct selinfo *si, *last;
+	struct selinfo *si = NULL, *last = NULL;
 	struct socket *so = (struct socket*)sp;
 	
 	switch(which) {
@@ -1199,13 +1203,15 @@ static int checkselect(struct socket *so, struct selinfo *si)
 	}
 	return 0;
 event:
+#ifdef _KERNEL_MODE
 	notify_select_event(si->sync, si->ref);
+#endif
 	return 1;
 }
 
 void sowakeup(struct socket *so, struct sockbuf *sb)
 {
-	struct selinfo *si, *last;
+	struct selinfo *si, *last = NULL;
 	void *sync;
 
 	/* Yuck! This is not good... */	
