@@ -105,5 +105,7 @@ struct protosw {
 struct protosw *protocols;
 void add_protocol(struct protosw *pr, int fam);
 #endif
+struct protosw *pffindproto(int domain, int protocol, int type);
+struct protosw *pffindtype(int domain, int type);
 
 #endif /* PROTOSW_H */
