@@ -259,3 +259,10 @@ Description: The maximal MIME string length, BMimeType accepts is
              signature field.
 
 
+OS:          BeOS R5
+Module:      BMimeType
+Location:    SetAppHint()
+Description: The entry_ref passed to SetAppHint() must be valid but is not
+             required to refer to a file that actually exists; furthermore,
+             if it does exist, the MIME type of the file is not required to
+             match the BMimeType object's type.
