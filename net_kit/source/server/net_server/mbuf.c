@@ -79,7 +79,7 @@ void m_freem(struct mbuf *m)
 	} while ((m = n));
 }
 
-struct mbuf *m_prepend(struct mbuf *m, size_t len)
+struct mbuf *m_prepend(struct mbuf *m, int len)
 {
 	struct mbuf *mnew;
 	MGET(mnew, m->m_type);
