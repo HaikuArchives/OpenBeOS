@@ -1,0 +1,13 @@
+*WARNING* *WARNING* *WARNING* *WARNING* *WARNING* *WARNING* *WARNING*
+
+From now on any partition mounted usign OpenBFS as the file system
+will be set to read/write unless you specifically ask it to be
+mounted read-only (using -ro as a parameter for the mount command
+line app, for example). This means that it is possible that you 
+*LOSE DATA* if you don't mount it as read only.
+
+So far no real write support has ben implemented so you should be ok
+for now, but as we work into this code it will become dangerous to
+use it unless you know what you're doing. Be warned.
+
+*WARNING* *WARNING* *WARNING* *WARNING* *WARNING* *WARNING* *WARNING*
