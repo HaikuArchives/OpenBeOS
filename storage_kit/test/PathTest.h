@@ -1,3 +1,5 @@
+// PathTest.h
+
 #ifndef __sk_path_test_h__
 #define __sk_path_test_h__
 
@@ -5,7 +7,8 @@
 #include <cppunit/TestCaller.h>
 #include <cppunit/TestSuite.h>
 
-#include <Path.h>
+#include <StorageDefs.h>
+#include <SupportDefs.h>
 
 class PathTest : public CppUnit::TestCase
 {
@@ -21,8 +24,22 @@ public:
 	//------------------------------------------------------------
 	// Test functions
 	//------------------------------------------------------------
-	void SimpleInitTest();
+	void InitTest1();
+	void InitTest2();
+	void AppendTest();
+	void LeafTest();
+	void ParentTest();
+	void ComparisonTest();
+	void AssignmentTest();
+	void FlattenableTest();
 	
+	// helper functions
+
+	void nextSubTest();
+
+	int32 fSubTestNumber;
+	char fCurrentWorkingDir[B_PATH_NAME_LENGTH];
+	bool fValidCWD;
 };
 
 
