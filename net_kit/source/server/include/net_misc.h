@@ -29,7 +29,7 @@
 #define SHOW_DEBUG 	0	/* general debugging stuff (verbose!) */
 #define SHOW_ROUTE	0	/* show routing information */
 #define ARP_DEBUG	0	/* show ARP debug info */
-#define	SHOW_MALLOC_USAGE	0	/* show instances of malloc */
+#define USE_DEBUG_MALLOC   0   /* use the debug malloc code*/
 
 typedef struct ifnet	ifnet;
 
