@@ -316,6 +316,7 @@ KernelStaticLibraryObjects libc.a :
  	<$(SOURCE_GRIST)!libc!stdio>sprintf.o
  	<$(SOURCE_GRIST)!libc!stdio>stdio.o
 	<$(SOURCE_GRIST)!libc!stdio>ungetc.o
+	<$(SOURCE_GRIST)!libc!stdio>vfprintf.o
 	<$(SOURCE_GRIST)!libc!stdio>vfscanf.o
 	<$(SOURCE_GRIST)!libc!stdio>vscanf.o
  	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
@@ -787,6 +788,17 @@ KernelLd fops_test :
         bin/fops_test
         ; 
 
+KernelLd ps :
+	libglue2.o
+        <$(SOURCE_GRIST)!apps!ps>main.o
+        libc.so
+        :
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+        :
+        :
+        :
+        bin/ps
+        ; 
 
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
