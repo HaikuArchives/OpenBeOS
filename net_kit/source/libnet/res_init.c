@@ -93,11 +93,7 @@
  */
 
 
-#ifdef __MWERKS__
-	#define __P(a) a
-#endif
-
-static void res_setoptions __P((char *, char *));
+static void res_setoptions (char *, char *);
 
 #ifdef RESOLVSORT
 static const char sort_mask[] = "/&";

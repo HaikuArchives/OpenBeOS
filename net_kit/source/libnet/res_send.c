@@ -99,10 +99,6 @@ static int af = 0;		/* address family of socket */
 
 #define CAN_RECONNECT 1
 
-#ifdef __MWERKS__
-	#define __P(a) a
-#endif
-
 #ifndef DEBUG
 #   define Dprint(cond, args) /*empty*/
 #   define DprintQ(cond, args, query, size) /*empty*/
@@ -116,8 +112,8 @@ static int af = 0;		/* address family of socket */
 		} else {}
 static char abuf[NI_MAXHOST];
 static char pbuf[NI_MAXSERV];
-static void Aerror __P((FILE *, char *, int, struct sockaddr *));
-static void Perror __P((FILE *, char *, int));
+static void Aerror (FILE *, char *, int, struct sockaddr *);
+static void Perror (FILE *, char *, int);
 
     static void
     Aerror(file, string, error, address)
@@ -176,7 +172,7 @@ res_send_setrhook(hook)
 }
 
 #ifdef INET6
-static struct sockaddr * get_nsaddr __P((size_t));
+static struct sockaddr * get_nsaddr (size_t);
 
 /*
  * pick appropriate nsaddr_list for use.  see res_init() for initialization.

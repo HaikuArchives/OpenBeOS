@@ -95,12 +95,8 @@ static long ru_reseed;
 static uint32 tmp;                /* Storage for unused random */
 static struct timeval tv;
 
-#ifdef __MWERKS__
-	#define __P(a) a
-#endif
-
-static uint16 pmod __P((uint16, uint16, uint16));
-static void res_initid __P((void));
+static uint16 pmod (uint16, uint16, uint16);
+static void res_initid (void);
 
 /*
  * Do a fast modular exponation, returned value will be in the range

@@ -74,13 +74,9 @@
 #define MAXPACKET	1024
 #endif
 
-#ifdef __MWERKS__
-	#define __P(a) a
-#endif
-
-const char *hostalias __P((const char *));
+const char *hostalias (const char *);
 int h_errno;
-extern int res_opt __P((int, u_char *, int, int));
+extern int res_opt (int, u_char *, int, int);
 
 /*
  * Formulate a normal query, send, and await answer.
