@@ -1,15 +1,37 @@
-/********************************************************************************
-/
-/      File:           TranslatorRoster.h
-/
-/      Description:    The core class of the Translation Kit.
-/
-/      Copyright 1998, Be Incorporated, All Rights Reserved.
-/      Copyright 1995-1997, Jon Watte
-/
-********************************************************************************/
-
-
+/*****************************************************************************/
+//               File: TranslatorRoster.h
+//              Class: BTranslatorRoster
+//   Reimplimented by: Michael Wilber, Translation Kit Team
+//   Reimplimentation: 2002-06-11
+//
+// Description: This class is the guts of the translation kit, it makes the
+//              whole thing happen. It bridges the applications using this
+//              object with the translators that the apps need to access.
+//
+//
+// Copyright (c) 2002 OpenBeOS Project
+//
+// Original Version: Copyright 1998, Be Incorporated, All Rights Reserved.
+//                   Copyright 1995-1997, Jon Watte
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+// and/or sell copies of the Software, and to permit persons to whom the 
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included 
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+/*****************************************************************************/
 
 #ifndef _TRANSLATOR_ROSTER_H
 #define _TRANSLATOR_ROSTER_H
@@ -20,10 +42,25 @@
 #include <InterfaceDefs.h>
 #include <Archivable.h>
 #include <TranslatorFormats.h>
-
+#include <TranslationDefs.h>
+#include <TranslationErrors.h>
+#include <Translator.h>
+#include <String.h>
+#include <image.h>
+#include <File.h>
+#include <Directory.h>
+#include <Volume.h>
+#include <string.h>
+#include <OS.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <alloca.h>
+#include <R4xTranslator.h>
 
 struct translation_format;
-
 
 class BBitmap;
 class BView;
@@ -31,181 +68,170 @@ class BPositionIO;
 class BQuery;
 class BMessage;
 
+const char kgDefaultTranslatorPath[] = "/boot/home/config/add-ons/Translators:/boot/home/config/add-ons/Datatypes:/system/add-ons/Translators";
 
-class BTranslatorRoster :
-	public BArchivable
-{
-			/*	private unimplemented	*/
-		BTranslatorRoster(
-				const BTranslatorRoster &);
-		BTranslatorRoster & operator=(
-				const BTranslatorRoster &);
+// used by BTranslatorRoster to store the list of translators
+struct translator_node {
+	BTranslator *translator;
+	char *path;
+	image_id image;
+	translator_id id;
+	translator_node *next;
+};
+
+class BTranslatorRoster : public BArchivable {
+	// private, unimplemented functions
+	// (I'm not sure if there is a need for them anyway)
+	BTranslatorRoster(const BTranslatorRoster &);
+	BTranslatorRoster & operator=(const BTranslatorRoster &);
 
 public:
+	BTranslatorRoster();
+		// initializes the object with no translators
+		
+	BTranslatorRoster(BMessage *model);
+		// initializes the object and loads all translators from the
+		// "be:translator_path" string array in model
+		
+	~BTranslatorRoster();
+		// frees memory used by this object
 
-		BTranslatorRoster();	/*	doesn't call AddTranslators()	*/
-		BTranslatorRoster(
-				BMessage *model);
-		~BTranslatorRoster();
+	virtual status_t Archive(BMessage *into, bool deep = true) const;
+		// store the BTranslatorRoster in into so it can later be
+		// used with Instantiate or the BMessage constructor
+		
+	static BArchivable *Instantiate(BMessage *from);
+		// creates a BTranslatorRoster object from the from archive
 
-virtual	status_t Archive(
-				BMessage *into, 
-				bool deep = true) const;
-static	BArchivable *Instantiate(
-				BMessage *from);
+	static const char *Version(int32 *outCurVersion, int32 *outMinVersion,
+		int32 inAppVersion = B_TRANSLATION_CURRENT_VERSION);
+		// returns the version of BTranslator roster as a string
+		// and through the int32 pointers; inAppVersion appears
+		// to be ignored
 
-static	const char *Version(	/*	returns version string	*/
-				int32 * outCurVersion,	/*	current version spoken	*/
-				int32 * outMinVersion,	/*	minimum version understood	*/
-	/*	what app thinks it's doing	*/
-				int32 inAppVersion = B_TRANSLATION_CURRENT_VERSION);
+	static BTranslatorRoster *Default();
+		// returns the "default" set of translators, they are translators
+		// that are loaded from the default paths
+		//	/boot/home/config/add-ons/Translators, 
+		//	/boot/home/config/add-ons/Datatypes,
+		//	/system/add-ons/Translators or the paths in the
+		// TRANSLATORS environment variable, if it exists
 
-			/*	This call will return the "default" set of translators.	*/
-			/*	If there is not yet a deafult set of translators, it will	*/
-			/*	instantiate one and load translator add-ons from the 	*/
-			/*	default location (~/config/add-ons/Datatypes, and is 	*/
-			/*	modifiable with the DATATYPES environment variable)	*/
+	status_t AddTranslators(const char *load_path = NULL);
+		// this adds a translator, all of the translators in a folder or
+		// the default translators if the path is NULL
 
-static	BTranslatorRoster *Default();	/*	you shouldn't delete this object	*/
+	status_t AddTranslator(BTranslator * translator);
+		// adds a translator that you've created yourself to the
+		// BTranslatorRoster; this is useful if you have translators
+		// that you don't want to make public or don't want loaded as
+		// an add-on
 
-			/*	You can pass a folder (which will be scanned for loadable	*/
-			/* translators) or a specific translator (which will just be loaded)	*/
-		status_t AddTranslators(		/*	establish connection	*/
-				const char * load_path = NULL);	/*	NULL means default translators	*/
+	virtual status_t Identify(BPositionIO *inSource, BMessage *ioExtension,
+		translator_info *outInfo, uint32 inHintType = 0,
+		const char *inHintMIME = NULL, uint32 inWantType = 0);
+		// identifies the translator that can handle the data in inSource
 
-			/* You can add a BTranslator object you create yourself, too. */
-		status_t AddTranslator(
-				BTranslator * translator);
+	virtual status_t GetTranslators(BPositionIO *inSource,
+		BMessage *ioExtension, translator_info **outInfo, int32 *outNumInfo, 
+		uint32 inHintType = 0, const char *inHintMIME = NULL,
+		uint32 inWantType = 0);
+		// finds all translators for the given type
 
-			/*	these functions call through to the translators	*/
-			/*	when wantType is not 0, will only take into consideration 	*/
-			/*	translators that can read input data and produce output data	*/
+	virtual status_t GetAllTranslators(translator_id **outList,
+		int32 *outCount);
+		// returns all translators that this object contains
 
-virtual	status_t Identify(	/*	find out what something is	*/
-				BPositionIO * inSource,		/*	not NULL	*/
-				BMessage * ioExtension,
-				translator_info * outInfo,	/*	not NULL	*/
-				uint32 inHintType = 0,
-				const char * inHintMIME = NULL,
-				uint32 inWantType = 0);
+	virtual	status_t GetTranslatorInfo(translator_id forTranslator,
+		const char **outName, const char **outInfo, int32 *outVersion);
+		// gets user visible info about a specific translator
 
-virtual	status_t GetTranslators(/*	find all translators for a type	*/
-				BPositionIO * inSource,		/*	not NULL	*/
-				BMessage * ioExtension,
-				translator_info * * outInfo,/*	not NULL, call delete[] on *outInfo when done	*/
-				int32 * outNumInfo,			/*	not NULL	*/
-				uint32 inHintType = 0,
-				const char * inHintMIME = NULL,
-				uint32 inWantType = 0);
+	virtual status_t GetInputFormats(translator_id forTranslator,
+		const translation_format **outFormats, int32 *outNumFormats);
+		// finds all input formats for a translator;
+		// note that translators don't always publish the formats
+		// that they support
 
-virtual	status_t GetAllTranslators(/*	find all translator IDs	*/
-				translator_id * * outList,	/*	not NULL, call delete[] when done	*/
-				int32 * outCount);			/*	not NULL	*/
+	virtual	status_t GetOutputFormats(translator_id forTranslator,
+		const translation_format **outFormats, int32 *outNumFormats);
+		// finds all output formats for a translator;
+		// note that translators don't always publish the formats
+		// that they support
 
-virtual	status_t GetTranslatorInfo(/*	given a translator, get user-visible info	*/
-				translator_id forTranslator,
-				const char * * outName,
-				const char * * outInfo,
-				int32 * outVersion);
+	virtual	status_t Translate(BPositionIO *inSource,
+		const translator_info *inInfo, BMessage *ioExtension,
+		BPositionIO *outDestination, uint32 inWantOutType,
+		uint32 inHintType = 0, const char *inHintMIME = NULL);
+		// the whole point of this entire kit boils down to this function;
+		// this translates the data in inSource into outDestination
+		// using the format inWantOutType
 
-			/*	note that translators may choose to be "invisible" to	*/
-			/*	the public formats, and just kick in when they 	*/
-			/*	recognize a file format by its data.	*/
+	virtual	status_t Translate(translator_id inTranslator,
+		BPositionIO *inSource, BMessage *ioExtension,
+		BPositionIO *outDestination, uint32 inWantOutType);
+		// the whole point of this entire kit boils down to this function;
+		// this translates the data in inSource into outDestination
+		// using the format inWantOutType and the translator inTranslator
 
-virtual	status_t GetInputFormats(/*	find all input formats for translator	*/
-				translator_id forTranslator,
-				const translation_format * * outFormats,/*	not NULL, don't write contents!	*/
-				int32 * outNumFormats);		/*	not NULL	*/
+	virtual status_t MakeConfigurationView(translator_id forTranslator,
+		BMessage *ioExtension, BView **outView, BRect *outExtent);
+		// create the view for forTranslator that allows the user
+		// to configure it;
+		// NOTE: translators are not required to support this function
 
-virtual	status_t GetOutputFormats(/*	find all output formats for translator	*/
-				translator_id forTranslator,
-				const translation_format * *	outFormats,/*	not NULL, don't write contents!	*/
-				int32 * outNumFormats);		/*	not NULL	*/
+	virtual	status_t GetConfigurationMessage(translator_id forTranslator,
+		BMessage *ioExtension);
+		// this is used to save the settings for a translator so that
+		// they can be written to disk or used in an Indentify or
+		// Translate call
 
-			/*	actually do some work	*/
-			/*	Translate() and Identify() are thread safe (can be re-entered)	*/
-			/*	as long as you don't call AddTranslators() or delete the object	*/
-			/*	at the same time. Making sure you don't is up to you; there is	*/
-			/*	no explicit lock provided.	*/
-
-virtual	status_t Translate(	/*	morph data into form we want	*/
-				BPositionIO * inSource,		/*	not NULL	*/
-				const translator_info * inInfo,/*	may be NULL	*/
-				BMessage * ioExtension,
-				BPositionIO * outDestination,	/*	not NULL	*/
-				uint32 inWantOutType,
-				uint32 inHintType = 0,
-				const char * inHintMIME = NULL);
-
-virtual	status_t Translate(	/*	Make it easy to use a specific translator	*/
-				translator_id inTranslator,
-				BPositionIO * inSource,			/*	not NULL	*/
-				BMessage * ioExtension,
-				BPositionIO * outDestination,	/*	not NULL	*/
-				uint32 inWantOutType);
-
-			/*	For configuring options of the translator, a translator can support 	*/
-			/*	creating a view to cofigure the translator. The translator can save 	*/
-			/*	its preferences in the database or settings file as it sees fit.	*/
-			/*	As a convention, the translator should always save whatever 	*/
-			/*	settings are changed when the view is deleted or hidden.	*/
-
-virtual	status_t MakeConfigurationView(
-				translator_id forTranslator,
-				BMessage * ioExtension,
-				BView * * outView,		/*	not NULL	*/
-				BRect * outExtent);		/*	not NULL	*/
-
-			/*	For saving settings and using them later, your app can get the 	*/
-			/*	current settings from a translator into a BMessage that you create 	*/
-			/*	and pass in empty. Pass this message (or a copy thereof) to the 	*/
-			/*	translator later in a call to Translate() to translate using 	*/
-			/*	those settings.	*/
-
-virtual	status_t GetConfigurationMessage(
-				translator_id forTranslator,
-				BMessage * ioExtension);
-
-		status_t GetRefFor(
-				translator_id translator,
-				entry_ref * out_ref);
+	status_t GetRefFor(translator_id translator, entry_ref *out_ref);
+		// I'm guessing that this returns the entry_ref for the
+		// translator add-on file for the translator_id translator
 
 private:
+	void Initialize();
+		// class initialization code used by all constructors
+		
+	translator_node *FindTranslatorNode(translator_id id);
+		// used to find the translator_node for the translator_id id
+		// returns NULL if the id is not valid
 
-		status_t LoadTranslator(
-				const char * path);
-		void LoadDir(
-				const char * path,
-				int32 & loadErr,
-				int32 & nLoaded);
-		bool CheckFormats(
-				struct _XLInfo * info,
-				uint32 hintType,
-				const char * hintMIME,
-				const translation_format * & outFormat);
-		status_t AddTranslatorLocked(
-				BTranslator * translator,
-				image_id image);
+	status_t LoadTranslator(const char *path);
+		// loads the translator add-on specified by path
+		
+	void LoadDir(const char *path, int32 &loadErr, int32 &nLoaded);
+		// loads all of the translator add-ons from path and
+		// returns error status in loadErr and the number of
+		// translators loaded in nLoaded
+		
+	bool CheckFormats(const translation_format *inputFormats,
+		int32 inputFormatsCount, uint32 hintType, const char *hintMIME,
+		const translation_format **outFormat);
+		// determines how the Identify function is called
 
+	// adds the translator to the list of translators
+	// that this object maintains
+	status_t AddTranslatorToList(BTranslator *translator);
+	status_t AddTranslatorToList(BTranslator *translator,
+			const char *path, image_id image, bool acquire);
 
-		static void _roster_cleanup();
-
-static	BTranslatorRoster * _defaultTranslators;
-		friend class _AutoRosterDeleter;
-		struct PrivateData;
-		PrivateData * _private;
-
-		/*	FBC goop	*/
-
-		int32 _reservedTranslators[6];
-
-virtual	void ReservedTranslatorRoster1();
-virtual	void ReservedTranslatorRoster2();
-virtual	void ReservedTranslatorRoster3();
-virtual	void ReservedTranslatorRoster4();
-virtual	void ReservedTranslatorRoster5();
-virtual	void ReservedTranslatorRoster6();
-
+	static	BTranslatorRoster *fspDefaultTranslators;
+		// object that contains the default translators
+	translator_node *fpTranslators;
+		// list of translators maintained by this object
+	sem_id fSem;
+		// semaphore used to lock this object
+		
+	// used to maintain binary combatibility with
+	// past and future versions of this object
+	int32 fReservedTranslators[5];
+	virtual	void ReservedTranslatorRoster1();
+	virtual	void ReservedTranslatorRoster2();
+	virtual	void ReservedTranslatorRoster3();
+	virtual	void ReservedTranslatorRoster4();
+	virtual	void ReservedTranslatorRoster5();
+	virtual	void ReservedTranslatorRoster6();
 };
 
 #endif	/* _TRANSLATOR_ROSTER_H */
