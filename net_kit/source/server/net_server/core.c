@@ -77,6 +77,9 @@ _EXPORT struct core_module_info core_info = {
 	add_protosw,
 	start_rx_thread,
 	start_tx_thread,
+	
+	net_add_timer,
+	net_remove_timer,
 
 	pool_init,
 	pool_get,
@@ -760,9 +763,12 @@ found:
 
 static int start_stack(void)
 {
+	
 	/* have we already been started??? */
 	if (domains != NULL)
 		return -1;
+
+	net_init_timer();
 		
 	domains = NULL;
 	protocols = NULL;
@@ -808,6 +814,9 @@ static status_t core_std_ops(int32 op, ...)
 	 */
 	switch(op) {
 		case B_MODULE_INIT:
+#ifdef LOAD_SYMBOLS
+			load_driver_symbols("core");
+#endif
 			break;
 		case B_MODULE_UNINIT:
 			// the stack is keeping loaded, so don't stop it

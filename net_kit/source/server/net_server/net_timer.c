@@ -6,11 +6,15 @@
 ** This file may be used under the terms of the OpenBeOS License.
 */
 
+#include <OS.h>
+#include <malloc.h>
+
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
 
 #include "net_timer.h"
 
-#include <OS.h>
-#include <malloc.h>
 
 
 struct timer_entry {
@@ -51,7 +55,14 @@ net_init_timer(void)
 	if (gTimerInfo.ti_wait < B_OK)
 		return B_ERROR;
 
+#ifdef _KERNEL_MODE
+	set_sem_owner(gTimerInfo.ti_lock, B_SYSTEM_TEAM);
+	set_sem_owner(gTimerInfo.ti_wait, B_SYSTEM_TEAM);
+	
+	thread = spawn_kernel_thread(net_timer,"net timer",B_NORMAL_PRIORITY,&gTimerInfo);
+#else
 	thread = spawn_thread(net_timer,"net timer",B_NORMAL_PRIORITY,&gTimerInfo);
+#endif
 	if (thread < B_OK)
 		return thread;
 

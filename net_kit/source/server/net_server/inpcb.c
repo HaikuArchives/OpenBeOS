@@ -246,7 +246,8 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 		return EINVAL;
 	}
 	if (sin->sin_family != AF_INET) {
-		printf("in_pcbconnect: EAFNOSUPPORT\n");
+		printf("in_pcbconnect: EAFNOSUPPORT (sin_family = %d, not %d)\n",
+		       sin->sin_family, AF_INET);
 		return EAFNOSUPPORT;
 	}
 	if (sin->sin_port == 0) {
