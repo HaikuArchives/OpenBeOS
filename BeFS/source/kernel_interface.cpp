@@ -504,25 +504,26 @@ bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize)
 {
 	FUNCTION();
 
-	Inode *inode = (Inode *)_node;
-	
-	if (inode->IsSymLink())
-		RETURN_ERROR(B_BAD_VALUE);
+	status_t status = B_OK; 
+        
+	Inode *inode = (Inode *)_node; 
+        
+	if (inode->IsSymLink()) { 
+    	if (inode->Flags() & INODE_LONG_SYMLINK) { 
+        	status = inode->ReadAt(0, buffer, bufferSize); 
+        } else { 
+            size_t numBytes = strlen((char *)&inode->Node()->short_symlink); 
+            if (numBytes > *bufferSize) 
+            	memcpy(buffer, inode->Node()->short_symlink, *bufferSize); 
+            else 
+                memcpy(buffer, inode->Node()->short_symlink, numBytes); 
 
-	if (inode->Flags() & INODE_LONG_SYMLINK)
-		RETURN_ERROR(inode->ReadAt(0, buffer, bufferSize));
-
-	size_t numBytes = strlen((char *)&inode->Node()->short_symlink);
-
-	if (numBytes > *bufferSize) {
-		FATAL(("link size is greater than buffer size, %ld > %ld\n",numBytes,*bufferSize));
-		return B_NAME_TOO_LONG;
-	} else
-		*bufferSize = numBytes;
-
-	memcpy(buffer, inode->Node()->short_symlink, numBytes);
-
-	return B_OK;
+            *bufferSize = numBytes; 
+        } 
+	} else 
+		status = B_BAD_VALUE;                   
+        
+	RETURN_ERROR(status); 
 }
 
 
