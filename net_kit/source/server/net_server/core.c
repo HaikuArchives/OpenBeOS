@@ -34,6 +34,8 @@
 #include "sys/socket.h"
 #include "netinet/in_pcb.h"
 #include "net/route.h"
+#include "sys/domain.h"
+#include "sys/protosw.h"
 
 loaded_net_module *global_modules;
 static int nmods = 0;
@@ -63,16 +65,13 @@ static int32 if_thread(void *data)
 	size_t len = i->if_mtu;
 	int count = 0;
 
-dprintf("if_thread: %s running! calling read() on dev %d\n", 
-		i->if_name, i->devid);
-
 	while ((status = read(i->devid, buffer, len)) >= B_OK && count < RECV_MSGS) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
 
 dprintf("if_thread: read %d bytes of data!\n", status);
 
 		if (i->input)
-			i->input(mb, 0);
+			i->input(mb);
 		atomic_add(&i->if_ipackets, 1);
 		count++;
 		len = i->if_mtu;
@@ -84,7 +83,7 @@ dprintf("if_thread: read %d bytes of data!\n", status);
 /* This is used when we don't have a dev to read/write from as we're using
  * a virtual device, e.g. a loopback driver!
  *
- * It simply queue's the buf's and drgas them off as normal in the tx thread.
+ * It simply queue's the buf's and drags them off as normal in the tx thread.
  */
 static int32 rx_thread(void *data)
 {
@@ -96,7 +95,7 @@ static int32 rx_thread(void *data)
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
 		if (i->input)
-			i->input(m, 0);
+			i->input(m);
 		else
 			dprintf("%s%d: no input function!\n", i->name, i->unit);
 	}
@@ -153,11 +152,16 @@ static int32 tx_thread(void *data)
 ifq *start_ifq(void)
 {
 	ifq *nifq;
+#if SHOW_MALLOC_USAGE
+	dprintf("core.c: start_ifq: malloc(%ld)\n", sizeof(ifq));
+#endif
 	nifq = malloc(sizeof(ifq));
 
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
-
+	set_sem_owner(nifq->lock, B_SYSTEM_TEAM);
+	set_sem_owner(nifq->pop, B_SYSTEM_TEAM);
+	
 	if (nifq->lock < B_OK || nifq->pop < B_OK)
 		return NULL;
 
@@ -173,11 +177,12 @@ void net_server_add_device(ifnet *ifn)
 
 	if (!ifn)
 		return;
-dprintf("net_server_add_device: %p\n", ifn);
 
 	sprintf(dname, "%s%d", ifn->name, ifn->unit);
+dprintf("net_server_add_device: %s\n", dname);
 	ifn->if_name = strdup(dname);
-dprintf("device to be added is %s\n", ifn->if_name);
+dprintf("ifn->if_name = %s\n", ifn->if_name);
+dprintf("devices = %p\n", devices);
 
 	if (ifn->devid < 0) {
 		/* pseudo device... */
@@ -194,7 +199,7 @@ dprintf("device to be added is %s\n", ifn->if_name);
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
-dprintf("add_device: added %s\n", ifn->if_name);	
+dprintf("device was id %d\n", ndevs - 1);
 }
 
 /* For all the devices we need to, here we start the threads
@@ -205,7 +210,6 @@ static void start_device_threads(void)
 	ifnet *d = devices;
 	char tname[32];
 	int priority = B_NORMAL_PRIORITY;
-dprintf("start_devices()...\n");
 
 	acquire_sem(dev_lock);
 
@@ -310,7 +314,7 @@ static void list_devices(void)
 			while (ifa) {
 				dump_sockaddr(ifa->ifa_addr);
 				dprintf("\n");
-				ifa = ifa->ifn_next;
+				ifa = ifa->ifa_next;
 			}
 		}
 
@@ -345,6 +349,7 @@ static void start_devices(void)
 	d = devices;
 	while (d) {
 		if (d->start(d) != 0) {
+			/* if we had a problem, remove the device... */
 			if (old)
 				old->next = d->next;
 		} else 
@@ -362,6 +367,171 @@ static void close_devices(void)
 		close(d->devid);
 		d = d->next;
 	}
+}
+
+static struct domain af_inet_domain = {
+	AF_INET,
+	"internet",
+	NULL,
+	NULL,
+	NULL,
+	rn_inithead,
+	32,
+	sizeof(struct sockaddr_in)
+};
+	
+/* Domain support */
+void add_domain(struct domain *dom, int fam)
+{
+	struct domain *dm = domains;
+	struct domain *ndm;
+
+dprintf("add_domain: %d\n", fam);
+
+	for(; dm; dm = dm->dom_next) {
+		if (dm->dom_family == fam)
+			/* already done */
+			return;
+	}	
+
+	if (dom == NULL) {
+		/* we're trying to add a builtin domain! */
+
+		switch (fam) {
+			case AF_INET:
+				/* ok, add it... */
+#if SHOW_MALLOC_USAGE
+	dprintf("core.c: add_domain: malloc(%ld)\n", sizeof(*ndm));
+#endif
+				ndm = (struct domain*)malloc(sizeof(*ndm));
+				*ndm = af_inet_domain;
+				if (dm)
+					dm->dom_next = ndm;
+				else
+					domains = ndm;
+				dprintf("Added AF_INET domain\n");
+				return;
+			default:
+				dprintf("Don't know how to add domain %d\n", fam);
+		}
+	} else {
+		if (dm)
+			dm->dom_next = dom;
+		else
+			domains = dom;
+	}
+	return;
+}
+
+void add_protocol(struct protosw *pr, int fam)
+{
+	struct protosw *psw = protocols;
+	struct domain *dm = domains;
+	
+	dprintf("add_protocol: %s\n", pr->name);
+	
+	/* first find the correct domain... */
+	for (; dm; dm= dm->dom_next) {
+		if (dm->dom_family == fam)
+			break;
+	}
+
+	if (dm == NULL) {
+		dprintf("Unable to add protocol due to no domain available!\n");
+		return;
+	}
+	
+	/* OK, we can add it... */
+	for (;psw;psw = psw->pr_next) {
+		if (psw->pr_type == pr->pr_type &&
+		    psw->pr_protocol == pr->pr_protocol &&
+		    psw->pr_domain == dm) {
+		    dprintf("duplicate protocol detected!!\n");
+			return;
+		}
+	}
+
+	/* find last entry in protocols list */
+	if (protocols) {
+		for (psw = protocols;psw->pr_next; psw = psw->pr_next)
+			continue;
+		psw->pr_next = pr;
+	} else
+		protocols = pr;
+
+	pr->pr_domain = dm;
+
+	/* Now add to domain */
+	if (dm->dom_protosw) {
+		psw = dm->dom_protosw;
+		for (;psw->dom_next;psw = psw->dom_next)
+			continue;
+		psw->dom_next = pr;
+	} else {
+		dm->dom_protosw = pr;
+	}
+
+	return;
+}
+
+static void domain_init(void)
+{
+	struct domain *d;
+	struct protosw *p;
+
+dprintf("domain_init()\n");
+	
+	for (d = domains;d;d = d->dom_next) {
+		if (d->dom_init)
+			d->dom_init();
+
+		for (p = d->dom_protosw;p;p = p->dom_next) {
+			if (p->pr_init)
+				p->pr_init();
+		}
+	}
+}
+
+static void walk_domains(void)
+{
+	struct domain *d;
+	struct protosw *p;
+	
+	for (d = domains;d;d = d->dom_next) {
+		dprintf("Domain: %s\n", d->dom_name);
+		p = d->dom_protosw;
+		for (;p;p = p->dom_next) {
+			dprintf("\t%s provided by %s\n", p->name, p->mod_path);
+		}
+	}
+}
+
+/* Add protocol modules. Each module is loaded and this triggers
+ * the init routine which should call the add_domain and add_protocol
+ * functions to make sure we know what it does!
+ * NB these don't have any additional functions so we just use the
+ * system defined module_info structures
+ */
+static void find_protocol_modules(void)
+{
+	void *ml = open_module_list(NETWORK_PROTOCOLS);
+	size_t sz = B_PATH_NAME_LENGTH;
+	char name[sz];
+	module_info *dmi = NULL;
+	int rv;
+
+	if (ml == NULL) {
+		dprintf("failed to open the %s directory\n", 
+			NETWORK_PROTOCOLS);
+		return;
+	}
+
+	while (read_next_module_name(ml, name, &sz) == B_OK) {
+		rv = get_module(name, &dmi);
+		sz = B_PATH_NAME_LENGTH;
+	}
+
+	close_module_list(ml);
 }
 
 /* This is a little misnamed. This goes through and tries to
@@ -387,12 +557,9 @@ static void find_interface_modules(void)
 
 	while (read_next_module_name(ml, name, &sz) == B_OK) {
 		rv = get_module(name, (module_info**)&dmi);
-		dprintf("get_module(%s) has returned %d\n", name, rv);
 		if (rv == 0) {
-			dprintf("Loaded %s, running init\n", name);
 			dmi->init();
 		}
-
 		sz = B_PATH_NAME_LENGTH;
 	}
 
@@ -414,44 +581,78 @@ static void list_modules(void)
 }
 
 
-net_module *pffindtype(int domain, int type)
+struct protosw *pffindtype(int domain, int type)
 {
-        int i;
-        net_module *n;
-
-	for (i=0;i<nmods;i++) {
-                n = global_modules[i].mod;
-
-		if (n->domain == domain && n->sock_type == type)
-			return n;
+	struct domain *d;
+	struct protosw *p;
+	
+	for (d = domains; d; d = d->dom_next) {
+		if (d->dom_family == domain)
+			goto found;
+	}
+	return NULL;
+found:
+	for (p=d->dom_protosw; p; p = p->dom_next) {
+		if (p->pr_type && p->pr_type == type)
+			return p;
 	}
 	return NULL;
 }
 
-net_module *pffindproto(int domain, int protocol, int type)
+struct protosw *pffindproto(int domain, int protocol, int type)
 {
-        int i;
-        net_module *n;
+	struct domain *d;
+	struct protosw *p, *maybe = NULL;
 
-        for (i=0;i<nmods;i++) {
-                n = global_modules[i].mod;
+	if (domain == 0)
+		return NULL;
+	
+	for (d = domains; d; d = d->dom_next) {
+		if (d->dom_family == domain)
+			goto found;
+	}
+	return NULL;
 
-                if (n->domain == domain &&
-                        n->proto == protocol &&
-                        n->sock_type == type)
-                        return n;
-        }
-        return NULL;
+found:
+	for (p=d->dom_protosw;p;p = p->dom_next) {
+		if (p->pr_protocol == protocol && p->pr_type == type)
+			return p;
+		/* deal with SOCK_RAW and AF_UNSPEC */
+		if (type == SOCK_RAW && p->pr_type == SOCK_RAW &&
+			p->pr_protocol == AF_UNSPEC && maybe == NULL)
+			maybe = p;
+	}
+	return maybe;
 }
 
 int start_stack(void)
 {
+	/* have we already been started??? */
+	if (domains != NULL)
+		return;
+		
 	dprintf("core network module: Starting network stack...\n");
 
+	domains = NULL;
+	protocols = NULL;
+	devices = NULL;
+	pdevices = NULL;
+	
+	find_protocol_modules();
+	
+	walk_domains();
+	
+	domain_init();
+	
 	mbinit();
 	sockets_init();
 	inpcb_init();
 	route_init();
+
+#if SHOW_MALLOC_USAGE
+	dprintf("core.c: start_ifq: malloc(%ld)\n", 
+		sizeof(loaded_net_module) * 255);
+#endif
 
 	global_modules = malloc(sizeof(loaded_net_module) * 255);
 	dev_lock = create_sem(1, "device_lock");
@@ -461,11 +662,9 @@ int start_stack(void)
 	start_devices();
 
 	list_devices();
-//	start_device_threads();
+	start_device_threads();
 
 	list_modules();
-
-dprintf("done starting the stack!!!\n");
 
 	return 0;
 }
@@ -507,6 +706,8 @@ static struct core_module_info core_info = {
 
 	start_stack,
 	stop_stack,
+	add_domain,
+	add_protocol,
 
 	soo_ioctl,
 
@@ -514,6 +715,16 @@ static struct core_module_info core_info = {
 	socreate,
 	soclose,
 	sobind,
+	soreserve,
+	sbappendaddr,
+	sowakeup,
+	
+	in_pcballoc,
+	in_pcbdetach,
+	in_pcbbind,
+	in_pcbconnect,
+	in_pcbdisconnect,
+	in_pcblookup,
 
 	m_free,
 	m_freem,
