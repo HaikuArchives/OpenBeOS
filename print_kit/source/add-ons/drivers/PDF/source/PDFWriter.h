@@ -133,6 +133,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 
 		void		*CreateMask(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 		BBitmap		*ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
+		bool		GetImages(BRect src, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data, int* mask, int* image);
 
 		// String handling
 		bool		BeginsChar(char byte) { return BEGINS_CHAR(byte); }

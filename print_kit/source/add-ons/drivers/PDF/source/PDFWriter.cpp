@@ -533,42 +533,56 @@ PDFWriter::FindPattern()
 void
 PDFWriter::CreatePattern() 
 {
-	// TODO: create mask for transparent pixels
 	LOG((fLog, "CreatePattern\n"));
-	uint8 bitmap[8*8*3];
+	BBitmap bm(BRect(0, 0, 7, 7), B_RGBA32);
+	
 	uint8* data = (uint8*)fState->pattern.data;
+	rgb_color h = fState->foregroundColor;
+	rgb_color l = fState->backgroundColor;
+	if (h.alpha < 128) {
+		h.red = h.green = h.blue = 255;
+	}
+	if (l.alpha < 128) {
+		l.red = l.green = l.blue = 255;
+	}
 
-	uint8* b = bitmap;
+	uint8* row = (uint8*)bm.Bits();
 	for (int8 y = 0; y <= 7; y ++, data ++) {
-		uint8 d = *data;
-		for (int8 x = 0; x <= 7; x ++, d >>= 1, b += 3) {
+		uint8  d = *data;
+		uint8* b = row; row += bm.BytesPerRow();
+		for (int8 x = 0; x <= 7; x ++, d >>= 1, b += 4) {
 			if (d & 1 == 1) {
-				b[0] = fState->foregroundColor.red;
-				b[1] = fState->foregroundColor.green;
-				b[2] = fState->foregroundColor.blue;
+				b[2] = h.red;   //fState->foregroundColor.red;
+				b[1] = h.green; //fState->foregroundColor.green;
+				b[0] = h.blue;  //fState->foregroundColor.blue;
+				b[3] = h.alpha; //fState->foregroundColor.alpha;
 			} else {
-				b[0] = fState->backgroundColor.red;
-				b[1] = fState->backgroundColor.green;
-				b[2] = fState->backgroundColor.blue;
+				b[2] = l.red;   //fState->backgroundColor.red;
+				b[1] = l.green; //fState->backgroundColor.green;
+				b[0] = l.blue;  //fState->backgroundColor.blue;
+				b[3] = l.alpha; //fState->backgroundColor.alpha;
 			}
 		} 
 	}
 
-	int image = PDF_open_image(fPdf, "raw", "memory", (const char *) bitmap, sizeof(bitmap), 8, 8, 3, 8, 0);
-	if (image == -1) {
-		LOG((fLog, "CreatePattern could not create image\n"));
+	int mask, image;
+		
+	if (!GetImages(bm.Bounds(), 8, 8, bm.BytesPerRow(), bm.ColorSpace(), 0, bm.Bits(), &mask, &image)) {
 		return;
-	}	
+	}
+
 	int pattern = PDF_begin_pattern(fPdf, 8, 8, 8, 8, 1);
 	if (pattern == -1) {
 		LOG((fLog, "CreatePattern could not create pattern\n"));
 		PDF_close_image(fPdf, image);
+		if (mask != -1) PDF_close_image(fPdf, mask);
 		return;
 	}
 	PDF_setcolor(fPdf, "both", "rgb", 0, 0, 1, 0);
 	PDF_place_image(fPdf, image, 0, 0, 1);
 	PDF_end_pattern(fPdf);
 	PDF_close_image(fPdf, image);
+	if (mask != -1) PDF_close_image(fPdf, mask);
 	
 	Pattern* p = new Pattern(fState->pattern, fState->backgroundColor, fState->foregroundColor, pattern);
 	fPatterns.AddItem(p);
@@ -1265,6 +1279,50 @@ PDFWriter::StoreTranslatorBitmap(BBitmap *bitmap, const char *filename, uint32 t
 	return res;
 }
 
+// --------------------------------------------------
+bool	
+PDFWriter::GetImages(BRect src, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, 
+	int32 flags, void *data, int* maskId, int* image)
+{
+	void 	*mask = NULL;
+	*maskId = -1;
+
+	mask = CreateMask(src, bytesPerRow, pixelFormat, flags, data);
+
+	if (mask) {
+		int32 width = src.IntegerWidth() + 1;
+		int32 height = src.IntegerHeight() + 1;
+		int32 w = (width+7)/8;
+		int32 h = height;
+		*maskId = PDF_open_image(fPdf, "raw", "memory", (const char *) mask, w*h, width, height, 1, 1, "mask");
+		delete []mask;
+	}
+
+	BBitmap * bm = ConvertBitmap(src, bytesPerRow, pixelFormat, flags, data);
+	if (!bm) {
+		LOG((fLog, "ConvertBitmap failed!\n"));
+		if (*maskId != -1) PDF_close_image(fPdf, *maskId);
+		return false;
+	}
+
+	char *pdfLibFormat   = "png";
+	char *bitmapFileName = "/tmp/pdfwriter.png";	
+	const uint32 beosFormat    = B_PNG_FORMAT;
+
+	if (!StoreTranslatorBitmap(bm, bitmapFileName, beosFormat)) {
+		delete bm;
+		LOG((fLog, "StoreTranslatorBitmap failed\n"));
+		if (*maskId != -1) PDF_close_image(fPdf, *maskId);
+		return false;
+	}
+	delete bm;
+
+	*image = PDF_open_image_file(fPdf, pdfLibFormat, bitmapFileName, 
+		*maskId == -1 ? "" : "masked", *maskId == -1 ? 0 : *maskId);
+
+	return *image >= 0;
+}
+
 
 #ifdef CODEWARRIOR
 	#pragma mark -- BPicture playback handlers
@@ -1710,10 +1768,6 @@ void
 PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 bytesPerRow, int32 pixelFormat, 
 	int32 flags, void *data)
 {
-	int		image;
-	void 	*mask = NULL;
-	int     maskId = -1;
-
 	LOG((fLog, "DrawPixels src=[%f, %f, %f, %f], dest=[%f, %f, %f, %f], " \
 					"width=%ld, height=%ld, bytesPerRow=%ld, pixelFormat=%ld, " \
 					"flags=%ld, data=%p\n", \
@@ -1728,47 +1782,25 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 		return;
 	}
 
-	mask = CreateMask(src, bytesPerRow, pixelFormat, flags, data);
-
-	float scaleX = (dest.Width()+1) / (src.Width()+1);
-	float scaleY = (dest.Height()+1) / (src.Height()+1);
-
-	if (mask) {
-		int32 width = src.IntegerWidth() + 1;
-		int32 height = src.IntegerHeight() + 1;
-		int32 w = (width+7)/8;
-		int32 h = height;
-		maskId = PDF_open_image(fPdf, "raw", "memory", (const char *) mask, w*h, width, height, 1, 1, "mask");
-		delete []mask;
-	}
-
-	BBitmap * bm = ConvertBitmap(src, bytesPerRow, pixelFormat, flags, data);
-	if (!bm) {
-		LOG((fLog, "ConvertBitmap failed!\n"));
-		if (maskId != -1) PDF_close_image(fPdf, maskId);
-		return;
-	}
-
-	char *pdfLibFormat   = "png";
-	char *bitmapFileName = "/tmp/pdfwriter.png";	
-	const uint32 beosFormat    = B_PNG_FORMAT;
-
-	if (!StoreTranslatorBitmap(bm, bitmapFileName, beosFormat)) {
-		delete bm;
-		LOG((fLog, "StoreTranslatorBitmap failed\n"));
-		if (maskId != -1) PDF_close_image(fPdf, maskId);
-		return;
-	}
-	delete bm;
+	int maskId, image;
 	
-	PDF_save(fPdf);
-	PDF_scale(fPdf, scaleX, scaleY);	
+	if (!GetImages(src, width, height, bytesPerRow, pixelFormat, flags, data, &maskId, &image)) {
+		return;
+	}
+
+	const float scaleX = (dest.Width()+1) / (src.Width()+1);
+	const float scaleY = (dest.Height()+1) / (src.Height()+1);
+
+	const bool needs_scaling = scaleX != 1.0 || scaleY != 1.0;
+	
+	if (needs_scaling) {	
+		PDF_save(fPdf);
+		PDF_scale(fPdf, scaleX, scaleY);
+	}
 
 	float x = tx(dest.left)   / scaleX;
 	float y = ty(dest.bottom) / scaleY;
 
-	image = PDF_open_image_file(fPdf, pdfLibFormat, bitmapFileName, 
-		maskId == -1 ? "" : "masked", maskId == -1 ? 0 : maskId);
 	if ( image >= 0 ) {
 		PDF_place_image(fPdf, image, x, y, scale(1.0));
 		PDF_close_image(fPdf, image);
@@ -1776,8 +1808,9 @@ PDFWriter::DrawPixels(BRect src, BRect dest, int32 width, int32 height, int32 by
 		LOG((fLog, "PDF_open_image_file failed!\n"));
 
 	if (maskId != -1) PDF_close_image(fPdf, maskId);
-	PDF_restore(fPdf);
+	if (needs_scaling) PDF_restore(fPdf);
 }
+
 
 
 // --------------------------------------------------
