@@ -14,6 +14,7 @@
 
 #include "LibBeAdapter.h"
 
+#include <algobase.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -504,6 +505,57 @@ StorageKit::write_attr ( StorageKit::FileDescriptor file,
 			
 	ssize_t result = fs_write_attr ( file, attribute, type, pos, buf, count );
 	return (result == -1 ? errno : result);
+}
+
+status_t
+StorageKit::rename_attr(FileDescriptor file, const char *oldName,
+						const char *newName)
+{
+	status_t error = (oldName && newName ? B_OK : B_BAD_VALUE);
+	// Figure out how much data there is
+	attr_info info;
+	if (error == B_OK) {
+		error = stat_attr(file, oldName, &info);
+		if (error != B_OK)
+			error = B_BAD_VALUE;	// This is what R5::BNode returns...		
+	}
+	// Alloc a buffer
+	char *data = NULL;
+	if (error == B_OK) {
+		// alloc at least one byte
+		data = new(nothrow) char[max(info.size, 1LL)];
+		if (data == NULL)
+			error = B_NO_MEMORY;		
+	}
+	// Read in the data
+	if (error == B_OK) {
+		ssize_t size = read_attr(file, oldName, info.type, 0, data, info.size);
+		if (size != info.size) {
+			if (size < 0)
+				error = size;
+			else
+				error = B_ERROR;
+		}		
+	}
+	// Write it to the new attribute
+	if (error == B_OK) {
+		ssize_t size = 0;
+		if (info.size > 0)
+			size = write_attr(file, newName, info.type, 0, data, info.size);
+		if (size != info.size) {
+			if (size < 0)
+				error = size;
+			else
+				error = B_ERROR;
+		}	
+	}
+	// free the buffer
+	if (data)
+		delete[] data;
+	// Remove the old attribute
+	if (error == B_OK)
+		error = remove_attr(file, oldName);
+	return error;
 }
 
 status_t

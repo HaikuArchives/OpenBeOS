@@ -17,8 +17,6 @@
 #include "kernel_interface.h"
 #include "storage_support.h"
 
-/*! \file Node.h */
-
 //----------------------------------------------------------------------
 // node_ref
 //----------------------------------------------------------------------
@@ -27,8 +25,8 @@
 /*! \brief Creates an uninitialized node_ref object.
 */
 node_ref::node_ref()
-		: device(0),
-		  node(0)
+		: device(-1),
+		  node(-1)
 {
 }
 
@@ -37,6 +35,8 @@ node_ref::node_ref()
 	\param ref the node_ref to be copied
 */
 node_ref::node_ref(const node_ref &ref)
+		: device(-1),
+		  node(-1)
 {
 	*this = ref;
 }
@@ -152,8 +152,9 @@ BNode::BNode(const BNode &node)
 
 /*!	\brief Frees all resources associated with this BNode.
 */
-BNode::~BNode() {
-	close_fd();
+BNode::~BNode()
+{
+	Unset();
 }
 
 /*!	\brief Checks whether the object has been properly initialized or not.
@@ -162,7 +163,8 @@ BNode::~BNode() {
 	- an error code, otherwise.
 */
 status_t
-BNode::InitCheck() const {
+BNode::InitCheck() const
+{
 	return fCStatus;
 }
 
@@ -175,7 +177,8 @@ BNode::InitCheck() const {
 	- another error code, e.g., if the object wasn't properly initialized
 */
 status_t
-BNode::GetStat(struct stat *st) const {
+BNode::GetStat(struct stat *st) const
+{
 	return (fCStatus != B_OK) ? fCStatus : StorageKit::get_stat(fFd, st) ;
 }
 
@@ -190,7 +193,9 @@ BNode::GetStat(struct stat *st) const {
 		  Reimplement!
 */
 status_t
-BNode::SetTo(const entry_ref *ref) {
+BNode::SetTo(const entry_ref *ref)
+{
+	Unset();
 	char path[B_PATH_NAME_LENGTH + 1];
 	status_t error = (ref ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
@@ -214,7 +219,9 @@ BNode::SetTo(const entry_ref *ref) {
 		  reimplement!
 */
 status_t
-BNode::SetTo(const BEntry *entry) {
+BNode::SetTo(const BEntry *entry)
+{
+	Unset();
 	entry_ref ref;
 	status_t error = (entry ? B_OK : B_BAD_VALUE);
 	if (error == B_OK && entry->InitCheck() != B_OK)
@@ -237,7 +244,8 @@ BNode::SetTo(const BEntry *entry) {
 	- \c B_BUSY: The entry is locked.
 */
 status_t
-BNode::SetTo(const char *path) {
+BNode::SetTo(const char *path)
+{
 	Unset();	
 	if (path != NULL) 
 		fCStatus = StorageKit::open(path, O_RDWR | O_NOTRAVERSE, fFd);
@@ -257,7 +265,9 @@ BNode::SetTo(const char *path) {
 	\todo Implemented using SetTo(BEntry*). Check, if necessary to reimplement!
 */
 status_t
-BNode::SetTo(const BDirectory *dir, const char *path) {
+BNode::SetTo(const BDirectory *dir, const char *path)
+{
+	Unset();
 	status_t error = (dir && path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK && StorageKit::is_absolute_path(path))
 		error = B_BAD_VALUE;
@@ -273,8 +283,10 @@ BNode::SetTo(const BDirectory *dir, const char *path) {
 /*!	\brief Returns the object to an uninitialized state.
 */
 void
-BNode::Unset() {
+BNode::Unset()
+{
 	close_fd();
+	fCStatus = B_NO_INIT;	
 }
 
 /*!	\brief Attains an exclusive lock on the data referred to by this node, so
@@ -286,7 +298,8 @@ BNode::Unset() {
 	\todo Currently unimplemented; requires new kernel.
 */
 status_t
-BNode::Lock() {
+BNode::Lock()
+{
 	if (fCStatus != B_OK)
 		return fCStatus;
 
@@ -307,7 +320,8 @@ BNode::Lock() {
 	\todo Currently unimplemented; requires new kernel.
 */
 status_t
-BNode::Unlock() {
+BNode::Unlock()
+{
 	if (fCStatus != B_OK)
 		return fCStatus;
 	// This will have to wait for the new kenel
@@ -320,7 +334,8 @@ BNode::Unlock() {
 	- an error code, if something went wrong.
 */
 status_t
-BNode::Sync() {
+BNode::Sync()
+{
 	return (fCStatus != B_OK) ? B_FILE_ERROR : StorageKit::sync(fFd) ;
 }
 
@@ -346,11 +361,13 @@ BNode::Sync() {
 */
 ssize_t
 BNode::WriteAttr(const char *attr, type_code type, off_t offset,
-				 const void *buffer, size_t len) {
-	if (fCStatus == B_NO_INIT)
+				 const void *buffer, size_t len)
+{
+	if (fCStatus != B_OK)
 		return B_FILE_ERROR;
 	else {
-		ssize_t result = StorageKit::write_attr(fFd, attr, type, offset, buffer, len);
+		ssize_t result = StorageKit::write_attr(fFd, attr, type, offset,
+												buffer, len);
 		return result;
 	}
 }
@@ -372,11 +389,13 @@ BNode::WriteAttr(const char *attr, type_code type, off_t offset,
 */
 ssize_t
 BNode::ReadAttr(const char *attr, type_code type, off_t offset,
-				void *buffer, size_t len) const {
-	if (fCStatus == B_NO_INIT)
+				void *buffer, size_t len) const
+{
+	if (fCStatus != B_OK)
 		return B_FILE_ERROR;
 	else {
-		ssize_t result = StorageKit::read_attr(fFd, attr, type, offset, buffer, len);
+		ssize_t result = StorageKit::read_attr(fFd, attr, type, offset, buffer,
+											   len);
 		return result;
 	}
 }
@@ -391,8 +410,10 @@ BNode::ReadAttr(const char *attr, type_code type, off_t offset,
 	- \c B_NOT_ALLOWED: The node resides on a read only volume.
 */
 status_t
-BNode::RemoveAttr(const char *name) {
-	return (fCStatus == B_NO_INIT) ? B_FILE_ERROR : StorageKit::remove_attr(fFd, name);
+BNode::RemoveAttr(const char *name)
+{
+	return (fCStatus != B_OK) ? B_FILE_ERROR
+							  : StorageKit::remove_attr(fFd, name);
 }
 
 /*!	\brief Moves the attribute given by \a oldname to \a newname.
@@ -408,38 +429,11 @@ BNode::RemoveAttr(const char *name) {
 	- \c B_NOT_ALLOWED: The node resides on a read only volume.
 */
 status_t
-BNode::RenameAttr(const char *oldname, const char *newname) {
+BNode::RenameAttr(const char *oldname, const char *newname)
+{
 	if (fCStatus != B_OK)
 		return B_FILE_ERROR;
-
-	attr_info info;
-	status_t result;
-	ssize_t size;
-	
-	// Figure out how much data there is
-	result = GetAttrInfo(oldname, &info);
-	if (result != B_OK)
-		return B_BAD_VALUE;	// This is what R5::BNode returns...		
-	// Alloc a buffer
-	void *data = new(nothrow) char[info.size];
-	if (data == NULL)
-		return B_NO_MEMORY;		
-	// Read in the data
-	size = ReadAttr(oldname, B_STRING_TYPE, 0, data, info.size);
-	if (size != info.size) {
-		delete data;		
-		return size;
-	}		
-	// Write it to the new attribute
-	size = WriteAttr(newname, B_STRING_TYPE, 0, data, size);
-	if (size != info.size) {
-		delete data;		
-		return size;
-	}	
-	// We're done with the buffer now.
-	delete data;	
-	// Remove the old attribute
-	return RemoveAttr(oldname);	
+	return StorageKit::rename_attr(fFd, oldname, newname);
 }
 
 
@@ -454,8 +448,10 @@ BNode::RenameAttr(const char *oldname, const char *newname) {
 	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a name.
 */
 status_t
-BNode::GetAttrInfo(const char *name, struct attr_info *info) const {
-	return (fCStatus == B_NO_INIT) ? B_FILE_ERROR : StorageKit::stat_attr(fFd, name, info) ;
+BNode::GetAttrInfo(const char *name, struct attr_info *info) const
+{
+	return (fCStatus != B_OK) ? B_FILE_ERROR
+							  : StorageKit::stat_attr(fFd, name, info);
 }
 
 /*!	\brief Returns the next attribute in the node's list of attributes.
@@ -476,7 +472,8 @@ BNode::GetAttrInfo(const char *name, struct attr_info *info) const {
 	  name has already been returned.
  */
 status_t
-BNode::GetNextAttrName(char *buffer) {
+BNode::GetNextAttrName(char *buffer)
+{
 	// We're allowed to assume buffer is at least
 	// B_BUFFER_NAME_LENGTH chars long, but NULLs
 	// are not acceptable.
@@ -501,15 +498,13 @@ BNode::GetNextAttrName(char *buffer) {
 	- \c B_FILE_ERROR: Some error occured.
 */
 status_t
-BNode::RewindAttrs() {
+BNode::RewindAttrs()
+{
 	if (InitAttrDir() != B_OK)
 		return B_FILE_ERROR;	
 	StorageKit::rewind_attr_dir(fAttrFd);
 	return B_OK;
 }
-
-// We need an OpenBeOS BString implementation before we can actually test
-// WriteAttrString() and ReadAttrString().
 
 /*!	Writes the specified string to the specified attribute, clobbering any
 	previous data.
@@ -524,7 +519,8 @@ BNode::RewindAttrs() {
 	- \c B_NO_MEMORY: Insufficient memory to complete the operation.
 */
 status_t
-BNode::WriteAttrString(const char *name, const BString *data) {
+BNode::WriteAttrString(const char *name, const BString *data)
+{
 	status_t error = (!name || !data)  ? B_BAD_VALUE : B_OK;
 	if (error == B_OK) {
 		int32 len = data->Length();
@@ -547,7 +543,8 @@ BNode::WriteAttrString(const char *name, const BString *data) {
 	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a attr.
 */
 status_t
-BNode::ReadAttrString(const char *name, BString *result) const {
+BNode::ReadAttrString(const char *name, BString *result) const
+{
 	if (!name || !result)
 		return B_BAD_VALUE;
 	
@@ -559,13 +556,15 @@ BNode::ReadAttrString(const char *name, BString *result) const {
 		return error;		
 	// Lock the string's buffer so we can meddle with it	
 	char *data = result->LockBuffer(info.size+1);
+	if (!data)
+		return B_NO_MEMORY;
 	// Read the attribute		
 	ssize_t bytes = ReadAttr(name, B_STRING_TYPE, 0, data, info.size);
 	// Check for failure
 	if (bytes < 0) {
 		error = bytes;
 		bytes = 0;	// In this instance, we simply clear the string
-	} else 
+	} else
 		error = B_OK;
 	// Null terminate the new string just to be sure (since it *is*
 	// possible to read and write non-NULL-terminated strings)
@@ -579,12 +578,13 @@ BNode::ReadAttrString(const char *name, BString *result) const {
 	\return a reference to this BNode object.
 */
 BNode&
-BNode::operator=(const BNode &node) {
+BNode::operator=(const BNode &node)
+{
 	// No need to do any assignment if already equal
 	if (*this == node)
 		return *this;	
 	// Close down out current state
-	close_fd();	
+	Unset();	
 	// We have to manually dup the node, because R5::BNode::Dup()
 	// is not declared to be const (which IMO is retarded).
 	fFd = StorageKit::dup(node.fFd);
@@ -599,7 +599,8 @@ BNode::operator=(const BNode &node) {
 	\return \c true, if the BNode objects are equal, \c false otherwise
 */
 bool
-BNode::operator==(const BNode &node) const {
+BNode::operator==(const BNode &node) const
+{
 	if (fCStatus == B_NO_INIT && node.InitCheck() == B_NO_INIT)
 		return true;		
 	if (fCStatus == B_OK && node.InitCheck() == B_OK) {
@@ -621,7 +622,8 @@ BNode::operator==(const BNode &node) const {
 	\return \c false, if the BNode objects are equal, \c true otherwise
 */
 bool
-BNode::operator!=(const BNode &node) const {
+BNode::operator!=(const BNode &node) const
+{
 	return !(*this == node);
 }
 
@@ -631,7 +633,8 @@ BNode::operator!=(const BNode &node) const {
 	\return a valid file descriptor, or -1, if something went wrong.
 */
 int
-BNode::Dup() {
+BNode::Dup()
+{
 	return StorageKit::dup(fFd);
 }
 
@@ -650,11 +653,16 @@ void BNode::_ReservedNode6() { }
 	file-type specific system calls for opening file descriptors.
 	\param fd the file descriptor this BNode should be set to (may be -1)
 	\return \c B_OK, if everything went fine, an error code otherwise.
+	\note This method calls close_fd() to close previously opened FDs. Thus
+		  derived classes should take care to first call set_fd() and set
+		  class specific resources freed in their close_fd() version
+		  thereafter.
 */
 status_t
-BNode::set_fd(StorageKit::FileDescriptor fd) {
+BNode::set_fd(StorageKit::FileDescriptor fd)
+{
 	if (fFd != -1)
-		close_fd();		
+		close_fd();
 	fFd = fd;
 	return B_OK;
 }
@@ -666,8 +674,10 @@ BNode::set_fd(StorageKit::FileDescriptor fd) {
 	if necessary.
 */
 void
-BNode::close_fd() {
-	if (fAttrFd != StorageKit::NullFd) {
+BNode::close_fd()
+{
+	if (fAttrFd != StorageKit::NullFd)
+	{
 		StorageKit::close_attr_dir(fAttrFd);
 		fAttrFd = StorageKit::NullFd;
 	}	
@@ -675,13 +685,12 @@ BNode::close_fd() {
 		close(fFd);
 		fFd = StorageKit::NullFd;
 	}	
-	fCStatus = B_NO_INIT;	
 }
 
 // set_status
 /*! \brief Sets the BNode's status.
-	To be used instead of accessing the BNode's private \c fCStatus member
-	directly.
+	To be used by derived classes instead of accessing the BNode's private
+	\c fCStatus member directly.
 	\param newStatus the new value for the status variable.
 */
 void
@@ -698,7 +707,8 @@ BNode::set_status(status_t newStatus)
 	\return \c B_OK if everything went fine, an error code otherwise.
 */
 status_t
-BNode::set_stat(struct stat &st, uint32 what) {
+BNode::set_stat(struct stat &st, uint32 what)
+{
 	if (fCStatus != B_OK)
 		return B_FILE_ERROR;
 	return StorageKit::set_stat(fFd, st, what);
@@ -710,7 +720,8 @@ BNode::set_stat(struct stat &st, uint32 what) {
 	\return \c B_OK if everything went fine, an error code otherwise.
 */
 status_t
-BNode::InitAttrDir() {
+BNode::InitAttrDir()
+{
 	if (fCStatus == B_OK && fAttrFd == StorageKit::NullFd) 
 		return StorageKit::open_attr_dir(fFd, fAttrFd);
 	return fCStatus;	

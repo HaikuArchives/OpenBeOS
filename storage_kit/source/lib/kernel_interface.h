@@ -128,6 +128,10 @@ ssize_t read_attr(FileDescriptor file, const char *attribute, uint32 type,
 ssize_t write_attr(FileDescriptor file, const char *attribute, uint32 type, 
 						off_t pos, const void *buf, size_t count);
 
+//! Renames the specified attribute.
+status_t rename_attr(FileDescriptor file, const char *oldName,
+					 const char *newName);
+
 //! Removes the specified attribute and any data associated with it.
 status_t remove_attr(FileDescriptor file, const char *attr);
 

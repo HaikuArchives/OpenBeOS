@@ -34,7 +34,7 @@ BFile::BFile()
 BFile::BFile(const BFile &file)
 	 : BNode(),
 	   BPositionIO(),
-	   fMode()
+	   fMode(0)
 {
 	*this = file;
 }
@@ -123,7 +123,7 @@ BFile::~BFile()
 	\param openMode the mode in which the file should be opened
 	\a openMode must be a bitwise or of exactly one of the flags
 	- \c B_READ_ONLY: The file is opened read only.
-	- \c B_WRITE_ONLY: The file is opened read only.
+	- \c B_WRITE_ONLY: The file is opened write only.
 	- \c B_READ_WRITE: The file is opened for random read/write access.
 	and any number of the flags
 	- \c B_CREATE_FILE: A new file will be created, if it does not already
@@ -134,7 +134,7 @@ BFile::~BFile()
 	- \c B_OPEN_AT_END: Seek() to the end of the file after opening.
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a ref or bad \a openMode.
+	- \c B_BAD_VALUE: \c NULL \a ref or bad \a openMode.
 	- \c B_ENTRY_NOT_FOUND: File not found or failed to create file.
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
@@ -169,7 +169,7 @@ BFile::SetTo(const entry_ref *ref, uint32 openMode)
 	\param openMode the mode in which the file should be opened
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a entry or bad \a openMode.
+	- \c B_BAD_VALUE: \c NULL \a entry or bad \a openMode.
 	- \c B_ENTRY_NOT_FOUND: File not found or failed to create file.
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
@@ -202,7 +202,7 @@ BFile::SetTo(const BEntry *entry, uint32 openMode)
 	\param openMode the mode in which the file should be opened
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path or bad \a openMode.
+	- \c B_BAD_VALUE: \c NULL \a path or bad \a openMode.
 	- \c B_ENTRY_NOT_FOUND: File not found or failed to create file.
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
@@ -217,7 +217,7 @@ BFile::SetTo(const char *path, uint32 openMode)
 {
 	Unset();
 	status_t result = B_OK;
-	int newFd = -1;
+	StorageKit::FileDescriptor newFd = StorageKit::NullFd;
 	if (path) {
 		// analyze openMode
 		// Well, it's a bit schizophrenic to convert the B_* style openMode
@@ -275,7 +275,7 @@ BFile::SetTo(const char *path, uint32 openMode)
 	\param path the file's path name relative to \a dir
 	\param openMode the mode in which the file should be opened
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a dir or \a path or bad \a openMode.
+	- \c B_BAD_VALUE: \c NULL \a dir or \a path or bad \a openMode.
 	- \c B_ENTRY_NOT_FOUND: File not found or failed to create file.
 	- \c B_FILE_EXISTS: File exists and \c B_FAIL_IF_EXISTS was passed.
 	- \c B_PERMISSION_DENIED: File permissions didn't allow operation.
@@ -412,6 +412,7 @@ BFile::WriteAt(off_t location, const void *buffer, size_t size)
 	\return
 	- the new read/write position relative to the beginning of the file
 	- \c B_ERROR when trying to seek before the beginning of the file
+	- \c B_FILE_ERROR, if the file is not properly initialized
 */
 off_t
 BFile::Seek(off_t offset, uint32 seekMode)
@@ -459,8 +460,6 @@ BFile::SetSize(off_t size)
 	if (result == B_OK && size < 0)
 		result = B_BAD_VALUE;
 	struct stat statData;
-	if (result == B_OK)
-		result = GetStat(&statData);
 	if (result == B_OK) {
 		statData.st_size = size;
 		result = set_stat(statData, WSTAT_SIZE);
@@ -482,7 +481,7 @@ BFile::operator=(const BFile &file)
 		Unset();
 		if (file.InitCheck() == B_OK) {
 			// duplicate the file descriptor
-			int fd = -1;
+			StorageKit::FileDescriptor fd = -1;
 			status_t status = StorageKit::dup(file.get_fd(), fd);
 			// set it
 			if (status == B_OK) {
@@ -499,6 +498,7 @@ BFile::operator=(const BFile &file)
 }
 
 
+// FBC
 void BFile::_ReservedFile1() {}
 void BFile::_ReservedFile2() {}
 void BFile::_ReservedFile3() {}

@@ -102,8 +102,6 @@ public:
 	int Dup();  // This should be "const" but R5's is not... Ugggh.
 
 private:
-	friend class BEntry;
-	friend class BVolume;
 	friend class BFile;
 	friend class BDirectory;
 	friend class BSymLink;

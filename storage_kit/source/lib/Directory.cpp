@@ -9,6 +9,7 @@
 
 #include <fs_info.h>
 #include <string.h>
+
 #include <Directory.h>
 #include <Entry.h>
 #include <File.h>
@@ -130,7 +131,7 @@ BDirectory::~BDirectory()
 	\param ref the entry_ref referring to the directory
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a ref.
+	- \c B_BAD_VALUE: \c NULL \a ref.
 	- \c B_ENTRY_NOT_FOUND: Directory not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -163,7 +164,7 @@ BDirectory::SetTo(const entry_ref *ref)
 	\param nref the node_ref referring to the directory
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a nref.
+	- \c B_BAD_VALUE: \c NULL \a nref.
 	- \c B_ENTRY_NOT_FOUND: Directory not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -191,7 +192,7 @@ BDirectory::SetTo(const node_ref *nref)
 	\param entry the BEntry referring to the directory
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a entry.
+	- \c B_BAD_VALUE: \c NULL \a entry.
 	- \c B_ENTRY_NOT_FOUND: Directory not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -224,7 +225,7 @@ BDirectory::SetTo(const BEntry *entry)
 	\param path the directory's path name 
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path.
+	- \c B_BAD_VALUE: \c NULL \a path.
 	- \c B_ENTRY_NOT_FOUND: Directory not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -240,8 +241,9 @@ BDirectory::SetTo(const char *path)
 {
 	Unset();	
 	status_t result = (path ? B_OK : B_BAD_VALUE);
+	StorageKit::FileDescriptor newDirFd = StorageKit::NullFd;
 	if (result == B_OK)
-		result = StorageKit::open_dir(path, fDirFd);
+		result = StorageKit::open_dir(path, newDirFd);
 	if (result == B_OK) {
 		// We have to take care that BNode doesn't stick to a symbolic link.
 		// open_dir() does always traverse those. Therefore we open the FD for
@@ -253,10 +255,10 @@ BDirectory::SetTo(const char *path)
 			if (result != B_OK)
 				StorageKit::close(fd);
 		}
-		if (result != B_OK) {
-			StorageKit::close_dir(fDirFd);
-			fDirFd = StorageKit::NullFd;
-		}
+		if (result == B_OK)
+			fDirFd = newDirFd;
+		else
+			StorageKit::close_dir(newDirFd);
 	}
 	// finally set the BNode status
 	set_status(result);
@@ -271,7 +273,7 @@ BDirectory::SetTo(const char *path)
 	\param path the directory's path name relative to \a dir
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a dir or \a path, or \a path is absolute.
+	- \c B_BAD_VALUE: \c NULL \a dir or \a path, or \a path is absolute.
 	- \c B_ENTRY_NOT_FOUND: Directory not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -306,7 +308,7 @@ BDirectory::SetTo(const BDirectory *dir, const char *path)
 		   directory
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a entry.
+	- \c B_BAD_VALUE: \c NULL \a entry.
 	- \c B_ENTRY_NOT_FOUND: Directory not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -321,10 +323,10 @@ status_t
 BDirectory::GetEntry(BEntry *entry) const
 {
 	status_t error = (entry ? B_OK : B_BAD_VALUE);
-	if (error == B_OK && InitCheck() != B_OK) {
+	if (entry)
 		entry->Unset();
+	if (error == B_OK && InitCheck() != B_OK)
 		error = B_NO_INIT;
-	}
 	entry_ref ref;
 	if (error == B_OK)
 		error = StorageKit::dir_to_self_entry_ref(fDirFd, &ref);
@@ -366,7 +368,7 @@ BDirectory::IsRootDirectory() const
 		   is a symbolic link.
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path or \a entry.
+	- \c B_BAD_VALUE: \c NULL \a path or \a entry.
 	- \c B_ENTRY_NOT_FOUND: Entry not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -404,11 +406,11 @@ BDirectory::FindEntry(const char *path, BEntry *entry, bool traverse) const
 
 // Contains
 /*!	\brief Returns whether this directory or any of its subdirectories
-	at any level contains the entry referred to by the supplied path name.
+	at any level contain the entry referred to by the supplied path name.
 	Only entries that match the node flavor specified by \a nodeFlags are
 	considered.
 	If the BDirectory is not properly initialized, the method returns \c true,
-	if the entry exists and has its kind does match. A non-absolute path is
+	if the entry exists and its kind does match. A non-absolute path is
 	considered relative to the current directory.
 	\param path the entry's path name. May be relative to this directory or
 		   absolute.
@@ -443,7 +445,7 @@ BDirectory::Contains(const char *path, int32 nodeFlags) const
 
 // Contains
 /*!	\brief Returns whether this directory or any of its subdirectories
-	at any level contains the entry referred to by the supplied BEntry.
+	at any level contain the entry referred to by the supplied BEntry.
 	Only entries that match the node flavor specified by \a nodeFlags are
 	considered.
 	\param entry a BEntry referring to the entry
@@ -508,11 +510,11 @@ BDirectory::Contains(const BEntry *entry, int32 nodeFlags) const
 /*!	\brief Returns the stat structure of the entry referred to by the supplied
 	path name.
 	\param path the entry's path name. May be relative to this directory or
-		   absolute.
+		   absolute, or \c NULL to get the directories stat info.
 	\param st a pointer to the stat structure to be filled in by this function
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path or \a st.
+	- \c B_BAD_VALUE: \c NULL \a st.
 	- \c B_ENTRY_NOT_FOUND: Entry not found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -548,14 +550,14 @@ BDirectory::GetStatFor(const char *path, struct stat *st) const
 // GetNextEntry
 //! Returns the BDirectory's next entry as a BEntry.
 /*!	Unlike GetNextDirents() this method ignores the entries "." and "..".
-	\param entry a pointer to a BEntry to be initialized with the found entry
+	\param entry a pointer to a BEntry to be initialized to the found entry
 	\param traverse specifies whether to follow it, if the found entry
 		   is a symbolic link.
 	\note The iterator used by this method is the same one used by
 		  GetNextRef(), GetNextDirents(), Rewind() and CountEntries().
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a entry.
+	- \c B_BAD_VALUE: \c NULL \a entry.
 	- \c B_ENTRY_NOT_FOUND: No more entries found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -572,7 +574,7 @@ BDirectory::GetNextEntry(BEntry *entry, bool traverse)
 		entry_ref ref;
 		error = GetNextRef(&ref);
 		if (error == B_OK)
-			entry->SetTo(&ref, traverse);
+			error = entry->SetTo(&ref, traverse);
 	}
 	return error;
 }
@@ -588,7 +590,7 @@ BDirectory::GetNextEntry(BEntry *entry, bool traverse)
 		  GetNextEntry(), GetNextDirents(), Rewind() and CountEntries().
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a ref.
+	- \c B_BAD_VALUE: \c NULL \a ref.
 	- \c B_ENTRY_NOT_FOUND: No more entries found.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -632,8 +634,7 @@ BDirectory::GetNextRef(entry_ref *ref)
 	\return
 	- The number of dirent structures stored in the buffer, 0 when there are
 	  no more entries to be returned.
-	- \c B_BAD_VALUE: NULL \a buf.
-	- \c B_ENTRY_NOT_FOUND: Entry not found.
+	- \c B_BAD_VALUE: \c NULL \a buf.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
 	- \c B_NAME_TOO_LONG: The entry's name is too long for the buffer.
@@ -702,8 +703,9 @@ BDirectory::CountEntries()
 			if (StorageKit::read_dir(fDirFd, &entry, sizeof(entry), 1) != 1)
 				error = B_ENTRY_NOT_FOUND;
 			if (error == B_OK
-				&& strcmp(entry.d_name, ".") && strcmp(entry.d_name, ".."))
+				&& strcmp(entry.d_name, ".") && strcmp(entry.d_name, "..")) {
 				count++;
+			}
 		}
 		if (error == B_ENTRY_NOT_FOUND)
 			error = B_OK;
@@ -718,10 +720,10 @@ BDirectory::CountEntries()
 	\param path the new directory's path name. May be relative to this
 		   directory or absolute.
 	\param dir a pointer to a BDirectory to be initialized to the newly
-		   created directory. May be NULL.
+		   created directory. May be \c NULL.
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path.
+	- \c B_BAD_VALUE: \c NULL \a path.
 	- \c B_ENTRY_NOT_FOUND: \a path does not refer to a possible entry.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -763,12 +765,12 @@ BDirectory::CreateDirectory(const char *path, BDirectory *dir)
 	\param path the new file's path name. May be relative to this
 		   directory or absolute.
 	\param file a pointer to a BFile to be initialized to the newly
-		   created file. May be NULL.
+		   created file. May be \c NULL.
 	\param failIfExists \c true, if the method should fail when the file
 		   already exists, \c false otherwise
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path.
+	- \c B_BAD_VALUE: \c NULL \a path.
 	- \c B_ENTRY_NOT_FOUND: \a path does not refer to a possible entry.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -808,10 +810,10 @@ BDirectory::CreateFile(const char *path, BFile *file, bool failIfExists)
 		   directory or absolute.
 	\param linkToPath the path the symbolic link shall point to.
 	\param dir a pointer to a BSymLink to be initialized to the newly
-		   created symbolic link. May be NULL.
+		   created symbolic link. May be \c NULL.
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path or \a linkToPath.
+	- \c B_BAD_VALUE: \c NULL \a path or \a linkToPath.
 	- \c B_ENTRY_NOT_FOUND: \a path does not refer to a possible entry.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
@@ -872,6 +874,7 @@ BDirectory::operator=(const BDirectory &dir)
 }
 
 
+// FBC
 void BDirectory::_ReservedDirectory1() {}
 void BDirectory::_ReservedDirectory2() {}
 void BDirectory::_ReservedDirectory3() {}
@@ -889,16 +892,6 @@ BDirectory::close_fd()
 		fDirFd = StorageKit::NullFd;
 	}
 	BNode::close_fd();
-}
-
-// set_fd
-//! Sets the file descriptor for the BDirectory.
-/*!	\param fd the new file descriptor, may be -1.
-*/
-status_t
-BDirectory::set_fd(StorageKit::FileDescriptor fd)
-{
-	return BNode::set_fd(fd);
 }
 
 //! Returns the BDirectory's file descriptor.
@@ -922,14 +915,14 @@ BDirectory::get_fd() const
 		   newly created directories.
 	\return
 	- \c B_OK: Everything went fine.
-	- \c B_BAD_VALUE: NULL \a path.
+	- \c B_BAD_VALUE: \c NULL \a path.
 	- \c B_ENTRY_NOT_FOUND: \a path does not refer to a possible entry.
 	- \c B_PERMISSION_DENIED: Directory permissions didn't allow operation.
 	- \c B_NO_MEMORY: Insufficient memory for operation.
 	- \c B_LINK_LIMIT: Indicates a cyclic loop within the file system.
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
-	- \c B_FILE_EXISTS: An entry other than a directory with that name does
+	- \c B_NOT_A_DIRECTORY: An entry other than a directory with that name does
 	  already exist.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	\todo Check for efficency.

@@ -85,15 +85,13 @@ private:
 	virtual void _ReservedDirectory5();
 	virtual void _ReservedDirectory6();
 
-	uint32 _reservedData[7];
-
-private:
-	StorageKit::FileDescriptor fDirFd;
-
 private:
 	virtual void close_fd();
-	status_t set_fd(StorageKit::FileDescriptor fd);
 	StorageKit::FileDescriptor get_fd() const;
+
+private:
+	uint32 _reservedData[7];
+	StorageKit::FileDescriptor fDirFd;
 
 	friend class BEntry;
 };
