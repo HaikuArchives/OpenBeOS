@@ -1,8 +1,9 @@
-/* libnet.c */
+/* socket.c */
 
 /* This is a very simple little shared library that acts as a wrapper
  * for our device/kernel stack!
  */
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <kernel/OS.h>
@@ -402,29 +403,8 @@ int accept(int sock, struct sockaddr * addr, int * addrlen)
 	return new_sock;
 }
 
-
-/* these are for compatibility with BeOS R5... */
-
-int herror()
-{
-	printf("herror() not yet supported.");
-	return 0;
-}
-
-int _socket_interrupt()
-{
-	printf("_socket_interrupt\n");
-	return 0;
-}
-
-int _netconfig_find()
-{
-	printf("_netconfig_find\n");
-	return 0;
-}
-
 #ifdef CODEWARRIOR
-	#pragma mark [Privates routines]
+	#pragma mark [Private routines]
 #endif
 
 /* 
@@ -466,4 +446,3 @@ static void	convert_from_beos_r5_sockopt(int * level, int * optnum)
 	// case 5: *optnum = SO_FIONREAD; break;
 	};
 }
-
