@@ -35,7 +35,7 @@ THE SOFTWARE.
 #include <AppKit.h>
 #include <InterfaceKit.h>
 
-#include "StatusWindow.h"
+//#include "StatusWindow.h"
 
 #ifndef ROUND_UP
 	#define ROUND_UP(x, y) (((x) + (y) - 1) & ~((y) - 1))
@@ -53,12 +53,15 @@ extern "C" {
 /**
  * Class PrinterDriver
  */
-class PrinterDriver {
+class PrinterDriver 
+{
 public:
 	// constructors / destructor
 							PrinterDriver();
 	virtual					~PrinterDriver();
 	
+	void StopPrinting();
+
 	virtual status_t 		PrintJob(BFile *jobFile, BNode *printerNode, BMessage *jobMsg);
 	virtual status_t		PrintPage(int32 pageNumber, int32 pageCount);
 
@@ -76,7 +79,7 @@ public:
 	inline BNode			*PrinterNode()	{ return fPrinterNode; }
 	inline BMessage			*JobMsg()		{ return fJobMsg; }
 	inline BDataIO			*Transport()	{ return fTransport; }
-	inline StatusWindow     *Status()       { return fStatusWindow; }
+	inline BWindow     		*Status()       { return fStatusWindow; }
 	
 	// publics status code
 	typedef enum {
@@ -84,13 +87,16 @@ public:
 		LANDSCAPE_ORIENTATION
 	} Orientation;
 
+
 private:
 	BFile					*fJobFile;
 	BNode					*fPrinterNode;
 	BMessage				*fJobMsg;
-	StatusWindow            *fStatusWindow;
+	BWindow    		        *fStatusWindow;
 
 	volatile Orientation	fOrientation;
+	
+	bool					printing;
 	
 	// transport-related 
 	BDataIO					*fTransport;

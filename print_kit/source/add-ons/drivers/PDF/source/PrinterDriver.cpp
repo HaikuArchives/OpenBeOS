@@ -65,13 +65,16 @@ PrinterDriver::PrinterDriver()
 {
 }
 
-PrinterDriver::~PrinterDriver()
-{
+PrinterDriver::~PrinterDriver() {
 }
 
 #ifdef CODEWARRIOR
 	#pragma mark [Public methods]
 #endif
+
+//void PrinterDriver::SimonStopPrinting() {
+//	printingProgress = false;
+//}
 
 // Public methods
 // --------------
@@ -99,11 +102,9 @@ PrinterDriver::PrintJob
 		return B_ERROR;
 
 	// open transport
-	if (OpenTransport() != B_OK) 
+	if (OpenTransport() != B_OK) {
 		return B_ERROR;
-
-	// show status window
-	fStatusWindow = new StatusWindow("", BRect(40, 40, 200, 54));
+	}
 
 	// read print file header	
 	fJobFile->Seek(0, SEEK_SET);
@@ -113,19 +114,30 @@ PrinterDriver::PrintJob
 	fJobMsg = msg = new BMessage();
 	msg->Unflatten(fJobFile);
 	
-	if (msg->HasInt32("copies")) 
+	if (msg->HasInt32("copies")) {
 		copies = msg->FindInt32("copies");
-	else
+	} else {
 		copies = 1;
+	}
 	
+	// show status window
+	fStatusWindow = new StatusWindow(pfh.page_count, this);
+
 	status = B_OK;
-	for (copy = 0; copy < copies; copy++) {
-		for (page = 1; page <= pfh.page_count && status == B_OK; page++)
+	printing = true;
+	for (copy = 0; copy < copies; copy++) 
+	{
+		for (page = 1; page <= pfh.page_count && status == B_OK; page++) {
+			fStatusWindow->PostMessage(new BMessage('page'));
 			status = PrintPage(page, pfh.page_count);
+			if (!printing) {
+				break;
+			}
+		}
 
-		if (status != B_OK)
+		if (status != B_OK) {
 			break;
-
+		}
 		// re-read job message for next page
 		fJobFile->Seek(sizeof(pfh), SEEK_SET);
 		msg->Unflatten(fJobFile);
@@ -143,6 +155,15 @@ PrinterDriver::PrintJob
 	return status;
 }
 
+/**
+ * This will stop the printing loop
+ *
+ * @param none
+ * @return void
+ */
+void PrinterDriver::StopPrinting() {
+	printing = false;
+}
 
 status_t 
 PrinterDriver::PrintPage(int32 pageNumber, int32 pageCount) 
