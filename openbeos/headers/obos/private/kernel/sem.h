@@ -38,5 +38,14 @@ int user_set_sem_owner(sem_id id, proc_id proc);
 int sem_delete_owned_sems(proc_id owner);
 int sem_interrupt_thread(struct thread *t);
 
-#endif
+/* BeOS compat - XXX - move to correct header as soon as we have it :) */
+sem_id create_sem(int, const char *);
+int delete_sem(sem_id);
+int acquire_sem(sem_id);
+int acquire_sem_etc(sem_id, uint32, uint32, bigtime_t);
+int release_sem(sem_id);
+int release_sem_etc(sem_id, int32, uint32);
+
+
+#endif /* _KERNEL_SEM_H */
 
