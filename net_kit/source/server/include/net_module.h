@@ -7,6 +7,7 @@
 
 #include "mbuf.h"
 #include "if.h"
+#include "net_misc.h"
 
 #ifndef OBOS_NET_MODULE_H
 #define OBOS_NET_MODULE_H
@@ -21,10 +22,12 @@ typedef struct net_module {
 	int proto;
 	int layer;
 
-	int (*init) (loaded_net_module *, int *pt);
-	int (*dev_init) (ifnet *);
-	int (*input) (struct mbuf *);
-	int (*output) (struct mbuf*);
+	int 			(*init) (loaded_net_module *, int *pt);
+	int 			(*dev_init) (ifnet *);
+	int 			(*input) (struct mbuf *);
+	int 			(*output) (struct mbuf *, int, ifnet *, 
+						struct sockaddr *);
+	struct sockaddr* 	(*lookup) (struct sockaddr *, struct sockaddr *);
 } net_module;
 
 struct loaded_net_module {
