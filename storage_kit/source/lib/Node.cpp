@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <fs_attr.h> // for struct attr_info
 
-BNode::BNode() : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fAttrDir(NULL), fCStatus(B_NO_INIT) {
+BNode::BNode() : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fCStatus(B_NO_INIT) {
 }
 
 BNode::BNode(const entry_ref *ref) {
@@ -18,7 +18,7 @@ BNode::BNode(const entry_ref *ref) {
 BNode::BNode(const BEntry *entry) {
 }
 
-BNode::BNode(const char *path) : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fAttrDir(NULL), fCStatus(B_NO_INIT)  {
+BNode::BNode(const char *path) : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fCStatus(B_NO_INIT)  {
 	SetTo(path);
 }
 

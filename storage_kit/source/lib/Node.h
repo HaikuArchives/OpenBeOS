@@ -217,11 +217,8 @@ private:
 	/*! (currently unused) */
 	virtual void _RudeNode6();
 	
-	/*! Attribute directory */
-	StorageKit::Dir fAttrDir;	
-	
 	/*! (currently unused) */
-	uint32 rudeData[3];
+	uint32 rudeData[4];
 	
 	
 	/*! Used by each implementation (i.e. BNode, BFile, BDirectory, etc.) to set
