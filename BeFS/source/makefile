@@ -98,9 +98,9 @@ INSTALL_DIR=/boot/home/config/add-ons/kernel/file_systems
 ## include the makefile-engine
 include /boot/develop/etc/makefile-engine
 
-#install::
+install::
 #	rescan $(NAME)
-#	sync
+	sync
 
 
 tar zip backup:

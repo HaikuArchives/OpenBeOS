@@ -91,42 +91,6 @@ class TreeIterator;
 class CachedNode;
 class Inode;
 
-//******** Cache handling *********
-
-class Cached
-{
-	public:
-		Cached(off_t,bplustree_node *);
-		~Cached();
-
-		Cached		*prev,*next;
-		int32		locked;
-		bool		isDirty;
-
-		off_t		offset;
-		bplustree_node *node;
-};
-
-class TreeCache
-{
-	public:
-		TreeCache(int32 max = 20);
-		~TreeCache();
-
-		void Flush(BPlusTree *tree,int32 targetCount = 0,bool force = false);
-
-		status_t Release(Cached *node);
-		Cached *Get(BPlusTree *tree,off_t offset);
-
-	private:
-		Cached *GetFromCache(off_t offset);
-
-		int32	fMaxInQueue, fCount;
-		Cached	*fMostRecentlyUsed;
-		Cached	*fLeastRecentlyUsed;
-};
-
-
 //******** B+tree class *********
 
 class BPlusTree
@@ -175,7 +139,6 @@ class BPlusTree
 		status_t	InsertDuplicate(bplustree_node *node,uint16 index);
 
 	private:
-		friend TreeCache;
 		friend TreeIterator;
 		friend CachedNode;
 
@@ -187,11 +150,10 @@ class BPlusTree
 		int32		fNodeSize;
 		bool		fAllowDuplicates;
 		status_t	fStatus;
-
-		TreeCache	fCache;
 };
 
-//***** helper classes *****
+
+//***** Cache handling *****
 
 class CachedNode
 {
@@ -199,14 +161,18 @@ class CachedNode
 		CachedNode(BPlusTree *tree)
 			:
 			fTree(tree),
-			fNode(NULL)
+			fNode(NULL),
+			fBlock(NULL),
+			fIsDirty(false)
 		{
 		}
 
 		CachedNode(BPlusTree *tree,off_t offset)
 			:
 			fTree(tree),
-			fNode(NULL)
+			fNode(NULL),
+			fBlock(NULL),
+			fIsDirty(false)
 		{
 			SetTo(offset);
 		}
@@ -216,30 +182,25 @@ class CachedNode
 			Unset();
 		}
 
-		void Unset()
-		{
-			if (fNode != NULL)
-				fTree->fCache.Release(fNode);
-		}
+		void Unset();
+		bplustree_node *SetTo(off_t offset,bool check = false);
 
-		bplustree_node *SetTo(off_t offset)
-		{
-			Unset();
-			fNode = fTree->fCache.Get(fTree,offset);
-			return fNode ? fNode->node : NULL;
-		}
-
-		bplustree_node *Node() const { return fNode ? fNode->node : NULL; }
+		bplustree_node *Node() const { return fNode; }
 
 		void SetDirty(bool dirty)
 		{
-			fNode->isDirty = dirty;
+			fIsDirty = dirty;
 		}
 
 	protected:
-		BPlusTree	*fTree;
-		Cached		*fNode;
+		BPlusTree		*fTree;
+		bplustree_node	*fNode;
+		uint8			*fBlock;
+		off_t			fBlockNumber;
+		bool			fIsDirty;
 };
+
+//***** helper classes *****
 
 class TreeIterator
 {

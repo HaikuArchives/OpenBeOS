@@ -19,157 +19,60 @@
 #include <stdio.h>
 
 
-#define MAX_NODES_IN_CACHE 20
-
-
-Cached::Cached(off_t _offset,bplustree_node *_node)
-	:
-	prev(NULL),
-	next(NULL),
-	locked(0L),
-	isDirty(false),
-	offset(_offset),
-	node(_node)
-{
-}
-
-
-Cached::~Cached()
-{
-	if (node)
-		free(node);
-}
-
-
-//	#pragma mark -
-
-
-TreeCache::TreeCache(int32 max)
-	:
-	fMaxInQueue(max),
-	fCount(0),
-	fMostRecentlyUsed(NULL),
-	fLeastRecentlyUsed(NULL)
-{
-}
-
-
-TreeCache::~TreeCache()
-{
-	Flush(NULL,0,true);
-}
-
-
 void 
-TreeCache::Flush(BPlusTree *tree,int32 targetCount, bool force)
+CachedNode::Unset()
 {
-	Cached *entry = fLeastRecentlyUsed;
-	while (entry)
-	{
-		Cached *prev = entry->prev;
-		if (entry->locked <= 0 || force)
-		{
-			if (tree && entry->isDirty)
-			{
-				if (tree->WriteNode(entry->offset,entry->node) < B_OK && !force)
-					// don't remove the node, if it couldn't be written
-					continue;
+	if (fBlock == NULL)
+		return;
+	
+	Volume *volume = fTree->fStream->GetVolume();
+
+	if (fIsDirty && fNode) {
+		cached_write(volume->Device(),fBlockNumber,fBlock,1,volume->BlockSize());
+		fIsDirty = false;
+	}
+	release_block(volume->Device(),fBlockNumber);
+
+	fBlock = NULL;
+	fNode = NULL;
+}
+
+
+bplustree_node *
+CachedNode::SetTo(off_t offset,bool check)
+{
+	Unset();
+
+	if (offset > fTree->fHeader->maximum_size - fTree->fNodeSize
+		|| offset <= 0
+		|| (offset % fTree->fNodeSize) != 0)
+		return NULL;
+
+	off_t fileOffset;
+	block_run run;
+	if (fTree->fStream->FindBlockRun(offset,run,fileOffset) == B_OK) {
+		Volume *volume = fTree->fStream->GetVolume();
+		int32 blockOffset = (offset - fileOffset) / volume->BlockSize();
+		fBlockNumber = volume->ToBlock(run) + blockOffset;
+
+		// this only works for block_size >= 1024 !!
+		fBlock = (uint8 *)get_block(volume->Device(),fBlockNumber,volume->BlockSize());
+		if (fBlock) {
+			fNode = (bplustree_node *)(fBlock + offset -
+						(fileOffset + blockOffset * volume->BlockSize()));
+			if (check) {
+				// sanity checks (links, all_key_count)
+				bplustree_header *header = fTree->fHeader;
+				if (!header->IsValidLink(fNode->left_link)
+					|| !header->IsValidLink(fNode->right_link)
+					|| !header->IsValidLink(fNode->overflow_link)
+					|| (int8 *)fNode->Values() + fNode->all_key_count * sizeof(off_t) >
+							(int8 *)fNode + fTree->fNodeSize) {
+					return NULL;}
 			}
-
-			if (entry->next)
-				entry->next->prev = prev;
-			if (prev)
-				prev->next = entry->next;
-
-			if (fLeastRecentlyUsed == entry)
-				fLeastRecentlyUsed = prev;
-			if (fMostRecentlyUsed == entry)
-				fMostRecentlyUsed = entry->next;
-
-			delete entry;
-			
-			if (--fCount <= targetCount)
-				break;
-		}
-
-		entry = prev;
-	}
-}
-
-
-status_t 
-TreeCache::Release(Cached *entry)
-{
-	entry->locked--;
-}
-
-
-Cached *
-TreeCache::Get(BPlusTree *tree,off_t offset)
-{
-	Cached *entry = GetFromCache(offset);
-	if (entry)
-	{
-		entry->locked++;
-
-		if (fMostRecentlyUsed == entry)
-			return entry;
-
-		// remove entry from cache (to insert it at top of the MRU list)
-		if (entry->prev)
-			entry->prev->next = entry->next;
-		if (!entry->next)
-			fLeastRecentlyUsed = entry->prev;
-	}
-	else
-	{
-		// ToDo: find empty (unused) entry here
-		// if none was found, do:
-		bplustree_node *node = (bplustree_node *)malloc(tree->fNodeSize);
-		if (node == NULL)
-			return NULL;
-
-		entry = new Cached(offset,node);
-		fCount++;
-
-		if (tree->ReadNode(offset,entry->node,false) != B_OK)
-		{
-			delete entry;
-			return NULL;
 		}
 	}
-
-	if (entry)
-	{
-		// insert entry at the top of the MRU list
-		entry->next = fMostRecentlyUsed;
-		
-		if (fMostRecentlyUsed)
-			fMostRecentlyUsed->prev = entry;
-		else
-			fLeastRecentlyUsed = entry;
-		fMostRecentlyUsed = entry;
-		
-		// remove old nodes from of the cache (if possible and necessary)
-		if (fCount > fMaxInQueue
-			&& fLeastRecentlyUsed)
-			Flush(tree,fMaxInQueue);
-	}
-	return entry;
-}
-
-
-Cached *
-TreeCache::GetFromCache(off_t offset)
-{
-	Cached *entry = fMostRecentlyUsed;
-	while (entry)
-	{
-		if (entry->offset == offset)
-			return entry;
-		entry = entry->next;
-	}
-	return NULL;
+	return fNode;
 }
 
 
@@ -179,8 +82,8 @@ TreeCache::GetFromCache(off_t offset)
 BPlusTree::BPlusTree(int32 keyType,int32 nodeSize,bool allowDuplicates)
 	:
 	fStream(NULL),
-	fHeader(NULL),
-	fCache(MAX_NODES_IN_CACHE)
+	fHeader(NULL)
+//	fCache(MAX_NODES_IN_CACHE)
 {
 	SetTo(keyType,nodeSize,allowDuplicates);
 }
@@ -189,8 +92,8 @@ BPlusTree::BPlusTree(int32 keyType,int32 nodeSize,bool allowDuplicates)
 BPlusTree::BPlusTree(Inode *stream,bool allowDuplicates)
 	:
 	fStream(NULL),
-	fHeader(NULL),
-	fCache(MAX_NODES_IN_CACHE)
+	fHeader(NULL)
+//	fCache(MAX_NODES_IN_CACHE)
 {
 	SetTo(stream,allowDuplicates);
 }
@@ -202,15 +105,15 @@ BPlusTree::BPlusTree()
 	fHeader(NULL),
 	fNodeSize(BPLUSTREE_NODE_SIZE),
 	fAllowDuplicates(true),
-	fStatus(B_NO_INIT),
-	fCache(MAX_NODES_IN_CACHE)
+	fStatus(B_NO_INIT)
+//	fCache(MAX_NODES_IN_CACHE)
 {
 }
 
 
 BPlusTree::~BPlusTree()
 {
-	fCache.Flush(this,0,true);
+//	fCache.Flush(this,0,true);
 }
 
 
@@ -218,7 +121,7 @@ void
 BPlusTree::Initialize(int32 nodeSize)
 {
 	// free old data
-	fCache.Flush(0,true);
+//	fCache.Flush(0,true);
 
 	if (fHeader)
 		free(fHeader);
@@ -544,11 +447,13 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 	if (SeekDown(stack,key,keyLength) != B_OK)
 		return B_ERROR;
 
-	CachedNode freeNode(this,BPLUSTREE_NULL);
-	uint8 *key1 = (uint8 *)freeNode.Node();
+	dprintf("bfs: BPlusTree::Insert() - shouldn't be here, not yet implemented!!\n");
+
+//	CachedNode freeNode(this,BPLUSTREE_NULL);
+//	uint8 *key1 = (uint8 *)freeNode.Node();
 //	uint8 *key2 = key1 + (fNodeSize >> 1);
 
-	memcpy(key1,key,keyLength);
+//	memcpy(key1,key,keyLength);
 
 	off_t valueToInsert = value;
 
@@ -581,7 +486,7 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 		// is the node big enough to hold the pair?
 		if (node->Used() + keyLength + int32(sizeof(uint16) + sizeof(off_t)) < fNodeSize)
 		{
-			InsertKey(node,key1,keyLength,valueToInsert,nodeAndKey.keyIndex);
+//			InsertKey(node,key1,keyLength,valueToInsert,nodeAndKey.keyIndex);
 			cached.SetDirty(true);
 
 			return B_OK;

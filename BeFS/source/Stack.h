@@ -26,14 +26,17 @@ template<class T> class Stack
 				free(fArray);
 		}
 		
-		void Push(T value)
+		status_t Push(T value)
 		{
 			if (fUsed >= fMax)
 			{
 				fMax += 16;
 				fArray = (T *)realloc(fArray,fMax * sizeof(T));
+				if (fArray == NULL)
+					return B_NO_MEMORY;
 			}
 			fArray[fUsed++] = value;
+			return B_OK;
 		}
 		
 		bool Pop(T *value)

@@ -460,7 +460,7 @@ bfs_read_dir(void *_ns, void *_node, void *_cookie, long *num,
 	if (iterator == NULL)
 		return B_BAD_VALUE;
 
-	dprintf("bfs_readdir() xxx\n");
+	dprintf("bfs_readdir()\n");
 
 	uint16 length;
 	vnode_id id;
