@@ -66,8 +66,8 @@ protected:
                             { m_fixture.get ()->tearDown (); }
 
 private:
-   TestMethod               m_test;
    std::auto_ptr<Fixture>   m_fixture;
+   TestMethod               m_test;
 
 };
 
