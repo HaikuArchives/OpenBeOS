@@ -32,7 +32,7 @@
 struct sockaddr {
 	uint8	sa_len;
 	uint8	sa_family;
-	uint	sa_data[30];
+	uint8	sa_data[30];
 };
 
 #endif /* OBOS_SYS_SOCKET_H */
