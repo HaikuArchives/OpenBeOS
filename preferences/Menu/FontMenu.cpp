@@ -45,6 +45,9 @@
 	void
 	FontMenu::Update()
 	{
+		// it may be better to pull all menu prefs
+		// related stuff out of the FontMenu class
+		// so it can be easily reused in other apps
 		get_menu_info(&info);
  		
 		// font menu
@@ -58,5 +61,57 @@
 		// font style menus 		
  		for (int i = 0; i < CountItems(); i++) {
  			ItemAt(i)->Submenu()->SetFont(&font);
+		}
+		
+		 
+		ClearAllMarkedItems();
+		PlaceCheckMarkOnFont(info.f_family, info.f_style);
+	}
+	
+	status_t 
+	FontMenu::PlaceCheckMarkOnFont(font_family family, font_style style)
+	{
+		BMenuItem *fontFamilyItem;
+		BMenuItem *fontStyleItem;
+		BMenu *styleMenu;
+	
+		fontFamilyItem = FindItem(family);
+
+		if ((fontFamilyItem != NULL) && (family != NULL))
+		{
+			fontFamilyItem->SetMarked(true);
+			styleMenu = fontFamilyItem->Submenu();
+		
+			if ((styleMenu != NULL) && (style != NULL))
+			{
+				fontStyleItem = styleMenu->FindItem(style);
+
+				if (fontStyleItem != NULL)
+				{
+					fontStyleItem->SetMarked(true);
+				}
+			
+			}
+			else
+				return B_ERROR;
+		}
+		else
+			return B_ERROR;
+			
+
+		return B_OK;
+	}
+
+	void
+	FontMenu::ClearAllMarkedItems()
+	{
+		BMenuItem *markedItem;
+	
+		markedItem = FindMarked();
+	
+		while (markedItem != NULL)
+		{
+			markedItem->SetMarked(false);
+			markedItem = FindMarked();
 		}
 	}
