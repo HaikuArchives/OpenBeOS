@@ -18,12 +18,10 @@
 static struct pool_ctl *pcbpool;
 static struct in_addr zeroin_addr;
 
-extern loaded_net_module *global_modules;
-extern int prot_table[255];
-extern struct in_ifaddr *primary_addr;
-
 int inpcb_init(void)
 {
+	in_ifaddr = NULL;
+	
 	if (!pcbpool)
 		pool_init(&pcbpool, sizeof(struct inpcb));
 
@@ -234,9 +232,9 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 		return EADDRNOTAVAIL;
 	}
 	
-	if (primary_addr) {
+	if (in_ifaddr) {
 		if (sin->sin_addr.s_addr == INADDR_ANY)
-			sin->sin_addr = IA_SIN(primary_addr)->sin_addr;
+			sin->sin_addr = IA_SIN(in_ifaddr)->sin_addr;
 
 		/* we need to handle INADDR_BROADCAST here as well */
 		
@@ -275,7 +273,7 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 				ia = ifatoia(ifa_ifwithnet(sintosa(sin)));
 			sin->sin_port = fport;
 			if (ia == NULL)
-				ia = primary_addr;
+				ia = in_ifaddr;
 			if (ia == NULL)
 				return EADDRNOTAVAIL;
 		}
