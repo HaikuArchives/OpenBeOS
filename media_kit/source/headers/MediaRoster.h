@@ -20,15 +20,7 @@ class BMimeType;
 struct dormant_flavor_info;
 class BMediaAddOn;
 
-#define MEDIA_ROSTER_IS_LOOPER 1
-
-class BMediaRoster :
-//	public BHandler
-#if MEDIA_ROSTER_IS_LOOPER
-	public BLooper
-#else
-	public BHandler
-#endif
+class BMediaRoster : public BLooper
 {
 public:
 
@@ -361,9 +353,7 @@ static	ssize_t MediaFlags(
 virtual		void MessageReceived(
 				BMessage * message);
 
-#if MEDIA_ROSTER_IS_LOOPER
 virtual		bool QuitRequested();
-#endif
 
 virtual		BHandler * ResolveSpecifier(
 				BMessage *msg,

@@ -12,7 +12,8 @@
 #include <string.h>
 #include "debug.h"
 
-static int32 NextChangeTag = 1000;
+// don't rename this one, it's used and exported for binary compatibility
+int32 BMediaNode::_m_changeTag = 0;
 
 /*************************************************************
  * media_node 
@@ -217,7 +218,7 @@ BMediaNode::NodeStopped(bigtime_t whenPerformance)
 	// called by derived classes when they have
 	// finished handling a stop request.
 	
-	// XXX nototify anyone who is listening for stop notifications!
+	// XXX notify anyone who is listening for stop notifications!
 	
 	// XXX If your node is a BBufferProducer, downstream consumers 
 	// XXX will be notified that your node stopped (automatically, no less) 
@@ -456,6 +457,12 @@ BMediaNode::RequestCompleted(const media_request_info &info)
 	CALLED();
 	// This function is called whenever a request issued by the node is completed.
 	// May be overriden by derived classes.
+	// info.change_tag can be used to match up requests against 
+	// the accompaning calles from
+	// BBufferConsumer::RequestFormatChange()
+	// BBufferConsumer::SetOutputBuffersFor()
+	// BBufferConsumer::SetOutputEnabled()
+	// BBufferConsumer::SetVideoClippingFor()
 	return B_OK;
 }
 
@@ -466,8 +473,11 @@ BMediaNode::RequestCompleted(const media_request_info &info)
 int32
 BMediaNode::IncrementChangeTag()
 {
-	UNIMPLEMENTED();
-	// TODO: look into R4 documentation
+	CALLED();
+	// Only present in BeOS R4
+	// Obsoleted in BeOS R4.5 and later
+	// "updates the change tag, so that downstream consumers know that the node is in a new state."
+	// not supported, only for binary compatibility
 	return 0;
 }
 
@@ -476,7 +486,10 @@ int32
 BMediaNode::ChangeTag()
 {
 	UNIMPLEMENTED();
-	// TODO: look into R4 documentation
+	// Only present in BeOS R4
+	// Obsoleted in BeOS R4.5 and later
+	// "returns the node's current change tag value."
+	// not supported, only for binary compatibility
 	return 0;
 }
 
@@ -485,7 +498,11 @@ int32
 BMediaNode::MintChangeTag()
 {
 	UNIMPLEMENTED();
-	// TODO: look into R4 documentation
+	// Only present in BeOS R4
+	// Obsoleted in BeOS R4.5 and later
+	// "mints a new, reserved, change tag."
+	// "Call ApplyChangeTag() to apply it to the node"
+	// not supported, only for binary compatibility
 	return 0;
 }
 
@@ -494,7 +511,12 @@ status_t
 BMediaNode::ApplyChangeTag(int32 previously_reserved)
 {
 	UNIMPLEMENTED();
-	// TODO: look into R4 documentation
+	// Only present in BeOS R4
+	// Obsoleted in BeOS R4.5 and later
+	// "this returns B_OK if the new change tag is"
+	// "successfully applied, or B_MEDIA_STALE_CHANGE_TAG if the new change"
+	// "count you tried to apply is already obsolete."
+	// not supported, only for binary compatibility
 	return B_OK;
 }
 
@@ -619,9 +641,17 @@ BMediaNode::BMediaNode(const char *name,
 BMediaNode::NewChangeTag()
 {
 	CALLED();
-	// query server for new change tag?
-	// TODO get documentation
-	return NextChangeTag++;
+	// change tags have been used in BeOS R4 to match up 
+	// format change requests between producer and consumer,
+	// This has changed starting with R4.5
+	// now "change tags" are used with
+	// BMediaNode::RequestCompleted()
+	// and
+	// BBufferConsumer::RequestFormatChange()
+	// BBufferConsumer::SetOutputBuffersFor()
+	// BBufferConsumer::SetOutputEnabled()
+	// BBufferConsumer::SetVideoClippingFor()
+	return atomic_add(&BMediaNode::_m_changeTag,1);
 }
 
 

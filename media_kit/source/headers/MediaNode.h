@@ -337,7 +337,7 @@ protected:
 static	int32 NewChangeTag();	//	for use by BBufferConsumer, mostly
 
 private:
-
+		// dont' rename this one, it's static and needed for binary compatibility
 static	int32 _m_changeTag;		//	not to be confused with _mChangeCount
 };
 

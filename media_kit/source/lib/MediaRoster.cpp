@@ -882,14 +882,12 @@ BMediaRoster::MessageReceived(BMessage * message)
 	UNIMPLEMENTED();
 }
 
-#if MEDIA_ROSTER_IS_LOOPER
 /* virtual */ bool 
 BMediaRoster::QuitRequested()
 {
 	UNIMPLEMENTED();
 	return true;
 }
-#endif
 
 /* virtual */ BHandler * 
 BMediaRoster::ResolveSpecifier(BMessage *msg,
@@ -947,10 +945,8 @@ status_t BMediaRoster::_Reserved_MediaRoster_6(void *) { return 0; }
 status_t BMediaRoster::_Reserved_MediaRoster_7(void *) { return 0; }
 
 
-BMediaRoster::BMediaRoster()
-#if MEDIA_ROSTER_IS_LOOPER
-	: BLooper("BMediaRoster looper",B_NORMAL_PRIORITY,B_LOOPER_PORT_DEFAULT_CAPACITY)
-#endif
+BMediaRoster::BMediaRoster() : 
+	BLooper("BMediaRoster looper",B_NORMAL_PRIORITY,B_LOOPER_PORT_DEFAULT_CAPACITY)
 {
 	CALLED();
 	BMessage msg(MEDIA_SERVER_REGISTER_APP);
