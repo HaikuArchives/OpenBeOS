@@ -9,8 +9,8 @@
 
 #ifdef _KERNEL_MODE
 #	define add_protosw         core->add_protosw
-#	define start_rx_thread	    core->start_rx_thread
-#	define start_tx_thread	    core->start_tx_thread
+#	define start_rx_thread	   core->start_rx_thread
+#	define start_tx_thread	   core->start_tx_thread
 
 #	define pool_init           core->pool_init
 #	define pool_get            core->pool_get
