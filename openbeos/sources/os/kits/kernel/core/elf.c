@@ -14,6 +14,8 @@
 #include <debug.h>
 // #include <heap.h>
 #include <arch/cpu.h>
+#include <memheap.h>
+/* ROUNDDOWN/UP macro's are defined in arch/x86/stage2_priv.h ??? */
 
 #include <elf32.h>
 
@@ -182,6 +184,7 @@ static void dump_image_info(struct elf_image_info *image)
 	dprintf(" rela_len 0x%x\n", image->rela_len);
 }
 
+/* XXX - Currently unused
 static void dump_symbol(struct elf_image_info *image, struct Elf32_Sym *sym)
 {
 
@@ -194,6 +197,7 @@ static void dump_symbol(struct elf_image_info *image, struct Elf32_Sym *sym)
 	dprintf(" st_other 0x%x\n", sym->st_other);
 	dprintf(" st_shndx %d\n", sym->st_shndx);
 }
+*/
 
 static struct Elf32_Sym *elf_find_symbol(struct elf_image_info *image, const char *name)
 {
@@ -586,10 +590,11 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 			 * check if we need extra storage for the bss
 			 */
 			if(A != B) {
-				size_t bss_size;
-
-				bss_size=
-					ROUNDUP(pheaders[i].p_memsz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
+				/* XXX - this is broken! The final comma on the 1st line means we don't do the
+				 *       subtraction? What's actually desired here?
+				 */
+				size_t bss_size=
+					ROUNDUP(pheaders[i].p_memsz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE)/*, */
 					- ROUNDUP(pheaders[i].p_filesz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE);
 
 				sprintf(region_name, "%s_bss%d", path, 'X');
@@ -932,7 +937,6 @@ error0:
 int elf_init(kernel_args *ka)
 {
 	vm_region_info rinfo;
-	int err;
 
 	// build a image structure for the kernel, which has already been loaded
 	kernel_image = create_image_struct();
