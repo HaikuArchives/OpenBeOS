@@ -54,7 +54,7 @@
 #include <debug.h>
 #include <devfs.h>
 #include <arch/int.h>
-#include <sem.h>
+#include <OS.h>
 #include <string.h>
 
 /////////////////////////////////////////////////////////////////////////
