@@ -118,6 +118,16 @@ void FrameBuffer::MessageReceived(BMessage *msg)
 	}
 }
 
+bool FrameBuffer::QuitRequested(void)
+{
+	port_id serverport=find_port(SERVER_PORT_NAME);
+
+	if(serverport!=B_NAME_NOT_FOUND)
+		write_port(serverport,B_QUIT_REQUESTED,NULL,0);
+
+	return true;
+}
+
 ScreenDriver::ScreenDriver(void)
 {
 	status_t st;
@@ -738,8 +748,8 @@ printf("SetPixelPattern: bit=0x%llx\n",((uint64)2 << (32-patternindex)));
 printf("SetPixelPattern: bit mask=0x%llx\n",~((uint64)2 << (32-patternindex)));
 printf("SetPixelPattern: bit value=%s\n",transparent_bit?"true":"false");
 
-//		bool highcolor_bit=
-//			( *p64 & ~((uint64)2 << (64-patternindex)))?true:false;
+		bool highcolor_bit=
+			( *p64 & ~((uint64)2 << (64-patternindex)))?true:false;
 			
 		switch(fbuffer->gcinfo.bits_per_pixel)
 		{	

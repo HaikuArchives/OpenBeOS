@@ -25,6 +25,7 @@ public:
 	void ScreenConnected(bool connected);
 	void MessageReceived(BMessage *msg);
 	bool IsConnected(void) const { return is_connected; }
+	bool QuitRequested(void);
 	
 	graphics_card_info gcinfo;
 protected:
