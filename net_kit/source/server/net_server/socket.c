@@ -978,7 +978,6 @@ int soclose(void *sp)
 	struct socket *so = (struct socket*)sp;
 	int error = 0;
 
-
 	/* we don't want any more events... */
 	so->event_callback = NULL;
 	so->event_callback_cookie = NULL;
@@ -1061,10 +1060,8 @@ bad:
 
 void sofree(struct socket *so)
 {
-	if (so->so_pcb || (so->so_state & SS_NOFDREF) == 0) {
-		printf("so->so_pcb = %p\n", so->so_pcb);
+	if (so->so_pcb || (so->so_state & SS_NOFDREF) == 0)
 		return;
-	}
 
 	if (so->so_head) {
 		if (!soqremque(so, 0) && !soqremque(so, 1)) {
@@ -1093,8 +1090,6 @@ int sosetopt(void *sp, int level, int optnum, const void *data, size_t datalen)
 	struct mbuf *m, *m0;
 	int error = 0;
 
-printf("sosetopt\n");
-	
 	m = m_get(MT_SOOPTS);
 	if (!m)
 		return ENOMEM;
@@ -1290,18 +1285,34 @@ static int checkevent(struct socket *so)
 	if (!so || !so->event_callback)
 		return B_OK;
 
-	if (soreadable(so)) 
-		so->event_callback(so, 1, so->event_callback_cookie);
-	if (sowriteable(so))
-		so->event_callback(so, 2, so->event_callback_cookie);
-	if (so->so_oobmark || (so->so_state & SS_RCVATMARK))
-		so->event_callback(so, 3, so->event_callback_cookie);
-		
+	/* XXX - The checks here may seem a bit excessive, but we have a race
+	 * condition here. If we're checking for soreadable() in one
+	 * thread while we're closing in another, things will blow up as
+	 * so->event_callback will have been set to NULL.
+	 *
+	 * ??? Maybe we should lock the socket for things like this?
+	 */
+	if (so && soreadable(so)) {
+		if (so->event_callback)
+			so->event_callback(so, 1, so->event_callback_cookie);
+	}
+	if (so && sowriteable(so)) {
+		if (so->event_callback)
+			so->event_callback(so, 2, so->event_callback_cookie);
+	}
+	if (so && (so->so_oobmark || (so->so_state & SS_RCVATMARK))) {
+		if (so->event_callback)
+			so->event_callback(so, 3, so->event_callback_cookie);
+	}
+	
 	return B_OK;
 }
 
 void sowakeup(struct socket *so, struct sockbuf *sb)
 {
+	if (!so || !sb)
+		return;
+		
 	sb->sb_flags &= ~SB_SEL;
 	if (sb->sb_flags & SB_WAIT) {
 		sb->sb_flags &= ~SB_WAIT;
