@@ -12,6 +12,7 @@ File.cpp
 FindDirectory.cpp
 Flattenable.cpp
 List.cpp
+Locker.cpp
 MallocIO.cpp
 Mime.cpp
 MimeType.cpp
@@ -23,6 +24,7 @@ ResourcesContainer.cpp
 ResourceFile.cpp
 ResourceItem.cpp
 Resources.cpp
+ResourceStrings.cpp
 Statable.cpp
 String.cpp
 SymLink.cpp
