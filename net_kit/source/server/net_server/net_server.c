@@ -27,6 +27,8 @@
 #include "sys/domain.h"
 #include "sys/protosw.h"
 #include "sys/sockio.h"
+#include "net/if_arp.h"
+#include "netinet/if_ether.h"
 
 struct ifnet *devices = NULL;
 struct ifnet *pdevices = NULL;		/* pseudo devices - loopback etc */
@@ -37,8 +39,8 @@ static int32 if_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
 	status_t status;
-	char buffer[i->if_mtu * 2];
-	size_t len = i->if_mtu * 2;
+	char buffer[ETHER_MAX_LEN];
+	size_t len = ETHER_MAX_LEN;
 
 	while ((status = read(i->devid, buffer, len)) >= B_OK) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
@@ -47,12 +49,12 @@ static int32 if_thread(void *data)
 			m_freem(mb);
 			continue;
 		}
-		
+		printf("read %ld bytes\n", status);
 		if (i->input)
 			i->input(mb);
 			
 		atomic_add(&i->if_ipackets, 1);
-		len = i->if_mtu * 2;
+		len = ETHER_MAX_LEN;
 	}
 	printf("%s: terminating if_thread\n", i->name);
 	return 0;
@@ -158,7 +160,6 @@ void net_server_add_device(ifnet *ifn)
 		return;
 
 	sprintf(dname, "%s%d", ifn->name, ifn->if_unit);
-	printf("adding device %s\n", dname);
 	ifn->if_name = strdup(dname);
 
 	acquire_sem(dev_lock);
@@ -179,8 +180,6 @@ void net_server_add_device(ifnet *ifn)
 		devices = ifn;
 	}
 	release_sem(dev_lock);
-	
-	printf("add_device: added %s\n", ifn->if_name);	
 }
 
 /* This calls the start function for each device, which should
@@ -282,10 +281,8 @@ static void list_devices(void)
 		printf("\n");
 		if (d->if_addrlist) {
 			struct ifaddr *ifa = d->if_addrlist;
-			printf("\t\t Addresses:\n");
 			while (ifa) {
 				dump_sockaddr(ifa->ifa_addr);
-				printf("\n");
 				ifa = ifa->ifa_next;
 			}
 		}
@@ -403,9 +400,6 @@ void add_domain(struct domain *dom, int fam)
 		switch (fam) {
 			case AF_INET:
 				/* ok, add it... */
-#if SHOW_MALLOC_USAGE
-	printf("core.c: add_domain: malloc(%ld)\n", sizeof(*ndm));
-#endif
 				ndm = (struct domain*)malloc(sizeof(*ndm));
 				*ndm = af_inet_domain;
 				if (dm)
@@ -432,9 +426,7 @@ void add_protocol(struct protosw *pr, int fam)
 {
 	struct protosw *psw = protocols;
 	struct domain *dm = domains;
-	
-	printf("add_protocol: %s\n", pr->name);
-	
+
 	/* first find the correct domain... */
 	for (; dm; dm= dm->dom_next) {
 		if (dm->dom_family == fam)
@@ -569,13 +561,44 @@ found:
 	return maybe;
 }
 
+int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
+               void *newp, size_t newlen)
+{
+	struct domain *dp;
+	struct protosw *pr;
+	int family, protocol;
+
+	if (namelen < 3) {
+		printf("net_sysctl: EINVAL (namelen < 3, %d)\n", namelen);
+		return EINVAL; // EISDIR??
+	}
+	family = name[0];
+	protocol = name[1];
+	
+	if (family == 0)
+		return 0;
+	
+	for (dp=domains; dp; dp= dp->dom_next)
+		if (dp->dom_family == family)
+			goto found;
+	printf("net_sysctl: EPROTOOPT (domain)\n");
+	return EINVAL; //EPROTOOPT;
+found:
+	for (pr=dp->dom_protosw; pr; pr = pr->dom_next) {
+		if (pr->pr_protocol == protocol && pr->pr_sysctl) {
+			return ((*pr->pr_sysctl)(name+2, namelen -2, oldp, oldlenp, newp, newlen));
+		}
+	}
+	printf("net_sysctl: EPROTOOPT (protocol)\n");
+	return EINVAL;//EPROTOOPT;
+}
+
 int start_stack(void)
 {
 	/* we use timers in TCP, so init our timer here...
 	 * kernel version uses kernel timer so doesn't need this!
 	 */
-	status_t rv = net_init_timer();
-	printf("init_timer = %ld\n", rv);
+	net_init_timer();
 	find_protocol_modules();
 	
 	domain_init();
@@ -654,8 +677,9 @@ void assign_addresses(void)
 	int rv;
 	struct ifreq ifr;
 	
-	printf("\n*** assign socket addresses ***\n"
-	       "Have you changed these to match your card and network?\n");
+	printf("*************** assign socket addresses **************\n"
+	       "Have you changed these to match your card and network?\n"
+	       "******************************************************\n");
 
 	rv = initsocket(&sp);
 	if (rv < 0) {
@@ -708,147 +732,44 @@ static void err(int code, char *msg)
 {
 	printf("Error: %s: %d [%s]\n", msg, code, strerror(code));
 }
-
-static void big_socket_test(void)
-{
-	void *sp[100];
-	int i, rv;
-	int qty = 10;
-	struct sockaddr_in sa;
-	int32 nsocks = 0;
-	
-	sa.sin_family = AF_INET;
-	sa.sin_port = 0;
-	sa.sin_addr.s_addr = INADDR_LOOPBACK;
-	sa.sin_len = sizeof(sa);
-	memset(&sa.sin_zero, 0, sizeof(sa.sin_zero));
-	
-	printf("\n*** big socket test (stupid name!) ***\n");
-	while (qty < 100) {
-		for (i=0;i<qty;i++) {
-			rv = initsocket(&sp[i]);
-			if (rv < 0) {
-				err(rv, "Failed to create a socket");
-				break;
-			}	
-			rv = socreate(AF_INET, sp[i], SOCK_DGRAM, 0);
-			if (rv < 0) {
-				err(rv, "Failed to create #2 a socket");
-				break;
-			}
-		}
-		for (i=0;i < qty;i++) {
-			rv = sobind(sp[i], (caddr_t)&sa, sizeof(sa));
-			if (rv < 0) {
-				err(rv, "Failed to bind!");
-				break;
-			}
-		}	
-		for (i=0;i<qty;i++) {
-			soclose(sp[i]);
-			nsocks++;
-		}
-		qty += 10;
-	}
-	printf("Big socket test completed: %ld sockets created/bound and then closed\n",
-	       nsocks);
-}
-			
-static void bind_test(void)
-{
-	void *sp = NULL, *sq = NULL; /* socket pointer... */
-	int rv, rw;
-	struct sockaddr_in sa;
-	struct msghdr mh;
-	struct iovec iov;
-	char msg[20];
-
-	printf("\n*** bind test (UDP sockets) ***\n\n");		
-	rv = initsocket(&sp);
-	if (rv < 0) {
-		err(rv, "Couldn't get a socket!");
-		return;
-	}
-	rv = initsocket(&sq);
-	if (rv < 0) {
-		err(rv, "Couldn't get a 2nd socket!");
-		return;
-	}
-	
-	rv = socreate(AF_INET, sp, SOCK_DGRAM, 0);
-	if (rv < 0) {
-		err(rv, "Failed to create a socket to use...");
-		return;
-	}
-
-	memset(&sa, 0, sizeof(sa));
-	sa.sin_family = AF_INET;
-	sa.sin_port = htons(7772);
-	sa.sin_addr.s_addr = INADDR_ANY;
-	sa.sin_len = sizeof(sa);
-	
-	rv = sobind(sp, (caddr_t)&sa, sizeof(sa));
-	if (rv < 0) {
-		err(rv, "Failed to bind!\n");
-	}
-
-	rv = socreate(AF_INET, sq, SOCK_DGRAM, 0);
-	if (rv < 0) {
-		err(rv, "Failed to create a socket to use...");
-		return;
-	}
-	sa.sin_addr.s_addr = INADDR_LOOPBACK;
-	sa.sin_port = htons(7773);
-	
-	rv = sobind(sq, (caddr_t)&sa, sizeof(sa));
-	if (rv < 0) {
-		err(rv, "Failed to bind!");
-		return;
-	}
-	memcpy(msg, TEST_DATA, strlen(TEST_DATA));
-	
-	mh.msg_name = (caddr_t)&sa;
-	mh.msg_namelen = sizeof(sa);
-	mh.msg_flags = 0;
-	mh.msg_control = NULL;
-	mh.msg_controllen = 0;
-	iov.iov_base = &msg;
-	iov.iov_len = strlen(TEST_DATA);
-	mh.msg_iov = &iov;
-	mh.msg_iovlen = 1;
-	sa.sin_len = sizeof(sa);
-	
-	printf("Trying to send %ld bytes data\n", strlen(TEST_DATA));
-	
-	rv = sendit(sp, &mh, 0, &rw);
-	if (rv < 0) {
-		printf("Failed to send data!\n");
-		goto out;
-	}
 		
-	iov.iov_base = &msg;
-	iov.iov_len = 20;
-	mh.msg_namelen = sizeof(sa);
-	mh.msg_name = (caddr_t)&sa;
-	memset(&msg, 0, 20);
-	memset(&sa, 0, sizeof(sa));
-	sa.sin_len = sizeof(sa);
+static void sysctl_test(void)
+{
+	int mib[5];
+	size_t needed;
+	char *buf;
+	caddr_t lim;
 	
-	rv = recvit(sq, &mh, (caddr_t)&mh.msg_namelen, &rw);
-	printf("recvit gave %d, rw = %d\n", rv, rw);
-	if (rw > 0) {
-		printf("got %d bytes\n[%s]\n", rw, msg);
-		printf("Came from %08lx:%d\n", ntohl(sa.sin_addr.s_addr), 
-			ntohs(sa.sin_port));
+	printf ("sysctl test\n"
+	        "===========\n");
+	
+	mib[0] = PF_ROUTE;
+	mib[1] = 0;
+	mib[2] = 0;
+	mib[3] = NET_RT_DUMP;
+	mib[4] = 0;
+	if (net_sysctl(mib, 5, NULL, &needed, NULL, 0) < 0)	{
+		perror("route-sysctl-estimate");
+		exit(1);
 	}
-out:
-	soclose(sp);
-	soclose(sq);
 
-	printf("Bind socket test completed.\n");
+	printf("estimated to need %ld bytes\n", needed);
+
+	if (needed > 0) {
+		if ((buf = malloc(needed)) == 0) {
+			printf("out of space\n");
+			exit(1);
+		}
+		if (net_sysctl(mib, 5, buf, &needed, NULL, 0) < 0) {
+			perror("sysctl of routing table");
+			exit(1);
+		}
+		lim  = buf + needed;
+	}
+	printf("got data...\n");
 }
-
-void tcp_test(void)
+	
+static void tcp_test(uint32 srv)
 {
 	void *sp;
 	struct sockaddr_in sa;
@@ -879,14 +800,16 @@ void tcp_test(void)
 	rv = sobind(sp, (caddr_t)&sa, sizeof(sa));
 	if (rv < 0) {
 		err(rv, "Failed to bind!\n");
+		return;
 	}
 
-	sa.sin_addr.s_addr = htonl(0xc0a80001);
+	sa.sin_addr.s_addr = htonl(srv);
 	sa.sin_port = htons(80);
 	
 	rv = soconnect(sp, (caddr_t)&sa, sizeof(sa));
 	if (rv < 0) {
 		err(rv, "Connect failed!!");
+		return;
 	}
 	snooze(500000);
 
@@ -899,6 +822,7 @@ void tcp_test(void)
 	rv = writeit(sp, &iov, flags);
 	if (rv < 0) {
 		err(rv, "writeit failed!!");
+		return;
 	}
 	printf("writeit wrote %d bytes\n\n", rv);
 	
@@ -908,7 +832,8 @@ void tcp_test(void)
 	while ((rv = readit(sp, &iov, &flags)) >= 0) {
 		if (rv < 0) { 
 			err (rv, "readit");
-			break;
+			soclose(sp);
+			return;
 		} else
 			printf("%s", buffer);
 		if (rv == 0)
@@ -927,36 +852,28 @@ int main(int argc, char **argv)
 {
 	status_t status;
 	ifnet *d;
-	thread_id t;
-	int qty = 15000;
-
+	int qty = 1000;
+	/* XXX - change this line to query a different web server! */
+	uint32 web_server = 0xc0a80001;
+	
 	printf("Net Server Test App!\n"
 	       "====================\n\n");
 
 	start_stack();
 
-	if (net_init_timer() < B_OK)
-		printf("timer service won't work!\n");
-
 	if (devices == NULL) {
 		printf("\nFATAL: no devices configured!\n");
 		exit (-1);
 	}
+	
+	printf("\n");
 
 	assign_addresses();
 	list_devices();
 
-/*
-	t = spawn_thread(create_sockets, "socket creation test",
-		B_NORMAL_PRIORITY, &qty);
-	if (t >= 0)
-		resume_thread(t);
-
-	wait_for_thread(t, &status);
-*/	
-//	bind_test();
-	tcp_test();
-//	big_socket_test();
+	create_sockets((void*)&qty);
+	tcp_test(web_server);
+	sysctl_test();
 	
 	printf("\n\n Tests completed!\n");
 	
