@@ -8,6 +8,7 @@
 #define __sk_entry_list_h__
 
 #include <dirent.h>
+#include <SupportDefs.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
@@ -28,7 +29,7 @@ class entry_ref;
 class BEntryList {
 public:
 	BEntryList();
-	~BEntryList();
+	virtual ~BEntryList();
 	
 	/*! Places the next entry in the list in entry, traversing symlinks if traverse
 		is true. Returns B_OK if successful, B_ENTRY_NOT_FOUND when at the end of
@@ -51,6 +52,31 @@ public:
 	
 	/*! Returns the number of entries in the list */
 	virtual int32 CountEntries() = 0;
+	
+private:
+	/*! Currently unused */
+	virtual	void _ReservedEntryList1();
+
+	/*! Currently unused */
+	virtual	void _ReservedEntryList2();
+
+	/*! Currently unused */
+	virtual	void _ReservedEntryList3();
+
+	/*! Currently unused */
+	virtual	void _ReservedEntryList4();
+
+	/*! Currently unused */
+	virtual	void _ReservedEntryList5();
+
+	/*! Currently unused */
+	virtual	void _ReservedEntryList6();
+
+	/*! Currently unused */
+	virtual	void _ReservedEntryList7();
+
+	/*! Currently unused */
+	virtual	void _ReservedEntryList8();
 	
 };
 
