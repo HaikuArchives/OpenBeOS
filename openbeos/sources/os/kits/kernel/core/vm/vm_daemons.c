@@ -12,6 +12,7 @@
 #include <vm_priv.h>
 #include <vm_cache.h>
 #include <vm_page.h>
+#include <atomic.h>
 
 bool trimming_cycle;
 static addr free_memory_low_water;
@@ -25,7 +26,7 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 	addr va;
 	addr pa;
 	unsigned int flags, flags2;
-	int err;
+//	int err;
 	int quantum = PAGE_SCAN_QUANTUM;
 
 //	dprintf("scan_pages called on aspace 0x%x, id 0x%x, free_target %d\n", aspace, aspace->id, free_target);

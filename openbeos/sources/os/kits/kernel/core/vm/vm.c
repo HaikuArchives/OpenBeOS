@@ -21,6 +21,7 @@
 #include <khash.h>
 #include <errors.h>
 #include <thread.h>
+#include <atomic.h>
 
 #include <stage2.h>
 

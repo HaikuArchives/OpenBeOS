@@ -777,7 +777,7 @@ addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock)
 	addr vspot;
 	addr pspot;
 	unsigned int i;
-	int curr_phys_alloc_range = 0;
+//	int curr_phys_alloc_range = 0;
 
 	// find the vaddr to allocate at
 	vspot = vm_alloc_vspace_from_ka_struct(ka, size);
