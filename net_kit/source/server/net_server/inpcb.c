@@ -50,14 +50,9 @@ int in_pcballoc(struct socket *so, struct inpcb *head)
 	memset(inp, 0, sizeof(*inp));
 
 	inp->inp_head = head;
-	/* insert new pcb at head of queue */
-	inp->inp_prev = head->inp_next->inp_prev;
-	inp->inp_next = head->inp_next;
-	head->inp_next->inp_prev = inp;
-	head->inp_next = inp;
-
 	/* associate ourselves with the socket */
 	inp->inp_socket = so;
+	insque(inp, head);
 	so->so_pcb = (caddr_t)inp;
 	return 0;
 }
@@ -83,9 +78,7 @@ void in_pcbdetach(struct inpcb *inp)
 	if (inp->inp_route.ro_rt)
 		rtfree(inp->inp_route.ro_rt);
 	
-	inp->inp_prev->inp_next = inp->inp_next;
-	inp->inp_next->inp_prev = inp->inp_prev;
-
+	remque(inp);
 	pool_put(pcbpool, inp);
 }
 
