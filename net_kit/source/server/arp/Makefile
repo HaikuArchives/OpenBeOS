@@ -1,7 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=arp
 CFLAGS=-Wall -g -O0 -fPIC -DPIC -nostart
-LOBJS=../nhash.o ../util/misc.o
+LOBJS=../util/nhash.o ../util/misc.o
 LDFLAGS=../_APP_
 
 all:	$(TARGET)
