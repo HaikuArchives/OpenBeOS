@@ -102,10 +102,10 @@ void remove_fd(struct ioctx *ioctx, int fd)
 }
 
 /* USER routines */ 
-ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len)
+ssize_t user_read(int fd, void *buf, off_t pos, size_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
-
+	ssize_t rv = 0;	
 //	dprintf("user_read: fd %d\n", fd);
 	
 	if(!f)
@@ -114,16 +114,21 @@ ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len)
 	/* This is a user_function, so abort if we have a kernel address */
 	CHECK_USER_ADDR(buf)
 	
-	if (f->ops->fd_read)
-		return f->ops->fd_read(f, buf, pos, len);
-	else
+	if (f->ops->fd_read) {
+		size_t rlen = len;
+		rv = f->ops->fd_read(f, buf, pos, &rlen);
+		if (rv < 0)
+			return rv;
+		return rlen;
+	} else
 		return EOPNOTSUPP;
 }
 
-ssize_t user_write(int fd, const void *buf, off_t pos, ssize_t len)
+ssize_t user_write(int fd, const void *buf, off_t pos, size_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
-
+	ssize_t rv = 0;
+	
 //	dprintf("user_write: fd %d\n", fd);
 	
 	if(!f)
@@ -131,9 +136,13 @@ ssize_t user_write(int fd, const void *buf, off_t pos, ssize_t len)
 
 	CHECK_USER_ADDR(buf)
 
-	if (f->ops->fd_write)
-		return f->ops->fd_write(f, buf, pos, len);
-	else
+	if (f->ops->fd_write) {
+		size_t rlen = len;
+		rv = f->ops->fd_write(f, buf, pos, &rlen);
+		if (rv < 0)
+			return rv;
+		return rlen;
+	} else
 		return EOPNOTSUPP;
 }
 
@@ -171,10 +180,10 @@ int user_close(int fd)
 
 /* SYSTEM functions */
 
-ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len)
+ssize_t sys_read(int fd, void *buf, off_t pos, size_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
-
+	
 //	dprintf("sys_read: fd %d\n", fd);
 	
 	if(!f)
@@ -183,13 +192,17 @@ ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len)
 	/* This is a user_function, so abort if we have a kernel address */
 	CHECK_SYS_ADDR(buf)
 	
-	if (f->ops->fd_read)
-		return f->ops->fd_read(f, buf, pos, len);
-	else
+	if (f->ops->fd_read) {
+		size_t rlen = len;
+		ssize_t rv = f->ops->fd_read(f, buf, pos, &rlen);
+		if (rv < 0)
+			return rv;
+		return rlen;
+	} else
 		return EOPNOTSUPP;
 }
 
-ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len)
+ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len)
 {
 	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
 
@@ -200,9 +213,14 @@ ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len)
 
 	CHECK_SYS_ADDR(buf)
 
-	if (f->ops->fd_write)
-		return f->ops->fd_write(f, buf, pos, len);
-	else
+	if (f->ops->fd_write) {
+		size_t rlen = len;
+		ssize_t rv = f->ops->fd_write(f, buf, pos, &rlen);
+		dprintf("sys_write(%d) = %ld (rlen = %ld)\n", fd, rv, rlen);
+		if (rv < 0)
+			return rv;
+		return rlen;
+	} else
 		return EOPNOTSUPP;
 }
 

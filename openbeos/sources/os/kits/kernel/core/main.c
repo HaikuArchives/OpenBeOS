@@ -122,7 +122,7 @@ static int main2(void *unused)
 
 	//net_init(&ka);
 	dev_init(&ka);
-	module_init( &ka, NULL );
+	module_init(&ka, NULL);
 	bus_init(&ka);
 	devs_init(&ka);
 	con_init(&ka);

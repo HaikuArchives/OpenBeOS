@@ -26,7 +26,7 @@ KernelObjects
 	<$(SOURCE_GRIST)>thread.c 
 	<$(SOURCE_GRIST)>timer.c 
 	: 
-	-DNEWOS=1 -fno-pic
+	-fno-pic
 	;
 
 KernelLd linkhack.so :

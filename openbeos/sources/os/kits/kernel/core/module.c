@@ -914,6 +914,8 @@ int	get_module(const char *path, module_info **vec)
 	loaded_module *lm;
 	int res = NO_ERROR;
 	*vec = NULL;
+
+dprintf("*** get_module: %s\n", path);
 	
 	if (!m) {
 		m = search_module(path);
@@ -964,3 +966,21 @@ int put_module(const char *path)
 		unload_module_file(m->file);
 	}
 }
+
+/* BeOS Ccompat functions.
+ * XXX - This really isn't the right place for these, but in the absence of
+ * anywhere better and as so far it's only modules or other
+ * loaded binaries that need these adding them here makes a degree
+ * of sense.
+ *
+ * XXX - Move them when appropriate.
+ */
+/* This is needed by some beos modules */
+void spin(bigtime_t microseconds)
+{
+	bigtime_t time = system_time();
+
+	while((system_time() - time) < microseconds)
+		;
+}
+
