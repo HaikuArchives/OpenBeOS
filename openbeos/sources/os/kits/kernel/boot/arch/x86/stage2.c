@@ -73,7 +73,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 	// verify we can run on this cpu
 	if(check_cpu() < 0) {
 		dprintf("\nSorry, this computer appears to be lacking some of the features\n");
-		dprintf("needed by NewOS. It is currently only able to run on\n");
+		dprintf("needed by OpenBeOS. It is currently only able to run on\n");
 		dprintf("Pentium class cpus and above, with a few exceptions to\n");
 		dprintf("that rule.\n");
 		dprintf("\nPlease reset your computer to continue.");
