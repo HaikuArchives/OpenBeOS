@@ -1,3 +1,5 @@
 CVS
 *.o
 icmp
+*.xMAP
+_KERNEL_
