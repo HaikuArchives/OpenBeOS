@@ -106,10 +106,12 @@ int main(void)
 					static_cast<long long>(system_time() - startTime));
 		delete testListNew[i];
 	}
+
+	if (testsRun > 0) {
+		printf("\nTests Run = %d  Tests Failed = %d  Pass Rate = %d%%\n",
+				testsRun, failedTests,
+				((testsRun - failedTests) * 100) / testsRun);
+	}
 	
-	printf("\nTests Run = %d  Tests Failed = %d  Pass Rate = %d%%\n",
-			testsRun, failedTests,
-			((testsRun - failedTests) * 100) / testsRun);
-			
 	exit(failedTests == 0 ? 0 : 1);
 }

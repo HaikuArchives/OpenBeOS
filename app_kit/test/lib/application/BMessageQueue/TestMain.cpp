@@ -69,9 +69,11 @@ int main(void)
 		delete testListNew[i];
 	}
 	
-	printf("\nTests Run = %d  Tests Failed = %d  Pass Rate = %d%%\n",
-			testsRun, failedTests,
-			((testsRun - failedTests) * 100) / testsRun);
-			
+	if (testsRun > 0) {
+		printf("\nTests Run = %d  Tests Failed = %d  Pass Rate = %d%%\n",
+				testsRun, failedTests,
+				((testsRun - failedTests) * 100) / testsRun);
+	}
+	
 	exit(failedTests == 0 ? 0 : 1);
 }

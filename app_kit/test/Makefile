@@ -8,4 +8,4 @@ clean:
 
 runtests:
 	cd lib/support/BLocker; make runtests
-	cd lib/applicaiton/BMessageQueue; make runtests
+	cd lib/application/BMessageQueue; make runtests
