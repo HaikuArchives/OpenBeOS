@@ -20,26 +20,17 @@ typedef struct ether_addr {
         uint8 addr[6];
 } ether_addr;
 
-typedef struct sockaddr {
-	uint8	type;
-	uint8	len;
-	uint8	addr[30];
-} sockaddr;
-
 typedef	uint32	ipv4_addr;
 
 /* XXX - add some macro's for inserting various types of address
  */
 
-enum {
-	AF_LINK		= 0, /* ethernet address */
-	AF_INET		= 1, /* IPv4 address */
-	AF_INET6	= 2, /* IPv6 address */
-};
-
-
 void net_server_add_device(ifnet *ifn);
 int in_cksum(struct mbuf *m, int len);
+void local_init(void);
+void insert_local_address(struct sockaddr *sa, ifnet *dev);
+ifnet *interface_for_address(struct sockaddr *sa);
+int compare_sockaddr(struct sockaddr *a, struct sockaddr *b);
 
 /* Useful debugging functions */
 void dump_ipv4_addr(char *msg, ipv4_addr *ad);
