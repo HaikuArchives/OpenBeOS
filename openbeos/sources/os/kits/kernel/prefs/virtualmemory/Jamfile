@@ -1,7 +1,7 @@
 SubDir OBOS_TOP sources os kits kernel prefs virtualmemory ;
 
-Preference VirtualMemory : main.cpp MainWindow.cpp VMSettings.cpp ;
+Preference VirtualMemory : src/main.cpp src/MainWindow.cpp src/VMSettings.cpp ;
 
 LinkSharedOSLibs VirtualMemory : be root ;
 
-AddResources VirtualMemory : Resource.rsrc ;
+AddResources VirtualMemory : src/Resource.rsrc ;
