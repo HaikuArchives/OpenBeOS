@@ -3,67 +3,67 @@
 	<group name="Application Kit">
 		<section name="Messaging">
 			<class name="BInvoker">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BInvoker();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BInvoker(BMessage* message, const BHandler* handler, const BLooper* looper = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BInvoker(BMessage* message, BMessenger target);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BInvoker();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t SetMessage(BMessage* message);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BMessage* Message() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					uint32 Command() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t SetTarget(const BHandler* h, const BLooper* loop = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t SetTarget(BMessenger messenger);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool IsTargetLocal() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BHandler* Target(BLooper** looper = NULL) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BMessenger Messenger() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t SetHandlerForReply(BHandler* handler);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BHandler* HandlerForReply() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Invoke(BMessage* msg = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					status_t InvokeNotify(BMessage* msg, uint32 kind = B_CONTROL_INVOKED);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					status_t SetTimeout(bigtime_t timeout);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bigtime_t Timeout() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					uint32 InvokeKind(bool* notify = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void BeginInvokeNotify(uint32 kind = B_CONTROL_INVOKED);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void EndInvokeNotify();
 				</task>
 			</class>
@@ -591,37 +591,37 @@
 				</task>
 			</class>
 			<class name="BMessageQueue">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					BMessageQueue();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					virtual ~BMessageQueue();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					void AddMessage(BMessage* an_event);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					bool RemoveMessage(BMessage* an_event);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					BMessage* NextMessage();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					BMessage* FindMessage(int32 index) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					BMessage* FindMessage(uint32 what, int32 index = 0) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					int32 CountMessages() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					bool IsEmpty() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
 					bool Lock();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Ran" tests="true" tspec="true">
 					void Unlock();
 				</task>
 			</class>
@@ -1091,19 +1091,19 @@
 		</section>
 		<section name="BCursor">
 			<class name="BCursor">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BCursor(const void* cursorData);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BCursor(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BCursor();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* into, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
 			</class>
@@ -1164,292 +1164,292 @@
 	<group name="Interface Kit">
 		<section name="Group 1 Support">
 			<class name="BPoint">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint(float X, float Y);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint(const BPoint& pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint& operator=(const BPoint& from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void Set(float X, float Y);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void ConstrainTo(BRect rect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void PrintToStream() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint operator+(const BPoint&) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint operator-(const BPoint&) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint& operator+=(const BPoint&);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint& operator-=(const BPoint&);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool operator!=(const BPoint&) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool operator==(const BPoint&) const;
 				</task>
 			</class>
 			<class name="BPolygon">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					BPolygon(const BPoint* ptArray, int32 numPoints);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					BPolygon();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					BPolygon(const BPolygon* poly);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					virtual ~BPolygon();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					BPolygon& operator=(const BPolygon& from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					BRect Frame() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					void AddPoints(const BPoint* ptArray, int32 numPoints);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					int32 CountPoints() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					void MapTo(BRect srcRect, BRect dstRect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Staffan Hellstrom" tests="false" tspec="false">
 					void PrintToStream() const;
 				</task>
 			</class>
 			<class name="BRect">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect(const BRect &);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect(float l, float t, float r, float b);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect(BPoint leftTop, BPoint rightBottom);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect& operator=(const BRect &from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void Set(float l, float t, float r, float b);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void PrintToStream() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint LeftTop() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint RightBottom() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint LeftBottom() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BPoint RightTop() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetLeftTop(const BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetRightBottom(const BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetLeftBottom(const BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetRightTop(const BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void InsetBy(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void InsetBy(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void OffsetBy(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void OffsetBy(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void OffsetTo(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void OffsetTo(float x, float y);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect& InsetBySelf(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect& InsetBySelf(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect InsetByCopy(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect InsetByCopy(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect& OffsetBySelf(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect& OffsetBySelf(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect OffsetByCopy(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect OffsetByCopy(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect& OffsetToSelf(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect& OffsetToSelf(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect OffsetToCopy(BPoint);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect OffsetToCopy(float dx, float dy);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool operator==(BRect) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool operator!=(BRect) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect operator&(BRect) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRect operator|(BRect) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool Intersects(BRect r) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool IsValid() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					float Width() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					int32 IntegerWidth() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					float Height() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					int32 IntegerHeight() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool Contains(BPoint) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool Contains(BRect) const;
 				</task>
 			</class>
 			<class name="BRegion">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					BRegion();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					BRegion(const BRegion &region);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					BRegion(const BRect rect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					virtual ~BRegion();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					BRegion& operator=(const BRegion &from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					BRect Frame() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					clipping_rect FrameInt() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					BRect RectAt(int32 index);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					clipping_rect RectAtInt(int32 index);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					int32 CountRects();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Set(BRect newBounds);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Set(clipping_rect newBounds);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					bool Intersects(BRect r) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					bool Intersects(clipping_rect r) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					bool Contains(BPoint pt) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					bool Contains(int32 x, int32 y);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void PrintToStream() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void OffsetBy(int32 dh, int32 dv);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void MakeEmpty();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Include(BRect r);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Include(clipping_rect r);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Include(const BRegion*);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Exclude(BRect r);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Exclude(clipping_rect r);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void Exclude(const BRegion*);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
 					void IntersectWith(const BRegion*);
 				</task>
 			</class>
@@ -1935,260 +1935,260 @@
 		</section>
 		<section name="Control Widgets">
 			<class name="BControl">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BControl(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizeMask, uint32 flags);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BControl(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BControl();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void WindowActivated(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void KeyDown(const char* bytes, int32 numBytes);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseDown(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetLabel(const char* text);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					const char* Label() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetValue(int32 value);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					int32 Value() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetEnabled(bool on);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool IsEnabled() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Invoke(BMessage* msg = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool IsFocusChanging() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool IsTracking() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetTracking(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetValueNoUpdate(int32 value);
 				</task>
 			</class>
 			<class name="BButton">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BButton(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BButton(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BButton();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void Draw(BRect updateRect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseDown(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void KeyDown(const char* bytes, int32 numBytes);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeDefault(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetLabel(const char* text);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					bool IsDefault() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void WindowActivated(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetValue(int32 value);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Invoke(BMessage* msg = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
 			</class>
 			<class name="BCheckBox">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BCheckBox(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BCheckBox(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BCheckBox();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void Draw(BRect updateRect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseDown(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void WindowActivated(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void KeyDown(const char* bytes, int32 numBytes);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetValue(int32 value);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Invoke(BMessage* msg = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
 			</class>
@@ -2398,79 +2398,79 @@
 				</task>
 			</class>
 			<class name="BRadioButton">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRadioButton(BRect frame, const char* name, const char* label, BMessage* message, uint32 resizMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BRadioButton(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BRadioButton();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void Draw(BRect updateRect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseDown(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void KeyDown(const char* bytes, int32 numBytes);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetValue(int32 value);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Invoke(BMessage* msg = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void WindowActivated(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
 			</class>
@@ -2885,165 +2885,165 @@
 		</section>
 		<section name="Non-Control Widgets">
 			<class name="BBox">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BBox(BRect bounds, const char* name = NULL, uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP, border_style border = B_FANCY_BORDER);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BBox(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BBox(void);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetBorder(border_style style);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					border_style Border() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetLabel(const char* label);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					status_t SetLabel(BView* view_label);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					const char* Label() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BView* LabelView() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void Draw(BRect bounds);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseDown(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void WindowActivated(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
 			</class>
 			<class name="BStringView">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BStringView(BRect bounds, const char* name, const char* text, uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BStringView(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BStringView();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetText(const char* text);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					const char* Text() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void SetAlignment(alignment flag);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					alignment Alignment() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void Draw(BRect bounds);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseDown(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
 			</class>
@@ -3970,67 +3970,67 @@
 		</section>
 		<section name="ListView Support">
 			<class name="BListItem">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem(uint32 outlineLevel = 0, bool expanded = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual ~BListItem();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					float Height() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					float Width() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool IsSelected() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void Select();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void Deselect();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void SetEnabled(bool on);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool IsEnabled() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void SetHeight(float height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void SetWidth(float width);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void DrawItem(BView* owner, BRect bounds, bool complete = false) = 0;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void Update(BView* owner, const BFont* font);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t Perform(perform_code d, void* arg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool IsExpanded() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void SetExpanded(bool expanded);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					uint32 OutlineLevel() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool IsItemVisible() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void SetItemVisible(bool);
 				</task>
 			</class>
@@ -4067,378 +4067,378 @@
 				</task>
 			</class>
 			<class name="BListView">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListView(BRect frame, const char *name, list_view_type type = B_SINGLE_SELECTION_LIST, uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListView(BMessage *data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual ~BListView();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					static BArchivable *Instantiate(BMessage *data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t Archive(BMessage *data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void Draw(BRect updateRect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage *msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MouseDown(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void KeyDown(const char *bytes, int32 numBytes);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void FrameResized(float newWidth, float newHeight);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void TargetedByScrollView(BScrollView *scroller);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void ScrollTo(float x, float y);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void ScrollTo(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddItem(BListItem *item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddItem(BListItem *item, int32 atIndex);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddList(BList *newItems);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddList(BList *newItems, int32 atIndex);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool RemoveItem(BListItem *item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual BListItem *RemoveItem(int32 index);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool RemoveItems(int32 index, int32 count);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void SetSelectionMessage(BMessage *message);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void SetInvocationMessage(BMessage *message);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BMessage *SelectionMessage() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					uint32 SelectionCommand() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BMessage *InvocationMessage() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					uint32 InvocationCommand() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void SetListType(list_view_type type);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					list_view_type ListType() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem *ItemAt(int32 index) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 IndexOf(BPoint point) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 IndexOf(BListItem *item) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem *FirstItem() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem *LastItem() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool HasItem(BListItem *item) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 CountItems() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MakeEmpty();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool IsEmpty() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void DoForEach(bool (*func)(BListItem *));
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void DoForEach(bool (*func)(BListItem *, void *), void *);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					const BListItem **Items() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void InvalidateItem(int32 index);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void ScrollToSelection();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void Select(int32 index, bool extend = false);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void Select(int32 from, int32 to, bool extend = false);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool IsItemSelected(int32 index) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 CurrentSelection(int32 index = 0) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t Invoke(BMessage *msg = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void DeselectAll();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void DeselectExcept(int32 except_from, int32 except_to);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void Deselect(int32 index);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void SelectionChanged();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void SortItems(int (*cmp)(const void *, const void *));
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool SwapItems(int32 a, int32 b);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool MoveItem(int32 from, int32 to);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool ReplaceItem(int32 index, BListItem * item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BRect ItemFrame(int32 index);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual BHandler *ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier, int32 form, const char *property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage *data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t Perform(perform_code d, void *arg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void WindowActivated(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage *msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool InitiateDrag(BPoint pt, int32 itemIndex, bool initialySelected);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void GetPreferredSize(float *width, float *height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool DoMiscellaneous(MiscCode code, MiscData * data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void DrawItem(BListItem *item, BRect itemRect, bool complete = false);
 				</task>
 			</class>
 			<class name="BOutlineListView">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BOutlineListView(BRect frame, const char* name, list_view_type type = B_SINGLE_SELECTION_LIST, uint32 resizeMask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BOutlineListView(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual ~BOutlineListView();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MouseDown(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void KeyDown(const char* bytes, int32 numBytes);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MouseUp(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddUnder(BListItem* item, BListItem* underItem);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddItem(BListItem* item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddItem(BListItem* item, int32 fullListIndex);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddList(BList* newItems);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool AddList(BList* newItems, int32 fullListIndex);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool RemoveItem(BListItem* item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual BListItem* RemoveItem(int32 fullListIndex);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool RemoveItems(int32 fullListIndex, int32 count);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem* FullListItemAt(int32 fullListIndex) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 FullListIndexOf(BPoint point) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 FullListIndexOf(BListItem* item) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem* FullListFirstItem() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem* FullListLastItem() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool FullListHasItem(BListItem* item) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 FullListCountItems() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 FullListCurrentSelection(int32 index = 0) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MakeEmpty();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool FullListIsEmpty() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void FullListDoForEach(bool (*func)(BListItem* ));
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void FullListDoForEach(bool (*func)(BListItem* , void* ), void*);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem* Superitem(const BListItem* item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void Expand(BListItem* item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void Collapse(BListItem* item);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					bool IsExpanded(int32 fullListIndex);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual status_t Perform(perform_code d, void* arg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MakeFocus(bool state = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void FullListSortItems(int (*compareFunc)(const BListItem* , const BListItem* ));
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					void SortItemsUnder(BListItem* underItem, bool oneLevelOnly, int (*compareFunc)(const BListItem* , const BListItem*));
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					int32 CountItemsUnder(BListItem* under, bool oneLevelOnly) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem* EachItemUnder(BListItem* underItem, bool oneLevelOnly, BListItem* (*eachFunc)(BListItem* , void* ), void* );
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					BListItem* ItemUnderAt(BListItem* underItem, bool oneLevelOnly, int32 index) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual bool DoMiscellaneous(MiscCode code, MiscData* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* );
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="false" owner="Ulrich Wimboeck" tests="false" tspec="false">
 					virtual void ExpandOrCollapse(BListItem* underItem, bool expand);
 				</task>
 			</class>
@@ -4759,109 +4759,109 @@
 				</task>
 			</class>
 			<class name="BTextControl">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BTextControl(BRect frame, const char* name, const char* label, const char* initial_text, BMessage* message, uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
 				</task>
 				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
 					BTextControl(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual ~BTextControl();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					static BArchivable* Instantiate(BMessage* data);
 				</task>
 				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
 					virtual status_t Archive(BMessage* data, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetText(const char* text);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					const char* Text() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetValue(int32 value);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t Invoke(BMessage* msg = NULL);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BTextView* TextView() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetModificationMessage(BMessage* message);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					BMessage* ModificationMessage() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetAlignment(alignment label, alignment text);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					void GetAlignment(alignment* label, alignment* text) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetDivider(float dividing_line);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					float Divider() const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void Draw(BRect updateRect);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseDown(BPoint where);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AttachedToWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MakeFocus(bool focusState = true);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetEnabled(bool state);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameMoved(BPoint new_position);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void FrameResized(float new_width, float new_height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void WindowActivated(bool active);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void GetPreferredSize(float* width, float* height);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void ResizeToPreferred();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MessageReceived(BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseUp(BPoint pt);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void DetachedFromWindow();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllAttached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void AllDetached();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual status_t GetSupportedSuites(BMessage* data);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="" tests="false" tspec="false">
 					virtual void SetFlags(uint32 flags);
 				</task>
 			</class>
@@ -5793,42 +5793,42 @@
 	<group name="Integration">
 		<section name="BArchivable">
 			<class name="BArchivable">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					BArchivable();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					BArchivable(BMessage* from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					~BArchivable();
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					virtual status_t Archive(BMessage* into, bool deep = true) const;
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					static BArchivable* Instantiate(BMessage* from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					virtual status_t Perform(perform_code d, void* arg); ???
 				</task>
 			</class>
 			<functions name="BArchivable">
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					BArchivable* instantiate_object(BMessage* from, image_id* id);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					BArchivable* instantiate_object(BMessage* from);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					bool validate_instantiation(BMessage* from, const char* class_name);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					instantiation_func find_instantiation_func(const char* class_name, const char* sig);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					instantiation_func find_instantiation_func(const char* class_name);
 				</task>
-				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
+				<task cases="false" fspec="false" impl="true" owner="Erik Jakowatz" tests="true" tspec="false">
 					instantiation_func find_instantiation_func(BMessage* archive_data);
 				</task>
 			</functions>
@@ -6823,6 +6823,719 @@
 				</task>
 				<task cases="false" fspec="false" impl="false" owner="" tests="false" tspec="false">
 					virtual void DrawAfterChildren(BRect r);
+				</task>
+			</class>
+		</section>
+	</group>
+	<group name="Support Kit">
+		<section name="IO">
+			<class name="BDataIO">
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BDataIO
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ~BDataIO();
+				</task>
+			</class>
+			<class name="BMallocIO">
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BMallocIO();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ~BMallocIO();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ssize_t ReadAt(off_t pos, void *buffer, size_t size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ssize_t WriteAt(off_t pos, const void *buffer, size_t size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual off_t Seek(off_t pos, uint32 seek_mode);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual off_t Position() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual status_t SetSize(off_t size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					void SetBlockSize(size_t blocksize);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					const void* Buffer() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					size_t BufferLength() const;
+				</task>
+			</class>
+			<class name="BMemoryIO">
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BMemoryIO(void *p, size_t len);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BMemoryIO(const void *p, size_t len);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ~BMemoryIO();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ssize_t ReadAt(off_t pos, void *buffer, size_t size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ssize_t WriteAt(off_t pos, const void *buffer, size_t size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual off_t Seek(off_t pos, uint32 seek_mode);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual off_t Position() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual status_t SetSize(off_t size);
+				</task>
+			</class>
+			<class name="BPositionIO">
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BPositionIO();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ~BPositionIO();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ssize_t Read(void *buffer, size_t size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ssize_t Write(const void *buffer, size_t size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					virtual status_t SetSize(off_t size);
+				</task>
+			</class>
+		</section>
+		<section name="Utilities">
+			<functions name="Misc">
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					convert_from_utf8
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					convert_to_utf8
+				</task>
+			</functions>
+			<functions name="BString Utility">
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&lt(const char *, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&lt=(const char *, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator==(const char *, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&gt(const char *, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&gt=(const char *, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator!=(const char *, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int Compare(const BString &, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int ICompare(const BString &, const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int Compare(const BString *, const BString *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int ICompare(const BString *, const BString *);
+				</task>
+			</functions>
+			<class name="BList">
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					BList(int32 itemsPerBlock = 20);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					BList(const BList&);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					virtual ~BList();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					BList& operator=(const BList &from);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool AddItem(void *item);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool AddItem(void *item, int32 atIndex);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool AddList(BList *newItems);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool AddList(BList *newItems, int32 atIndex);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool RemoveItem(void *item);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void* RemoveItem(int32 index);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool RemoveItems(int32 index, int32 count);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool ReplaceItem(int32 index, void *newItem);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void MakeEmpty();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void SortItems(int (*cmp)(const void *, const void *));
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool SwapItems(int32 indexA, int32 indexB);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool MoveItem(int32 fromIndex, int32 toIndex);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void* ItemAt(int32) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void* ItemAtFast(int32) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void* FirstItem() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void* LastItem() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void* Items() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool HasItem(void *item) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					int32 IndexOf(void *item) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					int32 CountItems() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					bool IsEmpty() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void DoForEach(bool (*func)(void *));
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Issac Yonemoto" tests="false" tspec="false">
+					void DoForEach(bool (*func)(void *, void *), void *);
+				</task>
+			</class>
+			<class name="BString">
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString(const char *, int32 maxLength);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					~BString();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					const char* String() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 Length() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 CountChars() const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator=(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator=(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator=(char);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& SetTo(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& SetTo(const char *, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& SetTo(const BString &from);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Adopt(BString &from);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& SetTo(const BString &, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Adopt(BString &from, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& SetTo(char, int32 count);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& CopyInto(BString &into, int32 fromOffset, int32 length) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					void CopyInto(char *into, int32 fromOffset, int32 length) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator+=(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator+=(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator+=(char);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Append(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Append(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Append(const BString &, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Append(const char *, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Append(char, int32 count);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Prepend(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Prepend(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Prepend(const char *, int32);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Prepend(const BString &, int32);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Prepend(char, int32 count);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Insert(const char *, int32 pos);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Insert(const char *, int32 length, int32 pos);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Insert(const char *, int32 fromOffset, int32 length, int32 pos);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Insert(const BString &, int32 pos);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Insert(const BString &, int32 length, int32 pos);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Insert(const BString &, int32 fromOffset, int32 length, int32 pos);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Insert(char, int32 count, int32 pos);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Truncate(int32 newLength, bool lazy = true);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Remove(int32 from, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& RemoveFirst(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& RemoveLast(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& RemoveAll(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& RemoveFirst(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& RemoveLast(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& RemoveAll(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& RemoveSet(const char *setOfCharsToRemove);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& MoveInto(BString &into, int32 from, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					void MoveInto(char *into, int32 from, int32 length);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&lt(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&lt=(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator==(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&gt=(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&gt(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator!=(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&lt(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&lt=(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator==(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&gt=(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator&gt(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					bool operator!=(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int Compare(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int Compare(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int Compare(const BString &, int32 n) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int Compare(const char *, int32 n) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int ICompare(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int ICompare(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int ICompare(const BString &, int32 n) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int ICompare(const char *, int32 n) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindFirst(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindFirst(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindFirst(const BString &, int32 fromOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindFirst(const char *, int32 fromOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindFirst(char) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindFirst(char, int32 fromOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindLast(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindLast(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindLast(const BString &, int32 beforeOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindLast(const char *, int32 beforeOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindLast(char) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 FindLast(char, int32 fromOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindFirst(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindFirst(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindFirst(const BString &, int32 fromOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindFirst(const char *, int32 fromOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindLast(const BString &) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindLast(const char *) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindLast(const BString &, int32 beforeOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					int32 IFindLast(const char *, int32 beforeOffset) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceFirst(char replaceThis, char withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceLast(char replaceThis, char withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceAll(char replaceThis, char withThis, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Replace(char replaceThis, char withThis, int32 maxReplaceCount, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceFirst(const char *replaceThis, const char *withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceLast(const char *replaceThis, const char *withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceAll(const char *replaceThis, const char *withThis, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Replace(const char *replaceThis, const char *withThis, int32 maxReplaceCount, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplaceFirst(char replaceThis, char withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplaceLast(char replaceThis, char withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplaceAll(char replaceThis, char withThis, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplace(char replaceThis, char withThis, int32 maxReplaceCount, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplaceFirst(const char *replaceThis, const char *withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplaceLast(const char *replaceThis, const char *withThis);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplaceAll(const char *replaceThis, const char *withThis, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& IReplace(const char *replaceThis, const char *withThis, int32 maxReplaceCount, int32 fromOffset = 0);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceSet(const char *setOfChars, char with);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ReplaceSet(const char *setOfChars, const char *with);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					char operator[](int32 index) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					char& operator[](int32 index);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					char ByteAt(int32 index) const;
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					char* LockBuffer(int32 maxLength);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& UnlockBuffer(int32 length = -1);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ToLower();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& ToUpper();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& Capitalize();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& CapitalizeEachWord();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& CharacterEscape(const char* original, const char* setOfCharsToEscape, char escapeWith);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& CharacterEscape(const char *setOfCharsToEscape, char escapeWith);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& CharacterDeescape(const char *original, char escapeChar);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& CharacterDeescape(char escapeChar);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(const char *);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(const BString &);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(char);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(int);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(unsigned int);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(uint32);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(int32);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(uint64);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(int64);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Steve Vallee" tests="false" tspec="false">
+					BString& operator&lt&lt(float);
+				</task>
+			</class>
+			<class name="BBlockCache">
+				<task cases="false" fspec="false" impl="false" owner="Graham Gilmore" tests="false" tspec="false">
+					BBlockCache(size_t cache_size, size_t block_size, uint32 type);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Graham Gilmore" tests="false" tspec="false">
+					virtual ~BBlockCache();
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Graham Gilmore" tests="false" tspec="false">
+					void* Get(size_t block_size);
+				</task>
+				<task cases="false" fspec="false" impl="false" owner="Graham Gilmore" tests="false" tspec="false">
+					void Save(void *pointer, size_t block_size);
+				</task>
+			</class>
+			<class name="BStopWatch">
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					BStopWatch(const char *name, bool silent = false);
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					virtual ~BStopWatch();
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					void Suspend();
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					void Resume();
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					bigtime_t Lap();
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					bigtime_t ElapsedTime() const;
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					void Reset();
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Steve Vallee" tests="false" tspec="false">
+					const char* Name() const;
+				</task>
+			</class>
+		</section>
+		<section name="Synchronization">
+			<class name="BAutoLock">
+				<task cases="false" fspec="false" impl="true" owner="Jeremy Rand" tests="false" tspec="false">
+					BAutolock(BLocker *lock);
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Jeremy Rand" tests="false" tspec="false">
+					BAutolock(BLocker &lock);
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Jeremy Rand" tests="false" tspec="false">
+					BAutolock(BLooper *looper);
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Jeremy Rand" tests="false" tspec="false">
+					~BAutolock();
+				</task>
+				<task cases="false" fspec="false" impl="true" owner="Jeremy Rand" tests="false" tspec="false">
+					bool IsLocked();
+				</task>
+			</class>
+			<class name="BLocker">
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					BLocker();
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					BLocker(const char *name);
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					BLocker(bool benaphore_style);
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					BLocker(const char *name, bool benaphore_style);
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					BLocker(const char *name, bool benaphore_style, bool);
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					virtual ~BLocker();
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					bool Lock(void);
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					status_t LockWithTimeout(bigtime_t timeout);
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					void Unlock(void);
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					thread_id LockingThread(void) const;
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					bool IsLocked(void) const;
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					int32 CountLocks(void) const;
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					int32 CountLockRequests(void) const;
+				</task>
+				<task cases="true" fspec="true" impl="true" owner="Jeremy Rand" tests="true" tspec="true">
+					sem_id Sem(void) const;
 				</task>
 			</class>
 		</section>

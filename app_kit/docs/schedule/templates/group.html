@@ -20,11 +20,11 @@
 				<!-- spacer -->
 				<td width=10"></td>
 				<!-- how much is done -->
-				<td width="$GROUP.ispec_table_complete" bgcolor="red" align="left"></td>
+				<td width="$GROUP.ispec_table_complete" bgcolor="blue" align="left"></td>
 				<!-- how much is left -->
 				<td width="$GROUP.ispec_table_incomplete" bgcolor="red" align="right"></td>
 				<!-- the above two translated into a percentage -->
-				<td width="25" align="center">$GROUP.ispec_complete%</td>
+				<td width="25" align="right">$GROUP.ispec_complete%</td>
 			</tr>
 		</table>
 		<br><br>
@@ -43,7 +43,7 @@
 				<!-- spacer -->
 				<td width=10"></td>
 				<!-- how much is done -->
-				<td width="$GROUP.cases_table_complete" bgcolor="red" align="left"></td>
+				<td width="$GROUP.cases_table_complete" bgcolor="blue" align="left"></td>
 				<!-- how much is left -->
 				<td width="$GROUP.cases_table_incomplete" bgcolor="red" align="right"></td>
 				<!-- the above two translated into a percentage -->
@@ -66,7 +66,7 @@
 				<!-- spacer -->
 				<td width=10"></td>
 				<!-- how much is done -->
-				<td width="$GROUP.tests_table_complete" bgcolor="red" align="left"></td>
+				<td width="$GROUP.tests_table_complete" bgcolor="blue" align="left"></td>
 				<!-- how much is left -->
 				<td width="$GROUP.tests_table_incomplete" bgcolor="red" align="right"></td>
 				<!-- the above two translated into a percentage -->
@@ -89,7 +89,7 @@
 				<!-- spacer -->
 				<td width=10"></td>
 				<!-- how much is done -->
-				<td width="$GROUP.tspec_table_complete" bgcolor="red" align="left"></td>
+				<td width="$GROUP.tspec_table_complete" bgcolor="blue" align="left"></td>
 				<!-- how much is left -->
 				<td width="$GROUP.tspec_table_incomplete" bgcolor="red" align="right"></td>
 				<!-- the above two translated into a percentage -->
@@ -104,7 +104,7 @@
 <scripting>
 @for_each milestone in $GROUP.milestones
 	<li>
-		<a href="$milestone.short_name##.html">$milestone.name</a>$milestone.note feature complete
+		<a href="$milestone.short_name##.html">$milestone.name</a>$milestone.note complete
 @if $milestone.complete
 		<!-- Copy this table to each item when work begins on it -->
 		<!-- progress graph -->
@@ -113,11 +113,11 @@
 				<!-- spacer -->
 				<td width=10"></td>
 				<!-- how much is done -->
-				<td width="$milestone.table_complete" bgcolor="red" align="left"></td>
+				<td width="$milestone.table_complete" bgcolor="blue" align="left"></td>
 				<!-- how much is left -->
 				<td width="$milestone.table_incomplete" bgcolor="red" align="right"></td>
 				<!-- the above two translated into a percentage -->
-				<td width="25" align="center">$milestone.complete%</td>
+				<td width="35" align="right">$milestone.complete%</td>
 			</tr>
 		</table>
 		<br><br>
@@ -152,13 +152,14 @@ See the complete list of <a href="$GROUP.short_name##Tasks.html">$GROUP.name tas
 
 <!-- The obligatory SourceForge plug -->
 <center> 
-<small>Hosted by:</small><br> 
+<small>The OpenBeOS project is hosted by:</small><br><br> 
 <a href="http://sourceforge.net"> 
 <img src="http://sourceforge.net/sflogo.php?group_id=33869&type=1" width="88" height="31" border="0" alt="SourceForge Logo">
 </a> 
 <p> 
 
-<small>Copyright &copy; 2001-2002 OpenBeOS Project</small> 
+<small>Copyright &copy; 2001-2002
+<a href="http://www.openbeos.org">OpenBeOS</a> Project</small> 
 </center>
 
 </body>

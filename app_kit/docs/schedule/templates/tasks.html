@@ -46,7 +46,7 @@
 @for_each s in $MILESTONE
 	<!-- $s.type header -->
 	<tr>
-		<td colspan="7"><center><strong>$s.type $s.name</strong></center></td>
+		<td colspan="7"><center><strong>$s.name $s.type</strong></center></td>
 	</tr>
 @for_each t in $s.tasks
 	<tr>
@@ -95,9 +95,10 @@
 		</td>
 		<!-- owner -->
 		<td>
-			
+			$t.owner
 		</td>
 	</tr>
+@end
 @end
 </scripting>
 </table>
@@ -148,13 +149,14 @@
 
 <!-- The obligatory SourceForge plug -->
 <center> 
-<small>Hosted by:</small><br> 
-<a href="http://sourceforge.net">
+<small>The OpenBeOS project is hosted by:</small><br><br> 
+<a href="http://sourceforge.net"> 
 <img src="http://sourceforge.net/sflogo.php?group_id=33869&type=1" width="88" height="31" border="0" alt="SourceForge Logo">
 </a> 
 <p> 
 
-<small>Copyright &copy; 2001-2002 OpenBeOS Project</small> 
+<small>Copyright &copy; 2001-2002
+<a href="http://www.openbeos.org">OpenBeOS</a> Project</small> 
 </center>
 
 </body>

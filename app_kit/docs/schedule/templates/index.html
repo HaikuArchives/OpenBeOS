@@ -39,7 +39,6 @@ graphs. =)
 
 <!-- And here we go into table madness! -->
 <table cellspacing="0">
-<scripting>
 	<!-- sub-project header -->
 	<tr>
 		<td colspan="3" align="left"><strong>Overall</strong></td>
@@ -49,15 +48,18 @@ graphs. =)
 		<table cellspacing="0">
 			<tr>
 				<!-- how much is done -->
+<scripting>
 				<td width="$GROUPS.table_complete" bgcolor="blue" align="left"></td>
 				<!-- how much is left -->
 				<td width="$GROUPS.table_incomplete" bgcolor="red" align="right"></td>
 				<!-- the above two translated into a percentage -->
 				<td width="25" align="center">$GROUPS.complete%</td>
+</scripting>
 			</tr>
 		</table>
 	</tr>
 
+<scripting>
 @for_each group in $GROUPS
 	<!-- sub-project header -->
 	<tr>
@@ -84,13 +86,14 @@ graphs. =)
 
 <!-- The obligatory SourceForge plug -->
 <center> 
-<small>Hosted by:</small><br> 
+<small>The OpenBeOS project is hosted by:</small><br><br> 
 <a href="http://sourceforge.net"> 
 <img src="http://sourceforge.net/sflogo.php?group_id=33869&type=1" width="88" height="31" border="0" alt="SourceForge Logo">
 </a> 
 <p> 
 
-<small>Copyright &copy; 2001-2002 OpenBeOS Project</small> 
+<small>Copyright &copy; 2001-2002
+<a href="http://www.openbeos.org">OpenBeOS</a> Project</small> 
 </center>
 
 </body>
