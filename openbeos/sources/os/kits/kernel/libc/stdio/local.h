@@ -54,6 +54,7 @@ int      __swhatbuf (FILE *, size_t *, int *);
 int      _fwalk (int (*)(FILE *));
 int      __swsetup (FILE *);
 int      __sflags (const char *, int *);
+int	__swbuf(int c, FILE* fp);
 
 extern int __sdidinit;
 

@@ -41,6 +41,8 @@
  */
 #undef getc_unlocked
 
+int getc_unlocked(FILE *fp);
+
 int
 getc_unlocked(fp)
 	FILE *fp;

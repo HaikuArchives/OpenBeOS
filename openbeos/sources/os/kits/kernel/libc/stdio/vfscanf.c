@@ -83,7 +83,7 @@
 #define u_char unsigned char
 #define u_long unsigned long
 
-static u_char *__sccl();
+static u_char *__sccl(char *tab, u_char *fmt);
 
 /*
  * vfscanf

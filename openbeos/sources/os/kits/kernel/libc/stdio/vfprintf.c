@@ -192,7 +192,7 @@ vfprintf(fp, fmt0, ap)
 	int dprec;		/* a copy of prec if [diouxX], 0 otherwise */
 	int realsz;		/* field size expanded by dprec */
 	int size;		/* size of converted field or string */
-	char *xdigs;		/* digits for [xX] conversion */
+	char *xdigs=NULL;	/* digits for [xX] conversion */
 #define NIOV 8
 	struct __suio uio;	/* output information: summary */
 	struct __siov iov[NIOV];/* ... and individual io vectors */
