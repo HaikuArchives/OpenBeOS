@@ -1,0 +1,54 @@
+cbuf.c
+
+Cbuf manages the chunk buffers. Functions are included to allocate and free chunks.
+
+static void initialize_cbuf(cbuf *buf)
+Initializes a buffer. Sets len to size of the data area, data to the data area, flags to 0 and total_len to 0.
+
+static void *_cbuf_alloc(int size)
+Calls kmalloc passing in size.
+
+static cbuf *allocate_cbuf_mem(int count)
+Allocates space (using _cbuf_alloc) for count cbufs. Initializes each wth proper flags and lengths. Returns a pointer to the first one in the list.
+
+static void _clear_chain(cbuf *head, cbuf **tail)
+	Calls initialize_cbuf on every buffer in the list, returns the last node in tail.
+
+void cbuf_free_chain_noblock(cbuf *buf)
+	Calls _clear_chain on the list. Then prepends this chain to the cbuf_free_noblock_list. Disables interrupts.
+
+void cbuf_free_chain(cbuf *buf)
+	Same as cbuf_free_chain_noblock, except that it prepends to the cbuf_free list. Does not disable interrupts, but does lock on a semaphore.
+
+cbuf *cbuf_get_chain(int len)
+	Attempts to allocate a list of buffers containing len bytes from the cbuf_free list. Uses semaphores.
+
+cbuf *cbuf_get_chain_noblock(int len)
+	Same as above, but from the cbuf_free_no_block list. 
+
+int cbuf_memcpy_to_chain(cbuf *chain, int offset, const void *_src, int len)
+	Copies len bytes from src into the chain (offset bytes in). Does some validation.
+
+int cbuf_memcpy_from_chain(void *_dest, cbuf *chain, int offset, int len)
+	Copies len bytes from the chain (starting at offset) into dest.
+
+cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2)
+	Adds chain2 to the end of chain1. Returns chain1 (now the combined chain).
+
+int cbuf_get_len(cbuf *buf)
+	Returns the number of bytes total in the chain.
+
+void *cbuf_get_ptr(cbuf *buf, int offset)
+	Returns a void pointer offset bytes into the chain. 
+
+int cbuf_is_contig_region(cbuf *buf, int start, int end)
+	Indicates whether bytes start-->end are all in the same block.
+
+int cbuf_truncate_head(cbuf *buf, int trunc_bytes)
+	Chops trunc_bytes out of the beginning of the list. Does not free the memory.
+
+int cbuf_truncate_tail(cbuf *buf, int trunc_bytes)
+	Chops trunc_bytes out of the end of the list. Does not free the memory.
+
+int cbuf_init()  
+	Prepares the cbuf_free_list and cbuf_free_noblock_list. Makes 16 blocks of each, then frees them so that they will be available for later allocation. Creates the cbuf_free_list_sem semphore (used internally).

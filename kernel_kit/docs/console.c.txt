@@ -1,0 +1,12 @@
+console.c
+
+Contains functions to be used in the usage of console.
+
+int kprintf(const char *fmt, ...)
+	Uses va_args to sprintf the text into a 256 byte local buffer. Then uses sys_write to output to the screen.
+
+int kprintf_xy(int x, int y, const char *fmt, ...)
+	Same as kprintf, but writes to a particular x,y position of the screen.
+	
+int con_init(kernel_args *ka)  
+	Opens /dev/console. 
