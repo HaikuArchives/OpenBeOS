@@ -1,27 +1,22 @@
-# $Id$
-#
-# Makefile for testing the BLocker implementation for OpenBeOS
-#
-
 ## BeOS Generic Makefile v2.2 ##
 
 ## Fill in this file to specify the project being created, and the referenced
 ## makefile-engine will do all of the hard work for you.  This handles both
 ## Intel and PowerPC builds of the BeOS.
 
-OPENBEOSLIBDIR=../../../../source/lib/$(OBJ_DIR)
+APPKITROOT=../../../..
 
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= TestMain
+NAME=BLockerTest
 
 # specify the type of binary
 #	APP:	Application
 #	SHARED:	Shared library or add-on
 #	STATIC:	Static library archive
 #	DRIVER: Kernel Driver
-TYPE= APP
+TYPE=SHARED
 
 #	add support for new Pe and Eddie features
 #	to fill in generic makefile
@@ -37,8 +32,14 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= TestLocker.cpp Test1.cpp Test2.cpp Test3.cpp Test4.cpp Test5.cpp \
-		Test6.cpp Test7.cpp TestMain.cpp
+SRCS=LockerTestAddon.cpp LockerTestCase.cpp \
+	ConstructionTest1.cpp \
+	ConcurrencyTest1.cpp \
+	ConcurrencyTest2.cpp \
+	DestructionTest1.cpp \
+	DestructionTest2.cpp \
+	BenaphoreLockCountTest1.cpp \
+	SemaphoreLockCountTest1.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -59,7 +60,7 @@ RSRCS=
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be openbeos
+LIBS=stdc++.r4 CppUnit be openbeos
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -67,7 +68,7 @@ LIBS= be openbeos
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS= $(OPENBEOSLIBDIR)
+LIBPATHS= $(APPKITROOT)/test/CppUnit/lib/
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
@@ -77,7 +78,10 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = ../../../../source/lib/support/headers
+LOCAL_INCLUDE_PATHS = $(APPKITROOT)/test/CppUnit \
+	$(APPKITROOT)/test/CppUnit/lib \
+	$(APPKITROOT)/test/CppUnit/lib/extensions \
+	$(APPKITROOT)//source/lib/support/headers
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
@@ -107,7 +111,8 @@ SYMBOLS = TRUE
 DEBUGGER = TRUE
 
 #	specify additional compiler flags for all files
-COMPILER_FLAGS = -fno-implicit-templates
+#COMPILER_FLAGS = -fno-implicit-templates
+COMPILER_FLAGS =
 
 #	specify additional linker flags
 LINKER_FLAGS =
@@ -125,14 +130,12 @@ APP_VERSION =
 DRIVER_PATH = 
 
 all:	depend default
-	rm -f $(OBJ_DIR)/lib
-	ln -s ../$(OPENBEOSLIBDIR) $(OBJ_DIR)/lib
+	rm -f $(APPKITROOT)/test/add-ons/BLockerTest
+	ln -s ../lib/support/BLocker/$(OBJ_DIR)/BLockerTest \
+		$(APPKITROOT)/test/add-ons/BLockerTest
+
+clean::	FORCE cleandepend
+	rm -f $(APPKITROOT)/test/add-ons/BLockerTest
 
 ## include the makefile-engine
 include $(BUILDHOME)/etc/makefile-engine
-
-runtests: all
-	$(OBJ_DIR)/TestMain
-
-clean ::	FORCE cleandepend
-	rm -rf $(OBJ_DIR)
