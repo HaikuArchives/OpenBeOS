@@ -33,6 +33,13 @@ class BPlusTree;
 class TreeIterator;
 
 
+enum inode_type {
+	S_DIR		= S_IFDIR,
+	S_FILE		= S_IFREG,
+	S_SYMLINK	= S_IFLNK
+};
+
+
 // The CachedBlock class is completely implemented as inlines.
 // It should be used when cache single blocks to make sure they
 // will be properly released after use (and it's also very
@@ -122,6 +129,7 @@ class Inode : public CachedBlock
 		
 		off_t Size() const { return Node()->data.size; }
 
+		block_run BlockRun() const { return Node()->inode_num; }
 		block_run Parent() const { return Node()->parent; }
 		block_run Attributes() const { return Node()->attributes; }
 		Volume *GetVolume() const { return fVolume; }

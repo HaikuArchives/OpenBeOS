@@ -26,6 +26,14 @@ class Benaphore {
 			delete_sem(fSemaphore);
 		}
 
+		status_t InitCheck()
+		{
+			if (fSemaphore < B_OK)
+				return fSemaphore;
+			
+			return B_OK;
+		}
+
 		status_t Lock()
 		{
 			if (atomic_add(&fCount, -1) <= 0)
@@ -43,6 +51,25 @@ class Benaphore {
 	private:
 		sem_id	fSemaphore;
 		vint32	fCount;
+};
+
+// a convenience class to lock the benaphore
+
+class Locker {
+	public:
+		Locker(Benaphore &lock)
+			: fLock(lock)
+		{
+			lock.Lock();
+		}
+		
+		~Locker()
+		{
+			fLock.Unlock();
+		}
+	
+	private:
+		Benaphore	&fLock;
 };
 
 

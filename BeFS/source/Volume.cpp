@@ -22,6 +22,7 @@
 Volume::Volume(nspace_id id)
 	:
 	fID(id),
+	fBlockAllocator(this),
 	fFlags(0)
 {
 }
@@ -82,42 +83,49 @@ Volume::Mount(const char *deviceName,uint32 flags)
 
 	if (IsValidSuperBlock()) {
 		if (init_cache_for_device(fDevice, NumBlocks()) == B_OK) {
-			fRootNode = new Inode(this,ToVnode(Root()));
+			if (fBlockAllocator.Initialize() == B_OK) {
+				fRootNode = new Inode(this,ToVnode(Root()));
+	
+				if (fRootNode && fRootNode->InitCheck() == B_OK) {
+					if (new_vnode(fID,ToVnode(Root()),(void *)fRootNode) == B_OK) {
+						// try to get indices root dir
+						
+						// question: why doesn't get_vnode() work here??
+						// answer: we have not yet backpropagated the pointer to the
+						// volume in bfs_mount(), so bfs_read_vnode() can't get it.
+						// But it's not needed to that anyway.
 
-			if (fRootNode && fRootNode->InitCheck() == B_OK) {
-				if (new_vnode(fID,ToVnode(Root()),(void *)fRootNode) == B_OK) {
-					// try to get indices root dir
-					
-					// question: why doesn't get_vnode() work here??
-					// answer: we have not yet backpropagated the pointer to the
-					// volume in bfs_mount(), so bfs_read_vnode() can't get it - axeld.
-					fIndicesNode = new Inode(this,ToVnode(Indices()));
-					if (fIndicesNode == NULL
-						|| fIndicesNode->InitCheck() < B_OK
-						|| !fIndicesNode->IsDirectory()) {
-						INFORM(("bfs: volume doesn't have indices!\n"));
-
-						if (fIndicesNode) {
-							// in this case, BFS should be mounted as read-only
-							fIndicesNode = NULL;
+						fIndicesNode = new Inode(this,ToVnode(Indices()));
+						if (fIndicesNode == NULL
+							|| fIndicesNode->InitCheck() < B_OK
+							|| !fIndicesNode->IsDirectory()) {
+							INFORM(("bfs: volume doesn't have indices!\n"));
+	
+							if (fIndicesNode) {
+								// in this case, BFS should be mounted as read-only
+								fIndicesNode = NULL;
+							}
 						}
-					}
-
-					// all went fine
-					return B_OK;
+	
+						// all went fine
+						return B_OK;
+					} else
+						status = B_NO_MEMORY;
 				} else
-					status = B_NO_MEMORY;
-			} else
-				status = B_BAD_VALUE;
-
-			FATAL(("bfs: could not create root node: new_vnode() failed!\n"));
+					status = B_BAD_VALUE;
+	
+				FATAL(("could not create root node: new_vnode() failed!\n"));
+			} else {
+				status = B_NO_MEMORY;
+				FATAL(("could not initialize block bitmap allocator!\n"));
+			}
 
 			remove_cached_device_blocks(fDevice,NO_WRITES);
 		} else {
-			FATAL(("bfs: could not initialize cache!\n"));
+			FATAL(("could not initialize cache!\n"));
 			status = B_IO_ERROR;
 		}
-		FATAL(("bfs: invalid super block!\n"));
+		FATAL(("invalid super block!\n"));
 	}
 	else
 		status = B_BAD_VALUE;

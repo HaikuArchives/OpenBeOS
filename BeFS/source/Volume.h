@@ -16,8 +16,8 @@ extern "C" {
 	#include "fsproto.h"
 }
 
-//#include "Bitmap.h"
 #include "bfs.h"
+#include "BlockAllocator.h"
 
 class Inode;
 
@@ -54,6 +54,7 @@ class Volume
 		uint32				InodeSize() const { return fSuperBlock.inode_size; }
 		uint32				AllocationGroups() const { return fSuperBlock.num_ags; }
 		uint32				AllocationGroupShift() const { return fSuperBlock.ag_shift; }
+		disk_super_block	&SuperBlock() { return fSuperBlock; }
 
 		off_t				ToOffset(block_run run) const { return ToBlock(run) << fSuperBlock.block_shift; }
 		off_t				ToBlock(block_run run) const { return ((((off_t)run.allocation_group) << fSuperBlock.ag_shift) | (off_t)run.start); }
@@ -66,7 +67,8 @@ class Volume
 		nspace_id			fID;
 		int					fDevice;
 		disk_super_block	fSuperBlock;
-		
+		BlockAllocator		fBlockAllocator;
+
 		Inode				*fRootNode;
 		Inode				*fIndicesNode;
 		
