@@ -30,6 +30,9 @@ public:
 
 	static void dumpStat(struct stat &st);
 
+	static void createVolume(string imageFile, string mountPoint, int32 megs);
+	static void deleteVolume(string imageFile, string mountPoint);
+
 protected:	
 	int32 fSubTestNumber;
 	int32 fAvailableFDs;
@@ -95,7 +98,7 @@ public:
 			fTestedNames.erase(name);
 	}
 
-	void clear(string name)
+	void clear()
 	{
 		fUntestedNames.clear();
 		fTestedNames.clear();

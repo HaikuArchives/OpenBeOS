@@ -99,3 +99,29 @@ BasicTest::dumpStat(struct stat &st)
 	printf("  st_crtime : %x\n", st.st_crtime);
 }
 
+// createVolume
+void
+BasicTest::createVolume(string imageFile, string mountPoint, int32 megs)
+{
+	char megsString[16];
+	sprintf(megsString, "%ld", megs);
+	execCommand(string("dd if=/dev/zero of=") + imageFile
+					+ " bs=1M count=" + megsString
+					+ " &> /dev/null"
+				+ " ; mkbfs " + imageFile
+					+ " > /dev/null"
+				+ " ; sync"
+				+ " ; mkdir " + mountPoint
+				+ " ; mount " + imageFile + " " + mountPoint);
+}
+
+// deleteVolume
+void
+BasicTest::deleteVolume(string imageFile, string mountPoint)
+{
+	execCommand(string("sync")
+				+ " ; unmount " + mountPoint
+				+ " ; rmdir " + mountPoint
+				+ " ; rm " + imageFile);
+}
+
