@@ -53,25 +53,36 @@ static void isa_write_io_32( int mapped_io_addr, uint32 value )
 	out32( value, mapped_io_addr );
 }
 
-isa_bus_manager isa_interface = {
-	isa_read_io_8, isa_write_io_8,
-	isa_read_io_16, isa_write_io_16,
-	isa_read_io_32, isa_write_io_32
+static int std_ops(int32 op, ...)
+{
+	switch(op) {
+		case B_MODULE_INIT:
+			isa_init();
+			break;
+		case B_MODULE_UNINIT:
+			isa_uninit();
+			break;
+		default:
+			return EINVAL;
+	}
+	return 0;
+}
+
+static isa_bus_manager isa_module = {
+	{
+		ISA_MODULE_NAME,
+		B_KEEP_LOADED,
+		std_ops
+	},
+	isa_read_io_8, 
+	isa_write_io_8,
+	isa_read_io_16, 
+	isa_write_io_16,
+	isa_read_io_32, 
+	isa_write_io_32
 };
-
-
-static module_header isa_module = {
-	ISA_MODULE_NAME,
-	MODULE_CURR_VERSION,
-	0,
 	
-	&isa_interface,
-	
-	isa_init,
-	isa_uninit
-};
-
-module_header *newos_modules[] = {
-	&isa_module,
+module_info *modules[] = {
+	(module_info*) &isa_module,
 	NULL
 };
