@@ -71,8 +71,8 @@ protected:
 
 private:
 	virtual void Run();
-	
-	void _Inflow() const;
+	void _Inflow();
+	void _SprayEvent(BMidiEvent *) const;
 	static int32 _RunThread(void * data);
 	static int32 _InflowThread(void * data);
 
@@ -80,6 +80,7 @@ private:
 	BList * _con_list;
 	thread_id _run_thread_id;
 	thread_id _inflow_thread_id;
+	port_id _inflow_port;
 	bool _is_running;
 	bool _is_inflowing;
 	bool _keep_running;

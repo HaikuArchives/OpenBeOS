@@ -5,23 +5,32 @@
 #include <iostream.h>
 #include "MidiEvent.h"
 
+#define MSG_CODE_PROCESS_EVENT 1
+#define MSG_CODE_TERMINATE_THREAD 0
+
 //-----------------------------------------------------------------------------
-//
+// Initialization Stuff
 BMidi::BMidi() {
 	_con_list = new BList();
 	_is_running = false;
 	_is_inflowing = false;
+	_inflow_port = create_port(1,"Inflow Port");
 	_inflow_thread_id = spawn_thread(_InflowThread, 
 		"BMidi Inflow Thread", B_REAL_TIME_PRIORITY, (void *)this);
-	status_t ret = resume_thread(_inflow_thread_id);		
+	status_t ret = resume_thread(_inflow_thread_id);
 }
+
 BMidi::~BMidi() {
-	kill_thread(_inflow_thread_id);
+	status_t ret;
+	status_t exit_value;
+	write_port(_inflow_port,MSG_CODE_TERMINATE_THREAD,NULL,0);
+	delete_port(_inflow_port);
+	wait_for_thread(_inflow_thread_id,&exit_value);
 	delete _con_list;
 }
 
 //-----------------------------------------------------------------------------
-//
+// Stubs for midi event hooks.
 void BMidi::NoteOff(uchar chan, uchar note, uchar vel, uint32 time) {
 }
 void BMidi::NoteOn(uchar chan, uchar note, uchar vel, uint32 time) {
@@ -112,6 +121,15 @@ void BMidi::Run() {
 
 //-----------------------------------------------------------------------------
 // Spray Functions
+void BMidi::_SprayEvent(BMidiEvent * e) const {
+	int32 num_connections = _con_list->CountItems();
+	BMidi * m;
+	for(int32 i = 0; i < num_connections; i++) {
+		m = (BMidi *)_con_list->ItemAt(i);
+		write_port(m->_inflow_port,MSG_CODE_PROCESS_EVENT,e,sizeof(*e));
+	}
+}
+
 void BMidi::SprayNoteOff(uchar chan, uchar note, uchar vel,
 	uint32 time) const {
 	BMidiEvent e;
@@ -120,7 +138,7 @@ void BMidi::SprayNoteOff(uchar chan, uchar note, uchar vel,
 	e.data.note_off.channel = chan;
 	e.data.note_off.note = note;
 	e.data.note_off.velocity = vel;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SprayNoteOn(uchar chan, uchar note, uchar vel,
@@ -131,7 +149,7 @@ void BMidi::SprayNoteOn(uchar chan, uchar note, uchar vel,
 	e.data.note_on.channel = chan;
 	e.data.note_on.note = note;
 	e.data.note_on.velocity = vel;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SprayKeyPressure(uchar chan, uchar note, uchar pres,
@@ -142,7 +160,7 @@ void BMidi::SprayKeyPressure(uchar chan, uchar note, uchar pres,
 	e.data.key_pressure.channel = chan;
 	e.data.key_pressure.note = note;
 	e.data.key_pressure.pressure = pres;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SprayControlChange(uchar chan, uchar ctrl_num, uchar ctrl_val,
@@ -153,7 +171,7 @@ void BMidi::SprayControlChange(uchar chan, uchar ctrl_num, uchar ctrl_val,
 	e.data.control_change.channel = chan;
 	e.data.control_change.number = ctrl_num;
 	e.data.control_change.value = ctrl_val;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SprayProgramChange(uchar chan, uchar prog_num,
@@ -163,7 +181,7 @@ void BMidi::SprayProgramChange(uchar chan, uchar prog_num,
 	e.opcode = BMidiEvent::OP_PROGRAM_CHANGE;
 	e.data.program_change.channel = chan;
 	e.data.program_change.number = prog_num;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SprayChannelPressure(uchar chan, uchar pres,
@@ -173,7 +191,7 @@ void BMidi::SprayChannelPressure(uchar chan, uchar pres,
 	e.opcode = BMidiEvent::OP_CHANNEL_PRESSURE;
 	e.data.channel_pressure.channel = chan;
 	e.data.channel_pressure.pressure = pres;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SprayPitchBend(uchar chan, uchar lsb, uchar msb,
@@ -184,7 +202,7 @@ void BMidi::SprayPitchBend(uchar chan, uchar lsb, uchar msb,
 	e.data.pitch_bend.channel = chan;
 	e.data.pitch_bend.lsb = lsb;
 	e.data.pitch_bend.msb = msb;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SpraySystemExclusive(void * data, size_t data_len,
@@ -195,7 +213,7 @@ void BMidi::SpraySystemExclusive(void * data, size_t data_len,
 	e.opcode = BMidiEvent::OP_SYSTEM_EXCLUSIVE;
 	e.data.system_exclusive.data = (uint8 *)data;
 	e.data.system_exclusive.length = data_len;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SpraySystemCommon(uchar stat_byte, uchar data1, uchar data2,
@@ -206,7 +224,7 @@ void BMidi::SpraySystemCommon(uchar stat_byte, uchar data1, uchar data2,
 	e.data.system_common.status = stat_byte;
 	e.data.system_common.data1 = data1;
 	e.data.system_common.data2 = data2;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SpraySystemRealTime(uchar stat_byte, uint32 time) const {
@@ -214,7 +232,7 @@ void BMidi::SpraySystemRealTime(uchar stat_byte, uint32 time) const {
 	e.time = time;
 	e.opcode = BMidiEvent::OP_SYSTEM_REAL_TIME;
 	e.data.system_real_time.status = stat_byte;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 void BMidi::SprayTempoChange(int32 bpm, uint32 time) const {
@@ -222,117 +240,90 @@ void BMidi::SprayTempoChange(int32 bpm, uint32 time) const {
 	e.time = time;
 	e.opcode = BMidiEvent::OP_TEMPO_CHANGE;
 	e.data.tempo_change.beats_per_minute = bpm;
-	send_data(_inflow_thread_id, 0, (void *)&e, sizeof(BMidiEvent));
+	_SprayEvent(&e);
 }
 
 //-----------------------------------------------------------------------------
 // The Inflow Thread
-void BMidi::_Inflow() const {
+void BMidi::_Inflow() {
 	thread_id sender_id;
 	BMidiEvent e;
+	int32 code;
+	status_t ret;
 	while(true) {
-		int32 code = receive_data(&sender_id,(void *)&e,sizeof(BMidiEvent));
-		//lock
-		int32 num_connections = _con_list->CountItems();
+		ret = read_port(_inflow_port,&code,&e,sizeof(e));
+		if(ret != B_OK) {
+			continue;
+		}
+		if(code == MSG_CODE_TERMINATE_THREAD) {
+			return;
+		}
+		// Otherwise we process an event.
 		switch(e.opcode) {
 		case BMidiEvent::OP_NONE:
 		case BMidiEvent::OP_TRACK_END:
 		case BMidiEvent::OP_ALL_NOTES_OFF:
 			break;
 		case BMidiEvent::OP_NOTE_OFF:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					NoteOff(e.data.note_off.channel,
-						e.data.note_off.note,
-						e.data.note_off.velocity,
-						e.time);
-			}
+			NoteOff(e.data.note_off.channel,
+				e.data.note_off.note,
+				e.data.note_off.velocity,
+				e.time);
 			break;
 		case BMidiEvent::OP_NOTE_ON:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					NoteOff(e.data.note_on.channel,
-						e.data.note_on.note,
-						e.data.note_on.velocity,
-						e.time);
-			}
+			NoteOff(e.data.note_on.channel,
+				e.data.note_on.note,
+				e.data.note_on.velocity,
+				e.time);
 			break;
 		case BMidiEvent::OP_KEY_PRESSURE:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					KeyPressure(e.data.key_pressure.channel,
-						e.data.key_pressure.note,
-						e.data.key_pressure.pressure,
-						e.time);
-			}
+			KeyPressure(e.data.key_pressure.channel,
+				e.data.key_pressure.note,
+				e.data.key_pressure.pressure,
+				e.time);
 			break;
 		case BMidiEvent::OP_CONTROL_CHANGE:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					ControlChange(e.data.control_change.channel,
-						e.data.control_change.number,
-						e.data.control_change.value,
-						e.time);
-			}
+			ControlChange(e.data.control_change.channel,
+				e.data.control_change.number,
+				e.data.control_change.value,
+				e.time);
 			break;
 		case BMidiEvent::OP_PROGRAM_CHANGE:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					ProgramChange(e.data.program_change.channel,
-						e.data.program_change.number,
-						e.time);
-			}
+			ProgramChange(e.data.program_change.channel,
+				e.data.program_change.number,
+				e.time);
 			break;
 		case BMidiEvent::OP_CHANNEL_PRESSURE:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					ChannelPressure(e.data.channel_pressure.channel,
-						e.data.channel_pressure.pressure,
-						e.time);
-			}
+			ChannelPressure(e.data.channel_pressure.channel,
+				e.data.channel_pressure.pressure,
+				e.time);
 			break;
 		case BMidiEvent::OP_PITCH_BEND:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					PitchBend(e.data.pitch_bend.channel,
-						e.data.pitch_bend.lsb,
-						e.data.pitch_bend.msb,
-						e.time);
-			}
+			PitchBend(e.data.pitch_bend.channel,
+				e.data.pitch_bend.lsb,
+				e.data.pitch_bend.msb,
+				e.time);
 			break;
 		case BMidiEvent::OP_SYSTEM_EXCLUSIVE:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					SystemExclusive(e.data.system_exclusive.data,
-						e.data.system_exclusive.length,
-						e.time);
-			}
+			SystemExclusive(e.data.system_exclusive.data,
+				e.data.system_exclusive.length,
+				e.time);
 			break;
 		case BMidiEvent::OP_SYSTEM_COMMON:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					SystemCommon(e.data.system_common.status,
-						e.data.system_common.data1,
-						e.data.system_common.data2,
-						e.time);
-			}
+			SystemCommon(e.data.system_common.status,
+				e.data.system_common.data1,
+				e.data.system_common.data2,
+				e.time);
 			break;
 		case BMidiEvent::OP_SYSTEM_REAL_TIME:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					SystemRealTime(e.data.system_real_time.status, e.time);
-			}
+			SystemRealTime(e.data.system_real_time.status, e.time);
 			break;
 		case BMidiEvent::OP_TEMPO_CHANGE:
-			for(int32 i = 0; i < num_connections; i++) {
-				((BMidi *)_con_list->ItemAt(i))->
-					TempoChange(e.data.tempo_change.beats_per_minute, e.time);
-			}
+			TempoChange(e.data.tempo_change.beats_per_minute, e.time);
 			break;
 		default:
 			break;
 		}
-		//unlock
 	}
 }
 
