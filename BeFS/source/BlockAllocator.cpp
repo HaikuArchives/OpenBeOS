@@ -64,6 +64,7 @@ class AllocationGroup {
 		int32 fNumBits;
 		int32 fStart;
 		int32 fFirstFree,fLargest,fLargestFirst;
+		int32 fFreeBits;
 		bool fIsFull;
 };
 
@@ -151,7 +152,8 @@ AllocationGroup::AllocationGroup()
 	fFirstFree(-1),
 	fLargest(-1),
 	fLargestFirst(-1),
-	fIsFull(true)
+	fIsFull(true),
+	fFreeBits(0)
 {
 }
 
@@ -169,6 +171,8 @@ AllocationGroup::AddFreeRange(int32 start, int32 blocks)
 		fLargest = blocks;
 		fLargestFirst = start;
 	}
+
+	fFreeBits += blocks;
 	if (blocks)
 		fIsFull = false;
 }
@@ -219,6 +223,7 @@ BlockAllocator::initialize(BlockAllocator *allocator)
 	Volume *volume = allocator->fVolume;
 	uint32 blocks = allocator->fBlocksPerGroup;
 	uint32 numBits = 8 * blocks * volume->BlockSize();
+	off_t freeBlocks = 0;
 
 	uint32 *buffer = (uint32 *)malloc(numBits >> 3);
 	if (buffer == NULL)
@@ -254,9 +259,19 @@ BlockAllocator::initialize(BlockAllocator *allocator)
 		if (range)
 			groups[i].AddFreeRange(start,range);
 
+		freeBlocks += groups[i].fFreeBits;
+
 		offset += blocks;
 	}
 	free(buffer);
+
+	off_t usedBlocks = volume->NumBlocks() - freeBlocks;
+	if (volume->UsedBlocks() != usedBlocks) {
+		// ToDo: right now, since the super block is not written back anywhere,
+		// it's normal that the values don't match
+		INFORM(("volume reports %Ld used blocks, correct is %Ld\n",volume->UsedBlocks(),usedBlocks));
+		volume->SuperBlock().used_blocks = usedBlocks;
+	}
 
 	return B_OK;
 }

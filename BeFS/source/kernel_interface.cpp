@@ -214,6 +214,12 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 	FUNCTION();
 
 #ifndef USER
+	// If you can't build the file system because of this line, you can either
+	// add the prototype:
+	//	extern int load_driver_symbols(const char *driver_name);
+	// to your KernelExport.h include (since it's missing there in some releases
+	// of BeOS R5), or just uncomment the line, it won't do any harm and is used
+	// only for debugging purposes.
 	load_driver_symbols("obfs");
 #endif
 
