@@ -41,6 +41,11 @@ BPlusTree
  - BPlusTree::RemoveDuplicate() could spread the contents of duplicate node with only a few entries to save some space (right now, only empty nodes are freed)
 
 
+Inode
+
+ - Inode::MakeSpaceForSmallData() needs to be implemented
+
+
 Indices
 
  - Support for Live-Queries is also missing
@@ -60,7 +65,8 @@ Volume
 
 kernel_interface
 
- - missing functions, maybe they are not all needed (but most of them are): bfs_rename(), bfs_rename_attr(), bfs_rename_index(), bfs_remove_index(), bfs_initialize(), bfs_sync(), bfs_setflags(), bfs_fsync(), bfs_link(), bfs_symlink()
+ - missing functions, maybe they are not all needed (but most of them are): bfs_rename_attr(), bfs_rename_index(), bfs_initialize(), bfs_sync(), bfs_setflags(), bfs_fsync(), bfs_link(), bfs_symlink()
+ - bfs_rename() has to be revisited for correctness (especially when something goes wrong)
 
 
 general stuff
@@ -69,6 +75,7 @@ general stuff
  - much more stuff for full write capabilities ...
  - There is still much locking missing
  - There are also some comments with a leading "ToDo:" directly in the code which may not be mentioned here.
+
 
 -----
 Axel Dörfler

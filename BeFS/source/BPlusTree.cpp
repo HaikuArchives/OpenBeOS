@@ -1291,6 +1291,11 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 }
 
 
+/**	Removes the specified key from the tree. The "value" parameter is only used
+ *	for trees which allow duplicates, so you may safely ignore it.
+ *	It's not an optional parameter, so at least you have to think about it.
+ */
+
 status_t
 BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off_t value)
 {

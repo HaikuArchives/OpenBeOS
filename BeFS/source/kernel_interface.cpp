@@ -395,7 +395,7 @@ bfs_remove_vnode(void *_ns, void *_node, char reenter)
 	size_t length;
 	vnode_id id;
 	while ((status = iterator.GetNext(name,&length,&type,&id)) == B_OK) {
-		if (bfs_remove_attr(volume,inode,name) == B_OK) {
+		if (inode->RemoveAttribute(&transaction,name) == B_OK) {
 			// ToDo: Changes in the small_data section should update the
 			// AttributeIterator, so that this wouldn't be necessary
 			iterator.Rewind();
@@ -760,13 +760,93 @@ bfs_unlink(void *_ns, void *_directory, const char *name)
 
 
 int 
-bfs_rename(void *ns, void *oldDir, const char *oldName, void *newDir, const char *newName)
+bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const char *newName)
 {
 	FUNCTION_START(("oldName = \"%s\", newName = \"%s\"\n",oldName,newName));
+	
+	// there may be some more tests needed?!
+	if (_ns == NULL || _oldDir == NULL || _newDir == NULL
+		|| oldName == NULL || *oldName == '\0'
+		|| newName == NULL || *newName == '\0'
+		|| strcmp(oldName,".") || strcmp(oldName,"..")
+		|| strcmp(newName,".") || strcmp(newName,".."))
+		RETURN_ERROR(B_BAD_VALUE);
 
-	// ToDo: implement me!
+	Volume *volume = (Volume *)_ns;
+	Inode *oldDirectory = (Inode *)_oldDir;
+	Inode *newDirectory = (Inode *)_newDir;
 
-	return B_ERROR;
+	// get the directory's tree, and a pointer to the inode which should be changed
+	BPlusTree *tree;
+	status_t status = oldDirectory->GetTree(&tree);
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	off_t id;
+	status = tree->Find((const uint8 *)oldName,strlen(oldName),&id);
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	Vnode vnode(volume,id);
+	Inode *inode;
+	if (vnode.Get(&inode) < B_OK)
+		return B_IO_ERROR;
+
+	// Don't move a directory into one of its children - we soar up
+	// from the newDirectory to either the root node or the old
+	// directory, whichever comes first.
+	// If we meet our inode on that way, we have to bail out.
+
+	if (oldDirectory != newDirectory) {
+		vnode_id parent = volume->ToVnode(newDirectory->Parent());
+		vnode_id root = volume->RootNode()->ID();
+		while (true)
+		{
+			if (parent == id)
+				return B_BAD_VALUE;
+			else if (parent == root || parent == oldDirectory->ID())
+				break;
+
+			Vnode vnode(volume,parent);
+			Inode *parentNode;
+			if (vnode.Get(&parentNode) < B_OK)
+				return B_ERROR;
+
+			parent = volume->ToVnode(parentNode->Parent());
+		}
+	}
+
+	// Everything okay? Then lets get to work...
+
+	Transaction transaction(volume,oldDirectory->BlockNumber());
+
+	if (inode->SetName(&transaction,newName) < B_OK)
+		return status;
+
+	status = tree->Remove(&transaction,(const uint8 *)oldName,strlen(oldName),id);
+	if (status < B_OK)
+		return status;
+
+	Index index(volume);
+	index.UpdateName(&transaction,oldName,newName,id);
+
+	if (newDirectory != oldDirectory) {
+		status = newDirectory->GetTree(&tree);
+		if (status < B_OK)
+			RETURN_ERROR(status);
+	}
+	
+	status = tree->Insert(&transaction,(const uint8 *)newName,strlen(newName),id);
+	if (status < B_OK)
+		return status;
+
+	inode->Node()->parent = newDirectory->BlockRun();
+	status = inode->WriteBack(&transaction);
+
+	if (status == B_OK)	
+		transaction.Done();
+
+	return status;
 }
 
 
@@ -777,7 +857,6 @@ static int
 bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 {
 	FUNCTION();
-
 	if (_ns == NULL || _node == NULL || _cookie == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
@@ -1214,56 +1293,7 @@ bfs_remove_attr(void *_ns, void *_node, const char *name)
 
 	Transaction transaction(volume,inode->BlockNumber());
 
-	Index index(volume);
-	bool hasIndex = index.SetTo(name) == B_OK;
-
-	// update index for attributes in the small_data section
-	if (hasIndex) {
-		small_data *smallData = inode->FindSmallData(name);
-		if (smallData != NULL) {
-			uint32 length = smallData->data_size;
-			if (length > BPLUSTREE_MAX_KEY_LENGTH)
-				length = BPLUSTREE_MAX_KEY_LENGTH;
-			index.Update(&transaction,name,0,smallData->Data(),length,NULL,0,inode->ID());
-		}
-	}
-
-	if ((status = inode->RemoveSmallData(&transaction,name)) == B_OK) {
-		status = inode->WriteBack(&transaction);
-	} else if (status == B_ENTRY_NOT_FOUND && !inode->Attributes().IsZero()) {
-		// remove the attribute file if it exists
-		Vnode vnode(volume,inode->Attributes());
-		Inode *attributes;
-		if ((status = vnode.Get(&attributes)) < B_OK)
-			return status;
-
-		// update index
-		Inode *attribute;
-		if (hasIndex && inode->GetAttribute(name,&attribute) == B_OK) {
-			uint8 data[BPLUSTREE_MAX_KEY_LENGTH];
-			size_t length = BPLUSTREE_MAX_KEY_LENGTH;
-			if (attribute->ReadAt(0,data,&length) == B_OK)
-				index.Update(&transaction,name,0,data,length,NULL,0,inode->ID());
-
-			inode->ReleaseAttribute(attribute);
-		}
-
-		if ((status = attributes->Remove(&transaction,name)) < B_OK)
-			return status;
-
-		if (attributes->IsEmpty()) {
-			// remove attribute directory (don't fail if to remove the
-			// attribute if that fails)
-			if (remove_vnode(volume->ID(),attributes->ID()) == B_OK) {
-				// update the inode, so that no one will ever doubt it's deleted :-)
-				attributes->Node()->flags |= INODE_DELETED;
-				if (attributes->WriteBack(&transaction) == B_OK) {
-					inode->Attributes().SetTo(0,0,0);
-					inode->WriteBack(&transaction);
-				}
-			}
-		}
-	}
+	status = inode->RemoveAttribute(&transaction,name);
 	if (status == B_OK)
 		transaction.Done();
 
@@ -1326,65 +1356,15 @@ bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *bu
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
+	status_t status = inode->CheckPermissions(W_OK);
+	if (status < B_OK)
+		return status;
+
 	Transaction transaction(volume,inode->BlockNumber());
 
-	// needed to maintain the index
-	uint8 oldBuffer[BPLUSTREE_MAX_KEY_LENGTH],*oldData = NULL;
-	size_t oldLength = 0;
-
-	Index index(volume);
-	bool hasIndex = index.SetTo(name) == B_OK;
-
-	Inode *attribute = NULL;
-	status_t status;
-	if (inode->GetAttribute(name,&attribute) < B_OK) {
-		// save the old attribute data
-		if (hasIndex) {
-			small_data *smallData = inode->FindSmallData(name);
-			if (smallData != NULL) {
-				oldLength = smallData->data_size;
-				if (oldLength > BPLUSTREE_MAX_KEY_LENGTH)
-					oldLength = BPLUSTREE_MAX_KEY_LENGTH;
-				memcpy(oldData = oldBuffer,smallData->Data(),oldLength);
-			}
-		}
-
-		// if the attribute doesn't exist yet (as a file), try to put it in the
-		// small_data section first - if that fails (due to insufficent space),
-		// create a real attribute file
-		status = inode->AddSmallData(&transaction,name,type,(const uint8 *)buffer,*_length);
-		if (status == B_DEVICE_FULL) {
-			status = inode->CreateAttribute(&transaction,name,type,&attribute);
-			if (status < B_OK)
-				RETURN_ERROR(status);
-		} else if (status == B_OK)
-			status = inode->WriteBack(&transaction);
-	}
-
-	if (attribute != NULL) {
-		// save the old attribute data (if this fails, oldLength will reflect it)
-		if (hasIndex) {
-			oldLength = BPLUSTREE_MAX_KEY_LENGTH;
-			if (attribute->ReadAt(0,oldBuffer,&oldLength) == B_OK)
-				oldData = oldBuffer;
-		}
-		status = attribute->WriteAt(&transaction,pos,(const uint8 *)buffer,_length);
-		inode->ReleaseAttribute(attribute);
-	}
-
-	if (status == B_OK) {
-		// ToDo: find a better way for that "pos" thing...
-		// Update index
-		if (hasIndex && pos == 0) {
-			// index only the first BPLUSTREE_MAX_KEY_LENGTH bytes
-			uint16 length = *_length;
-			if (length > BPLUSTREE_MAX_KEY_LENGTH)
-				length = BPLUSTREE_MAX_KEY_LENGTH;
-
-			index.Update(&transaction,name,0,oldData,oldLength,(const uint8 *)buffer,length,inode->ID());
-		}
+	status = inode->WriteAttribute(&transaction,name,type,pos,(const uint8 *)buffer,_length);
+	if (status == B_OK)
 		transaction.Done();
-	}
 
 	return status;
 }
@@ -1516,6 +1496,10 @@ bfs_create_index(void *_ns, const char *name, int type, int flags)
 	if (volume->IsReadOnly())
 		return B_READ_ONLY_DEVICE;
 
+	// only root users are allowed to create indices
+	if (geteuid() != 0)
+		return B_NOT_ALLOWED;
+
 	Transaction transaction(volume,volume->Indices());
 
 	Index index(volume);
@@ -1529,13 +1513,33 @@ bfs_create_index(void *_ns, const char *name, int type, int flags)
 
 
 int 
-bfs_remove_index(void *ns, const char *name)
+bfs_remove_index(void *_ns, const char *name)
 {
 	FUNCTION();
+	if (_ns == NULL || name == NULL || *name == '\0')
+		return B_BAD_VALUE;
 
-	// ToDo: implement me!
+	Volume *volume = (Volume *)_ns;
 
-	RETURN_ERROR(B_ENTRY_NOT_FOUND);
+	if (volume->IsReadOnly())
+		return B_READ_ONLY_DEVICE;
+
+	// only root users are allowed to remove indices
+	if (geteuid() != 0)
+		return B_NOT_ALLOWED;
+
+	Inode *indices;
+	if ((indices = volume->IndicesNode()) == NULL)
+		return B_ENTRY_NOT_FOUND;
+
+	Transaction transaction(volume,volume->Indices());
+
+	status_t status = indices->Remove(&transaction,name);
+
+	if (status == B_OK)
+		transaction.Done();
+
+	RETURN_ERROR(status);
 }
 
 

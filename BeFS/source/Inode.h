@@ -123,8 +123,11 @@ class Inode : public CachedBlock {
 
 		mode_t Mode() const { return Node()->mode; }
 		int32 Flags() const { return Node()->flags; }
-		bool IsDirectory() const { return Node()->mode & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR); }
-		bool IsSymLink() const { return S_ISLNK(Node()->mode); }
+		bool IsDirectory() const { return Mode() & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR); }
+		bool IsIndex() const { return (Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR; }
+			// that's a stupid check, but AFAIK the only possible method...
+
+		bool IsSymLink() const { return S_ISLNK(Mode()); }
 
 		off_t Size() const { return Node()->data.size; }
 
@@ -145,6 +148,10 @@ class Inode : public CachedBlock {
 		small_data *FindSmallData(const char *name) const;
 		const char *Name() const;
 		status_t SetName(Transaction *transaction,const char *name);
+
+		// high-level attribute methods
+		status_t WriteAttribute(Transaction *transaction, const char *name, int32 type, off_t pos, const uint8 *buffer, size_t *_length);
+		status_t RemoveAttribute(Transaction *transaction, const char *name);
 
 		// attribute methods
 		status_t GetAttribute(const char *name,Inode **attribute);

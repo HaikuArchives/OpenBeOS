@@ -421,7 +421,135 @@ Inode::SetName(Transaction *transaction,const char *name)
 }
 
 
-//	#pragma mark -
+/**	Writes data to the specified attribute.
+ *	This is a high-level attribute function that understands attributes
+ *	in the small_data section as well as real attribute files.
+ */
+
+status_t
+Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t pos,const uint8 *buffer,size_t *_length)
+{
+	// needed to maintain the index
+	uint8 oldBuffer[BPLUSTREE_MAX_KEY_LENGTH],*oldData = NULL;
+	size_t oldLength = 0;
+
+	Index index(fVolume);
+	bool hasIndex = index.SetTo(name) == B_OK;
+
+	Inode *attribute = NULL;
+	status_t status;
+	if (GetAttribute(name,&attribute) < B_OK) {
+		// save the old attribute data
+		if (hasIndex) {
+			small_data *smallData = FindSmallData(name);
+			if (smallData != NULL) {
+				oldLength = smallData->data_size;
+				if (oldLength > BPLUSTREE_MAX_KEY_LENGTH)
+					oldLength = BPLUSTREE_MAX_KEY_LENGTH;
+				memcpy(oldData = oldBuffer,smallData->Data(),oldLength);
+			}
+		}
+
+		// if the attribute doesn't exist yet (as a file), try to put it in the
+		// small_data section first - if that fails (due to insufficent space),
+		// create a real attribute file
+		status = AddSmallData(transaction,name,type,buffer,*_length);
+		if (status == B_DEVICE_FULL) {
+			status = CreateAttribute(transaction,name,type,&attribute);
+			if (status < B_OK)
+				RETURN_ERROR(status);
+		} else if (status == B_OK)
+			status = WriteBack(transaction);
+	}
+
+	if (attribute != NULL) {
+		// save the old attribute data (if this fails, oldLength will reflect it)
+		if (hasIndex) {
+			oldLength = BPLUSTREE_MAX_KEY_LENGTH;
+			if (attribute->ReadAt(0,oldBuffer,&oldLength) == B_OK)
+				oldData = oldBuffer;
+		}
+		status = attribute->WriteAt(transaction,pos,buffer,_length);
+		ReleaseAttribute(attribute);
+	}
+
+	if (status == B_OK) {
+		// ToDo: find a better way for that "pos" thing...
+		// Update index
+		if (hasIndex && pos == 0) {
+			// index only the first BPLUSTREE_MAX_KEY_LENGTH bytes
+			uint16 length = *_length;
+			if (length > BPLUSTREE_MAX_KEY_LENGTH)
+				length = BPLUSTREE_MAX_KEY_LENGTH;
+
+			index.Update(transaction,name,0,oldData,oldLength,buffer,length,ID());
+		}
+	}
+	return status;
+}
+
+
+/**	Removes the specified attribute from the inode.
+ *	This is a high-level attribute function that understands attributes
+ *	in the small_data section as well as real attribute files.
+ */
+
+status_t
+Inode::RemoveAttribute(Transaction *transaction,const char *name)
+{
+	Index index(fVolume);
+	bool hasIndex = index.SetTo(name) == B_OK;
+
+	// update index for attributes in the small_data section
+	if (hasIndex) {
+		small_data *smallData = FindSmallData(name);
+		if (smallData != NULL) {
+			uint32 length = smallData->data_size;
+			if (length > BPLUSTREE_MAX_KEY_LENGTH)
+				length = BPLUSTREE_MAX_KEY_LENGTH;
+			index.Update(transaction,name,0,smallData->Data(),length,NULL,0,ID());
+		}
+	}
+
+	status_t status = RemoveSmallData(transaction,name);
+	if (status == B_OK) {
+		status = WriteBack(transaction);
+	} else if (status == B_ENTRY_NOT_FOUND && !Attributes().IsZero()) {
+		// remove the attribute file if it exists
+		Vnode vnode(fVolume,Attributes());
+		Inode *attributes;
+		if ((status = vnode.Get(&attributes)) < B_OK)
+			return status;
+
+		// update index
+		Inode *attribute;
+		if (hasIndex && GetAttribute(name,&attribute) == B_OK) {
+			uint8 data[BPLUSTREE_MAX_KEY_LENGTH];
+			size_t length = BPLUSTREE_MAX_KEY_LENGTH;
+			if (attribute->ReadAt(0,data,&length) == B_OK)
+				index.Update(transaction,name,0,data,length,NULL,0,ID());
+
+			ReleaseAttribute(attribute);
+		}
+
+		if ((status = attributes->Remove(transaction,name)) < B_OK)
+			return status;
+
+		if (attributes->IsEmpty()) {
+			// remove attribute directory (don't fail if to remove the
+			// attribute if that fails)
+			if (remove_vnode(fVolume->ID(),attributes->ID()) == B_OK) {
+				// update the inode, so that no one will ever doubt it's deleted :-)
+				attributes->Node()->flags |= INODE_DELETED;
+				if (attributes->WriteBack(transaction) == B_OK) {
+					Attributes().SetTo(0,0,0);
+					WriteBack(transaction);
+				}
+			}
+		}
+	}
+	return status;
+}
 
 
 status_t
@@ -483,6 +611,9 @@ Inode::CreateAttribute(Transaction *transaction,const char *name,uint32 type,Ino
 	}
 	return status;
 }
+
+
+//	#pragma mark -
 
 
 /**	Gives the caller direct access to the b+tree for a given directory.
@@ -1205,13 +1336,19 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 		return B_ENTRY_NOT_FOUND;
 	}
 
-	// if it's not of the correct type, don't delete it!
-	if (inode->IsDirectory() != isDirectory)
-		return isDirectory ? B_NOT_A_DIRECTORY : B_IS_A_DIRECTORY;
-	
-	// only delete empty directories
-	if (isDirectory && !inode->IsEmpty())
-		return B_DIRECTORY_NOT_EMPTY;
+	// It's a bit stupid, but indices are regarded as directories
+	// in BFS - so a test for a directory always succeeds, but you
+	// should really be able to do whatever you want with your indices
+	// without having to remove all files first :)
+	if (!inode->IsIndex()) {
+		// if it's not of the correct type, don't delete it!
+		if (inode->IsDirectory() != isDirectory)
+			return isDirectory ? B_NOT_A_DIRECTORY : B_IS_A_DIRECTORY;
+
+		// only delete empty directories
+		if (isDirectory && !inode->IsEmpty())
+			return B_DIRECTORY_NOT_EMPTY;
+	}
 
 	// remove_vnode() allows the inode to be accessed until the last put_vnode()
 	if (remove_vnode(fVolume->ID(),id) != B_OK)

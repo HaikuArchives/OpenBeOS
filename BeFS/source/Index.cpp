@@ -212,8 +212,6 @@ Index::Update(Transaction *transaction,const char *name,int32 type,const uint8 *
 	if (name != fName && (status = SetTo(name)) < B_OK)
 		return B_BAD_INDEX;
 
-if (Type() == B_STRING_TYPE)
-	PRINT(("Index::Update(name = %s): oldKey = \"%s\" (%u), newKey = \"%s\" (%u)\n",name,oldKey,oldLength,newKey,newLength));
 	// now that we have the type, check again for equality
 	if (type == 0 && !compareKeys(Type(),oldKey,oldLength,newKey,newLength))
 		return B_OK;
