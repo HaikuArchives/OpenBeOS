@@ -1,6 +1,9 @@
 /* raw.c */
 
+#ifndef _KERNEL_MODE
 #include <stdio.h>
+#include <string.h>
+#endif
 
 #include "mbuf.h"
 #include "sys/protosw.h"
@@ -12,10 +15,11 @@
 #include "netinet/in_var.h"
 #include "netinet/ip_var.h"
 
+#include "ipv4/ipv4_module.h"
+
 #ifdef _KERNEL_MODE
 #include "net_server/core_module.h"
 #include <KernelExport.h>
-#include "ipv4/ipv4_module.h"
 #include "raw/raw_module.h"
 
 #define m_copym             core->m_copym
@@ -37,10 +41,12 @@
 #define get_interfaces      core->get_interfaces
 
 static struct core_module_info *core = NULL;
-static struct ipv4_module_info *ipm = NULL;
 #else
 #define RAW_MODULE_PATH              "modules/protocols/raw"
+static image_id ipid;
 #endif
+
+static struct ipv4_module_info *ipm = NULL;
 
 static struct inpcb rawinpcb;
 static struct sockaddr_in ripsrc;
@@ -119,24 +125,19 @@ int rip_output(struct mbuf *m, struct socket *so, uint32 dst)
 		 * order...this is lame... */
 		ip->ip_len = ntohs(ip->ip_len);
 		if (ip->ip_id == 0)
-#ifdef _KERNEL_MODE
 			if (ipm)
 				ip->ip_id = htons(ipm->ip_id());
-#else
-			ip->ip_id = 1;// XXX - fix me!!! htons(ip_id++);
-#endif
+
 		opts = NULL;
 		flags |= IP_RAWOUTPUT;
 		ipstat.ips_rawout++;
 	}
 
-#ifdef _KERNEL_MODE
 	if (ipm) {
-		printf("calling ip output!\n");
-		return ipm->ip_output(m, opts, &inp->inp_route, flags, NULL);
+		printf("rip_output: calling ip output!\n");
+		return ipm->output(m, opts, &inp->inp_route, flags, NULL);
 	}
 	/* XXX - last arg should be inp->inp_moptions when we have multicast */
-#endif
 
 	return 0;
 }
@@ -311,6 +312,26 @@ static void rip_protocol_init(void)
 {
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_protocol, AF_INET);
+
+	if (!ipm) {
+		char path[PATH_MAX];
+		getcwd(path, PATH_MAX);
+		strcat(path, "/" IPV4_MODULE_PATH);
+
+		ipid = load_add_on(path);
+		if (ipid > 0) {
+			status_t rv = get_image_symbol(ipid, "ipv4_module_info",
+								B_SYMBOL_TYPE_DATA, (void**)&ipm);
+			if (rv < 0) {
+				printf("Failed to get access to IPv4 information!\n");
+				return;
+			}
+		} else { 
+			printf("Failed to load the IPv4 module...%ld [%s]\n", 
+			       ipid, strerror(ipid));
+			return;
+		}
+	}
 }
 
 struct protocol_info protocol_info = {
