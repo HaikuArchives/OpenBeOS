@@ -23,6 +23,8 @@
 #define SHOW_INSANE_DEBUGGING	0
 #define SERIAL_DEBUGGING	1
 
+_EXPORT int32 api_version = B_CUR_DRIVER_API_VERSION;
+
 /* static variables... */
 struct core_module_info *core = NULL;
 
@@ -43,6 +45,7 @@ status_t init_hardware (void)
 {
         bool safemode = false;
         void *sfmptr;
+		int rv;
 
         /* get a pointer to the driver settings... */
         sfmptr = load_driver_settings(B_SAFEMODE_DRIVER_SETTINGS);
@@ -63,6 +66,8 @@ status_t init_hardware (void)
 #if SERIAL_DEBUGGING	
 	/* XXX - switch on/off at top of file... */
         set_dprintf_enabled(true);
+		rv = load_driver_symbols("net/socket");
+		dprintf("load-driver_symbols gave %d\n", rv);
 #endif
 
         return B_OK;
@@ -84,6 +89,8 @@ status_t init_driver (void)
 	/* switch on/off at top of file */
 	/* XXX ??? - do we need this here? */
 	set_dprintf_enabled(true);
+	rv = load_driver_symbols("net/socket");
+	dprintf("load-driver_symbols gave %d\n", rv);
 #endif
 
 	rv = get_module(CORE_MODULE_PATH, (module_info **)&core);
@@ -199,6 +206,8 @@ static status_t net_socket_control(void *cookie,
 		case NET_SOCKET_SELECT: {
 			struct select_args *sa = (struct select_args *)data;
 			int i;
+			struct timeval tv;
+			
 		dprintf("NET_SOCKET_SELECT, mfd = %d\n", sa->mfd);	
 			for (i=2; i < sa->mfd;i++) {
 				dprintf("socket %d: ", i);
@@ -212,7 +221,10 @@ static status_t net_socket_control(void *cookie,
 				dprintf("\n");
 			}
 			
-			i = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, sa->tv);
+			tv.tv_sec = 1;
+			tv.tv_usec = 0;
+			
+			i = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, &tv);
 			dprintf("kernel select returned %d\n", i);
 			return i;
 		}
@@ -238,7 +250,16 @@ static status_t net_socket_control(void *cookie,
 			if (error == 0)
 				return retsize;
 			return error;
-		}	
+		}
+		case NET_SOCKET_SYSCTL:
+		{
+			struct sysctl_args *sa = (struct sysctl_args*)data;
+
+			sa->rv = core->net_sysctl(sa->name, sa->namelen,
+			                          sa->oldp, sa->oldlenp,
+			                          sa->newp, sa->newlen);
+			return sa->rv;
+		}
 		default:
 			return core->soo_ioctl(cookie, op, data);
 	}
@@ -272,6 +293,7 @@ static status_t net_socket_select(void *cookie,
 	dprintf("\tref = %ld\n", ref);;
 	dprintf("\tsync = %p\n", sync);
 	
+	
 	return B_OK;
 }
 
@@ -279,7 +301,7 @@ static status_t net_socket_deselect(void *cookie,
                                     uint8 event,
                                     selectsync *sync)
 {
-	dprintf("net_socket_select!\n");
+	dprintf("net_socket_deselect!\n");
 	dprintf("event = %d\n", event);
 	dprintf("sync = %p\n", sync);
 
