@@ -6,7 +6,7 @@
 //  by the OpenBeOS license.
 //
 //
-//  File:        listimage.c
+//  File:        listarea.c
 //  Author:      Daniel Reinhold (danielre@users.sf.net)
 //  Description: lists area info for all currently running teams
 //
@@ -14,7 +14,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <image.h>
 #include <OS.h>
 
 
