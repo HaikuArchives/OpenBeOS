@@ -15,7 +15,7 @@
 #include <Looper.h>
 
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
 
@@ -72,7 +72,7 @@ inline bool BAutolock::IsLocked()
 }
 
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 }
 #endif
 

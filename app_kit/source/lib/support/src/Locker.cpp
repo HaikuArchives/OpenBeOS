@@ -10,7 +10,7 @@
 #include <SupportDefs.h>
 
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
 
@@ -292,6 +292,6 @@ BLocker::AcquireLock(bigtime_t timeout,
 }
 
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 }
 #endif

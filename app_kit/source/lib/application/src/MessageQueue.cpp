@@ -10,8 +10,7 @@
 #include "Autolock.h"
 #include "Message.h"
 
-#ifdef OPENBEOS
-
+#ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
 
@@ -395,6 +394,6 @@ BMessageQueue::_ReservedMessageQueue3(void)
 {
 }
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 }
 #endif

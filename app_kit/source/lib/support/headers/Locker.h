@@ -14,7 +14,7 @@
 #include <SupportDefs.h>
 
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
 
@@ -55,7 +55,7 @@ private:
 	int32 fReservedSpace[4];
 };
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 }
 #endif
 

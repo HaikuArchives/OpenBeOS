@@ -17,7 +17,7 @@
 class BMessage;
 
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
 
@@ -59,7 +59,7 @@ private:
 	uint32 fReservedSpace[3];
 };
 
-#ifdef OPENBEOS
+#ifdef USE_OPENBEOS_NAMESPACE
 }
 #endif
 

@@ -88,7 +88,7 @@ OPTIMIZE= NONE
 #	to use.  For example, setting DEFINES to "DEBUG=1" will cause the
 #	compiler option "-DDEBUG=1" to be used.  Setting DEFINES to "DEBUG"
 #	would pass "-DDEBUG" on the compiler's command line.
-DEFINES= OPENBEOS
+DEFINES= USE_OPENBEOS_NAMESPACE
 
 #	specify special warning levels
 #	if unspecified default warnings will be used
