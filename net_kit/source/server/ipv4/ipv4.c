@@ -44,7 +44,7 @@ int ipv4_input(struct mbuf *buf)
 			break;
 		case IP_UDP:
 			printf("UDP\n");
-			udp_input(buf);
+			run_input(PROT_UDP, buf);
 			break;
 		case IP_TCP:
 			printf("TCP\n");

@@ -12,5 +12,7 @@
 
 #define 	PROT_IPV6		0x86dd
 
+#define		PROT_UDP		17
+
 #endif /* OBOS_PROTOCOLS_H */
 

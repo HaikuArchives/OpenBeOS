@@ -8,6 +8,8 @@
 #include <kernel/OS.h>
 #include <ByteOrder.h>
 
+#include "mbuf.h"
+
 /* This idea taken from newos. Type independant address storage
  */
 
@@ -32,5 +34,8 @@ enum {
 	ADDR_TYPE_IPV4		= 1, /* IPv4 address */
 	ADDR_TYPE_IPV6		= 2, /* IPv6 address */
 };
+
+/* Hack - just playing! */
+int run_input(int proto, struct mbuf *buf);
 
 #endif /* OBOS_NET_MISC_H */
