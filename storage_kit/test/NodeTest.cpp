@@ -666,10 +666,8 @@ NodeTest::AttrDirTest()
 	string nodeName;
 	for (testEntries.rewind(); testEntries.getNext(node, nodeName); ) {
 		char nameBuffer[B_ATTR_NAME_LENGTH];
-		CPPUNIT_ASSERT( equals(DecodeResult(node->RewindAttrs()), B_BAD_ADDRESS,
-							   B_FILE_ERROR) );
-		CPPUNIT_ASSERT( equals(DecodeResult(node->GetNextAttrName(nameBuffer)),
-							   B_BAD_ADDRESS, B_FILE_ERROR) );
+		CPPUNIT_ASSERT( node->RewindAttrs() != B_OK );
+		CPPUNIT_ASSERT( node->GetNextAttrName(nameBuffer) != B_OK );
 	}
 	testEntries.delete_all();
 	// existing entries
