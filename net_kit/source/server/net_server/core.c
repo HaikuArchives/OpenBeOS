@@ -16,15 +16,12 @@
 #include <Drivers.h>
 #include <module.h>
 #include <KernelExport.h>
-
 #define spawn_thread spawn_kernel_thread
-
 #endif
 
 #include <driver_settings.h>
 
 #include "core_module.h"
-
 #include "sys/socket.h"
 #include "sys/socketvar.h"
 #include "net/if.h"	/* for ifnet definition */
@@ -43,23 +40,33 @@
 #include "net/if_arp.h"
 #include "netinet/if_ether.h"
 
-struct ifnet *devices = NULL;
-struct ifnet *pdevices = NULL;		/* pseudo devices - loopback etc */
-int ndevs = 0;
-sem_id dev_lock;
-
+/* Defines we need */
 #define NETWORK_INTERFACES	"network/interface"
 #define NETWORK_PROTOCOLS	"network/protocol"
 
+/* Variables used in other core modules */
+int ndevs = 0;
+
+/* Static variables, used only in this file */
+struct ifnet *devices  = NULL;
+struct ifnet *pdevices = NULL;
+static sem_id dev_lock = -1;
+static sem_id proto_lock = -1;
+static sem_id dom_lock = -1;
+static int timer_on = 0;
+static int init_done = 0;
+
 /* Forward prototypes... */
+/* Private for this file */
 static status_t core_std_ops(int32 op, ...);
 static int start_stack(void);
 static int stop_stack(void);
-int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
-               void *newp, size_t newlen);
 static void add_protosw(struct protosw *[], int layer);
 static struct in_ifaddr *get_primary_addr(void);
 static struct net_module *module_list = NULL;
+/* Wider scoped prototypes */
+int net_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
+               void *newp, size_t newlen);
 
 _EXPORT struct core_module_info core_info = {
 	{
@@ -71,6 +78,7 @@ _EXPORT struct core_module_info core_info = {
 	start_stack,
 	stop_stack,
 	add_domain,
+	remove_domain,
 	add_protocol,
 	remove_protocol,
 	add_protosw,
@@ -411,9 +419,9 @@ static void close_devices(void)
 		kill_thread(d->rx_thread);
 		kill_thread(d->tx_thread);
 		close(d->devid);
-		d->if_flags &= ~IFF_RUNNING;		
-		d = d->if_next;
+		d = d->if_next;		
 	}
+	devices = NULL;
 }
 
 static struct domain af_inet_domain = {
@@ -439,6 +447,7 @@ void add_domain(struct domain *dom, int fam)
 			return;
 	}	
 
+	acquire_sem_etc(dom_lock, 1, B_CAN_INTERRUPT, 0);
 	if (dom == NULL) {
 		/* we're trying to add a builtin domain! */
 
@@ -451,7 +460,8 @@ void add_domain(struct domain *dom, int fam)
 					dm->dom_next = ndm;
 				else
 					domains = ndm;
-				return;
+				/* avoids too many release_sem_etc... */
+				goto domain_done;
 			default:
 				printf("Don't know how to add domain %d\n", fam);
 		}
@@ -464,35 +474,54 @@ void add_domain(struct domain *dom, int fam)
 		else
 			domains = dom;
 	}
+domain_done:
+	release_sem_etc(dom_lock, 1, B_CAN_INTERRUPT);
 	return;
 }
+
+#ifdef SHOW_DEBUG
+void walk_protocols(void)
+{
+	struct protosw *pr = protocols;
+	printf("Protocols:\n");	
+	for (;pr;pr = pr->pr_next) {
+		printf("    Protocol %s (%p)->(%p)\n", pr->name, pr, pr->pr_next);
+	}
+	printf("End of Protocol list\n");
+}
+#endif
 
 void add_protocol(struct protosw *pr, int fam)
 {
 	struct protosw *psw = protocols;
 	struct domain *dm = domains;
-	
+
 	/* first find the correct domain... */
-	for (; dm; dm= dm->dom_next) {
+	for (;dm; dm = dm->dom_next) {
 		if (dm->dom_family == fam)
 			break;
 	}
-
+	
 	if (dm == NULL) {
 		printf("Unable to add protocol due to no domain available!\n");
 		return;
 	}
-	
+
+	acquire_sem_etc(proto_lock, 1, B_CAN_INTERRUPT, 0);
 	/* OK, we can add it... */
 	for (;psw;psw = psw->pr_next) {
 		if (psw->pr_type == pr->pr_type &&
 		    psw->pr_protocol == pr->pr_protocol &&
 		    psw->pr_domain == dm) {
-		    printf("duplicate protocol detected!!\n");
+			release_sem_etc(proto_lock, 1, B_CAN_INTERRUPT);
+		    printf("Duplicate protocol detected (%s)!!\n", pr->name);
 			return;
 		}
 	}
 
+	pr->pr_next = NULL;
+	pr->dom_next = NULL;
+	pr->pr_domain = NULL;
 	/* find last entry in protocols list */
 	if (protocols) {
 		for (psw = protocols;psw->pr_next; psw = psw->pr_next)
@@ -501,18 +530,20 @@ void add_protocol(struct protosw *pr, int fam)
 	} else
 		protocols = pr;
 
+	release_sem_etc(proto_lock, 1, B_CAN_INTERRUPT);
+	
 	pr->pr_domain = dm;
 
 	/* Now add to domain */
+	acquire_sem_etc(dom_lock, 1, B_CAN_INTERRUPT, 0);
 	if (dm->dom_protosw) {
 		psw = dm->dom_protosw;
 		for (;psw->dom_next;psw = psw->dom_next)
 			continue;
 		psw->dom_next = pr;
-	} else {
+	} else
 		dm->dom_protosw = pr;
-	}
-
+	release_sem_etc(dom_lock, 1, B_CAN_INTERRUPT);
 	return;
 }
 
@@ -521,6 +552,7 @@ void remove_protocol(struct protosw *pr)
 	struct protosw *psw = protocols, *opr = NULL;
 	struct domain *dm;
 	
+	acquire_sem_etc(proto_lock, 1, B_CAN_INTERRUPT, 0);
 	for (;psw;psw = psw->pr_next) {
 		if (psw == pr) {
 			if (opr) {
@@ -533,8 +565,13 @@ void remove_protocol(struct protosw *pr)
 		}
 		opr = psw;
 	}
+	pr->pr_next = NULL;
+	
 	dm = pr->pr_domain;
 	opr = NULL;
+	
+	acquire_sem_etc(dom_lock, 1, B_CAN_INTERRUPT, 0);
+
 	for (psw = dm->dom_protosw; psw; psw = psw->dom_next) {
 		if (psw == pr) {
 			if (opr) 
@@ -545,6 +582,51 @@ void remove_protocol(struct protosw *pr)
 		}
 		opr = psw;
 	}
+
+	release_sem_etc(dom_lock, 1, B_CAN_INTERRUPT);
+	release_sem_etc(proto_lock, 1, B_CAN_INTERRUPT);
+
+	pr->dom_next = NULL;
+	pr->pr_domain = NULL;
+}
+
+static void walk_domains(void)
+{
+	struct domain *d;
+	struct protosw *p;
+	
+	for (d = domains;d;d = d->dom_next) {
+		p = d->dom_protosw;
+		for (;p;p = p->dom_next) {
+			printf("\t%s provided by %s\n", p->name, p->mod_path);
+		}
+	}
+}
+
+void remove_domain(int fam)
+{
+	struct domain *dmp = domains, *opr;
+
+	for (; dmp; dmp = dmp->dom_next) {
+		if (dmp->dom_family == fam)
+			break;
+		opr = dmp;
+	}
+	if (!dmp || dmp->dom_protosw != NULL)
+		return;
+
+	acquire_sem_etc(dom_lock, 1, B_CAN_INTERRUPT, 0);
+	/* we're ok to remove it! */
+	if (opr)
+		opr->dom_next = dmp->dom_next;
+	else
+		domains = dmp->dom_next;
+	dmp->dom_next = NULL;
+	if (dmp->dom_family == AF_INET)
+		free(dmp);
+	release_sem_etc(dom_lock, 1, B_CAN_INTERRUPT);
+	
+	return;
 }
 
 static void add_protosw(struct protosw *prt[], int layer)
@@ -579,19 +661,6 @@ static void domain_init(void)
 	}
 }
 
-static void walk_domains(void)
-{
-	struct domain *d;
-	struct protosw *p;
-	
-	for (d = domains;d;d = d->dom_next) {
-		printf("Domain: %s\n", d->dom_name);
-		p = d->dom_protosw;
-		for (;p;p = p->dom_next) {
-			printf("\t%s provided by %s\n", p->name, p->mod_path);
-		}
-	}
-}
 
 /* Add protocol modules. Each module is loaded and this triggers
  * the init routine which should call the add_domain and add_protocol
@@ -760,7 +829,6 @@ printf("userland: find_protocol_modules...\n");
 			status = get_image_symbol(nm->iid, "protocol_info",
 						B_SYMBOL_TYPE_DATA, (void**)&nm->ptr);
 			if (status == B_OK) {
-			printf("loaded %s ok\n", path);
 				nm->next = module_list;
 				module_list = nm;
 				nm->ptr->start(&core_info);
@@ -855,17 +923,17 @@ found:
 
 static int start_stack(void)
 {
-	
-	/* have we already been started??? */
-	if (domains != NULL)
-		return -1;
+printf("start_stack!\n");
+	if (init_done)
+		return 0;
 
-	net_init_timer();
+	if (timer_on == 0) {
+		net_init_timer();
+		timer_on = 1;
+	}
 		
 	domains = NULL;
 	protocols = NULL;
-	devices = NULL;
-	pdevices = NULL;
 
 	find_protocol_modules();
 	
@@ -879,13 +947,23 @@ static int start_stack(void)
 	route_init();
 	if_init();
 	
-	dev_lock = create_sem(1, "device_lock");
+	if (dev_lock == -1)
+		dev_lock =   create_sem(1, "device_lock");
+	if (proto_lock == -1)
+		proto_lock = create_sem(1, "protocol_lock");
+	if (dom_lock == -1)
+		dom_lock =   create_sem(1, "domain_lock");
+
 #ifdef _KERNEL_MODE
-	set_sem_owner(dev_lock, B_SYSTEM_TEAM);
+	set_sem_owner(dev_lock,   B_SYSTEM_TEAM);
+	set_sem_owner(proto_lock, B_SYSTEM_TEAM);
+	set_sem_owner(dom_lock,   B_SYSTEM_TEAM);
 #endif
 
 	find_interface_modules();
 
+	init_done = 1;
+	
 	return 0;
 }
 
@@ -895,12 +973,12 @@ static int stop_stack(void)
 	
 	printf("core network module: Stopping network stack!\n");
 
-
 	close_devices();
 
 	/* unload all modules... */
 	printf("trying to stop modules\n");
 	for (;nm; nm = nm->next) {
+		printf("stopping %s\n", nm->name);
 		if (nm->ptr->stop)
 			nm->ptr->stop();
 	}
@@ -914,6 +992,7 @@ static int stop_stack(void)
 #endif
 		onm = nm;
 		nm = nm->next;
+		onm->next = NULL;
 		free(onm);
 	} while (nm);
 
@@ -922,20 +1001,23 @@ static int stop_stack(void)
 	sockets_shutdown();
 	 */
 
+	delete_sem(dev_lock);
+	delete_sem(proto_lock);
+	delete_sem(dom_lock);
+	dev_lock = proto_lock = dom_lock = -1;
+	init_done = 0;
+	module_list = NULL;
+	ndevs = 0;
+			
 	return 0;
 }
 
 
 static status_t core_std_ops(int32 op, ...) 
 {
-	/* XXX ??? - is there anything we should
-	 * be doing here?
-	 */
 	switch(op) {
 		case B_MODULE_INIT:
-#ifdef LOAD_SYMBOLS
 			load_driver_symbols("core");
-#endif
 			break;
 		case B_MODULE_UNINIT:
 			// the stack is keeping loaded, so don't stop it
