@@ -14,11 +14,6 @@
 #include <image.h>
 #include <stdlib.h>
 
-#ifdef _KERNEL_MODE
-#include <driver_settings.h>
-#include "core_module.h"
-#endif
-
 #include "if.h"	/* for ifnet definition */
 #include "net_server/net_server.h"
 #include "protocols.h"
@@ -29,9 +24,10 @@
 #include "sys/socket.h"
 #include "netinet/in_pcb.h"
 #include "net/route.h"
+#include "sys/domain.h"
+#include "sys/protosw.h"
 
 loaded_net_module *global_modules;
-static int nmods = 0;
 int prot_table[255];
 
 struct ifnet *devices = NULL;
@@ -44,7 +40,7 @@ sem_id dev_lock;
 #define MAX_DEVICES 16
 #define MAX_NETMODULES	20
 
-#define RECV_MSGS	100
+#define RECV_MSGS	10
 
 static int32 if_thread(void *data)
 {
@@ -57,7 +53,7 @@ static int32 if_thread(void *data)
 	while ((status = read(i->devid, buffer, len)) >= B_OK && count < RECV_MSGS) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
 		if (i->input)
-			i->input(mb, 0);
+			i->input(mb);
 		atomic_add(&i->if_ipackets, 1);
 		count++;
 		len = i->if_mtu;
@@ -81,7 +77,7 @@ static int32 rx_thread(void *data)
 		acquire_sem(i->rxq->pop);
 		IFQ_DEQUEUE(i->rxq, m);
 		if (i->input)
-                	i->input(m, 0);
+                	i->input(m);
 		else
 			printf("%s%d: no input function!\n", i->name, i->unit);
         }
@@ -160,6 +156,7 @@ void net_server_add_device(ifnet *ifn)
 		return;
 
 	sprintf(dname, "%s%d", ifn->name, ifn->unit);
+	printf("adding device %s\n", dname);
 	ifn->if_name = strdup(dname);
 
 	if (ifn->devid < 0) {
@@ -177,14 +174,81 @@ void net_server_add_device(ifnet *ifn)
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
-printf("add_device: added %s\n", ifn->if_name);	
+	printf("add_device: added %s\n", ifn->if_name);	
 }
 
-static void start_devices(void)
+static void merge_devices(void)
+{
+	struct ifnet *d = NULL;
+
+	if (!devices && !pdevices) {
+		printf("No devices!\n");
+		return;
+	}
+
+	acquire_sem(dev_lock);
+	if (devices) {
+		/* Now append the pseudo devices and then start them. */
+		for (d = devices; d->next != NULL; d = d->next) {
+			continue;
+		}
+	}
+	if (pdevices) {
+		if (d) {
+			d->next = pdevices;
+			d = d->next;
+		} else {
+			devices = pdevices;
+			d = devices;
+		}
+		while (d) {
+			d->id = ndevs++;
+			d = d->next;
+		}
+	}
+	release_sem(dev_lock);
+}
+
+/* This calls the start function for each device, which should
+ * finish the required init (if any) and set the flags such
+ * that the device is "up", i.e. IFF_UP should be set when the device
+ * returns.
+ * Any value other than 0 will lead to the device being removed from 
+ * this list. NB it won't be removed from the module that created it at
+ * present. XXX - make this happen correctly.
+ *
+ * This is also where we need to add code to check if we're supposed
+ * to start the device!
+ * XXX - do this!
+ * XXX - need preferences to be done before we can do this.
+ */
+static void start_devices(void) 
+{
+	ifnet *d = NULL;
+	ifnet *old = NULL;
+
+	merge_devices();
+
+	if (devices == NULL)
+		return;
+
+	d = devices;
+	while (d) {
+		if (d->start(d) != 0) {
+			/* if we had a problem, remove the device... */
+			if (old)
+				old->next = d->next;
+		} else 
+			old = d;
+		d = d->next;
+	}
+}
+
+static void start_device_threads(void)
 {
 	ifnet *d = devices;
 	char tname[32];
-	int priority = B_REAL_TIME_DISPLAY_PRIORITY;
+	int priority = B_NORMAL_PRIORITY;
 
 	acquire_sem(dev_lock);
 
@@ -224,38 +288,6 @@ static void start_devices(void)
 	release_sem(dev_lock);
 }
 
-static void merge_devices(void)
-{
-	struct ifnet *d = NULL;
-
-	if (!devices && !pdevices) {
-		printf("No devices!\n");
-		return;
-	}
-
-	acquire_sem(dev_lock);
-	if (devices) {
-		/* Now append the pseudo devices and then start them. */
-		for (d = devices; d->next != NULL; d = d->next) {
-			continue;
-		}
-	}
-	if (pdevices) {
-		if (d) {
-			d->next = pdevices;
-			d = d->next;
-		} else {
-			devices = pdevices;
-			d = devices;
-		}
-		while (d) {
-			d->id = ndevs++;
-			d = d->next;
-		}
-	}
-	release_sem(dev_lock);
-}
-
 static void list_devices(void)
 {
 	ifnet *d = devices;
@@ -283,32 +315,11 @@ static void list_devices(void)
 			while (ifa) {
 				dump_sockaddr(ifa->ifa_addr);
 				printf("\n");
-				ifa = ifa->ifn_next;
+				ifa = ifa->ifa_next;
 			}
 		}
 
 		d = d->next; 
-	}
-}
-
-static void init_devices(void) 
-{
-	ifnet *d = NULL;
-	int i;
-
-	merge_devices();
-
-	if (devices == NULL)
-		return;
-
-	d = devices;
-	while (d) {
-	 	for (i=0;i<nmods;i++) {
-			if (global_modules[i].mod->dev_init) {
-				global_modules[i].mod->dev_init(d);
-			}
-		}
-		d = d->next;
 	}
 }
 
@@ -323,236 +334,361 @@ static void close_devices(void)
 	}
 }
 
-static void find_modules(void)
+static void find_interface_modules(void)
+{
+	char path[PATH_MAX], cdir[PATH_MAX];
+	image_id id;
+	DIR *dir;
+	struct dirent *fe;
+	struct device_info *di;
+	status_t status;
+	
+	getcwd(cdir, PATH_MAX);
+	sprintf(cdir, "%s/modules/interface", cdir);
+	dir = opendir(cdir);
+	
+	while ((fe = readdir(dir)) != NULL) {
+		/* last 2 entries are only valid for development... */
+		if (strcmp(fe->d_name, ".") == 0 || strcmp(fe->d_name, "..") == 0
+			|| strcmp(fe->d_name, ".cvsignore") == 0 
+			|| strcmp(fe->d_name, "CVS") == 0)
+                        continue;
+		sprintf(path, "%s/%s", cdir, fe->d_name);
+        printf("checking %s\n", path);              
+		id = load_add_on(path);
+		if (id > 0) {
+			
+			status = get_image_symbol(id, "device_info",
+						B_SYMBOL_TYPE_DATA, (void**)&di);
+			if (status == B_OK)
+				di->init();
+		}
+	}
+	
+	printf("finished getting interface modules...\n");
+}
+		
+static void find_protocol_modules(void)
 {
 	char path[PATH_MAX], cdir[PATH_MAX];
 	image_id u;
-	net_module *nm;
+	struct protocol_info *pi;
 	DIR *dir;
 	struct dirent *m;
 	status_t status;
 
 	getcwd(cdir, PATH_MAX);
-#ifndef _KERNEL_MODE
-	sprintf(cdir, "%s/modules", cdir);
-#else
-	/* This is a real hack - adjust for your setup */
-	sprintf(cdir, "/boot/home/openbeos/net_kit/source/server/modules");
-#endif
+	sprintf(cdir, "%s/modules/protocol", cdir);
 	dir = opendir(cdir);
 
 	while ((m = readdir(dir)) != NULL) {
 		/* last 2 entries are only valid for development... */
 		if (strcmp(m->d_name, ".") == 0 || strcmp(m->d_name, "..") == 0
-			|| strcmp(m->d_name, "socket") == 0
 			|| strcmp(m->d_name, ".cvsignore") == 0 
 			|| strcmp(m->d_name, "CVS") == 0)
                         continue;
 		/* ok so we try it... */
 		sprintf(path, "%s/%s", cdir, m->d_name);
-#ifndef _KERNEL_MODE
-       		u = load_add_on(path);
-#else
-		u = -1;
-#endif
+		u = load_add_on(path);
+
 		if (u > 0) {
-			status = get_image_symbol(u, "net_module_data", B_SYMBOL_TYPE_DATA,
-						(void**)&nm);
+			status = get_image_symbol(u, "protocol_info", 
+					B_SYMBOL_TYPE_DATA, (void**)&pi);
 			if (status == B_OK) {
-				if (nmods > 0)
-					global_modules[nmods].next = &global_modules[nmods -1];
-				global_modules[nmods].iid = u;
-				global_modules[nmods].ref_count = 0;
-				global_modules[nmods].mod = nm;
-				printf("Added module: %s\n", global_modules[nmods].mod->name);
-				prot_table[nm->proto] = nmods;
-				if (nm->init)
-					nm->init(global_modules, (int*)&prot_table);
-				nmods++;
+				pi->init();
 			} else {
-				printf("Found %s, but not a net module.\n", m->d_name);
+				printf("unable to load %s\n", path);
 			}
-		} else {
-			printf("unable to load %s\n", path);
 		}
 	}
+
 	printf("\n");
 }
 
-static void list_modules(void)
-{
-	int i;
+static struct domain af_inet_domain = {
+	AF_INET,
+	"internet",
+	NULL,
+	NULL,
+	NULL,
+	rn_inithead,
+	32,
+	sizeof(struct sockaddr_in)
+};
 
-	printf("\nModules List\n"
-		"No. Ref Cnt Proto Name\n"
-		"=== ======= ===== ===================\n");
-	for (i=0;i<nmods;i++) {
-		printf("%02d     %ld     %3d  %s\n", i,
-			global_modules[i].ref_count,
-			global_modules[i].mod->proto, 
-			global_modules[i].mod->name);
+/* Domain support */
+void add_domain(struct domain *dom, int fam)
+{
+	struct domain *dm = domains;
+	struct domain *ndm;
+
+	printf("add_domain: %d\n", fam);
+
+	for(; dm; dm = dm->dom_next) {
+		if (dm->dom_family == fam)
+			/* already done */
+			return;
+	}	
+
+	if (dom == NULL) {
+		/* we're trying to add a builtin domain! */
+
+		switch (fam) {
+			case AF_INET:
+				/* ok, add it... */
+#if SHOW_MALLOC_USAGE
+	printf("core.c: add_domain: malloc(%ld)\n", sizeof(*ndm));
+#endif
+				ndm = (struct domain*)malloc(sizeof(*ndm));
+				*ndm = af_inet_domain;
+				if (dm)
+					dm->dom_next = ndm;
+				else
+					domains = ndm;
+				printf("Added AF_INET domain\n");
+				return;
+			default:
+				printf("Don't know how to add domain %d\n", fam);
+		}
+	} else {
+		if (dm)
+			dm->dom_next = dom;
+		else
+			domains = dom;
 	}
-	printf("\n");
+	return;
 }
 
-net_module *pffindtype(int domain, int type)
+void add_protocol(struct protosw *pr, int fam)
 {
-        int i;
-        net_module *n;
+	struct protosw *psw = protocols;
+	struct domain *dm = domains;
+	
+	printf("add_protocol: %s\n", pr->name);
+	
+	/* first find the correct domain... */
+	for (; dm; dm= dm->dom_next) {
+		if (dm->dom_family == fam)
+			break;
+	}
 
-	for (i=0;i<nmods;i++) {
-                n = global_modules[i].mod;
+	if (dm == NULL) {
+		printf("Unable to add protocol due to no domain available!\n");
+		return;
+	}
+	
+	/* OK, we can add it... */
+	for (;psw;psw = psw->pr_next) {
+		if (psw->pr_type == pr->pr_type &&
+		    psw->pr_protocol == pr->pr_protocol &&
+		    psw->pr_domain == dm) {
+		    printf("duplicate protocol detected!!\n");
+			return;
+		}
+	}
 
-		if (n->domain == domain && n->sock_type == type)
-			return n;
+	/* find last entry in protocols list */
+	if (protocols) {
+		for (psw = protocols;psw->pr_next; psw = psw->pr_next)
+			continue;
+		psw->pr_next = pr;
+	} else
+		protocols = pr;
+
+	pr->pr_domain = dm;
+
+	/* Now add to domain */
+	if (dm->dom_protosw) {
+		psw = dm->dom_protosw;
+		for (;psw->dom_next;psw = psw->dom_next)
+			continue;
+		psw->dom_next = pr;
+	} else {
+		dm->dom_protosw = pr;
+	}
+
+	return;
+}
+
+static void domain_init(void)
+{
+	struct domain *d;
+	struct protosw *p;
+
+	printf("domain_init()\n");
+	
+	for (d = domains;d;d = d->dom_next) {
+		if (d->dom_init)
+			d->dom_init();
+
+		for (p = d->dom_protosw;p;p = p->dom_next) {
+			if (p->pr_init)
+				p->pr_init();
+		}
+	}
+}
+
+static void walk_domains(void)
+{
+	struct domain *d;
+	struct protosw *p;
+	
+	for (d = domains;d;d = d->dom_next) {
+		printf("Domain: %s\n", d->dom_name);
+		p = d->dom_protosw;
+		for (;p;p = p->dom_next) {
+			printf("\t%s provided by %s\n", p->name, p->mod_path);
+		}
+	}
+}
+
+struct protosw *pffindtype(int domain, int type)
+{
+	struct domain *d;
+	struct protosw *p;
+	
+	for (d = domains; d; d = d->dom_next) {
+		if (d->dom_family == domain)
+			goto found;
+	}
+	return NULL;
+found:
+	for (p=d->dom_protosw; p; p = p->dom_next) {
+		if (p->pr_type && p->pr_type == type)
+			return p;
 	}
 	return NULL;
 }
 
-net_module *pffindproto(int domain, int protocol, int type)
+struct protosw *pffindproto(int domain, int protocol, int type)
 {
-        int i;
-        net_module *n;
+	struct domain *d;
+	struct protosw *p, *maybe = NULL;
 
-        for (i=0;i<nmods;i++) {
-                n = global_modules[i].mod;
+	if (domain == 0)
+		return NULL;
+	
+	for (d = domains; d; d = d->dom_next) {
+		if (d->dom_family == domain)
+			goto found;
+	}
+	return NULL;
 
-                if (n->domain == domain &&
-                        n->proto == protocol &&
-                        n->sock_type == type)
-                        return n;
-        }
-        return NULL;
+found:
+	for (p=d->dom_protosw;p;p = p->dom_next) {
+		if (p->pr_protocol == protocol && p->pr_type == type)
+			return p;
+		/* deal with SOCK_RAW and AF_UNSPEC */
+		if (type == SOCK_RAW && p->pr_type == SOCK_RAW &&
+			p->pr_protocol == AF_UNSPEC && maybe == NULL)
+			maybe = p;
+	}
+	return maybe;
 }
 
 int start_stack(void)
 {
-#ifdef _KERNEL_MODE
-	dprintf("core network module: Starting network stack...\n");
-#endif
+	find_protocol_modules();
+	
+	domain_init();
+	walk_domains();
+	
 	mbinit();
 	sockets_init();
 	inpcb_init();
 	route_init();
+	
+	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
+	if (!global_modules)
+		return -1;
+	dev_lock = create_sem(1, "device lock");
 
-	find_modules();
-	init_devices();
-
+	find_interface_modules();
+	start_devices();
+	list_devices();
+	start_device_threads();
+	
 	return 0;
 }
 
 int stop_stack(void)
 {
-#ifdef _KERNEL_MODE
-	dprintf("core network module: Stopping network stack!\n");
-#endif	
-
 	sockets_shutdown();
 
 	close_devices();
 
-#ifndef _KERNEL_MODE
 	net_shutdown_timer();
-#endif
+
 	return 0;
 }
 
-#ifndef _KERNEL_MODE
+int32 create_sockets(void *data)
+{
+	int howmany = *(int*)data;
+	int intval = howmany / 10;
+	void *sp = NULL;
+	int rv, cnt = 0;
+	bigtime_t tnow;
+
+	printf("starting socket creation test...\n");
+	
+#define stats(x)	printf("Total sockets created: %d\n", x);
+	tnow = real_time_clock_usecs();
+	while (cnt < howmany) {
+		rv = initsocket(&sp);
+		if (rv != 0) {
+			printf("failed to create a new empty socket!\n");
+			stats(cnt);
+			return -1;
+		} else {
+			rv = socreate(AF_INET, sp, SOCK_DGRAM, 0);
+			if (rv != 0) {
+				printf("socreate failed! %d [%s]\n", rv, strerror(rv));
+				stats(cnt);
+				return -1;
+			}
+		}
+		rv = soclose(sp);
+		if (rv != 0) {
+			printf("Error closing socket! %d [%s]\n", rv, strerror(rv));
+			stats(cnt);
+			return -1;
+		}
+		cnt++;
+		if ((cnt % intval) == 0)
+			printf("socket test: %3d %%\n", (cnt / intval) * 10);
+	}
+	printf("%d sockets in %lld usecs...\n", howmany, real_time_clock_usecs() - tnow);	
+	printf("I have created %d sockets...\n", howmany);
+	
+	return 0;
+}
+	
 int main(int argc, char **argv)
-#else
-void _main(void)
-#endif
 {
 	status_t status;
 	ifnet *d;
-	int s, rv, i;
-	struct sockaddr_in sin;
-	char data[100];
-	char *bigbuf = malloc(sizeof(char) * 1024);
+	thread_id t;
+	int qty = 15000;
 
 	printf( "Net Server Test App!\n"
 		"====================\n\n");
 
 	start_stack();
 
-#ifndef _KERNEL_MODE
 	if (net_init_timer() < B_OK)
 		printf("timer service won't work!\n");
-#endif
-
-	dev_lock = create_sem(1, "device lock");
-
-	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
-	if (!global_modules) {
-		printf("Failed to malloc space for net modules list\n");
-#ifndef _KERNEL_MODE
-		return (-1);
-#else
-		return;
-#endif
-	}
 
 	if (ndevs == 0) {
 		printf("\nFATAL: no devices configured!\n");
-#ifndef _KERNEL_MODE
-		return (-1);
-#else
-		return;
-#endif
+		exit (-1);
 	}
 
-	list_devices();
-	list_modules();
-
-	start_devices();
-
-	/* Just to see if it works! */
-/*
-	s = socket(AF_INET, SOCK_DGRAM, 0);
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(7777);
-	sin.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	if ((rv = bind(s, (struct sockaddr*)&sin, sizeof(sin))))
-		printf("Call to bind failed. [%s]\n", strerror(rv));
-	else 
-		printf("Call to bind was OK: port = %d\n", ntohs(sin.sin_port));
-
-	for (i=0;i<100;i+=5) {
-		data[i] = 'h'; data[i+1] = 'e'; data[i+2] = 'l';
-		data[i+3] = 'l'; data[i+4] = 'o';
-	}
-
-	sin.sin_addr.s_addr = htonl(0xc0a8006e);
-	dump_ipv4_addr("Sending 100 bytes of data to port 7777 on ", &sin.sin_addr);
-	rv = sendto(s, data, 100, 0, (struct sockaddr*)&sin, sizeof(sin));
-	if (rv < 0)
-		printf("sendto gave %d [%s]\n", rv, strerror(rv));
-	else
-		printf("sendto completed, we sent %d bytes\n", rv);
-
-	rv = recvfrom(s, bigbuf, 1024, 0, (struct sockaddr*)&sin, sizeof(sin));
-	if (rv < 0)
-		printf("recvfrom gave %d [%s]\n", rv, strerror(rv));
-	else
-		printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
-
-	sin.sin_addr.s_addr = INADDR_LOOPBACK;
-        rv = sendto(s, data, 100, 0, (struct sockaddr*)&sin, sizeof(sin));
-        if (rv < 0)
-                printf("sendto gave %d [%s]\n", rv, strerror(rv));
-        else
-                printf("sendto completed, we sent %d bytes\n", rv);
-
-        rv = recvfrom(s, bigbuf, 1024, 0, (struct sockaddr*)&sin, sizeof(sin));
-        if (rv < 0)
-                printf("recvfrom gave %d [%s]\n", rv, strerror(rv));
-        else
-                printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
-
-*/
-
+	t = spawn_thread(create_sockets, "socket creation test",
+		B_NORMAL_PRIORITY, &qty);
+	if (t >= 0)
+		resume_thread(t);
+	
 	d = devices;
 	while (d) {
 		if (d->rx_thread  && d->if_type == IFT_ETHER) {
@@ -561,48 +697,9 @@ void _main(void)
 		}
 		d = d->next; 
 	}
-
-#ifndef _KERNEL_MODE
+	wait_for_thread(t, &status);
+	printf("socket creation test complete\n");
 
 	return 0;
-#endif
 }
-
-#ifdef _KERNEL_MODE
-
-static status_t core_std_ops(int32 op, ...) 
-{
-	switch(op) {
-		case B_MODULE_INIT:
-			return start_stack();
-			break;
-		case B_MODULE_UNINIT:
-			return stop_stack();
-		default:
-			return B_ERROR;
-	}
-	return B_OK;
-}
-
-static struct core_module_info core_info = {
-	{
-		CORE_MODULE_PATH,
-		B_KEEP_LOADED,
-		core_std_ops
-	},
-
-	soo_ioctl,
-
-	initsocket,
-	socreate,
-	soclose,
-	sobind	
-};
-
-_EXPORT module_info *modules[] = {
-	(module_info*) &core_info,
-	NULL
-};
-
-#endif /* _KERNEL_MODE */
 
