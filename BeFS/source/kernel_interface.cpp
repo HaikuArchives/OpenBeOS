@@ -784,6 +784,8 @@ bfs_unlink(void *_ns, void *_directory, const char *name)
 
 	if (_ns == NULL || _directory == NULL || name == NULL || *name == '\0')
 		return B_BAD_VALUE;
+	if (!strcmp(name,"..") || !strcmp(name,"."))
+		return B_NOT_ALLOWED;
 
 	Volume *volume = (Volume *)_ns;
 	Inode *directory = (Inode *)_directory;
@@ -808,7 +810,7 @@ int
 bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const char *newName)
 {
 	FUNCTION_START(("oldDir = %p, oldName = \"%s\", newDir = %p, newName = \"%s\"\n",_oldDir,oldName,_newDir,newName));
-	
+
 	// there may be some more tests needed?!
 	if (_ns == NULL || _oldDir == NULL || _newDir == NULL
 		|| oldName == NULL || *oldName == '\0'
