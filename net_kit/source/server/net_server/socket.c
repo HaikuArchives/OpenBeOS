@@ -1268,13 +1268,23 @@ int sogetopt(void *sp, int level, int optnum, void *data, size_t *datalen)
 }
 
 
-int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie)
+int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie, int event)
 {
 	struct socket *so = (struct socket *) sp;
 
 	so->event_callback = cb;
 	so->event_callback_cookie = cookie;
-	
+	if (cb) {
+		if (event == 3)
+			so->sel_ev |= SEL_EX;
+		else
+			so->sel_ev |= event;
+	} else {
+		if (event == 3)
+			so->sel_ev &= ~SEL_EX;
+		else
+			so->sel_ev &= ~event;
+	}	
 	checkevent(so);	/* notify any event condition ASAP! */
 	return B_OK;
 }
@@ -1292,17 +1302,21 @@ static int checkevent(struct socket *so)
 	 *
 	 * ??? Maybe we should lock the socket for things like this?
 	 */
-	if (so && soreadable(so)) {
+	if (so && (so->sel_ev & SEL_READ) && soreadable(so)) {
 		if (so->event_callback)
 			so->event_callback(so, 1, so->event_callback_cookie);
+		so->sel_ev &= ~SEL_READ;
 	}
-	if (so && sowriteable(so)) {
+	if (so && (so->sel_ev & SEL_WRITE) && sowriteable(so)) {
 		if (so->event_callback)
 			so->event_callback(so, 2, so->event_callback_cookie);
+		so->sel_ev &= ~SEL_WRITE;
 	}
-	if (so && (so->so_oobmark || (so->so_state & SS_RCVATMARK))) {
+	if (so && (so->sel_ev & SEL_EX) && 
+	    (so->so_oobmark || (so->so_state & SS_RCVATMARK))) {
 		if (so->event_callback)
 			so->event_callback(so, 3, so->event_callback_cookie);
+		so->sel_ev &= ~SEL_EX;
 	}
 	
 	return B_OK;

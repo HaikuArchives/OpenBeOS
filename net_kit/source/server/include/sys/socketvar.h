@@ -40,6 +40,7 @@ struct socket {
 	int16   so_linger;       /* dreaded linger value */
 	int16   so_state;        /* socket state */
 	caddr_t so_pcb;	         /* pointer to the control block */
+	sem_id so_lock;          /* socket lock */
 	sem_id  so_timeo;        /* our wait channel */
 
 	struct protosw *so_proto; /* pointer to protocol module */
@@ -62,7 +63,13 @@ struct socket {
 	// event callback
 	socket_event_callback event_callback;
 	void * event_callback_cookie;
+	int sel_ev;
 };
+
+/* Select event bit mask */
+#define SEL_READ   0x01
+#define SEL_WRITE  0x02
+#define SEL_EX     0x04
 
 /*
  * Socket state bits.
@@ -184,7 +191,7 @@ int     sosend(struct socket *so, struct mbuf *addr, struct uio *uio,
                struct mbuf *top, struct mbuf *control, int flags);
 
 struct socket *sonewconn(struct socket *head, int connstatus);
-int 	set_socket_event_callback(void *, socket_event_callback, void *);
+int 	set_socket_event_callback(void *, socket_event_callback, void *, int);
 int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
 
 void    sbrelease (struct sockbuf *sb);
