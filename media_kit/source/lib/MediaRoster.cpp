@@ -5,7 +5,47 @@
  ***********************************************************************/
 #include <MediaRoster.h>
 #include <Locker.h>
+#include <Message.h>
+#include <Messenger.h>
+#include <StopWatch.h>
+#include <OS.h>
 #include "debug.h"
+#include "../server/headers/MediaServerTypes.h"
+
+static BMessenger *ServerMessenger = 0;
+static team_id team;
+
+// the BMediaRoster destructor is private,
+// but _DefaultDeleter is a friend class of
+// the BMediaRoster an thus can delete it
+class _DefaultDeleter
+{
+public:
+	void DeleteMediaRoster() 
+	{ 
+		delete BMediaRoster::_sDefault; 
+	}
+};
+
+class RosterSingleton
+{
+public:
+	RosterSingleton()
+	{
+		thread_info info;
+		get_thread_info(find_thread(NULL), &info);
+		team = info.team;
+		ServerMessenger = new BMessenger(NEW_MEDIA_SERVER_SIGNATURE);
+	}
+	~RosterSingleton()
+	{
+		_DefaultDeleter deleter; 
+		deleter.DeleteMediaRoster();
+		delete ServerMessenger;
+	}
+};
+
+RosterSingleton singleton;
 
 /*************************************************************
  * public BMediaRoster
@@ -854,7 +894,11 @@ BMediaRoster::GetSupportedSuites(BMessage *data)
 
 BMediaRoster::~BMediaRoster()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	BMessage msg(MEDIA_SERVER_UNREGISTER_APP);
+	BMessage reply;
+	msg.AddInt32("team",team);
+	ServerMessenger->SendMessage(&msg,&reply);
 }
 
 
@@ -890,6 +934,10 @@ BMediaRoster::BMediaRoster()
 #endif
 {
 	CALLED();
+	BMessage msg(MEDIA_SERVER_REGISTER_APP);
+	BMessage reply;
+	msg.AddInt32("team",team);
+	ServerMessenger->SendMessage(&msg,&reply);
 }
 
 /* static */ status_t

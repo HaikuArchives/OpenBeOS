@@ -180,6 +180,7 @@ void _BMediaRosterP::RemoveCleanupFunction(void (*)(void *), void *)
 
 extern "C" {
 
+int MIDIisInitializingWorkaroundForDoom;
 /*
 
 these two moved to RealtimeAlloc.cpp

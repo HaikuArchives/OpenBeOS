@@ -4,6 +4,7 @@
  *  DESCR: 
  ***********************************************************************/
 #include <MediaFile.h>
+#include <MediaTrack.h>
 #include "debug.h"
 
 
@@ -97,7 +98,7 @@ BMediaTrack	*
 BMediaFile::TrackAt(int32 index)
 {
 	UNIMPLEMENTED();
-	return 0;
+	return new BMediaTrack(0, 0);
 }
 
 
@@ -222,7 +223,7 @@ BMediaFile::Init()
 }
 
 void 
-BMediaFile::InitReader(BDataIO *source, int32 flags = 0)
+BMediaFile::InitReader(BDataIO *source, int32 flags /* = 0 */)
 {
 	UNIMPLEMENTED();
 }
