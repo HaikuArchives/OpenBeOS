@@ -89,4 +89,11 @@
 #define ERR_NET_ARP_QUEUED        ERR_NET_GENERAL-3
 #define ERR_NET_NO_ROUTE          ERR_NET_GENERAL-4
 
+/* XXX - Hack to add the B_ errors that MPhipps added to vm.c that
+ * aren't defined anywhere else (AFAICT)
+ */
+#define B_ERROR               -1
+#define B_NAME_NOT_FOUND      -2147483641
+
+
 #endif
