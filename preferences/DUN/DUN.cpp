@@ -1,8 +1,8 @@
 /*
 
-DUN by Sikosis for OpenBeOS (www.openbeos.org)
+DUN by Sikosis (beos@gravity24hr.com)
 
-(C) 2002
+(C) 2002 OpenBeOS under MIT license
 
 */
 
