@@ -660,6 +660,14 @@ BMimeType::SetIconForType(const char *type, const BBitmap *icon, icon_size which
 }
 
 // GetSnifferRule
+/*! \brief Retrieves the MIME type's sniffer rule.
+	\param result Pointer to a pre-allocated BString into which the value is
+		   copied.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a result or uninitialized BMimeType
+	- \c B_ENTRY_NOT_FOUND: The MIME type is not installed.
+*/
 status_t
 BMimeType::GetSnifferRule(BString *result) const
 {
@@ -667,13 +675,111 @@ BMimeType::GetSnifferRule(BString *result) const
 }
 
 // SetSnifferRule
+/*!	\brief Sets the MIME type's sniffer rule.
+
+	If the supplied \a rule is \c NULL, the MIME type's sniffer rule is
+	unset.
+
+	SetSnifferRule() does also return \c B_OK, if the type is not installed,
+	but the call will have no effect in this case.
+
+	\param rule The rule string, may be \c NULL.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: Uninitialized BMimeType.
+	- \c B_BAD_MIME_SNIFFER_RULE: The supplied sniffer rule is invalid.
+
+	\see CheckSnifferRule().
+*/
 status_t
-BMimeType::SetSnifferRule(const char *)
+BMimeType::SetSnifferRule(const char *rule)
 {
 	return NOT_IMPLEMENTED;
 }
 
 // CheckSnifferRule
+/*!	\brief Checks whether a MIME sniffer rule is valid or not.
+
+	A MIME sniffer rule is valid, if it is well-formed with respect to the
+	following grammar and fulfills some further conditions listed thereafter:
+
+	Rule			::= LWS Priority LWS ExprList LWS
+	ExprList		::= Expression (LWS Expression)*
+	Expression		::= "(" LWS (PatternList | RPatternList) LWS ")"
+						| Range LWS "(" LWS PatternList LWS ")"
+	RPatternList	::= RPattern (LWS "|" LWS RPattern)*
+	PatternList		::= Pattern (LWS "|" LWS Pattern)*
+	RPattern		::= Range LWS Pattern
+	Pattern			::= PString [ LWS "&" LWS Mask ]
+	Range			::=	"[" LWS SDecimal [LWS ":" LWS SDecimal] LWS "]"
+
+	Priority		::= Float
+	Mask			::= PString
+	PString			::= HexString | QuotedString | Octal [UnquotedString]
+						EscapedChar [UnquotedString]
+	HexString		::= "0x" HexPair HexPair*
+	HexPair			::= HexChar HexChar
+	QuotedString	::= '"' QChar QChar* '"' | "'" QChar QChar* "'"
+	Octal			::= "\" OctChar [OctChar [OctChar]]
+	SDecimal		::= ["+" | "-"] Decimal
+	Decimal			::= DecChar DecChar*
+	Float			::= Fixed [("E" | "e") Decimal]
+	Fixed			::= SDecimal ["." [Decimal]] | [SDecimal] "." Decimal
+	UnquotedString	::= UChar UChar*
+	LWS				::= LWSChar*
+
+	LWSChar			::= LF | " " | TAB
+	OctChar			::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7"
+	DecChar			::= OctChar | "8" | "9"
+	HexChar			::= DecChar | "a" | "b" | "c" | "d" | "e" | "A" | "B" | "C"
+						| "D" | "E"
+	Char			:: <any character>
+	QChar			::= <Char except "\", "&", "'" and '"'> | EscapedChar
+	EscapedChar		::= "\" Char
+	UChar			::= <QChar except LWSChar>
+
+	Conditions:
+	(checked)
+	- If a mask is specified for a pattern, this mask must have the same
+	  length as the pattern string.
+	(not checked)
+	- 0 <= Priority <= 1
+	- 0 <= Range begin <= Range end
+
+	Examples:
+	- 1.0 ('ABCD')
+	  The file must start with the string "ABCD". The priority of the rule
+	  is 1.0 (maximal).
+	- 0.8 [0:3] ('ABCD' | 'abcd')
+	  The file must contain the string "ABCD" or "abcd" starting somewhere in
+	  the first four bytes. The rule priority is 0.8.
+	- 0.5 [0:3] ('ABCD' | 'abcd') | [13] ('EFGH')
+	  0.5 ([0:3] 'ABCD' | [0:3] 'abcd' | [13] 'EFGH')
+	  Both rules are equivalent.
+	  The file must contain the string "ABCD" or "abcd" starting somewhere in
+	  the first four bytes or the string "EFGH" at position 13. The rule
+	  priority is 0.5.
+	- 0.8 [0:3] ('ABCD' & 0xff00ffff | 'abcd' & 0xffff00ff)
+	  The file must contain the string "A.CD" or "ab.d" (whereas "." is an
+	  arbitrary character) starting somewhere in the first four bytes. The
+	  rule priority is 0.8.
+
+	Real examples:
+	- 0.20 ([0]"//" | [0]"/*" | [0:32]"#include" | [0:32]"#ifndef"
+	        | [0:32]"#ifdef")
+	  text/x-source-code
+	- 0.70 ("8BPS  \000\000\000\000" & 0xffffffff0000ffffffff )
+	  image/x-photoshop
+
+	\param rule The rule string.
+	\param parseError A pointer to a pre-allocated BString into which a
+		   description of the parse error is written (if any), may be \c NULL.
+	\return
+	- \c B_OK: The supplied sniffer rule is valid.
+	- \c B_BAD_VALUE: \c NULL \a rule.
+	- \c B_BAD_MIME_SNIFFER_RULE: The supplied sniffer rule is not valid. A
+	  description of the error is written to \a parseError, if supplied.
+*/
 status_t
 BMimeType::CheckSnifferRule(const char *rule, BString *parseError)
 {
