@@ -57,7 +57,7 @@ installetc:
 	@for i in $(ETC_FILES); do \
 		echo $$i; \
 		if test -L /etc/$$i; then rm /etc/$$i; fi; \
-		ln -s `pwd`/$$i /etc/$$i; \
+		ln -s "`pwd`/$$i" /etc/$$i; \
 	done;
 
 removeetc:
