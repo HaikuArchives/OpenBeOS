@@ -8,14 +8,9 @@
 #ifndef __sk_def_storage_h__
 #define __sk_def_storage_h__
 
-// These files were included in the original StorageDefs.h. If
-// you find yourself needing to use one, uncomment it and include
-// StorageDefs.h instead:
-
-//#include <fcntl.h>
-//#include <sys/param.h>
-//#include <limits.h>
-
+#include <fcntl.h>
+#include <sys/param.h>
+#include <limits.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
