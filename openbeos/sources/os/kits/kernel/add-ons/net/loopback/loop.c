@@ -6,6 +6,7 @@
 #include <ktypes.h>
 #include <module.h>
 #include <errors.h>
+#include <debug.h>
 
 /*#include "sys/socket.h"
 #include "protocols.h"
@@ -104,6 +105,7 @@ static int loop_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 */	
 static int loop_init(void)
 {
+dprintf("LOOPBACK: init!\n");
 /*	me = (struct ifnet*)malloc(sizeof(struct ifnet));
 	if (!me)
 		return -1;
@@ -145,23 +147,21 @@ static status_t loop_ops(int32 op, ...)
 	}
 	return 0;
 }
-/*
-static struct device_module_info my_module = {
+
+/* XXX - temp hack */
+struct device_mi {
+	module_info info;
+	int (*init)(void);
+};
+
+static struct device_mi my_module = {
 	{
 		LOOP_MODULE_PATH,
-		B_KEEP_LOADED,
+		0,
 		loop_ops
 	},
 
 	loop_init
-};
-
-XXX - temporary hack...
-*/
-static module_info my_module = {
-	LOOP_MODULE_PATH,
-	B_KEEP_LOADED,
-	loop_ops
 };
 
 module_info *modules[] = {

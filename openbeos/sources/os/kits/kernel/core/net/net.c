@@ -14,19 +14,27 @@
 #include <module.h>
 #include <pools.h>
 #include <debug.h>
+#include <module.h>
 
-#define NETWORK_INTERFACES "network/interfaces"
+#define NETWORK_INTERFACES "network/interface"
 
 int net_init(kernel_args *ka);
 int sockets_init(kernel_args *ka);
+
+/* XXX temp hack */
+struct device_mi {
+	module_info info;
+	int (*init)(void);
+};
 
 static void find_interface_modules(void)
 {
 	void *ml = open_module_list(NETWORK_INTERFACES);
 	size_t sz = SYS_MAX_PATH_LEN;
 	char name[sz];
+	struct device_mi *mi;
 //	device_module_info *dmi = NULL;
-//	int rv;
+	int rv;
 
 	if (ml == NULL) {
 		dprintf("failed to open the %s directory\n", 
@@ -35,13 +43,11 @@ static void find_interface_modules(void)
 	}
 
 	while (read_next_module_name(ml, name, &sz) == 0) {
-dprintf("module: %s\n", name);
-/*
-		rv = get_module(name, (module_info**)&dmi);
+		dprintf("*** net interface module: %s\n", name);
+		rv = get_module(name, (module_info**)&mi);
 		if (rv == 0) {
-			dmi->init();
+			mi->init();
 		}
-*/
 		sz = SYS_MAX_PATH_LEN;
 	}
 
