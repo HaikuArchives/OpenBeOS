@@ -19,6 +19,10 @@
 extern "C" {
 #endif
 
+
+/* XXX - until we get OS.h sorted out properly :) */
+struct sem_info;
+
 int sys_null();
 
 /* fs api */

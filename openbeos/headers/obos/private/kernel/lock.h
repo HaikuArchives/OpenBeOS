@@ -53,30 +53,30 @@ typedef struct rw_lock rw_lock;
 #define INIT_BENAPHORE(lock,name) \
 	{ \
 		(lock).count = 1; \
-		(lock).sem = sem_create(0, name); \
+		(lock).sem = create_sem(0, name); \
 	}
 
 #define CHECK_BENAPHORE(lock) \
 	((lock).sem)
 
 #define UNINIT_BENAPHORE(lock) \
-	sem_delete((lock).sem);
+	delete_sem((lock).sem);
 
 #define ACQUIRE_BENAPHORE(lock) \
 	(atomic_add(&((lock).count), -1) <= 0 ? \
-		sem_acquire_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL) \
+		acquire_sem_etc((lock).sem, 1, B_CAN_INTERRUPT, 0) \
 		: 0)
 
 #define RELEASE_BENAPHORE(lock) \
 	{ \
 		if (atomic_add(&((lock).count), 1) < 0) \
-			sem_release_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE); \
+			release_sem_etc((lock).sem, 1, B_CAN_INTERRUPT); \
 	}
 
 /* read/write lock */
 #define INIT_RW_LOCK(lock,name) \
 	{ \
-		(lock).sem = sem_create(0, name); \
+		(lock).sem = create_sem(0, name); \
 		(lock).count = MAX_READERS; \
 		INIT_BENAPHORE((lock).writeLock, "r/w write lock"); \
 	}
@@ -85,19 +85,19 @@ typedef struct rw_lock rw_lock;
 	((lock).sem)
 
 #define UNINIT_RW_LOCK(lock) \
-	sem_delete((lock).sem); \
+	delete_sem((lock).sem); \
 	UNINIT_BENAPHORE((lock).writeLock)
 
 #define ACQUIRE_READ_LOCK(lock) \
 	{ \
 		if (atomic_add(&(lock).count, -1) <= 0) \
-			sem_acquire_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL); \
+			acquire_sem_etc((lock).sem, 1, B_CAN_INTERRUPT, 0); \
 	}
 
 #define RELEASE_READ_LOCK(lock) \
 	{ \
 		if (atomic_add(&(lock).count, 1) < 0) \
-			sem_release_etc((lock).sem, 1, SEM_FLAG_INTERRUPTABLE); \
+			release_sem_etc((lock).sem, 1, B_CAN_INTERRUPT); \
 	}
 
 #define ACQUIRE_WRITE_LOCK(lock) \
@@ -106,8 +106,8 @@ typedef struct rw_lock rw_lock;
 		ACQUIRE_BENAPHORE((lock).writeLock); \
 		readers = atomic_add(&(lock).count, -MAX_READERS); \
 		if (readers < MAX_READERS) \
-			sem_acquire_etc((lock).sem,readers <= 0 ? 1 : MAX_READERS - readers, \
-			                SEM_FLAG_INTERRUPTABLE,0, NULL); \
+			acquire_sem_etc((lock).sem,readers <= 0 ? 1 : MAX_READERS - readers, \
+			                B_CAN_INTERRUPT,0); \
 		RELEASE_BENAPHORE((lock).writeLock); \
 	}
 
@@ -115,7 +115,7 @@ typedef struct rw_lock rw_lock;
 	{ \
 		int32 readers = atomic_add(&(lock).count,MAX_READERS); \
 		if (readers < 0) \
-			sem_release_etc((lock).sem,readers <= -MAX_READERS ? 1 : -readers,SEM_FLAG_INTERRUPTABLE); \
+			release_sem_etc((lock).sem,readers <= -MAX_READERS ? 1 : -readers,B_CAN_INTERRUPT); \
 	}
 
 
