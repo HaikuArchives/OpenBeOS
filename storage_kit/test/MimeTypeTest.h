@@ -34,16 +34,19 @@ public:
 	//------------------------------------------------------------
 	void InstallDeleteTest();
 	void AppHintTest();
+	void AttrInfoTest();
 	void FileExtensionsTest();
 	void LargeIconTest();
 	void MiniIconTest();
 	void LargeIconForTypeTest();
 	void MiniIconForTypeTest();
+	void InstalledTypesTest();
 	void LongDescriptionTest();
 	void ShortDescriptionTest();
 	void PreferredAppTest();
-	void AttrInfoTest();
-
+	void SupportingAppsTest();
+	void WildcardAppsTest();
+	
 	void InitTest();
 	void StringTest();
 	void MonitoringTest();

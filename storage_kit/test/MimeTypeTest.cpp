@@ -2,6 +2,8 @@
 
 #include <ctype.h>			// For tolower()
 #include <fcntl.h>			// open()
+#include <map>
+#include <queue>
 #include <stdio.h>
 #include <string.h>			// For memcmp()
 #include <string>
@@ -30,7 +32,7 @@
 static const char *testDir				= "/tmp/mimeTestDir";
 static const char *mimeDatabaseDir		= "/boot/home/config/settings/beos_mime";
 
-// MIME Types
+// MIME Test Types
 // testType and testTypeApp are Delete()d after each test.
 static const char *testType				= "text/x-vnd.obos-Storage-Kit-Test";
 static const char *testType1			= "text/x-vnd.obos-Storage-Kit-Test1";
@@ -46,6 +48,11 @@ static const char *testTypeApp2			=  "application/"
 static const char *testTypeApp3			=  "application/"
 										   "x-vnd.obos.mime.test.test3";
 static const char *testTypeInvalid		= "text/Are spaces valid?";
+static const char *testTypeSuperValid	= "valid-but-fake-supertype";
+static const char *testTypeSuperInvalid	= "?????";
+
+// Real MIME types
+static const char *wildcardType			= "application/octet-stream";
 
 // Application Paths
 static const char *testApp				= "/boot/beos/apps/SoundRecorder";
@@ -90,6 +97,12 @@ static void fill_bitmap(BBitmap &bmp, char value);
 static void to_lower(const char *str, std::string &result);
 static void remove_type(const char *type, const char *databaseDir = mimeDatabaseDir);
 static bool type_exists(const char *type, const char *databaseDir = mimeDatabaseDir);
+class ContainerAdapter;
+class SetAdapter;
+class QueueAdapter;
+void FillWithMimeTypes(ContainerAdapter &container, BMessage &typeMessage, const char* fieldName);
+	// Used to add all the types in a BMessage from GetInstalled*Types() to some
+	// sort of container object (via an adapter to support differing interfaces).
 
 // Suite
 CppUnit::Test*
@@ -104,6 +117,10 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::AppHintTest) );
 	suite->addTest( new TC("BMimeType::Attribute Info Test",
 						   &MimeTypeTest::AttrInfoTest) );
+	suite->addTest( new TC("BMimeType::Long Description Test",
+						   &MimeTypeTest::LongDescriptionTest) );
+	suite->addTest( new TC("BMimeType::Short Description Test",
+						   &MimeTypeTest::ShortDescriptionTest) );
 	suite->addTest( new TC("BMimeType::File Extensions Test",
 						   &MimeTypeTest::FileExtensionsTest) );
 	suite->addTest( new TC("BMimeType::Icon Test (Large)",
@@ -114,12 +131,12 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::LargeIconForTypeTest) );
 	suite->addTest( new TC("BMimeType::Icon For Type Test (Mini)",
 						   &MimeTypeTest::MiniIconForTypeTest) );
-	suite->addTest( new TC("BMimeType::Long Description Test",
-						   &MimeTypeTest::LongDescriptionTest) );
-	suite->addTest( new TC("BMimeType::Short Description Test",
-						   &MimeTypeTest::ShortDescriptionTest) );
+	suite->addTest( new TC("BMimeType::Installed Types Test",
+						   &MimeTypeTest::InstalledTypesTest) );
 	suite->addTest( new TC("BMimeType::Preferred App Test",
 						   &MimeTypeTest::PreferredAppTest) );
+	suite->addTest( new TC("BMimeType::Wildcard Apps Test",
+						   &MimeTypeTest::WildcardAppsTest) );
 
 	// Ingo						   
 	suite->addTest( new TC("BMimeType::Initialization Test",
@@ -138,6 +155,11 @@ MimeTypeTest::Suite() {
 						   &MimeTypeTest::SnifferRuleTest) );
 	suite->addTest( new TC("BMimeType::Sniffing Test",
 						   &MimeTypeTest::SniffingTest) );
+						   
+	// In progress
+	suite->addTest( new TC("BMimeType::Supporting Apps Test",
+						   &MimeTypeTest::SupportingAppsTest) );
+		
 						   
 	return suite;
 }		
@@ -1299,6 +1321,283 @@ MimeTypeTest::MiniIconForTypeTest() {
 	IconForTypeTest(helper);
 }
 
+bool isMIMESupertype(const char *type) {
+	BMimeType sub, super;
+	status_t err;
+	err = !type || !BMimeType::IsValid(type);
+
+	// See if the type is the same as it's supertype
+	if (!err) 
+		err = sub.SetTo(type);
+	if (!err)
+		return sub.GetSupertype(&super) == B_BAD_VALUE;
+			// This is what R5::GetSupertype() returns when called on a supertype;
+
+	return false;
+}
+
+
+
+void
+MimeTypeTest::InstalledTypesTest() {
+	// NULL params
+	{
+		BMessage msg;
+		nextSubTest();
+#if !SK_TEST_R5
+		CHK(RES(BMimeType::GetInstalledTypes(NULL)) != B_OK);			// R5 == CRASH!!!
+#endif
+		nextSubTest();
+#if !SK_TEST_R5
+		CHK(RES(BMimeType::GetInstalledTypes("text", NULL)) != B_OK);	// R5 == CRASH!!!
+#endif
+		nextSubTest();
+		CHK(BMimeType::GetInstalledTypes(NULL, &msg) == B_OK);		// Same as GetInstalledTypes(&msg)
+		nextSubTest();
+#if !SK_TEST_R5
+		CHK(RES(BMimeType::GetInstalledTypes(NULL, NULL)) != B_OK);		// R5 == CRASH!!!
+#endif
+		nextSubTest();
+#if !SK_TEST_R5
+		CHK(RES(BMimeType::GetInstalledSupertypes(NULL)) != B_OK);		// R5 == CRASH!!!
+#endif
+	}
+	// Invalid supertype param to GetInstalledTypes(char *super, BMessage*)
+	{
+		BMessage msg;
+		nextSubTest();
+		CHK(!BMimeType::IsValid(testTypeSuperInvalid));
+		CHK(BMimeType::GetInstalledTypes(testTypeSuperInvalid, &msg) != B_OK);			// R5 == B_BAD_VALUE
+		nextSubTest();
+		CHK(BMimeType::IsValid(testTypeSuperValid));
+		CHK(BMimeType::GetInstalledTypes(testTypeSuperValid, &msg) != B_OK);	// R5 == B_ENTRY_NOT_FOUND
+	}
+	// Normal Function -- GetInstalledTypes(BMessage*)
+	// This test gets the list of installed types, then iterates through
+	// the actual database directory listings and verifies they're identical.
+	nextSubTest();
+	{
+		BMessage msg;
+
+		// Get the list of installed types
+		CHK(BMimeType::GetInstalledTypes(&msg) == B_OK);
+		
+		// Add all the type strings to a std::set
+		std::set<std::string> typeSet;	
+		type_code type;
+		int32 count;
+		status_t err = msg.GetInfo("types", &type, &count);
+
+		if (err == B_NAME_NOT_FOUND)
+			count = 0;	// No types installed in the database! :-)
+		else
+			CHK(err == B_OK);
+			
+		for (int i = 0; i < count; i++) {
+			char *str;
+			CHK(msg.FindString("types", i, (const char**)&str) == B_OK);
+			// Convert it to lowercase, since the filenames for types are lowercase, but
+			// the types returned by GetInstalledTypes are sometimes mixedcase
+			std::string strLower;
+			to_lower(str, strLower);
+			// Make sure it's a valid type string, since the R5::GetInstalled*Types()
+			// functions do no such verification, and we ignore invalid type files
+			// in the database.
+			if (BMimeType::IsValid(strLower.c_str()))
+				typeSet.insert(strLower.c_str());
+		}
+		
+		// Manually verify that the set of types returned by GetInstalledTypes()
+		// and the types present in the database are exactly the same (ignoring
+		// any files with names made of invalid characters, in case some bozo
+		// manually added such a file :-)
+		BDirectory rootDir(mimeDatabaseDir);
+		BEntry superEntry;		
+		CHK(rootDir.InitCheck() == B_OK);
+		rootDir.Rewind();
+		while (true) {
+			status_t err = rootDir.GetNextEntry(&superEntry);
+			if (err == B_ENTRY_NOT_FOUND)
+				break;	// End of directory listing
+
+			CHK(!err);	// Any other error is unacceptable :-)
+
+			// Get the leaf name			
+			char superLeafMixed[B_PATH_NAME_LENGTH+1];
+			CHK(superEntry.GetName(superLeafMixed) == B_OK);
+			std::string superLeaf;
+			to_lower(superLeafMixed, superLeaf);
+			
+			// We're only interested in directories, as they map to
+			// supertypes (and since they map thusly, they must also
+			// be valid MIME strings)
+			if (superEntry.IsDirectory() && BMimeType::IsValid(superLeaf.c_str())) {
+				// First, find and remove the supertype from our set				
+				CHK(typeSet.find(superLeaf.c_str()) != typeSet.end());
+				typeSet.erase(superLeaf.c_str());
+				
+				// Second, iterate through all the entries in the directory.
+				// If the entry designates a valid MIME string, find it
+				// in the set and remove it.
+				BDirectory superDir(&superEntry);
+				BEntry subEntry;
+				CHK(superDir.InitCheck() == B_OK);
+				superDir.Rewind();
+				while (true) {
+					status_t err = superDir.GetNextEntry(&subEntry);
+					if (err == B_ENTRY_NOT_FOUND)
+						break;	// End of directory listing
+						
+					CHK(!err);	// Any other error is unacceptable :-)
+					
+					// Get the leaf name
+					char subLeafMixed[B_PATH_NAME_LENGTH+1];
+					CHK(subEntry.GetName(subLeafMixed) == B_OK);
+					std::string subLeaf;
+					to_lower(subLeafMixed, subLeaf);
+					
+					// Verify it's a valid mime string. If so, find and remove from our set
+					std::string subType = superLeaf + "/" + subLeaf;
+					if (BMimeType::IsValid(subType.c_str())) {
+						CHK(typeSet.find(subType.c_str()) != typeSet.end());
+						typeSet.erase(subType.c_str());
+					}
+				}				
+			}
+		}
+		
+		// At this point our set should be empty :-)
+		CHK(typeSet.size() == 0);				
+	}	
+	// Normal Function -- GetInstalledSupertypes()/GetInstalledTypes(char*,BMessage*)
+	// This test gets the list of installed super types, then iterates through
+	// the actual database directory listings and verifies they're identical.
+	nextSubTest();
+	{
+		BMessage msg;
+
+		// Get the list of installed types
+		CHK(BMimeType::GetInstalledSupertypes(&msg) == B_OK);
+		
+		// Add all the type strings to a std::set
+		std::set<std::string> typeSet;		
+		type_code type;
+		int32 count;
+		status_t err = msg.GetInfo("super_types", &type, &count);
+		
+		if (err == B_NAME_NOT_FOUND)
+			count = 0;	// No supertypes installed in the database! :-)
+		else
+			CHK(err == B_OK);
+			
+		for (int i = 0; i < count; i++) {
+			char *str;
+			CHK(msg.FindString("super_types", i, (const char**)&str) == B_OK);
+			// Convert it to lowercase, since the filenames for types are lowercase, but
+			// the types returned by GetInstalledTypes are sometimes mixedcase
+			std::string strLower;
+			to_lower(str, strLower);
+			// Make sure it's a valid type string, since the R5::GetInstalled*Types()
+			// functions do no such verification, and we ignore invalid type files
+			// in the database.
+			if (BMimeType::IsValid(strLower.c_str()))
+				typeSet.insert(strLower.c_str());
+		}
+		
+		// Manually verify that the set of types returned by GetInstalledSupertypes()
+		// and the types present in the database are exactly the same (ignoring
+		// any files with names made of invalid characters, in case some bozo
+		// manually added such a file :-)
+		BDirectory rootDir(mimeDatabaseDir);
+		BEntry superEntry;		
+		CHK(rootDir.InitCheck() == B_OK);
+		rootDir.Rewind();
+		while (true) {
+			status_t err = rootDir.GetNextEntry(&superEntry);
+			if (err == B_ENTRY_NOT_FOUND)
+				break;	// End of directory listing
+
+			CHK(!err);	// Any other error is unacceptable :-)
+
+			// Get the leaf name			
+			char superLeafMixed[B_PATH_NAME_LENGTH+1];
+			CHK(superEntry.GetName(superLeafMixed) == B_OK);
+			std::string superLeaf;
+			to_lower(superLeafMixed, superLeaf);
+			
+			// We're only interested in directories, as they map to
+			// supertypes (and since they map thusly, they must also
+			// be valid MIME strings)
+			if (superEntry.IsDirectory() && BMimeType::IsValid(superLeaf.c_str())) {
+				// First, find and remove the supertype from our set
+				CHK(typeSet.find(superLeaf.c_str()) != typeSet.end());
+				typeSet.erase(superLeaf.c_str());
+				
+				// Second, get the list of corresponding subtypes and add them
+				// to a std::set to be used for verification
+				BMessage msg;
+				CHK(BMimeType::GetInstalledTypes(superLeaf.c_str(), &msg) == B_OK);
+				type_code type;
+				int32 count;
+				std::set<std::string> subtypeSet;
+				status_t err = msg.GetInfo("types", &type, &count);
+				if (err == B_NAME_NOT_FOUND)
+					count = 0;	// No subtypes for this supertype
+				else
+					CHK(err == B_OK);
+				for (int i = 0; i < count; i++) {
+					char *str;
+					CHK(msg.FindString("types", i, (const char**)&str) == B_OK);
+					// Convert it to lowercase, since the filenames for types are lowercase, but
+					// the types returned by GetInstalledTypes are sometimes mixedcase
+					std::string strLower;
+					to_lower(str, strLower);
+					// Make sure it's a valid type string, since the R5::GetInstalled*Types()
+					// functions do no such verification, and we ignore invalid type files
+					// in the database.
+					if (BMimeType::IsValid(strLower.c_str()))
+						subtypeSet.insert(strLower.c_str());
+				}
+				
+				// Third, iterate through all the entries in the directory.
+				// If the entry designates a valid MIME string, find it
+				// in the subtype set and remove it.
+				BDirectory superDir(&superEntry);
+				BEntry subEntry;
+				CHK(superDir.InitCheck() == B_OK);
+				superDir.Rewind();
+				while (true) {
+					status_t err = superDir.GetNextEntry(&subEntry);
+					if (err == B_ENTRY_NOT_FOUND)
+						break;	// End of directory listing
+						
+					CHK(!err);	// Any other error is unacceptable :-)
+					
+					// Get the leaf name
+					char subLeafMixed[B_PATH_NAME_LENGTH+1];
+					CHK(subEntry.GetName(subLeafMixed) == B_OK);
+					std::string subLeaf;
+					to_lower(subLeafMixed, subLeaf);
+					
+					// Verify it's a valid mime string. If so, find and remove from our set
+					std::string subType = superLeaf + "/" + subLeaf;
+					if (BMimeType::IsValid(subType.c_str())) {
+						CHK(subtypeSet.find(subType.c_str()) != subtypeSet.end());
+						subtypeSet.erase(subType.c_str());
+					}
+				}
+				
+				// At this point our subtype set should be empty :-)
+				CHK(subtypeSet.size() == 0);			
+								
+			}
+		}
+		
+		// At this point our set should be empty :-)
+		CHK(typeSet.size() == 0);			
+	}
+
+}
 
 // Short Description
 
@@ -1604,6 +1903,142 @@ MimeTypeTest::InstallDeleteTest() {
 		CHK(!mime.IsInstalled());
 	}
 	
+}
+
+class ContainerAdapter {
+public:
+	virtual void Add(std::string value) = 0;
+};
+
+class SetAdapter : public ContainerAdapter {
+public:
+	SetAdapter(std::set<std::string> &set)
+		: fSet(set) { }
+	virtual void Add(std::string value) {
+		fSet.insert(value);	
+	}
+protected:
+	std::set<std::string> &fSet;
+};
+	
+class QueueAdapter : public ContainerAdapter {
+public:
+	QueueAdapter(std::queue<std::string> &queue)
+		: fQueue(queue) { }
+	virtual void Add(std::string value) {
+		fQueue.push(value);	
+	}
+protected:
+	std::queue<std::string> &fQueue;
+};
+
+void FillWithMimeTypes(ContainerAdapter &container, BMessage &typeMessage, const char* fieldName) {
+	type_code type;
+	int32 count;
+	status_t err;
+			
+	// Get a count of types in the message
+	err = typeMessage.GetInfo(fieldName, &type, &count);
+	if (err == B_NAME_NOT_FOUND)
+		count = 0;			// No such types installed in the database! :-)
+	else
+		CHK(err == B_OK);	// Any other error is unacceptable
+				
+	// Add them all to the container, after converting to lowercase and
+	// checking validity
+	for (int i = 0; i < count; i++) {
+		char *str;
+		CHK(typeMessage.FindString(fieldName, i, (const char**)&str) == B_OK);
+		std::string strLower;
+		to_lower(str, strLower);
+		// Make sure it's a valid type string, since the R5::GetInstalled*Types()
+		// functions do no such verification, and we ignore invalid type files
+		// in the database.
+		if (BMimeType::IsValid(strLower.c_str()))
+			container.Add(strLower);
+	}
+}
+
+void
+MimeTypeTest::SupportingAppsTest() {
+/*	{
+		BMessage msg;
+		BMimeType::GetInstalledTypes(&msg);
+		msg.PrintToStream();
+	}
+	{
+		BMessage msg;
+		BMimeType mime("application/octet-stream");
+		CHK(mime.InitCheck() == B_OK);
+		CHK(mime.GetSupportingApps(&msg) == B_OK);
+		msg.PrintToStream();
+	}
+	{
+		BMessage msg;
+		BMimeType mime("text");
+		CHK(mime.InitCheck() == B_OK);
+		CHK(mime.GetSupportingApps(&msg) == B_OK);
+		msg.PrintToStream();
+	}
+	{
+		BMessage msg;
+		BMimeType mime("text/html");
+		CHK(mime.InitCheck() == B_OK);
+		CHK(mime.GetSupportingApps(&msg) == B_OK);
+		msg.PrintToStream();
+	} */
+	nextSubTest();
+	{
+		std::queue<std::string> typeList;							// Stores all installed MIME types
+		std::queue<std::string> appList;							// Stores all installed application subtypes
+		std::map< std::string, std::set<std::string> > typeAppMap;	// Stores mapping of types to apps that support them
+		
+		// Get a list of all the types in the database
+		{
+			BMessage msg;
+			CHK(BMimeType::GetInstalledTypes(&msg) == B_OK);
+		}
+
+		// Get a list of all the apps in the database
+		
+		// For each app in the database, get a list of the MIME types is supports,
+		// and add the app to the type->app map for each type
+		for (;false;) {
+			std::queue<std::string> supportList;
+
+			for (;false; /* supported types */) {
+			
+			}			
+		}
+		
+		// For each installed type, get a list of the supported apps, and
+		// verify that the list matches the list we generated. Also check
+		// that the list of apps for the type's supertype (if it exists)
+		// is a subset of the list we generated for said supertype.
+	}
+}
+	
+void
+MimeTypeTest::WildcardAppsTest() {
+	// NULL param
+	nextSubTest();
+	{
+#if SK_TEST_R5
+		CHK(BMimeType::GetWildcardApps(NULL) == B_OK);			// R5 == B_OK (???)
+#else
+		CHK(RES(BMimeType::GetWildcardApps(NULL)) != B_OK);		// Personally I think we ought to return B_BAD_VALUE
+#endif
+	}
+	// Normal function (compare to BMimeType("application/octet-stream").GetSupportingApps())
+	nextSubTest();
+	{
+		BMessage msg1, msg2;
+		CHK(BMimeType::GetWildcardApps(&msg1) == B_OK);		
+		BMimeType mime(wildcardType);
+		CHK(mime.InitCheck() == B_OK);
+		CHK(mime.GetSupportingApps(&msg2) == B_OK);
+		CHK(msg1 == msg2);
+	}
 }
 
 
