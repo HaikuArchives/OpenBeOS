@@ -834,6 +834,18 @@ KernelLd echo :
         bin/echo
         ; 
 
+KernelLd uname :
+        libglue2.o
+        <$(SOURCE_GRIST)!apps!uname>main.o
+        libc.so
+        :
+        $(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+        :
+        :
+        :
+        bin/uname
+        ;
+
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
 BuildKernel $(OBOS_KERNEL) : $(OBOS_KERNEL_CONFIG) ;
