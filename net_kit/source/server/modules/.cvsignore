@@ -4,3 +4,4 @@ ethernet
 ipv4
 arp
 icmp
+loop
