@@ -7,6 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
+extern char *__progname;
+
 void (*disp_func)(const char *, struct file_stat *) = NULL;
 
 static void display_l(const char *filename, struct file_stat *stat)
@@ -63,7 +65,8 @@ int main(int argc, char *argv[])
 	
 	rc = sys_rstat(arg, &stat);
 	if(rc < 0) {
-		printf("sys_rstat() returned error: %s!\n", strerror(rc));
+		printf("%s: sys_rstat() returned error: %s!\n", __progname,
+		       strerror(rc));
 		goto err_ls;
 	}
 
@@ -74,7 +77,8 @@ int main(int argc, char *argv[])
 
 			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
-				printf("ls: sys_open() returned error: %s!\n", strerror(fd));
+				printf("%s: sys_open() returned error: %s!\n", 
+				       __progname, strerror(fd));
 				break;
 			}
 
@@ -111,5 +115,3 @@ int main(int argc, char *argv[])
 err_ls:
 	return 0;
 }
-
-
