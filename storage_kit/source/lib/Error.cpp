@@ -22,9 +22,10 @@ StorageKit::Error::SetErrorMessage(const char* errorMessage) {
 	if (fErrorMessage != NULL)			// Check for previous message
 		delete fErrorMessage;			// Free it if necessary
 
-	if (errorMessage == NULL) {	
-		fErrorMessage = NULL;
-		return;
+	char str[1024];
+	if (errorMessage == NULL) {
+		sprintf(str, "%s -- %d", kDefaultErrorMessage, fErrorCode);
+		errorMessage = str;
 	}
 	
 	// Allocate room for and then copy the given string
