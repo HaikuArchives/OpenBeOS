@@ -1,13 +1,14 @@
-
 	#include <Application.h>
 	#include <Button.h>
 	#include <ColorControl.h>
 	#include <Window.h>
-	#include <View.h>
+	#include <Box.h>
 	#include <Alert.h>
 	#include <Menu.h>
 	#include <MenuBar.h>
 	#include <MenuItem.h>
+	
+	#include "BitmapMenuItem.h"
 	
 	#ifndef MENU_H 
 	#define MENU_H
@@ -21,12 +22,12 @@
 		virtual void	Update();
 		
 		menu_info 		info;
-		BMenuItem	*	fontSizeNine;
-		BMenuItem	*	fontSizeTen;
-		BMenuItem	*	fontSizeEleven;
-		BMenuItem	*	fontSizeTwelve;
-		BMenuItem	*	fontSizeFourteen;
-		BMenuItem	*	fontSizeEighteen;
+		BMenuItem		*fontSizeNine;
+		BMenuItem		*fontSizeTen;
+		BMenuItem		*fontSizeEleven;
+		BMenuItem		*fontSizeTwelve;
+		BMenuItem		*fontSizeFourteen;
+		BMenuItem		*fontSizeEighteen;
 	};
 	
 	class FontMenu : public BMenu {
@@ -37,17 +38,17 @@
 		virtual void	Update();
 	
 		menu_info		info;
-		BMenu		*	fontFamily;
-		BMenuItem	*	fontStyleItem;
+		BMenuItem		*fontFamily;
+		BMenu			*fontStyleMenu;
+		BMenuItem		*fontStyleItem;
 	};
 	
 	class MenuBar : public BMenuBar {
 		public:
 						MenuBar();
 		virtual 		~MenuBar();
-		virtual void	toggle_key_marker();
-		virtual void	set_menu();
-		virtual void	build_menu();
+				void	set_menu();
+				void	build_menu();
 		virtual void	Update();
 		virtual void 	FrameResized(float width, float height);
 		
@@ -55,28 +56,26 @@
 		BRect			rect;
 		menu_info 		info;
 		
+		//bitmaps
+		BBitmap			*fCtlBmp;
+		BBitmap			*fAltBmp;
+		BBitmap			*fSep0Bmp;
+		BBitmap			*fSep1Bmp;
+		BBitmap			*fSep2Bmp;
+		
 		//seperator submenu
-		BMenu		*	separatorStyleMenu;
-		BMenuItem	*	separatorStyleZero;
-		BMenuItem	*	separatorStyleOne;
-		BMenuItem	*	separatorStyleTwo;
+		BMenu			*separatorStyleMenu;
+		BMenuItem		*separatorStyleZero;
+		BMenuItem		*separatorStyleOne;
+		BMenuItem		*separatorStyleTwo;
 		
 		//others
-		BMenuItem	*	clickToOpenItem;
-		BMenuItem	*	alwaysShowTriggersItem;
-		BMenuItem	*	colorSchemeItem;
-		BMenuItem	*	separatorStyleItem;
-		BMenuItem	*	ctlAsShortcutItem;
-		BMenuItem	*	altAsShortcutItem;
-	};
-	
-	class MenuView : public BView {
-		public:
-						MenuView();
-		virtual			~MenuView();
-		virtual void	MessageReceived(BMessage *msg);
-		
-		menu_info		info;
+		BMenuItem		*clickToOpenItem;
+		BMenuItem		*alwaysShowTriggersItem;
+		BMenuItem		*colorSchemeItem;
+		BMenuItem		*separatorStyleItem;
+		BMenuItem		*ctlAsShortcutItem;
+		BMenuItem		*altAsShortcutItem;
 	};
 	
 	class ColorPicker : public BColorControl {
@@ -92,9 +91,9 @@
 		virtual			~ColorWindow();
 		virtual void	MessageReceived(BMessage *msg);
 		
-		ColorPicker *	colorPicker;
-		BButton 	*	DefaultButton;
-		BButton 	*	RevertButton;
+		ColorPicker 	*colorPicker;
+		BButton 		*DefaultButton;
+		BButton 		*RevertButton;
 		menu_info		revert_info;
 		menu_info 		info;
 	};
@@ -106,21 +105,21 @@
 		virtual void	MessageReceived(BMessage *msg);
 		virtual bool	QuitRequested();
 		virtual	void	Update();
-		virtual void	Defaults();
+				void	Defaults();
 		
 				bool	revert;
-		ColorWindow	*	colorWindow;
-		BMenuItem 	*	toggleItem;
+		ColorWindow		*colorWindow;
+		BMenuItem 		*toggleItem;
 		menu_info		info;
 		menu_info		revert_info;
 		BRect			rect;	
-		BMenu		*	menu;
-		MenuBar		*	menuBar;
-		MenuView	*	menuView;
-		FontMenu	*	fontMenu;
-		FontSizeMenu*	fontSizeMenu;
-		BButton 	*	revertButton;
-		BButton 	*	defaultButton;
+		BMenu			*menu;
+		MenuBar			*menuBar;
+		BBox			*menuView;
+		FontMenu		*fontMenu;
+		FontSizeMenu	*fontSizeMenu;
+		BButton 		*revertButton;
+		BButton 		*defaultButton;
 	};
 	
 	class MenuApp : public BApplication {
@@ -132,10 +131,10 @@
 		virtual bool	QuitRequested();
 		
 		//main
-		MenuWindow	*	menuWindow;
+		MenuWindow		*menuWindow;
 		BRect			rect;
 		menu_info		info;
-		BMenu 		*	menu;
+		BMenu 			*menu;
 	};
 	
 	#endif

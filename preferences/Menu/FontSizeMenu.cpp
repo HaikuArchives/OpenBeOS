@@ -6,27 +6,39 @@
 	{		
 		get_menu_info(&info);
 		
-		fontSizeNine = new BMenuItem("9", new BMessage(FONT_SIZE_NINE), 0, 0);
+		BMessage *msg = new BMessage(MENU_FONT_SIZE);
+		msg->AddFloat("size", 9);
+		fontSizeNine = new BMenuItem("9", msg, 0, 0);
 		AddItem(fontSizeNine);
 		if(info.font_size == 9){fontSizeNine->SetMarked(true);}
 		
-		fontSizeTen = new BMenuItem("10", new BMessage(FONT_SIZE_TEN), 0, 0);
+		msg = new BMessage(MENU_FONT_SIZE);
+		msg->AddFloat("size", 10);
+		fontSizeTen = new BMenuItem("10", msg, 0, 0);
 		AddItem(fontSizeTen);
 		if(info.font_size == 10){fontSizeTen->SetMarked(true);}
 		
-		fontSizeEleven = new BMenuItem("11", new BMessage(FONT_SIZE_ELEVEN), 0, 0);
+		msg = new BMessage(MENU_FONT_SIZE);
+		msg->AddFloat("size", 11);
+		fontSizeEleven = new BMenuItem("11", msg, 0, 0);
 		AddItem(fontSizeEleven);
 		if(info.font_size == 11){fontSizeEleven->SetMarked(true);}
 		
-		fontSizeTwelve = new BMenuItem("12", new BMessage(FONT_SIZE_TWELVE), 0, 0);
+		msg = new BMessage(MENU_FONT_SIZE);
+		msg->AddFloat("size", 12);
+		fontSizeTwelve = new BMenuItem("12", msg, 0, 0);
 		AddItem(fontSizeTwelve);
 		if(info.font_size == 12){fontSizeTwelve->SetMarked(true);}
 		
-		fontSizeFourteen = new BMenuItem("14", new BMessage(FONT_SIZE_FOURTEEN), 0, 0);
+		msg = new BMessage(MENU_FONT_SIZE);
+		msg->AddFloat("size", 14);
+		fontSizeFourteen = new BMenuItem("14", msg, 0, 0);
 		AddItem(fontSizeFourteen);
 		if(info.font_size == 14){fontSizeFourteen->SetMarked(true);}
 		
-		fontSizeEighteen = new BMenuItem("18", new BMessage(FONT_SIZE_EIGHTEEN), 0, 0);
+		msg = new BMessage(MENU_FONT_SIZE);
+		msg->AddFloat("size", 18);
+		fontSizeEighteen = new BMenuItem("18", msg, 0, 0);
 		AddItem(fontSizeEighteen);
 		if(info.font_size == 18){fontSizeEighteen->SetMarked(true);}
 		

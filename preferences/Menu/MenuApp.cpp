@@ -5,6 +5,7 @@
 		: BApplication("application/x-vnd.Be-GGUI")
 	{
 		get_menu_info(&info);
+		
 		menuWindow = new MenuWindow();
 		Update();
 		menuWindow->Show();
@@ -51,5 +52,4 @@
 			BMessage(msg);
 			break;
 		}
-		
 	}

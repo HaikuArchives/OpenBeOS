@@ -3,6 +3,12 @@
 	MenuBar::MenuBar()
 		:BMenuBar(BRect(40,10,10,10), "menu", B_FOLLOW_TOP|B_FRAME_EVENTS, B_ITEMS_IN_COLUMN, true)
 	{
+		fCtlBmp = BTranslationUtils::GetBitmap("ctl.bmp");
+		fAltBmp = BTranslationUtils::GetBitmap("alt.bmp");
+		fSep0Bmp = BTranslationUtils::GetBitmap("sep0.bmp");
+		fSep1Bmp = BTranslationUtils::GetBitmap("sep1.bmp");
+		fSep2Bmp = BTranslationUtils::GetBitmap("sep2.bmp");
+		
 		get_menu_info(&info);
 		build_menu();
 		set_menu();
@@ -17,11 +23,10 @@
 		
 		// create the menu items
 		clickToOpenItem = new BMenuItem("Click To Open", new BMessage(CLICK_OPEN_MSG), 0, 0);
-		alwaysShowTriggersItem = new BMenuItem("Allways Show Triggers", new BMessage(ALLWAYS_TRIGGERS_MSG), 0, 0);
+		alwaysShowTriggersItem = new BMenuItem("Always Show Triggers", new BMessage(ALLWAYS_TRIGGERS_MSG), 0, 0);
 		separatorStyleItem = new BMenuItem("Separator Style", new BMessage(DEFAULT_MSG), 0, 0);
-		ctlAsShortcutItem = new BMenuItem("CTL As Shortcut Key", new BMessage(CTL_MARKED_MSG), 0, 0);
-		altAsShortcutItem = new BMenuItem("ALT As Shortcut Key", new BMessage(ALT_MARKED_MSG), 0, 0);
-		altAsShortcutItem->SetMarked(true);
+		ctlAsShortcutItem = new BitmapMenuItem("as Shortcut Key", new BMessage(CTL_MARKED_MSG), fCtlBmp);
+		altAsShortcutItem = new BitmapMenuItem("as Shortcut Key", new BMessage(ALT_MARKED_MSG), fAltBmp);
 		
 		// color menu
 		colorSchemeItem = new BMenuItem("Color Scheme...", new BMessage(COLOR_SCHEME_MSG), 0, 0);
@@ -29,9 +34,15 @@
 		// create the separator menu
 		separatorStyleMenu = new BMenu("Separator Style", B_ITEMS_IN_COLUMN);
 		separatorStyleMenu->SetRadioMode(true);
-		separatorStyleZero = new BMenuItem("Separator Style 0", new BMessage(SEP_ZERO), 0, 0);
-		separatorStyleOne = new BMenuItem("Separator Style 1", new BMessage(SEP_ONE), 0, 0);
-		separatorStyleTwo = new BMenuItem("Separator Style 2", new BMessage(SEP_TWO), 0, 0);
+		BMessage *msg = new BMessage(MENU_SEP_TYPE);
+		msg->AddInt32("sep", 0);
+		separatorStyleZero = new BitmapMenuItem("                 ", msg, fSep0Bmp);
+		msg = new BMessage(MENU_SEP_TYPE);
+		msg->AddInt32("sep", 1);
+		separatorStyleOne = new BitmapMenuItem("", msg, fSep1Bmp);
+		msg = new BMessage(MENU_SEP_TYPE);
+		msg->AddInt32("sep", 2);
+		separatorStyleTwo = new BitmapMenuItem("", msg, fSep2Bmp);
 		if(info.separator == 0)
 			{separatorStyleZero->SetMarked(true);}
 		if(info.separator == 1)
@@ -57,30 +68,9 @@
 	}
 	
 	void
-	MenuBar::toggle_key_marker()
-	{
-		if (ctlAsShortcutItem->IsMarked()) {
-			ctlAsShortcutItem->SetMarked(false);
-			ctlAsShortcutItem->SetEnabled(true);
-			
-			altAsShortcutItem->SetMarked(true);
-			altAsShortcutItem->SetEnabled(true);
-		} else {
-			altAsShortcutItem->SetMarked(false);
-			altAsShortcutItem->SetEnabled(true);
-			
-			ctlAsShortcutItem->SetMarked(true);
-			ctlAsShortcutItem->SetEnabled(true);
-		}
-		
-		set_menu_info(&info);
-	}
-	
-	void
 	MenuBar::set_menu()
 	{
-		// make sure that the info being used is 
-		// up-to-date
+		// get up-to-date menu info
 		get_menu_info(&info);
 		
 		if (info.triggers_always_shown) {
@@ -112,7 +102,7 @@
 		// get up-to-date menu info
 		get_menu_info(&info);
 
-		// this needs to be updated incase the Defaults
+		// this needs to be updated in case the Defaults
 		// were requested.
 		if (info.separator == 0)
 			separatorStyleZero->SetMarked(true);
@@ -120,6 +110,8 @@
 			separatorStyleOne->SetMarked(true);
 		else if (info.separator == 2)
 			separatorStyleTwo->SetMarked(true);
+
+		set_menu();
 		
 		BFont font;
 		Window()->Lock();
@@ -128,6 +120,9 @@
  		SetFont(&font);
  		SetViewColor(info.background_color);
 		Window()->Unlock();
+	
+		//ctlAsShortcutItem
+		//altAsShortcutItem
 	
 		// force the menu to redraw
 		InvalidateLayout();

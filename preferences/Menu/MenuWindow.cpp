@@ -1,4 +1,5 @@
 	#include "MenuApp.h"
+	#include <stdio.h>
 	
 	int ans;
 	
@@ -7,9 +8,16 @@
 	{
 	 	get_menu_info(&revert_info);
 	 	get_menu_info(&info);
+	 	
 	 	revert = false;
+	 	
 	 	MoveTo((rect.left += 100),(rect.top += 100));
-	 	menuView = new MenuView();
+	 	BRect r = Bounds();
+	 	r.left -= 1;
+	 	r.top -= 1;
+	 	menuView = new BBox(r, "menuView",
+			B_FOLLOW_ALL, B_WILL_DRAW | B_FULL_UPDATE_ON_RESIZE);
+		menuView->SetViewColor(219,219,219,255);
 		menuBar = new MenuBar();
 		fontMenu = new FontMenu();
 		fontSizeMenu = new FontSizeMenu();
@@ -35,7 +43,6 @@
 	void
 	MenuWindow::MessageReceived(BMessage *msg)
 	{
-		revert = true;
 		switch(msg->what) {
 		
 		case MENU_REVERT:
@@ -51,98 +58,134 @@
 		case UPDATE_WINDOW:
 			Update();
 			break;
-			
-		case FONT_SIZE_NINE:{
-			get_menu_info(&info);
-			info.font_size = 9;
-			set_menu_info(&info);
-			Update();
-			break;}
 		
-		case FONT_SIZE_TEN:{
-			get_menu_info(&info);
-			info.font_size = 10;
-			set_menu_info(&info);
-			Update();
-			break;}
-		
-		case FONT_SIZE_ELEVEN:{
-			get_menu_info(&info);
-			info.font_size = 11;
-			set_menu_info(&info);
-			Update();
-			break;}
-		
-		case FONT_SIZE_TWELVE:{
-			get_menu_info(&info);
-			info.font_size = 12;
-			set_menu_info(&info);
-			Update();
-			break;}
-		
-		case FONT_SIZE_FOURTEEN:{
-			get_menu_info(&info);
-			info.font_size = 14;
-			set_menu_info(&info);
-			Update();
-			break;}
+		case MENU_FONT_FAMILY:
+		{
+			BMenuItem *item;
+			if (item = fontMenu->FindMarked()) {
 				
-		case FONT_SIZE_EIGHTEEN:{
-			get_menu_info(&info);
-			info.font_size = 18;
-			set_menu_info(&info);
-			Update();
-			break;}
+				if (!item->Submenu()->FindMarked()) {
+					item->Submenu()->ItemAt(0)->SetMarked(true);
+					font_family *family;
+					//BString family;
+					//msg->FindString("family", &family);
+					//char fam[64];
+					//family.CopyInto(fam, 0, family.Length());
+					//fam[family.Length()] = '\0';
+					//info.f_family = fam;
+					msg->FindPointer("family", (void**)&family);
+					info.f_family = *family;
+				}
+
+				// clear all other style submenus
+				for (int i = 0; i < fontMenu->CountItems(); i++) {
+					
+					// do not clear our style menu
+					if (fontMenu->ItemAt(i)->IsMarked())
+						continue;
+					
+					BMenu *menu = fontMenu->ItemAt(i)->Submenu();
+					for (int j = 0; j < menu->CountItems(); j ++) {
+						BMenuItem *mItem = menu->ItemAt(j);
+						if (mItem->IsMarked())
+							mItem->SetMarked(false);					
+					}
+				}
+			}
 			
-		case SEP_ZERO:
-			get_menu_info(&info);
-			info.separator = 0;
 			set_menu_info(&info);
 			Update();
 			break;
-		
-		case SEP_ONE:
-			get_menu_info(&info);
-			info.separator = 1;
+		}
+			
+		case MENU_FONT_STYLE:
+		{
+			font_family *family;
+			msg->FindPointer("family", (void**)&family); 
+			font_style *style;
+			msg->FindPointer("style", (void**)&style);
+			info.f_family = *family;
+			info.f_style = *style;
+			
+			BMenuItem *item;
+
+			if (item = fontMenu->FindItem(*family)) {
+				item->SetMarked(true);
+
+				// clear all other style submenus
+				for (int i = 0; i < fontMenu->CountItems(); i++) {
+				
+					// do not clear our style menu
+					if (fontMenu->ItemAt(i)->IsMarked())
+						continue;
+
+					BMenu *menu = fontMenu->ItemAt(i)->Submenu();
+				
+					for (int j = 0; j < menu->CountItems(); j ++) {
+						BMenuItem *mItem = menu->ItemAt(j);
+						if (mItem->IsMarked())
+							mItem->SetMarked(false);					
+					}
+				}
+			}
+			
 			set_menu_info(&info);
 			Update();
 			break;
+		}
 		
-		case SEP_TWO:
-			get_menu_info(&info);
-			info.separator = 2;
+		case MENU_FONT_SIZE:
+			revert = true;
+			float f;
+			msg->FindFloat("size", &f);
+			info.font_size = f;
+			set_menu_info(&info);
+			Update();
+			break;
+			
+		case MENU_SEP_TYPE:
+			revert = true;
+			int32 i;
+			msg->FindInt32("sep", &i);
+			info.separator = i;
 			set_menu_info(&info);
 			Update();
 			break;
 		
 		case CLICK_OPEN_MSG:
-			get_menu_info(&info);
+			revert = true;
 			if (info.click_to_open != true)
 				info.click_to_open = true;
 			else
 				info.click_to_open = false;
 			set_menu_info(&info);
 			menuBar->set_menu();
+			Update();
 			break;
 		
 		case ALLWAYS_TRIGGERS_MSG:
-			get_menu_info(&info);
+			revert = true;
 			if (info.triggers_always_shown != true)
 				info.triggers_always_shown = true;
 			else
 				info.triggers_always_shown = false;
 			set_menu_info(&info);
 			menuBar->set_menu();
+			Update();
 			break;
 		
 		case CTL_MARKED_MSG:
-			if(menuBar->ctlAsShortcutItem->IsMarked() == true){break;}
-			menuBar->toggle_key_marker();
+			revert = true;
+			menuBar->ctlAsShortcutItem->SetMarked(true);
+			menuBar->altAsShortcutItem->SetMarked(false);
+			Update();
 			break;
 		
 		case ALT_MARKED_MSG:
-			if(menuBar->altAsShortcutItem->IsMarked() == true){break;}
-			menuBar->toggle_key_marker();
+			revert = true;
+			menuBar->altAsShortcutItem->SetMarked(true);
+			menuBar->ctlAsShortcutItem->SetMarked(false);
+			Update();
 			break;
 		
 		case COLOR_SCHEME_MSG:
@@ -198,8 +241,8 @@
 		// for get_menu_info and set_menu_info (or is this information
 		// coming from libbe.so? or else where?). 
 		info.font_size = 12;
-		//info.f_family;
-		//info.f_style;
+		//info.f_family = "test";
+		//info.f_style = "test";
 		info.background_color = color;
 		info.separator = 0;
 		info.click_to_open = true;
