@@ -691,6 +691,46 @@ static void err(int code, char *msg)
 	printf("Error: %s: %d [%s]\n", msg, code, strerror(code));
 }
 
+static void big_socket_test(void)
+{
+	void *sp[100];
+	int i, rv;
+	int qty = 10;
+	struct sockaddr_in sa;
+
+	sa.sin_family = AF_INET;
+	sa.sin_port = 0;
+	sa.sin_addr.s_addr = INADDR_LOOPBACK;
+	sa.sin_len = sizeof(sa);
+	memset(&sa.sin_zero, 0, sizeof(sa.sin_zero));
+	
+	while (qty < 100) {
+		for (i=0;i<qty;i++) {
+			rv = initsocket(&sp[i]);
+			if (rv < 0) {
+				err(rv, "Failed to create a socket");
+				break;
+			}	
+			rv = socreate(AF_INET, sp[i], SOCK_DGRAM, 0);
+			if (rv < 0) {
+				err(rv, "Failed to create #2 a socket");
+				break;
+			}
+		}
+		for (i=0;i < qty;i++) {
+			rv = sobind(sp[i], (caddr_t)&sa, sizeof(sa));
+			if (rv < 0) {
+				err(rv, "Failed to bind!");
+				break;
+			}
+		}	
+		for (i=0;i<qty;i++) {
+			soclose(sp[i]);
+		}
+		qty += 10;
+	}
+}
+			
 static void bind_test(void)
 {
 	void *sp = NULL, *sq = NULL; /* socket pointer... */
@@ -805,6 +845,7 @@ int main(int argc, char **argv)
 
 	assign_addresses();
 	bind_test();
+	big_socket_test();
 	list_devices();
 	
 	d = devices;
