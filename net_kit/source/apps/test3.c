@@ -2,6 +2,7 @@
 #include <kernel/OS.h>
 #include <string.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #include "sys/socket.h"
 #include "netinet/in.h"
@@ -21,7 +22,7 @@ int32 test_thread(void *data)
 	int sock[MAX_SOCK];
 	int qty = MIN_SOCK;
 	struct sockaddr_in sa;
-	int i, rv;
+	int i, rv, totsock = 0;
 
 	sa.sin_family = AF_INET;
 	sa.sin_port = 0;
@@ -36,8 +37,11 @@ int32 test_thread(void *data)
 			if (i >= MAX_SOCK)
 				break;
 			sock[i] = socket(AF_INET, SOCK_DGRAM , 0);
-			if (sock[i] < 0)
-				err(sock[i], "Socket creation failed");
+			totsock++;
+			if (sock[i] < 0) {
+				printf("Total of %d sockets created\n", totsock);
+				err(errno, "Socket creation failed");
+			}
 		}
 		printf("Thread %d: completed creating %d sockets...\n", tnum+1, qty);
 		for (i=0;i < qty;i++) {
@@ -45,12 +49,14 @@ int32 test_thread(void *data)
 				break;
 			rv = bind(sock[i],	(struct sockaddr*)&sa, sizeof(sa));
 			if (rv < 0)
-				err(rv, "Failed to bind!");
+				err(errno, "Failed to bind!");
 		}	
 		for (i=0;i < qty;i++) {
 			if (i >= MAX_SOCK)
 				break;
-			closesocket(sock[i]);
+			rv = close(sock[i]);
+			if (rv < 0)
+				err(errno, "Failed to close socket!");
 		}
 		qty += (MAX_SOCK - MIN_SOCK) / 10;
 	}
