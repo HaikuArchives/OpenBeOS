@@ -22,7 +22,9 @@ typedef struct attr_info;
 typedef struct entry_ref;
 
 //! Private Storage Kit Namespace
-/*! Private Storage Kit Namespace */
+/*! Encompasses the functions used internally by the Storage Kit to
+	interface with the kernel, as well as various internal support functions,
+	data types, and type aliases. */
 namespace StorageKit {
 
 // Type aliases
@@ -45,7 +47,9 @@ const FileDescriptor NullFd = -1;
 //------------------------------------------------------------------------------
 // File Functions
 //------------------------------------------------------------------------------
-/*! Opens the filesystem entry specified by path. Returns a
+/*! \brief Opens the filesystem entry specified by path.
+
+	Returns a
 	new file descriptor if successful, -1 otherwise. This version
 	fails if the given file does not exist, or if you specify
 	O_CREAT as one of the flags (use the four argument version
@@ -53,12 +57,12 @@ const FileDescriptor NullFd = -1;
 	it doesn't already exist). */
 status_t open(const char *path, OpenFlags flags, FileDescriptor &result);
 
-/*! Same as the other version of open() except the file is created with the
+/*! \brief Same as the other version of open() except the file is created with the
 	permissions given by creationFlags if it doesn't exist. */
 status_t open(const char *path, OpenFlags flags, CreationFlags creationFlags,
 	FileDescriptor &result);
 
-/*! Closes a previously open()ed file. */
+/*! \brief Closes a previously open()ed file. */
 status_t close( FileDescriptor file );
 
 //! Reads data from a file into a buffer.
@@ -79,7 +83,7 @@ off_t seek(FileDescriptor fd, off_t pos, SeekMode mode);
 //! Returns the position of a file's read/write pointer.
 off_t get_position(FileDescriptor fd);
 
-/*! Returns a new file descriptor that refers to the same file as
+/*! \brief Returns a new file descriptor that refers to the same file as
 	that specified, or -1 if unsuccessful. Remember to call close
 	on the file descriptor when through with it. */
 FileDescriptor dup(FileDescriptor file);
@@ -89,43 +93,43 @@ FileDescriptor dup(FileDescriptor file);
 	parameter an. */
 status_t dup(FileDescriptor file, FileDescriptor& result);
 
-/*! Flushes any buffers associated with the given file to disk
+/*! \brief Flushes any buffers associated with the given file to disk
 	and then returns. */
 status_t sync(FileDescriptor file);
 
-/*! Locks the given file so it may not be accessed by anyone else. */
+//! Locks the given file so it may not be accessed by anyone else. */
 status_t lock(FileDescriptor file, OpenFlags mode, FileLock *lock);
 
-/*! Unlocks a file previously locked with lock(). */
+//! Unlocks a file previously locked with lock(). */
 status_t unlock(FileDescriptor file, FileLock *lock);
 
-/*! Returns statistical information for the given file. */
+//! Returns statistical information for the given file. */
 status_t get_stat(const char *path, Stat *s);
 status_t get_stat(FileDescriptor file, Stat *s);
 status_t get_stat(entry_ref &ref, Stat *s);
 
-/*! Modifies a given portion of the file's statistical information. */
+//! Modifies a given portion of the file's statistical information. */
 status_t set_stat(FileDescriptor file, Stat &s, StatMember what);
 
-/*! Same as the other version of set_stat(), except the file is specified by name. */
+//! Same as the other version of set_stat(), except the file is specified by name. */
 status_t set_stat(const char *filename, Stat &s, StatMember what);
 
 //------------------------------------------------------------------------------
 // Attribute Functions
 //------------------------------------------------------------------------------
-/*! Reads the data from the specified attribute into the given buffer of size
+/*! \brief Reads the data from the specified attribute into the given buffer of size
 	count. Returns the number of bytes actually read. */
 ssize_t read_attr(FileDescriptor file, const char *attribute, uint32 type, 
 						off_t pos, void *buf, size_t count );
 						
-/*! Write count bytes from the given data buffer into the specified attribute. */
+//! Write count bytes from the given data buffer into the specified attribute. */
 ssize_t write_attr(FileDescriptor file, const char *attribute, uint32 type, 
 						off_t pos, const void *buf, size_t count);
 
-/*! Removes the specified attribute and any data associated with it. */						
+//! Removes the specified attribute and any data associated with it. */						
 status_t remove_attr(FileDescriptor file, const char *attr);
 
-/*! Returns statistical information about the given attribute. */
+//! Returns statistical information about the given attribute. */
 status_t stat_attr(FileDescriptor file, const char *name, AttrInfo *ai);
 
 
@@ -150,7 +154,7 @@ status_t close_attr_dir(FileDescriptor dir);
 //------------------------------------------------------------------------------
 // Directory Functions
 //------------------------------------------------------------------------------
-/*! Opens the given directory. Sets result to a properly "unitialized" directory
+/*! \brief Opens the given directory. Sets result to a properly "unitialized" directory
 	if the function fails. */
 status_t open_dir(const char *path, FileDescriptor &result);
 
@@ -162,7 +166,7 @@ status_t create_dir(const char *path,
 status_t create_dir(const char *path, FileDescriptor &result,
 					 mode_t mode = S_IRWXU | S_IRWXG | S_IRWXU);
 
-//! \brief Returns the next entries in the given directory.
+//! Returns the next entries in the given directory.
 int32 read_dir(FileDescriptor dir, DirEntry *buffer, size_t length,
 				int32 count = INT_MAX);
 
