@@ -21,6 +21,8 @@ typedef int proc_id;
 typedef int sem_id;
 typedef int port_id;
 typedef int image_id;
+/* compat with beos (was int32 on beos) */
+typedef int status_t;
 
 typedef uint64 vnode_id;
 typedef uint32 fs_id;
