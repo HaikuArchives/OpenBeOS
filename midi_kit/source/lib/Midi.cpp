@@ -84,7 +84,7 @@ void BMidi::SnoozeUntil(uint32 time) const {
 
 void BMidi::SprayNoteOff(uchar chan, uchar note, uchar vel,
 	uint32 time) const {
-    int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			NoteOff(chan,note,vel,time);
@@ -93,7 +93,7 @@ void BMidi::SprayNoteOff(uchar chan, uchar note, uchar vel,
 
 void BMidi::SprayNoteOn(uchar chan, uchar note, uchar vel,
 	uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			NoteOn(chan,note,vel,time);
@@ -102,7 +102,7 @@ void BMidi::SprayNoteOn(uchar chan, uchar note, uchar vel,
 
 void BMidi::SprayKeyPressure(uchar chan, uchar note, uchar pres,
 	uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			KeyPressure(chan,note,pres,time);
@@ -111,7 +111,7 @@ void BMidi::SprayKeyPressure(uchar chan, uchar note, uchar pres,
 
 void BMidi::SprayControlChange(uchar chan, uchar ctrl_num, uchar ctrl_val,
 	uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			ControlChange(chan,ctrl_num,ctrl_val,time);
@@ -120,7 +120,7 @@ void BMidi::SprayControlChange(uchar chan, uchar ctrl_num, uchar ctrl_val,
 
 void BMidi::SprayProgramChange(uchar chan, uchar prog_num,
 	uint32 time) const {                            
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			ProgramChange(chan,prog_num,time);
@@ -129,7 +129,7 @@ void BMidi::SprayProgramChange(uchar chan, uchar prog_num,
 
 void BMidi::SprayChannelPressure(uchar chan, uchar pres,
 	uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			ChannelPressure(chan,pres,time);
@@ -138,7 +138,7 @@ void BMidi::SprayChannelPressure(uchar chan, uchar pres,
 
 void BMidi::SprayPitchBend(uchar chan, uchar lsb, uchar msb,
 	uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			PitchBend(chan,lsb,msb,time);
@@ -147,7 +147,7 @@ void BMidi::SprayPitchBend(uchar chan, uchar lsb, uchar msb,
 
 void BMidi::SpraySystemExclusive(void * data, size_t data_len,
 	uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			SystemExclusive(data,data_len);
@@ -156,7 +156,7 @@ void BMidi::SpraySystemExclusive(void * data, size_t data_len,
 
 void BMidi::SpraySystemCommon(uchar stat_byte, uchar data1, uchar data2,
 	uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			SystemCommon(stat_byte,data1,data2,time);
@@ -164,7 +164,7 @@ void BMidi::SpraySystemCommon(uchar stat_byte, uchar data1, uchar data2,
 }
 
 void BMidi::SpraySystemRealTime(uchar stat_byte, uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			SystemRealTime(stat_byte,time);
@@ -172,7 +172,7 @@ void BMidi::SpraySystemRealTime(uchar stat_byte, uint32 time) const {
 }
 
 void BMidi::SprayTempoChange(int32 bpm, uint32 time) const {
-	int32 num;
+    int32 num = _con_list->CountItems();
 	for(int32 i = 0; i < num; i++) {
 		((BMidi *)_con_list->ItemAt(i))->
 			TempoChange(bpm,time);

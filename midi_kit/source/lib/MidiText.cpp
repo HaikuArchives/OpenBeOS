@@ -12,45 +12,46 @@ BMidiText::~BMidiText() {
 
 void BMidiText::NoteOff(uchar chan, uchar note, uchar vel, uint32 time) {
 	_PrintTime();
-	cout << ":NOTE OFF;channel = " << chan
-		<< ",note = " << note << ",velocity = " << vel << endl;
+	cout << ":NOTE OFF;channel = " << (int)chan
+		<< ",note = " << (int)note << ",velocity = " << (int)vel << endl;
 }
 
 void BMidiText::NoteOn(uchar chan, uchar note, uchar vel, uint32 time) {
 	_PrintTime();
-	cout << ":NOTE ON;channel = " << chan
-		<< ",note = " << note << ",velocity = " << vel << endl;
+	cout << ":NOTE ON;channel = " << (int)chan
+		<< ",note = " << (int)note << ",velocity = " << (int)vel << endl;
 }
 
 void BMidiText::KeyPressure(uchar chan, uchar note, uchar pres, uint32 time) {
 	_PrintTime();
-	cout << ":KEY PRESSURE;channel = " << chan
-		<< ",note = " << note << ",pressure = " << pres << endl;
+	cout << ":KEY PRESSURE;channel = " << (int)chan
+		<< ",note = " << (int)note << ",pressure = " << (int)pres << endl;
 }
 
 void BMidiText::ControlChange(uchar chan, uchar ctrl_num,
                                uchar ctrl_val, uint32 time) {
 	_PrintTime();
-	cout << ":CONTROL CHANGE;channel = " << chan
-		<< ",control = " << ctrl_num << ",value = " << ctrl_val << endl;
+	cout << ":CONTROL CHANGE;channel = " << (int)chan
+		<< ",control = " << (int)ctrl_num
+		<< ",value = "<< (int)ctrl_val << endl;
 }
 
 void BMidiText::ProgramChange(uchar chan, uchar prog_num, uint32 time) {
 	_PrintTime();
-	cout << ":PROGRAM CHANGE;channel = " << chan
-		<< ",program = " << prog_num << endl;
+	cout << ":PROGRAM CHANGE;channel = " << (int)chan
+		<< ",program = " << (int)prog_num << endl;
 }
 
 void BMidiText::ChannelPressure(uchar chan, uchar pres, uint32 time) {
 	_PrintTime();
-	cout << ":CHANNEL PRESSURE;channel = " << hex << chan
-		<< ",pressure = " << pres << endl;
+	cout << ":CHANNEL PRESSURE;channel = " << (int)chan
+		<< ",pressure = " << (int)pres << endl;
 }
 
 void BMidiText::PitchBend(uchar chan, uchar lsb, uchar msb, uint32 time) {
 	_PrintTime();
-	cout << ":PITCH BEND;channel = " << chan << hex
-		<< ",lsb = " << lsb << ",msb = " << msb << endl;
+	cout << ":PITCH BEND;channel = " << (int)chan << hex
+		<< ",lsb = " << (int)lsb << ",msb = " << (int)msb << endl;
 }
 
 void BMidiText::SystemExclusive(void * data, size_t data_len, uint32 time) {
@@ -65,13 +66,13 @@ void BMidiText::SystemExclusive(void * data, size_t data_len, uint32 time) {
 void BMidiText::SystemCommon(uchar stat_byte, uchar data1,
 	uchar data2, uint32 time) {
 	_PrintTime();
-	cout << ":SYSTEM COMMON;status = " << hex << stat_byte
-		<< ",data1 = " << data1 << ",data2 = " << data2 << endl;                              
+	cout << ":SYSTEM COMMON;status = " << hex << (int)stat_byte
+		<< ",data1 = " << (int)data1 << ",data2 = " << (int)data2 << endl;                              
 }
 
 void BMidiText::SystemRealTime(uchar stat_byte, uint32 time) {
 	_PrintTime();
-	cout << ":SYSTEM REAL TIME;status = " << hex << stat << endl;
+	cout << ":SYSTEM REAL TIME;status = " << hex << (int)stat << endl;
 }
 
 void BMidiText::TempoChange(int32 bpm, uint32 time) {

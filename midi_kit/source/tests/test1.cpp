@@ -18,7 +18,7 @@ int main(int argc, char * argv[]) {
 	entry_ref e_ref;
 	entry.GetRef(&e_ref);
 	store.Import(&e_ref);
-	text.Connect(&store);
+	store.Connect(&text);
 	store.Start();
 	snooze(10000000);
 	store.Stop();

@@ -8,6 +8,12 @@
 #include <string.h>
 #include "MidiEvent.h"
 
+#define PACK_4_U8_TO_U32(_d1, _d2) \
+	_d2 = (uint32)_d1[0] << 24 | (uint32)_d1[1] << 16 | \
+		(uint32)_d1[2] << 8 | (uint32)_d1[3];
+#define PACK_2_U8_TO_U16(_d1, _d2) \
+	_d2 = (uint16)_d1[0] << 8 | (uint16)_d1[1];
+
 BMidiStore::BMidiStore() {
 	_evt_list = new BList();
 }
@@ -78,16 +84,21 @@ status_t BMidiStore::Import(const entry_ref * ref) {
 		return B_BAD_MIDI_DATA;
 	}
 	d += 4;
-	uint32 hdr_len = (uint32)d[0] << 24 | (uint32)d[1] << 16 |
-		(uint32)d[2] << 8 | (uint32)d[3];
+	uint32 hdr_len;
+	PACK_4_U8_TO_U32(d,hdr_len);
 	if(hdr_len != 6) {
 		return B_BAD_MIDI_DATA;
 	}
 	d += 4;
-	uint32 format = (uint32)d[0] << 8 | (uint32)d[1];
-	uint32 tracks = (uint32)d[2] << 8 | (uint32)d[3];
-	uint32 division = (uint32)d[4] << 8 | (uint32)d[5];
-	d += 6;
+	uint32 format;
+	uint32 tracks;
+	uint32 division;
+	PACK_2_U8_TO_U16(d,format);
+	d += 2;
+	PACK_2_U8_TO_U16(d,tracks);
+	d += 2;
+	PACK_2_U8_TO_U16(d,tracks);
+	d += 2;
 	status_t ret;
 	switch(format) {
 	case 0:
@@ -146,19 +157,24 @@ int32 BMidiStore::Tempo() const {
 
 void BMidiStore::Run() {
 	while(KeepRunning()) {
+		SprayNoteOn(1,1,1,B_NOW);
 		snooze(1000000);
-		cout << "s";
-		cout.flush();
 	}
 }
 
 //-----------------------------------------------------------------------------
 //
-status_t BMidiStore::_DecodeFormat0Tracks(uint8 * data,
-	uint16 tracks, uint32 len) {
+status_t BMidiStore::_DecodeFormat0Tracks(uint8 * data, uint16 tracks,
+	uint32 len) {
 	cout << "Decoding " << tracks << " tracks" << endl;
-	
-
-
+	uint8 * d = data;
+	uint32 hdr_id;
+	uint32 hdr_len;
+	PACK_4_U8_TO_U32(d,hdr_id);
+	d += 4;
+	PACK_4_U8_TO_U32(d,hdr_len);
+	d += 4;
+	cout << "Header id: " << hdr_id << endl;
+	cout << "Header len: " << hdr_len << endl;
 	return B_OK;
 }
