@@ -169,7 +169,7 @@ static void attach_device(int devid, char *driver, char *devno)
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_hdrlen = 14;
 	ifp->if_addrlen = 6;
-	ifp->if_flags |= IFF_BROADCAST;
+	ifp->if_flags |= (IFF_BROADCAST|IFF_SIMPLEX|IFF_MULTICAST);
 	
 	ifp->rx_thread = -1;
 	ifp->tx_thread = -1;
@@ -827,6 +827,9 @@ int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 						ifa->ifa_addr->sa_family);
 			}
 			break;
+		case SIOCSIFFLAGS:
+			printf("ether_ioctl: SIOCSIFFLAGS\n");
+			break;
 		default:
 			printf("unhandled call to ethernet_ioctl\n");
 	}
@@ -873,6 +876,12 @@ static int ether_init(void *cpp)
 	return 0;
 }
 
+static int ether_stop()
+{
+	net_remove_timer(arptimer_id);
+	return 0;
+}
+
 _EXPORT struct kernel_net_module_info device_info = {
 	{
 		ETHERNET_MODULE_PATH,
@@ -881,7 +890,7 @@ _EXPORT struct kernel_net_module_info device_info = {
 	},
 
 	ether_init,
-	NULL
+	ether_stop
 };
 
 #ifdef _KERNEL_MODE
