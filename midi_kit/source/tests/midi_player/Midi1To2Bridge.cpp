@@ -2,13 +2,13 @@
 
 Midi1To2Bridge.cpp
 
-Copyright (c) 2002 OpenBeOS. 
+Copyright (c) 2002 OpenBeOS.
 
 Midi Kit 1 input to Midi Kit 2 input (consumer) bridge.
-A Midi Kit 1 input node that passes the midi events via a 
+A Midi Kit 1 input node that passes the midi events via a
 Midi Kit 2 producer to Midi Kit 2 consumers.
 
-Author: 
+Author:
 	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -34,97 +34,97 @@ THE SOFTWARE.
 #include "Midi1To2Bridge.h"
 
 Midi1To2Bridge::Midi1To2Bridge(const char *name) {
-	m_output = new BMidiLocalProducer(name);
-	m_output->Register();
+	fOutput = new BMidiLocalProducer(name);
+	fOutput->Register();
 }
 
 Midi1To2Bridge::~Midi1To2Bridge() {
-	m_output->Unregister();
-	m_output->Release();
+	fOutput->Unregister();
+	fOutput->Release();
 }
 
-void Midi1To2Bridge::NoteOff(uchar channel, 
-						uchar note, 
+void Midi1To2Bridge::NoteOff(uchar channel,
+						uchar note,
 						uchar velocity,
 						uint32 time = B_NOW) {
-	m_output->SprayNoteOff(channel-1, note, velocity, ToBigtime(time));
+	fOutput->SprayNoteOff(channel-1, note, velocity, ToBigtime(time));
 }
 
-void Midi1To2Bridge::NoteOn(uchar channel, 
-					   uchar note, 
+void Midi1To2Bridge::NoteOn(uchar channel,
+					   uchar note,
 					   uchar velocity,
 			    	   uint32 time = B_NOW) {
-	m_output->SprayNoteOn(channel-1, note, velocity, ToBigtime(time));
+	fOutput->SprayNoteOn(channel-1, note, velocity, ToBigtime(time));
 }
 
 
-void Midi1To2Bridge::KeyPressure(uchar channel, 
-							uchar note, 
+void Midi1To2Bridge::KeyPressure(uchar channel,
+							uchar note,
 							uchar pressure,
 							uint32 time = B_NOW) {
-	m_output->SprayKeyPressure(channel-1, note, pressure, ToBigtime(time));
+	fOutput->SprayKeyPressure(channel-1, note, pressure, ToBigtime(time));
 }
 
 
-void Midi1To2Bridge::ControlChange(uchar channel, 
+void Midi1To2Bridge::ControlChange(uchar channel,
 							  uchar controlNumber,
-							  uchar controlValue, 
+							  uchar controlValue,
 							  uint32 time = B_NOW) {
-	m_output->SprayControlChange(channel-1, controlNumber, controlValue, ToBigtime(time));
+	fOutput->SprayControlChange(channel-1, controlNumber, controlValue, ToBigtime(time));
 }
 
 
-void Midi1To2Bridge::ProgramChange(uchar channel, 
+void Midi1To2Bridge::ProgramChange(uchar channel,
 								uchar programNumber,
 							  	uint32 time = B_NOW) {
-	m_output->SprayProgramChange(channel-1, programNumber, ToBigtime(time));
+	fOutput->SprayProgramChange(channel-1, programNumber, ToBigtime(time));
 }
 
 
-void Midi1To2Bridge::ChannelPressure(uchar channel, 
-								uchar pressure, 
+void Midi1To2Bridge::ChannelPressure(uchar channel,
+								uchar pressure,
 								uint32 time = B_NOW) {
-	m_output->SprayChannelPressure(channel-1, pressure, ToBigtime(time));
+	fOutput->SprayChannelPressure(channel-1, pressure, ToBigtime(time));
 }
 
 
-void Midi1To2Bridge::PitchBend(uchar channel, 
-						  uchar lsb, 
+void Midi1To2Bridge::PitchBend(uchar channel,
+						  uchar lsb,
 						  uchar msb,
 			    		  uint32 time = B_NOW) {
-	m_output->SprayPitchBend(channel-1, lsb, msb, ToBigtime(time));
+	fOutput->SprayPitchBend(channel-1, lsb, msb, ToBigtime(time));
 }
 
 
-void Midi1To2Bridge::SystemExclusive(void* data, 
-								size_t dataLength, 
+void Midi1To2Bridge::SystemExclusive(void* data,
+								size_t dataLength,
 								uint32 time = B_NOW) {
-	m_output->SpraySystemExclusive(data, dataLength, ToBigtime(time));
+	fOutput->SpraySystemExclusive(data, dataLength, ToBigtime(time));
 }
 
 
-void Midi1To2Bridge::SystemCommon(uchar statusByte, 
-							 uchar data1, 
+void Midi1To2Bridge::SystemCommon(uchar statusByte,
+							 uchar data1,
 							 uchar data2,
 							 uint32 time = B_NOW) {
-	m_output->SpraySystemCommon(statusByte, data1, data2, ToBigtime(time));
+	fOutput->SpraySystemCommon(statusByte, data1, data2, ToBigtime(time));
 }
 
 
 void Midi1To2Bridge::SystemRealTime(uchar statusByte, uint32 time = B_NOW) {
-	m_output->SpraySystemRealTime(statusByte, ToBigtime(time));
+	fOutput->SpraySystemRealTime(statusByte, ToBigtime(time));
 }
 
 
 void Midi1To2Bridge::TempoChange(int32 bpm, uint32 time = B_NOW) {
-	m_output->SprayTempoChange(bpm, ToBigtime(time));
+	fOutput->SprayTempoChange(bpm, ToBigtime(time));
 }
 
 
 void Midi1To2Bridge::AllNotesOff(bool justChannel = true, uint32 time = B_NOW) {
 	bigtime_t t = ToBigtime(time);
 	for (uchar channel = 0; channel < 16; channel ++) {
-		m_output->SprayControlChange(channel, B_ALL_NOTES_OFF, 0, t);
+		fOutput->SprayControlChange(channel, B_ALL_NOTES_OFF, 0, t);
 	}
 }
 

@@ -40,7 +40,7 @@ THE SOFTWARE.
 // Note channel starts with 0 in Midi Kit 2 and it starts with 1 in Midi Kit 1
 
 class Midi1To2Bridge : public BMidi {
-	BMidiLocalProducer* m_output;
+	BMidiLocalProducer* fOutput;
 
 	static inline bigtime_t ToBigtime(uint32 time) { return time * (bigtime_t)1000; }	
 	
