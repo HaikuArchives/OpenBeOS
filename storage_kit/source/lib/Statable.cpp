@@ -1,10 +1,11 @@
 #include <Statable.h>
-
-#include "kernel_interface.h"
-#include <posix/sys/stat.h>
-
 #include <Node.h>
 #include <Volume.h>
+
+#include <posix/sys/stat.h>
+
+#include "fsproto.h"
+#include "kernel_interface.h"
 
 bool
 BStatable::IsFile() const
@@ -56,6 +57,7 @@ status_t
 BStatable::GetOwner(uid_t *owner) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
@@ -68,14 +70,23 @@ BStatable::GetOwner(uid_t *owner) const
 status_t 
 BStatable::SetOwner(uid_t owner)
 {
+  status_t error;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if(error == B_OK) {
+    statData.st_uid = owner;
+    error = set_stat(statData, WSTAT_UID);
+  }
   
-  return B_BAD_VALUE;
+  return error;
 }
 	
 status_t
 BStatable::GetGroup(gid_t *group) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
@@ -88,13 +99,23 @@ BStatable::GetGroup(gid_t *group) const
 status_t
 BStatable::SetGroup(gid_t group)
 {
-	return B_BAD_VALUE;
+  status_t error;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if(error == B_OK) {
+    statData.st_gid = group;
+    error = set_stat(statData, WSTAT_GID);
+  }
+  
+  return error;
 }
 	
 status_t
 BStatable::GetPermissions(mode_t *perms) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
@@ -107,13 +128,23 @@ BStatable::GetPermissions(mode_t *perms) const
 status_t
 BStatable::SetPermissions(mode_t perms)
 {
-	return B_BAD_VALUE;
+  status_t error;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if(error == B_OK) {
+    statData.st_mode = perms;
+    error = set_stat(statData, WSTAT_MODE);
+  }
+  
+  return error;
 }
 
 status_t
 BStatable::GetSize(off_t *size) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
@@ -122,11 +153,12 @@ BStatable::GetSize(off_t *size) const
 
   return error;
 }
-	
+
 status_t
 BStatable::GetModificationTime(time_t *mtime) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
@@ -139,13 +171,23 @@ BStatable::GetModificationTime(time_t *mtime) const
 status_t
 BStatable::SetModificationTime(time_t mtime)
 {
-	return B_BAD_VALUE;
+  status_t error;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if(error == B_OK) {
+    statData.st_mtime = mtime;
+    error = set_stat(statData, WSTAT_MTIME);
+  }
+  
+  return error;
 }
 
 status_t
 BStatable::GetCreationTime(time_t *ctime) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
@@ -158,13 +200,23 @@ BStatable::GetCreationTime(time_t *ctime) const
 status_t
 BStatable::SetCreationTime(time_t ctime)
 {
-	return B_BAD_VALUE;
+  status_t error;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if(error == B_OK) {
+    statData.st_ctime = ctime;
+    error = set_stat(statData, WSTAT_CRTIME);
+  }
+  
+  return error;
 }
 
 status_t
 BStatable::GetAccessTime(time_t *atime) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
@@ -177,22 +229,36 @@ BStatable::GetAccessTime(time_t *atime) const
 status_t
 BStatable::SetAccessTime(time_t atime)
 {
-	return B_BAD_VALUE;
+  status_t error;
+  struct stat statData;
+
+  error = GetStat(&statData);
+  if(error == B_OK) {
+    statData.st_atime = atime;
+    error = set_stat(statData, WSTAT_ATIME);
+  }
+  
+  return error;
 }
 
 status_t
 BStatable::GetVolume(BVolume *vol) const
 {
   struct stat statData;
+  status_t error;
 
   error = GetStat(&statData);
   if (error == B_OK) {
-	if(vol != null) {
-	  vol->SetTo(statData.device);
+	if(vol != 0) {
+	  vol->SetTo(statData.st_dev);
 	} else {
-	  vol = new BVolume(statData.device);
+	  vol = new BVolume(statData.st_dev);
 	}
   }
 
   return error;
 }
+
+void BStatable::_OhSoStatable1() {}
+void BStatable::_OhSoStatable2() {}
+void BStatable::_OhSoStatable3() {}
