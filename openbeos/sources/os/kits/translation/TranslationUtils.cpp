@@ -455,7 +455,7 @@ BTranslationUtils::GetStyledText(BPositionIO *fromStream, BTextView *intoView,
 }
 
 // ---------------------------------------------------------------
-// PutStyledTest
+// PutStyledText
 //
 // This function takes styled text data from fromView and writes it to
 // intoStream.  The plain text data and styled text data are combined
