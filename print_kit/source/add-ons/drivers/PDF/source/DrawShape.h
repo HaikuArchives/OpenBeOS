@@ -44,6 +44,7 @@ class DrawShape : public BShapeIterator
 	inline PDF *Pdf()			{ return fWriter->fPdf; }
 	inline float tx(float x)	{ return fWriter->tx(x); }
 	inline float ty(float y)	{ return fWriter->ty(y); }
+	inline float scale(float f) { return fWriter->scale(f); }
 
 	inline bool IsDrawing() const  { return fWriter->IsDrawing(); }
 	inline bool IsClipping() const { return fWriter->IsClipping(); }

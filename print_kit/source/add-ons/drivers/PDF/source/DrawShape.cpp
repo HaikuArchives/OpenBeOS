@@ -66,7 +66,7 @@ DrawShape::BezierLength(BPoint *curve, int n) {
 		len += sqrt(diff.x * diff.x + diff.y * diff.y);
 		start = end;
 	}
-	return len;
+	return scale(len);
 }
 
 
