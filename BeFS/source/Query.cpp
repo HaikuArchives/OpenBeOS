@@ -856,11 +856,6 @@ Equation::PrepareQuery(Volume */*volume*/, Index &index, TreeIterator **iterator
 		// Try to get an index that holds all files (name)
 		// Also sets the default type for all attributes without index
 		// to string.
-		// It would make sense to switch to e.g. last_modified, since
-		// that tend to be the smallest index, but OTOH name may be
-		// the least frequently used one for write accesses...
-		// Perhaps some real world benchmarks would hint to the right
-		// thing
 		type = status < B_OK ? B_STRING_TYPE : index.Type();
 
 		if (index.SetTo("name") < B_OK)

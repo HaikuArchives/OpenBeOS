@@ -130,9 +130,25 @@ CachedNode::Free(Transaction *transaction,off_t offset)
 		|| offset == BPLUSTREE_NULL)
 		RETURN_ERROR(B_BAD_VALUE);
 
-	// we just add the page to the free pages list, but we
-	// could also really free the space for it, if the page
-	// is the last one in the tree
+	// ToDo: scan the free nodes list and remove all nodes at the end
+	// of the tree - perhaps that shouldn't be done everytime that
+	// function is called, perhaps it should be done when the directory
+	// inode is closed or based on some calculation or whatever...
+
+	// if the node is the last one in the tree, we shrink
+	// the tree and file size by one node
+	off_t lastOffset = fTree->fHeader->maximum_size - fTree->fNodeSize;
+	if (offset == lastOffset) {
+		fTree->fHeader->maximum_size = lastOffset;
+		
+		status_t status = fTree->fStream->SetFileSize(transaction,lastOffset);
+		if (status < B_OK)
+			return status;
+
+		return fTree->fCachedHeader.WriteBack(transaction);
+	}
+
+	// add the node to the free nodes list
 	fNode->left_link = fTree->fHeader->free_node_pointer;
 	if (WriteBack(transaction) == B_OK) {
 		fTree->fHeader->free_node_pointer = offset;
@@ -912,15 +928,22 @@ void
 BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 {
 	// should never happen, but who knows?
-	if (index >= node->all_key_count)
+	if (index > node->all_key_count && node->all_key_count > 0)
 		return;
+
+	off_t *values = node->Values();
+
+	// if we would have to drop the overflow link, drop
+	// the last key instead and update the overflow link
+	// to the value of that one
+	if (!node->IsLeaf() && index == node->all_key_count)
+		node->overflow_link = values[--index];
 
 	uint16 length;
 	uint8 *key = node->KeyAt(index,&length);
 	if (length > BPLUSTREE_MAX_KEY_LENGTH)
 		return;
 
-	off_t *values = node->Values();
 	uint16 *keyLengths = node->KeyLengths();
 	uint8 *keys = node->Keys();
 
@@ -970,7 +993,6 @@ BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 		if (node->IsLeaf())	// first round, check for duplicate entries
 		{
 			status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
-
 			if (status < B_OK)
 				RETURN_ERROR(status); 
 
@@ -983,26 +1005,45 @@ BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 			}
 		}
 
-		RemoveKey(node,nodeAndKey.keyIndex);
-		cached.WriteBack(transaction);
+		// if it's an empty root node, we have to convert it
+		// to a leaf node by dropping the overflow link
+		if (nodeAndKey.nodeOffset == fHeader->root_node_pointer
+			&& node->all_key_count == 0) {
+			node->overflow_link = BPLUSTREE_NULL;
+			if (cached.WriteBack(transaction) < B_OK)
+				return B_IO_ERROR;
 
-		// ToDo: do something here if the node is empty!
-		// I think we will follow the original implementation and
-		// don't implement merging of nodes that use too less
-		// space.
-		// In any way, we should free the node - and enter the loop
-		// again; the correct key indices are on the stack
-
-		/*
-		if (node->all_key_count == 0
-			&& nodeAndKey.nodeOffset != fHeader->root_node_pointer
-			&& node->IsLeaf()) {
-			cached.Free(transaction);
-			continue;
+			fHeader->max_number_of_levels = 1;
+			return fCachedHeader.WriteBack(transaction);
 		}
-		*/
 
-		return B_OK;
+		// if there is only one key left, we don't have to remove
+		// it, we can just dump the node (index nodes still have
+		// the overflow link, so we have to drop the last key)
+		if (node->all_key_count > 1
+			|| !node->IsLeaf() && node->all_key_count == 1) {
+			RemoveKey(node,nodeAndKey.keyIndex);
+			return cached.WriteBack(transaction);
+		}
+
+		// when we are here, we can just free the node, but
+		// we have to update the right/left link of the
+		// siblings first
+		CachedNode otherCached(this);
+		bplustree_node *other = otherCached.SetTo(node->left_link);
+		if (other != NULL) {
+			other->right_link = node->right_link;
+			if (otherCached.WriteBack(transaction) < B_OK)
+				return B_IO_ERROR;
+		}
+
+		if ((other = otherCached.SetTo(node->right_link)) != NULL) {
+			other->left_link = node->left_link;
+			if (otherCached.WriteBack(transaction) < B_OK)
+				return B_IO_ERROR;
+		}
+
+		cached.Free(transaction,nodeAndKey.nodeOffset);
 	}
 	RETURN_ERROR(B_ERROR);
 }

@@ -30,8 +30,7 @@ Journal
 
 BPlusTree
 
- - BPlusTree::Remove() currently does not free empty pages
- - CachedNode::Free() could free pages at the end of the stream data
+ - BPlusTree::Remove() could trigger CachedNode::Free() to go through the free nodes list and free all pages at the end of the data stream
  - inserting/removing duplicates is not yet implemented
 
 Indices
