@@ -5,7 +5,7 @@ LIBNET_PATH=`pwd`/../libnet
 LDFLAGS=-nostdlib -lroot -Wl,-rpath,$(LIBNET_PATH) -L$(LIBNET_PATH) -lnet $(START_DYN)
 OBJS = ufunc.o
 
-TGTS=	test1 test2 test3 select_test tcp_test
+TGTS=	test1 test2 test3 select_test tcp_test at_srv at_client
 
 all:	$(TGTS)
 
@@ -26,6 +26,12 @@ select_test:	libnet $(OBJS) select_test.o
 
 tcp_test: libnet $(OBJS) tcp_test.o
 	@$(CC) $(LDFLAGS) -o tcp_test $(OBJS) tcp_test.o
+
+at_srv: libnet $(OBJS) at_srv.o
+	@$(CC) $(LDFLAGS) -o at_srv $(OBJS) at_srv.o
+
+at_client: libnet $(OBJS) at_client.o
+	@$(CC) $(LDFLAGS) -o at_client $(OBJS) at_client.o
 
 libnet:
 	@cd ../libnet;make;cd ../apps
