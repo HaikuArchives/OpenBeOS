@@ -10,6 +10,10 @@
 #include "SharedBufferList.h"
 
 
+enum {
+	MEDIA_SERVER_GET_SHARED_BUFFER_LIST
+};
+
 /*************************************************************
  * private BBufferGroup
  *************************************************************/
@@ -18,20 +22,32 @@ status_t
 BBufferGroup::InitBufferGroup()
 {
 	area_id id;
+	
+	// some defaults
+	fBufferList = 0;
+	fReclaimSem = B_ERROR;
+	fInitError = B_ERROR;
+	fRequestError = B_ERROR;
+	fBufferCount = 0;
 
-	// first ask media_server to get the area_id of the shared buffer list
-	id = 0; // XXX
-
+	// create the reclaim semaphore
 	fReclaimSem = create_sem(0,"buffer reclaim sem");
 	if (fReclaimSem < B_OK) {
 		fInitError = (status_t)fReclaimSem;
 		return fInitError;
 	}
+
+	// ask media_server to get the area_id of the shared buffer list
+	BMessage request(MEDIA_SERVER_GET_SHARED_BUFFER_LIST);
+	BMessage reply;
+
+	// XXX call media server here
+
+	id = reply.FindInt32("shared buffer area");
 	
-	fRequestError = B_OK;
-	fBufferCount = 0;
 	fBufferList = _shared_buffer_list::Clone(id);
-	fInitError = (fBufferList != NULL) ? B_OK : B_ERROR;
+	if (fBufferList != NULL)
+		fInitError = B_ERROR;
 
 	return fInitError;
 }
@@ -96,7 +112,12 @@ BBufferGroup::BBufferGroup(size_t size,
 			fInitError = B_ERROR;
 			break;
 		}
-		fBufferList->AddBuffer(fReclaimSem,buffer);
+		if (B_OK != fBufferList->AddBuffer(fReclaimSem,buffer)) {
+			TRACE("error when adding buffer\n");
+			delete buffer;
+			fInitError = B_ERROR;
+			break;
+		}
 	}
 
 	delete_area(buffer_area);
@@ -139,7 +160,12 @@ BBufferGroup::BBufferGroup(int32 count,
 			fInitError = B_ERROR;
 			break;
 		}
-		fBufferList->AddBuffer(fReclaimSem,buffer);
+		if (B_OK != fBufferList->AddBuffer(fReclaimSem,buffer)) {
+			TRACE("error when adding buffer\n");
+			delete buffer;
+			fInitError = B_ERROR;
+			break;
+		}
 	}
 }
 
@@ -149,7 +175,8 @@ BBufferGroup::~BBufferGroup()
 	CALLED();
 	if (fBufferList)
 		fBufferList->Terminate(fReclaimSem);
-	delete_sem(fReclaimSem);
+	if (fReclaimSem >= B_OK)
+		delete_sem(fReclaimSem);
 }
 
 
@@ -179,7 +206,12 @@ BBufferGroup::AddBuffer(const buffer_clone_info &info,
 		delete buffer;
 		return B_ERROR;
 	}
-	fBufferList->AddBuffer(fReclaimSem,buffer);
+	if (B_OK != fBufferList->AddBuffer(fReclaimSem,buffer)) {
+		TRACE("error when adding buffer\n");
+		delete buffer;
+		fInitError = B_ERROR;
+		return B_ERROR;
+	}
 	atomic_add(&fBufferCount,1);
 	
 	if (out_buffer != 0)
@@ -366,7 +398,7 @@ BBufferGroup::AddBuffersTo(BMessage * message, const char * name, bool needLock)
 			goto end;
 	
 end:
-	delete buffers;
+	delete [] buffers;
 	return status;
 }
 

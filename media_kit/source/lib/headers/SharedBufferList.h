@@ -29,10 +29,10 @@ struct _shared_buffer_list
 	int32		buffercount;
 	_shared_buffer_info info[MAX_BUFFER];
 
-	void 		AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer);
+	status_t	AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer);
 	status_t	RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_group, size_t size, media_buffer_id wantID, BBuffer **buffer, bigtime_t timeout);
 	status_t	GetBufferList(sem_id group_reclaim_sem, int32 buf_count, BBuffer **out_buffers);
-	void 		ReclaimBuffer(BBuffer *buffer);
+	status_t	ReclaimBuffer(BBuffer *buffer);
 	
 		
 	status_t 	Init();
@@ -41,8 +41,8 @@ struct _shared_buffer_list
 	void 		Terminate(sem_id group_reclaim_sem);
 	void 		Unmap();
 
-	void 		Lock();
-	void 		Unlock();
+	status_t	Lock();
+	status_t	Unlock();
 	
 	// call this one with the list locked
 	void 		RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_buffer_id id);

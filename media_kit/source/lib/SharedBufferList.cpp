@@ -15,13 +15,15 @@ _shared_buffer_list::Init()
 	CALLED();
 	locker_atom = 0;
 	locker_sem = create_sem(0,"shared buffer list lock");
+	if (locker_sem < B_OK)
+		return (status_t) locker_sem;
+
 	for (int i = 0; i < MAX_BUFFER; i++) {
 		info[i].id = -1;
 		info[i].buffer = 0;
 		info[i].reclaim_sem = 0;
 		info[i].reclaimed = false;
 	}
-	
 	return B_OK;
 }
 
@@ -67,8 +69,12 @@ _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 	CALLED();
 
 	// delete all BBuffers of this group, then unmap from memory
-	
-	Lock();
+
+	if (Lock() != B_OK) { // better not try to access the list unlocked
+		// but at least try to unmap the memory
+		Unmap();
+		return;
+	}
 
 	for (int32 i = 0; i < buffercount; i++) {
 		if (info[i].reclaim_sem == group_reclaim_sem) {
@@ -76,7 +82,7 @@ _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 			delete info[i].buffer;
 			// fill the gap in the list with the last element
 			// and adjust i and buffercount 
-			info[i--] = info[--buffercount];
+			info[i--] = info[--buffercount]; // XXX is this correct?
 		}
 	}
 	
@@ -85,30 +91,38 @@ _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 	Unmap();
 }
 
-void 
+status_t
 _shared_buffer_list::Lock()
 { 
-	if (atomic_add(&locker_atom, 1) > 0)
-		while (B_INTERRUPTED == acquire_sem(locker_sem))
+	if (atomic_add(&locker_atom, 1) > 0) {
+		status_t status;
+		while (B_INTERRUPTED == (status = acquire_sem(locker_sem)))
 			;
+		return status; // will only return != B_OK if the media_server crashed or quit
+	}
+	return B_OK;
 }
 
-void
+status_t
 _shared_buffer_list::Unlock()
 { 
 	if (atomic_add(&locker_atom, -1) > 1)
-		release_sem(locker_sem);
+		return release_sem(locker_sem); // will only return != B_OK if the media_server crashed or quit
+	return B_OK;
 }
 
-void
+status_t
 _shared_buffer_list::AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 {
 	CALLED();
-	Lock();
+
+	if (Lock() != B_OK)
+		return B_ERROR;
 	
 	if (buffercount == MAX_BUFFER) {
 		Unlock();
 		debugger("we are doomed");
+		return B_ERROR;
 	}
 
 	info[buffercount].id = buffer->ID();
@@ -118,6 +132,7 @@ _shared_buffer_list::AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 	buffercount++;
 
 	Unlock();
+	return B_OK;
 }
 
 status_t	
@@ -145,8 +160,12 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 			;
 		if (status != B_OK)
 			return status;
-			
-		Lock();
+
+		// try to exit savely if the lock fails			
+		if (Lock() != B_OK) {
+			release_sem_etc(group_reclaim_sem, count, 0);
+			return B_ERROR;
+		}
 		
 		for (int32 i = 0; i < buffercount; i++) {
 			// we need a BBuffer from the group, and it must be reclaimed
@@ -172,7 +191,8 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 		}
 
 		release_sem_etc(group_reclaim_sem, count, B_DO_NOT_RESCHEDULE);
-		Unlock();
+		if (Unlock() != B_OK)
+			return B_ERROR;
 
 		// prepare to request one more buffer next time
 		count++;
@@ -192,8 +212,12 @@ _shared_buffer_list::RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_
 			// XXX this can deadlock if BBuffers with same media_buffer_id
 			// XXX exist in more than one BBufferGroup, and RequestBuffer()
 			// XXX is called on both groups (which should not be done).
-			while (B_INTERRUPTED == acquire_sem(info[i].reclaim_sem))
+			status_t status;
+			while (B_INTERRUPTED == (status = acquire_sem(info[i].reclaim_sem)))
 				;
+			// try to skip entries that belong to crashed teams
+			if (status != B_OK)
+				continue;
 
 			if (info[i].reclaimed == false) {
 				TRACE("Error, BBuffer 0x%08x, id = 0x%08x not reclaimed while requesting\n",(int)info[i].buffer,(int)id);
@@ -205,20 +229,23 @@ _shared_buffer_list::RequestBufferInOtherGroups(sem_id group_reclaim_sem, media_
 	}
 }
 
-void
+status_t
 _shared_buffer_list::ReclaimBuffer(BBuffer *buffer)
 {
 	CALLED();
 	
-	int debug_reclaim = 0;
+	int reclaimed_count;
 	
 	media_buffer_id id = buffer->ID();
 
-	Lock();
+	if (Lock() != B_OK)
+		return B_ERROR;
+
+	reclaimed_count = 0;	
 	for (int32 i = 0; i < buffercount; i++) {
 		// find the buffer id, and reclaim it in all groups it belongs to
 		if (info[i].id == id) {
-			debug_reclaim++;
+			reclaimed_count++;
 			if (info[i].reclaimed) {
 				TRACE("Error, BBuffer 0x%08x, id = 0x%08x already reclaimed\n",(int)buffer,(int)id);
 				break;
@@ -227,10 +254,15 @@ _shared_buffer_list::ReclaimBuffer(BBuffer *buffer)
 			release_sem_etc(info[i].reclaim_sem, 1, B_DO_NOT_RESCHEDULE);
 		}
 	}
-	Unlock();
+	if (Unlock() != B_OK)
+		return B_ERROR;
 	
-	if (debug_reclaim == 0)
+	if (reclaimed_count == 0) {
 		TRACE("Error, BBuffer 0x%08x, id = 0x%08x NOT reclaimed\n",(int)buffer,(int)buffer->ID());
+		return B_ERROR;
+	}
+
+	return B_OK;
 }
 
 status_t	
@@ -241,7 +273,9 @@ _shared_buffer_list::GetBufferList(sem_id group_reclaim_sem, int32 buf_count, BB
 	int32 found;
 	
 	found = 0;
-	Lock();
+
+	if (Lock() != B_OK)
+		return B_ERROR;
 
 	for (int32 i = 0; i < buffercount; i++)
 		if (info[i].reclaim_sem == group_reclaim_sem) {
@@ -250,7 +284,8 @@ _shared_buffer_list::GetBufferList(sem_id group_reclaim_sem, int32 buf_count, BB
 				break;
 		}
 	
-	Unlock();
+	if (Unlock() != B_OK)
+		return B_ERROR;
 
 	return (found == buf_count) ? B_OK : B_ERROR;
 }
