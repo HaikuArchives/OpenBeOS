@@ -20,6 +20,7 @@ HDRS += "$(TOP)/source/lib" ;
 # All of our test code smashed together into a library
 Library $(TOP)/test/libstoragetest : 
 	TestUtils.cpp
+	DirectoryTest.cpp
 	EntryTest.cpp
 	FileTest.cpp
 	NodeTest.cpp
