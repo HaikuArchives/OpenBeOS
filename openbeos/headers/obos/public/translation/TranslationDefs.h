@@ -7,6 +7,7 @@
 /      Copyright 1998, Be Incorporated, All Rights Reserved.
 /      Copyright 1995-1997, Jon Watte
 /
+/      2002 - translation_data struct added by Michael Wilber, OBOS TransKit Team
 ********************************************************************************/
 
 #if !defined(_TRANSLATION_DEFS_H)
@@ -52,5 +53,34 @@ struct translator_info {			/* Info about a specific translation*/
 	char			name[251];
 	char			MIME[251];
 };
+
+// BEGIN: Added by Michael Wilber
+struct translator_data {
+	const char *	translatorName;
+	const char *	translatorInfo;
+	int32			translatorVersion;
+	const translation_format *	inputFormats;
+	const translation_format *	outputFormats;
+
+	status_t		(*Identify)(
+						BPositionIO *		inSource,
+						const translation_format *		inFormat,
+						BMessage *			ioExtension,
+						translator_info *			outInfo,
+						uint32				outType);
+	status_t		(*Translate)(
+						BPositionIO *		inSource,
+						const translator_info *	inInfo,
+						BMessage *			ioExtension,
+						uint32				outType,
+						BPositionIO *		outDestination);
+	status_t		(*MakeConfig)(
+						BMessage *			ioExtension,
+						BView * *			outView,
+						BRect *				outExtent);
+	status_t		(*GetConfigMessage)(
+						BMessage *			ioExtension);
+};
+// END: Added by Michael Wilber
 
 #endif /* _TRANSLATION_DEFS_H */
