@@ -1,5 +1,5 @@
-PDF Writer
-1/16/2002
+PDF Writer 1.0b1
+2/19/2002
 
 is now part of the print_kit of the OBOS (OpenBeOS) project.
 http://open-beos.sourceforge.net
@@ -13,18 +13,27 @@ Developers:
 
 Installation
 
-1. Execute the "Install" shell script with Tracker.
-2. Open the Printers preferences application and install "PDF Writer"
- as a new printer that prints to file and make it the default printer.
+1. Expand the zip file somewhere
+2. Open the newly created folder
+3. Run the Install script to install the driver
+
+These steps are needed only if you don't have already set up a PDF Writer spooler:
+
+4. Open the Printers preference panel
+5. Click Add button
+6. Choose local printer (Network printing is untested, feedback welcome!)
+7. Type a name for your new PDF Writer spooler
+8. Select PDF Writer as kind
+9. Select port to output PDF (Print to file to generate PDF files)
+10. Click Add button
+11. Click Ok button
+12. Enjoy!
 
 
 Known Bugs/Limitations
 
 - alpha channel is not supported
 - patterns not supported
-- only characters that are in the MacRoman character set are supported;
-  no CJK fonts supported; no Symbol fonts supported
-- only bitmaps in 32bpp are supported 
 - clipping to inverse BPicture not supported
 - canceling the "save file as" window crashes PDF Writer
 
@@ -32,7 +41,7 @@ Known Bugs/Limitations
 Contact
 
 Either one of the developers or post to the print_kit mailing list
-open-beos-printing@freelists.org
+open-beos-printing@freelists.org (preferred)
 
 
 Build Instructions for BeOS on x86 platform
