@@ -26,7 +26,7 @@ typedef struct eth802_header {
 	uint16	type;
 } eth802_header;
 
-int ethernet_input(struct mbuf *buf);
+#define ETHERMTU 1500
 
 #endif /* OBOS_ETHERNET_H */
 

@@ -12,6 +12,7 @@
 #include "ethernet.h"
 #include "mbuf.h"
 #include "net_module.h"
+#include "include/if.h"
 
 static loaded_net_module *net_modules;
 static int *prot_table;
@@ -117,10 +118,15 @@ int ether_dev_init(ifnet *dev)
                 return 0;
         }
         status = ioctl(dev->dev, IF_SETPROMISC, &on, 1);
-        if (status < B_OK) {
+        if (status == B_OK) {
+		dev->flags |= IFF_PROMISC;
+	} else {
 		/* not a hanging offence */
-                printf("failed to set %s to promiscuous\n", dev->name);
+                printf("Failed to set %s into promiscuous mode\n", dev->name);
         }
+
+	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_BROADCAST|IFF_MULTICAST);
+	dev->mtu = ETHERMTU;
 		
 	return 1;
 }

@@ -144,12 +144,22 @@ static void find_devices(void)
 static void list_devices(void)
 {
 	int i;
-	printf( "Dev    Name         MAC Address\n"
-		"====== ============ ===========\n");
+	printf( "Dev Name         MTU  MAC Address       Flags\n"
+		"=== ============ ==== ================= ===========================\n");
 	
 	for (i=0;i<ndevs;i++) {
-		printf("%02d     %s       ", i, devices[i].name);
+		printf("%2d  %s       %4d ", i, devices[i].name, devices[i].mtu);
 		print_ether_addr(&devices[i].mac);
+		if (devices[i].flags & IFF_UP)
+			printf(" UP");
+		if (devices[i].flags & IFF_RUNNING)
+			printf(" RUNNING");
+		if (devices[i].flags & IFF_PROMISC)
+			printf(" PROMISCUOUS");
+		if (devices[i].flags & IFF_BROADCAST)
+			printf(" BROADCAST");
+		if (devices[i].flags & IFF_MULTICAST)
+			printf(" MULTICAST");
 		printf("\n");
 	}
 }

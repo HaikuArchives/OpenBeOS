@@ -28,6 +28,9 @@ enum {
 	IFF_UP 		= 0x0001,
 	IFF_DOWN	= 0x0002,
 	IFF_PROMISC	= 0x0004,
+	IFF_RUNNING	= 0x0008,
+	IFF_MULTICAST	= 0x0010,
+	IFF_BROADCAST	= 0x0020
 };
 
 typedef struct ifnet {
@@ -37,6 +40,7 @@ typedef struct ifnet {
 	int type;
 	ether_addr mac;	/* The ethernet address if there is one... */
 	int flags;	/* flags */
+	int mtu;	/* mtu */
 
 	thread_id rx_thread;	
 	thread_id tx_thread;
