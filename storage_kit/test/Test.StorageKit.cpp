@@ -8,6 +8,7 @@
 #include "FileTest.h"
 #include "NodeTest.h"
 #include "PathTest.h"
+#include "ResourcesTest.h"
 #include "SymLinkTest.h"
 
 
@@ -20,6 +21,7 @@ int main(int argc, char *argv[]) {
 	shell.AddSuite( "BFile", &FileTest::Suite );
 	shell.AddSuite( "BNode", &NodeTest::Suite );
 	shell.AddSuite( "BPath", &PathTest::Suite );
+	shell.AddSuite( "BResources", &ResourcesTest::Suite );
 	shell.AddSuite( "BSymLink", &SymLinkTest::Suite );
 
 	return shell.Run(argc, argv);
