@@ -187,9 +187,8 @@ printf("sobind: data = %p, len = %d, nam = %p\n", data, len, nam);
 		return ENOMEM;
 
 	nam->m_len = len;
-printf("sobind: About to memcpy data...\n");
 	memcpy(mtod(nam, char*), data, len);
-printf("calling pr_userreq\n");		
+
 /* xxx - locking! */
 	error = (*so->so_proto->pr_userreq) (so, PRU_BIND, NULL, nam, NULL);
 	
@@ -697,16 +696,14 @@ int soo_ioctl(void *sp, int cmd, caddr_t data)
 			return 0;
 		case FIONREAD:
 			/* how many bytes do we have waiting... */
-			//*(int*)data = so->so_rcv.sb_cc;
+			*(int*)data = so->so_rcv.sb_cc;
 			return 0;
 	}
 
 	if (IOCGROUP(cmd) == 'i') {
-		printf("calling ifioctl...\n");
 		return ifioctl(so, cmd, data);
 	}
 	if (IOCGROUP(cmd) == 'r') {
-		printf("I'd call rtioctl...\n");
 		return 0;
 	}	
 	return (*so->so_proto->pr_userreq)(so, PRU_CONTROL, 
@@ -774,6 +771,7 @@ void sofree(struct socket *so)
 	}
 	
 	delete_sem(so->so_rcv.sb_pop);
+
 	pool_put(spool, so);
 
 	return;
