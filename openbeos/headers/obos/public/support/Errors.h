@@ -43,6 +43,7 @@ enum {
 	B_NO_INIT,			
 	B_BUSY,					
 	B_NOT_ALLOWED,				
+	B_BAD_DATA,
 
 	B_ERROR = -1,				
 	B_OK = 0,
