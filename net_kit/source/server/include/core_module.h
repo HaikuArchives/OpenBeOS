@@ -141,7 +141,7 @@ struct core_module_info {
 	int (*set_socket_event_callback)(void *, socket_event_callback, void *);
 	int (*sogetpeername)(void *, struct sockaddr *, int *);
 	int (*sogetsockname)(void *, struct sockaddr *, int *);
-	int (*soaccept)(void *, void **, struct sockaddr *, int *);
+	int (*soaccept)(void *, void **, void *, int *);
 };
 
 #ifdef _KERNEL_MODE

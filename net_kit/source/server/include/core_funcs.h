@@ -88,6 +88,8 @@
 
 #   define sobind              core->sobind
 #   define soconnect           core->soconnect
+#   define solisten            core->solisten
+#   define soaccept            core->soaccept
 
 #   define soo_ioctl           core->soo_ioctl
 #   define net_sysctl          core->net_sysctl

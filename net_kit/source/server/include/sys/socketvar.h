@@ -35,12 +35,12 @@ struct  sockbuf {
 typedef void (*socket_event_callback)(void * socket, uint32 event, void * cookie);
 
 struct socket {
-	uint16 so_type;		/* type of socket */
-	uint16 so_options;	/* socket options */
-	int16 so_linger;	/* dreaded linger value */
-	int16 so_state;		/* socket state */
-	caddr_t so_pcb;		/* pointer to the control block */
-	sem_id so_timeo;          /* our wait channel */
+	uint16  so_type;         /* type of socket */
+	uint16  so_options;      /* socket options */
+	int16   so_linger;       /* dreaded linger value */
+	int16   so_state;        /* socket state */
+	caddr_t so_pcb;	         /* pointer to the control block */
+	sem_id  so_timeo;        /* our wait channel */
 
 	struct protosw *so_proto; /* pointer to protocol module */
 
@@ -149,31 +149,32 @@ struct socket {
 uint32 sb_max;
 
 /* Function prototypes */
-int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
 
 /* These are the ones we export to libnet.so */
 
-int     initsocket(void **spp);
-int     socreate(int dom, void *aso, int type, int proto);
+int     initsocket(void **);
+int     socreate  (int, void *, int, int);
+int     soshutdown(void *, int);
+int     soclose   (void *);
 
-int     sobind(void *so, caddr_t, int);
-int     solisten(void *sp, int backlog);
-int     soconnect(void *sp, caddr_t, int);
-int     sosysctl (int *, uint, void *, size_t *, void *, size_t);
-int     soshutdown(void *sp, int how);
-int     writeit(void *, struct iovec *, int);
-int     readit(void *, struct iovec *, int *);
+int     sobind    (void *, caddr_t, int);
+int     solisten  (void *, int);
+int     soconnect (void *, caddr_t, int);
+int     soaccept  (void *, void **, void *, int *);
 
-int     sendit(void *, struct msghdr *, int, int *);
-int     recvit(void *, struct msghdr *, caddr_t, int *);
+int     writeit   (void *, struct iovec *, int);
+int     readit    (void *, struct iovec *, int *);
+int     sendit    (void *, struct msghdr *, int, int *);
+int     recvit    (void *, struct msghdr *, caddr_t, int *);
 
-int     sosetopt(void *, int, int, const void *, size_t);
-int     sogetopt(void *, int, int, void *, size_t *);
+int     soo_ioctl (void *, int, caddr_t);
+int     sosysctl  (int *, uint, void *, size_t *, void *, size_t);
+int     sosetopt  (void *, int, int, const void *, size_t);
+int     sogetopt  (void *, int, int, void *, size_t *);
 
 int     sogetpeername(void *, struct sockaddr *, int *);
 int     sogetsockname(void *, struct sockaddr *, int *);
 
-int     soaccept(void *sp, void ** asp, struct sockaddr *sa, int * alen);
 
 /* these are all private to the stack...although may be shared with 
  * other network modules.
@@ -184,6 +185,7 @@ int     sosend(struct socket *so, struct mbuf *addr, struct uio *uio,
 
 struct socket *sonewconn(struct socket *head, int connstatus);
 int 	set_socket_event_callback(void *, socket_event_callback, void *);
+int	soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
 
 void    sbrelease (struct sockbuf *sb);
 int     sbreserve (struct sockbuf *sb, uint32 cc);
@@ -204,8 +206,6 @@ int     soreceive (struct socket *so, struct mbuf **paddr, struct uio *uio,
 void    sowakeup(struct socket *so, struct sockbuf *sb);
 int     sbwait(struct sockbuf *sb);
 
-int     soo_ioctl(void *sp, int cmd, caddr_t data);
-int     soclose(void *sp);
 int     sodisconnect(struct socket *);
 void    sofree(struct socket *);
 
