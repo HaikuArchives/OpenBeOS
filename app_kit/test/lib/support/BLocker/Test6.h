@@ -1,5 +1,5 @@
 /*
-	Test6.h
+	$Id$
 	
 	This file defines a classes for performing one test of BLocker
 	functionality.

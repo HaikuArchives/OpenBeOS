@@ -1,5 +1,5 @@
 /*
-	TestMessageQueue.h
+	$Id$
 	
 	This file defines a set of classes for testing BMessageQueue
 	functionality.

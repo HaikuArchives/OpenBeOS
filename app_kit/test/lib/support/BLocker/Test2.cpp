@@ -1,5 +1,5 @@
 /*
-	Test2.cpp
+	$Id$
 	
 	This file implements a test class for testing BLocker construction functionality.
 	It checks the "Construction 1", "Construction 2" and "Sem" use cases.  It does

@@ -1,5 +1,5 @@
 /*
-	Test3.cpp
+	$Id$
 	
 	This file implements a test class for testing BLocker functionality.
 	It tests use cases "Destruction" and "Locking 3".

@@ -1,5 +1,5 @@
 //
-//	MessageQueue.h
+//	$Id$
 //
 //	This is the BMessageQueue interface for OpenBeOS.  It has been created
 //  to be source and binary compatible with the BeOS version of

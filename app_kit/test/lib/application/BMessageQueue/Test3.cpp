@@ -1,5 +1,5 @@
 /*
-	Test3.cpp
+	$Id$
 	
 	This file implements a test class for testing BMessageQueue functionality.
 	It tests use cases Destruction, Add Message 1, Add Message 3, Remove Message 1,

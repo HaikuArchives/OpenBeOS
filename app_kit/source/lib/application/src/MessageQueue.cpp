@@ -1,5 +1,5 @@
 //
-//  MessageQueue.cpp
+//  $Id$
 //
 //  This file contains the implementation of the BMessageQueue class
 //  for the OpenBeOS project.

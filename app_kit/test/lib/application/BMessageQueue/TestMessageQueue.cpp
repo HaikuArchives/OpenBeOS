@@ -1,5 +1,5 @@
 /*
-	TestMessageQueue.cpp
+	$Id$
 	
 	This file implements a base class for testing BMessageQueue functionality.
 	

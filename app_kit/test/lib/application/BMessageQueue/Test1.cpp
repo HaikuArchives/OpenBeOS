@@ -1,5 +1,5 @@
 /*
-	Test1.cpp
+	$Id$
 	
 	This file implements the first test for the OpenBeOS BMessageQueue code.
 	It tests the Construction, Destruction, Add Message 1, Count Messages,

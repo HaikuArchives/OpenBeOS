@@ -1,5 +1,5 @@
 //
-//	Locker.h
+//	$Id$
 //
 //	This is the BLocker interface for OpenBeOS.  It has been created to
 //	be source and binary compatible with the BeOS version of BLocker.
