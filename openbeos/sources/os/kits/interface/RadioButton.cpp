@@ -20,21 +20,17 @@
 //	DEALINGS IN THE SOFTWARE.
 //
 //	File Name:		RadioButton.cpp
-//	Author:			Frans van Nispen (xlr8@tref.nl)
+//	Author:			Marc Flerackers (mflerackers@androme.be)
 //	Description:	BRadioButton represents a single on/off button.  All
-//					sibling BRadioButton objects comprise a single
-//					"multiple choice" control.
+//                  sibling BRadioButton objects comprise a single
+//                  "multiple choice" control.
 //------------------------------------------------------------------------------
 
 // Standard Includes -----------------------------------------------------------
-#include <stdio.h>
 
 // System Includes -------------------------------------------------------------
-#include <Control.h>
-#include <InterfaceDefs.h>
-#include <Message.h>
 #include <RadioButton.h>
-#include <Window.h>
+#include <Errors.h>
 
 // Project Includes ------------------------------------------------------------
 
@@ -44,20 +40,19 @@
 
 // Globals ---------------------------------------------------------------------
 
-
 //------------------------------------------------------------------------------
-BRadioButton::BRadioButton(BRect frame, const char* name, const char* label,
-						   BMessage* message, uint32 mask, uint32 flags)
-	:	BControl(frame, name, label, message, mask, flags),
-		fOutlined(false),
-		fPressed(false)
+BRadioButton::BRadioButton(BRect frame, const char *name, const char *label,
+						   BMessage *message, uint32 resizMask, uint32 flags)
+	:	BControl(frame, name, label, message, resizMask, flags),
+		fOutlined(false)
 {
+	if (Bounds().Height() < 18.0f)
+		ResizeTo(Bounds().Width(), 18.0f);
 }
 //------------------------------------------------------------------------------
-BRadioButton::BRadioButton(BMessage* data)
-	:	BControl(data),
-		fOutlined(false),
-		fPressed(false)
+BRadioButton::BRadioButton(BMessage *archive)
+	:	BControl(archive),
+		fOutlined(false)
 {
 }
 //------------------------------------------------------------------------------
@@ -65,117 +60,173 @@ BRadioButton::~BRadioButton()
 {
 }
 //------------------------------------------------------------------------------
-BArchivable* BRadioButton::Instantiate(BMessage* data)
+BArchivable *BRadioButton::Instantiate(BMessage *archive)
 {
-	if (!validate_instantiation(data,"BRadioButton"))
-	{
+	if (validate_instantiation(archive, "BRadioButton"))
+		return new BRadioButton(archive);
+	else
 		return NULL;
-	}
-
-	return new BRadioButton(data);
 }
 //------------------------------------------------------------------------------
-status_t BRadioButton::Archive(BMessage* data, bool deep = true) const
+status_t BRadioButton::Archive(BMessage *archive, bool deep) const
 {
-	BControl::Archive(data, deep);
-	return B_OK;
+	return BControl::Archive(archive, deep);
 }
 //------------------------------------------------------------------------------
 void BRadioButton::Draw(BRect updateRect)
 {
-	// We use the view's base color which is normally (216,216,216)
-	rgb_color color = ui_color(B_PANEL_BACKGROUND_COLOR);
-	rgb_color col;
+	// Placeholder until sBitmaps is filled in
+	rgb_color no_tint = ui_color(B_PANEL_BACKGROUND_COLOR),
+	lighten1 = tint_color(no_tint, B_LIGHTEN_1_TINT),
+	lightenmax = tint_color(no_tint, B_LIGHTEN_MAX_TINT),
+	darken1 = tint_color(no_tint, B_DARKEN_1_TINT),
+	darken2 = tint_color(no_tint, B_DARKEN_2_TINT),
+	darken3 = tint_color(no_tint, B_DARKEN_3_TINT),
+	darken4 = tint_color(no_tint, B_DARKEN_4_TINT),
+	darkenmax = tint_color(no_tint, B_DARKEN_MAX_TINT);
 
-	// Draw background
-	SetLowColor(ViewColor());
+	BRect rect(1.0, 3.0, 13.0, 15.0);
 
-	// draw box
-	BRect rect;
-	rect.Set(1.0, 3.0, 13.0, 15.0);
-	if (!IsEnabled())
+	if (IsEnabled())
 	{
-		rect.InsetBy(1,1);
+		// Dot
+		if (Value() == B_CONTROL_ON)
+		{
+			rgb_color kb_color = ui_color(B_KEYBOARD_NAVIGATION_COLOR);
+
+			SetHighColor(tint_color(kb_color, B_DARKEN_3_TINT));
+			FillEllipse(rect);
+			SetHighColor(kb_color);
+			FillEllipse(BRect(rect.left + 3, rect.top + 3, rect.right - 4, rect.bottom - 4));
+			SetHighColor(tint_color(kb_color, B_DARKEN_3_TINT));
+			StrokeLine(BPoint(rect.right - 5, rect.bottom - 4),
+				BPoint(rect.right - 4, rect.bottom - 5));
+			SetHighColor(tint_color(kb_color, B_LIGHTEN_MAX_TINT));
+			StrokeLine(BPoint(rect.left + 4, rect.top + 5),
+				BPoint(rect.left + 5, rect.top + 4));
+
+		}
+		else
+		{
+			SetHighColor(lightenmax);
+			FillEllipse(rect);
+		}
+
+		// Outer circle
+		if (fOutlined)
+		{
+			SetHighColor(darken3);
+			StrokeEllipse(rect);
+		}
+		else
+		{
+			SetHighColor(darken1);
+			StrokeArc(rect, 45.0f, 180.0f);
+			SetHighColor(lightenmax);
+			StrokeArc(rect, 45.0f, -180.0f);
+		}
+
+		rect.InsetBy(1, 1);
+		
+		// Inner circle
+		SetHighColor(darken3);
+		StrokeArc(rect, 45.0f, 180.0f);
+		StrokeLine(BPoint(rect.left + 1, rect.top + 1),
+			BPoint(rect.left + 1, rect.top + 1));
+		SetHighColor(no_tint);
+		StrokeArc(rect, 45.0f, -180.0f);
+		StrokeLine(BPoint(rect.left + 1, rect.bottom - 1),
+			BPoint(rect.left + 1, rect.bottom - 1));
+		StrokeLine(BPoint(rect.right - 1, rect.bottom - 1),
+			BPoint(rect.right - 1, rect.bottom - 1));
+		StrokeLine(BPoint(rect.right - 1, rect.top + 1),
+			BPoint(rect.right - 1, rect.top + 1));
+
+		// Label
+		BFont font;
+		GetFont(&font);
+		font_height fh;
+		font.GetHeight(&fh);
+
+		SetHighColor(darkenmax);
+		DrawString(Label(), BPoint(20.0f, 8.0f + (float)ceil(fh.ascent / 2.0f)));
+
+		// Focus
+		if (IsFocus())
+		{
+			float h = 8.0f + (float)ceil(fh.ascent / 2.0f) + 2.0f;
+
+			SetHighColor(ui_color(B_KEYBOARD_NAVIGATION_COLOR));
+			StrokeLine(BPoint(20.0f, h), BPoint(20.0f + StringWidth(Label()), h));
+		}
 	}
-
-	FillRect(rect, B_SOLID_LOW);
-
-	float add1 = 0.0f;
-	float add2 = 0.0f;
-	IsEnabled()	? add1 = 1.0f : add2 = 1.0f;
-
-	BeginLineArray(6);
-
-	col = tint_color(color, IsEnabled() ? B_DARKEN_1_TINT :
-					 B_DARKEN_2_TINT);
-	AddLine(BPoint(rect.left, rect.bottom - add2),
-			BPoint(rect.left, rect.top), col);
-	AddLine(BPoint(rect.left, rect.top),
-			BPoint(rect.right - add2, rect.top), col);
-	col = tint_color(color, IsEnabled() ? B_DARKEN_4_TINT :
-					 B_LIGHTEN_2_TINT);
-	rect.InsetBy(1, 1);
-	AddLine(BPoint(rect.left, rect.bottom),
-			BPoint(rect.left, rect.top), col);
-	AddLine(BPoint(rect.left, rect.top),
-			BPoint(rect.right, rect.top), col);
-	col = tint_color(color, IsEnabled() ? B_NO_TINT : B_DARKEN_1_TINT);
-	AddLine(BPoint(rect.left + add1, rect.bottom),
-			BPoint(rect.right, rect.bottom), col);
-	AddLine(BPoint(rect.right, rect.bottom),
-			BPoint(rect.right, rect.top+add1), col);
-
-	EndLineArray();
-	
-	rect.InsetBy(3, 3);
-	if (Value() == B_CONTROL_ON)
+	else
 	{
-		SetHighColor(tint_color(ui_color(B_KEYBOARD_NAVIGATION_COLOR),
-					 IsEnabled() ? B_NO_TINT : B_LIGHTEN_1_TINT));
-		FillEllipse(rect);
-		SetHighColor(tint_color(ui_color(B_KEYBOARD_NAVIGATION_COLOR),
-								B_LIGHTEN_2_TINT));
-		rect.InsetBy(-1, -1);
-		StrokeEllipse(rect);
-	}
-	
-	BFont font;
-	GetFont(&font);
-	font_height fh;
-	font.GetHeight(&fh);
+		// Dot
+		if (Value() == B_CONTROL_ON)
+		{
+			rgb_color kb_color = ui_color(B_KEYBOARD_NAVIGATION_COLOR);
 
-	float h = ceil(fh.ascent + fh.descent + fh.leading) + 3.0f;
+			SetHighColor(tint_color(kb_color, B_LIGHTEN_2_TINT));
+			FillEllipse(rect);
+			SetHighColor(tint_color(kb_color, B_LIGHTEN_MAX_TINT));
+			StrokeLine(BPoint(rect.left + 4, rect.top + 5),
+				BPoint(rect.left + 5, rect.top + 4));
+			SetHighColor(tint_color(kb_color, B_DARKEN_3_TINT));
+			StrokeArc(BRect(rect.left + 2, rect.top + 2, rect.right - 2, rect.bottom - 2),
+				45.0f, -180.0f);
+		}
+		else
+		{
+			SetHighColor(lighten1);
+			FillEllipse(rect);
+		}
 
-	SetHighColor(IsFocus() ? ui_color(B_KEYBOARD_NAVIGATION_COLOR) :
-				 ViewColor() );
-	BRect rect2(BPoint(18.0f, 3.0f),
-				BPoint(22.0f + font.StringWidth(BControl::Label()), h));
-	StrokeRect(rect2, B_MIXED_COLORS);
+		// Outer circle
+		SetHighColor(no_tint);
+		StrokeArc(rect, 45.0f, 180.0f);
+		SetHighColor(lighten1);
+		StrokeArc(rect, 45.0f, -180.0f);
 
-	SetHighColor(tint_color(color, IsEnabled() ?
-				 B_DARKEN_MAX_TINT : B_DISABLED_LABEL_TINT) );
-	DrawString(BControl::Label(), BPoint( 21.0f, 3.0f + font.Size()));
+		rect.InsetBy(1, 1);
+		
+		// Inner circle
+		SetHighColor(darken2);
+		StrokeArc(rect, 45.0f, 180.0f);
+		StrokeLine(BPoint(rect.left + 1, rect.top + 1),
+			BPoint(rect.left + 1, rect.top + 1));
+		SetHighColor(no_tint);
+		StrokeArc(rect, 45.0f, -180.0f);
+		StrokeLine(BPoint(rect.left + 1, rect.bottom - 1),
+			BPoint(rect.left + 1, rect.bottom - 1));
+		StrokeLine(BPoint(rect.right - 1, rect.bottom - 1),
+			BPoint(rect.right - 1, rect.bottom - 1));
+		StrokeLine(BPoint(rect.right - 1, rect.top + 1),
+			BPoint(rect.right - 1, rect.top + 1));
 
-	if (fOutlined)
-	{
-		SetHighColor(tint_color(color, B_DARKEN_1_TINT));
-		FillEllipse(rect);
+		// Label
+		BFont font;
+		GetFont(&font);
+		font_height fh;
+		font.GetHeight(&fh);
+
+		SetHighColor(tint_color(no_tint, B_DISABLED_LABEL_TINT));
+		DrawString(Label(), BPoint(20.0f, 8.0f + (float)ceil(fh.ascent / 2.0f)));
 	}
 }
 //------------------------------------------------------------------------------
-void BRadioButton::MouseDown(BPoint where)
+void BRadioButton::MouseDown(BPoint point)
 {
 	if (!IsEnabled())
 	{
-		BView::MouseDown(where);
+		BControl::MouseDown(point);
 		return;
 	}
 
 	SetMouseEventMask(B_POINTER_EVENTS,	B_NO_POINTER_HISTORY |
 					  B_SUSPEND_VIEW_FOCUS);
 
-	MakeFocus();
-	fPressed = true;
+	SetTracking(true);
 	fOutlined = true;
 	Invalidate();
 }
@@ -183,17 +234,9 @@ void BRadioButton::MouseDown(BPoint where)
 void BRadioButton::AttachedToWindow()
 {
 	BControl::AttachedToWindow();
-
-	// resize to minimum height (BeOS uses 24)
-	if (Bounds().Height() < 18.0f)
-	{
-		ResizeTo( Bounds().Width(), 18.0f);
-	}
-
-	Draw(Bounds());
 }
 //------------------------------------------------------------------------------
-void BRadioButton::KeyDown(const char* bytes, int32 numBytes)
+void BRadioButton::KeyDown(const char *bytes, int32 numBytes)
 {
 	BControl::KeyDown(bytes, numBytes);
 }
@@ -201,78 +244,73 @@ void BRadioButton::KeyDown(const char* bytes, int32 numBytes)
 void BRadioButton::SetValue(int32 value)
 {
 	if (BControl::Value() == value)
-	{
 		return;
-	}
 
-	if (!fPressed)
+	if (!IsTracking())
 	{
-		BView* parent = Parent();
-		if (parent)
-		{
-			BView* sibling;
-			int32 i = 0;
-			while ((sibling = parent->ChildAt(i++)) != NULL)
-			{
-				if (sibling == this)
-				{
-					continue;
-				}
+		BView *sibling;
 		
-				BRadioButton* radio = dynamic_cast<BRadioButton*>(sibling);
-				if (radio != NULL)
-				{
-					radio->BControl::SetValue(B_CONTROL_OFF);
-				}
-			}
+		for (sibling = PreviousSibling(); sibling != NULL;
+			sibling = sibling->PreviousSibling())
+		{
+			BRadioButton* radio = dynamic_cast<BRadioButton*>(sibling);
+				
+			if (radio != NULL)
+				radio->BControl::SetValue(B_CONTROL_OFF);
+		}
+			
+		for (sibling = NextSibling(); sibling != NULL;
+			sibling = sibling->NextSibling())
+		{
+			BRadioButton* radio = dynamic_cast<BRadioButton*>(sibling);
+				
+			if (radio != NULL)
+				radio->BControl::SetValue(B_CONTROL_OFF);
 		}
 	}
 
 	BControl::SetValue(B_CONTROL_ON);
 }
 //------------------------------------------------------------------------------
-void BRadioButton::GetPreferredSize(float* width, float* height)
+void BRadioButton::GetPreferredSize(float *width, float *height)
 {
-	BFont font;
-	GetFont(&font);
 	font_height fh;
-	font.GetHeight(&fh);
+	GetFontHeight(&fh);
 
-	*height = ceil(fh.ascent + fh.descent + fh.leading) + 6.0f;
-	*width = 22.0f + ceil(font.StringWidth(BControl::Label()));
+	*height = (float)ceil(fh.ascent + fh.descent + fh.leading) + 6.0f;
+	*width = 22.0f + (float)ceil(StringWidth(Label()));
 }
 //------------------------------------------------------------------------------
 void BRadioButton::ResizeToPreferred()
 {
-	float w;
-	float h;
-	GetPreferredSize(&w, &h);
-	BView::ResizeTo(w, h);
+	float width, height;
+	GetPreferredSize(&width, &height);
+	BControl::ResizeTo(width, height);
 }
 //------------------------------------------------------------------------------
-status_t BRadioButton::Invoke(BMessage *msg = NULL)
+status_t BRadioButton::Invoke(BMessage *message)
 {
-	return BControl::Invoke(msg);
+	return BControl::Invoke(message);
 }
 //------------------------------------------------------------------------------
-void BRadioButton::MessageReceived(BMessage *msg)
+void BRadioButton::MessageReceived(BMessage *message)
 {
-	BControl::MessageReceived(msg);
+	BControl::MessageReceived(message);
 }
 //------------------------------------------------------------------------------
-void BRadioButton::WindowActivated(bool state)
+void BRadioButton::WindowActivated(bool active)
 {
-	BControl::WindowActivated(state);
+	BControl::WindowActivated(active);
 }
 //------------------------------------------------------------------------------
-void BRadioButton::MouseUp(BPoint pt)
+void BRadioButton::MouseUp(BPoint point)
 {
-	if (IsEnabled() && fPressed)
+	if (IsEnabled() && IsTracking())
 	{
 		fOutlined = false;
-		fPressed = false;
+		SetTracking(false);
 
-		if (Bounds().Contains(pt))
+		if (Bounds().Contains(point))
 		{
 			SetValue(B_CONTROL_ON);
 			Invoke();
@@ -280,34 +318,26 @@ void BRadioButton::MouseUp(BPoint pt)
 	}
 	else
 	{
-		BView::MouseUp(pt);
+		BControl::MouseUp(point);
 		return;
 	}
+
 	Invalidate();
 }
 //------------------------------------------------------------------------------
-void BRadioButton::MouseMoved(BPoint pt, uint32 code, const BMessage* msg)
+void BRadioButton::MouseMoved(BPoint point, uint32 transit, const BMessage *message)
 {
-	if (IsEnabled() && fPressed)
+	if (IsEnabled() && IsTracking())
 	{
-		if (code == B_EXITED_VIEW)
-		{
+		if (transit == B_EXITED_VIEW)
 			fOutlined = false;
-		}
-		else
-		{
-			if (code == B_ENTERED_VIEW)
-			{
-				fOutlined = true;
-			}
-		}
-		Draw(Bounds());
+		else if (transit == B_ENTERED_VIEW)
+			fOutlined = true;
+
+		Invalidate();
 	}
 	else
-	{
-		BView::MouseMoved(pt, code, msg);
-		return;
-	}
+		BView::MouseMoved(point, transit, message);
 }
 //------------------------------------------------------------------------------
 void BRadioButton::DetachedFromWindow()
@@ -315,22 +345,24 @@ void BRadioButton::DetachedFromWindow()
 	BControl::DetachedFromWindow();
 }
 //------------------------------------------------------------------------------
-void BRadioButton::FrameMoved(BPoint newPosition)
+void BRadioButton::FrameMoved(BPoint newLocation)
 {
-	BControl::FrameMoved(newPosition);
+	BControl::FrameMoved(newLocation);
 }
 //------------------------------------------------------------------------------
-void BRadioButton::FrameResized(float newWidth, float newHeight)
+void BRadioButton::FrameResized(float width, float height)
 {
-	BControl::FrameResized(newWidth, newHeight);
+	BControl::FrameResized(width, height);
 }
 //------------------------------------------------------------------------------
-BHandler *BRadioButton::ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier, int32 form, const char *property)
+BHandler *BRadioButton::ResolveSpecifier(BMessage *message, int32 index,
+										 BMessage *specifier, int32 what,
+										 const char *property)
 {
-	return NULL;
+	return ResolveSpecifier(message, index, specifier, what, property);
 }
 //------------------------------------------------------------------------------
-void BRadioButton::MakeFocus(bool state = true)
+void BRadioButton::MakeFocus(bool focused)
 {
 	BControl::MakeFocus();
 }
@@ -345,27 +377,21 @@ void BRadioButton::AllDetached()
 	BControl::AllDetached();
 }
 //------------------------------------------------------------------------------
-status_t BRadioButton::GetSupportedSuites(BMessage* data)
+status_t BRadioButton::GetSupportedSuites(BMessage *message)
 {
-	return B_OK;
+	return GetSupportedSuites(message);
 }
 //------------------------------------------------------------------------------
-status_t BRadioButton::Perform(perform_code d, void* arg)
+status_t BRadioButton::Perform(perform_code d, void *arg)
 {
 	return B_ERROR;
 }
 //------------------------------------------------------------------------------
-void BRadioButton::_ReservedRadioButton1()
-{
-}
+void BRadioButton::_ReservedRadioButton1() {}
+void BRadioButton::_ReservedRadioButton2() {}
 //------------------------------------------------------------------------------
-void BRadioButton::_ReservedRadioButton2()
+BRadioButton &BRadioButton::operator=(const BRadioButton &)
 {
-}
-//------------------------------------------------------------------------------
-BRadioButton& BRadioButton::operator=(const BRadioButton&)
-{
-	// Assignment not allowed
 	return *this;
 }
 //------------------------------------------------------------------------------
@@ -376,4 +402,3 @@ BRadioButton& BRadioButton::operator=(const BRadioButton&)
  * $Id  $
  *
  */
-
