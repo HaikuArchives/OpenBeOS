@@ -1,6 +1,7 @@
 // MimeTypeTest.cpp
 
 #include <stdio.h>
+#include <string.h>			// For memcmp()
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -8,11 +9,14 @@
 
 #include <Application.h>
 #include <Bitmap.h>
+#include <DataIO.h>
+#include <Message.h>
 #include <Mime.h>
 #include <MimeTypeTest.h>
 #include <Path.h>			// Only needed for entry_ref dumps
 #include <StorageKit.h>
 #include <String.h>
+
 
 #include "Test.StorageKit.h"
 #include "TestApp.h"
@@ -20,11 +24,14 @@
 
 static const char *testDir				= "/tmp/mimeTestDir";
 static const char *mimeDatabaseDir		= "/boot/home/config/settings/beos_mime";
-//static const char *testType				= "text/StorageKit-Test";
-static const char *testType				= "application/StorageKit-Test";
+static const char *testType				= "text/StorageKit-Test";
+static const char *testTypeApp			= "application/StorageKit-Test";
+static const char *testTypeInvalid		= "text/Are spaces valid?";
 static const char *testApp				= "/boot/beos/apps/SoundRecorder";
 static const char *testApp2				= "/boot/beos/apps/CDPlayer";
 static const char *fakeTestApp			= "/__this_isn't_likely_to_exist__";
+static const char *typeField			= "type";
+static const char *fileExtField			= "extensions";
 // Descriptions
 static const char *testDescr			= "Just a test, nothing more :-)";
 static const char *testDescr2			= "Another amazing test string";
@@ -53,7 +60,7 @@ bool operator==(BBitmap &bmp1, BBitmap &bmp2) {
 			char *data1 = (char*)bmp1.Bits();
 			char *data2 = (char*)bmp2.Bits();
 			// NOTE! It's possible that padding bits might not get copied verbatim,
-			// which might lead to unexpected failures. If things are acting weird,
+			// which could lead to unexpected failures. If things are acting weird,
 			// you might try the commented out code below (keeping in mind that it
 			// currently only works for 8-bit color depths).
 			for (int i = 0; i < bmp1.BitsLength(); data1++, data2++, i++) {
@@ -82,6 +89,67 @@ bool operator!=(BBitmap &bmp1, BBitmap &bmp2) {
 	return !(bmp1 == bmp2);
 }
 
+// Handy comparison operators for BMessages. The BMessages are checked field
+// by field, each of which is verified to be identical with respect to: type,
+// count, and data (all items).
+bool operator==(BMessage &msg1, BMessage &msg2) {
+	status_t err = B_OK;
+	
+	// For now I'm ignoring the what fields...I shall deal with that later :-)
+//	if (msg1.what != msg2.what)
+//		return false;
+
+/*
+	printf("----------------------------------------------------------------------\n");
+	msg1.PrintToStream();
+	msg2.PrintToStream();
+	printf("----------------------------------------------------------------------\n");
+*/
+	
+	// Check the counts of field names
+	int count1, count2;	
+	count1 = msg1.CountNames(B_ANY_TYPE);
+	count2 = msg2.CountNames(B_ANY_TYPE);
+	if (count1 != count2 && (count1 == 0 || count2 == 0))
+		return false;
+		
+	// Iterate over all the names in msg1 and check that the field
+	// with the same name exists in msg2, is of the same type, and
+	// contains identical data.
+	for (int i = 0; i < count1 && !err; i++) {
+		char *name;
+		type_code typeFound1, typeFound2;
+		int32 countFound1, countFound2;
+		
+		// Check type and count info
+		err = msg1.GetInfo(B_ANY_TYPE, i, &name, &typeFound1, &countFound1);			
+		if (!err) 
+			err = msg2.GetInfo(name, &typeFound2, &countFound2);
+		if (!err) 
+			err = (typeFound1 == typeFound2 && countFound1 == countFound2 ? B_OK : B_ERROR);
+		if (!err) {
+			// Check all the data items
+			for (int j = 0; j < countFound1; j++) {
+				void *data1, *data2;
+				ssize_t bytes1, bytes2;
+				
+				err = msg1.FindData(name, typeFound1, j, (const void**)&data1, &bytes1);
+				if (!err) 
+					err = msg2.FindData(name, typeFound2, j, (const void**)&data2, &bytes2);
+				if (!err) 
+					err = (bytes1 == bytes2 && memcmp(data1, data2, bytes1) == 0 ? B_OK : B_ERROR);			
+			}
+		}
+	}
+	
+	return !err;
+}
+
+bool operator!=(BMessage &msg1, BMessage &msg2) {
+	return !(msg1 == msg2);
+}
+
+
 // Suite
 CppUnit::Test*
 MimeTypeTest::Suite() {
@@ -91,14 +159,16 @@ MimeTypeTest::Suite() {
 	// Tyler
 	suite->addTest( new TC("BMimeType::App Hint Test",
 						   &MimeTypeTest::AppHintTest) );
+	suite->addTest( new TC("BMimeType::File Extensions Test",
+						   &MimeTypeTest::FileExtensionsTest) );
 	suite->addTest( new TC("BMimeType::Large Icon Test",
 						   &MimeTypeTest::LargeIconTest) );
 	suite->addTest( new TC("BMimeType::Mini Icon Test",
 						   &MimeTypeTest::MiniIconTest) );
-//	suite->addTest( new TC("BMimeType::Large Icon For Type Test",
-//						   &MimeTypeTest::LargeIconForTypeTest) );
-//	suite->addTest( new TC("BMimeType::Mini Icon For Type Test",
-//						   &MimeTypeTest::MiniIconForTypeTest) );
+	suite->addTest( new TC("BMimeType::Large Icon For Type Test",
+						   &MimeTypeTest::LargeIconForTypeTest) );
+	suite->addTest( new TC("BMimeType::Mini Icon For Type Test",
+						   &MimeTypeTest::MiniIconForTypeTest) );
 	suite->addTest( new TC("BMimeType::Long Description Test",
 						   &MimeTypeTest::LongDescriptionTest) );
 	suite->addTest( new TC("BMimeType::Short Description Test",
@@ -115,11 +185,43 @@ MimeTypeTest::Suite() {
 	return suite;
 }		
 
+// Fills the bitmap data with the given character
+void FillBitmap(BBitmap &bmp, char value) {
+	char *data = (char*)bmp.Bits();
+	for (int i = 0; i < bmp.BitsLength(); data++, i++) {
+//		printf("(%d -> ", *data);
+		*data = value;
+//		printf("%d)", *data);
+	}
+//	printf("\n");
+}
+	
+// Dumps the size, colorspace, and first data byte
+// of the bitmap to stdout
+void DumpBitmap(BBitmap &bmp, char *name = "bmp") {
+	printf("%s == (%dx%d, ", name, bmp.Bounds().IntegerWidth()+1,
+		bmp.Bounds().IntegerHeight()+1);
+	switch (bmp.ColorSpace()) {
+		case B_CMAP8:
+			printf("B_CMAP8");
+			break;
+				
+		case B_RGBA32:
+			printf("B_RGBA32");
+			break;
+				
+		default:
+			printf("%x", bmp.ColorSpace());
+			break;		
+	}
+	printf(", %d)\n", *(char*)bmp.Bits());
+}
+	
 // IconHelper and IconForTypeHelper:
 // Adapter(?) classes needed to reuse icon tests among {Get,Set}Icon() and {Get,Set}IconForType()
 // What originally were meant to encapsulate the variations among calls to the various BMimeType
 // icon functions have now exploded into beefy helper classes with a bunch of BBitmap related
-// functionality as well. 
+// functionality as well. A lot of this stuff doesn't necessarily belong
 
 class IconHelper {
 public:
@@ -129,46 +231,15 @@ public:
 		  bmp2(BitmapBounds(which), B_CMAP8),
 		  bmpTemp(BitmapBounds(which), B_CMAP8)
 	{
+		// Initialize our three bitmaps to different "colors"
 		FillBitmap(bmp1, 1);
 		FillBitmap(bmp2, 2);
 		FillBitmap(bmpTemp, 3);
 	}
 	
-	// Fills the bitmap data with the given character
-	void FillBitmap(BBitmap &bmp, char value) {
-		char *data = (char*)bmp.Bits();
-		for (int i = 0; i < bmp.BitsLength(); data++, i++) {
-//			printf("(%d -> ", *data);
-			*data = value;
-//			printf("%d)", *data);
-		}
-//		printf("\n");
-	}
-	
-	// Dumps the size, colorspace, and first data byte
-	// of the bitmap to stdout
-	void DumpBitmap(BBitmap &bmp, char *name = "bmp") {
-		printf("%s == (%dx%d, ", name, bmp.Bounds().IntegerWidth(),
-			bmp.Bounds().IntegerHeight());
-		switch (bmp.ColorSpace()) {
-			case B_CMAP8:
-				printf("B_CMAP8");
-				break;
-				
-			case B_RGBA32:
-				printf("B_RGBA32");
-				break;
-				
-			default:
-				printf("%x", bmp.ColorSpace());
-				break;		
-		}
-		printf(", %d)\n", *(char*)bmp.Bits());
-	}
-	
 	// Returns the proper bitmap bounds for the given icon size
 	BRect BitmapBounds(icon_size isize) {
-		return isize == B_LARGE_ICON ? BRect(0,0,31,31) : BRect(0,0,16,16);
+		return isize == B_LARGE_ICON ? BRect(0,0,31,31) : BRect(0,0,15,15);
 	}
 	
 	// Returns the proper bitmap bounds for this helper's icon size
@@ -198,12 +269,15 @@ public:
 		return &bmp2;
 	}
 	
+	icon_size Size() {
+		return size;
+	}
+	
 protected:	
 	BBitmap bmp1;
 	BBitmap bmp2;
 	BBitmap bmpTemp;
-	icon_size size;
-	
+	icon_size size;	
 };
 
 class IconForTypeHelper : public IconHelper {
@@ -211,10 +285,10 @@ public:
 	IconForTypeHelper(const char *fileType, icon_size which)
 		: IconHelper(which), fileType(fileType) {}
 	virtual status_t GetIcon(BMimeType &mime, BBitmap *icon) {
-		return mime.GetIconForType(fileType.data(), icon, size);
+		return mime.GetIconForType(fileType.c_str(), icon, size);
 	}
 	virtual status_t SetIcon(BMimeType &mime, BBitmap *icon) {
-		return mime.GetIconForType(fileType.data(), icon, size);
+		return mime.SetIconForType(fileType.c_str(), icon, size);
 	}
 protected:
 	std::string fileType;
@@ -412,6 +486,131 @@ void MimeTypeTest::AppHintTest() {
 	}		
 }
 
+// File Extensions
+
+void MimeTypeTest::FileExtensionsTest() {
+	// Create some messages to sling around
+	const int32 WHAT = 888;
+	BMessage msg1(WHAT), msg2(WHAT), msg3(WHAT);
+
+	CHK(msg1.AddString(fileExtField, ".data") == B_OK);
+	CHK(msg1.AddString(fileExtField, ".txt") == B_OK);
+	CHK(msg1.AddString(fileExtField, ".png") == B_OK);
+	CHK(msg1.AddString(fileExtField, ".html") == B_OK);
+
+	CHK(msg2.AddString(fileExtField, ".data") == B_OK);
+	CHK(msg2.AddString(fileExtField, ".txt") == B_OK);
+	
+	CHK(msg3.AddString(fileExtField, ".data") == B_OK);
+	CHK(msg3.AddString(fileExtField, ".txt") == B_OK);
+	
+	CHK(msg1 == msg1);
+	CHK(msg2 == msg2);
+	CHK(msg3 == msg3);
+	CHK(msg1 != msg2);
+	CHK(msg1 != msg3);
+	CHK(msg2 == msg3);
+
+	// Uninitialized
+	nextSubTest();
+	{
+		BMessage msg(WHAT);
+		BMimeType mime;
+		
+		CHK(mime.InitCheck() == B_NO_INIT);
+		CHK(mime.GetFileExtensions(&msg) != B_OK);	// R5 == B_BAD_VALUE
+		CHK(mime.SetFileExtensions(&msg) != B_OK);	// R5 == B_BAD_VALUE
+	}
+	// NULL params
+	nextSubTest();
+	{
+		BMessage msg(WHAT);
+		BMimeType mime(testType);
+		
+		CHK(mime.InitCheck() == B_OK);
+		// Make sure the type isn't installed
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		CHK(!mime.IsInstalled());
+		// Not installed
+		CHK(mime.GetFileExtensions(NULL) != B_OK);	// R5 == B_BAD_VALUE
+		CHK(!mime.IsInstalled());
+#if !SK_TEST_R5
+		CHK(RES(mime.SetFileExtensions(NULL)) == B_OK);	// R5 == CRASH!
+		CHK(mime.IsInstalled());
+		CHK(RES(mime.GetFileExtensions(&msg)) != B_OK);	// R5 == B_ENTRY_NOT_FOUND
+		// Installed
+/*		CHK(mime.GetFileExtensions(NULL) != B_OK);	// R5 == B_BAD_VALUE
+		CHK(mime.SetFileExtensions(helper.Bitmap1()) == B_OK);
+		CHK(mime.GetFileExtensions(bmp) == B_OK);
+		CHK(*bmp == *helper.Bitmap1());
+		CHK(mime.SetFileExtensions(NULL) == B_OK);
+		CHK(mime.GetFileExtensions(bmp) != B_OK);	// R5 == B_ENTRY_NOT_FOUND*/
+#endif
+	}
+	// Set() with empty message
+	nextSubTest();
+	{
+	}
+	// Set() with extra attributes in message
+	nextSubTest();
+	{
+	}
+	// Normal function
+	{
+		BMessage msg(WHAT);
+		BMimeType mime(testType);
+		
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);			
+		CHK(mime.IsInstalled());
+		// Initial Set()/Get()
+		nextSubTest();
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+		CHK(mime.SetFileExtensions(&msg1) == B_OK);
+		CHK(mime.GetFileExtensions(&msg) == B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg2.AddString(typeField, testType) == B_OK);
+		CHK(msg == msg1);
+		CHK(msg != msg2);
+		// Followup Set()/Get()
+		nextSubTest();
+		CHK(msg.MakeEmpty() == B_OK);
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+		CHK(mime.SetFileExtensions(&msg2) == B_OK);
+		CHK(mime.GetFileExtensions(&msg) == B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg2.AddString(typeField, testType) == B_OK);
+		CHK(msg != msg1);
+		CHK(msg == msg2);
+		// Clear
+		nextSubTest();
+		CHK(msg.MakeEmpty() == B_OK);
+		msg1.RemoveName(typeField);		// Clear "type" fields, since SFE() just adds another
+		msg2.RemoveName(typeField);	
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+#if !SK_TEST_R5
+		CHK(RES(mime.SetFileExtensions(NULL)) == B_OK);		// R5 == CRASH!
+		CHK(RES(mime.GetFileExtensions(&msg)) != B_OK);
+		CHK(msg1.AddString(typeField, testType) == B_OK);	// Add in "type" fields as GFE() does
+		CHK(msg2.AddString(typeField, testType) == B_OK);
+		CHK(msg != msg1);
+		CHK(msg != msg2);
+#endif
+	}
+}
+
+
 // Icon Test Helper Function
 
 void MimeTypeTest::IconTest(IconHelper &helper) {
@@ -477,7 +676,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		CHK(mime.IsInstalled());
 		// Init Test Bitmap
 		BBitmap testBmp(BRect(0,0,9,9), B_CMAP8);
-		helper.FillBitmap(testBmp, 3);
+		FillBitmap(testBmp, 3);
 		// Test Set()
 		CHK(testBmp != *helper.Bitmap1());
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
@@ -488,7 +687,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		CHK(*bmp == *helper.Bitmap1());
 		CHK(*bmp != testBmp);		
 		// Test Get()
-		helper.FillBitmap(testBmp, 3);
+		FillBitmap(testBmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, &testBmp) != B_OK);	// R5 == B_BAD_VALUE
 	}
@@ -506,7 +705,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		// Init Test Bitmap
 		BBitmap testBmp(BRect(0,0,99,99), B_CMAP8);
 		// Test Set()
-		helper.FillBitmap(testBmp, 3);
+		FillBitmap(testBmp, 3);
 		CHK(testBmp != *helper.Bitmap1());
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, bmp) == B_OK);
@@ -516,7 +715,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		CHK(*bmp == *helper.Bitmap1());
 		CHK(*bmp != testBmp);
 		// Test Get()
-		helper.FillBitmap(testBmp, 3);
+		FillBitmap(testBmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, &testBmp) != B_OK);	// R5 == B_BAD_VALUE
 	}	
@@ -535,7 +734,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 		BBitmap testBmp(helper.BitmapBounds(), B_RGBA32);
 		// Test Set()
 #if !SK_TEST_R5
-		helper.FillBitmap(testBmp, 4);
+		FillBitmap(testBmp, 4);
 		CHK(testBmp != *helper.Bitmap1());
 		CHK(RES(helper.SetIcon(mime, helper.Bitmap1())) == B_OK);
 		CHK(RES(helper.GetIcon(mime, bmp)) == B_OK);
@@ -549,7 +748,7 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 #endif
 		// Test Get()
 #if SK_TEST_R5
-		helper.FillBitmap(testBmp, 3);
+		FillBitmap(testBmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, &testBmp) == B_OK);	// R5 == B_OK, but testBmp is not actually modified
 		CHK(testBmp != *helper.Bitmap1());
@@ -567,17 +766,68 @@ void MimeTypeTest::IconTest(IconHelper &helper) {
 			CHK(mime.Install() == B_OK);
 		CHK(mime.IsInstalled());
 		// Set() then Get()
-		helper.FillBitmap(*bmp, 3);
+		FillBitmap(*bmp, 3);
 		CHK(*bmp != *helper.Bitmap1());
 		CHK(helper.SetIcon(mime, helper.Bitmap1()) == B_OK);
 		CHK(helper.GetIcon(mime, bmp) == B_OK);
 		CHK(*bmp == *helper.Bitmap1());
 		// Set() then Get() again
-		helper.FillBitmap(*bmp, 3);
+		FillBitmap(*bmp, 3);
 		CHK(helper.SetIcon(mime, helper.Bitmap2()) == B_OK);
 		CHK(helper.GetIcon(mime, bmp) == B_OK);
 		CHK(*bmp == *helper.Bitmap2());
 		CHK(*bmp != *helper.Bitmap1());		
+	}	
+}
+
+// Icon For Type Helper Functions
+
+void MimeTypeTest::IconForTypeTest(IconForTypeHelper &helper) {
+	IconTest(helper);	// First run all the icon tests	
+		// Then do some IconForType() specific tests
+		
+	BBitmap *bmp = helper.TempBitmap();
+		
+	// Invalid MIME string
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);
+		CHK(mime.IsInstalled());
+		// Set() then Get()
+		FillBitmap(*bmp, 3);
+		CHK(*bmp != *helper.Bitmap1());
+		CHK(mime.SetIconForType(testTypeInvalid, helper.Bitmap1(), helper.Size()) != B_OK);	// R5 == B_BAD_VALUE
+		CHK(mime.GetIconForType(testTypeInvalid, bmp, helper.Size()) != B_OK);				// R5 == B_BAD_VALUE
+		CHK(*bmp != *helper.Bitmap1());
+	}
+	// NULL MIME string (just like calling respective {Get,Set}Icon() function)
+	nextSubTest();
+	{
+		BMimeType mime(testType);
+		CHK(mime.InitCheck() == B_OK);
+		// Uninstall then reinstall to clear attributes
+		if (mime.IsInstalled())
+			CHK(mime.Delete() == B_OK);
+		if (!mime.IsInstalled())
+			CHK(mime.Install() == B_OK);
+		CHK(mime.IsInstalled());
+		// Set() then Get()
+		FillBitmap(*bmp, 3);
+		CHK(*bmp != *helper.Bitmap1());
+		CHK(mime.SetIconForType(NULL, helper.Bitmap1(), helper.Size()) == B_OK);
+		CHK(mime.GetIconForType(NULL, bmp, helper.Size()) == B_OK);
+		CHK(*bmp == *helper.Bitmap1());
+		// Verify GetIcon() does the same thing
+		FillBitmap(*bmp, 3);
+		CHK(*bmp != *helper.Bitmap1());
+		CHK(mime.GetIcon(bmp, helper.Size()) == B_OK);
+		CHK(*bmp == *helper.Bitmap1());
 	}	
 }
 
@@ -587,18 +837,18 @@ void MimeTypeTest::LargeIconTest() {
 }
 
 void MimeTypeTest::MiniIconTest() {
-	IconHelper helper(B_LARGE_ICON);
+	IconHelper helper(B_MINI_ICON);
 	IconTest(helper);
 }
 
 void MimeTypeTest::LargeIconForTypeTest() {
 	IconForTypeHelper helper(testType, B_LARGE_ICON);
-	IconTest(helper);
+	IconForTypeTest(helper);
 }
 
 void MimeTypeTest::MiniIconForTypeTest() {
-	IconForTypeHelper helper(testType, B_LARGE_ICON);
-	IconTest(helper);
+	IconForTypeHelper helper(testType, B_MINI_ICON);
+	IconForTypeTest(helper);
 }
 
 
@@ -1253,12 +1503,12 @@ MimeTypeTest::StringTest()
 									  BMessage *subtypes);
 	static status_t GetWildcardApps(BMessage *wild_ones);
 
-	status_t GetAppHint(entry_ref *ref) const;
-	status_t SetAppHint(const entry_ref *ref);
++	status_t GetAppHint(entry_ref *ref) const;
++	status_t SetAppHint(const entry_ref *ref);
 
-	status_t GetIconForType(const char *type, BBitmap *icon,
++	status_t GetIconForType(const char *type, BBitmap *icon,
 							icon_size which) const;
-	status_t SetIconForType(const char *type, const BBitmap *icon,
++	status_t SetIconForType(const char *type, const BBitmap *icon,
 							icon_size which);
 */
 
