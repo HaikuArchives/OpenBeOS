@@ -40,9 +40,9 @@ KeyboardView::KeyboardView(BRect rect)
 	AddChild(aButton);
 	// Add the "Revert" button...
 	aRect.Set(92,187,167,207);
-	aButton = new BButton(aRect,"keyboard_revert","Revert", new BMessage(BUTTON_REVERT));
-	aButton->SetEnabled(false);
-	AddChild(aButton);
+	revertButton = new BButton(aRect,"keyboard_revert","Revert", new BMessage(BUTTON_REVERT));
+	revertButton->SetEnabled(false);
+	AddChild(revertButton);
 	// Create the box for the sliders...
 	aRect=Bounds();
 	aRect.left=aRect.left+11;

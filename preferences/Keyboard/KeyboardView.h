@@ -30,6 +30,7 @@ public:
 		KeyboardView(BRect frame);
 		BSlider		*rateSlider;
 		BSlider		*delaySlider;
+		BButton		*revertButton;
 private:
         int32            rrate;
 		bigtime_t        drate; 
