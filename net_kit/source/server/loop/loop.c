@@ -112,7 +112,7 @@ static int loop_init(void)
 
 	me->devid = -1;
 	me->name = "loop";
-	me->unit = 0;
+	me->if_unit = 0;
 	me->if_type = IFT_LOOP;
 	me->rx_thread = -1;
 	me->tx_thread = -1;
