@@ -468,8 +468,8 @@ BPlusTree::Insert(uint8 *key,uint16 keyLength,off_t value)
 		if (count++ == 0)	// first round, check for duplicate entries
 		{
 			status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
-			if (status == B_ERROR)
-				return B_ERROR;
+			//if (status == B_ERROR)
+			//	return B_ERROR;
 
 			// is this a duplicate entry?
 			if (status == B_OK && node->overflow_link == BPLUSTREE_NULL)
@@ -518,8 +518,8 @@ BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *value)
 	if (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
 	{
 		status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
-		if (status == B_ERROR)
-			return B_ERROR;
+		//if (status == B_ERROR)
+		//	return B_ERROR;
 		
 		if (status == B_OK && node->overflow_link == BPLUSTREE_NULL)
 		{
