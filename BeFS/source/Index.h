@@ -9,6 +9,7 @@
 
 #include <KernelExport.h>
 
+class Transaction;
 class Volume;
 class Inode;
 
@@ -24,6 +25,10 @@ class Index {
 		Inode *Node() const { return fNode; };
 		uint32 Type();
 		size_t KeySize();
+
+		status_t InsertName(Transaction *transaction,const char *name,off_t id);
+		status_t RemoveName(Transaction *transaction,const char *name,off_t id);
+		status_t UpdateName(Transaction *transaction,const char *oldName,const char *newName,off_t id);
 
 	private:
 		Volume		*fVolume;

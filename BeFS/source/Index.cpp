@@ -132,3 +132,57 @@ Index::KeySize()
 	return 0;
 }
 
+
+status_t 
+Index::InsertName(Transaction *transaction,const char *name,off_t id)
+{
+	return UpdateName(transaction,NULL,name,id);
+}
+
+
+status_t 
+Index::RemoveName(Transaction *transaction,const char *name,off_t id)
+{
+	return UpdateName(transaction,name,NULL,id);
+}
+
+
+/**	Updates the "name" index, the oldName will be removed from, the newName
+ *	inserted into the tree.
+ *	If the method returns B_BAD_INDEX, it means the index couldn't be found -
+ *	the most common reason will be that the index doesn't exist.
+ *	You may not want to let the whole transaction fail because of that.
+ */
+
+status_t 
+Index::UpdateName(Transaction *transaction,const char *oldName, const char *newName,off_t id)
+{
+	if (oldName == NULL && newName == NULL)
+		return B_BAD_VALUE;
+
+	status_t status = SetTo("name");
+	if (status < B_OK)
+		return B_BAD_INDEX;
+
+	BPlusTree *tree;
+	if ((status = Node()->GetTree(&tree)) < B_OK)
+		return status;
+
+	// remove the old name
+	
+	if (oldName != NULL) {
+		status = tree->Remove(transaction,(const uint8 *)oldName,strlen(oldName),id);
+		if (status == B_ENTRY_NOT_FOUND) {
+			FATAL(("Name \"%s\" should be in index, but was not found (inode at %Ld)!\n",oldName,id));
+		} else if (status < B_OK)
+			return status;
+	}
+	
+	// add the new name
+	
+	if (newName != NULL)
+		status = tree->Insert(transaction,(const uint8 *)newName,strlen(newName),id);
+
+	return status;
+}
+

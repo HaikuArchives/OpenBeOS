@@ -271,7 +271,10 @@ BPlusTree::SetTo(Transaction *transaction,Inode *stream,int32 nodeSize)
 			RETURN_ERROR(fStatus = B_ERROR);
 	}
 
-	fAllowDuplicates = (stream->Mode() & S_INDEX_DIR) == S_INDEX_DIR;
+	fAllowDuplicates = ((stream->Mode() & S_INDEX_DIR) == S_INDEX_DIR
+						&& stream->BlockRun() != stream->Parent())
+						|| stream->Mode() & S_ALLOW_DUPS;
+
 	fNodeSize = nodeSize;
 
 	// initialize b+tree header
@@ -335,7 +338,10 @@ BPlusTree::SetTo(Inode *stream)
 		}
 
 		 // although it's in stat.h, the S_ALLOW_DUPS flag is obviously unused
-		fAllowDuplicates = (stream->Mode() & S_INDEX_DIR) == S_INDEX_DIR;
+		 // in the original BFS code - we will honour it nevertheless
+		fAllowDuplicates = ((stream->Mode() & S_INDEX_DIR) == S_INDEX_DIR
+							&& stream->BlockRun() != stream->Parent())
+							|| stream->Mode() & S_ALLOW_DUPS;
 	}
 
 	CachedNode cached(this,fHeader->root_node_pointer);
@@ -434,7 +440,7 @@ BPlusTree::CompareKeys(const void *key1, int keyLength1, const void *key2, int k
 
 
 status_t
-BPlusTree::FindKey(bplustree_node *node,uint8 *key,uint16 keyLength,uint16 *index,off_t *next)
+BPlusTree::FindKey(bplustree_node *node,const uint8 *key,uint16 keyLength,uint16 *index,off_t *next)
 {
 	if (node->all_key_count == 0)
 	{
@@ -495,7 +501,7 @@ BPlusTree::FindKey(bplustree_node *node,uint8 *key,uint16 keyLength,uint16 *inde
  */
 
 status_t
-BPlusTree::SeekDown(Stack<node_and_key> &stack,uint8 *key,uint16 keyLength)
+BPlusTree::SeekDown(Stack<node_and_key> &stack,const uint8 *key,uint16 keyLength)
 {
 	// set the root node to begin with
 	node_and_key nodeAndKey;
@@ -795,7 +801,7 @@ BPlusTree::SplitNode(bplustree_node *node,off_t nodeOffset,bplustree_node *other
 
 
 status_t
-BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t value)
+BPlusTree::Insert(Transaction *transaction,const uint8 *key,uint16 keyLength,off_t value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
 		RETURN_ERROR(B_BAD_VALUE);
@@ -970,7 +976,7 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 
 
 status_t
-BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength,off_t value)
+BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off_t value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
 		RETURN_ERROR(B_BAD_VALUE);
@@ -1062,7 +1068,7 @@ BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
  */
 
 status_t
-BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *_value)
+BPlusTree::Find(const uint8 *key,uint16 keyLength,off_t *_value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
 		|| key == NULL)
@@ -1311,7 +1317,7 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
  */
 
 status_t 
-TreeIterator::Find(uint8 *key, uint16 keyLength)
+TreeIterator::Find(const uint8 *key, uint16 keyLength)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
 		|| key == NULL)

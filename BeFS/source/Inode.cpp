@@ -9,6 +9,7 @@
 #include "cpp.h"
 #include "Inode.h"
 #include "BPlusTree.h"
+#include "Index.h"
 
 #include <string.h>
 
@@ -1162,6 +1163,14 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 	if (inode->WriteBack(transaction) < B_OK)
 		return B_ERROR;
 
+	// update the "name", "size", & "last_modified" indices
+	
+	Index index(fVolume);
+	index.RemoveName(transaction,Name(),ID());
+
+	// ToDo: update other indices (the attributes will
+	// be removed in the bfs_remove_vnode() function)
+
 	return B_OK;
 }
 
@@ -1234,8 +1243,6 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 		parent->WriteBack(transaction);
 	}
 
-	// ToDo: update indices - only if it's a regular file!
-
 	// initialize the on-disk bfs_inode structure 
 
 	bfs_inode *node = inode->Node();
@@ -1272,6 +1279,14 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 				return B_ERROR;
 		}
 	}
+
+	// update the indices (name, size & last_modified)
+	Index index(volume);
+	status = index.InsertName(transaction,name,inode->ID());
+	if (status < B_OK && status != B_BAD_INDEX)
+		return status;
+
+	// ToDo: update other indices - only if it's a regular file or symlink!
 
 	if ((status = inode->WriteBack(transaction)) < B_OK)
 		return status;

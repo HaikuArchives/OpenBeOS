@@ -162,8 +162,8 @@ class BPlusTree {
 		status_t	InitCheck();
 		status_t	Validate();
 
-		status_t	Remove(Transaction *transaction,uint8 *key, uint16 keyLength, off_t value);
-		status_t	Insert(Transaction *transaction,uint8 *key, uint16 keyLength, off_t value);
+		status_t	Remove(Transaction *transaction,const uint8 *key, uint16 keyLength, off_t value);
+		status_t	Insert(Transaction *transaction,const uint8 *key, uint16 keyLength, off_t value);
 
 		status_t	Insert(Transaction *transaction,const char *key, off_t value);
 		status_t	Insert(Transaction *transaction,int32 key, off_t value);
@@ -173,15 +173,15 @@ class BPlusTree {
 		status_t	Insert(Transaction *transaction,float key, off_t value);
 		status_t	Insert(Transaction *transaction,double key, off_t value);
 
-		status_t	Find(uint8 *key, uint16 keyLength, off_t *value);
+		status_t	Find(const uint8 *key, uint16 keyLength, off_t *value);
 
 		static int32 TypeCodeToKeyType(type_code code);
 		static int32 ModeToKeyType(mode_t mode);
 
 	private:
 		int32		CompareKeys(const void *key1, int keylength1, const void *key2, int keylength2);
-		status_t	FindKey(bplustree_node *node, uint8 *key, uint16 keyLength, uint16 *index = NULL, off_t *next = NULL);
-		status_t	SeekDown(Stack<node_and_key> &stack, uint8 *key, uint16 keyLength);
+		status_t	FindKey(bplustree_node *node, const uint8 *key, uint16 keyLength, uint16 *index = NULL, off_t *next = NULL);
+		status_t	SeekDown(Stack<node_and_key> &stack, const uint8 *key, uint16 keyLength);
 
 		status_t	InsertDuplicate(bplustree_node *node,uint16 index,off_t value);
 		void		InsertKey(bplustree_node *node, uint16 index, uint8 *key, uint16 keyLength, off_t value);
@@ -214,7 +214,7 @@ class TreeIterator {
 
 		status_t	Goto(int8 to);
 		status_t	Traverse(int8 direction, void *key, uint16 *keyLength, uint16 maxLength, off_t *value,uint16 *duplicate = NULL);
-		status_t	Find(uint8 *key, uint16 keyLength);
+		status_t	Find(const uint8 *key, uint16 keyLength);
 
 		status_t	Rewind();
 		status_t	GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate = NULL);
