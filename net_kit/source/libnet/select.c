@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <posix/signal.h>
- 
+#include <strings.h>
+
 #include "net_stack_driver.h"
 
 extern const char * g_stack_driver_path;
@@ -73,13 +74,11 @@ _EXPORT int select(int nbits, struct fd_set *rbits,
 	
 	args.rv = B_OK;
 	rv = ioctl(tmpfd, NET_STACK_SELECT, &args, sizeof(args));
-	if (rv == 0)
-		rv = args.rv;
-		
+
 	if (timeout) {
 		signal(SIGALRM, previous_sigalrm_handler);
 		if (when < system_time())
-			rv = 0;	// okay, select() timed out, so return 0 (see select() man page)
+			rv = 0;
 	};
 		
 	close(tmpfd);

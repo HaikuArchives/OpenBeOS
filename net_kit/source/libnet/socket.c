@@ -69,8 +69,12 @@ _EXPORT int socket(int family, int type, int protocol)
 			protocol = IPPROTO_TCP;
 		else if (protocol == 3)
 			protocol = IPPROTO_ICMP;
+		
+		/* also convert AF_INET */
+		if (family == 1)
+			family = AF_INET;
 	};
-	
+
 	args.family = family;
 	args.type = type;
 	args.proto = protocol;
@@ -93,7 +97,6 @@ _EXPORT int bind(int sock, const struct sockaddr *addr, int addrlen)
 {
 	struct sockaddr temp;
 	struct sockaddr_args args;
-	int rv;
 	
 	if (g_beos_r5_compatibility) {
 		convert_from_beos_r5_sockaddr(&temp, addr);
@@ -105,21 +108,18 @@ _EXPORT int bind(int sock, const struct sockaddr *addr, int addrlen)
 	args.addrlen = addrlen;
 	
 	args.rv = B_ERROR;
-	rv = ioctl(sock, NET_STACK_BIND, &args, sizeof(args));
-	return (rv < 0) ? rv : args.rv;
+	return ioctl(sock, NET_STACK_BIND, &args, sizeof(args));
 }
 
 
 _EXPORT int shutdown(int sock, int how)
 {
 	struct int_args args;
-	int rv;
 	
 	args.value = how;
 	
 	args.rv = B_ERROR;
-	rv = ioctl(sock, NET_STACK_SHUTDOWN, &args, sizeof(args));
-	return (rv < 0) ? rv : args.rv;
+	return ioctl(sock, NET_STACK_SHUTDOWN, &args, sizeof(args));
 }
 
 
@@ -127,7 +127,6 @@ _EXPORT int connect(int sock, const struct sockaddr *addr, int addrlen)
 {
 	struct sockaddr temp;
 	struct sockaddr_args args;
-	int rv;
 	
 	if (g_beos_r5_compatibility) {
 		convert_from_beos_r5_sockaddr(&temp, addr);
@@ -137,23 +136,18 @@ _EXPORT int connect(int sock, const struct sockaddr *addr, int addrlen)
 
 	args.addr = (struct sockaddr *) addr;
 	args.addrlen = addrlen;
-	
-	args.rv = B_ERROR;
-	rv = ioctl(sock, NET_STACK_CONNECT, &args, sizeof(args));
-	return (rv < 0) ? rv : args.rv;
+       	
+	return ioctl(sock, NET_STACK_CONNECT, &args, sizeof(args));
 }
 
 
 _EXPORT int listen(int sock, int backlog)
 {
 	struct int_args args;
-	int rv;
-	
+
 	args.value = backlog;
 	
-	args.rv = B_ERROR;
-	rv = ioctl(sock, NET_STACK_LISTEN, &args, sizeof(args));
-	return (rv < 0) ? rv : args.rv;
+	return ioctl(sock, NET_STACK_LISTEN, &args, sizeof(args));
 }
 
 
@@ -334,19 +328,15 @@ _EXPORT int getsockopt(int sock, int level, int option, void *optval, size_t *op
 	args.optval = optval;
 	args.optlen = *optlen;
 	
-	args.rv = B_ERROR;	
 	rv = ioctl(sock, NET_STACK_GETSOCKOPT, &args, sizeof(args));
-	if (rv < 0)
-		return rv;
-		
-	*optlen = args.optlen;
-	return args.rv;
+	if (rv ==0)
+		*optlen = args.optlen;
+	return rv;
 }
 
 _EXPORT int setsockopt(int sock, int level, int option, const void *optval, size_t optlen)
 {
 	struct sockopt_args args;
-	int rv;
 	
 	/* BeOS R5 uses 
 	 * setsockopt(sock, SOL_SOCKET, SO_NONBLOCK, &i, sizeof(i));
@@ -365,9 +355,7 @@ _EXPORT int setsockopt(int sock, int level, int option, const void *optval, size
 	args.optval = (void *) optval;
 	args.optlen = optlen;
 	
-	args.rv = B_ERROR;	
-	rv = ioctl(sock, NET_STACK_SETSOCKOPT, &args, sizeof(args));
-	return (rv < 0) ? rv : args.rv;
+	return ioctl(sock, NET_STACK_SETSOCKOPT, &args, sizeof(args));
 }
 
 _EXPORT int getpeername(int sock, struct sockaddr *addr, int *addrlen)
@@ -454,7 +442,10 @@ static void convert_from_beos_r5_sockaddr(struct sockaddr *_to, const struct soc
 	struct sockaddr_in *to = (struct sockaddr_in *)_to;
 	memset(to, 0, sizeof(*to));
 	to->sin_len = sizeof(*to);
-	to->sin_family = from->sin_family;
+	if (from->sin_family == 1)
+		to->sin_family = AF_INET;
+	else
+		to->sin_family = from->sin_family;
 	to->sin_port = from->sin_port;
 	to->sin_addr.s_addr = from->sin_addr;
 }
@@ -464,7 +455,10 @@ static void convert_to_beos_r5_sockaddr(struct sockaddr *_to, const struct socka
 	const struct sockaddr_in *from = (struct sockaddr_in *)_from;
 	struct beosr5_sockaddr_in *to = (struct beosr5_sockaddr_in *)_to;
 	memset(to, 0, sizeof(*to));
-	to->sin_family = from->sin_family;
+	if (from->sin_family == AF_INET)
+		to->sin_family = 1;
+	else
+		to->sin_family = from->sin_family;
 	to->sin_port = from->sin_port;
 	to->sin_addr = from->sin_addr.s_addr;
 }
