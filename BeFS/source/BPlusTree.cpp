@@ -150,6 +150,8 @@ CachedNode::Free(Transaction *transaction,off_t offset)
 
 	// add the node to the free nodes list
 	fNode->left_link = fTree->fHeader->free_node_pointer;
+	fNode->overflow_link = BPLUSTREE_FREE;
+
 	if (WriteBack(transaction) == B_OK) {
 		fTree->fHeader->free_node_pointer = offset;
 		return fTree->fCachedHeader.WriteBack(transaction);
@@ -519,7 +521,8 @@ BPlusTree::FindKey(bplustree_node *node,const uint8 *key,uint16 keyLength,uint16
 
 		uint16 searchLength;
 		uint8 *searchKey = node->KeyAt(i,&searchLength);
-		if (searchKey + searchLength + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fNodeSize) {
+		if (searchKey + searchLength + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fNodeSize
+			|| searchLength > BPLUSTREE_MAX_KEY_LENGTH) {
 			fStream->GetVolume()->Panic();
 			RETURN_ERROR(B_BAD_DATA);
 		}
@@ -834,11 +837,9 @@ BPlusTree::SplitNode(bplustree_node *node,off_t nodeOffset,bplustree_node *other
 		if (in == keyIndex && !bytes) {
 			bytes = *_keyLength;
 		} else {
-			if (keyIndex < out) {
+			if (keyIndex < out)
 				bytesAfter = inKeyLengths[in] - bytesBefore;
-				// fix the key lengths for the new node
-				inKeyLengths[in] = bytesAfter + bytesBefore + bytes;
-			}
+
 			in++;
 		}
 		out++;
@@ -883,7 +884,8 @@ BPlusTree::SplitNode(bplustree_node *node,off_t nodeOffset,bplustree_node *other
 			// copy the keys after the new key
 			memcpy(outKeys + bytesBefore + bytes,inKeys + bytesBefore,bytesAfter);
 			keys = out - keyIndex - 1;
-			memcpy(outKeyLengths + keyIndex + 1,inKeyLengths + keyIndex,keys * sizeof(uint16));
+			for (int32 i = 0;i < keys;i++)
+				outKeyLengths[keyIndex + i + 1] = inKeyLengths[keyIndex + i] + bytes;
 			memcpy(outKeyValues + keyIndex + 1,inKeyValues + keyIndex,keys * sizeof(off_t));
 		}
 	}
@@ -912,9 +914,14 @@ BPlusTree::SplitNode(bplustree_node *node,off_t nodeOffset,bplustree_node *other
 			other->overflow_link = *_value;
 			keyIndex--;
 		} else {
-			// if a key is dropped (is not the new key), we have to copy
-			// it, because it would be lost if not
+			// If a key is dropped (is not the new key), we have to copy
+			// it, because it would be lost if not.
 			uint8 *droppedKey = node->KeyAt(in,&newLength);
+			if (droppedKey + newLength + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fNodeSize
+				|| newLength > BPLUSTREE_MAX_KEY_LENGTH) {
+				fStream->GetVolume()->Panic();
+				RETURN_ERROR(B_BAD_DATA);
+			}
 			newKey = (uint8 *)malloc(newLength);
 			if (newKey == NULL)
 				return B_NO_MEMORY;
@@ -1271,8 +1278,8 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 
 	uint16 length;
 	uint8 *key = node->KeyAt(index,&length);
-	if (length > BPLUSTREE_MAX_KEY_LENGTH
-		|| key + length + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fNodeSize) {
+	if (key + length + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fNodeSize
+		|| length > BPLUSTREE_MAX_KEY_LENGTH) {
 		FATAL(("Key length to long: %s, %u (inode at %ld,%u [%s])\n",key,length,fStream->BlockRun().allocation_group,fStream->BlockRun().start,fStream->Name()));
 		fStream->GetVolume()->Panic();
 		return;
@@ -1334,10 +1341,13 @@ BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 			if (status < B_OK)
 				RETURN_ERROR(status); 
 
-			// If we will remove the last key, the iterator will be
-			// set to the next node after the current
+			// If we will remove the last key, the iterator will be set
+			// to the next node after the current - if there aren't any
+			// more nodes, we need a way to prevent the TreeIterators to
+			// touch the old node again, we use BPLUSTREE_FREE for this
+			off_t next = node->right_link == BPLUSTREE_NULL ? BPLUSTREE_FREE : node->right_link;
 			UpdateIterators(nodeAndKey.nodeOffset,node->all_key_count == 1 ?
-								node->right_link : BPLUSTREE_NULL,nodeAndKey.keyIndex,0,-1);
+								next : BPLUSTREE_NULL,nodeAndKey.keyIndex,0,-1);
 
 			// is this a duplicate entry?
 			if (bplustree_node::IsDuplicate(node->Values()[nodeAndKey.keyIndex])) {
@@ -1349,15 +1359,14 @@ BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 		}
 
 		// if it's an empty root node, we have to convert it
-		// to a leaf node by dropping the overflow link
+		// to a leaf node by dropping the overflow link, or,
+		// if it's a leaf node, just empty it
 		if (nodeAndKey.nodeOffset == fHeader->root_node_pointer
-			&& node->all_key_count < 2) {
-			// either convert the root node to a leaf node, or
-			// just drop the last key
-			if (node->all_key_count == 0)
-				node->overflow_link = BPLUSTREE_NULL;
-			else if (node->all_key_count == 1)
-				node->all_key_count = 0;
+			&& node->all_key_count == 0
+			|| node->all_key_count == 1 && node->IsLeaf()) {
+			node->overflow_link = BPLUSTREE_NULL;
+			node->all_key_count = 0;
+			node->all_key_length = 0;
 
 			if (cached.WriteBack(transaction) < B_OK)
 				return B_IO_ERROR;
@@ -1579,6 +1588,10 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 		&& Goto(direction == BPLUSTREE_FORWARD ? BPLUSTREE_BEGIN : BPLUSTREE_END) < B_OK) 
 		RETURN_ERROR(B_ERROR);
 
+	// if the tree was emptied since the last call
+	if (fCurrentNodeOffset == BPLUSTREE_FREE)
+		return B_ENTRY_NOT_FOUND;
+
 	// lock access to stream
 	ReadLocked locked(fTree->fStream->Lock());
 
@@ -1660,6 +1673,11 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 
 	uint16 length;
 	uint8 *keyStart = node->KeyAt(fCurrentKey,&length);
+	if (keyStart + length + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fTree->fNodeSize
+		|| length > BPLUSTREE_MAX_KEY_LENGTH) {
+		fTree->fStream->GetVolume()->Panic();
+		RETURN_ERROR(B_BAD_DATA);
+	}
 
 	length = min_c(length,maxLength);
 	memcpy(key,keyStart,length);

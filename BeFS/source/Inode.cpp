@@ -1480,9 +1480,6 @@ Inode::Trim(Transaction *transaction)
 status_t
 Inode::Remove(Transaction *transaction,const char *name,off_t *_id,bool isDirectory)
 {
-	if (!strcmp(name,".") || !strcmp(name,".."))
-		return B_NOT_ALLOWED;
-
 	BPlusTree *tree;
 	if (GetTree(&tree) != B_OK)
 		RETURN_ERROR(B_BAD_VALUE);
