@@ -1,3 +1,14 @@
 SubDir OBOS_TOP sources os kits kernel libc unistd ;
 
-KernelStaticLibrary unistd : close.c dup.c dup2.c lseek.c open.c pread.c pwrite.c read.c sleep.c usleep.c write.c ;
+KernelObjects
+	<$(SOURCE_GRIST)>close.c 
+	<$(SOURCE_GRIST)>dup.c 
+	<$(SOURCE_GRIST)>dup2.c 
+	<$(SOURCE_GRIST)>lseek.c 
+	<$(SOURCE_GRIST)>open.c 
+	<$(SOURCE_GRIST)>pread.c 
+	<$(SOURCE_GRIST)>pwrite.c 
+	<$(SOURCE_GRIST)>read.c 
+	<$(SOURCE_GRIST)>sleep.c 
+	<$(SOURCE_GRIST)>usleep.c 
+	<$(SOURCE_GRIST)>write.c ;

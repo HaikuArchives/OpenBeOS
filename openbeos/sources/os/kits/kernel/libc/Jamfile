@@ -1,65 +1,15 @@
 SubDir OBOS_TOP sources os kits kernel libc ;
 
-KernelStaticLibrary libc :
-	<$(SOURCE_GRIST)>nulibc_init.c
+KernelObjects <$(SOURCE_GRIST)>nulibc_init.c ;
+
+SubInclude OBOS_TOP sources os kits kernel libc hoard ;
+SubInclude OBOS_TOP sources os kits kernel libc locale ;
+SubInclude OBOS_TOP sources os kits kernel libc stdio ;
+SubInclude OBOS_TOP sources os kits kernel libc string ;
+SubInclude OBOS_TOP sources os kits kernel libc stdlib ;
+SubInclude OBOS_TOP sources os kits kernel libc system ;
+SubInclude OBOS_TOP sources os kits kernel libc system arch ;
+SubInclude OBOS_TOP sources os kits kernel libc unistd ;
+
+
 	
-	<$(SOURCE_GRIST)>locale/ctype.c
-
-	<$(SOURCE_GRIST)>stdio/stdio.c
-	<$(SOURCE_GRIST)>stdio/vsprintf.c
-
-	<$(SOURCE_GRIST)>stdlib/assert.c
-	<$(SOURCE_GRIST)>stdlib/atoi.c
-	<$(SOURCE_GRIST)>stdlib/bsearch.c
-	<$(SOURCE_GRIST)>stdlib/heapsort.c
-	<$(SOURCE_GRIST)>stdlib/merge.c
-	<$(SOURCE_GRIST)>stdlib/qsort.c
-	<$(SOURCE_GRIST)>stdlib/radixsort.c
-	<$(SOURCE_GRIST)>stdlib/rand.c
-	<$(SOURCE_GRIST)>stdlib/random.c
-
-	<$(SOURCE_GRIST)>string/bcopy.c
-	<$(SOURCE_GRIST)>string/bzero.c
-	<$(SOURCE_GRIST)>string/memchr.c
-	<$(SOURCE_GRIST)>string/memcmp.c
-	<$(SOURCE_GRIST)>string/memcpy.c
-	<$(SOURCE_GRIST)>string/memmove.c
-	<$(SOURCE_GRIST)>string/memset.c
-	<$(SOURCE_GRIST)>string/strcat.c
-	<$(SOURCE_GRIST)>string/strchr.c
-	<$(SOURCE_GRIST)>string/strcmp.c
-	<$(SOURCE_GRIST)>string/strcpy.c
-	<$(SOURCE_GRIST)>string/strerror.c
-	<$(SOURCE_GRIST)>string/strlcat.c
-	<$(SOURCE_GRIST)>string/strlcpy.c
-	<$(SOURCE_GRIST)>string/strlen.c
-	<$(SOURCE_GRIST)>string/strncat.c
-	<$(SOURCE_GRIST)>string/strncmp.c
-	<$(SOURCE_GRIST)>string/strncpy.c
-	<$(SOURCE_GRIST)>string/strnicmp.c
-	<$(SOURCE_GRIST)>string/strnlen.c
-	<$(SOURCE_GRIST)>string/strpbrk.c
-	<$(SOURCE_GRIST)>string/strrchr.c
-	<$(SOURCE_GRIST)>string/strspn.c
-	<$(SOURCE_GRIST)>string/strstr.c
-	<$(SOURCE_GRIST)>string/strtok.c
-
-	<$(SOURCE_GRIST)>system/dlfcn.c
-	<$(SOURCE_GRIST)>system/rlimit.c
-	<$(SOURCE_GRIST)>system/syscalls.S
-	<$(SOURCE_GRIST)>system/arch/$(OBOS_ARCH)/atomic.S
-
-	<$(SOURCE_GRIST)>unistd/close.c
-	<$(SOURCE_GRIST)>unistd/dup.c
-	<$(SOURCE_GRIST)>unistd/dup2.c
-	<$(SOURCE_GRIST)>unistd/lseek.c
-	<$(SOURCE_GRIST)>unistd/open.c
-	<$(SOURCE_GRIST)>unistd/pread.c
-	<$(SOURCE_GRIST)>unistd/pwrite.c
-	<$(SOURCE_GRIST)>unistd/read.c
-	<$(SOURCE_GRIST)>unistd/sleep.c
-	<$(SOURCE_GRIST)>unistd/usleep.c
-	<$(SOURCE_GRIST)>unistd/write.c
-
-	;
-

@@ -1,3 +1,6 @@
 SubDir OBOS_TOP sources os kits kernel libc system ;
 
-KernelStaticLibrary system : dlfcn.c rlimit.c syscalls.S ;
+KernelObjects
+	<$(SOURCE_GRIST)>dlfcn.c 
+	<$(SOURCE_GRIST)>rlimit.c 
+	<$(SOURCE_GRIST)>syscalls.S ;

@@ -32,7 +32,7 @@ extern "C" {
 #if  1
 
 #include <stdio.h>
-//#include <syscalls.h>
+#include <syscalls.h>
 #include <atomic.h>
 
 int hoardGetThreadID (void)
