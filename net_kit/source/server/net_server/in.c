@@ -2,6 +2,10 @@
 
 #include <stdio.h>
 
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
+
 #include "netinet/in.h"
 #include "sys/socketvar.h"
 #include "net/if.h"
