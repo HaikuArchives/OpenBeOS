@@ -902,6 +902,12 @@ BPlusTree::RemoveDuplicate(bplustree_node */*node*/,uint16 /*index*/,off_t /*val
 }
 
 
+/** Removes the key with the given index from the specified node.
+ *	Since it has to get the key from the node anyway (to obtain it's
+ *	pointer), it's not needed to pass the key & its length, although
+ *	the calling method (BPlusTree::Remove()) have this data.
+ */
+
 void
 BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 {
@@ -911,7 +917,6 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 
 	uint16 length;
 	uint8 *key = node->KeyAt(index,&length);
-	
 	if (length > BPLUSTREE_MAX_KEY_LENGTH)
 		return;
 
@@ -929,7 +934,7 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 	memmove(key,key + length,node->all_key_length - (key - keys));
 	
 	// move and update key lengths
-	if (index > 0)
+	if (index > 0 && newKeyLengths != keyLengths)
 		memmove(newKeyLengths,keyLengths,index * sizeof(uint16));
 	for (uint16 i = index;i < node->all_key_count;i++)
 		newKeyLengths[i] = keyLengths[i + 1] - length;
@@ -937,8 +942,7 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 	// move values
 	if (index > 0)
 		memmove(newValues,values,index * sizeof(off_t));
-	for (uint16 i = node->all_key_count;i-- > index;)
-		newValues[i] = values[i + 1];
+	memmove(newValues + index,values + index + 1,(node->all_key_count - index) * sizeof(off_t));
 }
 
 
