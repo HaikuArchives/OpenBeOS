@@ -1,11 +1,11 @@
 /* if.h
  * Interface definitions for beos
  */
-#include <kernel/OS.h>
 
 #ifndef OBOS_IF_H
 #define OBOS_IF_H
 
+#include <kernel/OS.h>
 #include <Drivers.h>
 #include "sys/socket.h"
 #include "net/if_types.h"
@@ -132,7 +132,7 @@ struct ifnet {
 	char *if_name;			/* full name, e.g. tulip0 */
 	struct if_data ifd;		/* if_data structure, shortcuts below */
 	int flags;			/* if flags */
-	
+	int if_index;           /* our index in ifnet_addrs and interfaces */
 	ifq *rxq;
 	thread_id rx_thread;
 	ifq *txq;
@@ -174,12 +174,12 @@ struct sockaddr_dl {
 	uint8	sdl_nlen;     /* interface name length, no trailing 0 reqd. */
 	uint8	sdl_alen;     /* link level address length */
 	uint8	sdl_slen;     /* link layer selector length */
-	char	sdl_data[16]; /* minimum work area, can be larger;
+	char	sdl_data[12]; /* minimum work area, can be larger;
                                    contains both if name and ll address */
 };
 
 /* Macro to get a pointer to the link level address */
-#define LLADDR(s)	((caddr_t)((s)->sdl_data + (s)->sdl_nlen)
+#define LLADDR(s)	((caddr_t)((s)->sdl_data + (s)->sdl_nlen))
 
 #define IFNAMSIZ	16
 
@@ -222,6 +222,9 @@ do { \
                 (ifa)->ifa_refcnt--; \
 } while (0)
 
+
+#ifdef _NETWORK_STACK
+
 struct	ifnet *ifunit(char *name);
 struct	ifaddr *ifa_ifwithaddr (struct sockaddr *);
 struct	ifaddr *ifa_ifwithaf (int);
@@ -232,8 +235,12 @@ struct	ifaddr *ifa_ifwithroute (int, struct sockaddr *,
 struct	ifaddr *ifaof_ifpforaddr (struct sockaddr *, struct ifnet *);
 void	ifafree (struct ifaddr *);
 
-int     ifioctl(struct socket *so, int cmd, caddr_t data);
+void    if_attach(struct ifnet *ifp);
 
+int     ifioctl(struct socket *so, int cmd, caddr_t data);
+void    if_init(void);
+
+#endif
 
 #endif /* OBOS_IF_H */
 
