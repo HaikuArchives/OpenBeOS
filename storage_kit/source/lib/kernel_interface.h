@@ -1,24 +1,28 @@
 //----------------------------------------------------------------------
-// kernel_interface.h
-// This is the internal interface used by the storage kit to 
-// communicate with the kernel
-//----------------------------------------------------------------------
+//  This software is part of the OpenBeOS distribution and is covered 
+//  by the OpenBeOS license.
+//
+//  File Name: kernel_interface.h
+//  Description: This is the internal interface used by the Storage Kit
+//  to communicate with the kernel
+//---------------------------------------------------------------------
 #ifndef _sk_kernel_interface_h_
 #define _sk_kernel_interface_h_
 
-//#include <SupportKit.h>	
+//#include <SupportKit.h>
+#include "Error.h"
 
-namespace storage_kit {
+namespace StorageKit {
 
 // Modes for opening files
 typedef enum {
 	READ,
 	WRITE,
 	READ_WRITE
-} open_mode;
+} OpenMode;
 
 // File descriptor type
-typedef int fd;
+typedef int FileDescriptor;
 
 //----------------------------------------------------------------------
 // user_* functions pulled from NewOS's vfs.h (with the "user_" part removed)
@@ -45,8 +49,8 @@ typedef int fd;
 //----------------------------------------------------------------------
 
 
-fd open(const char *path, open_mode mode);
-int close(fd file);
+FileDescriptor Open(const char *path, OpenMode mode) throw (Error);
+int Close(FileDescriptor file);
 
 
 }

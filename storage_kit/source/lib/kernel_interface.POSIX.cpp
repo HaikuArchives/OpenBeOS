@@ -1,13 +1,17 @@
 //----------------------------------------------------------------------
-// kernel_interface.POSIX.cpp
-// Initial implementation of our kernel interface with calls to 
-// POSIX api. This will later be replaced with a version that
-// makes syscalls into the actual kernel
+//  This software is part of the OpenBeOS distribution and is covered 
+//  by the OpenBeOS license.
+//
+//  File Name: kernel_interface.POSIX.cpp
+//  Description: Initial implementation of our kernel interface with
+//  calls to the POSIX api. This will later be replaced with a version
+//  that makes syscalls into the actual kernel
 //----------------------------------------------------------------------
 
 #include "kernel_interface.h"
 
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <stdio.h>
 	// open, close
@@ -15,26 +19,25 @@
 #include <errno.h>
 	// errno
 
-#include "SKError.h"
+#include "Error.h"
 	// SKError
 
 // Used to throw the appropriate error as noted by errno
-void throw_error()
-{
-	switch (errno)
-	{
+void ThrowError() throw (StorageKit::Error) {
+	switch (errno) {
 		case ENAMETOOLONG:
-			throw new SKError(errno, "Specified pathname is too long");
+			throw new StorageKit::Error(errno, "Specified pathname is too long");
 			break;
 			
 		default:
-			throw new SKError(errno);
+			throw new StorageKit::Error(errno);
 			break;
 	}
 }
 
 
-storage_kit::fd storage_kit::open(const char *path, storage_kit::open_mode mode) {
+StorageKit::FileDescriptor StorageKit::Open(const char *path,
+StorageKit::OpenMode mode) throw (StorageKit::Error) {
 	// Choose the proper posix flags
 	int posix_flags;
 	switch (mode) { 
@@ -56,16 +59,16 @@ storage_kit::fd storage_kit::open(const char *path, storage_kit::open_mode mode)
 	mode_t posix_mode = S_IRWXU | S_IRWXG | S_IRWXO;
 	
 	// Open the file
-	fd result = ::open(path, posix_flags, posix_mode);
+	FileDescriptor result = ::open(path, posix_flags, posix_mode);
 	
 	// Check for errors
 	if (result == -1)
-		throw_error();
+		ThrowError();
 	
 	return result;
 }
 
 
-int storage_kit::close(storage_kit::fd file) {
-	return close(file);
+int StorageKit::Close(StorageKit::FileDescriptor file) {
+	return ::close(file);
 }
