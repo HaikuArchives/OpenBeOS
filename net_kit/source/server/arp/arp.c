@@ -26,6 +26,11 @@
 struct core_module_info *core = NULL;
 struct timer clean_timer;
 status_t arp_ops(int32 op, ...);
+  #ifdef USE_DEBUG_MALLOC
+  #define malloc dbg_malloc
+  #define free dbg_free
+  #endif
+
 #endif
 
 /* arp cache */
@@ -177,12 +182,21 @@ int arp_input(struct mbuf *buf, int hdrlen)
 {
 	ether_arp *arp = mtod(buf, ether_arp*);
 	int rv = -1;
-	struct in_ifaddr *ia = primary_addr, *maybe_ia = NULL;
+	struct in_ifaddr *ia = NULL, *maybe_ia = NULL;
 	struct in_addr my_addr;
 
 #if ARP_DEBUG
 	dump_arp(arp);
 #endif
+
+	if (!primary_addr)
+#ifndef _KERNEL_MODE
+	primary_addr = get_primary_addr();
+#else
+	primary_addr = core->get_primary_addr();
+#endif
+	ia = primary_addr;
+	
 	/* find out if it's for us... */
 	for (;ia ; ia = ia->ia_next)
 		if (ia->ia_ifp == buf->m_pkthdr.rcvif) {
@@ -193,6 +207,7 @@ int arp_input(struct mbuf *buf, int hdrlen)
 		}
 	if (!maybe_ia)
 		goto out;
+	
 	my_addr = ia ? ia->ia_addr.sin_addr : maybe_ia->ia_addr.sin_addr;
 
 	switch (ntohs(arp->arp_op)) {
@@ -456,15 +471,9 @@ int arp_init(void)
 {
 #ifdef _KERNEL_MODE
 	int rv;
-dprintf("arp_init!\n");
 
 	if (!core)
 		get_module(CORE_MODULE_PATH, (module_info**)&core);
-
-	primary_addr = core->get_primary_addr();
-dprintf("primary_addr = %p\n", primary_addr);
-#else
-	primary_addr = get_primary_addr();
 #endif
 
 	if (!arphash)
@@ -491,11 +500,9 @@ dprintf("primary_addr = %p\n", primary_addr);
 			B_PERIODIC_TIMER);
 
 	if (rv != B_OK) {
-		dprintf("arp_init: add_timer failed %d [%s]\n",
+		printf("arp_init: add_timer failed %d [%s]\n",
 			rv, strerror(rv));
 	} 
-
-dprintf("I've added a timer to run every %d seconds...\n", arp_prune);
 #else
 	/* now, start the cleanser... */
 	net_add_timer(&arp_cleanse, NULL, arp_prune * USECS_PER_SEC);
