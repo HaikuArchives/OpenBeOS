@@ -64,7 +64,8 @@ struct core_module_info {
 	/* module control routines... */
 	void (*add_device)(ifnet *);
 	struct ifnet *(*get_interfaces)(void);
-	
+	int (*in_broadcast)(struct in_addr, struct ifnet *);
+		
 	/* routing */
 	void (*rtalloc)(struct route *ro);
 	struct rtentry *(*rtalloc1)(struct sockaddr *, int);
@@ -104,6 +105,7 @@ struct core_module_info {
 	int (*writeit)(void *, struct iovec *, int);
 	int (*readit)(void*, struct iovec *, int *);
 	int (*soselect)(void *, uint8, uint32, void *);
+	int (*sodeselect)(void *, uint8, void *);
 	int (*sosetopt)(void *, int, int, const void *, size_t);
 	int (*sogetopt)(void *, int, int, void *, size_t *);
 

@@ -285,7 +285,7 @@ int in_pcbconnect(struct inpcb *inp, struct mbuf *nam)
 			rtalloc(ro);
 		}
 		/* did we find a route?? */
-		if (ro->ro_rt && (ro->ro_rt->rt_ifp->flags & IFF_LOOPBACK))
+		if (ro->ro_rt && (ro->ro_rt->rt_ifp->if_flags & IFF_LOOPBACK))
 			ia = ifatoia(ro->ro_rt->rt_ifa);
 
 		if (ia == NULL) {

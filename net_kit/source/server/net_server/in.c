@@ -37,7 +37,7 @@ void in_socktrim(struct sockaddr_in *ap)
 }
 
 #define rtinitflags(x) \
-        ((((x)->ia_ifp->flags & (IFF_LOOPBACK | IFF_POINTOPOINT)) != 0) \
+        ((((x)->ia_ifp->if_flags & (IFF_LOOPBACK | IFF_POINTOPOINT)) != 0) \
             ? RTF_HOST : 0)
 /*
  * remove a route to prefix ("connected route" in cisco terminology).
@@ -142,13 +142,13 @@ int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
 	in_socktrim(&ia->ia_sockmask);
 
 	ia->ia_ifa.ifa_metric = dev->if_metric;
-	if (dev->flags & IFF_BROADCAST) {
+	if (dev->if_flags & IFF_BROADCAST) {
 		ia->ia_broadaddr.sin_addr.s_addr = ia->ia_subnet | ~ia->ia_subnetmask;
 		ia->ia_netbroadcast.s_addr = ia->ia_net | ~ia->ia_netmask;
-	} else if (dev->flags & IFF_LOOPBACK) {
+	} else if (dev->if_flags & IFF_LOOPBACK) {
 		ia->ia_ifa.ifa_dstaddr = ia->ia_ifa.ifa_addr;
 		flags |= RTF_HOST;
-	} else if (dev->flags & IFF_POINTOPOINT) {
+	} else if (dev->if_flags & IFF_POINTOPOINT) {
 		if (ia->ia_dstaddr.sin_family != AF_INET)
 			return 0;
 		flags |= RTF_HOST;
@@ -237,7 +237,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 				ia->ia_ifa.ifa_dstaddr  = (struct sockaddr*) &ia->ia_dstaddr;
 				ia->ia_ifa.ifa_netmask  = (struct sockaddr*) &ia->ia_sockmask;
 				ia->ia_sockmask.sin_len = 8;
-				if (ifp->flags & IFF_BROADCAST) {
+				if (ifp->if_flags & IFF_BROADCAST) {
 					ia->ia_broadaddr.sin_len = sizeof(ia->ia_addr);
 					ia->ia_broadaddr.sin_family = AF_INET;
 				}
@@ -263,14 +263,14 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			break;
 		case SIOCGIFDSTADDR:
 			/* get interface point to point destination address */
-			if ((ifp->flags & IFF_POINTOPOINT) == 0)
+			if ((ifp->if_flags & IFF_POINTOPOINT) == 0)
 				/* we're not a point to point interface */
 				return EINVAL;
 			*((struct sockaddr_in*) &ifr->ifr_dstaddr) = ia->ia_dstaddr;
 			break;
 		case SIOCGIFBRDADDR:
 			/* get interface broadcast address */
-			if ((ifp->flags & IFF_BROADCAST) == 0)
+			if ((ifp->if_flags & IFF_BROADCAST) == 0)
 				/* we're not a broadcast capable interface */
 				return EINVAL;
 			*((struct sockaddr_in*) &ifr->ifr_dstaddr) = ia->ia_broadaddr;
@@ -295,7 +295,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			break;
 		case SIOCSIFDSTADDR:
 			printf("SIOCSIFDSTADDR\n");
-			if ((ifp->flags & IFF_POINTOPOINT) == 0)
+			if ((ifp->if_flags & IFF_POINTOPOINT) == 0)
 				return EINVAL;
 			oldaddr = ia->ia_dstaddr;
 			ia->ia_dstaddr = *(struct sockaddr_in*)&ifr->ifr_dstaddr;
@@ -319,7 +319,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 		case SIOCSIFBRDADDR:
 			printf("SIOCSIFBRDADDR\n");
 			/* set the broadcast address if interface supports it */
-			if ((ifp->flags & IFF_BROADCAST) == 0)
+			if ((ifp->if_flags & IFF_BROADCAST) == 0)
 				/* we don't support broadcast on that interface */
 				return EINVAL;
 			ia->ia_broadaddr = *(struct sockaddr_in*) &ifr->ifr_broadaddr;
@@ -343,7 +343,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 				ia->ia_subnetmask = ia->ia_sockmask.sin_addr.s_addr;
 				maskIsNew = 1;
 			}
-			if ((ifp->flags & IFF_POINTOPOINT) &&
+			if ((ifp->if_flags & IFF_POINTOPOINT) &&
 			    (ifra->ifra_dstaddr.sin_family == AF_INET)) {
 				in_scrubprefix(ia);
 				ia->ia_dstaddr = ifra->ifra_dstaddr;
@@ -352,7 +352,7 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp)
 			if (ifra->ifra_addr.sin_family == AF_INET &&
 			    (hostIsNew || maskIsNew))
 				error = in_ifinit(ifp, ia, &ifra->ifra_addr, 0);
-			if ((ifp->flags & IFF_BROADCAST) &&
+			if ((ifp->if_flags & IFF_BROADCAST) &&
 			    (ifra->ifra_broadaddr.sin_family == AF_INET))
 				ia->ia_broadaddr = ifra->ifra_broadaddr;
 			return error;
@@ -379,7 +379,7 @@ int in_broadcast(struct in_addr in, struct ifnet *ifp)
 	if (in.s_addr == INADDR_BROADCAST ||
 	    in.s_addr == INADDR_ANY)
 		return 1;
-	if (ifp && ((ifp->flags & IFF_BROADCAST) == 0))
+	if (ifp && ((ifp->if_flags & IFF_BROADCAST) == 0))
 		return 0;
 
 	if (ifp == NULL) {
@@ -387,7 +387,7 @@ int in_broadcast(struct in_addr in, struct ifnet *ifp)
 		if_target = 0;
 	} else {
 		if_first = ifp;
-		if_target = ifp->next;
+		if_target = ifp->if_next;
 	}
 
 #define ia (ifatoia(ifa))
@@ -396,12 +396,12 @@ int in_broadcast(struct in_addr in, struct ifnet *ifp)
 	 * with a broadcast address.
 	 * If ifp is NULL, check against all the interfaces.
 	 */
-	for (ifn = if_first; ifn != if_target; ifn = ifn->next) {
+	for (ifn = if_first; ifn != if_target; ifn = ifn->if_next) {
 		for (ifa = ifn->if_addrlist; ifa; ifa = ifa->ifa_next) {
 			if (!ifp) {
 				if (ifa->ifa_addr->sa_family == AF_INET &&
 				    ((ia->ia_subnetmask != 0xffffffff &&
-				    (((ifn->flags & IFF_BROADCAST) &&
+				    (((ifn->if_flags & IFF_BROADCAST) &&
 				    in.s_addr == ia->ia_broadaddr.sin_addr.s_addr) ||
 				    in.s_addr == ia->ia_subnet)) ||
 				    /*
@@ -412,7 +412,7 @@ int in_broadcast(struct in_addr in, struct ifnet *ifp)
 					return 1;
 				else
 					if (ifa->ifa_addr->sa_family == AF_INET &&
-					    (((ifn->flags & IFF_BROADCAST) &&
+					    (((ifn->if_flags & IFF_BROADCAST) &&
 					    in.s_addr == ia->ia_broadaddr.sin_addr.s_addr) ||
 					    in.s_addr == ia->ia_netbroadcast.s_addr ||
 					    /*
@@ -427,4 +427,3 @@ int in_broadcast(struct in_addr in, struct ifnet *ifp)
 	return (0);
 #undef ia
 }
-

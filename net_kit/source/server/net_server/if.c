@@ -53,7 +53,7 @@ int ifioctl(struct socket *so, int cmd, caddr_t data)
 	switch(cmd) {
 		case SIOCGIFFLAGS:
 			/* get interface flags */
-			ifr->ifr_flags = ifp->flags;
+			ifr->ifr_flags = ifp->if_flags;
 			break;
 		case SIOCGIFMETRIC:
 			/* get interface metric */
@@ -64,7 +64,7 @@ int ifioctl(struct socket *so, int cmd, caddr_t data)
 			ifr->ifr_mtu = ifp->if_mtu;
 			break;
 		case SIOCSIFFLAGS:
-			ifp->flags = ifr->ifr_flags;
+			ifp->if_flags = ifr->ifr_flags;
 			/* restart card with new settings... */
 			break;
 		case SIOCSIFMETRIC:
@@ -87,7 +87,7 @@ struct ifnet *ifunit(char *name)
 {
 	ifnet *d = devices;
 
-	for (d=devices;d;d = d->next)
+	for (d=devices;d;d = d->if_next)
 		if (strcmp(d->if_name, name) == 0)
 			return d;
 	return NULL;
@@ -199,8 +199,8 @@ struct ifaddr *ifa_ifwithdstaddr(struct sockaddr *addr)
 	struct ifnet *ifp;
 	struct ifaddr *ifa;
 
-        for (ifp = devices; ifp != NULL; ifp = ifp->next)
-            if (ifp->flags & IFF_POINTOPOINT)
+        for (ifp = devices; ifp != NULL; ifp = ifp->if_next)
+            if (ifp->if_flags & IFF_POINTOPOINT)
                 for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                         if (ifa->ifa_addr->sa_family != addr->sa_family ||
                             ifa->ifa_dstaddr == NULL)
@@ -216,13 +216,13 @@ struct ifaddr *ifa_ifwithaddr(struct sockaddr *addr)
 	struct ifnet *ifp;
 	struct ifaddr *ifa;
 
-        for (ifp = devices; ifp != NULL; ifp = ifp->next) {
+        for (ifp = devices; ifp != NULL; ifp = ifp->if_next) {
             for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                 if (ifa->ifa_addr->sa_family != addr->sa_family)
                         continue;
                 if (equal(addr, ifa->ifa_addr))
                         return (ifa);
-                if ((ifp->flags & IFF_BROADCAST) && ifa->ifa_broadaddr &&
+                if ((ifp->if_flags & IFF_BROADCAST) && ifa->ifa_broadaddr &&
                     /* IPv6 doesn't have broadcast */
                     ifa->ifa_broadaddr->sa_len != 0 &&
                     equal(ifa->ifa_broadaddr, addr))
@@ -249,13 +249,14 @@ struct ifaddr *ifa_ifwithnet(struct sockaddr *addr)
 		if (sdl->sdl_index && sdl->sdl_index <= ndevs)
                 	return (ifnet_addrs[sdl->sdl_index]);
 	}
-        for (ifp = devices; ifp != NULL; ifp = ifp->next)
+        for (ifp = devices; ifp != NULL; ifp = ifp->if_next)
                 for (ifa = ifp->if_addrlist; ifa != NULL; ifa = ifa->ifa_next) {
                         register char *cp, *cp2, *cp3;
 
                         if (ifa->ifa_addr->sa_family != af ||
                             ifa->ifa_netmask == 0)
-                                next: continue;
+next: 
+								continue;
                         cp = addr_data;
                         cp2 = ifa->ifa_addr->sa_data;
                         cp3 = ifa->ifa_netmask->sa_data;
@@ -290,7 +291,7 @@ void if_attach(struct ifnet *ifp)
 	ifp->if_name = strdup(dname);
 	
 	while (*p)
-		p = &((*p)->next);
+		p = &((*p)->if_next);
 	
 	*p = ifp;
 	ifp->if_index = ++if_index; /* atomic add ? */
@@ -336,7 +337,7 @@ void if_attach(struct ifnet *ifp)
 		sdl->sdl_index = ifp->if_index;
 		sdl->sdl_type = ifp->if_type;
 		ifnet_addrs[if_index - 1] = ifa;
-		ifa->ifn = ifp;
+		ifa->ifa_ifp = ifp;
 		ifa->ifa_next = ifp->if_addrlist;
 		ifp->if_addrlist = ifa;
 		ifa->ifa_addr = (struct sockaddr*)sdl;
@@ -373,7 +374,7 @@ int ifconf(int cmd, caddr_t data)
 	
 	printf("ifconf\n");
 	
-	for (; space > sizeof(ifr) && ifp; ifp = ifp->next) {
+	for (; space > sizeof(ifr) && ifp; ifp = ifp->if_next) {
 		strncpy(ifr.ifr_name, ifp->if_name, sizeof(ifr.ifr_name) - 2);
 		for (cp = ifr.ifr_name;cp < ep && *cp; cp++)
 			continue;

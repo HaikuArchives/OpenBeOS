@@ -101,9 +101,9 @@ static int32 tx_thread(void *data)
 	char buffer[2048];
 	size_t len = 0;
 	status_t status;
-#if SHOW_DEBUG
+//#if SHOW_DEBUG
 	int txc = 0;
-#endif
+//#endif
 
 	while (1) {
 		acquire_sem_etc(i->txq->pop,1,B_CAN_INTERRUPT|B_DO_NOT_RESCHEDULE, 0);
@@ -196,7 +196,7 @@ void start_tx_thread(ifnet *dev)
 		return;
 
 	sprintf(name, "%s_tx_thread", dev->if_name);
-	dev->tx_thread = spawn_kernel_thread(tx_thread, "net_tx_thread", priority, dev);
+	dev->tx_thread = spawn_kernel_thread(tx_thread, name, priority, dev);
 	if (dev->tx_thread < 0) {
 		printf("Failed to start the tx_thread for %s\n", dev->if_name);
 		dev->tx_thread = -1;
@@ -215,23 +215,24 @@ void net_server_add_device(ifnet *ifn)
 	sprintf(dname, "%s%d", ifn->name, ifn->unit);
 	ifn->if_name = strdup(dname);
 
-	if (ifn->devid < 0) {
+	if (ifn->if_type != IFT_ETHER) {
 		/* pseudo device... */
 		if (pdevices)
-			ifn->next = pdevices;
+			ifn->if_next = pdevices;
 		else
-			ifn->next = NULL;
+			ifn->if_next = NULL;
 		pdevices = ifn;
 	} else {
 		if (devices)
-			ifn->next = devices;
+			ifn->if_next = devices;
 		else
-			ifn->next = NULL;
+			ifn->if_next = NULL;
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
 }
 
+/*
 static void merge_devices(void)
 {
 	struct ifnet *d = NULL;
@@ -243,27 +244,27 @@ static void merge_devices(void)
 
 	acquire_sem(dev_lock);
 	if (devices) {
-		/* Now append the pseudo devices and then start them. */
-		for (d = devices; d->next != NULL; d = d->next) {
+		for (d = devices; d->if_next != NULL; d = d->if_next) {
 			continue;
 		}
 	}
 	if (pdevices) {
 		if (d) {
-			d->next = pdevices;
-			d = d->next;
+			d->if_next = pdevices;
+			d = d->if_next;
 		} else {
 			devices = pdevices;
 			d = devices;
 		}
 		while (d) {
 			d->id = ndevs++;
-			d = d->next;
+			d = d->if_next;
 		}
 	}
 	release_sem(dev_lock);
 }
-
+*/
+/*
 static void list_devices(void)
 {
 	ifnet *d = devices;
@@ -274,15 +275,15 @@ static void list_devices(void)
 	while (d) {
 		dprintf("%2d  %s%d       %4ld ", i++, d->name, d->unit, d->if_mtu);
 		dprintf("                 ");
-		if (d->flags & IFF_UP)
+		if (d->if_flags & IFF_UP)
 			dprintf(" UP");
-		if (d->flags & IFF_RUNNING)
+		if (d->if_flags & IFF_RUNNING)
 			dprintf(" RUNNING");
-		if (d->flags & IFF_PROMISC)
+		if (d->if_flags & IFF_PROMISC)
 			dprintf(" PROMISCUOUS");
-		if (d->flags & IFF_BROADCAST)
+		if (d->if_flags & IFF_BROADCAST)
 			dprintf(" BROADCAST");
-		if (d->flags & IFF_MULTICAST)
+		if (d->if_flags & IFF_MULTICAST)
 			dprintf(" MULTICAST");
 		printf("\n");
 		if (d->if_addrlist) {
@@ -295,38 +296,29 @@ static void list_devices(void)
 			}
 		}
 
-		d = d->next; 
+		d = d->if_next; 
 	}
 }
+*/
 
-/* This calls the start function for each device, which should
- * finish the required init (if any) and set the flags such
- * that the device is "up", i.e. IFF_UP should be set when the device
- * returns.
- * Any value other than 0 will lead to the device being removed from 
- * this list. NB it won't be removed from the module that created it at
- * present. XXX - make this happen correctly.
- *
- * This is also where we need to add code to check if we're supposed
- * to start the device!
- * XXX - do this!
- * XXX - need preferences to be done before we can do this.
- */
-static void start_devices(void) 
+/*
+static void attach_devices(void) 
 {
 	ifnet *d = NULL;
 
-//	merge_devices();
+	merge_devices();
 
 	if (devices == NULL)
 		return;
 
 	d = devices;
 	while (d) {
-		d->start(d);
-		d = d->next;
+		if (d->attach)
+			d->attach(d);
+		d = d->if_next;
 	}
 }
+*/
 
 static void close_devices(void)
 {
@@ -335,7 +327,7 @@ static void close_devices(void)
 		kill_thread(d->rx_thread);
 		kill_thread(d->tx_thread);
 		close(d->devid);
-		d = d->next;
+		d = d->if_next;
 	}
 }
 
@@ -650,9 +642,7 @@ int start_stack(void)
 	set_sem_owner(dev_lock, B_SYSTEM_TEAM);
 
 	find_interface_modules();
-	start_devices();
-
-	list_devices();
+	//start_devices();
 
 	return 0;
 }
@@ -733,6 +723,7 @@ static struct core_module_info core_info = {
 	
 	net_server_add_device,
 	get_interfaces,
+	in_broadcast,
 	
 	rtalloc,
 	rtalloc1,
@@ -766,6 +757,7 @@ static struct core_module_info core_info = {
 	writeit,
 	readit,
 	soselect,
+	sodeselect,
 	sosetopt,
 	sogetopt
 };

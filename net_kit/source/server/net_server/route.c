@@ -195,7 +195,7 @@ makeroute:
 			}
 			ifa->ifa_refcnt++;
 			rt->rt_ifa = ifa;
-			rt->rt_ifp = ifa->ifn;
+			rt->rt_ifp = ifa->ifa_ifp;
 			/* if we've fallen through - copy metrics */
 			if (req == RTM_RESOLVE)
 				rt->rt_rmx = (*ret_nrt)->rt_rmx;
@@ -253,7 +253,7 @@ struct ifaddr *ifa_ifwithroute(int flags,
         }
         if (ifa->ifa_addr->sa_family != dst->sa_family) {
                 struct ifaddr *oifa = ifa;
-                ifa = ifaof_ifpforaddr(dst, ifa->ifn);
+                ifa = ifaof_ifpforaddr(dst, ifa->ifa_ifp);
                 if (ifa == NULL)
                         ifa = oifa;
         }
@@ -356,63 +356,57 @@ int rtinit(struct ifaddr *ifa, int cmd, int flags)
 	int error;
 
 	dst = flags & RTF_HOST ? ifa->ifa_dstaddr : ifa->ifa_addr;
-        if (cmd == RTM_DELETE) {
-                if ((flags & RTF_HOST) == 0 && ifa->ifa_netmask) {
-                        m = m_get(MT_SONAME);
-                        if (m == NULL)
-                                return(ENOBUFS);
-                        deldst = mtod(m, struct sockaddr *);
+	if (cmd == RTM_DELETE) {
+		if ((flags & RTF_HOST) == 0 && ifa->ifa_netmask) {
+			m = m_get(MT_SONAME);
+			if (m == NULL)
+				return(ENOBUFS);
+			deldst = mtod(m, struct sockaddr *);
+			rt_maskedcopy(dst, deldst, ifa->ifa_netmask);
+			dst = deldst;
+		}
+		if ((rt = rtalloc1(dst, 0)) != NULL) {
+			rt->rt_refcnt--;
+			if (rt->rt_ifa != ifa) {
+				if (m != NULL)
+					(void) m_free(m);
+				return (flags & RTF_HOST ? EHOSTUNREACH : ENETUNREACH);
+			}
+		}
+	}
 
-                        rt_maskedcopy(dst, deldst, ifa->ifa_netmask);
-                        dst = deldst;
-                }
-                if ((rt = rtalloc1(dst, 0)) != NULL) {
-                        rt->rt_refcnt--;
-                        if (rt->rt_ifa != ifa) {
-                                if (m != NULL)
-                                        (void) m_free(m);
-                                return (flags & RTF_HOST ? EHOSTUNREACH
-                                                        : ENETUNREACH);
-                        }
-                }
-        }
+	error = rtrequest(cmd, dst, ifa->ifa_addr, ifa->ifa_netmask,
+	                  flags | ifa->ifa_flags, &nrt);
 
-        error = rtrequest(cmd, dst, ifa->ifa_addr, ifa->ifa_netmask,
-			flags | ifa->ifa_flags, &nrt);
-
-        if (cmd == RTM_DELETE && error == 0 && (rt = nrt) != NULL) {
-                /* XXX - add this when we have routing sockets!
+	if (cmd == RTM_DELETE && error == 0 && (rt = nrt) != NULL) {
+		/* XXX - add this when we have routing sockets!
 		rt_newaddrmsg(cmd, ifa, error, nrt);
 		*/
-                if (rt->rt_refcnt <= 0) {
-                        rt->rt_refcnt++;
-                        rtfree(rt);
-                }
-        }
-        if (cmd == RTM_ADD && error == 0 && (rt = nrt) != NULL) {
-                rt->rt_refcnt--;
-                if (rt->rt_ifa != ifa) {
-                        printf("rtinit: wrong ifa (%p) was (%p)\n",
-                               ifa, rt->rt_ifa);
-			/* XXX - enable this once we have it! 
+		if (rt->rt_refcnt <= 0) {
+			rt->rt_refcnt++;
+			rtfree(rt);
+		}
+	}
+	if (cmd == RTM_ADD && error == 0 && (rt = nrt) != NULL) {
+		rt->rt_refcnt--;
+		if (rt->rt_ifa != ifa) {
+			printf("rtinit: wrong ifa (%p) was (%p)\n", ifa, rt->rt_ifa);
+
 			if (rt->rt_ifa->ifa_rtrequest)
 				rt->rt_ifa->ifa_rtrequest(RTM_DELETE, rt, NULL);
-			*/
-                        IFAFREE(rt->rt_ifa);
-                        rt->rt_ifa = ifa;
-                        rt->rt_ifp = ifa->ifn;
-                        rt->rt_rmx.rmx_mtu = ifa->ifn->if_mtu;      /*XXX*/
-                        ifa->ifa_refcnt++;
-			/* XXX - enable this once we have it!
-                        if (ifa->ifa_rtrequest)
-                                ifa->ifa_rtrequest(RTM_ADD, rt, NULL);
-			*/
-                }
+			IFAFREE(rt->rt_ifa);
+			rt->rt_ifa = ifa;
+			rt->rt_ifp = ifa->ifa_ifp;
+			rt->rt_rmx.rmx_mtu = ifa->ifa_ifp->if_mtu;
+			ifa->ifa_refcnt++;
+			if (ifa->ifa_rtrequest)
+				ifa->ifa_rtrequest(RTM_ADD, rt, NULL);
+		}
 		/* XXX - add this when we have routing sockets!
-                rt_newaddrmsg(cmd, ifa, error, nrt);
+		rt_newaddrmsg(cmd, ifa, error, nrt);
 		*/
-        }
-        return (error);
+	}
+	return (error);
 }
 
 void rtable_init(void **table)
