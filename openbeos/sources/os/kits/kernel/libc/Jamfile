@@ -1,6 +1,11 @@
 SubDir OBOS_TOP sources os kits kernel libc ;
 
-KernelObjects <$(SOURCE_GRIST)>nulibc_init.c ;
+KernelObjects 
+	<$(SOURCE_GRIST)>nulibc_init.c
+ 	<$(SOURCE_GRIST)>errno.c
+ 	:
+	-fPIC -DPIC
+	;
 
 SubInclude OBOS_TOP sources os kits kernel libc hoard ;
 SubInclude OBOS_TOP sources os kits kernel libc locale ;
