@@ -26,7 +26,7 @@ struct fs_calls {
 	int (*fs_unregister_mountpoint)(void *fs_cookie, void *vnode);
 	int (*fs_dispose_vnode)(void *fs_cookie, void *vnode);
 	int (*fs_open)(void *fs_cookie, void *base_vnode, const char *path, const char *stream, stream_type stream_type, void **vnode, void **cookie, struct redir_struct *redir);
-	int (*fs_seek)(void *fs_cookie, void *vnode, void *cookie, off_t pos, seek_type seek_type);
+	int (*fs_seek)(void *fs_cookie, void *vnode, void *cookie, off_t pos, int seek_type);
 	int (*fs_read)(void *fs_cookie, void *vnode, void *cookie, void *buf, off_t pos, size_t *len);
 	int (*fs_write)(void *fs_cookie, void *vnode, void *cookie, const void *buf, off_t pos, size_t *len);
 	int (*fs_ioctl)(void *fs_cookie, void *vnode, void *cookie, int op, void *buf, size_t len);
@@ -54,7 +54,7 @@ struct fs_calls {
 
 	ssize_t (*fs_read)(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, size_t *len);
 	ssize_t (*fs_write)(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, size_t *len);
-	int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, seek_type st);
+	int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, int st);
 	int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
 
 	int (*fs_canpage)(fs_cookie fs, fs_vnode v);
@@ -112,7 +112,7 @@ int sys_close(int fd);
 int sys_fsync(int fd);
 ssize_t sys_read(int fd, void *buf, off_t pos, size_t len);
 ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len);
-int sys_seek(int fd, off_t pos, seek_type seek_type);
+int sys_seek(int fd, off_t pos, int seek_type);
 int sys_ioctl(int fd, int op, void *buf, size_t len);
 int sys_create(const char *path, stream_type stream_type);
 int sys_unlink(const char *path);
@@ -133,7 +133,7 @@ int user_close(int fd);
 int user_fsync(int fd);
 ssize_t user_read(int fd, void *buf, off_t pos, size_t len);
 ssize_t user_write(int fd, const void *buf, off_t pos, size_t len);
-int user_seek(int fd, off_t pos, seek_type seek_type);
+int user_seek(int fd, off_t pos, int seek_type);
 int user_ioctl(int fd, int op, void *buf, size_t len);
 int user_create(const char *path, stream_type stream_type);
 int user_unlink(const char *path);

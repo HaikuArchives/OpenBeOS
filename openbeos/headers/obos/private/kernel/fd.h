@@ -47,7 +47,6 @@ struct file_descriptor {
 	void *cookie;
 };
 
-
 struct file_descriptor *alloc_fd(void);
 int new_fd(struct ioctx *, struct file_descriptor *);
 struct file_descriptor *get_fd(struct ioctx *, int);

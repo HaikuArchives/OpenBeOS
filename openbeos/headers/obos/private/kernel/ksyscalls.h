@@ -79,7 +79,8 @@ enum {
 	SYSCALL_ATOMIC_SET,
 	SYSCALL_TEST_AND_SET,/* 70 */
 	SYSCALL_SYSCTL,
-	SYSCALL_SOCKET
+	SYSCALL_SOCKET,
+	SYSCALL_GETDTABLESIZE
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

@@ -8,11 +8,11 @@ typedef enum {
 	STREAM_TYPE_DEVICE
 } stream_type;
 
-typedef enum {
-	SEEK_SET = 0,
-	SEEK_CUR,
-	SEEK_END
-} seek_type;
+//typedef enum {
+//	SEEK_SET = 0,
+//	SEEK_CUR,
+//	SEEK_END
+//} seek_type;
 
 typedef void * fs_cookie;
 typedef void * file_cookie;

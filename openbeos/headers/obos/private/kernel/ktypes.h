@@ -77,6 +77,8 @@ typedef unsigned long           ulong;
 
 //typedef unsigned long addr;
 
+typedef uint32                  socklen_t;
+
 #ifdef __cplusplus
 }
 #endif

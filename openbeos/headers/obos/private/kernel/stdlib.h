@@ -39,6 +39,14 @@ void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
 int   radixsort(u_char const **, int, u_char const *, u_int);
 int   sradixsort(u_char const **, int, u_char const *, u_int);
 
+int mblen(const char *, size_t);
+int mbtowc(int *, const char *, size_t);
+int wctomb(char *, int);
+size_t mbstowcs(int *, const char*, size_t);
+size_t wcstombs(char *, const int*, size_t);
+
+int64  strtoq(const char *, char **, int);
+uint64 strtouq(const char *, char **, int);
 
 #define	RAND_MAX	0x7fffffff
 int   rand(void);
@@ -50,6 +58,7 @@ void  srandom(unsigned long);
 void exit(int);
 void _exit(int);
 
+#define MB_CUR_MAX 1
 
 #ifdef __cplusplus
 } /* extern "C" */

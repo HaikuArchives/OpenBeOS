@@ -21,6 +21,9 @@ int     close(int);
 int     dup(int);
 int     dup2(int, int);
 
+ssize_t read(int, void *, size_t);
+ssize_t write(int, const void *, size_t);
+
 int     getopt(int, char * const *, const char *);
 extern	 char *optarg;			/* getopt(3) external variables */
 extern	 int opterr;
@@ -34,8 +37,11 @@ ssize_t pread(int, void *, size_t, off_t);
 ssize_t write(int, void const*, size_t);
 ssize_t pwrite(int, void const*, size_t, off_t);
 
+
 unsigned sleep(unsigned);
 int      usleep(unsigned);
+
+int getdtablesize(void);
 
 #define STDIN_FILENO     0
 #define STDOUT_FILENO    1

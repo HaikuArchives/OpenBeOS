@@ -29,7 +29,7 @@ int sys_close(int fd);
 int sys_fsync(int fd);
 ssize_t sys_read(int fd, void *buf, off_t pos, size_t len);
 ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len);
-int sys_seek(int fd, off_t pos, seek_type seek_type);
+int sys_seek(int fd, off_t pos, int seek_type);
 int sys_ioctl(int fd, int op, void *buf, size_t len);
 int sys_create(const char *path, stream_type stream_type);
 int sys_unlink(const char *path);
@@ -112,6 +112,11 @@ int sys_socket(int, int, int);
 
 /* region prototypes */
 area_id sys_find_region_by_name(const char *);
+
+/* This is a real BSD'ism :) Basically it returns the size of the
+ * descriptor table for the current process as an integer.
+ */
+int kern_getdtablesize(void);
 
 #ifdef __cplusplus
 }
