@@ -11,6 +11,7 @@ SOURCE_FILES =
 	DirectoryTest.cpp
 	EntryTest.cpp
 	FileTest.cpp
+	FindDirectoryTest.cpp
 	NodeTest.cpp
 	PathTest.cpp
 	ResourcesTest.cpp

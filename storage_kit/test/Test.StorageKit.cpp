@@ -8,6 +8,7 @@
 #include "DirectoryTest.h"
 #include "EntryTest.h"
 #include "FileTest.h"
+#include "FindDirectoryTest.h"
 #include "NodeTest.h"
 #include "PathTest.h"
 #include "ResourcesTest.h"
@@ -27,6 +28,7 @@ int main(int argc, char *argv[]) {
 	shell.AddSuite( "BResources", &ResourcesTest::Suite );
 	shell.AddSuite( "BResourceStrings", &ResourceStringsTest::Suite );
 	shell.AddSuite( "BSymLink", &SymLinkTest::Suite );
+	shell.AddSuite( "FindDirectory", &FindDirectoryTest::Suite );
 
 	return shell.Run(argc, argv);
 }
