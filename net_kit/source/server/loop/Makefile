@@ -1,7 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=loop
 CFLAGS+=-nostart
-LOBJS=../_APP_ ../util/misc.o
+LOBJS=../_APP_ ../net_server/misc.o
 OBJS=loop.o
 
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
