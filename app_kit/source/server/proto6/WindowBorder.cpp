@@ -100,6 +100,8 @@ printf("WindowBorder(): Click Tab\n");
 				is_moving_window=true;
 				activeborder=this;
 			}
+			if(buttons==B_SECONDARY_MOUSE_BUTTON)
+				MoveToBack();
 			break;
 		}
 		case CLICK_RESIZE:
