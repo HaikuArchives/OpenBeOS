@@ -1,0 +1,6 @@
+#include <Be.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#define PATTERN_SUPPORT 0
