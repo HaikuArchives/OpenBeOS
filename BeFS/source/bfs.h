@@ -161,17 +161,20 @@ enum inode_flags
 //**************************************
 
 
-inline int32 divide_roundup(int32 num,int32 divisor)
+inline int32
+divide_roundup(int32 num,int32 divisor)
 {
 	return (num + divisor - 1) / divisor;
 }
 
-inline int64 divide_roundup(int64 num,int32 divisor)
+inline int64
+divide_roundup(int64 num,int32 divisor)
 {
 	return (num + divisor - 1) / divisor;
 }
 
-inline int get_shift(uint64 i)
+inline int
+get_shift(uint64 i)
 {
 	int c;
 	c = 0;
@@ -182,32 +185,12 @@ inline int get_shift(uint64 i)
 	return c;
 }
 
-//**************************************
-
-inline uint16 roundup(uint16 data, uint16 factor)
+inline int32
+round_up(uint32 data)
 {
-	uint16 temp = data % factor;
-	if (temp != 0)
-		data += (factor - temp);
-	return data;
+	// rounds up to the next off_t boundary
+	return (data + sizeof(off_t) - 1) & ~(sizeof(off_t) - 1);
 }
-
-inline uint32 roundup(uint32 data, uint32 factor)
-{
-	uint32 temp = data % factor;
-	if (temp != 0)
-		data += (factor - temp);
-	return data;
-}
-
-inline uint64 roundup(uint64 data, uint64 factor)
-{
-	uint64 temp = data % factor;
-	if (temp != 0)
-		data += (factor - temp);
-	return data;
-}
-
 
 /************************ block_run inline functions ************************/
 //	#pragma mark -

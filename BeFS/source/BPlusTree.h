@@ -62,6 +62,8 @@ struct bplustree_node
 	inline int32 Used() const;
 	uint8 *KeyAt(int32 index,uint16 *keyLength) const;
 	
+	inline bool IsLeaf() const;
+
 	uint8 CountDuplicates(off_t offset,bool isFragment) const;
 	off_t DuplicateAt(off_t offset,bool isFragment,int8 index) const;
 
@@ -69,7 +71,7 @@ struct bplustree_node
 	static inline off_t FragmentOffset(off_t link);
 };
 
-#define BPLUSTREE_NODE 0
+//#define BPLUSTREE_NODE 0
 #define BPLUSTREE_DUPLICATE_NODE 2
 #define BPLUSTREE_DUPLICATE_FRAGMENT 3
 
@@ -132,6 +134,7 @@ class CachedNode
 		bplustree_header *SetToHeader();
 		void Unset();
 
+		status_t Free(Transaction *transaction, off_t offset);
 		bplustree_node *Allocate(Transaction *transaction,off_t *offset);
 		status_t WriteBack(Transaction *transaction);
 
@@ -186,6 +189,7 @@ class BPlusTree
 
 		void		InsertKey(bplustree_node *node, uint8 *key, uint16 keyLength, off_t value, uint16 index);
 		status_t	InsertDuplicate(bplustree_node *node,uint16 index);
+		status_t	SplitNode(bplustree_node *node, off_t nodeOffset, bplustree_node *other, off_t otherOffset, uint16 *_keyIndex, uint8 *key, uint16 *_keyLength, off_t *_value);
 
 	private:
 		friend TreeIterator;
@@ -228,51 +232,58 @@ class TreeIterator
 		bool		fIsFragment;
 };
 
-// BPlusTree's inline functions
+// BPlusTree's inline functions (most of them may not be needed)
 
-inline status_t BPlusTree::Insert(Transaction *transaction,const char *key,off_t value)
+inline status_t
+BPlusTree::Insert(Transaction *transaction,const char *key,off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_STRING_TYPE)
 		return B_BAD_TYPE;
 	return Insert(transaction,(uint8 *)key, strlen(key), value);
 }
 
-inline status_t BPlusTree::Insert(Transaction *transaction,int32 key, off_t value)
+inline status_t
+BPlusTree::Insert(Transaction *transaction,int32 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_INT32_TYPE)
 		return B_BAD_TYPE;
 	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(Transaction *transaction,uint32 key, off_t value)
+inline status_t
+BPlusTree::Insert(Transaction *transaction,uint32 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_UINT32_TYPE)
 		return B_BAD_TYPE;
 	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(Transaction *transaction,int64 key, off_t value)
+inline status_t
+BPlusTree::Insert(Transaction *transaction,int64 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_INT64_TYPE)
 		return B_BAD_TYPE;
 	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(Transaction *transaction,uint64 key, off_t value)
+inline status_t
+BPlusTree::Insert(Transaction *transaction,uint64 key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_UINT64_TYPE)
 		return B_BAD_TYPE;
 	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(Transaction *transaction,float key, off_t value)
+inline status_t
+BPlusTree::Insert(Transaction *transaction,float key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_FLOAT_TYPE)
 		return B_BAD_TYPE;
 	return Insert(transaction,(uint8 *)&key, sizeof(key), value);
 }
 
-inline status_t BPlusTree::Insert(Transaction *transaction,double key, off_t value)
+inline status_t
+BPlusTree::Insert(Transaction *transaction,double key, off_t value)
 {
 	if (fHeader->data_type != BPLUSTREE_DOUBLE_TYPE)
 		return B_BAD_TYPE;
@@ -283,17 +294,20 @@ inline status_t BPlusTree::Insert(Transaction *transaction,double key, off_t val
 /************************ TreeIterator inline functions ************************/
 //	#pragma mark -
 
-inline status_t TreeIterator::Rewind()
+inline status_t
+TreeIterator::Rewind()
 {
 	return Goto(BPLUSTREE_BEGIN);
 }
 
-inline status_t TreeIterator::GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value)
+inline status_t
+TreeIterator::GetNextEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value)
 {
 	return Traverse(BPLUSTREE_FORWARD,key,keyLength,maxLength,value);
 }
 
-inline status_t TreeIterator::GetPreviousEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value)
+inline status_t
+TreeIterator::GetPreviousEntry(void *key,uint16 *keyLength,uint16 maxLength,off_t *value)
 {
 	return Traverse(BPLUSTREE_BACKWARD,key,keyLength,maxLength,value);
 }
@@ -302,7 +316,8 @@ inline status_t TreeIterator::GetPreviousEntry(void *key,uint16 *keyLength,uint1
 //	#pragma mark -
 
 
-inline bool bplustree_header::IsValidLink(off_t link)
+inline bool
+bplustree_header::IsValidLink(off_t link)
 {
 	return link == BPLUSTREE_NULL || (link > 0 && link <= maximum_size - node_size);
 }
@@ -312,32 +327,44 @@ inline bool bplustree_header::IsValidLink(off_t link)
 //	#pragma mark -
 
 
-inline uint16 *bplustree_node::KeyLengths() const
+inline uint16 *
+bplustree_node::KeyLengths() const
 {
-	return (uint16 *)(((char *)this) + roundup(sizeof(bplustree_node) + all_key_length,8));
+	return (uint16 *)(((char *)this) + round_up(sizeof(bplustree_node) + all_key_length));
 }
 
-inline off_t *bplustree_node::Values() const
+inline off_t *
+bplustree_node::Values() const
 {
 	return (off_t *)((char *)KeyLengths() + all_key_count * sizeof(uint16));
 }
 
-inline uint8 *bplustree_node::Keys() const
+inline uint8 *
+bplustree_node::Keys() const
 {
 	return (uint8 *)this + sizeof(bplustree_node);
 }
 
-inline int32 bplustree_node::Used() const
+inline int32
+bplustree_node::Used() const
 {
-	return roundup(sizeof(bplustree_node) + all_key_length,8) + all_key_count * (sizeof(uint16) + sizeof(off_t));
+	return round_up(sizeof(bplustree_node) + all_key_length) + all_key_count * (sizeof(uint16) + sizeof(off_t));
 }
 
-inline uint8 bplustree_node::LinkType(off_t link)
+inline bool 
+bplustree_node::IsLeaf() const
+{
+	return overflow_link == BPLUSTREE_NULL;
+}
+
+inline uint8
+bplustree_node::LinkType(off_t link)
 {
 	return *(uint64 *)&link >> 62;
 }
 
-inline off_t bplustree_node::FragmentOffset(off_t link)
+inline off_t
+bplustree_node::FragmentOffset(off_t link)
 {
 	return link & 0x3ffffffffffffc00LL;
 }
