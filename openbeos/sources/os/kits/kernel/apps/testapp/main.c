@@ -9,6 +9,7 @@
 #include <ktypes.h>
 #include <resource.h>
 #include <errors.h>
+#include <OS.h>
 
 static void port_test(void);
 static int port_test_thread_func(void* arg);
@@ -59,7 +60,7 @@ int main(int argc, char **argv)
 		printf("arg %d = %s \n",cnt,argv[cnt]);
 	}
 
-	printf("my thread id is %d\n", sys_get_current_thread_id());
+	printf("my thread id is %d\n", find_thread(NULL));
 #if 0
 	{
 		char c;
@@ -149,8 +150,8 @@ int main(int argc, char **argv)
 		int i;
 
 		for(i=0; i<10; i++) {
-			tids[i] = sys_thread_create_thread("foo", &test_thread, (void *)i);
-			sys_thread_resume_thread(tids[i]);
+			tids[i] = spawn_thread(&test_thread, "foo", THREAD_MEDIUM_PRIORITY, (void *)i);
+			resume_thread(tids[i]);
 		}
 
 		sys_snooze(5000000);
@@ -158,7 +159,7 @@ int main(int argc, char **argv)
 /*
 		sys_snooze(3000000);
 		for(i=0; i<10; i++) {
-			sys_thread_kill_thread(tids[i]);
+			kill_thread(tids[i]);
 		}
 		printf("thread_is dead\n");
 		sys_snooze(5000000);
@@ -355,8 +356,8 @@ int main(int argc, char **argv)
 
 		printf("spawning two cpu eaters\n");
 
-//		sys_thread_resume_thread(sys_thread_create_thread("cpu eater 1", &cpu_eater_thread, 0));
-//		sys_thread_resume_thread(sys_thread_create_thread("cpu eater 2", &cpu_eater_thread, 0));
+//		resume_thread(spawn_thread("cpu eater 1", &cpu_eater_thread, 0));
+//		resume_thread(spawn_thread(&cpu_eater_thread, "cpu eater 2", &cpu_eater_thread, 0));
 
 		printf("spawning %d threads\n", 10000);
 
@@ -368,8 +369,10 @@ int main(int argc, char **argv)
 
 			t = sys_system_time();
 
-			id = sys_thread_create_thread("testthread", &dummy_thread, 0);
-			sys_thread_resume_thread(id);
+			id = spawn_thread(&dummy_thread, "testthread", THREAD_MEDIUM_PRIORITY, NULL);
+			if (id > 0)
+				resume_thread(id);
+
 			sys_thread_wait_on_thread(id, NULL);
 
 			printf("done (%Ld usecs)\n", sys_system_time() - t);
@@ -383,20 +386,20 @@ int main(int argc, char **argv)
 
 		printf("spawning a few floating point crunchers\n");
 
-		id = sys_thread_create_thread("fpu thread0", &fpu_cruncher_thread, &f[0]);
-		sys_thread_resume_thread(id);
+		id = spawn_thread(&fpu_cruncher_thread, "fpu thread0", THREAD_MEDIUM_PRIORITY, &f[0]);
+		resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread1", &fpu_cruncher_thread, &f[1]);
-		sys_thread_resume_thread(id);
+		id = spawn_thread(&fpu_cruncher_thread, "fpu thread1", THREAD_MEDIUM_PRIORITY, &f[1]);
+		resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread2", &fpu_cruncher_thread, &f[2]);
-		sys_thread_resume_thread(id);
+		id = spawn_thread(&fpu_cruncher_thread, "fpu thread2", THREAD_MEDIUM_PRIORITY, &f[2]);
+		resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread3", &fpu_cruncher_thread, &f[3]);
-		sys_thread_resume_thread(id);
+		id = spawn_thread(&fpu_cruncher_thread, "fpu thread3", THREAD_MEDIUM_PRIORITY, &f[3]);
+		resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread4", &fpu_cruncher_thread, &f[4]);
-		sys_thread_resume_thread(id);
+		id = spawn_thread(&fpu_cruncher_thread, "fpu thread4", THREAD_MEDIUM_PRIORITY, &f[4]);
+		resume_thread(id);
 
 		getchar();
 		printf("passed the test\n");
@@ -449,9 +452,9 @@ static void port_test(void)
 	printf("porttest: res=%d, %s\n", res, res == ERR_PORT_TIMED_OUT ? "ok" : "BAD");
 
 	printf("porttest: spawning thread for port 1\n");
-	t = sys_thread_create_thread("port_test", port_test_thread_func, NULL);
+	t = spawn_thread(port_test_thread_func, "port_test", THREAD_MEDIUM_PRIORITY, NULL);
 	// resume thread
-	sys_thread_resume_thread(t);
+	resume_thread(t);
 
 	printf("porttest: write\n");
 	sys_port_write(test_p1, 1, &testdata, sizeof(testdata));

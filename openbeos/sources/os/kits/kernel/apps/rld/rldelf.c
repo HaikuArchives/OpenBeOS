@@ -11,6 +11,7 @@
 #include <user_runtime.h>
 #include <syscalls.h>
 #include <arch/cpu.h>
+#include <sem.h>
 
 #include "rld_priv.h"
 
@@ -1061,5 +1062,5 @@ rldelf_init(struct uspace_prog_args_t const *_uspa)
 {
 	uspa= _uspa;
 
-	rld_sem= sys_sem_create(1, "rld_lock\n");
+	rld_sem= create_sem(1, "rld_lock\n");
 }
