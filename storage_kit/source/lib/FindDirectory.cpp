@@ -1,11 +1,13 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: FindDirectory.cpp
 //---------------------------------------------------------------------
-#include <FindDirectory.h>
+/*!
+	\file FindDirectory.cpp
+	find_directory() implementations.	
+*/
 
+#include <FindDirectory.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {

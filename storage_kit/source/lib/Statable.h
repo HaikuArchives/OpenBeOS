@@ -1,3 +1,12 @@
+//----------------------------------------------------------------------
+//  This software is part of the OpenBeOS distribution and is covered 
+//  by the OpenBeOS license.
+//---------------------------------------------------------------------
+/*!
+	\file Statable.h
+	BStatable interface declaration.
+*/
+
 #ifndef __sk_statable_h__
 #define __sk_statable_h__
 

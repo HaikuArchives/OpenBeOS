@@ -1,10 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Path.h
-//  Description: An absolute pathname wrapper class
 //---------------------------------------------------------------------
+/*!
+	\file Path.h
+	BPath interface declaration.
+*/
+
 #ifndef __sk_path_h__
 #define __sk_path_h__
 
@@ -23,7 +25,7 @@ class BEntry;
 struct entry_ref;
 
 /*!
-	\class BDirectory
+	\class BPath
 	\brief An absolute pathname wrapper class
 	
 	Provides a convenient means of managing pathnames.

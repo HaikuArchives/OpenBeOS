@@ -1,15 +1,17 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: kernel_interface.POSIX.cpp
-//  Description: Initial implementation of our kernel interface with
-//  calls to the POSIX api. This will later be replaced with a version
-//  that makes syscalls into the actual kernel
 //----------------------------------------------------------------------
+/*!
+	\file kernel_interface.POSIX.cpp
+	Initial implementation of our kernel interface with
+	calls to the POSIX api. This will later be replaced with a version
+	that makes syscalls into the actual kernel
+*/
 
 #include "kernel_interface.h"
 #include "storage_support.h"
+
 
 #include <fcntl.h>
 #include <unistd.h>

@@ -1,10 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Entry.cpp
-//  Description:  A file location wrapper class
 //---------------------------------------------------------------------
+/*!
+	\file Entry.cpp
+	BEntry and entry_ref implementations.
+*/
+
 #include <Entry.h>
 
 #include <Directory.h>
@@ -101,6 +103,11 @@ status_t entry_ref::set_name(const char *name) {
 	return B_OK;			
 }
 
+/*! \brief Compares the entry_ref with another entry_ref, returning true if they are equal.
+	\return
+	- \c true: the entry_refs are equal
+	- \c false: the entry_refs are not equal
+*/
 bool
 entry_ref::operator==(const entry_ref &ref) const {
 	return (	device == ref.device &&
@@ -108,11 +115,21 @@ entry_ref::operator==(const entry_ref &ref) const {
 				strcmp(name, ref.name) == 0		);
 }
 
+/*! \brief Compares the entry_ref with another entry_ref, returning true if they are not equal.
+	\return
+	- \c true: the entry_refs are not equal
+	- \c false: the entry_refs are equal
+*/
 bool
 entry_ref::operator!=(const entry_ref &ref) const {
 	return !(*this == ref);
 }
 
+/*! \brief Makes the entry_ref a copy of the entry_ref specified by \a ref.
+	\param ref then entry_ref to copy
+	\return
+	- a reference to the copy
+*/
 entry_ref&
 entry_ref::operator=(const entry_ref &ref) {
 	if (this == &ref)
@@ -123,6 +140,22 @@ entry_ref::operator=(const entry_ref &ref) {
 	set_name(ref.name);
 	return *this;
 }
+
+/*!
+	\var dev_t entry_ref::device
+	\brief The device id of the storage device on which the entry resides
+
+*/
+
+/*!
+	\var ino_t entry_ref::directory
+	\brief The inode number of the directory in which the entry resides
+*/
+
+/*!
+	\var char *entry_ref::name
+	\brief The leaf name of the entry
+*/
 
 
 //----------------------------------------------------------------------------
@@ -237,19 +270,25 @@ BEntry::BEntry(const BEntry &entry) :
 			// straight copy of the given entry
 };
 
-/*! Destructor, frees all previously allocated resources */
+//! Frees all of the BEntry's allocated resources.
+/*! \see Unset()
+*/
 BEntry::~BEntry(){
 	Unset();
 };
 
-/*! Returns the status of the most recent construction or
-	SetTo() call */
+//! Returns the result of the most recent construction or SetTo() call.
+/*! \return
+		- \c B_OK success
+		- \c B_NO_INIT the object has been Unset() or is uninitialized
+		- <code>some error code</code>
+*/
 status_t
 BEntry::InitCheck() const {
 	return fCStatus;
 };
 
-/*! Returns true if the Entry exists in the filesytem, false otherwise. */
+//! Returns true if the Entry exists in the filesytem, false otherwise. 
 bool
 BEntry::Exists() const {
 	if (fCStatus != B_OK)
@@ -260,7 +299,17 @@ BEntry::Exists() const {
 	return StorageKit::find_dir(fDirFd, fName, &entry, sizeof(entry)) == B_OK;
 };
 
-/*! Gets a stat structure for the Entry */
+/*! \brief Fills in a stat structure for the entry. The information is copied into
+	the \c stat structure pointed to by \a result.
+	
+	\b NOTE: The BStatable object does not cache the stat structure; every time you 
+	call GetStat(), fresh stat information is retrieved.
+	
+	\param result pointer to a pre-allocated structure into which the stat information will be copied
+	\return
+	- \c B_OK success
+	- "error code" another error code
+*/
 status_t
 BEntry::GetStat(struct stat *result) const{
 	if (fCStatus != B_OK)

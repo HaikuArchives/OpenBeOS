@@ -1,3 +1,12 @@
+//----------------------------------------------------------------------
+//  This software is part of the OpenBeOS distribution and is covered 
+//  by the OpenBeOS license.
+//---------------------------------------------------------------------
+/*!
+	\file NodeInfo.h
+	BNodeInfo interface declaration.
+*/
+
 #ifndef __sk_node_info_h__
 #define __sk_node_info_h__
 

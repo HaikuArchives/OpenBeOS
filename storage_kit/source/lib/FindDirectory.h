@@ -1,9 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: FindDirectory.h
 //---------------------------------------------------------------------
+/*!
+	\file FindDirectory.h
+	Declarations of find_directory() functions and associated types.	
+*/
+
 #ifndef __sk_find_directory_h__
 #define __sk_find_directory_h__
 

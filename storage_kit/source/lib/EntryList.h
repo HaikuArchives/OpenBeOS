@@ -1,9 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: EntryList.h
 //---------------------------------------------------------------------
+/*!
+	\file EntryList.h
+	BEntryList interface declaration.
+*/
+
 #ifndef __sk_entry_list_h__
 #define __sk_entry_list_h__
 

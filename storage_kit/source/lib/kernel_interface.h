@@ -1,11 +1,13 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: kernel_interface.h
-//  Description: This is the internal interface used by the Storage Kit
-//  to communicate with the kernel
 //---------------------------------------------------------------------
+/*!
+	\file kernel_interface.h
+	This is the private interface used by the Storage Kit
+	to communicate with the kernel
+*/
+
 #ifndef _sk_kernel_interface_h_
 #define _sk_kernel_interface_h_
 

@@ -1,11 +1,13 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Directory.cpp
 //---------------------------------------------------------------------
-#include <string.h>
+/*!
+	\file Directory.cpp
+	BDirectory implementation.	
+*/
 
+#include <string.h>
 #include <Directory.h>
 #include <Entry.h>
 #include <File.h>

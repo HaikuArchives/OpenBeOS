@@ -1,9 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Directory.h
 //---------------------------------------------------------------------
+/*!
+	\file Directory.h
+	BDirectory interface declaration.
+*/
+
 #ifndef __sk_directory_h__
 #define __sk_directory_h__
 

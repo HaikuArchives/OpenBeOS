@@ -1,14 +1,16 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: storage_support.h
-//  Description: This file contains the interface for miscellaneous
-//  Storage Kit internal support functionality.
 //---------------------------------------------------------------------
+/*!
+	\file storage_support.h
+	Interface declarations for miscellaneous internal
+	Storage Kit support functions.
+*/
 
 #ifndef _sk_storage_support_h_
 #define _sk_storage_support_h_
+
 
 namespace StorageKit {
 

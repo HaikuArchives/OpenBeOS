@@ -1,9 +1,11 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Node.cpp
-//---------------------------------------------------------------------
+//----------------------------------------------------------------------
+/*!
+	\file Node.cpp
+	BNode implementation.
+*/
 
 #include <fs_attr.h> // for struct attr_info
 #include <string.h>
@@ -13,6 +15,8 @@
 
 #include "kernel_interface.h"
 #include "storage_support.h"
+
+/*! \file Node.h */
 
 // node_ref
 

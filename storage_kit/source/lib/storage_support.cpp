@@ -1,11 +1,11 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: storage_support.cpp
-//  Description: This file contains the implementation of miscellaneous
-//  Storage Kit internal support functionality.
 //----------------------------------------------------------------------
+/*!
+	\file storage_support.cpp
+	Implementations of miscellaneous internal Storage Kit support functions.
+*/
 
 #include <string.h>
 

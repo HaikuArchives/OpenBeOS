@@ -1,10 +1,11 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: File.h
-//  Description: A wrapper class for common operations on files.
 //---------------------------------------------------------------------
+/*!
+	\file File.h
+	BFile interface declaration.
+*/
 #ifndef __sk_file_h__
 #define __sk_file_h__
 

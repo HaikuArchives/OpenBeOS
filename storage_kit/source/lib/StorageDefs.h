@@ -1,10 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: StorageDefs.h
-//	Description: Miscellaneous Storage Kit definitions and includes
 //---------------------------------------------------------------------
+/*!
+	\file StorageDefs.h
+	Miscellaneous Storage Kit definitions and includes.
+*/
+
 #ifndef __sk_def_storage_h__
 #define __sk_def_storage_h__
 

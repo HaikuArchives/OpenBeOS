@@ -1,13 +1,11 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Path.cpp
-//  Description: An absolute pathname wrapper class
 //---------------------------------------------------------------------
-
-/*! \file Path.h */
-/*! \file Path.cpp */
+/*!
+	\file Path.cpp
+	BPath implementation.
+*/
 
 #include <Path.h>
 #include <Directory.h>

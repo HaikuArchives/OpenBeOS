@@ -1,3 +1,12 @@
+//----------------------------------------------------------------------
+//  This software is part of the OpenBeOS distribution and is covered 
+//  by the OpenBeOS license.
+//---------------------------------------------------------------------
+/*!
+	\file Statable.cpp
+	BStatable implementation.
+*/
+
 #include <Statable.h>
 #include <Node.h>
 #include <Volume.h>

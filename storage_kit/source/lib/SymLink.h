@@ -4,6 +4,11 @@
 //
 //  File Name: SymLink.h
 //---------------------------------------------------------------------
+/*!
+	\file SymLink.h
+	BSymLink interface declaration.
+*/
+
 #ifndef __sk_sym_link_h__
 #define __sk_sym_link_h__
 

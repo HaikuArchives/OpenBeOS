@@ -1,10 +1,11 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: File.cpp
-//  Description: A wrapper class for common operations on files.
 //---------------------------------------------------------------------
+/*!
+	\file File.cpp
+	BFile implementation.
+*/
 
 #include <fsproto.h>
 

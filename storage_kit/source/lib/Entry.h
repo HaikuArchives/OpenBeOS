@@ -1,10 +1,11 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Entry.h
-//  Description: A file location wrapper class
 //---------------------------------------------------------------------
+/*!
+	\file Entry.h
+	BEntry and entry_ref interface declarations.
+*/
 #ifndef __sk_entry_h__
 #define __sk_entry_h__
 

@@ -1,9 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: SymLink.cpp
 //---------------------------------------------------------------------
+/*!
+	\file SymLink.cpp
+	BSymLink implementation.
+*/
+
 #include <SymLink.h>
 #include <Directory.h>
 #include <Entry.h>

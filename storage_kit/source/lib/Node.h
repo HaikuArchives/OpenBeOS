@@ -1,9 +1,12 @@
 //----------------------------------------------------------------------
 //  This software is part of the OpenBeOS distribution and is covered 
 //  by the OpenBeOS license.
-//
-//  File Name: Node.h
 //---------------------------------------------------------------------
+/*!
+	\file Node.h
+	BNode and node_ref interface declarations.
+*/
+
 #ifndef __sk_node_h__
 #define __sk_node_h__
 
