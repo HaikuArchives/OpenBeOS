@@ -306,6 +306,11 @@ Journal::WriteLogEntry()
 	if (logPosition < fVolume->LogEnd())
 		fVolume->FlushDevice();
 
+	// We need to flush the drives own cache here to ensure
+	// disk consistency.
+	// If that call fails, we can't do anything about it anyway
+	ioctl(fVolume->Device(),B_FLUSH_DRIVE_CACHE);
+
 	fArray.MakeEmpty();
 
 	// Update the log end pointer in the super block
