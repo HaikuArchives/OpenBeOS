@@ -35,36 +35,7 @@
 #include <Message.h>
 #include <Archivable.h>
 #include <File.h>
-
-/** small "fullscale" app to test MakeConfigurationView */
-//=====================================
 #include <Application.h>
-#include <View.h>
-#include <Window.h>
-class ViewTest : public BApplication {
-public:
-	ViewTest(BTranslatorRoster* roster);
-	bool Worked() { return Extent->IsValid(); };
-	BRect* Extent;
-	BView* View;
-};
-
-ViewTest::ViewTest(BTranslatorRoster* roster) : BApplication("application/x-vnd.obos_translationkit-ConfigTest") {
-	//create invalid rect - if it is valid after the
-	//MakeConfigurationView call the test has succeded
-	Extent = new BRect(-1, -1, -1, -1);
-	
-	//create config view
-	translator_id* translators;
-	int32 num_translators;
-	roster->GetAllTranslators(&translators, &num_translators);	
-	roster->MakeConfigurationView(translators[0], NULL, &View, Extent);
-	delete [] translators;
-
-	//get out
-	be_app->PostMessage(B_QUIT_REQUESTED);
-}
-//-------------------------------------
 
 /**
  * Default constructor - no work
@@ -579,20 +550,24 @@ status_t TranslatorRosterTest::IdentifyTest() {
  * @return B_OK if everything went ok, B_ERROR if not
  */
 status_t TranslatorRosterTest::MakeConfigurationViewTest() {
-	//create test app
-	ViewTest* test = new ViewTest(roster);
-	test->Run();
+	//create invalid rect - if it is valid after the
+	//MakeConfigurationView call the test has succeded
+	BRect extent(-1, -1, -1, -1);
 	
-	//get test result
-	bool worked = test->Worked();
+	//create config view
+	BView* view;
+	translator_id* translators;
+	int32 num_translators;
+	roster->GetAllTranslators(&translators, &num_translators);	
+	roster->MakeConfigurationView(translators[0], NULL, &view, &extent);
+
+	//check validity
+	bool success = (extent.IsValid()) ? B_OK : B_ERROR;
+
+	//clean up after ourselves
+	delete [] translators;
 	
-	delete test;
-	
-	if(worked) {
-		return B_OK;
-	} else {
-		return B_ERROR;
-	}
+	return success;
 }
 
 /**
@@ -636,6 +611,8 @@ void TranslatorRosterTest::Debug(char* string) {
 }
 
 int main() {
+	//needed by MakeConfigurationView
+	BApplication app("application/x-vnd.OpenBeOS-translationkit_translatorrostertest");
 	TranslatorRosterTest test;
 	test.setVerbose(true);
 	test.Initialize();
