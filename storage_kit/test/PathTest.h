@@ -26,7 +26,7 @@ public:
 
 	void SimpleInitTest() {
 		BPath path("/");
-		CPPUNIT_ASSERT( path.InitCheck() == B_NO_INIT ); 
+		CPPUNIT_ASSERT( path.InitCheck() == B_OK ); 
 	}
 	
 };
