@@ -21,7 +21,7 @@ KeymapWindow::KeymapWindow( BRect frame )
 	:	BWindow( frame, WINDOW_TITLE, B_TITLED_WINDOW,
 			B_NOT_ZOOMABLE|B_NOT_RESIZABLE|B_ASYNCHRONOUS_CONTROLS )
 {
-	rgb_color	temp_color;
+	rgb_color	tempColor;
 	BRect		bounds = Bounds();
 	BMenuBar	*menubar;
 
@@ -35,8 +35,8 @@ KeymapWindow::KeymapWindow( BRect frame )
 	bounds.top = menubar->Bounds().bottom + 1;
 	fPlaceholderView = new BView( bounds, "placeholderView", 
 		B_FOLLOW_NONE, 0 );
-	temp_color = ui_color( B_MENU_BACKGROUND_COLOR );
-	fPlaceholderView->SetViewColor( temp_color );
+	tempColor = ui_color( B_MENU_BACKGROUND_COLOR );
+	fPlaceholderView->SetViewColor( tempColor );
 	AddChild( fPlaceholderView );
 
 	// Create the Maps box and contents
@@ -48,6 +48,12 @@ KeymapWindow::KeymapWindow( BRect frame )
 		new BMessage( USE_KEYMAP ));
 	fPlaceholderView->AddChild( fUseButton );
 	
+	// The 'Revert' button
+	bounds.Set( 442,200, 515,220 );
+	fRevertButton = new BButton( bounds, "revertButton", "Revert",
+		new BMessage( REVERT ));
+	fPlaceholderView->AddChild( fRevertButton );
+
 }
 
 BMenuBar * KeymapWindow::AddMenuBar()
@@ -59,7 +65,7 @@ BMenuBar * KeymapWindow::AddMenuBar()
 
 	bounds = Bounds();
 	menubar = new BMenuBar( bounds, "menubar" );
-	AddChild(menubar);
+	AddChild( menubar );
 	
 	// Create the File menu
 	menu = new BMenu( "File" );
@@ -118,9 +124,48 @@ void KeymapWindow::AddMaps()
 	mapsBox = new BBox( bounds );
 	mapsBox->SetLabel( "Maps" );
 	fPlaceholderView->AddChild( mapsBox );
-
+/*
+	// Set drawing mode to B_OP_COPY
+	mapsBox->SetDrawingMode( B_OP_COPY );
+	
+	// Set mapsBox->LowColor to background color
+	rgb_color	tempColor;
+	tempColor = ui_color( B_MENU_BACKGROUND_COLOR );
+	mapsBox->SetLowColor( tempColor );
+	
+	// Set mapsBox->HighColor to black
+	tempColor.red   = 0;
+	tempColor.green = 0;
+	tempColor.blue  = 0;
+	tempColor.alpha = 0;
+	mapsBox->SetHighColor( tempColor );
+	
+	// Set font to something nice
+	BFont	*font = new BFont();
+	font->SetFace( B_REGULAR_FACE );
+//	font->SetFamilyAndStyle();
+	font->SetRotation( 0.0 );
+	font->SetShear( 90.0 );
+	font->SetSize( 12.0 );
+	font->SetSpacing( B_BITMAP_SPACING );
+	mapsBox->SetFont( font );
+*/
 	// The System list
-	mapsBox->DrawString( "System", BPoint( 13, 20 ) );
+	bounds = BRect( 9,20, 70,35 );
+/*
+	BView	*textSystem = new BView( bounds, NULL, B_NOT_RESIZABLE, 0 );
+	rgb_color	tempColor;
+//	tempColor = ui_color( B_MENU_BACKGROUND_COLOR );
+//	textSystem->SetViewColor( tempColor );
+	tempColor.red   = 0;
+	tempColor.green = 0;
+	tempColor.blue  = 0;
+	tempColor.alpha = 0;
+	textSystem->SetHighColor( tempColor );
+	textSystem->SetLowColor( tempColor );
+	textSystem->DrawString( "System", BPoint( 0, 20 ) );
+	mapsBox->AddChild( textSystem );
+*/
 	bounds = BRect( 13,36, 103,106 );
 	entryList = fApplication->SystemMaps();
 	fSystemListView = new BListView( bounds, "systemList" );
@@ -225,6 +270,8 @@ void KeymapWindow::MessageReceived( BMessage* message )
 		case USE_KEYMAP:
 			UseKeymap();
 			break;
+		case REVERT:	// do nothing, just like the original
+			break;
 
 		default:	
 			BWindow::MessageReceived( message );
@@ -234,55 +281,49 @@ void KeymapWindow::MessageReceived( BMessage* message )
 
 void KeymapWindow::HandleSystemMapSelected( BMessage *selectionMessage )
 {
-	cout << "System map selected" << endl;
+	#if DEBUG
+		cout << "System map selected" << endl;
+	#endif //DEBUG
 	HandleMapSelected( selectionMessage, fSystemListView, fUserListView );
 }
 
 void KeymapWindow::HandleUserMapSelected( BMessage *selectionMessage )
 {
-	cout << "User map selected" << endl;
+	#if DEBUG
+		cout << "User map selected" << endl;
+	#endif //DEBUG
 	HandleMapSelected( selectionMessage, fUserListView, fSystemListView );
 }
 
 void KeymapWindow::HandleMapSelected( BMessage *selectionMessage,
 	BListView * selectedView, BListView * otherView )
 {
-	// Deselect current other map
-	int32	otherIndex;
-
-	otherIndex = otherView->CurrentSelection();
-/*	if( otherIndex >= 0 )
-	{
-		int32	selectedIndex;
-		
-		selectedIndex = selectedView->CurrentSelection();
-*/
-		otherView->Deselect( otherIndex );
-/*//		otherView->InvalidateItem( otherIndex );
-		selectedView->Select( selectedIndex );		
-		selectedView->InvalidateItem( selectedIndex );
-	}
-*/
-	// save entry for selected map in fSelectedMap
-	int32			index;
+	int32	index;
 	KeymapListItem	*keymapListItem;
 
+	// Anything selected?
 	index = selectedView->CurrentSelection( 0 );
-	if( index < 0 )
+	if( index < 0 ) {
+		#if DEBUG
+			cout << "index<0; HandleMapSelected ends here." << endl;
+	
+		#endif //DEBUG
 		return;
+	}
+	
+	// Store selected map in fSelectedMap
 	keymapListItem = (KeymapListItem*)selectedView->ItemAt( index );
 	if( keymapListItem == NULL )
 		return;
 	fSelectedMap = keymapListItem->KeymapEntry();
 	#if DEBUG
 		char	name[B_FILE_NAME_LENGTH];
-		
 		fSelectedMap->GetName( name );
 		cout << "fSelectedMap has been set to " << name << endl;
 	#endif //DEBUG
 
-	// Display selected map
-
+	// Deselect item in other BListView
+	otherView->DeselectAll();
 }
 
 void KeymapWindow::UseKeymap()

@@ -32,6 +32,7 @@ protected:
 	// the map that's currently highlighted
 	BEntry				*fSelectedMap;
 	BButton				*fUseButton;
+	BButton				*fRevertButton;
 	const char			*title;
 
 	BMenuBar		*AddMenuBar();
