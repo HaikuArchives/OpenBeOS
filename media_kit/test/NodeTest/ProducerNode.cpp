@@ -423,6 +423,8 @@ ProducerNode::_bufferproducer(void *arg)
 	return 0;
 }
 
+#define DELAY 2000000
+
 void
 ProducerNode::BufferProducer()
 {
@@ -432,7 +434,7 @@ ProducerNode::BufferProducer()
 
 	status_t rv;
 	for (;;) {
-		rv = acquire_sem_etc(mBufferProducerSem,1,B_RELATIVE_TIMEOUT,2000000);
+		rv = acquire_sem_etc(mBufferProducerSem,1,B_RELATIVE_TIMEOUT,DELAY);
 		if (rv == B_INTERRUPTED) {
 			continue;
 		} else if (rv == B_OK) {
@@ -450,7 +452,7 @@ ProducerNode::BufferProducer()
 		buffer = mBufferGroup->RequestBuffer(2048);
 		if (!buffer) {
 		}
-		buffer->Header()->start_time = TimeSource()->Now() + 1000000;
+		buffer->Header()->start_time = TimeSource()->Now() + DELAY / 2;
 		out("ProducerNode: SendBuffer, sheduled time = %5.4f\n",buffer->Header()->start_time / 1E6);
 		rv = SendBuffer(buffer, mOutput.destination);
 		if (rv != B_OK) {

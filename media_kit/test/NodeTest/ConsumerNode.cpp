@@ -1,5 +1,6 @@
 #include <TimeSource.h>
 #include <Buffer.h>
+#include <stdlib.h>
 #include "ConsumerNode.h"
 #include "misc.h"
 
@@ -214,6 +215,8 @@ ConsumerNode::HandleEvent(const media_timed_event *event,
 			BBuffer* buffer = const_cast<BBuffer*>((BBuffer*) event->pointer);
 
 			out("### sheduled time = %5.4f, current time = %5.4f, lateness = %5.4f\n",buffer->Header()->start_time / 1E6,TimeSource()->Now() / 1E6,lateness / 1E6);
+			
+			snooze((rand()*100) % 200000);
 	
 			if (buffer)
 				buffer->Recycle();
