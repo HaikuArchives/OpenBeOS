@@ -12,6 +12,7 @@
 #include "sys/socketvar.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
+#include "sys/sockio.h"
 
 #include "net_malloc.h"
 
@@ -72,37 +73,38 @@ static int loop_dev_stop(ifnet *dev)
 	if (!dev || dev->if_type != IFT_LOOP)
 		return EINVAL;
 
-	dev->flags &= ~IFF_UP;
+	dev->if_flags &= ~IFF_UP;
 
 	if (dev->rx_thread > 0)
 		kill_thread(dev->rx_thread);
 	if (dev->tx_thread > 0)
 		kill_thread(dev->tx_thread);
 
-	dev->flags &= ~IFF_RUNNING;
+	dev->if_flags &= ~IFF_RUNNING;
 	
 	return 0;
 }
 
-static int loop_dev_start(ifnet *dev)
+static int loop_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 {
-	if (!dev || dev->if_type != IFT_LOOP)
-		return EINVAL;
+	int error = 0;
 
-	dev->if_mtu = 16384; /* can be as large as we want */
-	dev->flags |= (IFF_UP|IFF_MULTICAST|IFF_LOOPBACK);
-	dev->stop = &loop_dev_stop;
-	
-	if (dev->rx_thread < 0)
-		start_rx_thread(dev);
-	if (dev->tx_thread < 0)
-		start_tx_thread(dev);
+printf("loop_ioctl\n");
 
-	if (dev->rx_thread > 0 && dev->tx_thread > 0)
-		dev->flags |= IFF_RUNNING;	
-	return 0;
+	switch(cmd) {
+		case SIOCSIFADDR:
+			ifp->if_flags |= IFF_UP;
+			if (ifp->rx_thread < 0)
+				start_rx_thread(ifp);
+			if (ifp->tx_thread < 0)
+				start_tx_thread(ifp);
+			break;
+		default:
+			error = EINVAL;
+	}
+	return error;
 }
-
+	
 static int loop_init(void)
 {
 	struct ifnet *me = (ifnet*)malloc(sizeof(ifnet));
@@ -118,11 +120,12 @@ static int loop_init(void)
 	me->tx_thread = -1;
 	me->if_addrlen = 0;
 	me->if_hdrlen = 0;
-	me->flags = IFF_LOOPBACK | IFF_MULTICAST;
-	me->start = &loop_dev_start;
+	me->if_flags = IFF_LOOPBACK | IFF_MULTICAST | IFF_RUNNING;
+	me->if_mtu = 16384; /* can be as large as we want */
 	me->input = &loop_input;
 	me->output = &loop_output;
-	/* XXX - add ioctl */
+	me->stop = &loop_dev_stop;
+	me->ioctl = &loop_ioctl;
 	
 #ifndef _KERNEL_MODE
 	add_protosw(proto, NET_LAYER1);
@@ -136,6 +139,7 @@ static int loop_init(void)
 	return 0;
 }
 
+		
 
 struct device_info device_info = {
 	"Loopback Device Driver",

@@ -11,11 +11,11 @@ KLOBJS=#./net_server/area_malloc.o
 all:	$(TARGET)
 
 kernel:
-	$(CC) $(KCFLAGS) $(INCLUDES) -c loop.c
-	$(CC) $(KLDFLAGS) $(KLOBJS) -o loop loop.o
+	@$(CC) $(KCFLAGS) $(INCLUDES) -c loop.c
+	@$(CC) $(KLDFLAGS) $(KLOBJS) -o loop loop.o
 
 installkernel:	kernel
-	cp loop /boot/home/config/add-ons/kernel/network/interface/loop
+	@cp loop /boot/home/config/add-ons/kernel/network/interface/loop
 
 clean:
 	@if test -e ../modules/interface/$(TARGET); then \
@@ -25,7 +25,7 @@ clean:
 	@if test -e $(OBJS); then rm $(OBJS); fi
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o ../modules/interface/$(TARGET)
+	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o ../modules/interface/$(TARGET)
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
