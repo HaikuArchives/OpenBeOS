@@ -280,8 +280,8 @@ void BLooper::AddHandler(BHandler* handler)
 	if (handler->Looper() == NULL)
 	{
 		fHandlers.AddItem(handler);
-		handler->SetNextHandler(this);
 		handler->SetLooper(this);
+		handler->SetNextHandler(this);
 		BList* Filters = handler->FilterList();
 		if (Filters)
 		{
@@ -857,15 +857,15 @@ void BLooper::InitData()
 
 	BAutolock ListLock(sLooperListLock);
 	AddLooper(this);
-	AddHandler(this);
 	Lock();
+	AddHandler(this);
 }
 //------------------------------------------------------------------------------
 void BLooper::InitData(const char* name, int32 priority, int32 port_capacity)
 {
 	fLockSem = create_sem(1, name);
 
-	if (fMsgPort >= 0)
+	if (fMsgPort <= 0)
 	{
 		fMsgPort = create_port(port_capacity, name ? name : "LooperPort");
 	}
@@ -1176,20 +1176,23 @@ void BLooper::AddLooper(BLooper* loop)
 	{
 #if defined(CHECK_ADD_LOOPER)
 		// First see if it's already been added
-		if (!IsLooperValid(l))
+		if (!IsLooperValid(loop))
 #endif
 		{
 			_loop_data_* result = find_loop_data(sLooperList,
 												 sLooperList + sLooperCount,
 												 empty_slot_pred, NULL);
+
+			uint32& looperCount = sLooperCount;			// hokey debugging aids
+			uint32& looperListSize = sLooperListSize;
 			if (!result)
 			{
 				// No empty slots; time to expand
-				if (sLooperCount == sLooperListSize)
+				if (looperCount == looperListSize)
 				{
 					// Allocate the expanded list
 					_loop_data_* temp =
-						new _loop_data_[sLooperListSize + DATA_BLOCK_SIZE];
+						new _loop_data_[looperListSize + DATA_BLOCK_SIZE];
 					if (!temp)
 					{
 						// Not good
@@ -1199,19 +1202,19 @@ void BLooper::AddLooper(BLooper* loop)
 
 					// Transfer the existing data
 					memcpy(temp, sLooperList,
-						   sizeof (_loop_data_*) * sLooperListSize);
+						   sizeof (_loop_data_*) * looperListSize);
 					delete[] sLooperList;
 					sLooperList = temp;
-					sLooperListSize += DATA_BLOCK_SIZE;
+					looperListSize += DATA_BLOCK_SIZE;
 				}
 
 				// Whether we expanded or not, the "new" one will be at the end
-				result = &sLooperList[sLooperCount];
+				result = &sLooperList[looperCount];
 			}
 
 			result->looper = loop;
 			result->thread = loop->fTaskID;
-			++sLooperCount;
+			++looperCount;
 		}
 	}
 }
