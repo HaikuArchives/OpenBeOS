@@ -560,7 +560,6 @@ status_t TranslatorRosterTest::MakeConfigurationViewTest() {
 	BView* view = new BView(rect, "TranslatorRosterView Test", 0, 0);
 	roster->MakeConfigurationView(translators[0], NULL, &view, &rect);
 	*/	
-	
 	delete [] translators;
 	//delete view;
 	return B_OK;
@@ -574,27 +573,26 @@ status_t TranslatorRosterTest::MakeConfigurationViewTest() {
  * @return B_OK if everything went ok, B_ERROR if not
  */
 status_t TranslatorRosterTest::TranslateTest() {
-	BFile input("./data/images/image.tga", B_READ_ONLY);
-	BFile output("./data/images/image.out.bmp", B_WRITE_ONLY | B_CREATE_FILE | B_ERASE_FILE);
+	//input
+	BFile input("./data/images/image.jpg", B_READ_ONLY);
+
+	//temp file for generic format
+	BFile temp("/tmp/TranslatorRosterTest.temp", B_READ_WRITE | B_CREATE_FILE | B_ERASE_FILE);
 	
-	//translate
-	/*
-	Always fails - something wrong (duh!)
-	status_t result = roster->Translate(&input, NULL, NULL, &output, B_BMP_FORMAT);
-	switch(result) {
-		case B_OK:
-			Debug("OK!");
-			return B_OK;
-		case B_NO_TRANSLATOR:
-			Debug("NO_TRANSLATOR!");
-			return B_ERROR;
-		case B_NOT_INITIALIZED:
-			Debug("B_NOT_INITIALIZED!");
-			return B_ERROR;
-		case B_BAD_VALUE:
-			Debug("B_BAD_VALUE!");
-			return B_ERROR;			
-	}*/
+	//output file
+	BFile output("./data/images/image.out.png", B_WRITE_ONLY | B_CREATE_FILE | B_ERASE_FILE);
+	
+	//translate to generic
+	if(roster->Translate(&input, NULL, NULL, &temp, B_TRANSLATOR_BITMAP) != B_OK) {
+		Debug("Could not translate image to generic format");
+		return B_ERROR;
+	}
+	
+	//translate to specific
+	if(roster->Translate(&temp, NULL, NULL, &output, B_PNG_FORMAT) != B_OK) {
+		Debug("Could not translate generic image to specific format");
+		return B_ERROR;
+	}
 	return B_OK;
 }
 
