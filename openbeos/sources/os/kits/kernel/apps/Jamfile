@@ -11,4 +11,5 @@ SubInclude OBOS_TOP sources os kits kernel apps rld ;
 SubInclude OBOS_TOP sources os kits kernel apps shell ;
 SubInclude OBOS_TOP sources os kits kernel apps sockettest ;
 SubInclude OBOS_TOP sources os kits kernel apps testapp ;
+SubInclude OBOS_TOP sources os kits kernel apps testdigit ;
 SubInclude OBOS_TOP sources os kits kernel apps unmount ;
