@@ -7,7 +7,7 @@ APRApplication::APRApplication()
 	BRect rect;
 
 	// This is just the size and location of the window when Show() is called	
-	rect.Set(100,100,530,220);
+	rect.Set(100,100,580,220);
 	aprwin=new APRWindow(rect);
 	aprwin->Show();
 }
