@@ -243,10 +243,19 @@ Description: The contents of the description string are modified even if
              
 
 OS:          BeOS R5
-Modeule:     BMimeType
+Module:      BMimeType
 Location:    SetShortDescription()
 Description: When passed a NULL description, doesn't crash, but does
              appear to make the result of following calls to SetShortDescription
              unreliable (sometimes they work, sometimes they don't).
+
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    
+Description: The maximal MIME string length, BMimeType accepts is
+             B_MIME_TYPE_LENGTH *not* including terminating null. Note, that
+             app_info reserves only B_MIME_TYPE_LENGTH chars for the
+             signature field.
 
 
