@@ -21,6 +21,9 @@ int udp_input(struct mbuf *buf)
 	printf("            : dst_port      : %d\n", ntohs(udp->dst_port));
 	printf("            : udp length    : %d bytes\n", ntohs(udp->length));
 
+	/* hmm, not sure about this, but seems to be needed :-? */
+	m_freem(buf);
+
 	return 0;
 }
 
@@ -40,6 +43,7 @@ net_module net_module_data = {
 	&udp_init,
 	NULL,
 	&udp_input,
+	NULL,
 	NULL
 };
  
