@@ -6,7 +6,7 @@
 
 #include "net_module.h"
 
-#ifdef _KERNEL_MODE
+#ifdef _KERNEL_
 #include <KernelExport.h>
 #define RAW_MODULE_PATH	      "network/protocol/raw"
 #else
