@@ -27,6 +27,7 @@ BMidiStore::~BMidiStore() {
 	for(int i = num_items - 1; i >= 0; i--) {
 		delete (BMidiEvent *)_evt_list->RemoveItem(i);
 	}
+	_evt_list->MakeEmpty();
 	delete _evt_list;
 }
 
@@ -187,7 +188,6 @@ status_t BMidiStore::Import(const entry_ref * ref) {
 		_ticks_per_beat = division;
 	}
 	d += 2;
-	status_t ret;
 	try {
 		switch(format) {
 		case 0:
@@ -275,6 +275,7 @@ void BMidiStore::Run() {
 		last_time = time;
 		last_tick = tick;
 		BMidiEvent::Data & d = e->data;
+		cerr << "event 0x" << hex << e->opcode << " time = " << time << endl;
 		switch(e->opcode) {
 		case BMidiEvent::OP_NOTE_OFF:
 			SprayNoteOff(d.note_off.channel,
@@ -330,44 +331,64 @@ void BMidiStore::Run() {
 
 //-----------------------------------------------------------------------------
 // Decode and Encode Routines
-void BMidiStore::_DecodeFormat0Tracks(uint8 * data, uint16 tracks,
-	uint32 len) {
-	uint8 * last_byte = data + len;
-	if(tracks != 1) {
-		throw B_BAD_MIDI_DATA;
-	}
-	uint8 * d = data;
+uint8* BMidiStore::_DecodeTrack(uint8* d) {
 	if(strncmp((const char *)d,"MTrk",4) != 0) {
 		throw B_BAD_MIDI_DATA;
 	}
+//		cerr << "Track " << (track+1) << " offset = " << (unsigned long)(d-data) << "\n";
 	d += 4;
 	uint32 trk_len;
 	PACK_4_U8_TO_U32(d,trk_len);
 	d += 4;
-	uint32 time = 0;
+	uint32 ticks            = 0;
+	uint8* track_last_byte = d + trk_len;
+	uint8* next_chunk      = track_last_byte;
+	BMidiEvent* event      = NULL;
+	uint8 status           = 0;
 	try {
-		while(d < last_byte) {
-			uint32 evt_dtime = _ReadVarLength(&d,last_byte);
-			time += evt_dtime;
-			BMidiEvent * event = new BMidiEvent();
-			_ReadEvent(&d,last_byte,event);
-			event->time = time;
-			_evt_list->AddItem(event);
+		while(d < track_last_byte) {
+			uint32 evt_dticks = _ReadVarLength(&d, track_last_byte);
+			ticks += evt_dticks;
+			event = new BMidiEvent();
+			if ((d[0] & 0x80) != 0) { // running status
+				status = d[0]; d ++;
+			}
+			_ReadEvent(status, &d, track_last_byte, event);
+			event->time = ticks; // TODO: convert ticks to milliseconds
 			if(event->opcode == BMidiEvent::OP_TRACK_END) {
+				delete event; event = NULL;
 				break;
+			}
+			if (event->opcode != BMidiEvent::OP_NONE) {
+				_evt_list->AddItem(event);
+			} else { // skip unknown event
+				delete event; event = NULL;
 			}
 		}
 	} catch(status_t e) {
-		if(e == B_OK) {
-			return;
-		}
+		delete event;
 		throw e;
 	}
+	return next_chunk;
+}
+
+
+void BMidiStore::_DecodeFormat0Tracks(uint8 * data, uint16 tracks,
+	uint32 len) {
+	_DecodeTrack(data);
 }
 
 void BMidiStore::_DecodeFormat1Tracks(uint8 * data, uint16 tracks,
 	uint32 len) {
-	return;	
+	if(tracks == 0) {
+		throw B_BAD_MIDI_DATA;
+	}
+	// simply merge all tracks into one and sort the events afterwards
+	uint8 * next_track = data;
+	for (int track = 0; track < tracks; track ++) {
+		next_track = _DecodeTrack(next_track);
+	}
+	SortEvents();
 }
 
 void BMidiStore::_DecodeFormat2Tracks(uint8 * data, uint16 tracks,
@@ -384,18 +405,15 @@ void BMidiStore::_EncodeFormat1Tracks(uint8 *) {
 void BMidiStore::_EncodeFormat2Tracks(uint8 *) {
 }
 
-void BMidiStore::_ReadEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
+void BMidiStore::_ReadEvent(uint8 status, uint8 ** data, uint8 * max_d, BMidiEvent * event) {
 #define CHECK_DATA(_d) if((_d) > max_d) throw B_BAD_MIDI_DATA;
 #define INC_DATA(_d) CHECK_DATA(_d); d = _d;
-	uint8 tmp8;
-	uint16 tmp16;
-	uint32 tmp32;
 	uint8 * d = *data;
 	if(d == NULL) {
 		throw B_BAD_MIDI_DATA;
 	}
-	if(d[0] == 0xff) {
-		INC_DATA(d+1);
+//	cerr << "ReadEvent 0x" << hex << (int)status << "\n";
+	if(status == 0xff) {
 		uint32 len;
 		if(d[0] == 0x0) {
 			INC_DATA(d+1);
@@ -491,68 +509,59 @@ void BMidiStore::_ReadEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
 		} else {
 			throw B_BAD_MIDI_DATA;
 		}
-	} else if(d[0] == 0xf0) {
-		INC_DATA(d+1);
+	} else if(status == 0xf0) {
 		// Manufacturer ID = d[0];
 		while(d[0] != 0xf7) {
 			// Read data eliding the msb.
 			INC_DATA(d+1);
 		}
-	} else if((d[0] & 0xf0) == 0x80) {
+	} else if((status & 0xf0) == 0x80) {
 		event->opcode = BMidiEvent::OP_NOTE_OFF;
-		event->data.note_off.channel = d[0] & 0x0f;
-		INC_DATA(d+1);
+		event->data.note_off.channel = status & 0x0f;
 		event->data.note_off.note = d[0];
 		INC_DATA(d+1);
 		event->data.note_off.velocity = d[0];
 		INC_DATA(d+1);
-	} else if((d[0] & 0xf0) == 0x90) {
+	} else if((status & 0xf0) == 0x90) {
 		event->opcode = BMidiEvent::OP_NOTE_ON;
-		event->data.note_on.channel = d[0] & 0x0f;
-		INC_DATA(d+1);
+		event->data.note_on.channel = status & 0x0f;
 		event->data.note_on.note = d[0];
 		INC_DATA(d+1);
 		event->data.note_on.velocity = d[0];
 		INC_DATA(d+1);
-	} else if((d[0] & 0xf0) == 0xa0) {
+	} else if((status & 0xf0) == 0xa0) {
 		event->opcode = BMidiEvent::OP_KEY_PRESSURE;
-		event->data.key_pressure.channel = d[0] & 0x0f;
-		INC_DATA(d+1);
+		event->data.key_pressure.channel = status & 0x0f;
 		event->data.key_pressure.note = d[0];
 		INC_DATA(d+1);
 		event->data.key_pressure.pressure = d[0];
 		INC_DATA(d+1);
-	} else if((d[0] & 0xf0) == 0xb0) {
+	} else if((status & 0xf0) == 0xb0) {
 		event->opcode = BMidiEvent::OP_CONTROL_CHANGE;
-		event->data.control_change.channel = d[0] & 0x0f;
-		INC_DATA(d+1);
+		event->data.control_change.channel = status & 0x0f;
 		event->data.control_change.number = d[0];
 		INC_DATA(d+1);
 		event->data.control_change.value = d[0];
 		INC_DATA(d+1);
-	} else if((d[0] & 0xf0) == 0xc0) {
+	} else if((status & 0xf0) == 0xc0) {
 		event->opcode = BMidiEvent::OP_PROGRAM_CHANGE;
-		event->data.program_change.channel = d[0] & 0x0f;
-		INC_DATA(d+1);
+		event->data.program_change.channel = status & 0x0f;
 		event->data.program_change.number = d[0];
 		INC_DATA(d+1);
-	} else if((d[0] & 0xf0) == 0xd0) {
+	} else if((status & 0xf0) == 0xd0) {
 		event->opcode = BMidiEvent::OP_CHANNEL_PRESSURE;
-		event->data.channel_pressure.channel = d[0] & 0x0f;
-		INC_DATA(d+1);
+		event->data.channel_pressure.channel = status & 0x0f;
 		event->data.channel_pressure.pressure = d[0];
 		INC_DATA(d+1);
-	} else if((d[0] & 0xf0) == 0xe0) {
+	} else if((status & 0xf0) == 0xe0) {
 		event->opcode = BMidiEvent::OP_PITCH_BEND;
 		event->data.pitch_bend.channel = d[0] & 0x0f;
-		INC_DATA(d+1);
 		event->data.pitch_bend.lsb = d[0];
 		INC_DATA(d+1);
 		event->data.pitch_bend.msb = d[0];
 		INC_DATA(d+1);
 	} else {
-		cerr << "Unsupported Code:0x" << hex << (int)d[0] << endl;
-		INC_DATA(d+1);
+		cerr << "Unsupported Code:0x" << hex << (int)status << endl;
 		throw B_BAD_MIDI_DATA;
 	}
 	*data = d;
