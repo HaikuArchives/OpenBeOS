@@ -373,13 +373,41 @@ const char* BHandler::Name() const
 //------------------------------------------------------------------------------
 void BHandler::SetNextHandler(BHandler* handler)
 {
+	// NOTE:  This is called by BLooper::RemoveHandler() with NULL as the param,
+	// so we need to handle that possiblity.
+	if (!handler)
+	{
+		fNextHandler = NULL;
+		return;
+	}
+
+	if (!fLooper)
+	{
+		debugger("handler must belong to looper before setting NextHandler");
+		fNextHandler = NULL;
+		return;
+	}
+
+	if (fLooper != handler->Looper())
+	{
+		debugger("The handler and its NextHandler must have the same looper");
+		return;
+	}
+
+	if (!fLooper->IsLocked())
+	{
+		//debugger("Owning Looper must be locked before calling SetNextHandler");
+		// NOTE:  Original implementation allows setting the next handler here
+		// anyway.  The documentation *clearly* says otherwise.  Can we get away
+		// with being more strict?
+
+		// return;
+	}
+
 	// NOTE:  I'm sure some sort of threading protection should happen here,
 	// hopefully the spec-mandated BLooper lock is sufficient.
 	// TODO: implement correctly
-	if (fLooper->IsLocked() && fLooper == handler->Looper())
-	{
-		fNextHandler = handler;
-	}
+	fNextHandler = handler;
 }
 //------------------------------------------------------------------------------
 BHandler* BHandler::NextHandler() const
@@ -389,17 +417,23 @@ BHandler* BHandler::NextHandler() const
 //------------------------------------------------------------------------------
 void BHandler::AddFilter(BMessageFilter* filter)
 {
-	if (!fLooper)
-	{
-		// TODO: error handling
-		return;
-	}
-
-	if (!fLooper->IsLocked())
-	{
-		// TODO: error handling
-		return;
-	}
+	// NOTE:  Although the documentation states that the handler must belong to
+	// a looper and the looper must be locked in order to use this method,
+	// testing shows that this is not the case in the original implementation.
+	// We may want to investigate enforcing these rules; it would be interesting
+	// to see how many apps out there have violated the dictates of the docs.
+	// For now, though, we'll play nicely.
+//	if (!fLooper)
+//	{
+//		// TODO: error handling
+//		return false;
+//	}
+//
+//	if (!fLooper->IsLocked())
+//	{
+//		// TODO: error handling
+//		return false;
+//	}
 
 	if (!fFilters)
 	{
@@ -411,17 +445,23 @@ void BHandler::AddFilter(BMessageFilter* filter)
 //------------------------------------------------------------------------------
 bool BHandler::RemoveFilter(BMessageFilter* filter)
 {
-	if (!fLooper)
-	{
-		// TODO: error handling
-		return false;
-	}
-
-	if (!fLooper->IsLocked())
-	{
-		// TODO: error handling
-		return false;
-	}
+	// NOTE:  Although the documentation states that the handler must belong to
+	// a looper and the looper must be locked in order to use this method,
+	// testing shows that this is not the case in the original implementation.
+	// We may want to investigate enforcing these rules; it would be interesting
+	// to see how many apps out there have violated the dictates of the docs.
+	// For now, though, we'll play nicely.
+//	if (!fLooper)
+//	{
+//		// TODO: error handling
+//		return false;
+//	}
+//
+//	if (!fLooper->IsLocked())
+//	{
+//		// TODO: error handling
+//		return false;
+//	}
 
 	if (fFilters)
 	{
@@ -599,41 +639,49 @@ BMessage: what =  (0x0, or 0)
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatching(BMessenger Messenger, uint32 what)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StartObserving(Messenger, what);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatchingAll(BMessenger Messenger)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StartObserving(Messenger, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatching(BMessenger Messenger, uint32 what)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StopObserving(Messenger, what);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatchingAll(BMessenger Messenger)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StopObserving(Messenger, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatching(BHandler* Handler, uint32 what)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StartObserving(Handler, what);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StartWatchingAll(BHandler* Handler)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StartObserving(Handler, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatching(BHandler* Handler, uint32 what)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StopObserving(Handler, what);
 }
 //------------------------------------------------------------------------------
 status_t BHandler::StopWatchingAll(BHandler* Handler)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	return fObserverList->StopObserving(Handler, B_OBSERVER_OBSERVE_ALL);
 }
 //------------------------------------------------------------------------------
@@ -644,6 +692,7 @@ status_t BHandler::Perform(perform_code d, void* arg)
 //------------------------------------------------------------------------------
 void BHandler::SendNotices(uint32 what, const BMessage* msg)
 {
+	fObserverList ? fObserverList : fObserverList = new _ObserverList;
 	fObserverList->SendNotices(what, msg);
 }
 //------------------------------------------------------------------------------
@@ -796,6 +845,10 @@ status_t _ObserverList::StopObserving(BHandler* Handler, unsigned long what)
 		if (iter != Handlers.end())
 		{
 			Handlers.erase(iter);
+			if (Handlers.empty())
+			{
+				fHandlerMap.erase(what);
+			}
 			return B_OK;
 		}
 	}
@@ -817,6 +870,10 @@ status_t _ObserverList::StopObserving(const BMessenger& Messenger,
 	if (iter != Messengers.end())
 	{
 		Messengers.erase(iter);
+		if (Messengers.empty())
+		{
+			fMessengerMap.erase(what);
+		}
 		return B_OK;
 	}
 
