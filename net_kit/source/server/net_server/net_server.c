@@ -14,12 +14,14 @@
 #include <image.h>
 #include <stdlib.h>
 
-#include "include/if.h"	/* for ifnet definition */
+#include "if.h"	/* for ifnet definition */
 #include "net_server/net_server.h"
 #include "protocols.h"
 #include "net_module.h"
 #include "net_timer.h"
 #include "net_misc.h"
+#include "nhash.h"
+#include "sys/socket.h"
 
 /* horrible hack to get this building... */
 #include "ethernet/ethernet.h"
@@ -36,6 +38,15 @@ static int ndevs = 0;
 #define MAX_NETMODULES	20
 
 
+struct local_address {
+        struct local_address *next;
+        struct sockaddr *addr;
+        ifnet *ifn;
+};
+
+net_hash *localhash;
+struct local_address *local_addrs;
+
 static int32 rx_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
@@ -46,7 +57,8 @@ static int32 rx_thread(void *data)
 
 	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
         while ((status = read(i->dev, buffer, len)) >= B_OK && count < 10) {
-                struct mbuf *mb = m_devget(buffer, len, 0, NULL);
+                struct mbuf *mb = m_devget(buffer, len, 0, i, NULL);
+printf("rx: mbuf %p\n", mb);
                 global_modules[prot_table[NS_ETHER]].mod->input(mb);
 		count++;
 		len = 2048;
@@ -68,7 +80,11 @@ static int32 tx_thread(void *data)
 		acquire_sem(i->txq->pop);
 		IFQ_DEQUEUE(i->txq, m);
 
-		len = m->m_len;
+		if (m->m_flags & M_PKTHDR) 
+			len = m->m_pkthdr.len;
+		else 
+			len = m->m_len;
+
 		if (len > 2048) {
 			printf("%s%d: tx_thread: packet was too big!\n", i->name, i->unit);
 			m_freem(m);
@@ -76,9 +92,14 @@ static int32 tx_thread(void *data)
 		}
 
 		m_copydata(m, 0, len, buffer);
+
+printf("TXMIT: %ld bytes to dev %d\n",len ,i->dev);
+printf("tx: freeing mbuf %p\n", m);
+		m_freem(m);
+
 		status = write(i->dev, buffer, len);
-		if (status != B_OK) {
-			printf("Error sending data!\n");
+		if (status < B_OK) {
+			printf("Error sending data [%s]!\n", strerror(status));
 		}
 	}
 	return 0;
@@ -153,7 +174,7 @@ static void list_devices(void)
 	
 	while (d) {
 		printf("%2d  %s%d       %4d ", i++, d->name, d->unit, d->mtu);
-		print_ether_addr((ether_addr*)&d->link_addr->addr);
+		print_ether_addr((ether_addr*)&d->link_addr->sa_data);
 		if (d->flags & IFF_UP)
 			printf(" UP");
 		if (d->flags & IFF_RUNNING)
@@ -170,13 +191,13 @@ static void list_devices(void)
 			printf("\t\t Addresses:\n");
 			while (ifa) {
 				printf("\t\t\t");
-				if (ifa->if_addr.type == AF_LINK) {
+				if (ifa->if_addr.sa_family == AF_LINK) {
 					printf("Link Address: ");
-			                print_ether_addr((ether_addr*)&ifa->if_addr.addr);
+			                print_ether_addr((ether_addr*)&ifa->if_addr.sa_data);
 				}
-				if (ifa->if_addr.type == AF_INET) {
+				if (ifa->if_addr.sa_family == AF_INET) {
 					printf("IPv4: ");
-					print_ipv4_addr((ipv4_addr*)&ifa->if_addr.addr);
+					print_ipv4_addr((ipv4_addr*)&ifa->if_addr.sa_data);
 				}
 				printf("\n");
 				ifa = ifa->next;
@@ -274,12 +295,39 @@ static void list_modules(void)
 	printf("\n");
 }
 
+void insert_local_address(struct sockaddr *sa, ifnet *dev)
+{
+        if (!nhash_get(localhash, sa->sa_data, sa->sa_len)) {
+                struct local_address *la = malloc(sizeof(struct local_address));
+                printf("inserting local address\n");
+                nhash_set(localhash, sa->sa_data, sa->sa_len, la);
+                la->addr = sa;
+                la->ifn = dev;
+                if (local_addrs)
+                        la->next = local_addrs;
+                local_addrs = la;
+        }
+}
+
+ifnet *interface_for_address(struct sockaddr *sa)
+{
+        struct local_address *la;
+
+        la = (struct local_address*)nhash_get(localhash, sa->sa_data, sa->sa_len);
+        if (!la)
+                return NULL;
+        return la->ifn;
+}
+
+
 int main(int argc, char **argv)
 {
 	status_t status;
 	int i;
+	struct sockaddr sa, sb;
 
 	mbinit();
+	localhash = nhash_make();
 
 	printf( "Net Server Test App!\n"
 		"====================\n\n");
@@ -288,6 +336,7 @@ int main(int argc, char **argv)
 		printf("timer service won't work!\n");
 
 	devices = NULL;
+	local_addrs = NULL;
 
 	global_modules = malloc(sizeof(loaded_net_module) * MAX_NETMODULES);
 	if (!global_modules) {
@@ -304,6 +353,27 @@ printf("\n");
 
 	list_devices();
 	list_modules();
+
+	sa.sa_family = AF_INET;
+	sa.sa_len = 4;
+	sa.sa_data[0] = 192;
+	sa.sa_data[1] = 168;
+	sa.sa_data[2] = 0;
+	sa.sa_data[3] = 1;
+
+        sb.sa_family = AF_INET;
+        sb.sa_len = 4;
+        sb.sa_data[0] = 192;
+        sb.sa_data[1] = 168;
+        sb.sa_data[2] = 0;
+        sb.sa_data[3] = 133;
+
+	/* dirst hack to get us sending a request! */
+	global_modules[prot_table[NS_ARP]].mod->lookup(&sb, &sa);
+snooze(10000);
+        global_modules[prot_table[NS_ARP]].mod->lookup(&sb, &sa);
+snooze(10000);
+        global_modules[prot_table[NS_ARP]].mod->lookup(&sb, &sa);
 
 printf("\n");
 
