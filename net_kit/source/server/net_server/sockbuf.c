@@ -106,3 +106,157 @@ void sbrelease(struct sockbuf *sb)
         sb->sb_hiwat = sb->sb_mbmax = 0;
 }
 
+void sbappend(struct sockbuf *sb, struct mbuf *m)
+{
+        struct mbuf *n;
+
+        if (!m)
+                return;
+        if ((n = sb->sb_mb) != NULL) {
+                while (n->m_nextpkt)
+                        n = n->m_nextpkt;
+                do {
+                        if (n->m_flags & M_EOR) {
+                                sbappendrecord(sb, m); /* XXXXXX!!!! */
+                                return;
+                        }
+                } while (n->m_next && (n = n->m_next));
+        }
+        sbcompress(sb, m, n);
+}
+
+void sbappendrecord(struct sockbuf *sb, struct mbuf *m0)
+{
+        struct mbuf *m;
+
+        if (!m0)
+                return;
+        if ((m = sb->sb_mb) != NULL)
+                while (m->m_nextpkt)
+                        m = m->m_nextpkt;
+        /*
+         * Put the first mbuf on the queue.
+         * Note this permits zero length records.
+         */
+        sballoc(sb, m0);
+        if (m)
+                m->m_nextpkt = m0;
+        else
+                sb->sb_mb = m0;
+        m = m0->m_next;
+        m0->m_next = 0;
+        if (m && (m0->m_flags & M_EOR)) {
+                m0->m_flags &= ~M_EOR;
+                m->m_flags |= M_EOR;
+        }
+        sbcompress(sb, m, m0);
+}
+
+int sbappendaddr(struct sockbuf *sb, struct sockaddr *asa, 
+		 struct mbuf *m0, struct mbuf *control)
+{
+        struct mbuf *m, *n;
+        int space = asa->sa_len;
+
+        if (m0 && (m0->m_flags & M_PKTHDR) == 0) {
+		printf("sbappendaddr\n");
+		exit(-1);
+	}
+
+        if (m0)
+                space += m0->m_pkthdr.len;
+        for (n = control; n; n = n->m_next) {
+                space += n->m_len;
+                if (n->m_next == 0)     /* keep pointer to last control buf */
+                        break;
+        }
+        if (space > sbspace(sb))
+                return (0);
+        if (asa->sa_len > MLEN)
+                return (0);
+        MGET(m, MT_SONAME);
+        if (m == 0)
+                return (0);
+        m->m_len = asa->sa_len;
+        memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
+        if (n)
+                n->m_next = m0;         /* concatenate data to control */
+        else
+                control = m0;
+        m->m_next = control;
+        for (n = m; n; n = n->m_next)
+                sballoc(sb, n);
+        if ((n = sb->sb_mb) != NULL) {
+                while (n->m_nextpkt)
+                        n = n->m_nextpkt;
+                n->m_nextpkt = m;
+        } else
+                sb->sb_mb = m;
+        return (1);
+}
+
+void sbcompress(struct sockbuf *sb, struct mbuf *m, struct mbuf *n)
+{
+        int eor = 0;
+        struct mbuf *o;
+
+        while (m) {
+                eor |= m->m_flags & M_EOR;
+                if (m->m_len == 0 &&
+                    (eor == 0 ||
+                    (((o = m->m_next) || (o = n)) &&
+                    o->m_type == m->m_type))) {
+                        m = m_free(m);
+                        continue;
+                }
+                if (n && (n->m_flags & (M_EXT | M_EOR)) == 0 &&
+                    (n->m_data + n->m_len + m->m_len) < &n->m_dat[MLEN] &&
+                    n->m_type == m->m_type) {
+                        memcpy(mtod(n, caddr_t) + n->m_len, mtod(m, caddr_t),
+                            (unsigned)m->m_len);
+                        n->m_len += m->m_len;
+                        sb->sb_cc += m->m_len;
+                        m = m_free(m);
+                        continue;
+                }
+                if (n)
+                        n->m_next = m;
+                else
+                        sb->sb_mb = m;
+                sballoc(sb, m);
+                n = m;
+                m->m_flags &= ~M_EOR;
+                m = m->m_next;
+                n->m_next = 0;
+        }
+        if (eor) {
+                if (n)
+                        n->m_flags |= eor;
+                else
+                        printf("semi-panic: sbcompress\n");
+        }
+}
+
+void sbdroprecord(struct sockbuf *sb)
+{
+        struct mbuf *m, *mn;
+
+        m = sb->sb_mb;
+        if (m) {
+                sb->sb_mb = m->m_nextpkt;
+                do {
+                        sbfree(sb, m);
+                        MFREE(m, mn);
+                } while ((m = mn) != NULL);
+        }
+}
+
+int sbwait(struct sockbuf *sb)
+{
+	status_t rv;
+	sb->sb_flags |= SB_WAIT;
+	if (sb->sb_pop > 0)
+		rv = acquire_sem(sb->sb_pop);
+	return (int)rv;
+}
+
