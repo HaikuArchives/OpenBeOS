@@ -7,7 +7,7 @@
 
 const int32 kBlockSize = 1024;
 
-int32 gNumber = 10000;
+int32 gNumber = 100000;
 BList gList;
 BlockArray gArray(kBlockSize);
 
