@@ -75,12 +75,17 @@ public:
 	float PenSize(void);
 	void SetCursor(ServerCursor *cursor);
 */
+	void SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	void SetHighColor(rgb_color col);
+	void SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255);
+	void SetLowColor(rgb_color col);
+
 	void SetPixel(int x, int y, uint8 *pattern);
 
 	void SetPixel32(int x, int y, rgb_color col);
 	void SetPixel16(int x, int y, uint16 col);
 	void SetPixel8(int x, int y, uint8 col);
-	void DrawServerBitmap32(ServerBitmap *sourcebmp,BPoint pt, int32 blendmode);
+	void SetPixelPattern(int x, int y, uint8 *pattern, uint8 patternindex);
 
 //	void ShowCursor(void);
 
@@ -98,6 +103,7 @@ public:
 	void StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col);
 
 protected:
+	void Line32(BPoint pt, BPoint pt2, uint8 *pattern);
 	FrameBuffer *fbuffer;
 	int hide_cursor;
 	ServerBitmap *cursor;

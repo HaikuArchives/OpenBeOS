@@ -313,3 +313,15 @@ void DisplayDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BR
 void DisplayDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, rgb_color col)
 {
 }
+
+void DisplayDriver::Line32(BPoint pt, BPoint pt2, uint8 *pattern)
+{
+}
+
+void DisplayDriver::Line16(BPoint pt, BPoint pt2, uint8 *pattern)
+{
+}
+
+void DisplayDriver::Line8(BPoint pt, BPoint pt2, uint8 *pattern)
+{
+}

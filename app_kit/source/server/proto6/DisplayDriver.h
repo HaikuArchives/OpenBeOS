@@ -139,6 +139,10 @@ public:
 	graphics_card_info *ginfo;
 
 protected:
+	virtual void Line32(BPoint pt, BPoint pt2, uint8 *pattern);
+	virtual void Line16(BPoint pt, BPoint pt2, uint8 *pattern);
+	virtual void Line8(BPoint pt, BPoint pt2, uint8 *pattern);
+
 	bool is_initialized, cursor_visible, show_on_move;
 	ServerCursor *current_cursor;
 	BLocker *locker;

@@ -33,6 +33,7 @@
 #include "ServerCursor.h"
 #include "ServerProtocol.h"
 #include "ServerBitmap.h"
+#include "SystemPalette.h"
 #include "ColorUtils.h"
 #include "PortLink.h"
 #include "DebugTools.h"
@@ -229,8 +230,7 @@ printf("ScreenDriver::DrawBitmap(*, (%f,%f,%f,%f),(%f,%f,%f,%f) )\n",
 			case 32:
 			case 24:
 			{
-				printf("DrawBitmap: 32/24-bit\n");
-				DrawServerBitmap32(bitmap,dest.LeftTop(),drawmode);
+				printf("DrawBitmap: 32/24-bit unimplemented\n");
 				break;
 			}
 			case 16:
@@ -329,6 +329,54 @@ rect.PrintToStream();
 		StrokeLine(third,second,col);
 	}
 	locker->Unlock();
+}
+
+void ScreenDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
+{
+	rgb_color col={r,g,b,a};
+	SetHighColor(col);
+}
+
+void ScreenDriver::SetHighColor(rgb_color col)
+{
+	highcol=col;
+	
+	switch(fbuffer->gcinfo.bits_per_pixel)
+	{
+		case 16:
+		case 15:
+			high16=FindClosestColor16(highcol);
+			break;
+		case 8:
+			high8=FindClosestColor(system_palette,highcol);
+			break;
+		default:
+			break;
+	}
+}
+
+void ScreenDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255)
+{
+	rgb_color col={r,g,b,a};
+	SetLowColor(col);
+}
+
+void ScreenDriver::SetLowColor(rgb_color col)
+{
+	lowcol=col;
+	
+	switch(fbuffer->gcinfo.bits_per_pixel)
+	{
+		case 16:
+		case 15:
+			low16=FindClosestColor16(highcol);
+			break;
+		case 8:
+			low8=FindClosestColor(system_palette,highcol);
+			break;
+		default:
+			break;
+	}
 }
 
 void ScreenDriver::SetPixel(int x, int y, uint8 *pattern)
@@ -541,6 +589,11 @@ printf("ScreenDriver::StrokeRect( (%f,%f,%f,%f), %llx)\n",rect.left,rect.top,
 		MovePenTo(BPoint(rect.right,rect.top)); StrokeLine(BPoint(rect.right,rect.bottom),pattern);
 		MovePenTo(BPoint(rect.right,rect.bottom)); StrokeLine(BPoint(rect.left,rect.bottom),pattern);
 		MovePenTo(BPoint(rect.left,rect.bottom)); StrokeLine(BPoint(rect.left,rect.top),pattern);
+
+//		Line32(rect.LeftTop(),BPoint(rect.right,rect.top),pattern);
+//		Line32(BPoint(rect.right,rect.top),BPoint(rect.right,rect.bottom),pattern);
+//		Line32(BPoint(rect.right,rect.bottom),BPoint(rect.left,rect.bottom),pattern);
+//		Line32(BPoint(rect.left,rect.bottom),BPoint(rect.left,rect.top),pattern);
 	
 		penpos=oldpos;
 	}
@@ -610,6 +663,116 @@ rect.PrintToStream();
 		StrokeLine(third,second,col);
 	}
 	locker->Unlock();
+}
+
+void ScreenDriver::Line32(BPoint pt, BPoint pt2, uint8 *pattern)
+{
+#ifdef DEBUG_DRIVER
+printf("ScreenDriver::Line32( (%f,%f),(%f,%f), 0x%llx\n",pt.x,pt.y,
+	pt2.x,pt2.y,*((int64*)pattern));
+#endif
+	// Courtesy YNOP's SecondDriver with minor changes by DW
+	int oct=0;
+	int xoff=(int32)pt.x;
+	int yoff=(int32)pt.y; 
+	int32 x2=(int32)pt2.x-xoff;
+	int32 y2=(int32)pt2.y-yoff; 
+	int32 x1=0;
+	int32 y1=0;
+	if(y2<0){ y2=-y2; oct+=4; }//bit2=1
+	if(x2<0){ x2=-x2; oct+=2;}//bit1=1
+	if(x2<y2){ int t=x2; x2=y2; y2=t; oct+=1;}//bit0=1
+	int x=x1,
+		y=y1,
+		sum=x2-x1,
+		Dx=2*(x2-x1),
+		Dy=2*(y2-y1);
+	uint8 patindex=0;
+	
+	for(int i=0; i <= x2-x1; i++)
+	{
+		switch(oct)
+		{
+			case 0:SetPixelPattern(( x)+xoff,( y)+yoff,pattern,patindex);break;
+			case 1:SetPixelPattern(( y)+xoff,( x)+yoff,pattern,patindex);break;
+			case 3:SetPixelPattern((-y)+xoff,( x)+yoff,pattern,patindex);break;
+			case 2:SetPixelPattern((-x)+xoff,( y)+yoff,pattern,patindex);break;
+			case 6:SetPixelPattern((-x)+xoff,(-y)+yoff,pattern,patindex);break;
+			case 7:SetPixelPattern((-y)+xoff,(-x)+yoff,pattern,patindex);break;
+			case 5:SetPixelPattern(( y)+xoff,(-x)+yoff,pattern,patindex);break;
+			case 4:SetPixelPattern(( x)+xoff,(-y)+yoff,pattern,patindex);break;
+		}
+		x++;
+		sum-=Dy;
+		if(sum < 0)
+		{
+			y++;
+			sum += Dx;
+		}
+		patindex++;
+		if(patindex>32)
+			patindex=0;
+	}
+}
+
+void ScreenDriver::SetPixelPattern(int x, int y, uint8 *pattern, uint8 patternindex)
+{
+	// This function is designed to add pattern support to this thing. Should be
+	// inlined later to add speed lost in the multiple function calls.
+#ifdef DEBUG_DRIVER
+printf("ScreenDriver::SetPixelPattern(%u,%u,%llx,%u)\n",x,y,*((int64*)pattern),patternindex);
+#endif
+	if(patternindex>32)
+		return;
+
+	if(fbuffer->IsConnected())
+	{
+		uint64 *p64=(uint64*)pattern;
+
+		// check for transparency in mask. If transparent, we can quit here
+		
+		bool transparent_bit=
+			( *p64 & ~((uint64)2 << (32-patternindex)))?true:false;
+printf("SetPixelPattern: pattern=0x%llx\n",*p64);
+printf("SetPixelPattern: bit=0x%llx\n",((uint64)2 << (32-patternindex)));
+printf("SetPixelPattern: bit mask=0x%llx\n",~((uint64)2 << (32-patternindex)));
+printf("SetPixelPattern: bit value=%s\n",transparent_bit?"true":"false");
+
+//		bool highcolor_bit=
+//			( *p64 & ~((uint64)2 << (64-patternindex)))?true:false;
+			
+		switch(fbuffer->gcinfo.bits_per_pixel)
+		{	
+			case 32:
+			case 24:
+			{
+				
+				break;
+			}
+			case 16:
+			case 15:
+			{
+				break;
+			}
+			case 8:
+			{
+				break;
+			}
+			default:
+			{
+#ifdef DEBUG_DRIVER
+printf("SetPixelPattern: unknown bit depth %u\n",fbuffer->gcinfo.bits_per_pixel);
+#endif
+				break;
+			}
+		}
+	}
+	else
+	{
+#ifdef DEBUG_DRIVER
+printf("SetPixelPattern: driver is disconnected\n");
+#endif
+	}
 }
 
 void Clear_32Bit(void *buffer, int width, int height, rgb_color col)
@@ -739,170 +902,4 @@ printf("HLine(%u,%u,length %u,%u)\n",x,y,length,col);
 	bytes=(uint32(x+length)>bpr)?length-((x+length)-bpr):length;
 
 	memset(pcolor,col,bytes);
-}
-
-void ScreenDriver::DrawServerBitmap32(ServerBitmap *sourcebmp,BPoint pt, int32 blendmode)
-{
-	if(!fbuffer->IsConnected())
-		return;
-	BRect sourcerect=sourcebmp->Bounds(),
-		destbounds(0,0,(fbuffer->gcinfo.width/fbuffer->gcinfo.bytes_per_row)-1,
-			(fbuffer->gcinfo.height/fbuffer->gcinfo.bytes_per_row)-1),
-		destrect=sourcerect.OffsetByCopy(pt);
-	
-	int16 	red,green,blue,alpha,
-			sred,sgreen,sblue,salpha,
-			tempval=0,trans;
-	float tfrac;
-
-	// data vars for brush and for bitmap
-	uint8 *src_data=sourcebmp->Buffer(),
-			*dest_data=(uint8*)fbuffer->gcinfo.frame_buffer,
-			*src_pos,*dest_pos;
-	int8 	*src_pos_signed,*dest_pos_signed;
-	uint32 	src_rowsize=sourcebmp->BytesPerRow(),
-			dest_rowsize=fbuffer->gcinfo.bytes_per_row;
-
-	uint32 rows,columns,
-			lclip,rclip,tclip,bclip;	// integer vars for clipping rectangle
-
-	// Clip source and dest rectangles to respective bitmaps
-	if(!(sourcebmp->Bounds().Contains(sourcerect)))
-	{
-		sourcerect.LeftTop().ConstrainTo(sourcebmp->Bounds());
-		sourcerect.RightBottom().ConstrainTo(sourcebmp->Bounds());
-	}
-	if(!(destbounds.Contains(destrect)))
-	{
-		destrect.LeftTop().ConstrainTo(destbounds);
-		destrect.RightBottom().ConstrainTo(destbounds);
-	}
-	
-	// Clip source to dest rectangle
-	if(!(destbounds.Contains(sourcerect)))
-	{
-		sourcerect.LeftTop().ConstrainTo(destbounds);
-		sourcerect.RightBottom().ConstrainTo(destbounds);
-	}
-
-	// Assign source bitmap clipping rectangle proper values
-	lclip=(int32)sourcerect.left;
-	tclip=(int32)sourcerect.top;
-	rclip=(int32)sourcerect.right;
-	bclip=(int32)sourcerect.bottom;
-
-	// Jump to area in question in image
-	src_data += int32((sourcerect.top*src_rowsize) + (sourcerect.left *4));
-	dest_data += int32((destrect.top*dest_rowsize) + (destrect.left *4));
-
-	for(rows=tclip;rows<=bclip;rows++)
-	{	
-		dest_pos=(uint8*)(dest_data+(dest_rowsize * (rows-tclip)));
-		src_pos=(uint8*)(src_data+(src_rowsize * (rows-tclip)));
-		dest_pos_signed=(int8 *)dest_pos;
-		src_pos_signed=(int8 *)src_pos;
-		for(columns=lclip;columns<=rclip;columns++)
-		{
-			sred=src_pos[2];
-			sgreen=src_pos[1];
-			sblue=src_pos[0];
-			salpha=src_pos[3];
-
-			if(salpha==0)
-			{
-				dest_pos+=4;
-				src_pos+=4;
-				continue;
-			}
-
-			switch(blendmode)
-			{
-				case DRAW_MAX:
-				{	
-					red=MAX(dest_pos[2],sred);
-					green=MAX(dest_pos[1],sgreen);
-					blue=MAX(dest_pos[0],sblue);
-					break;
-				}
-				case DRAW_MIN:
-				{	
-					red=MIN(dest_pos[2],sred);
-					green=MIN(dest_pos[1],sgreen);
-					blue=MIN(dest_pos[0],sblue);
-					break;
-				}
-				case DRAW_BLEND:
-				{	
-					red=(sred+dest_pos[2])/2;
-					green=(sgreen|dest_pos[1])/2;
-					blue=(sblue|dest_pos[0]);
-					break;
-				}
-				case DRAW_ADD:
-				{	
-					red=dest_pos[2]+sred;
-					green=dest_pos[1]+sgreen;
-					blue=dest_pos[0]+sblue;
-					if(red>255) red=255;
-					if(green>255) green=255;
-					if(blue>255) blue=255;
-					break;
-				}
-				case DRAW_SUBTRACT:
-				{	
-					red=dest_pos[2]-sred;
-					green=dest_pos[1]-sgreen;
-					blue=dest_pos[0]-sblue;
-					if(red<0) red=0;
-					if(green<0) green=0;
-					if(blue<0) blue=0;
-					break;
-				}
-				case DRAW_INVERT:
-				{
-					red=dest_pos[2]^255;
-					green=dest_pos[1]^255;
-					blue=dest_pos[0]^255;
-					break;
-				}
-				default:
-				{
-					blue=sblue;
-					green=sgreen;
-					red=sred;
-				}
-			}
-			
-			trans=salpha;
-			tfrac=float(salpha)/255.0;
-
-			tempval+=(blue>dest_pos[0])?int16(float(blue) * tfrac):int16(float(blue) * tfrac * -1);
-			if(tempval>255)
-				tempval=255;
-			dest_pos[0] = blue;
-
-			tempval+=(green>dest_pos[1])?int16(float(green) * tfrac):int16(float(green) * tfrac * -1);
-			if(tempval>255)
-				tempval=255;
-			dest_pos[1] = green;
-
-			tempval+=(red>dest_pos[2])?int16(float(red) * tfrac):int16(float(red) * tfrac * -1);
-			if(tempval>255)
-				tempval=255;
-			dest_pos[2] = red;
-
-			alpha=dest_pos[3]-salpha;
-			alpha=dest_pos_signed[3]-salpha;
-			alpha=dest_pos[3]+int16(float(dest_pos[3])*tfrac);
-			tempval=dest_pos[3] + int16(float(alpha) * tfrac);
-			if(tempval>255)
-				tempval=255;
-			if(blendmode==DRAW_COPY)
-				tempval=salpha;
-			dest_pos[3]=tempval;
-
-			dest_pos+=4;
-			src_pos+=4;
-		}	// end for columns
-	}	// end for rows
 }
