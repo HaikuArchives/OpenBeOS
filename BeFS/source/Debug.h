@@ -16,6 +16,9 @@
 //	PRINT - is for general messages that very unlikely should appear in a release build
 //	FATAL - this is for fatal messages, when something has really gone wrong
 //	INFORM - general information, as disk size, etc.
+//	REPORT_ERROR(status_t) - prints out error information
+//	RETURN_ERROR(status_t) - calls REPORT_ERROR() and return the value
+//	D() - the contents of D() are only included if DEBUG is defined
 
 #ifdef DEBUG
 	#define PRINT(x) { __out("bfs: "); __out x; }
@@ -24,9 +27,9 @@
 	#define FATAL(x) { __out("bfs: "); __out x; }
 	#define INFORM(x) { __out("bfs: "); __out x; }
 //	#define FUNCTION() __out("bfs: %s()\n",__FUNCTION__);
-	#define FUNCTION_START(x) { __out("bfs: %s() ",__FUNCTION__); __out x; }
+//	#define FUNCTION_START(x) { __out("bfs: %s() ",__FUNCTION__); __out x; }
 	#define FUNCTION() ;
-//	#define FUNCTION_START(x) ;
+	#define FUNCTION_START(x) ;
 	#define D(x) {x};
 #else
 	#define PRINT(x) ;

@@ -31,6 +31,11 @@
 void 
 CachedNode::Unset()
 {
+	if (fTree == NULL || fTree->fStream == NULL) {
+		REPORT_ERROR(B_BAD_VALUE);
+		return;
+	}
+
 	if (fBlock == NULL)
 		return;
 	
@@ -50,6 +55,11 @@ CachedNode::Unset()
 bplustree_node *
 CachedNode::SetTo(off_t offset,bool check)
 {
+	if (fTree == NULL || fTree->fStream == NULL) {
+		REPORT_ERROR(B_BAD_VALUE);
+		return NULL;
+	}
+
 	Unset();
 
 	// You can only ask for nodes at valid positions - the b+tree
@@ -86,7 +96,8 @@ CachedNode::SetTo(off_t offset,bool check)
 					return NULL;
 				}
 			}
-		}
+		} else
+			REPORT_ERROR(B_IO_ERROR);
 	}
 	return fNode;
 }
