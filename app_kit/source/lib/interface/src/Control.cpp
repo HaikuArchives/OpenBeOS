@@ -185,7 +185,7 @@ void BControl::AttachedToWindow()
 		SetViewColor(Parent()->ViewColor());
 
 	if ( Target() == NULL)
-		BInvoker::SetTarget(BMessenger(NULL, Window()));
+		BInvoker::SetTarget(BMessenger(Window(), NULL));
 
 	BView::AttachedToWindow();
 }
@@ -279,7 +279,7 @@ void BControl::MakeFocus(bool focused)
 
 	fFocusChanging = true;
 	Draw(Bounds());
-	Sync();
+	Flush();
 	fFocusChanging = false;
 }
 //------------------------------------------------------------------------------
@@ -388,7 +388,7 @@ void BControl::SetEnabled(bool enabled)
 	if (fEnabled)
 		BView::SetFlags(Flags() | B_NAVIGABLE);
 	else
-		BView::SetFlags(Flags() & (0xffffffff - B_NAVIGABLE));
+		BView::SetFlags(Flags() & ~B_NAVIGABLE);
 
 	Invalidate();
 }
@@ -400,8 +400,8 @@ bool BControl::IsEnabled() const
 //------------------------------------------------------------------------------
 void BControl::GetPreferredSize(float *width, float *height)
 {
-	*width = 100.0f;
-	*height = 100.0f;
+	*width = 1.0f;
+	*height = 1.0f;
 }
 //------------------------------------------------------------------------------
 void BControl::ResizeToPreferred()
@@ -529,6 +529,7 @@ void BControl::InitData(BMessage *data)
 {
 
 }
+//------------------------------------------------------------------------------
 
 /*
  * $Log $

@@ -422,11 +422,8 @@ void BButton::SetValue(int32 value)
 {
 	if (BControl::Value() == value)
 		return;
-
-	if (value == B_CONTROL_OFF)
-		BControl::SetValue(B_CONTROL_OFF);
-	else
-		BControl::SetValue(B_CONTROL_ON);
+	
+	BControl::SetValue(value);
 }
 //------------------------------------------------------------------------------
 void BButton::GetPreferredSize (float *width, float *height)
