@@ -72,6 +72,7 @@ _EXPORT struct core_module_info core_info = {
 	stop_stack,
 	add_domain,
 	add_protocol,
+	remove_protocol,
 	add_protosw,
 	start_rx_thread,
 	start_tx_thread,
@@ -177,7 +178,8 @@ static int32 if_thread(void *data)
 
 	while ((status = read(i->devid, buffer, len)) >= B_OK) {
 		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
-
+		if (!(i->if_flags & IFF_UP))
+			break;
 		if (mb) {
 			if (i->input)
 				i->input(mb);
@@ -201,7 +203,10 @@ static int32 rx_thread(void *data)
 
 	while (1) {
 		acquire_sem_etc(i->rxq->pop, 1, B_CAN_INTERRUPT|B_DO_NOT_RESCHEDULE, 0);
+		if (!(i->if_flags & IFF_UP))
+			break;
 		IFQ_DEQUEUE(i->rxq, m);
+
 		if (i->input)
 			i->input(m);
 		else
@@ -225,6 +230,9 @@ static int32 tx_thread(void *data)
 
 	while (1) {
 		acquire_sem_etc(i->txq->pop,1,B_CAN_INTERRUPT|B_DO_NOT_RESCHEDULE, 0);
+		if (!(i->if_flags & IFF_UP))
+			break;
+
 		IFQ_DEQUEUE(i->txq, m);
 
 		if (!m)
@@ -256,6 +264,7 @@ static int32 tx_thread(void *data)
 		}
 
 	}
+	printf("%s: terminating tx_thread\n", i->if_name);
 	return 0;
 }
 	
@@ -288,7 +297,8 @@ void start_rx_thread(struct ifnet *dev)
 	sprintf(name, "%s_rx_thread", dev->if_name);
 
 	if (dev->if_type != IFT_ETHER) {
-		dev->rxq = start_ifq();
+		if (!dev->rxq)
+			dev->rxq = start_ifq();
 		if (!dev->rxq)
 			return;
 		dev->rx_thread = spawn_thread(rx_thread, name, 
@@ -312,7 +322,8 @@ void start_tx_thread(struct ifnet *dev)
 {
 	int32 priority = B_NORMAL_PRIORITY;
 	char name[B_OS_NAME_LENGTH]; /* 32 */
-	dev->txq = start_ifq();
+	if (!dev->txq)
+		dev->txq = start_ifq();
 	if (!dev->txq)
 		return;
 
@@ -394,9 +405,11 @@ static void close_devices(void)
 {
 	struct ifnet *d = devices;
 	while (d) {
+		d->if_flags &= ~IFF_UP;
 		kill_thread(d->rx_thread);
 		kill_thread(d->tx_thread);
 		close(d->devid);
+		d->if_flags &= ~IFF_RUNNING;		
 		d = d->if_next;
 	}
 }
@@ -499,6 +512,37 @@ void add_protocol(struct protosw *pr, int fam)
 	}
 
 	return;
+}
+
+void remove_protocol(struct protosw *pr)
+{
+	struct protosw *psw = protocols, *opr = NULL;
+	struct domain *dm;
+	
+	for (;psw;psw = psw->pr_next) {
+		if (psw == pr) {
+			if (opr) {
+				opr->pr_next = psw->pr_next;
+			} else {
+				/* first entry */
+				protocols = psw->pr_next;
+			}
+			break;
+		}
+		opr = psw;
+	}
+	dm = pr->pr_domain;
+	opr = NULL;
+	for (psw = dm->dom_protosw; psw; psw = psw->dom_next) {
+		if (psw == pr) {
+			if (opr) 
+				opr->dom_next = psw->dom_next;
+			else
+				dm->dom_protosw = psw->dom_next;
+			break;
+		}
+		opr = psw;
+	}
 }
 
 static void add_protosw(struct protosw *prt[], int layer)
