@@ -12,7 +12,6 @@
 #include <SupportDefs.h>
 #include <StorageDefs.h>
 
-#include <Message.h>
 #include <Messenger.h>
 #include <Mime.h>
 #include <File.h>
