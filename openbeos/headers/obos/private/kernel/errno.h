@@ -23,12 +23,14 @@ extern int errno;
 
 /*
  * These need to match system errors... will do some other day,
- * right now i'm just happy getting stdio to compile
+ * right now I'm just happy getting stdio to compile
  */
-#define ENOMEM	0xF0000000
-#define EBADF	0xF0000001
-#define EINVAL	0xF0000002
-
+/* XXX - Replace with Be values - david has a file ready for this :) */
+#define ENOMEM	    0xF0000000
+#define EBADF	    0xF0000001
+#define EINVAL	    0xF0000002
+#define EPERM       0xF0000003
+#define EOPNOTSUPP  0xF0000004
 
 #ifdef __cplusplus
 } /* "C" */
