@@ -25,7 +25,7 @@ TYPE= SHARED
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
 SRCS= Driver.cpp PrinterDriver.cpp PageSetupWindow.cpp JobSetupWindow.cpp \
-	  PrinterSetupWindow.cpp StatusWindow.cpp \
+	  PrinterSetupWindow.cpp MarginView.cpp StatusWindow.cpp \
 	  PDFWriter.cpp 
 		
 #	specify the resource files to use
