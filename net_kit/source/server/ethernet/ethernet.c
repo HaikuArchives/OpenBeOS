@@ -453,8 +453,11 @@ bad:
 static struct llinfo_arp *arplookup(uint32 addr, int create, int proxy)
 {
 	struct rtentry *rt;
-	static struct sockaddr_inarp sin = {sizeof(sin), AF_INET};
+	static struct sockaddr_inarp sin;
 
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_len = sizeof(sin);
 	sin.sin_addr.s_addr = addr;
 	sin.sin_other = proxy ? SIN_PROXY : 0;
 	rt = rtalloc1((struct sockaddr*) &sin, create);
@@ -484,7 +487,7 @@ int arpresolve(struct arpcom *ac, struct rtentry *rt, struct mbuf *m,
 		ETHER_MAP_IP_MULTICAST(&SIN(dst)->sin_addr, desten);
 		return 1;
 	}
-	
+
 	if (rt) {
 		la = (struct llinfo_arp*) rt->rt_llinfo;
 	} else {
