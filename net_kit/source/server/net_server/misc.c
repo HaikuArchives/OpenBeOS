@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <strings.h>
 
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
+
 #include "net_misc.h"
 #include "sys/socket.h"
 

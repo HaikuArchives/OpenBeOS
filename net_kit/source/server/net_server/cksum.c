@@ -1,4 +1,9 @@
 #include <stdio.h>
+
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
+
 #include "mbuf.h"
 #include "net_misc.h"
 
