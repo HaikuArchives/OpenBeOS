@@ -88,6 +88,11 @@ static struct radix_mask *
 static int	rn_satsifies_leaf (char *trial, struct radix_node *leaf,
 				       int skip);
 
+struct radix_node *rn_head_search(void *arg_v) 
+{
+	return rn_search(arg_v, mask_rnhead->rnh_treetop);
+}
+
 /*
  * The data structure for the keys is a radix tree with one way
  * branching removed.  The index rn_bit at an internal node n represents a bit
