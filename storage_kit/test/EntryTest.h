@@ -36,6 +36,7 @@ public:
 //		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Miscellaneous Test", &EntryTest::MiscTest) );
 		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Existence Test", &EntryTest::ExistenceTest) );
 		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Rename Test", &EntryTest::RenameTest) );
+		suite->addTest( new CppUnit::TestCaller<EntryTest>("BEntry::Stat Test", &EntryTest::StatTest) );
 		
 		return suite;
 	}		
@@ -47,6 +48,9 @@ public:
 	static const char fourLink[] = "EntryTest.4Link";
 	static const char tripleLinkLeaf[] = "EntryTest.TripleLink";
 	char tripleLink[B_PATH_NAME_LENGTH+1];
+	static const char sparkleMotion[] = "/boot/I_am_beggining_to_doubt_your_dedication_to_Sparkle_Motion";
+	static const char someFile[] = "/boot/SomeFileNameThatWeReallyReallyLikeALot";
+
 
 	EntryTest() {
 		// Create our tripleLink filename, which is absolute (most of
@@ -336,9 +340,6 @@ public:
 		CPPUNIT_ASSERT( root.Rename("/", false) == B_FILE_EXISTS );
 		CPPUNIT_ASSERT( root.Rename("/", true) == B_NOT_ALLOWED );
 		
-		const char sparkleMotion[] = "/boot/I_am_beggining_to_doubt_your_dedication_to_Sparkle_Motion";
-		const char someFile[] = "/boot/SomeFileNameThatWeReallyReallyLikeALot";
-
 		// Verify abstract entries
 		RemoveFile(sparkleMotion);		// Make sure it doesn't exist
 		BEntry abstract(sparkleMotion);
@@ -375,6 +376,35 @@ public:
 		// Clean up
 		RemoveFile(sparkleMotion);	
 
+	}
+	
+	void StatTest() {
+		StorageKit::Stat stat;
+
+		// Unitialized Entry
+		BEntry null;
+		CPPUNIT_ASSERT( null.GetStat(&stat) == B_NO_INIT );
+		
+		// Abstract entry
+		RemoveFile(sparkleMotion);
+		BEntry sparkle(sparkleMotion);
+		CPPUNIT_ASSERT( sparkle.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( !sparkle.Exists() );
+		CPPUNIT_ASSERT( sparkle.GetStat(&stat) == B_ENTRY_NOT_FOUND );		
+	
+		// Concrete entry
+		BEntry boot("/boot");
+		CPPUNIT_ASSERT( boot.InitCheck() == B_OK );
+		CPPUNIT_ASSERT( boot.GetStat(&stat) == B_OK );
+
+		// Uncomment this test if you want to verify that GetStat() is actually
+		// returning the proper info. This bit isn't compatible with the R5
+		// Storage Kit, so it'll only link properly with our libstorage.
+/*		StorageKit::DirEntry *entry;
+		CPPUNIT_ASSERT( StorageKit::find_dir( boot.fDir, boot.fName, entry ) == B_OK );
+		CPPUNIT_ASSERT( entry->d_dev == stat.st_dev );
+		CPPUNIT_ASSERT( entry->d_ino == stat.st_ino );
+*/
 	}
 	
 	// This is a non-CPPUNIT test called by EntryTest.Private.cpp to test
