@@ -11,7 +11,6 @@
 #include <malloc.h>
 #include <time.h>
 
-#include "net_module.h"
 #include "protocols.h"
 #include "netinet/in_var.h"
 #include "sys/protosw.h"
@@ -24,15 +23,16 @@
 #include "sys/sockio.h"
 #include "net/route.h"
 
+#include "core_module.h"
+#include "net_module.h"
+#include "core_funcs.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_device.h"
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
 
 #define ETHERNET_MODULE_PATH	"network/interface/ethernet"
 
-static struct core_module_info *core = NULL;
 static timer arp_timer;
 
 /* forward prototypes */
@@ -41,6 +41,8 @@ int ether_dev_stop (ifnet *dev);
 #else	/* _KERNEL_MODE */
 #include "net_timer.h"
 #endif
+
+static struct core_module_info *core = NULL;
 
 struct protosw *proto[IPPROTO_MAX];
 static struct ether_device *ether_devices = NULL; 	/* list of ethernet devices */
@@ -852,8 +854,9 @@ int ether_dev_stop(ifnet *dev)
 
 #ifndef _KERNEL_MODE
 
-static int ether_init(void)
+static int ether_init(struct core_module_info *cp)
 {
+	core = cp;
 	find_devices();
 
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);

@@ -1,7 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=ethernet
 TGT=../modules/interface/$(TARGET)
-LOBJS=../_APP_
+LOBJS=../net_server/net_timer.o
 OBJS=ethernet.o
 
 CFLAGS += -D_NETWORK_STACK
@@ -25,7 +25,7 @@ installkernel:  kernel
 	@cp ethernet /boot/home/config/add-ons/kernel/network/interface/ethernet
 
 $(TARGET): $(OBJS)
-	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
