@@ -1,104 +1,83 @@
-#ifndef KEYBOARD_SETTINGS_H
-#include "KeyboardSettings.h"
-#endif
-#ifndef _APPLICATION_H
+/*
+ * KeyboardSettings.cpp
+ * Keyboard mccall@digitalparadise.co.uk
+ *
+ */
+ 
 #include <Application.h>
-#endif
-#ifndef KEYBOARD_MESSAGES_H
-#include "KeyboardMessages.h"
-#endif
-#ifndef _FILE_H
-#include <File.h>
-#endif
-#ifndef _PATH_H
-#include <Path.h>
-#endif
-#ifndef _FINDDIRECTORY_H
 #include <FindDirectory.h>
-#endif
+#include <File.h>
+#include <Path.h>
+#include <String.h>
+#include <stdio.h>
+
+#include "KeyboardSettings.h"
+#include "KeyboardMessages.h"
 
 const char KeyboardSettings::kKeyboardSettingsFile[] = "Keyboard_settings";
 
 KeyboardSettings::KeyboardSettings()
-{//KeyboardSettings::KeyboardSettings
-
+{
 	BPath path;
-	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path) == B_OK)
-	{
+	
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path) == B_OK) {
 		path.Append(kKeyboardSettingsFile);
 		BFile file(path.Path(), B_READ_ONLY);
 		if (file.InitCheck() == B_OK) {
 			// Now read in the data
-			if (file.Read(&fsettings, sizeof(kb_settings)) != sizeof(kb_settings)) {
-				fsettings.key_repeat_delay=200;
-        		fsettings.key_repeat_rate=250000;
-			}
-			if (file.Read(&fcorner, sizeof(BPoint)) != sizeof(BPoint)) {
-				fcorner.x=50;
-				fcorner.y=50;
-			}
-		}
-		// Probably the first time the program has been run so lets
-		// just use the defaults....
-		else {
-        		fsettings.key_repeat_delay=200;
-        		fsettings.key_repeat_rate=250000;
-				fcorner.x=50;
-				fcorner.y=50;
+			if (file.Read(&fSettings, sizeof(kb_settings)) != sizeof(kb_settings)) {
+				fSettings.key_repeat_delay=200;
+        		fSettings.key_repeat_rate=250000;
 			}
 
-			
+			if (file.Read(&fCorner, sizeof(BPoint)) != sizeof(BPoint)) {
+					fCorner.x=50;
+					fCorner.y=50;
+				};
+		}
+		else {
+			fCorner.x=50;
+			fCorner.y=50;
+			fSettings.key_repeat_delay=200;
+        	fSettings.key_repeat_rate=250000;
+		}
 	}
-	
-	// Turn the BPoint into a usefull rectangle for the Keyboard Window.
-	fWindowFrame.left=fcorner.x;
-	fWindowFrame.top=fcorner.y;
-	fWindowFrame.right=fWindowFrame.left+229;
-	fWindowFrame.bottom=fWindowFrame.top+221;	
-	
-	//Check to see if the co-ords of the window are in the range of the Screen
-	BScreen screen;
-		if (screen.Frame().right >= fWindowFrame.right
-			&& screen.Frame().bottom >= fWindowFrame.bottom)
-		return;
-	// If they are not, lets just stick the window in the middle
-	// of the screen.
-	fWindowFrame = screen.Frame();
-	fWindowFrame.left = (fWindowFrame.right-229)/2;
-	fWindowFrame.right = fWindowFrame.left + 229;
-	fWindowFrame.top = (fWindowFrame.bottom-221)/2;
-	fWindowFrame.bottom = fWindowFrame.top + 221;
-}//KeyboardSettings::KeyboardSettings
+	else
+		be_app->PostMessage(ERROR_DETECTED);	
+}
 
 KeyboardSettings::~KeyboardSettings()
-{//KeyboardSettings::~KeyboardSettings
+{	
 	BPath path;
+
 	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path) < B_OK)
 		return;
 
 	path.Append(kKeyboardSettingsFile);
 
 	BFile file(path.Path(), B_WRITE_ONLY | B_CREATE_FILE);
-	if (file.InitCheck() == B_OK)
-	{
-		file.Write(&fsettings, sizeof(kb_settings));
-		file.Write(&fcorner, sizeof(BPoint));
+	if (file.InitCheck() == B_OK) {
+		file.Write(&fSettings, sizeof(kb_settings));
+		file.Write(&fCorner, sizeof(BPoint));
 	}
-}//KeyboardSettings::~KeyboardSettings
+	
+		
+}
 
-void KeyboardSettings::SetKeyboardRepeatRate(int32 f)
-{//KeyboardSettings::SetKeyboardRepeatRate
-	fsettings.key_repeat_rate=f;
-}//KeyboardSettings::SetKeyboardRepeatRate
+void
+KeyboardSettings::SetWindowCorner(BPoint corner)
+{
+	fCorner=corner;
+}
 
-void KeyboardSettings::SetKeyboardDelayRate(bigtime_t f)
-{//KeyboardSettings::SetKeyboardDelayRate
-	fsettings.key_repeat_delay=f;
-}//KeyboardSettings::SetKeyboardDelayRate
+void
+KeyboardSettings::SetKeyboardRepeatRate(int32 rate)
+{
+	fSettings.key_repeat_rate=rate;
+}
 
-void KeyboardSettings::SetWindowPosition(BRect f)
-{//KeyboardSettings::SetWindowFrame
-	fcorner.x=f.left;
-	fcorner.y=f.top;
-}//KeyboardSettings::SetWindowFrame
-
+void
+KeyboardSettings::SetKeyboardRepeatDelay(int32 rate)
+{
+	fSettings.key_repeat_delay=rate;
+}

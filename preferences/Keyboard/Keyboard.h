@@ -1,32 +1,33 @@
-/*
-	
-	Keyboard.h
-
-*/
-
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 
-#ifndef _APPLICATION_H
 #include <Application.h>
-#endif
-#ifndef KEYBOARD_WINDOW_H
+
 #include "KeyboardWindow.h"
-#endif
-#ifndef KEYBOARD_SETTINGS_H
 #include "KeyboardSettings.h"
-#endif
 
 class KeyboardApplication : public BApplication 
 {
 public:
-					KeyboardApplication();
-	 		~KeyboardApplication();
-	virtual void 	MessageReceived(BMessage *message);
-	virtual void 	AboutRequested(void);
+	KeyboardApplication();
+	virtual ~KeyboardApplication();
+	
+	void MessageReceived(BMessage *message);
+	BPoint WindowCorner() const {return fSettings->WindowCorner(); }
+	void SetWindowCorner(BPoint corner);
+	int32 KeyboardRepeatRate() const {return fSettings->KeyboardRepeatRate(); }
+	void SetKeyboardRepeatRate(int32 rate);
+	int32 KeyboardRepeatDelay() const {return fSettings->KeyboardRepeatDelay(); }
+	void SetKeyboardRepeatDelay(int32 rate);
+
+	void AboutRequested(void);
+	
 private:
-	KeyboardWindow		*aWindow;
-	KeyboardSettings 	*theseSettings;
+	
+	static const char kKeyboardApplicationSig[];
+
+	KeyboardSettings		*fSettings;
+
 };
 
-#endif //KEYBOARD_H
+#endif

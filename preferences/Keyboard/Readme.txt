@@ -1,5 +1,14 @@
 OpenBeOS Keyboard Preferences
 
+23/02/2002 - Beta 3 Released
+
+Re-written the program!
+The code now fits OpenTraker guidelines.
+Most of the work is done in Window and Application as it should be, and I have made much better use of BeOS's messaging features.
+The KeyboardSettings class is tidier, with it only doing settings work, rather than window positioning too (Can you believe I put that code in there?? :) ) 
+KeyboardView is derived from a BBox rather than a BView thanks to Philippe Houdoin for that one :)
+Added a makefile for all you command line junkies out there.
+
 15/02/2002 - Beta 2.0.1 Released.
 
 Fixed a problem if the program is being run and there isn't a /boot/home/config/settings/Keyboard_Settings file already in place.
@@ -20,7 +29,6 @@ If the initial co-ords are off screen, the application is now drawn in the middl
 To Do:
 
 Font sensitivity (Delayed till R2)
-Change to make or Jam
 ...Probably loads of other stuff too!
 
 This application is pretty much finished now, and really needs a good beta testing to try and spot bugs.

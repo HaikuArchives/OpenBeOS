@@ -1,123 +1,155 @@
 /*
-	
-	KeyboardWindow.cpp
-	
-*/
-
-#ifndef _APPLICATION_H
+ * KeyboardWindow.cpp
+ * Keyboard mccall@digitalparadise.co.uk
+ *
+ */
+ 
 #include <Application.h>
-#endif
-#ifndef KEYBOARD_WINDOW_H
-#include "KeyboardWindow.h"
-#endif
-#ifndef KEYBOARD_VIEW_H
-#include "KeyboardView.h"
-#endif
-#ifndef KEYBOARD_MESSAGES_H
-#include "KeyboardMessages.h"
-#endif
-#ifndef _BUTTON_H
+#include <TextControl.h>
+#include <Message.h>
 #include <Button.h>
-#endif
+#include <Slider.h>
+#include <Screen.h>
+#include <stdio.h>
 
-KeyboardWindow::KeyboardWindow(KeyboardSettings *Settings)
-				: BWindow(Settings->WindowPosition(), "Keyboard", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE )
-{//KeyboardWindow::KeyboardWindow
-	// set up a rectangle and instantiate a new view
-	fSettings = Settings;
-	BRect aRect( Bounds() );
-	aView = new KeyboardView(aRect);
-	// add view to window
-	AddChild(aView);
-}//KeyboardWindow::KeyboardWindow
+#include "KeyboardMessages.h"
+#include "KeyboardWindow.h"
+#include "KeyboardView.h"
+#include "Keyboard.h"
 
-bool KeyboardWindow::QuitRequested()
-{//KeyboardWindow::QuitRequested
+#define KEYBOARD_WINDOW_RIGHT	229
+#define KEYBOARD_WINDOW_BOTTTOM	221
+
+KeyboardWindow::KeyboardWindow()
+				: BWindow(BRect(0,0,KEYBOARD_WINDOW_RIGHT,KEYBOARD_WINDOW_BOTTTOM), "Keyboard", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE )
+{
+	BScreen screen;
+	BSlider *slider=NULL;
+
+	MoveTo(dynamic_cast<KeyboardApplication *>(be_app)->WindowCorner());
+
+	// Code to make sure that the window doesn't get drawn off screen...
+	if (!(screen.Frame().right >= Frame().right && screen.Frame().bottom >= Frame().bottom))
+		MoveTo((screen.Frame().right-Bounds().right)*.5,(screen.Frame().bottom-Bounds().bottom)*.5);
+	
+	BuildView();
+	AddChild(fView);
+
+	slider = (BSlider *)FindView("key_repeat_rate");
+	if (slider !=NULL) slider->SetValue(dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatRate());
+	printf("On start repeat rate: %ld\n", dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatRate());
+	
+	slider = (BSlider *)FindView("delay_until_key_repeat");
+	if (slider !=NULL) slider->SetValue(dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatDelay());
+	printf("On start repeat delay: %ld\n", dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatDelay());
+
+	Show();
+
+}
+
+void
+KeyboardWindow::BuildView()
+{
+	fView = new KeyboardView(Bounds());	
+}
+
+bool
+KeyboardWindow::QuitRequested()
+{
+	BSlider *slider=NULL;
+
+	dynamic_cast<KeyboardApplication *>(be_app)->SetWindowCorner(BPoint(Frame().left,Frame().top));
+	
+	slider = (BSlider *)FindView("key_repeat_rate");
+	if (slider !=NULL) dynamic_cast<KeyboardApplication *>(be_app)->SetKeyboardRepeatRate(slider->Value());
+	printf("On quit repeat rate: %ld\n", dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatRate());
+	
+	slider = (BSlider *)FindView("delay_until_key_repeat");
+	if (slider !=NULL) dynamic_cast<KeyboardApplication *>(be_app)->SetKeyboardRepeatDelay(slider->Value());
+	printf("On quit repeat delay: %ld\n", dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatDelay());
+
 	be_app->PostMessage(B_QUIT_REQUESTED);
+	
 	return(true);
-}//KeyboardWindow::QuitRequested
+}
 
-void KeyboardWindow::MessageReceived(BMessage *message)
-{//KeyboardWindow::MessageReceived
-	switch(message->what)
-	{//Switch
-		case BUTTON_DEFAULTS:
-			{//BUTTON_DEFAULTS
-				if (set_key_repeat_rate(200)!=B_OK) 
-	  			{
-	    			be_app->PostMessage(ERROR_DETECTED);
-	  			};
-	  			aView->SetRepeatRate(200);
-				if (set_key_repeat_delay(250000)!=B_OK) 
-	  			{
-	    			be_app->PostMessage(ERROR_DETECTED);
-	  			};
-	  			aView->SetDelayRate(250000);
-	  			aView->SetRevertButton(true);
-			}//BUTTON_DEFAULTS
+void
+KeyboardWindow::MessageReceived(BMessage *message)
+{
+	BSlider *slider=NULL;
+	BButton *button=NULL;
+			
+	switch(message->what) {
+		case BUTTON_DEFAULTS:{
+			if (set_key_repeat_rate(200)!=B_OK) 
+	   			be_app->PostMessage(ERROR_DETECTED);
+			slider = (BSlider *)FindView("key_repeat_rate");
+			if (slider !=NULL) slider->SetValue(200);
+			
+			if (set_key_repeat_delay(250000)!=B_OK) 
+	   			be_app->PostMessage(ERROR_DETECTED);
+			slider = (BSlider *)FindView("delay_until_key_repeat");
+			if (slider !=NULL) slider->SetValue(250000);
+			
+			button = (BButton *)FindView("keyboard_revert");
+	  		if (button !=NULL) button->SetEnabled(true);
+			}
 			break;
-		case BUTTON_REVERT:
-			{//BUTTON_REVERT
-				//Uncomment when I know the file operations are working.
-				if (set_key_repeat_rate(fSettings->KeyboardRepeatRate())!=B_OK) 
-	  			{
-	    			be_app->PostMessage(ERROR_DETECTED);
-	  			};
-	  			aView->SetRepeatRate(fSettings->KeyboardRepeatRate());
-				if (set_key_repeat_delay(fSettings->KeyboardDelayRate())!=B_OK) 
-	  			{
-	    			be_app->PostMessage(ERROR_DETECTED);
-	  			};
-	  			aView->SetDelayRate(fSettings->KeyboardDelayRate());	  			
-				aView->SetRevertButton(false);
-			}//BUTTON_REVERT
+		case BUTTON_REVERT:{
+			if (set_key_repeat_rate(dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatRate())!=B_OK) 
+	    		be_app->PostMessage(ERROR_DETECTED);
+			slider = (BSlider *)FindView("key_repeat_rate");
+			if (slider !=NULL) slider->SetValue(dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatRate());	    		
+	    			
+			if (set_key_repeat_delay(dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatDelay())!=B_OK) 
+	    		be_app->PostMessage(ERROR_DETECTED);
+			slider = (BSlider *)FindView("delay_until_key_repeat");
+			if (slider !=NULL) slider->SetValue(dynamic_cast<KeyboardApplication *>(be_app)->KeyboardRepeatDelay());	    		
+			
+			button = (BButton *)FindView("keyboard_revert");
+	  		if (button !=NULL) button->SetEnabled(false);
+	  		}
 			break;
-		case SLIDER_REPEAT_RATE:
-			{//SLIDER_REPEAT_RATE
-				if (set_key_repeat_rate(message->FindInt32("be:value"))!=B_OK) 
-	  			{
-	    			be_app->PostMessage(ERROR_DETECTED);
-	  			};
-	  			aView->SetRevertButton(true);
-			}//SLIDER_REPEAT_RATE
+		case SLIDER_REPEAT_RATE:{
+			if (set_key_repeat_rate(message->FindInt32("be:value"))!=B_OK) 
+	    		be_app->PostMessage(ERROR_DETECTED);
+
+			button = (BButton *)FindView("keyboard_revert");
+	  		if (button !=NULL) button->SetEnabled(true);
+			}
 			break;
-		case SLIDER_DELAY_RATE:
-			{//SLIDER_DELAY_RATE
-				bigtime_t        drate;
-				drate=message->FindInt32("be:value");
+		case SLIDER_DELAY_RATE:{
+				bigtime_t        rate;
+				rate=message->FindInt32("be:value");
 				// We need to look at the value from the slider and make it "jump"
 				// to the next notch along. Setting the min and max values of the
 				// slider to 1 and 4 doesn't work like the real Keyboard app.
-				if (drate < 375000)
-					drate = 250000;
-				if ((drate >= 375000)&&(drate < 625000))
-					drate = 500000;
-				if ((drate >= 625000)&&(drate < 875000))
-					drate = 750000;
-				if (drate >= 875000)
-					drate = 1000000;
-				aView->SetDelayRate(drate);
-				if (set_key_repeat_delay(drate)!=B_OK) 
-	  			{
+				if (rate < 375000)
+					rate = 250000;
+				if ((rate >= 375000)&&(rate < 625000))
+					rate = 500000;
+				if ((rate >= 625000)&&(rate < 875000))
+					rate = 750000;
+				if (rate >= 875000)
+					rate = 1000000;
+				
+				if (set_key_repeat_delay(rate)!=B_OK) 
 	    			be_app->PostMessage(ERROR_DETECTED);
-	  			};
-	  			aView->SetRevertButton(true);
-			}//SLIDER_DELAY_RATE
+	    		slider = (BSlider *)FindView("delay_until_key_repeat");
+				if (slider !=NULL) slider->SetValue(rate);
+
+				button = (BButton *)FindView("keyboard_revert");
+	  			if (button !=NULL) button->SetEnabled(true);
+	  		}
 			break;
 		default:
 			BWindow::MessageReceived(message);
 			break;
-	}//Switch
-}//KeyboardWindow::MessageReceived
+	}
+	
+}
 
 KeyboardWindow::~KeyboardWindow()
-{//
-	//We only want to write the slider rates at the end of the program
-	fSettings->SetKeyboardRepeatRate(aView->GetRepeatRate());
-	fSettings->SetKeyboardDelayRate(aView->GetDelayRate());
-}//
+{
 
-void KeyboardWindow::FrameMoved(BPoint origin)
-{//KeyboardWindow::FrameMoved
-	fSettings->SetWindowPosition(Frame());
-}//KeyboardWindow::FrameMoved
+}

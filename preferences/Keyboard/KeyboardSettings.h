@@ -1,12 +1,7 @@
 #ifndef KEYBOARD_SETTINGS_H_
 #define KEYBOARD_SETTINGS_H_
 
-#ifndef _POINT_H
-#include <Point.h>
-#endif
-#ifndef _SCREEN_H
-#include <Screen.h>
-#endif
+#include <SupportDefs.h>
 
 typedef struct {
         bigtime_t       key_repeat_delay;
@@ -17,18 +12,18 @@ class KeyboardSettings{
 public :
 	KeyboardSettings();
 	~KeyboardSettings();
-	BRect WindowPosition() const { return fWindowFrame; }
-	int32 KeyboardRepeatRate() const { return fsettings.key_repeat_rate; }
-	bigtime_t KeyboardDelayRate() const { return fsettings.key_repeat_delay; }
-	void SetWindowPosition(BRect);
-	void SetKeyboardRepeatRate(int32);
-	void SetKeyboardDelayRate(bigtime_t);
+	
+	BPoint WindowCorner() const { return fCorner; }
+	void SetWindowCorner(BPoint corner);
+	int32 KeyboardRepeatRate() const { return fSettings.key_repeat_rate; }
+	void SetKeyboardRepeatRate(int32 rate);
+	int32 KeyboardRepeatDelay() const { return fSettings.key_repeat_delay; }
+	void SetKeyboardRepeatDelay(int32 rate);
 	
 private:
 	static const char 	kKeyboardSettingsFile[];
-	BRect				fWindowFrame;
-	BPoint				fcorner;
-	kb_settings			fsettings;
+	BPoint				fCorner;
+	kb_settings			fSettings;
 };
 
 #endif
