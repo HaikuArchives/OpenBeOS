@@ -32,11 +32,15 @@ struct pci_config {
 
 struct pci_config *pci_list;
 
-static int pci_open(dev_ident ident, dev_cookie *_cookie)
+static int pci_open(const char *name, uint32 flags, void * *_cookie)
 {
 //	struct pci_cookie *cookie;
-	struct pci_config *c = (struct pci_config *)ident;
+	struct pci_config *c = (struct pci_config *)kmalloc(sizeof(struct pci_config));
 
+	/* name points at the devfs_vnode so this is safe as we have to have a shorter
+	 * lifetime than the vnode and the devfs_vnode 
+	 */
+	c->full_path = (char*)name;
 	dprintf("pci_open: entry on '%s'\n", c->full_path);
 
 	*_cookie = c;
@@ -44,32 +48,36 @@ static int pci_open(dev_ident ident, dev_cookie *_cookie)
 	return 0;
 }
 
-static int pci_freecookie(dev_cookie cookie)
+static int pci_freecookie(void * cookie)
+{
+	kfree(cookie);
+	return 0;
+}
+
+/*
+static int pci_seek(void * cookie, off_t pos, seek_type st)
+{
+	return ERR_NOT_ALLOWED;
+}
+*/
+
+static int pci_close(void * cookie)
 {
 	return 0;
 }
 
-static int pci_seek(dev_cookie cookie, off_t pos, seek_type st)
+static ssize_t pci_read(void *cookie, off_t pos, void *buf, size_t *len)
+{
+	*len = 0;
+	return ERR_NOT_ALLOWED;
+}
+
+static ssize_t pci_write(void * cookie, off_t pos, const void *buf, size_t *len)
 {
 	return ERR_NOT_ALLOWED;
 }
 
-static int pci_close(dev_cookie cookie)
-{
-	return 0;
-}
-
-static ssize_t pci_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
-{
-	return ERR_NOT_ALLOWED;
-}
-
-static ssize_t pci_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
-{
-	return ERR_NOT_ALLOWED;
-}
-
-static int pci_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
+static int pci_ioctl(void * _cookie, uint32 op, void *buf, size_t len)
 {
 	struct pci_config *cookie = _cookie;
 	int err = 0;
@@ -95,18 +103,17 @@ err:
 	return err;
 }
 
-struct dev_calls pci_hooks = {
+device_hooks pci_hooks = {
 	&pci_open,
 	&pci_close,
 	&pci_freecookie,
-	&pci_seek,
 	&pci_ioctl,
 	&pci_read,
 	&pci_write,
-	/* cannot page from pci devices */
-	NULL,
-	NULL,
-	NULL
+	NULL, /* select */
+	NULL, /* deselect */
+//	NULL, /* readv */
+//	NULL  /* writev */
 };
 
 static int pci_create_config_structs()

@@ -27,12 +27,12 @@ int zfs_fsync(fs_cookie fs, fs_vnode v)
 	return ERR_NOT_IMPLEMENTED_YET;
 }
 
-ssize_t zfs_read(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, ssize_t len)
+ssize_t zfs_read(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, size_t *len)
 {
 	return ERR_NOT_IMPLEMENTED_YET;
 }
 
-ssize_t zfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len)
+ssize_t zfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, size_t *len)
 {
 	return ERR_NOT_IMPLEMENTED_YET;
 }

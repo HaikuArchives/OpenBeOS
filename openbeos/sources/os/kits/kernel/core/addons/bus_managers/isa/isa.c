@@ -9,13 +9,17 @@
 #include <arch/cpu.h>
 #include <debug.h>
 
-
 static int isa_init( void )
 {
 	dprintf( "ISA: init\n" );
 	return NO_ERROR;
 }
 
+static status_t isa_rescan(void)
+{
+	dprintf("isa_rescan()\n");
+	return 0;
+}
 
 static int isa_uninit( void )
 {
@@ -23,13 +27,15 @@ static int isa_uninit( void )
 	return NO_ERROR;
 }
 
-static uint8 isa_read_io_8( int mapped_io_addr )
+static uint8 isa_read_io_8(int mapped_io_addr)
 {
+	dprintf("isa_read_io_8(%d)\n", mapped_io_addr);
 	return in8( mapped_io_addr );
 }
 
-static void isa_write_io_8( int mapped_io_addr, uint8 value )
+static void isa_write_io_8(int mapped_io_addr, uint8 value)
 {
+	dprintf("isa_write_io_8(%d, %d)\n", mapped_io_addr, value);
 	out8( value, mapped_io_addr );
 }
 
@@ -53,6 +59,41 @@ static void isa_write_io_32( int mapped_io_addr, uint32 value )
 	out32( value, mapped_io_addr );
 }
 
+static void *ram_address(const void *physical_address_in_system_memory)
+{
+	dprintf("isa: ram_address\n");
+	return NULL;
+}
+
+static long make_isa_dma_table(const void *buffer, long buffer_size,
+                               ulong num_bits, isa_dma_entry *table,
+                               long	num_entries)
+{
+	return ENOSYS;
+}
+
+static long start_isa_dma(long	channel, void *buf, long transfer_count, 
+                          uchar mode, uchar e_mode)
+{
+	return ENOSYS;
+}
+
+static long start_scattered_isa_dma(long channel, const isa_dma_entry *table,
+                                    uchar mode, uchar emode)
+{
+	return ENOSYS;
+}
+
+static long lock_isa_dma_channel(long channel)
+{
+	return ENOSYS;
+}
+
+static long unlock_isa_dma_channel(long channel)
+{
+	return ENOSYS;
+}
+
 static int std_ops(int32 op, ...)
 {
 	switch(op) {
@@ -70,16 +111,25 @@ static int std_ops(int32 op, ...)
 
 static isa_bus_manager isa_module = {
 	{
-		ISA_MODULE_NAME,
-		B_KEEP_LOADED,
-		std_ops
+		{
+			ISA_MODULE_NAME,
+			B_KEEP_LOADED,
+			std_ops
+		},
+		&isa_rescan
 	},
-	isa_read_io_8, 
-	isa_write_io_8,
-	isa_read_io_16, 
-	isa_write_io_16,
-	isa_read_io_32, 
-	isa_write_io_32
+	&isa_read_io_8, 
+	&isa_write_io_8,
+	&isa_read_io_16, 
+	&isa_write_io_16,
+	&isa_read_io_32, 
+	&isa_write_io_32,
+	&ram_address,
+	&make_isa_dma_table,
+	&start_isa_dma,
+	&start_scattered_isa_dma,
+	&lock_isa_dma_channel,
+	&unlock_isa_dma_channel
 };
 	
 module_info *modules[] = {

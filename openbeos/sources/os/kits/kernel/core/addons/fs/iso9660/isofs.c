@@ -590,7 +590,7 @@ static int isofs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 //--------------------------------------------------------------------------------
 #define READ_CHUNK 16384
 static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
-							void *buf, off_t pos, ssize_t len)
+							void *buf, off_t pos, size_t *len)
 {
 	struct isofs *fs = _fs;
 #if ISOFS_TRACE
@@ -614,7 +614,7 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 			}
 
 			// If buffer is too small, bail out
-			if ((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
+			if ((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > *len) {
 				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto error;
 			}
@@ -634,7 +634,8 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 
 		case STREAM_TYPE_FILE:
 			// If size is negative, forget it
-			if(len <= 0) {
+			if(*len <= 0) {
+				*len = 0;
 				err = 0;
 				break;
 			}
@@ -653,9 +654,9 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 			}
 
 			// If read goes partially beyond EOF
-			if (pos + len > cookie->s->data_len) {
+			if (pos + *len > cookie->s->data_len) {
 				// trim the read
-				len = cookie->s->data_len - pos;
+				*len = cookie->s->data_len - pos;
 			}
 
 			tempbuf= kmalloc(READ_CHUNK);
@@ -663,15 +664,15 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 				goto error;
 			}
 
-			while (len) {
-				ssize_t to_read= (READ_CHUNK< len) ? READ_CHUNK : len;
+			while (*len) {
+				size_t to_read= (READ_CHUNK< *len) ? READ_CHUNK : *len;
 				err = sys_read(fs->fd, tempbuf, cookie->s->data_pos + pos, to_read);
 				if(err <= 0) {
 					goto error;
 				}
 				user_memcpy(buf, tempbuf, err);
 				pos += err;
-				len -= err;
+				*len -= err;
 				buf = ((char*)buf)+err;
 				totread += err;
 
@@ -691,13 +692,18 @@ error:
 	if(tempbuf)
 		kfree(tempbuf);
 
+	if (totread > 0) {
+		*len = totread;
+		err = 0;
+	}
+	
 	return err;
 }
 
 //--------------------------------------------------------------------------------
-static ssize_t isofs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t isofs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, size_t *len)
 {
-	TRACE(("isofs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+	TRACE(("isofs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, *len));
 
 	return ERR_VFS_READONLY_FS;
 }
