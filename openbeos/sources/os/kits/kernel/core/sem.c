@@ -319,6 +319,7 @@ static int sem_timeout(void *data)
 	return INT_RESCHEDULE;
 }
 
+
 int sem_acquire(sem_id id, int count)
 {
 	return sem_acquire_etc(id, count, 0, 0, NULL);
@@ -439,6 +440,7 @@ int sem_release(sem_id id, int count)
 {
 	return sem_release_etc(id, count, 0);
 }
+
 
 int sem_release_etc(sem_id id, int count, int flags)
 {
@@ -906,4 +908,63 @@ int user_set_sem_owner(sem_id uid, proc_id uproc)
 {
 	return set_sem_owner(uid, uproc);
 }
+
+/* BeOS compatibility functions... */
+#define B_CAN_INTERRUPT          1
+#define B_DO_NOT_RESCHEDULE      2
+#define B_CHECK_PERMISSION       4
+#define B_TIMEOUT                8
+#define	B_RELATIVE_TIMEOUT       8
+#define B_ABSOLUTE_TIMEOUT      16
+
+sem_id create_sem(int count, const char *name)
+{
+	return sem_create_etc(count, name, proc_get_kernel_proc_id());
+}
+	
+int delete_sem(sem_id id)
+{
+	return sem_delete_etc(id, 0);
+}
+
+int acquire_sem(sem_id id)
+{
+	return sem_acquire_etc(id, 1, 0, 0, NULL);
+}
+
+int acquire_sem_etc(sem_id id, uint32 count, uint32 flags, bigtime_t timeout)
+{
+	int nuflags = 0;
+	bigtime_t nutimeout = timeout;
+
+	if(flags & B_CAN_INTERRUPT)
+		nuflags |= SEM_FLAG_INTERRUPTABLE;
+	if(flags & B_DO_NOT_RESCHEDULE)
+		nuflags |= SEM_FLAG_NO_RESCHED;
+	if(flags & B_RELATIVE_TIMEOUT)
+		nuflags |= SEM_FLAG_TIMEOUT;
+	if(flags & B_ABSOLUTE_TIMEOUT) {
+		nuflags |= SEM_FLAG_TIMEOUT;
+		nutimeout = timeout - system_time();
+		if(nutimeout < 0)
+			nutimeout = 0;
+	}
+	return sem_acquire_etc(id, count, nuflags, nutimeout, NULL);
+}
+
+int release_sem(sem_id id)
+{
+	return sem_release_etc(id, 1, 0);
+}
+
+int release_sem_etc(sem_id id, int32 count, uint32 flags)
+{
+	int nuflags = 0;
+
+	if(flags & B_DO_NOT_RESCHEDULE)
+		nuflags = SEM_FLAG_NO_RESCHED;
+
+	return sem_release_etc(id, count, nuflags);
+}
+
 
