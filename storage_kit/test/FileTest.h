@@ -42,9 +42,6 @@ public:
 		status_t		initCheck;
 	};
 	
-	static	const char *		allFilenames[];
-	static	const int32 		allFilenameCount;
-
 	static	const InitTestCase	initTestCases[];
 	static	const int32			initTestCasesCount;
 };

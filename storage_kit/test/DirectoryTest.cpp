@@ -1889,20 +1889,3 @@ DirectoryTest::CreateDirectoryTest()
 	CPPUNIT_ASSERT( create_directory(NULL, 0x1ff) == B_BAD_VALUE );
 }
 
-
-
-// entries created in tests
-const char *DirectoryTest::allFilenames[] = {
-	existingFilename,
-	existingDirname,
-	nonExistingDirname,
-	testDirname1,
-	dirLinkname,
-	fileLinkname,
-	badLinkname,
-	cyclicLinkname1,
-	cyclicLinkname2,
-};
-const int32 DirectoryTest::allFilenameCount
-	= sizeof(allFilenames) / sizeof(const char*);
-

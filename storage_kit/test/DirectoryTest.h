@@ -38,9 +38,6 @@ public:
 	void EntryCreationTest();
 	void AssignmentTest();
 	void CreateDirectoryTest();
-
-	static	const char *		allFilenames[];
-	static	const int32 		allFilenameCount;
 };
 
 #endif	// __sk_directory_test_h__

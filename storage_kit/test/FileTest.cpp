@@ -721,15 +721,6 @@ FileTest::AssignmentTest()
 
 
 
-// entries created in tests
-const char *FileTest::allFilenames[] = {
-	existingFilename,
-	nonExistingFilename,
-	testFilename1,
-};
-const int32 FileTest::allFilenameCount
-	= sizeof(allFilenames) / sizeof(const char*);
-
 // test cases for the init tests
 const FileTest::InitTestCase FileTest::initTestCases[] = {
 	{ existingFilename	 , B_READ_ONLY , 0, 0, 0, false, B_OK				},
