@@ -44,10 +44,7 @@ BNode::InitCheck() const {
 
 status_t
 BNode::GetStat(struct stat *st) const {
-	if (fCStatus != B_OK)
-		return fCStatus;
-	else
-		return StorageKit::get_stat(fFd, st);
+	return (fCStatus != B_OK) ? fCStatus : StorageKit::get_stat(fFd, st) ;
 }
 
 status_t
@@ -64,7 +61,7 @@ status_t
 BNode::SetTo(const char *path) {
 	try {
 
-		set_fd(StorageKit::open(path, StorageKit::READ));
+		set_fd(StorageKit::open(path, StorageKit::READ_WRITE));
 		fCStatus = B_OK;
 
 	} catch (StorageKit::EEntryNotFound *e) {
@@ -109,7 +106,7 @@ BNode::Unlock() {
 
 status_t
 BNode::Sync() {
-	return B_ERROR;
+	return (fCStatus != B_OK) ? fCStatus : StorageKit::sync(fFd) ;
 }
 
 ssize_t
@@ -136,16 +133,15 @@ void *buffer, size_t len) const {
 
 status_t
 BNode::RemoveAttr(const char *name) {
-	if (fCStatus == B_NO_INIT)
-		return B_FILE_ERROR;
-	else
-		return StorageKit::remove_attr(fFd, name);
+	return (fCStatus == B_NO_INIT) ? B_FILE_ERROR : StorageKit::remove_attr(fFd, name);
 }
-
 
 
 status_t
 BNode::RenameAttr(const char *oldname, const char *newname) {
+
+	if (fCStatus != B_OK)
+		return B_FILE_ERROR;
 
 	attr_info info;
 	status_t result;
@@ -154,7 +150,7 @@ BNode::RenameAttr(const char *oldname, const char *newname) {
 	// Figure out how much data there is
 	result = GetAttrInfo(oldname, &info);
 	if (result != B_OK)
-		return result;
+		return B_BAD_VALUE;	// This is what R5::BNode returns...
 		
 	// Alloc a buffer
 	void *data = new char[info.size];
@@ -163,21 +159,29 @@ BNode::RenameAttr(const char *oldname, const char *newname) {
 		
 	// Read in the data
 	size = ReadAttr(oldname, B_STRING_TYPE, 0, data, info.size);
-	if (size != info.size)
+	if (size != info.size) {
+		delete data;		
 		return size;
+	}
 		
 	// Write it to the new attribute
 	size = WriteAttr(newname, B_STRING_TYPE, 0, data, size);
-	if (size != info.size)
+	if (size != info.size) {
+		delete data;		
 		return size;
+	}
+	
+	// We're done with the buffer now.
+	delete data;
 	
 	// Remove the old attribute
 	return RemoveAttr(oldname);
+	
 }
 
 
 status_t
-BNode::GetAttrInfo(const char *name, struct attr_info *info) {
+BNode::GetAttrInfo(const char *name, struct attr_info *info) const {
 	return (fCStatus == B_NO_INIT) ? B_FILE_ERROR : StorageKit::stat_attr(fFd, name, info) ;
 }
 
@@ -318,19 +322,3 @@ BNode::InitAttrDir() {
 
 	return fCStatus;	
 }
-
-/*
-status_t
-BNode::InitAttrDir() {
-	// Make sure we have an attr file descriptor
-	if (InitAttrFd() != B_OK)
-		return B_FILE_ERROR;
-		
-	// Open the attr directory if necessary
-	if (fAttrDir == NULL) 
-		fAttrDir = StorageKit::open_attr_dir(fAttrFd);
-		
-	return (fAttrDir != NULL) ? B_OK : B_FILE_ERROR;		
-}
-*/
-

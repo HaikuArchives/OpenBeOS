@@ -156,7 +156,7 @@ public:
 	
 	/*! Fills in the pre-allocated attr_info struct pointed to by <code>info</code>
 		with usefule information about the attribute specified by <code>name</code>. */
-	status_t GetAttrInfo(const char *name, struct attr_info *info);
+	status_t GetAttrInfo(const char *name, struct attr_info *info) const;
 	
 	/*! Every BNode maintains a pointer to its list of attributes. GetNextAttrName()
 		retrieves the name of the attribute that the pointer is currently pointing to,
