@@ -119,7 +119,9 @@ bool
 entry_ref::operator==(const entry_ref &ref) const {
 	return (	device == ref.device &&
 				directory == ref.directory &&
-				strcmp(name, ref.name) == 0		);
+				(name == ref.name
+				 || name != NULL && ref.name != NULL
+					&& strcmp(name, ref.name) == 0)		);
 }
 
 /*! \brief Compares the entry_ref with another entry_ref, returning true if they are not equal.
@@ -823,7 +825,11 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 						StorageKit::close_dir(dirFd);
 						dirFd = StorageKit::NullFd;
 						fDirFd = newDirFd;
-						set_name(linkPath.Leaf());
+						// handle "/", which has a "" Leaf()
+						if (linkPath == "/")
+							set_name(".");
+						else
+							set_name(linkPath.Leaf());
 					}
 				}
 			}
@@ -906,3 +912,21 @@ get_ref_for_path(const char *path, entry_ref *ref)
 	}
 	return error;
 }
+
+// <
+/*!	\brief Returns whether an entry is less than another.
+	The components are compared in order \c device, \c directory, \c name.
+	A \c NULL \c name is less than any other name.
+*/
+bool
+operator<(const entry_ref & a, const entry_ref & b)
+{
+	return (a.device < b.device
+		|| (a.device == b.device
+			&& (a.directory < b.directory
+			|| (a.directory == b.directory
+				&& (a.name == NULL && b.name != NULL
+				|| (a.name != NULL && b.name != NULL
+					&& strcmp(a.name, b.name) < 0))))));
+}
+

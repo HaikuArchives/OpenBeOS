@@ -114,8 +114,7 @@ private:
 // C functions
 
 status_t get_ref_for_path(const char *path, entry_ref *ref);
-// What's that?
-//bool operator<(const entry_ref & a, const entry_ref & b);
+bool operator<(const entry_ref & a, const entry_ref & b);
 
 
 #ifdef USE_OPENBEOS_NAMESPACE
