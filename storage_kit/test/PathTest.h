@@ -10,24 +10,18 @@
 class PathTest : public CppUnit::TestCase
 {
 public:
-	static Test* Suite() {
-		CppUnit::TestSuite *suite = new CppUnit::TestSuite();
-		
-		suite->addTest( new CppUnit::TestCaller<PathTest>("BPath::Simple Init Test", &PathTest::SimpleInitTest) );
-		
-		return suite;
-	}		
-
+	static CppUnit::Test* Suite();
+	
 	// This function called before *each* test added in Suite()
-	void setUp() {}
+	void setUp();
 	
 	// This function called after *each* test added in Suite()
-	void tearDown()	{}
+	void tearDown();
 
-	void SimpleInitTest() {
-		BPath path("/");
-		CPPUNIT_ASSERT( path.InitCheck() == B_OK ); 
-	}
+	//------------------------------------------------------------
+	// Test functions
+	//------------------------------------------------------------
+	void SimpleInitTest();
 	
 };
 
