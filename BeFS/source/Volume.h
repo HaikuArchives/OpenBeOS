@@ -73,6 +73,8 @@ class Volume {
 		BlockAllocator		&Allocator() { return fBlockAllocator; }
 #endif
 
+		uint32				GetUniqueID() { return fUniqueID++; }
+
 	protected:
 		nspace_id			fID;
 		int					fDevice;
@@ -81,7 +83,8 @@ class Volume {
 
 		Inode				*fRootNode;
 		Inode				*fIndicesNode;
-		
+
+		uint32				fUniqueID;
 		uint32				fFlags;
 };
 

@@ -21,6 +21,8 @@ Queries
  - There shouldn't be any cases where you can speed up a query with reordering
    the query expression - test it
  - Check permissions of the parent directories
+ - Live-Queries aren't implemented yet
+ - Special handling of the last_modified index needed
 
 
 Journal
@@ -34,11 +36,13 @@ BPlusTree
  - BPlusTree::Remove() could trigger CachedNode::Free() to go through the free nodes list and free all pages at the end of the data stream
  - removing duplicates is not yet implemented
  - duplicate_array::Insert() should do a binary search to speed up finding the value if there are more than a certain number (e.g. 8) of entries
+ - BPlusTree::Insert()/Remove() need to update all running TreeIterators
 
 
 Indices
 
- - are not yet updated
+ - are not yet updated (only name)
+ - Support for Live-Queries is also missing
 
 
 Attributes

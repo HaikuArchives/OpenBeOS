@@ -23,6 +23,7 @@ Volume::Volume(nspace_id id)
 	:
 	fID(id),
 	fBlockAllocator(this),
+	fUniqueID(0),
 	fFlags(0)
 {
 }

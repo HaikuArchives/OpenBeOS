@@ -1224,10 +1224,14 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 	if (inode->WriteBack(transaction) < B_OK)
 		return B_ERROR;
 
-	// update the "name", "size", & "last_modified" indices
-	
+	// In balance to the Inode::Create() method, the main indices
+	// are updated here (name, size, & last_modified)
+
 	Index index(fVolume);
-	index.RemoveName(transaction,Name(),ID());
+	index.RemoveName(transaction,name,id);
+		// If removing from the index fails, it is not regarded as a
+		// fatal error and will not be reported back!
+		// Deleted inodes won't be visible in queries anyway.
 
 	// ToDo: update other indices (the attributes will
 	// be removed in the bfs_remove_vnode() function)
@@ -1309,7 +1313,9 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 	node->type = type;
 
 	node->create_time = (bigtime_t)time(NULL) << INODE_TIME_SHIFT;
-	node->last_modified_time = node->create_time;
+	node->last_modified_time = node->create_time | (volume->GetUniqueID() & INODE_TIME_MASK);
+		// we use Volume::GetUniqueID() to avoid having to many duplicates in the
+		// last_modified index
 
 	node->inode_size = volume->InodeSize();
 
