@@ -22,7 +22,7 @@ int select(int nbits, struct fd_set *rbits,
 {
 	static select_function sf = NULL;
 
-	image_id	iid;
+	image_id iid;
 	int tmpfd;
 	struct select_args sa;
 	int rv;
@@ -57,11 +57,15 @@ int select(int nbits, struct fd_set *rbits,
 	sa.tv = timeout;
 
 	if (timeout) {
-		bigtime_t	duration;
+		bigtime_t duration;
 
 		// BeOS R5.0.3- select() don't honnor timeout arg!
 		// Here we use a alarm signal to work around this bug
 		duration = timeout->tv_sec * 1000000 + timeout->tv_usec;
+		if (duration < 1000) 
+			duration = 1000;	// non-blocking mode (timeval = 0) don't works too,
+								// and too small timeout will be fired *before*
+								// we've call ioctl()!
 		previous_sigalrm_handler = signal(SIGALRM, on_select_timeout);
 		when = system_time() + duration;
 		set_alarm(duration, B_ONE_SHOT_RELATIVE_ALARM);
