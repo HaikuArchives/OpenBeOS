@@ -18,16 +18,19 @@
 		#include <Volume.h>
 		
 	#endif
-	
 	#ifndef _VOLUME_ROSTER_H
 	
 		#include <VolumeRoster.h>
 		
 	#endif
-	
 	#ifndef _STDIO_H
 	
 		#include <stdio.h>
+		
+	#endif
+	#ifndef VM_SETTINGS_H
+	
+		#include "VMSettings.h"
 		
 	#endif
 	
@@ -44,6 +47,10 @@
 			 * Constructor.
 			 */
 			VM_pref();
+			virtual ~VM_pref();
+		
+		private:
+			VMSettings	*fSettings;
 			
 	};
 	

@@ -19,8 +19,8 @@
  * @param minVal The minimum value of the swap file.
  * @param maxSwapVal The maximum value of the swap file.
  */	
-MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal, int maxSwapVal)
-			:BWindow(frame, "Virtual Memory", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE){
+MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal, int maxSwapVal, VMSettings *Settings)
+			:BWindow(frame, "Virtual Memory", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE){
 
 	BStringView *physMem;
 	BStringView *currSwap;
@@ -28,19 +28,25 @@ MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal,
 	BBox *topLevelView;
 	BBox *boxView;
 	
+	fSettings = Settings;
+	
 	/**
 	 * Sets the fill color for the "used" portion of the slider.
 	 */
 	rgb_color fillColor;
-	fillColor.red = 255;
-	fillColor.blue = 0;
-	fillColor.green = 0;
+	fillColor.red = 0;
+	fillColor.blue = 152;
+	fillColor.green = 102;
 	
 	/**
 	 * This var sets the size of the visible box around the string views and
 	 * the slider.
 	 */
-	BRect boxRect(20, 20, 240, 160);
+	BRect boxRect=Bounds();
+	boxRect.left=boxRect.left+10;
+	boxRect.top=boxRect.top+10;
+	boxRect.bottom=boxRect.bottom-45;
+	boxRect.right=boxRect.right-10;
 	char labels[50];
 	char sliderMinLabel[10];
 	char sliderMaxLabel[10];
@@ -71,7 +77,7 @@ MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal,
 	 */
 	sprintf(sliderMinLabel, "%d MB", minSwapVal);
 	sprintf(sliderMaxLabel, "%d MB", maxSwapVal);
-	reqSizeSlider = new BSlider(*(new BRect(10, 55, 210, 100)), "ReqSwapSizeSlider", "", new BMessage(MEMORY_SLIDER_MSG), minSwapVal, maxSwapVal, B_TRIANGLE_THUMB, B_FOLLOW_LEFT, B_WILL_DRAW);
+	reqSizeSlider = new BSlider(*(new BRect(10, 51, 240, 75)), "ReqSwapSizeSlider", "", new BMessage(MEMORY_SLIDER_MSG), minSwapVal, maxSwapVal, B_TRIANGLE_THUMB, B_FOLLOW_LEFT, B_WILL_DRAW);
 	reqSizeSlider->SetLimitLabels(sliderMinLabel, sliderMaxLabel);
 	reqSizeSlider->UseFillColor(TRUE, &fillColor);
 	reqSizeSlider->SetModificationMessage(new BMessage(SLIDER_UPDATE_MSG));
@@ -81,7 +87,7 @@ MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal,
 	/**
 	 * Initializes the restart notice view.
 	 */
-	restart = new BStringView(*(new BRect(10, 110, 210, 120)), "RestartMessage", "", B_FOLLOW_ALL, B_WILL_DRAW);
+	restart = new BStringView(*(new BRect(40, 100, 210, 110)), "RestartMessage", "", B_FOLLOW_ALL, B_WILL_DRAW);
 	
 	/**
 	 * This view holds the three labels and the slider.
@@ -93,8 +99,8 @@ MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal,
 	boxView->AddChild(reqSwap);
 	boxView->AddChild(restart);
 		
-	defaultButton = new BButton(*(new BRect(20, 170, 80, 180)), "DefaultButton", "Default", new BMessage(DEFAULT_BUTTON_MSG), B_FOLLOW_ALL, B_WILL_DRAW);
-	revertButton = new BButton(*(new BRect(100, 170, 160, 180)), "RevertButton", "Revert", new BMessage(REVERT_BUTTON_MSG), B_FOLLOW_ALL, B_WILL_DRAW);
+	defaultButton = new BButton(*(new BRect(10, 138, 85, 158)), "DefaultButton", "Default", new BMessage(DEFAULT_BUTTON_MSG), B_FOLLOW_ALL, B_WILL_DRAW);
+	revertButton = new BButton(*(new BRect(95, 138, 170, 158)), "RevertButton", "Revert", new BMessage(REVERT_BUTTON_MSG), B_FOLLOW_ALL, B_WILL_DRAW);
 	revertButton->SetEnabled(false);
 	
 	topLevelView = new BBox(Bounds(), "TopLevelView", B_FOLLOW_ALL, B_WILL_DRAW, B_NO_BORDER);
@@ -156,7 +162,7 @@ void MainWindow::MessageReceived(BMessage *message){
 			if(currVal != origMemSize){
 			
 				revertButton->SetEnabled(true);
-				sprintf(msg, "You must reboot to apply changes.");
+				sprintf(msg, "Changes will take effect on restart.");
 				restart->SetText(msg);
 				
 			}//if
@@ -237,3 +243,9 @@ bool MainWindow::QuitRequested(){
 	return(true);
 	
 }
+
+void MainWindow::FrameMoved(BPoint origin)
+{//MainWindow::FrameMoved
+	fSettings->SetWindowPosition(Frame());
+}//MainWindow::FrameMoved
+

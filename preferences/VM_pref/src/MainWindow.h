@@ -63,6 +63,11 @@
 		#include <stdio.h>
 		
 	#endif
+	#ifndef VM_SETTINGS_H
+	
+		#include "VMSettings.h"
+
+	#endif
 	
 	/**
 	 * The main window of the app.
@@ -107,11 +112,14 @@
 			 */
 			BStringView *restart;
 			
+			VMSettings	*fSettings;
+			
 		public:
 		
-			MainWindow(BRect frame, int physMem, int currSwp, int sliderMin, int sliderMax);
+			MainWindow(BRect frame, int physMem, int currSwp, int sliderMin, int sliderMax, VMSettings *fSettings);
 			virtual bool QuitRequested();
 			virtual void MessageReceived(BMessage *message);
+			virtual void FrameMoved(BPoint origin);
 						
 	};
 	

@@ -49,16 +49,12 @@ VM_pref::VM_pref()
     char dummy[80];
     BVolume bootVol;
     BVolumeRoster *vol_rost = new BVolumeRoster();
+    fSettings = new VMSettings();
     
 	/*
 	 * The main interface window.
 	 */		
 	MainWindow *Main;
-	
-	/*
-	 * Sets the size for the main window.
-	 */
-	BRect MainWindowRect;
 	
 	/*
 	 * The amount of physical memory in the machine.
@@ -114,10 +110,15 @@ VM_pref::VM_pref()
 	 */
 	maxSwap = (bootVol.FreeBytes() / 1048576) + currSwap - 16;
 	
-	MainWindowRect.Set(100, 80, 360, 300);
-	Main = new MainWindow(MainWindowRect, physMem, currSwap, minSwap, maxSwap);
+	Main = new MainWindow(fSettings->WindowPosition(), physMem, currSwap, minSwap, maxSwap, fSettings);
 	
 	Main->Show();
 
 }
+
+
+VM_pref::~VM_pref()
+{//VM_pref::~VM_pref
+		delete fSettings;
+}//VM_pref::~VM_pref
 
