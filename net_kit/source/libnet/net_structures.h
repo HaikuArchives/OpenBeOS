@@ -36,6 +36,20 @@ struct select_args {
 	struct fd_set *ebits;
 	struct timeval *tv;
 };
+
+struct shutdown_args {
+	int how;
+};
+
+struct sysctl_args {
+	int rv;
+	int *name;
+	uint namelen;
+	void *oldp;
+	size_t *oldlenp;
+	void *newp;
+	size_t newlen;
+};
 	
 /* To simplyify the addition of ones! */
 enum {
@@ -45,7 +59,9 @@ enum {
 	NET_SOCKET_SENDTO,
 	NET_SOCKET_LISTEN,
 	NET_SOCKET_CONNECT,
-	NET_SOCKET_SELECT
+	NET_SOCKET_SELECT,
+	NET_SOCKET_SHUTDOWN,
+	NET_SOCKET_SYSCTL
 };
 
 
