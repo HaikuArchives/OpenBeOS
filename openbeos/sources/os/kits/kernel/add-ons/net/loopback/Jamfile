@@ -1,0 +1,7 @@
+SubDir OBOS_TOP sources os kits kernel add-ons net loopback ;
+
+KernelObjects 
+	<$(SOURCE_GRIST)>loop.c 
+	: 
+	-fPIC -DPIC -D_KERNEL_ 
+	;
