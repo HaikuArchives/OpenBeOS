@@ -1,62 +1,59 @@
-PDF Writer 1.0b1
-2/19/2002
+PDF Writer
+5/30/2002
 
 is now part of the print_kit of the OBOS (OpenBeOS) project.
 http://open-beos.sourceforge.net
 
 Developers: 
-  Name             Email address                Native language
-  Phillipe Houdoin <philippe.houdoin@free.fr>   French
-  Simon Gauvin     <gauvins@cs.dal.ca>          French/English
-  Michael Pfeiffer <michael.pfeiffer@utanet.at> German
+  Name              Email address                Native language
+  Phillipe Houdoin  <philippe.houdoin@free.fr>   French
+  Michael Pfeiffer  <michael.pfeiffer@utanet.at> German
+  Celerick Stephens <stephcel@snet.net>          English
+
+Former developer:
+  Simon Gauvin      <gauvins@cs.dal.ca>          French/English
 
 
 Installation
 
-1. Expand the zip file somewhere
-2. Open the newly created folder
-3. Run the Install script to install the driver
+1. Execute the "Install" shell script with Tracker.
+2. Open the Printers preferences application and install "PDF Writer"
+ as a new printer that prints to file and make it the default printer.
 
-These steps are needed only if you don't have already set up a PDF Writer spooler:
 
-4. Open the Printers preference panel
-5. Click Add button
-6. Choose local printer (Network printing is untested, feedback welcome!)
-7. Type a name for your new PDF Writer spooler
-8. Select PDF Writer as kind
-9. Select port to output PDF (Print to file to generate PDF files)
-10. Click Add button
-11. Click Ok button
-12. Enjoy!
+Changes
+
+Read the "CHANGES" file for the most recent changes.
 
 
 Known Bugs/Limitations
 
-- alpha channel is not supported
-- patterns not supported
-- clipping to inverse BPicture not supported
-- canceling the "save file as" window crashes PDF Writer
+- Limited alpha transparency support only (bitmap/pattern only)
+- Not all drawing modes supported
+- No security settings support.
+- Clipping to inverse BPicture not supported
+
+
+Information:
+- BePDF does not take the alpha channel of transparent bitmaps or patterns into account;
+  Acrobat Reader shows them properly!
 
 
 Contact
 
 Either one of the developers or post to the print_kit mailing list
-open-beos-printing@freelists.org (preferred)
-Before any post, you'll need to subscribe it:
-http://www.freelists.org/cgi-bin/list?list_id=open-beos-printing
+open-beos-printing@freelists.org
 
 
 Build Instructions for BeOS on x86 platform
 
 Building for x86
 - copy libpdf.so into /boot/home/config/lib
-- make "PDF Writer x86" with "PDF Writer_x86.proj"
-- rename into "PDF Writer"
+- make "PDF Writer" with "PDF Writer (release).proj"
 
 Building for PPC
 - copy libpdf.so into /boot/develop/tools/develop_ppc/lib/ppc
-- make "PDF Writer ppc" with "PDF Writer_ppc.proj"
-- rename into "PDF Writer"
+- make "PDF Writer.ppc" with "PDF Writer-ppc.proj"
 
 Both
 After making the binary copy it to /boot/home/config/add-ons/Print
