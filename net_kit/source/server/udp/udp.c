@@ -76,6 +76,8 @@ net_module net_module_data = {
 	"UDP module",
 	NS_UDP,
 	NET_LAYER3,
+	SOCK_DGRAM,
+	AF_INET,
 
 	&udp_init,
 	NULL,

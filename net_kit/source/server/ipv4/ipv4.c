@@ -7,6 +7,7 @@
 #include <kernel/OS.h>
 #include <malloc.h>
 
+#include "netinet/in.h"
 #include "ipv4/ipv4.h"
 #include "ipv4/ipv4_var.h"	/* for stats */
 #include "protocols.h"
@@ -114,11 +115,19 @@ int ipv4_dev_init(ifnet *dev)
 
 	ifa->if_addr.sa_family = AF_INET;
 	ifa->if_addr.sa_len = 4;
-	/* Yuck - hard coded address! */
-	ifa->if_addr.sa_data[0] = 192; 
-	ifa->if_addr.sa_data[1] = 168;
-	ifa->if_addr.sa_data[2] = 0;
-	ifa->if_addr.sa_data[3] = 133;
+	if (dev->type == IFD_ETHERNET) {
+		/* Yuck - hard coded address! */
+		ifa->if_addr.sa_data[0] = 192; 
+		ifa->if_addr.sa_data[1] = 168;
+		ifa->if_addr.sa_data[2] = 0;
+		ifa->if_addr.sa_data[3] = 133;
+	}
+	if (dev->type == IFD_LOOPBACK) {
+		ifa->if_addr.sa_data[0] = 127;
+		ifa->if_addr.sa_data[1] = 0;
+		ifa->if_addr.sa_data[2] = 0;
+		ifa->if_addr.sa_data[3] = 1;
+	}
 
 	ifa->ifn = dev;
 	ifa->next = NULL;
@@ -136,6 +145,8 @@ net_module net_module_data = {
 	"IPv4 module",
 	NS_IPV4,
 	NET_LAYER2,
+        0,      /* users can't create sockets in this module! */
+        0,
 
 	&ipv4_init,
 	&ipv4_dev_init,

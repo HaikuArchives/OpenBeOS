@@ -435,6 +435,8 @@ net_module net_module_data = {
 	"ARP module",
 	NS_ARP,
 	NET_LAYER1,
+	0, 	/* users can't create sockets in this module! */
+	0,
 
 	&arp_init,
 	NULL,

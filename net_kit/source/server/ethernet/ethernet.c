@@ -270,7 +270,7 @@ int ether_dev_init(ifnet *dev)
                 printf("Failed to get a MAC address, ignoring %s%d\n", dev->name, dev->unit);
                 return 0;
         }
-
+printf("Adding input func for %s%d\n", dev->name, dev->unit);
         dev->input = &ether_input;
         dev->output = &ether_output;
 
@@ -306,6 +306,8 @@ net_module net_module_data = {
 	"Ethernet/802.x module",
 	NS_ETHER,
 	NET_LAYER1,
+        0,      /* users can't create sockets in this module! */
+        0,
 
 	&ether_init,
 	&ether_dev_init,

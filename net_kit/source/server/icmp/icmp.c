@@ -90,6 +90,8 @@ net_module net_module_data = {
 	"ICMP Module",
 	NS_ICMP,
 	NET_LAYER2,
+        0,      /* users can't create sockets in this module! */
+        0,
 
 	&icmp_init,
 	NULL,
