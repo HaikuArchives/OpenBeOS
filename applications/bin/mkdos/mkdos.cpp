@@ -201,9 +201,7 @@ status_t Initialize(int fatbits, const char *device, const char *label, bool nop
 	}
 	
 	if (!IsRawDevice && !HasPartitionInfo) {
-		fprintf(stderr,"Error: couldn't get partition information\n");
-		close(fd);
-		return B_ERROR;
+		fprintf(stderr,"Warning: couldn't get partition information\n");
 	}
 	if (	(HasPartitionInfo && PartitionInfo.logical_block_size != 512) 
 		||	(HasBiosGeometry && BiosGeometry.bytes_per_sector != 512) 
