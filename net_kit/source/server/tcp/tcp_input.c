@@ -432,7 +432,10 @@ findpcb:
 		++tcpstat.tcps_pcbhashmiss;
 	}
 	if (inp == NULL) {
+/* XXX - This is very common, but only commented out as it's useful at times
+         for debugging.
 		printf("tcp_input: dropwithreset: inp is NULL, line %d\n", __LINE__);
+ */
 		goto dropwithreset;
 	}
 	
