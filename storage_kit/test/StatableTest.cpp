@@ -205,6 +205,9 @@ StatableTest::SetXYZTest()
 //		CPPUNIT_ASSERT( statable->SetCreationTime(ctime) == B_OK );
 //		CPPUNIT_ASSERT( statable->SetAccessTime(atime) == B_OK );
 		CPPUNIT_ASSERT( lstat(entryName.c_str(), &st) == 0 );
+//printf("entry: `%s'\n", entryName.c_str());
+//printf("owner: %x, st.st_uid: %x\n", owner, st.st_uid);
+//printf("group: %x, st.st_gid: %x\n", group, st.st_gid);
 		CPPUNIT_ASSERT( owner == st.st_uid );
 		CPPUNIT_ASSERT( group == st.st_gid );
 //		CPPUNIT_ASSERT( perms == (st.st_mode & S_IUMSK) );
