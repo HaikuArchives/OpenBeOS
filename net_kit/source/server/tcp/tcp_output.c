@@ -156,6 +156,7 @@ int tcp_output(struct tcpcb *tp)
 	uint optlen, hdrlen;
 	int idle, sendalot;
 
+printf("tcp_output\n");
 	idle = (tp->snd_max == tp->snd_una);
 
 	if (idle && tp->t_idle >= tp->t_rxtcur)

@@ -256,9 +256,9 @@ present:
 }
 
 #ifdef TCP_DEBUG
-static void show_ti(struct tcpiphdr *ti, char *msg)
+static void show_ti(struct tcpiphdr *ti)
 {
-	printf("TCP/IP Header: %s\n", msg);
+	printf("TCP/IP Header:\n");
 	printf("             : src port : %d\n", ntohs(ti->ti_sport));
 	printf("             : dst port : %d\n", ntohs(ti->ti_dport));
 	printf("             : seq num  : %lu\n", ti->ti_seq);
@@ -378,7 +378,6 @@ int tcp_input(struct mbuf *m, int iphlen)
 	
 	tlen -=off;
 	ti->ti_len = tlen;
-
 		
 	if (off > sizeof(struct tcphdr)) {
 		if (m->m_len < sizeof(struct ip) + off) {
@@ -424,7 +423,6 @@ int tcp_input(struct mbuf *m, int iphlen)
 	 * Locate pcb for segment.
 	 */
 findpcb:
-
 	inp = tcp_last_inpcb;
 	if (!inp || inp->lport != ti->ti_dport ||
 	    inp->fport != ti->ti_sport ||
@@ -437,11 +435,13 @@ findpcb:
 		++tcpstat.tcps_pcbhashmiss;
 	}
 	if (inp == NULL) {
+		printf("inp is NULL\n");
 		goto dropwithreset;
 	}
 	
 	tp = intotcpcb(inp);
 	if (tp == NULL) {
+		printf("tp is NULL\n");
 		goto dropwithreset;
 	}
 
@@ -712,10 +712,12 @@ findpcb:
 			if (tiflags & TH_ACK) {
 				if (tiflags & TH_SYN) {
 					tcpstat.tcps_badsyn++;
+					printf("SYN + ACK in a reply\n");
 					goto dropwithreset;
 				}
 				if (SEQ_LEQ(ti->ti_ack, tp->snd_una) ||
 				    SEQ_GT(ti->ti_ack, tp->snd_max)) {
+				    printf("SEQ outside of boundaries...\n");
 					goto dropwithreset;
 				}
 			}
@@ -737,6 +739,7 @@ findpcb:
 			if ((tiflags & TH_ACK) &&
 		    	(SEQ_LEQ(ti->ti_ack, tp->iss) ||
 		     	SEQ_GT(ti->ti_ack, tp->snd_max))) {
+		     	printf("SYN_SENT but ACK was not for our request!\n");
 				goto dropwithreset;
 			}
 			if (tiflags & TH_RST) {
