@@ -17,15 +17,15 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	$(CC) $(KCFLAGS) $(INCLUDES) -c icmp.c
-	$(CC) $(KLDFLAGS) $(KLOBJS) -o icmp icmp.o
+	@$(CC) $(KCFLAGS) $(INCLUDES) -c icmp.c
+	@$(CC) $(KLDFLAGS) $(KLOBJS) -o icmp icmp.o
 
 installkernel:	kernel
-	cp icmp /boot/home/config/add-ons/kernel/network/protocol/icmp
+	@cp icmp /boot/home/config/add-ons/kernel/network/protocol/icmp
 
 $(TGT): $(OBJS)
 	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
