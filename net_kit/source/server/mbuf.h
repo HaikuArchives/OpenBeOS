@@ -44,7 +44,7 @@ struct m_hdr {
 
 /* pkt_hdr
  * This is ONLY found in the first MBuf in a chain and is valid
- * ONLY if we have the m_PKTHDR flag is set
+ * ONLY if we have the M_PKTHDR flag is set
  */
 /* XXX - we also need to record things like the interface and also maintain
  * a list of the packets associated with this message here.
@@ -72,14 +72,14 @@ struct mbuf {
 	struct m_hdr	m_hdr;
 	union {
 		struct {
-			struct pkt_hdr	NH_pkthdr;	 
+			struct pkt_hdr	MH_pkthdr;	 
 			union {
 				struct m_ext MH_ext;
 				char MH_databuf[MHLEN];
 			} MH_dat;
 		} MH;
 		char m_databuf[MLEN];
-	} m_dat;
+	} um_dat;
 };
 
 /* these are simply shortcuts... */
@@ -90,9 +90,10 @@ struct mbuf {
 #define m_flags		m_hdr.m_flags
 #define m_cksum		m_hdr.m_cksum
 #define m_nextpkt	m_hdr.m_nxtpkt
-#define m_dat		m_dat.m_databuf
-#define m_ext		m_dat.MH.MH_dat.MH_ext
-#define m_pktdat	m_dat.MH.MH_dat.MH_databuf
+#define m_ext		um_dat.MH.MH_dat.MH_ext
+#define m_pktdat	um_dat.MH.MH_dat.MH_databuf
+#define m_pkthdr	um_dat.MH.MH_pkthdr
+#define m_dat           um_dat.m_databuf
 
 /* define a little macro that gives us the data pointer for an mbuf */
 #define mtod(m, t)		((t)((m)->m_data))
@@ -172,25 +173,52 @@ enum {
 		(n)->m_cksum = 0; \
 	}
 
+#define MGETHDR(n, type) \
+        n = (struct mbuf*)pool_get(mbpool); \
+        if (n) { \
+                (n)->m_type = (type); \
+                (n)->m_next = (struct mbuf*)NULL; \
+                (n)->m_nextpkt = (struct mbuf*)NULL; \
+                (n)->m_data = (n)->m_pktdat; \
+                (n)->m_flags = M_PKTHDR; \
+                (n)->m_cksum = 0; \
+        }
+
 #define MFREE(m, n) \
 	(n) = (m)->m_next; \
 	pool_put(mbpool, m);
-	
-#define _MFILLHDR(n, type) \
-	if (n) { \
-		(n)->m_type = (type); \
-		(n)->m_next = (struct mbuf*)NULL; \
-		(n)->m_nextpkt = (struct mbuf*)NULL; \
-		(n)->m_data = (n)->m_pktdat; \
-		(n)->m_flags = M_PKTHDR; \
-		(n)->m_cksum = 0; \
+
+/* set the data pointer to place an object of size len at the end
+ * of the mbuf, aligned to long word (16 bits)
+ */
+#define M_ALIGN(m, len) \
+	{ (m)->m_data += (MLEN - (len)) &~ (sizeof(int16) -1);}
+
+#define MH_ALIGN(m, len) \
+        { (m)->m_data += (MHLEN - (len)) &~ (sizeof(int16) -1);}
+
+#define M_MOVE_HDR(to, from) { \
+	(to)->m_pkthdr = (from)->m_pkthdr; \
+	(from)->m_flags &= ~M_PKTHDR; \
+	}
+
+#define M_MOVE_PKTHDR(to, from) { \
+	(to)->m_flags = (from)->m_flags & M_COPYFLAGS; \
+	M_MOVE_HDR((to), (from)); \
+	(to)->m_data = (to)->m_pktdat; \
 	}
 
 
 /* Functions! */
 void mbinit(void);
 struct mbuf *m_get(int type);
+struct mbuf *m_gethdr(int type);
+struct mbuf *m_getclr(int type);
+
+struct mbuf *m_prepend(struct mbuf *m, size_t len);
+
 struct mbuf *m_free(struct mbuf *mfree);
+void m_freem(struct mbuf *m);
 
 /* debug functions */
 void dump_freelist(void);

@@ -33,7 +33,7 @@ printf("Thread %d starting...\n", th);
                 for (i=0;i<(START_BUFFS + j%16);i++) {
                         m_free(buf[i]);
                 }
-                if (j%32 == 0)
+                if (j%32 == 0 && j > 0)
                         printf("thread %d: %d loops complete\n", th, j);
 
 
@@ -47,12 +47,26 @@ int main(int argc, char **argv)
 	int i;
 	thread_id thd[3];
 	status_t ev;
-			
+	struct mbuf *ts;
+	char *tptr;
+					
 	printf("Network Buffer Test\n");
 	printf("===================\n\n");
 	
 	mbinit();
 
+	printf("Checking if m_getclr works...");
+	ts = m_getclr(MT_DATA);
+	tptr = mtod(ts, char *);
+	for (i=0;i<MLEN;i++) {
+		if (*tptr++ != 0) {
+			printf("error!\n");
+			break;
+		}
+	}
+	m_free(ts);
+	printf("seems to!\n");
+		
 	for (i=0;i<3;i++) {
 		thd[i] = spawn_thread(mbuf_test_thread, "test_mbuf_thread",
 				B_NORMAL_PRIORITY, &i);
