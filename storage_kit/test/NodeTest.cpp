@@ -4,21 +4,17 @@
 #include <NodeTest.h>
 
 #include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
-
-#include <sys/stat.h>	// For struct stat
 #include <fs_attr.h>	// For struct attr_info
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/stat.h>	// For struct stat
 
 #include <Directory.h>
 #include <Entry.h>
+#include <Node.h>
 #include <StorageDefs.h>
 #include <String.h>
 #include <TypeConstants.h>
-
-//#include <kernel_interface.h>
-
-#include <Node.h>
 
 #include "TestUtils.h"
 
@@ -42,14 +38,22 @@ NodeTest::Suite() {
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Init Test2", &NodeTest::InitTest2) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Directory Test", &NodeTest::AttrDirTest) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Read/Write/Remove Test", &NodeTest::AttrTest) );
-	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Rename Test (NOTE: this fails with R5 libraries)", &NodeTest::AttrRenameTest) );
+	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Rename Test"
+#if SK_TEST_R5
+														" (NOTE: test not actually performed with R5 libraries)"
+#endif
+														, &NodeTest::AttrRenameTest) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Info Test", &NodeTest::AttrInfoTest) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute BString Test", &NodeTest::AttrBStringTest) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Sync Test", &NodeTest::SyncTest) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Dup Test", &NodeTest::DupTest) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Equality Test", &NodeTest::EqualityTest) );
 	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Assignment Test", &NodeTest::AssignmentTest) );
-	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Lock Test (NOTE: This fails with OpenBeOS Posix libraries)", &NodeTest::LockTest) );
+	suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Lock Test"
+#if SK_TEST_OBOS_POSIX
+														" (NOTE: test not actually performed with OpenBeOS Posix libraries)"
+#endif
+														, &NodeTest::LockTest) );
 		
 	return suite;
 }		
@@ -283,17 +287,15 @@ NodeTest::InitTest1()
 		CPPUNIT_ASSERT( node.InitCheck() == B_OK );
 
 	}
-/* BEntry doesn't seem to check the entry name length.
+/* BEntry doesn't seem to check the entry name length. */
 	nextSubTest();
 	{
 		BEntry entry(tooLongEntryname);
 		// R5 returns E2BIG instead of B_NAME_TOO_LONG
-printf("entry.InitCheck(): %x\n", entry.InitCheck());
-		CPPUNIT_ASSERT( entry.InitCheck() == E2BIG );
+		CPPUNIT_ASSERT( equals(entry.InitCheck(), E2BIG, B_NAME_TOO_LONG) );
 		BNode node(&entry);
 		CPPUNIT_ASSERT( equals(node.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
 	}
-*/
 
 	// 4. BNode(const entry_ref*)
 	nextSubTest();
@@ -398,16 +400,14 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 		BNode node(&pathDir, existingRelDir);
 		CPPUNIT_ASSERT( node.InitCheck() == B_OK );
 	}
-/* BEntry doesn't seem to check the entry name length.
+/* BEntry doesn't seem to check the entry name length. */
 	nextSubTest();
 	{
 		BDirectory pathDir(tooLongSuperEntryname);
 		CPPUNIT_ASSERT( pathDir.InitCheck() == B_OK );
 		BNode node(&pathDir, tooLongRelEntryname);
-printf("node.InitCheck(): %x\n", node.InitCheck());
 		CPPUNIT_ASSERT( node.InitCheck() == B_NAME_TOO_LONG );
 	}
-*/
 	nextSubTest();
 	{
 		BDirectory pathDir(fileSuperDirname);
@@ -498,16 +498,13 @@ NodeTest::InitTest2()
 	CPPUNIT_ASSERT( entry.SetTo(existingDir) == B_OK );
 	CPPUNIT_ASSERT( node.SetTo(&entry) == B_OK );
 	CPPUNIT_ASSERT( node.InitCheck() == B_OK );
-/* BEntry doesn't seem to check the entry name length.
+/* BEntry doesn't seem to check the entry name length. */
 	//
 	nextSubTest();
-	BEntry entry(tooLongEntryname);
 	// R5 returns E2BIG instead of B_NAME_TOO_LONG
-	CPPUNIT_ASSERT( entry.SetTo(tooLongEntryname) == E2BIG );
-printf("entry.InitCheck(): %x\n", entry.InitCheck());
+	CPPUNIT_ASSERT( equals(entry.SetTo(tooLongEntryname), E2BIG, B_NAME_TOO_LONG) );
 	CPPUNIT_ASSERT( equals(node.SetTo(&entry), B_BAD_ADDRESS, B_BAD_VALUE) );
 	CPPUNIT_ASSERT( equals(node.InitCheck(), B_BAD_ADDRESS, B_BAD_VALUE) );
-*/
 
 	// 4. BNode(const entry_ref*)
 	nextSubTest();
@@ -584,14 +581,12 @@ printf("entry.InitCheck(): %x\n", entry.InitCheck());
 	CPPUNIT_ASSERT( pathDir.SetTo(existingSuperDir) == B_OK );
 	CPPUNIT_ASSERT( node.SetTo(&pathDir, existingRelDir) == B_OK );
 	CPPUNIT_ASSERT( node.InitCheck() == B_OK );
-/* BEntry doesn't seem to check the entry name length.
+/* BEntry doesn't seem to check the entry name length. */
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( pathDir.SetTo(tooLongSuperEntryname) == B_OK );
-	CPPUNIT_ASSERT( node.SetTo(&pathDir, tooLongRelEntryname) == B_OK );
-printf("node.InitCheck(): %x\n", node.InitCheck());
+	CPPUNIT_ASSERT( node.SetTo(&pathDir, tooLongRelEntryname) == B_NAME_TOO_LONG );
 	CPPUNIT_ASSERT( node.InitCheck() == B_NAME_TOO_LONG );
-*/
 	//
 	nextSubTest();
 	CPPUNIT_ASSERT( pathDir.SetTo(fileSuperDirname) == B_OK );
@@ -656,7 +651,9 @@ NodeTest::AttrDirTest(BNode &node)
 	CPPUNIT_ASSERT( node.RewindAttrs() == B_OK );
 	testSet.rewind();
 // R5: crashs, if passing a NULL buffer
-//	CPPUNIT_ASSERT( node.GetNextAttrName(NULL) == B_BAD_VALUE );
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( node.GetNextAttrName(NULL) == B_BAD_VALUE );
+#endif
 }
 
 // AttrDirTest
@@ -798,6 +795,7 @@ NodeTest::AttrTest()
 void
 NodeTest::AttrRenameTest(BNode &node)
 {
+#if !SK_TEST_R5
 	const char attr1[] = "StorageKit::SomeAttribute";
 	const char attr2[] = "StorageKit::AnotherAttribute";
 	const char str[] = "This is my testing string and it rules your world.";
@@ -839,6 +837,7 @@ NodeTest::AttrRenameTest(BNode &node)
 					== B_BAD_VALUE );
 	CPPUNIT_ASSERT( node.RenameAttr(tooLongAttrName, attr1)
 					== B_BAD_VALUE );
+#endif
 }
 
 	
@@ -994,14 +993,18 @@ NodeTest::AttrBStringTest(BNode &node)
 	// bad args
 	BString readValue;
 	BString writeValue("test");
-// R5: crashs, if supplying a NULL BString
-//	CPPUNIT_ASSERT( node.WriteAttrString(attrNames[0], NULL) == B_BAD_VALUE );		
-//	CPPUNIT_ASSERT( node.ReadAttrString(attrNames[0], NULL) == B_BAD_VALUE );
+// R5: crashes, if supplying a NULL BString
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( node.WriteAttrString(attrNames[0], NULL) == B_BAD_VALUE );		
+	CPPUNIT_ASSERT( node.ReadAttrString(attrNames[0], NULL) == B_BAD_VALUE );
+#endif
 	CPPUNIT_ASSERT( equals(node.WriteAttrString(NULL, &writeValue),
 						   B_BAD_ADDRESS, B_BAD_VALUE) );
 	CPPUNIT_ASSERT( equals(node.ReadAttrString(NULL, &readValue),
 						   B_BAD_ADDRESS, B_BAD_VALUE) );
-//	CPPUNIT_ASSERT( node.WriteAttrString(NULL, NULL) == B_BAD_VALUE );
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( node.WriteAttrString(NULL, NULL) == B_BAD_VALUE );
+#endif
 	CPPUNIT_ASSERT( equals(node.ReadAttrString(NULL, NULL),
 						   B_BAD_ADDRESS, B_BAD_VALUE) );
 	// remove the attributes and try to read them
@@ -1183,6 +1186,7 @@ NodeTest::LockTest(BNode &node, const char *entryName)
 void
 NodeTest::LockTest()
 {
+#if !SK_TEST_OBOS_POSIX
 	// uninitialized objects
 	nextSubTest();
 	TestNodes testEntries;
@@ -1200,6 +1204,7 @@ NodeTest::LockTest()
 		LockTest(*node, nodeName.c_str());
 	}
 	testEntries.delete_all();
+#endif
 }
 
 // entry names used in tests

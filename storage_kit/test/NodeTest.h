@@ -104,14 +104,20 @@ NodeTest::AddBaseClassTests(const char *prefix, CppUnit::TestSuite *suite)
 
 	suite->addTest( new TC(p + "BNode::AttrDir Test", &NodeTest::AttrDirTest) );
 	suite->addTest( new TC(p + "BNode::Attr Test", &NodeTest::AttrTest) );
-	suite->addTest( new TC(p + "BNode::AttrRename Test "
-						   "(NOTE: this fails with R5 libraries)",
-						   &NodeTest::AttrRenameTest) );
+	suite->addTest( new TC(p + "BNode::AttrRename Test"
+#if SK_TEST_R5
+								" (NOTE: test not actually performed with R5 libraries)"
+#endif								
+								, &NodeTest::AttrRenameTest) );
 	suite->addTest( new TC(p + "BNode::AttrInfo Test", &NodeTest::AttrInfoTest) );
 	suite->addTest( new TC(p + "BNode::AttrBString Test", &NodeTest::AttrBStringTest) );
 	suite->addTest( new TC(p + "BNode::Sync Test", &NodeTest::SyncTest) );
 	suite->addTest( new TC(p + "BNode::Dup Test", &NodeTest::DupTest) );
-//	suite->addTest( new TC(p + "BNode::Lock Test", &NodeTest::LockTest) );
+	suite->addTest( new TC(p + "BNode::Lock Test"
+#if SK_TEST_OBOS_POSIX
+								" (NOTE: test not actually performed with OpenBeOS Posix libraries)"
+#endif
+								, &NodeTest::LockTest) );
 }
 
 
