@@ -12,8 +12,11 @@ DUNView by Sikosis (beos@gravity24hr.com)
 class DUNView : public BView {
 public:
    DUNView(BRect frame);
-   virtual void Draw (BRect updateRect);
-   void MouseDown(BPoint bp);
+};
+
+class ModemView : public BView {
+public:
+   ModemView(BRect frame);
 };
 
 #endif
