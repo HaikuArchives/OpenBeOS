@@ -650,12 +650,12 @@ BPlusTree::InsertDuplicate(Transaction *transaction,CachedNode *cached,bplustree
 		bplustree_node *duplicate;
 		off_t duplicateOffset;
 		do {
-			duplicate = cachedDuplicate.SetTo(bplustree_node::FragmentOffset(oldValue),false);
+			duplicateOffset = bplustree_node::FragmentOffset(oldValue);
+			duplicate = cachedDuplicate.SetTo(duplicateOffset,false);
 			if (duplicate == NULL)
 				return B_IO_ERROR;
 
 			array = duplicate->DuplicateArray();
-			duplicateOffset = oldValue;
 		} while (array->value_count >= NUM_DUPLICATE_VALUES && (oldValue = duplicate->right_link) != BPLUSTREE_NULL);
 
 		if (array->value_count < NUM_DUPLICATE_VALUES) {
