@@ -27,3 +27,4 @@
 # remove # from the below lines to enable syncmail
 #net_kit/ $CVSROOT/CVSROOT/syncmail %{sVv} openbeosnetteam@freelists.org
 #print_kit/ $CVSROOT/CVSROOT/syncmail %{sVv} open-beos-printing@freelists.org
+DEFAULT $CVSROOT/CVSROOT/syncmail %{sVv} open-beos-cvs@lists.sourceforge.net
