@@ -33,8 +33,5 @@ typedef struct icmp_echo {
 	uint16	seq;
 } icmp_echo;
 
-int icmp_input(struct mbuf *buf);
-int icmp_output(struct mbuf *buf, struct sockaddr *sa);
-
 #endif /* OBOS_ICMP_H */
 

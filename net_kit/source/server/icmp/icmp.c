@@ -12,6 +12,7 @@
 
 static loaded_net_module *global_modules;
 static int *prot_table;
+static struct route icmprt;
 
 #if SHOW_DEBUG
 static void dump_icmp(struct mbuf *buf)
@@ -33,19 +34,23 @@ static void dump_icmp(struct mbuf *buf)
 }
 #endif
 
-int icmp_input(struct mbuf *buf)
+int icmp_input(struct mbuf *buf, int hdrlen)
 {
 	ipv4_header *ip = mtod(buf, ipv4_header *);	
 	icmp_header *ic;
-	int icl = ntohs(ip->length) - (ip->hl * 4);
+	int icl = ip->length - hdrlen;
+	struct route rt;
+	int error = 0;
+	struct in_addr tmp;
 
-	ic = (icmp_header*)((caddr_t)ip + (ip->hl * 4));
+	ic = (icmp_header*)((caddr_t)ip + hdrlen);
+	rt.ro_rt = NULL;
 
 #if SHOW_DEBUG
 	dump_icmp(buf);
 #endif
 
-	if (in_cksum(buf, icl, (ip->hl * 4)) != 0) {
+	if (in_cksum(buf, icl, hdrlen) != 0) {
 		printf("Checksum failed!\n");
 		m_freem(buf);
 		return 0;
@@ -54,21 +59,26 @@ int icmp_input(struct mbuf *buf)
 	switch (ic->type) {
 		case ICMP_ECHO_RQST: {
 			icmp_echo *ie = (icmp_echo *)ic;
-			struct sockaddr sa;
 			ie->hdr.type = ICMP_ECHO_RPLY;
 
-			/* fill in target structure... */
-			sa.sa_family = AF_INET;
-			sa.sa_len = 4;
-			memcpy(&sa.sa_data, &ip->src, 4);
-
 			ie->hdr.cksum = 0;
-			ie->hdr.cksum = in_cksum(buf, icl, (ip->hl * 4));
+			ie->hdr.cksum = in_cksum(buf, icl, hdrlen);
+			tmp = ip->src;
 			ip->src = ip->dst;
+			ip->dst = tmp;
 
-			global_modules[prot_table[NS_IPV4]].mod->output(buf, NS_ICMP, &sa);
-
-			return 0;
+			if (satosin(&icmprt.ro_dst)->sin_addr.s_addr == ip->src.s_addr)
+				rt = icmprt;
+			else {
+				/* fill in target structure... */
+				satosin(&rt.ro_dst)->sin_family = AF_INET;
+				satosin(&rt.ro_dst)->sin_len = sizeof(rt.ro_dst);
+				satosin(&rt.ro_dst)->sin_addr = ip->src;
+			}
+			error = global_modules[prot_table[NS_IPV4]].mod->output(buf, NULL, &rt, 0, NULL);
+			if (error == 0)
+				icmprt = rt;
+			return error;
 			break;
 		}
 		case ICMP_ECHO_RPLY:
@@ -83,6 +93,7 @@ static int icmp_init(loaded_net_module *ln, int *pt)
 {
 	global_modules = ln;
 	prot_table = pt;
+	memset(&icmprt, 0, sizeof(icmprt));
 	return 0;
 }
 
