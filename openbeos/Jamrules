@@ -187,7 +187,7 @@ rule SharedLibrary
 	# SharedLibrary <name> : <sources> ;
 	local _lib = lib$(1).so ;
 	
-	SetupIncludes ;
+#	SetupIncludes ;
 	SetupObjectsDir ;
 	MakeLocateObjects $(2) ;
 	Main $(_lib) : $(2) ;
