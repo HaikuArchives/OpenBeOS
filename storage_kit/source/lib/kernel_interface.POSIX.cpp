@@ -546,8 +546,15 @@ StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
 			break;
 			
 		case WSTAT_GID:
-			result = ::fchown(file, 0xFFFFFFFF, s.st_gid);
+		{
+			// Should work, but doesn't. uid is set to 0xffffffff.
+//			result = ::fchown(file, 0xFFFFFFFF, s.st_gid);
+			Stat st;
+			result = fstat(file, &st);
+			if (result == 0)
+				result = ::fchown(file, st.st_uid, s.st_gid);
 			break;
+		}
 
 		case WSTAT_SIZE:
 			// For enlarging files the truncate() behavior seems to be not
@@ -641,8 +648,9 @@ StorageKit::read_attr ( StorageKit::FileDescriptor file, const char *attribute,
 				 uint32 type, off_t pos, void *buf, size_t count ) {
 	if (attribute == NULL || buf == NULL)
 		return B_BAD_VALUE;
-			
-	return fs_read_attr ( file, attribute, type, pos, buf, count );
+
+	ssize_t result = fs_read_attr ( file, attribute, type, pos, buf, count );
+	return (result == -1 ? errno : result);
 }
 
 ssize_t
@@ -652,7 +660,8 @@ StorageKit::write_attr ( StorageKit::FileDescriptor file, const char *attribute,
 	if (attribute == NULL || buf == NULL)
 		return B_BAD_VALUE;
 			
-	return fs_write_attr ( file, attribute, type, pos, buf, count );
+	ssize_t result = fs_write_attr ( file, attribute, type, pos, buf, count );
+	return (result == -1 ? errno : result);
 }
 
 status_t
@@ -705,13 +714,28 @@ StorageKit::rewind_attr_dir( FileDescriptor dir ) {
 	}
 }
 
-StorageKit::DirEntry*
-StorageKit::read_attr_dir( FileDescriptor dir ) {
+// buffer must be large enough!!!
+status_t
+StorageKit::read_attr_dir( FileDescriptor dir, StorageKit::DirEntry& buffer )
+{
 	// init a DIR structure
 	LongDIR dirDir;
 	dirDir.fd = dir;
-
-	return ::fs_read_attr_dir(&dirDir);
+	// check parameters
+	status_t error = B_OK;
+	// read one entry and copy it into the buffer
+	if (dirent *entry = ::fs_read_attr_dir(&dirDir)) {
+		// Don't trust entry->d_reclen.
+		// Unlike stated in BeBook::BEntryList, the value is not the length
+		// of the whole structure, but only of the name. Some FSs count
+		// the terminating '\0', others don't.
+		// So we calculate the size ourselves (including the '\0'):
+		size_t entryLen = entry->d_name + strlen(entry->d_name) + 1
+						  - (char*)entry;
+		memcpy(&buffer, entry, entryLen);
+	} else
+		error = B_ENTRY_NOT_FOUND;
+	return error;
 }
 
 status_t
@@ -722,6 +746,7 @@ StorageKit::close_attr_dir ( FileDescriptor dir )
 		
 	// init a DIR structure
 	LongDIR* dirDir = (LongDIR*)malloc(sizeof(LongDIR));
+	dirDir->fd = dir;
 	return (fs_close_attr_dir(dirDir) == -1) ? errno : B_OK ;
 }
 
