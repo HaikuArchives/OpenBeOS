@@ -108,11 +108,18 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 	int alen = af == AF_LINK ? 6 : 4; /* ugh - fix me! */
 	ace = (arp_cache_entry *)nhash_get(arphash, addr, alen);
 	if (ace) {
-		/* we already have it... */
-		/* ??? should we update the timer here ?? */
+		/* if we don't match the existing record, update it,
+		 * otherwsie we don't worry about it...
+		 */
+		if (memcmp(&ace->ll_addr.sa_data, link, 6) != 0) {
+			/* oh, change of ll_addr... */
+			memcpy(&ace->ll_addr.sa_data, link, alen);
+			ace->expires = real_time_clock_usecs() + 
+					(arp_keep * USECS_PER_SEC);
+		}	
 		return 0;
 	}
-	ace = (arp_cache_entry *)malloc(sizeof(arp_cache_entry));//pool_get(arpp);
+	ace = (arp_cache_entry *)pool_get(arpp);
 	ace->ip_addr.sa_family = af;
  	ace->ip_addr.sa_len = alen;
 	memcpy(&ace->ip_addr.sa_data, addr, alen);
@@ -137,7 +144,7 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 	nhash_set(arphash, &ace->ip_addr.sa_data, ace->ip_addr.sa_len, (void*)ace);
 	release_sem(arpc_lock);
 
-	/* thes should be oK outside the sem locked area as we use atomic_add and
+	/* these should be OK outside the sem locked area as we use atomic_add and
 	 * we don't reference them in many places...
 	 */
 	atomic_add(&arp_inuse, 1);
@@ -169,13 +176,13 @@ int arp_input(struct mbuf *buf)
                                 sa.sa_len = 6;
 				insert_cache_entry((char*)&arp->sender, AF_LINK, &arp->sender_ip, AF_INET);
 				memcpy(&sa.sa_data, &arp->target_ip, 4);
-				memcpy(&arp->target_ip, &arp->sender_ip, 4);
-				memcpy(&arp->target, &arp->sender, 6);
+				arp->target_ip = arp->sender_ip;
+				arp->target = arp->sender;
 				memcpy(&arp->sender, &buf->m_pkthdr.rcvif->link_addr->sa_data, 6);
 				memcpy(&arp->sender_ip, &sa.sa_data, 4);
 				memcpy(&sa.sa_data, &arp->target, 6);
 				arp->arp_op = htons(ARP_RPLY);
-				global_modules[prot_table[NS_ETHER]].mod->output(buf, NS_ARP, &sa);
+				buf->m_pkthdr.rcvif->output(buf, NS_ARP, &sa);
 				return 1;
 			}
 			/* not for us, just let it be discarded */
@@ -291,7 +298,7 @@ static void arp_cleanse(void *data)
 			/* remove from hash table */
 			nhash_set(arphash, &temp->ip_addr.sa_data, 
 				temp->ip_addr.sa_len, NULL);
-			free(ace);//pool_put(arpp, ace);
+			pool_put(arpp, ace);
 			atomic_add(&arp_inuse, -1);
 			continue;
 		}
@@ -391,7 +398,7 @@ int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 
 	if (ace) {
 		ace->expires = real_time_clock_usecs() + (arp_keep * USECS_PER_SEC);
-		memcpy(tgt, &ace->ll_addr, sizeof(struct sockaddr));
+		*tgt = ace->ll_addr;
 		return ARP_LOOKUP_OK;
 	}
 	/* ok, we didn't get one! */
@@ -406,7 +413,7 @@ int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 	if (!aqe) {
 		aqe = malloc(sizeof(struct arp_q_entry));
 		aqe->buf = buf;
-		memcpy(&aqe->tgt, tgt, sizeof(struct sockaddr));
+		aqe->tgt = *tgt;
 		aqe->callback = callback;
 
 		if (arp_lookup_q)
