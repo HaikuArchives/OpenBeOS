@@ -10,7 +10,7 @@
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #define AREA_ADDR_FLAG  B_ANY_KERNEL_ADDRESS
-#define AREA_FLAGS      B_FULL_LOCK
+#define AREA_FLAGS      B_NO_LOCK
 #else
 #define AREA_ADDR_FLAG  B_ANY_ADDRESS
 #define AREA_FLAGS      B_FULL_LOCK
