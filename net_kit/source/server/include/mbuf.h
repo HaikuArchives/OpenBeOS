@@ -275,7 +275,7 @@ struct mbuf *m_get(int type);
 struct mbuf *m_gethdr(int type);
 struct mbuf *m_getclr(int type);
 
-struct mbuf *m_prepend(struct mbuf *m, size_t len);
+struct mbuf *m_prepend(struct mbuf *m, int len);
 struct mbuf *m_devget(char *buf, int totlen, int off0,
                         struct ifnet *ifp,
                         void (*copy)(const void *, void *, size_t));
