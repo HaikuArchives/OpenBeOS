@@ -56,6 +56,8 @@ static uint16 ttf_get_uint16(FILE * ttf);
 static uint32 ttf_get_uint32(FILE *ttf);
 static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_size);
 
+static status_t psf_get_fontname(const char * path, char * fontname, size_t fn_size);
+
 // Private Variables
 // -----------------
 
@@ -350,10 +352,6 @@ PDFWriter::EndPage()
 status_t 
 PDFWriter::DeclareFonts()
 {
-	char 				fn[512];
-	char				buffer[1024];
-	BDirectory *		dir;
-    BEntry 				entry;
 	BPath				path;
 	directory_which	*	which_dir;
 	directory_which		lookup_dirs[] =
@@ -368,47 +366,93 @@ PDFWriter::DeclareFonts()
 	while (*which_dir >= 0)
 		{
 		if ( find_directory(*which_dir, &path) == B_OK )
-			{		
-			path.Append("ttfonts");
-			
-			dir = new BDirectory(path.Path());
-			if ( dir->InitCheck() == B_OK )
-				{
-				fprintf(fLog, "--- From %s\n", path.Path());
-				while ( dir->GetNextEntry(&entry) == B_OK )
-					{
-					if (! entry.IsFile())
-						continue;
+			LookupFontFiles(path);
 
-					entry.GetPath(&path);
-	
-					fn[0] = 0;
-					if ( ttf_get_fontname(path.Path(), fn, sizeof(fn)) != B_OK )
-						continue;
-										
-					BFile f(&entry, B_READ_ONLY);
-					off_t size;
-					if (f.GetSize(&size) != B_OK) size = 1024*1024*1024;
-					
-					fFontFiles.AddItem(new FontFile(fn, size, true_type_type));
-#ifndef __POWERPC__						
-					snprintf(buffer, sizeof(buffer), "%s==%s", fn, path.Path());
-#else
-					sprintf(buffer, "%s==%s", fn, path.Path());
-#endif
-					fprintf(fLog, "%s\n", buffer);
-					PDF_set_parameter(fPdf, "FontOutline", buffer);
-					};
-				};
-			delete dir;
-			};
-			
 		which_dir++;
 		};
 		
 	return B_OK;
 }
 
+
+// --------------------------------------------------
+status_t
+PDFWriter::LookupFontFiles
+	(
+	BPath	path
+	)
+{
+	BDirectory 	dir(path.Path());
+	BEntry 		entry;
+
+	if (dir.InitCheck() != B_OK)
+		return B_ERROR;
+
+	fprintf(fLog, "--- From %s\n", path.Path());
+	
+	dir.Rewind();
+	while (dir.GetNextEntry(&entry) >= 0)
+		{
+		BPath 		name;
+		char 		fn[512];
+		font_type	ft;
+		off_t 		size;
+		char		buffer[1024];
+		char *		parameter_name;
+		status_t	status;
+		
+		entry.GetPath(&name);
+		if (entry.IsDirectory())
+			// recursivly lookup in sub-directories...
+			LookupFontFiles(name);
+
+		if (! entry.IsFile())
+			continue;
+
+		fn[0] = 0;
+		parameter_name = NULL;
+		
+		// is it a truetype file?
+		status = ttf_get_fontname(name.Path(), fn, sizeof(fn));
+		if (status == B_OK )
+			{
+			ft = true_type_type;
+			parameter_name = "FontOutline";
+			}
+		else
+			{
+			// okay, maybe it's a postscript type file?
+			status = psf_get_fontname(name.Path(), fn, sizeof(fn));
+			if (status == B_OK)
+				{
+				ft = type1_type;
+				if (strstr(name.Leaf(), ".afm"))
+					parameter_name = "FontAFM";
+				else if (strstr(name.Leaf(), ".pfm"))
+					parameter_name = "FontPFM";
+				};
+			}; 
+
+		if (! parameter_name)
+			// not a font file...
+			continue;
+										
+		if (entry.GetSize(&size) != B_OK)
+			size = 1024*1024*1024;
+					
+		fFontFiles.AddItem(new FontFile(fn, size, ft));
+#ifndef __POWERPC__						
+		snprintf(buffer, sizeof(buffer), "%s==%s", fn, name.Path());
+#else
+		sprintf(buffer, "%s==%s", fn, name.Path());
+#endif
+		fprintf(fLog, "%s: %s\n", parameter_name, buffer);
+		
+		PDF_set_parameter(fPdf, parameter_name, buffer);
+		};	// while dir.GetNextEntry()...	
+
+	return B_OK;
+}
 
 // --------------------------------------------------
 static uint16 ttf_get_uint16(FILE * ttf)
@@ -578,6 +622,64 @@ exit:;
 	fclose(ttf);
 	return status;
 }
+
+
+// --------------------------------------------------
+static status_t psf_get_fontname(const char * path, char * fontname, size_t fn_size)
+{
+	FILE *		psf;
+	status_t	status;
+	int			i;
+	char		line[1024];
+	char * 		token;
+	char *		name;
+
+	// *.afm	search for "FontName <font_name_without_blank>" line
+	// *.pfa 	search for "/FontName /<font_name_without_blank> def" line
+
+	status = B_ERROR;
+	
+	psf = fopen(path, "r");
+	if (! psf) 
+		return status;
+
+	name = NULL;
+	
+	i = 0;
+	while ( fgets(line, sizeof(line), psf) != NULL )
+		{
+		i++;
+		if ( i > 64 )
+			// only check the first 64 lines of files...
+			break;
+		
+		token = strtok(line, " \r\n");
+		if (! token)
+			continue;
+			
+		if (strcmp(token, "FontName") == 0)
+			name = strtok(NULL, " \r\n");
+		else if (strcmp(token, "/FontName") == 0)
+			{
+			name = strtok(NULL, " \r\n");
+			if (name)
+				name++;	// skip the '/'
+			};
+
+		if (name)
+			break;
+		};
+		
+	if (name)
+		{
+		strncpy(fontname, name, fn_size);
+		status = B_OK;
+		};
+		
+	fclose(psf);
+	return status;
+}
+
 
 
 #ifdef CODEWARRIOR

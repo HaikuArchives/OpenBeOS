@@ -104,8 +104,9 @@ class PDFWriter : public PrinterDriver
 		void   ToUnicode(const char *string, BString &unicode);
 		uint16 CodePointSize(const char *s);
 		void   DrawChar(uint16 unicode, const char *utf8, int16 size);
-		bool   EmbedFont(const char* n);
-		status_t DeclareFonts();
+		bool   		EmbedFont(const char* n);
+		status_t 	DeclareFonts();
+		status_t	LookupFontFiles(BPath path);	
 
 		// BPicture playback handlers
 		void		Op(int number);
