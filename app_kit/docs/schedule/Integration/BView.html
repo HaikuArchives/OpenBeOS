@@ -6,7 +6,7 @@
 <h1>BView Tasks<hr></h1>
 
 
-<!-- master table -->
+<!-- summary table -->
 <table border>
 	<!-- table column headers -->
 	<th>
@@ -38,8 +38,80 @@
 			</td>
 		</table>
 	</th>
-	<th><strong>Task</strong></th>
+	<th><strong>Task Summary</strong></th>
 	<th><strong>Owner</strong></th>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BView
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			
+		</td>
+	</tr>
+
+</table>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<!-- detail table -->
+<table border>
+	<!-- table column headers -->
+	<th>
+		<table>
+			<td>
+				<a href="#legend">
+					<img src="../../images/DocumentDraw.gif" width="22" height="22" alt="Functional Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/User.gif" width="22" height="22" alt="Use Cases" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Help.gif" width="22" height="22" alt="Unit Tests" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Hammer.gif" width="22" height="22" alt="Technical Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/GoalFlag.gif" width="22" height="22" alt="Implementation" border="0">
+				</a>
+			</td>
+		</table>
+	</th>
+	<th width="100%"><strong>Task Details</strong></th>
+<!--	<th><strong>Owner</strong></th>	-->
 
 	<!-- Class header -->
 	<tr>
@@ -69,10 +141,6 @@
 		<td>
 			BView(BRect frame, const char* name, uint32 resizeMask, uint32 flags);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -97,10 +165,6 @@
 		<!-- task -->
 		<td>
 			BView(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -127,10 +191,6 @@
 		<td>
 			virtual ~BView();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -155,10 +215,6 @@
 		<!-- task -->
 		<td>
 			static BArchivable* Instantiate(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -185,10 +241,6 @@
 		<td>
 			virtual status_t Archive(BMessage* data, bool deep = true) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -213,10 +265,6 @@
 		<!-- task -->
 		<td>
 			virtual void AttachedToWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -243,10 +291,6 @@
 		<td>
 			virtual void AllAttached();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -271,10 +315,6 @@
 		<!-- task -->
 		<td>
 			virtual void DetachedFromWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -301,10 +341,6 @@
 		<td>
 			virtual void AllDetached();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -329,10 +365,6 @@
 		<!-- task -->
 		<td>
 			virtual void MessageReceived(BMessage* msg);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -359,10 +391,6 @@
 		<td>
 			void AddChild(BView* child, BView* before = NULL);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -387,10 +415,6 @@
 		<!-- task -->
 		<td>
 			bool RemoveChild(BView* child);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -417,10 +441,6 @@
 		<td>
 			int32 CountChildren() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -445,10 +465,6 @@
 		<!-- task -->
 		<td>
 			BView* ChildAt(int32 index) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -475,10 +491,6 @@
 		<td>
 			BView* NextSibling() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -503,10 +515,6 @@
 		<!-- task -->
 		<td>
 			BView* PreviousSibling() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -533,10 +541,6 @@
 		<td>
 			bool RemoveSelf();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -561,10 +565,6 @@
 		<!-- task -->
 		<td>
 			BWindow* Window() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -591,10 +591,6 @@
 		<td>
 			virtual void Draw(BRect updateRect);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -619,10 +615,6 @@
 		<!-- task -->
 		<td>
 			virtual void MouseDown(BPoint where);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -649,10 +641,6 @@
 		<td>
 			virtual void MouseUp(BPoint where);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -677,10 +665,6 @@
 		<!-- task -->
 		<td>
 			virtual void MouseMoved(BPoint where, uint32 code, const BMessage* a_message);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -707,10 +691,6 @@
 		<td>
 			virtual void WindowActivated(bool state);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -735,10 +715,6 @@
 		<!-- task -->
 		<td>
 			virtual void KeyDown(const char* bytes, int32 numBytes);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -765,10 +741,6 @@
 		<td>
 			virtual void KeyUp(const char* bytes, int32 numBytes);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -793,10 +765,6 @@
 		<!-- task -->
 		<td>
 			virtual void Pulse();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -823,10 +791,6 @@
 		<td>
 			virtual void FrameMoved(BPoint new_position);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -851,10 +815,6 @@
 		<!-- task -->
 		<td>
 			virtual void FrameResized(float new_width, float new_height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -881,10 +841,6 @@
 		<td>
 			virtual void TargetedByScrollView(BScrollView* scroll_view);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -909,10 +865,6 @@
 		<!-- task -->
 		<td>
 			void BeginRectTracking(BRect startRect, uint32 style = B_TRACK_WHOLE_RECT);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -939,10 +891,6 @@
 		<td>
 			void EndRectTracking();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -967,10 +915,6 @@
 		<!-- task -->
 		<td>
 			void GetMouse(BPoint* location, uint32* buttons, bool checkMessageQueue = true);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -997,10 +941,6 @@
 		<td>
 			void DragMessage(BMessage* aMessage, BRect dragRect, BHandler* reply_to = NULL);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1025,10 +965,6 @@
 		<!-- task -->
 		<td>
 			void DragMessage(BMessage* aMessage, BBitmap* anImage, BPoint offset, BHandler* reply_to = NULL);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1055,10 +991,6 @@
 		<td>
 			void DragMessage(BMessage* aMessage, BBitmap* anImage, drawing_mode dragMode, BPoint offset, BHandler* reply_to = NULL);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1083,10 +1015,6 @@
 		<!-- task -->
 		<td>
 			BView* FindView(const char* name) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1113,10 +1041,6 @@
 		<td>
 			BView* Parent() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1141,10 +1065,6 @@
 		<!-- task -->
 		<td>
 			BRect Bounds() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1171,10 +1091,6 @@
 		<td>
 			BRect Frame() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1199,10 +1115,6 @@
 		<!-- task -->
 		<td>
 			void ConvertToScreen(BPoint* pt) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1229,10 +1141,6 @@
 		<td>
 			BPoint ConvertToScreen(BPoint pt) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1257,10 +1165,6 @@
 		<!-- task -->
 		<td>
 			void ConvertFromScreen(BPoint* pt) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1287,10 +1191,6 @@
 		<td>
 			BPoint ConvertFromScreen(BPoint pt) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1315,10 +1215,6 @@
 		<!-- task -->
 		<td>
 			void ConvertToScreen(BRect* r) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1345,10 +1241,6 @@
 		<td>
 			BRect ConvertToScreen(BRect r) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1373,10 +1265,6 @@
 		<!-- task -->
 		<td>
 			void ConvertFromScreen(BRect* r) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1403,10 +1291,6 @@
 		<td>
 			BRect ConvertFromScreen(BRect r) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1431,10 +1315,6 @@
 		<!-- task -->
 		<td>
 			void ConvertToParent(BPoint* pt) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1461,10 +1341,6 @@
 		<td>
 			BPoint ConvertToParent(BPoint pt) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1489,10 +1365,6 @@
 		<!-- task -->
 		<td>
 			void ConvertFromParent(BPoint* pt) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1519,10 +1391,6 @@
 		<td>
 			BPoint ConvertFromParent(BPoint pt) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1547,10 +1415,6 @@
 		<!-- task -->
 		<td>
 			void ConvertToParent(BRect* r) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1577,10 +1441,6 @@
 		<td>
 			BRect ConvertToParent(BRect r) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1605,10 +1465,6 @@
 		<!-- task -->
 		<td>
 			void ConvertFromParent(BRect* r) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1635,10 +1491,6 @@
 		<td>
 			BRect ConvertFromParent(BRect r) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1663,10 +1515,6 @@
 		<!-- task -->
 		<td>
 			BPoint LeftTop() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1693,10 +1541,6 @@
 		<td>
 			void GetClippingRegion(BRegion* region) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1721,10 +1565,6 @@
 		<!-- task -->
 		<td>
 			virtual void ConstrainClippingRegion(BRegion* region);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1751,10 +1591,6 @@
 		<td>
 			void ClipToPicture(BPicture* picture, BPoint where = B_ORIGIN, bool sync = true);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1779,10 +1615,6 @@
 		<!-- task -->
 		<td>
 			void ClipToInversePicture(BPicture* picture, BPoint where = B_ORIGIN, bool sync = true);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1809,10 +1641,6 @@
 		<td>
 			virtual void SetDrawingMode(drawing_mode mode);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1837,10 +1665,6 @@
 		<!-- task -->
 		<td>
 			drawing_mode DrawingMode() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1867,10 +1691,6 @@
 		<td>
 			void SetBlendingMode(source_alpha srcAlpha, alpha_function alphaFunc);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1895,10 +1715,6 @@
 		<!-- task -->
 		<td>
 			void GetBlendingMode(source_alpha* srcAlpha, alpha_function* alphaFunc) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1925,10 +1741,6 @@
 		<td>
 			virtual void SetPenSize(float size);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1953,10 +1765,6 @@
 		<!-- task -->
 		<td>
 			float PenSize() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1983,10 +1791,6 @@
 		<td>
 			void SetViewCursor(const BCursor* cursor, bool sync=true);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2011,10 +1815,6 @@
 		<!-- task -->
 		<td>
 			virtual void SetViewColor(rgb_color c);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2041,10 +1841,6 @@
 		<td>
 			void SetViewColor(uchar r, uchar g, uchar b, uchar a = 255);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2069,10 +1865,6 @@
 		<!-- task -->
 		<td>
 			rgb_color ViewColor() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2099,10 +1891,6 @@
 		<td>
 			void SetViewBitmap(const BBitmap* bitmap, BRect srcRect, BRect dstRect, uint32 followFlags=B_FOLLOW_TOP|B_FOLLOW_LEFT, uint32 options = B_TILE_BITMAP);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2127,10 +1915,6 @@
 		<!-- task -->
 		<td>
 			void SetViewBitmap(const BBitmap* bitmap, uint32 followFlags = B_FOLLOW_TOP|B_FOLLOW_LEFT, uint32 options = B_TILE_BITMAP);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2157,10 +1941,6 @@
 		<td>
 			void ClearViewBitmap();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2185,10 +1965,6 @@
 		<!-- task -->
 		<td>
 			status_t SetViewOverlay(const BBitmap* overlay, BRect srcRect, BRect dstRect, rgb_color* colorKey, uint32 followFlags = B_FOLLOW_TOP|B_FOLLOW_LEFT, uint32 options = 0);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2215,10 +1991,6 @@
 		<td>
 			status_t SetViewOverlay(const BBitmap* overlay, rgb_color* colorKey, uint32 followFlags = B_FOLLOW_TOP|B_FOLLOW_LEFT, uint32 options = 0);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2243,10 +2015,6 @@
 		<!-- task -->
 		<td>
 			void ClearViewOverlay();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2273,10 +2041,6 @@
 		<td>
 			virtual void SetHighColor(rgb_color a_color);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2301,10 +2065,6 @@
 		<!-- task -->
 		<td>
 			void SetHighColor(uchar r, uchar g, uchar b, uchar a = 255);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2331,10 +2091,6 @@
 		<td>
 			rgb_color HighColor() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2359,10 +2115,6 @@
 		<!-- task -->
 		<td>
 			virtual void SetLowColor(rgb_color a_color);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2389,10 +2141,6 @@
 		<td>
 			void SetLowColor(uchar r, uchar g, uchar b, uchar a = 255);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2417,10 +2165,6 @@
 		<!-- task -->
 		<td>
 			rgb_color LowColor() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2447,10 +2191,6 @@
 		<td>
 			void SetLineMode(cap_mode lineCap, join_mode lineJoin, float miterLimit = B_DEFAULT_MITER_LIMIT);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2475,10 +2215,6 @@
 		<!-- task -->
 		<td>
 			join_mode LineJoinMode() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2505,10 +2241,6 @@
 		<td>
 			cap_mode LineCapMode() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2533,10 +2265,6 @@
 		<!-- task -->
 		<td>
 			float LineMiterLimit() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2563,10 +2291,6 @@
 		<td>
 			void SetOrigin(BPoint pt);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2591,10 +2315,6 @@
 		<!-- task -->
 		<td>
 			void SetOrigin(float x, float y);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2621,10 +2341,6 @@
 		<td>
 			BPoint Origin() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2649,10 +2365,6 @@
 		<!-- task -->
 		<td>
 			void PushState();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2679,10 +2391,6 @@
 		<td>
 			void PopState();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2707,10 +2415,6 @@
 		<!-- task -->
 		<td>
 			void MovePenTo(BPoint pt);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2737,10 +2441,6 @@
 		<td>
 			void MovePenTo(float x, float y);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2765,10 +2465,6 @@
 		<!-- task -->
 		<td>
 			void MovePenBy(float x, float y);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2795,10 +2491,6 @@
 		<td>
 			BPoint PenLocation() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2823,10 +2515,6 @@
 		<!-- task -->
 		<td>
 			void StrokeLine(BPoint toPt, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2853,10 +2541,6 @@
 		<td>
 			void StrokeLine(BPoint pt0, BPoint pt1, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2881,10 +2565,6 @@
 		<!-- task -->
 		<td>
 			void BeginLineArray(int32 count);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2911,10 +2591,6 @@
 		<td>
 			void AddLine(BPoint pt0, BPoint pt1, rgb_color col);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2939,10 +2615,6 @@
 		<!-- task -->
 		<td>
 			void EndLineArray();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2969,10 +2641,6 @@
 		<td>
 			void StrokePolygon(const BPolygon* aPolygon, bool closed = true, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2997,10 +2665,6 @@
 		<!-- task -->
 		<td>
 			void StrokePolygon(const BPoint* ptArray, int32 numPts, bool closed = true, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3027,10 +2691,6 @@
 		<td>
 			void StrokePolygon(const BPoint* ptArray, int32 numPts, BRect bounds, bool closed = true, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3055,10 +2715,6 @@
 		<!-- task -->
 		<td>
 			void FillPolygon(const BPolygon* aPolygon, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3085,10 +2741,6 @@
 		<td>
 			void FillPolygon(const BPoint* ptArray, int32 numPts, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3113,10 +2765,6 @@
 		<!-- task -->
 		<td>
 			void FillPolygon(const BPoint* ptArray, int32 numPts, BRect bounds, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3143,10 +2791,6 @@
 		<td>
 			void StrokeTriangle(BPoint pt1, BPoint pt2, BPoint pt3, BRect bounds, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3171,10 +2815,6 @@
 		<!-- task -->
 		<td>
 			void StrokeTriangle(BPoint pt1, BPoint pt2, BPoint pt3, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3201,10 +2841,6 @@
 		<td>
 			void FillTriangle(BPoint pt1, BPoint pt2, BPoint pt3, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3229,10 +2865,6 @@
 		<!-- task -->
 		<td>
 			void FillTriangle(BPoint pt1, BPoint pt2, BPoint pt3, BRect bounds,pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3259,10 +2891,6 @@
 		<td>
 			void StrokeRect(BRect r, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3287,10 +2915,6 @@
 		<!-- task -->
 		<td>
 			void FillRect(BRect r, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3317,10 +2941,6 @@
 		<td>
 			void FillRegion(BRegion* a_region, pattern p= B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3345,10 +2965,6 @@
 		<!-- task -->
 		<td>
 			void InvertRect(BRect r);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3375,10 +2991,6 @@
 		<td>
 			void StrokeRoundRect(BRect r, float xRadius, float yRadius, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3403,10 +3015,6 @@
 		<!-- task -->
 		<td>
 			void FillRoundRect(BRect r, float xRadius, float yRadius, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3433,10 +3041,6 @@
 		<td>
 			void StrokeEllipse(BPoint center, float xRadius, float yRadius, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3461,10 +3065,6 @@
 		<!-- task -->
 		<td>
 			void StrokeEllipse(BRect r, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3491,10 +3091,6 @@
 		<td>
 			void FillEllipse(BPoint center, float xRadius, float yRadius, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3519,10 +3115,6 @@
 		<!-- task -->
 		<td>
 			void FillEllipse(BRect r, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3549,10 +3141,6 @@
 		<td>
 			void StrokeArc(BPoint center, float xRadius, float yRadius, float start_angle, float arc_angle, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3577,10 +3165,6 @@
 		<!-- task -->
 		<td>
 			void StrokeArc(BRect r, float start_angle, float arc_angle, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3607,10 +3191,6 @@
 		<td>
 			void FillArc(BPoint center, float xRadius, float yRadius, float start_angle, float arc_angle, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3635,10 +3215,6 @@
 		<!-- task -->
 		<td>
 			void FillArc(BRect r, float start_angle, float arc_angle, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3665,10 +3241,6 @@
 		<td>
 			void StrokeBezier(BPoint* controlPoints, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3693,10 +3265,6 @@
 		<!-- task -->
 		<td>
 			void FillBezier( BPoint* controlPoints, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3723,10 +3291,6 @@
 		<td>
 			void StrokeShape(BShape* shape, pattern p = B_SOLID_HIGH);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3751,10 +3315,6 @@
 		<!-- task -->
 		<td>
 			void FillShape(BShape* shape, pattern p = B_SOLID_HIGH);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3781,10 +3341,6 @@
 		<td>
 			void CopyBits(BRect src, BRect dst);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3809,10 +3365,6 @@
 		<!-- task -->
 		<td>
 			void DrawBitmapAsync(const BBitmap* aBitmap, BRect srcRect, BRect dstRect);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3839,10 +3391,6 @@
 		<td>
 			void DrawBitmapAsync(const BBitmap* aBitmap);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3867,10 +3415,6 @@
 		<!-- task -->
 		<td>
 			void DrawBitmapAsync(const BBitmap* aBitmap, BPoint where);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3897,10 +3441,6 @@
 		<td>
 			void DrawBitmapAsync(const BBitmap* aBitmap, BRect dstRect);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3925,10 +3465,6 @@
 		<!-- task -->
 		<td>
 			void DrawBitmap(const BBitmap* aBitmap, BRect srcRect, BRect dstRect);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -3955,10 +3491,6 @@
 		<td>
 			void DrawBitmap(const BBitmap* aBitmap);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -3983,10 +3515,6 @@
 		<!-- task -->
 		<td>
 			void DrawBitmap(const BBitmap* aBitmap, BPoint where);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4013,10 +3541,6 @@
 		<td>
 			void DrawBitmap(const BBitmap* aBitmap, BRect dstRect);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4041,10 +3565,6 @@
 		<!-- task -->
 		<td>
 			void DrawChar(char aChar);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4071,10 +3591,6 @@
 		<td>
 			void DrawChar(char aChar, BPoint location);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4099,10 +3615,6 @@
 		<!-- task -->
 		<td>
 			void DrawString(const char* aString, escapement_delta* delta = NULL);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4129,10 +3641,6 @@
 		<td>
 			void DrawString(const char* aString, BPoint location, escapement_delta* delta = NULL);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4157,10 +3665,6 @@
 		<!-- task -->
 		<td>
 			void DrawString(const char* aString, int32 length, escapement_delta* delta = NULL);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4187,10 +3691,6 @@
 		<td>
 			void DrawString(const char* aString, int32 length, BPoint location, escapement_delta* delta = 0L);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4215,10 +3715,6 @@
 		<!-- task -->
 		<td>
 			virtual void SetFont(const BFont* font, uint32 mask = B_FONT_ALL);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4245,10 +3741,6 @@
 		<td>
 			void GetFont(BFont* font) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4273,10 +3765,6 @@
 		<!-- task -->
 		<td>
 			void TruncateString(BString* in_out, uint32 mode, float width) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4303,10 +3791,6 @@
 		<td>
 			float StringWidth(const char* string) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4331,10 +3815,6 @@
 		<!-- task -->
 		<td>
 			float StringWidth(const char* string, int32 length) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4361,10 +3841,6 @@
 		<td>
 			void GetStringWidths(char* stringArray[], int32 lengthArray[], int32 numStrings, float widthArray[]) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4389,10 +3865,6 @@
 		<!-- task -->
 		<td>
 			void SetFontSize(float size);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4419,10 +3891,6 @@
 		<td>
 			void ForceFontAliasing(bool enable);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4447,10 +3915,6 @@
 		<!-- task -->
 		<td>
 			void GetFontHeight(font_height* height) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4477,10 +3941,6 @@
 		<td>
 			void Invalidate(BRect invalRect);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4505,10 +3965,6 @@
 		<!-- task -->
 		<td>
 			void Invalidate(const BRegion* invalRegion);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4535,10 +3991,6 @@
 		<td>
 			void Invalidate();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4563,10 +4015,6 @@
 		<!-- task -->
 		<td>
 			void SetDiskMode(char* filename, long offset);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4593,10 +4041,6 @@
 		<td>
 			void BeginPicture(BPicture* a_picture);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4621,10 +4065,6 @@
 		<!-- task -->
 		<td>
 			void AppendToPicture(BPicture* a_picture);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4651,10 +4091,6 @@
 		<td>
 			BPicture* EndPicture();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4679,10 +4115,6 @@
 		<!-- task -->
 		<td>
 			void DrawPicture(const BPicture* a_picture);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4709,10 +4141,6 @@
 		<td>
 			void DrawPicture(const BPicture* a_picture, BPoint where);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4737,10 +4165,6 @@
 		<!-- task -->
 		<td>
 			void DrawPicture(const char* filename, long offset, BPoint where);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4767,10 +4191,6 @@
 		<td>
 			void DrawPictureAsync(const BPicture* a_picture);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4795,10 +4215,6 @@
 		<!-- task -->
 		<td>
 			void DrawPictureAsync(const BPicture* a_picture, BPoint where);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4825,10 +4241,6 @@
 		<td>
 			void DrawPictureAsync(const char* filename, long offset, BPoint where);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4853,10 +4265,6 @@
 		<!-- task -->
 		<td>
 			status_t SetEventMask(uint32 mask, uint32 options=0);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4883,10 +4291,6 @@
 		<td>
 			uint32 EventMask();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4911,10 +4315,6 @@
 		<!-- task -->
 		<td>
 			status_t SetMouseEventMask(uint32 mask, uint32 options=0);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4941,10 +4341,6 @@
 		<td>
 			virtual void SetFlags(uint32 flags);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -4969,10 +4365,6 @@
 		<!-- task -->
 		<td>
 			uint32 Flags() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -4999,10 +4391,6 @@
 		<td>
 			virtual void SetResizingMode(uint32 mode);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5027,10 +4415,6 @@
 		<!-- task -->
 		<td>
 			uint32 ResizingMode() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5057,10 +4441,6 @@
 		<td>
 			void MoveBy(float dh, float dv);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5085,10 +4465,6 @@
 		<!-- task -->
 		<td>
 			void MoveTo(BPoint where);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5115,10 +4491,6 @@
 		<td>
 			void MoveTo(float x, float y);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5143,10 +4515,6 @@
 		<!-- task -->
 		<td>
 			void ResizeBy(float dh, float dv);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5173,10 +4541,6 @@
 		<td>
 			void ResizeTo(float width, float height);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5201,10 +4565,6 @@
 		<!-- task -->
 		<td>
 			void ScrollBy(float dh, float dv);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5231,10 +4591,6 @@
 		<td>
 			void ScrollTo(float x, float y);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5259,10 +4615,6 @@
 		<!-- task -->
 		<td>
 			virtual void ScrollTo(BPoint where);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5289,10 +4641,6 @@
 		<td>
 			virtual void MakeFocus(bool focusState = true);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5317,10 +4665,6 @@
 		<!-- task -->
 		<td>
 			bool IsFocus() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5347,10 +4691,6 @@
 		<td>
 			virtual void Show();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5375,10 +4715,6 @@
 		<!-- task -->
 		<td>
 			virtual void Hide();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5405,10 +4741,6 @@
 		<td>
 			bool IsHidden() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5433,10 +4765,6 @@
 		<!-- task -->
 		<td>
 			bool IsHidden(const BView* looking_from) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5463,10 +4791,6 @@
 		<td>
 			void Flush() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5491,10 +4815,6 @@
 		<!-- task -->
 		<td>
 			void Sync() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5521,10 +4841,6 @@
 		<td>
 			virtual void GetPreferredSize(float* width, float* height);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5549,10 +4865,6 @@
 		<!-- task -->
 		<td>
 			virtual void ResizeToPreferred();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5579,10 +4891,6 @@
 		<td>
 			BScrollBar* ScrollBar(orientation posture) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5607,10 +4915,6 @@
 		<!-- task -->
 		<td>
 			virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5637,10 +4941,6 @@
 		<td>
 			virtual status_t GetSupportedSuites(BMessage* data);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5665,10 +4965,6 @@
 		<!-- task -->
 		<td>
 			bool IsPrinting() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -5695,10 +4991,6 @@
 		<td>
 			void SetScale(float scale) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5724,10 +5016,6 @@
 		<td>
 			virtual status_t Perform(perform_code d, void* arg);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -5752,10 +5040,6 @@
 		<!-- task -->
 		<td>
 			virtual void DrawAfterChildren(BRect r);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 

@@ -6,7 +6,7 @@
 <h1>BWindow Tasks<hr></h1>
 
 
-<!-- master table -->
+<!-- summary table -->
 <table border>
 	<!-- table column headers -->
 	<th>
@@ -38,8 +38,80 @@
 			</td>
 		</table>
 	</th>
-	<th><strong>Task</strong></th>
+	<th><strong>Task Summary</strong></th>
 	<th><strong>Owner</strong></th>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BWindow
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			
+		</td>
+	</tr>
+
+</table>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<!-- detail table -->
+<table border>
+	<!-- table column headers -->
+	<th>
+		<table>
+			<td>
+				<a href="#legend">
+					<img src="../../images/DocumentDraw.gif" width="22" height="22" alt="Functional Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/User.gif" width="22" height="22" alt="Use Cases" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Help.gif" width="22" height="22" alt="Unit Tests" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Hammer.gif" width="22" height="22" alt="Technical Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/GoalFlag.gif" width="22" height="22" alt="Implementation" border="0">
+				</a>
+			</td>
+		</table>
+	</th>
+	<th width="100%"><strong>Task Details</strong></th>
+<!--	<th><strong>Owner</strong></th>	-->
 
 	<!-- Class header -->
 	<tr>
@@ -69,10 +141,6 @@
 		<td>
 			BWindow(BRect frame, const char* title, window_type type, uint32 flags, uint32 workspace = B_CURRENT_WORKSPACE);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -97,10 +165,6 @@
 		<!-- task -->
 		<td>
 			BWindow(BRect frame, const char* title, window_look look, window_feel feel, uint32 flags, uint32 workspace = B_CURRENT_WORKSPACE);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -127,10 +191,6 @@
 		<td>
 			BWindow(BMessage* data);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -155,10 +215,6 @@
 		<!-- task -->
 		<td>
 			virtual ~BWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -185,10 +241,6 @@
 		<td>
 			static BArchivable* Instantiate(BMessage* data);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -213,10 +265,6 @@
 		<!-- task -->
 		<td>
 			virtual status_t Archive(BMessage* data, bool deep = true) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -243,10 +291,6 @@
 		<td>
 			virtual void Quit();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -271,10 +315,6 @@
 		<!-- task -->
 		<td>
 			void Close();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -301,10 +341,6 @@
 		<td>
 			void AddChild(BView* child, BView* before = NULL);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -329,10 +365,6 @@
 		<!-- task -->
 		<td>
 			bool RemoveChild(BView* child);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -359,10 +391,6 @@
 		<td>
 			int32 CountChildren() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -387,10 +415,6 @@
 		<!-- task -->
 		<td>
 			BView* ChildAt(int32 index) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -417,10 +441,6 @@
 		<td>
 			virtual void DispatchMessage(BMessage* message, BHandler* handler);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -445,10 +465,6 @@
 		<!-- task -->
 		<td>
 			virtual void MessageReceived(BMessage* message);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -475,10 +491,6 @@
 		<td>
 			virtual void FrameMoved(BPoint new_position);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -503,10 +515,6 @@
 		<!-- task -->
 		<td>
 			virtual void WorkspacesChanged(uint32 old_ws, uint32 new_ws);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -533,10 +541,6 @@
 		<td>
 			virtual void WorkspaceActivated(int32 ws, bool state);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -561,10 +565,6 @@
 		<!-- task -->
 		<td>
 			virtual void FrameResized(float new_width, float new_height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -591,10 +591,6 @@
 		<td>
 			virtual void Minimize(bool minimize);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -619,10 +615,6 @@
 		<!-- task -->
 		<td>
 			virtual void Zoom(BPoint rec_position, float rec_width, float rec_height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -649,10 +641,6 @@
 		<td>
 			void Zoom();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -677,10 +665,6 @@
 		<!-- task -->
 		<td>
 			void SetZoomLimits(float max_h, float max_v);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -707,10 +691,6 @@
 		<td>
 			virtual void ScreenChanged(BRect screen_size, color_space depth);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -735,10 +715,6 @@
 		<!-- task -->
 		<td>
 			void SetPulseRate(bigtime_t rate);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -765,10 +741,6 @@
 		<td>
 			bigtime_t PulseRate() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -793,10 +765,6 @@
 		<!-- task -->
 		<td>
 			void AddShortcut(uint32 key, uint32 modifiers, BMessage* msg);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -823,10 +791,6 @@
 		<td>
 			void AddShortcut(uint32 key, uint32 modifiers, BMessage* msg, BHandler* target);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -851,10 +815,6 @@
 		<!-- task -->
 		<td>
 			void RemoveShortcut(uint32 key, uint32 modifiers);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -881,10 +841,6 @@
 		<td>
 			void SetDefaultButton(BButton* button);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -909,10 +865,6 @@
 		<!-- task -->
 		<td>
 			BButton* DefaultButton() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -939,10 +891,6 @@
 		<td>
 			virtual void MenusBeginning();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -967,10 +915,6 @@
 		<!-- task -->
 		<td>
 			virtual void MenusEnded();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -997,10 +941,6 @@
 		<td>
 			bool NeedsUpdate() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1025,10 +965,6 @@
 		<!-- task -->
 		<td>
 			void UpdateIfNeeded();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1055,10 +991,6 @@
 		<td>
 			BView* FindView(const char* view_name) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1083,10 +1015,6 @@
 		<!-- task -->
 		<td>
 			BView* FindView(BPoint) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1113,10 +1041,6 @@
 		<td>
 			BView* CurrentFocus() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1141,10 +1065,6 @@
 		<!-- task -->
 		<td>
 			void Activate(bool = true);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1171,10 +1091,6 @@
 		<td>
 			virtual void WindowActivated(bool state);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1199,10 +1115,6 @@
 		<!-- task -->
 		<td>
 			void ConvertToScreen(BPoint* pt) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1229,10 +1141,6 @@
 		<td>
 			BPoint ConvertToScreen(BPoint pt) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1257,10 +1165,6 @@
 		<!-- task -->
 		<td>
 			void ConvertFromScreen(BPoint* pt) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1287,10 +1191,6 @@
 		<td>
 			BPoint ConvertFromScreen(BPoint pt) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1315,10 +1215,6 @@
 		<!-- task -->
 		<td>
 			void ConvertToScreen(BRect* rect) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1345,10 +1241,6 @@
 		<td>
 			BRect ConvertToScreen(BRect rect) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1373,10 +1265,6 @@
 		<!-- task -->
 		<td>
 			void ConvertFromScreen(BRect* rect) const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1403,10 +1291,6 @@
 		<td>
 			BRect ConvertFromScreen(BRect rect) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1431,10 +1315,6 @@
 		<!-- task -->
 		<td>
 			void MoveBy(float dx, float dy);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1461,10 +1341,6 @@
 		<td>
 			void MoveTo(BPoint);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1489,10 +1365,6 @@
 		<!-- task -->
 		<td>
 			void MoveTo(float x, float y);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1519,10 +1391,6 @@
 		<td>
 			void ResizeBy(float dx, float dy);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1547,10 +1415,6 @@
 		<!-- task -->
 		<td>
 			void ResizeTo(float width, float height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1577,10 +1441,6 @@
 		<td>
 			virtual void Show();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1605,10 +1465,6 @@
 		<!-- task -->
 		<td>
 			virtual void Hide();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1635,10 +1491,6 @@
 		<td>
 			bool IsHidden() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1663,10 +1515,6 @@
 		<!-- task -->
 		<td>
 			bool IsMinimized() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1693,10 +1541,6 @@
 		<td>
 			void Flush() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1721,10 +1565,6 @@
 		<!-- task -->
 		<td>
 			void Sync() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1751,10 +1591,6 @@
 		<td>
 			status_t SendBehind(const BWindow* window);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1779,10 +1615,6 @@
 		<!-- task -->
 		<td>
 			void DisableUpdates();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1809,10 +1641,6 @@
 		<td>
 			void EnableUpdates();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1837,10 +1665,6 @@
 		<!-- task -->
 		<td>
 			void BeginViewTransaction();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1867,10 +1691,6 @@
 		<td>
 			void EndViewTransaction();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1895,10 +1715,6 @@
 		<!-- task -->
 		<td>
 			BRect Bounds() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1925,10 +1741,6 @@
 		<td>
 			BRect Frame() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1953,10 +1765,6 @@
 		<!-- task -->
 		<td>
 			const char* Title() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1983,10 +1791,6 @@
 		<td>
 			void SetTitle(const char* title);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2011,10 +1815,6 @@
 		<!-- task -->
 		<td>
 			bool IsFront() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2041,10 +1841,6 @@
 		<td>
 			bool IsActive() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2069,10 +1865,6 @@
 		<!-- task -->
 		<td>
 			void SetKeyMenuBar(BMenuBar* bar);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2099,10 +1891,6 @@
 		<td>
 			BMenuBar* KeyMenuBar() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2127,10 +1915,6 @@
 		<!-- task -->
 		<td>
 			void SetSizeLimits(float min_h, float max_h, float min_v, float max_v);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2157,10 +1941,6 @@
 		<td>
 			void GetSizeLimits(float* min_h, float* max_h, float* min_v, float* max_v);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2185,10 +1965,6 @@
 		<!-- task -->
 		<td>
 			uint32 Workspaces() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2215,10 +1991,6 @@
 		<td>
 			void SetWorkspaces(uint32);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2243,10 +2015,6 @@
 		<!-- task -->
 		<td>
 			BView* LastMouseMovedView() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2273,10 +2041,6 @@
 		<td>
 			virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2301,10 +2065,6 @@
 		<!-- task -->
 		<td>
 			virtual status_t GetSupportedSuites(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2331,10 +2091,6 @@
 		<td>
 			status_t AddToSubset(BWindow* window);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2359,10 +2115,6 @@
 		<!-- task -->
 		<td>
 			status_t RemoveFromSubset(BWindow* window);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2389,10 +2141,6 @@
 		<td>
 			virtual status_t Perform(perform_code d, void* arg);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2417,10 +2165,6 @@
 		<!-- task -->
 		<td>
 			status_t SetType(window_type type);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2447,10 +2191,6 @@
 		<td>
 			window_type Type() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2475,10 +2215,6 @@
 		<!-- task -->
 		<td>
 			status_t SetLook(window_look look);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2505,10 +2241,6 @@
 		<td>
 			window_look Look() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2533,10 +2265,6 @@
 		<!-- task -->
 		<td>
 			status_t SetFeel(window_feel feel);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2563,10 +2291,6 @@
 		<td>
 			window_feel Feel() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2591,10 +2315,6 @@
 		<!-- task -->
 		<td>
 			status_t SetFlags(uint32);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2621,10 +2341,6 @@
 		<td>
 			uint32 Flags() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2649,10 +2365,6 @@
 		<!-- task -->
 		<td>
 			bool IsModal() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2679,10 +2391,6 @@
 		<td>
 			bool IsFloating() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2707,10 +2415,6 @@
 		<!-- task -->
 		<td>
 			status_t SetWindowAlignment(window_alignment mode, int32 h, int32 hOffset = 0, int32 width = 0, int32 widthOffset = 0, int32 v = 0, int32 vOffset = 0, int32 height = 0, int32 heightOffset = 0);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2737,10 +2441,6 @@
 		<td>
 			status_t GetWindowAlignment(window_alignment* mode = NULL, int32* h = NULL, int32* hOffset = NULL, int32* width = NULL, int32* widthOffset = NULL, int32* v = NULL, int32* vOffset = NULL, int32* height = NULL, int32* heightOffset = NULL) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2765,10 +2465,6 @@
 		<!-- task -->
 		<td>
 			virtual bool QuitRequested();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2795,10 +2491,6 @@
 		<td>
 			virtual thread_id Run();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2823,10 +2515,6 @@
 		<!-- task -->
 		<td>
 			virtual void task_looper();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 

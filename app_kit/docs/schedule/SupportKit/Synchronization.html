@@ -6,7 +6,7 @@
 <h1>Synchronization Tasks<hr></h1>
 
 
-<!-- master table -->
+<!-- summary table -->
 <table border>
 	<!-- table column headers -->
 	<th>
@@ -38,8 +38,109 @@
 			</td>
 		</table>
 	</th>
-	<th><strong>Task</strong></th>
+	<th><strong>Task Summary</strong></th>
 	<th><strong>Owner</strong></th>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BAutoLock
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			Jeremy Rand
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BLocker
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			Jeremy Rand
+		</td>
+	</tr>
+
+</table>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<!-- detail table -->
+<table border>
+	<!-- table column headers -->
+	<th>
+		<table>
+			<td>
+				<a href="#legend">
+					<img src="../../images/DocumentDraw.gif" width="22" height="22" alt="Functional Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/User.gif" width="22" height="22" alt="Use Cases" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Help.gif" width="22" height="22" alt="Unit Tests" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Hammer.gif" width="22" height="22" alt="Technical Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/GoalFlag.gif" width="22" height="22" alt="Implementation" border="0">
+				</a>
+			</td>
+		</table>
+	</th>
+	<th width="100%"><strong>Task Details</strong></th>
+<!--	<th><strong>Owner</strong></th>	-->
 
 	<!-- Class header -->
 	<tr>
@@ -69,10 +170,6 @@
 		<td>
 			BAutolock(BLocker *lock);
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -97,10 +194,6 @@
 		<!-- task -->
 		<td>
 			BAutolock(BLocker &lock);
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<tr>
@@ -127,10 +220,6 @@
 		<td>
 			BAutolock(BLooper *looper);
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -156,10 +245,6 @@
 		<td>
 			~BAutolock();
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -184,10 +269,6 @@
 		<!-- task -->
 		<td>
 			bool IsLocked();
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<!-- Class header -->
@@ -218,10 +299,6 @@
 		<td>
 			BLocker();
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -246,10 +323,6 @@
 		<!-- task -->
 		<td>
 			BLocker(const char *name);
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<tr>
@@ -276,10 +349,6 @@
 		<td>
 			BLocker(bool benaphore_style);
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -304,10 +373,6 @@
 		<!-- task -->
 		<td>
 			BLocker(const char *name, bool benaphore_style);
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<tr>
@@ -334,10 +399,6 @@
 		<td>
 			BLocker(const char *name, bool benaphore_style, bool);
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -362,10 +423,6 @@
 		<!-- task -->
 		<td>
 			virtual ~BLocker();
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<tr>
@@ -392,10 +449,6 @@
 		<td>
 			bool Lock(void);
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -420,10 +473,6 @@
 		<!-- task -->
 		<td>
 			status_t LockWithTimeout(bigtime_t timeout);
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<tr>
@@ -450,10 +499,6 @@
 		<td>
 			void Unlock(void);
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -478,10 +523,6 @@
 		<!-- task -->
 		<td>
 			thread_id LockingThread(void) const;
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<tr>
@@ -508,10 +549,6 @@
 		<td>
 			bool IsLocked(void) const;
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -536,10 +573,6 @@
 		<!-- task -->
 		<td>
 			int32 CountLocks(void) const;
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 	<tr>
@@ -566,10 +599,6 @@
 		<td>
 			int32 CountLockRequests(void) const;
 		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -594,10 +623,6 @@
 		<!-- task -->
 		<td>
 			sem_id Sem(void) const;
-		</td>
-		<!-- owner -->
-		<td>
-			Jeremy Rand
 		</td>
 	</tr>
 

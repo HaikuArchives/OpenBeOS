@@ -6,7 +6,7 @@
 <h1>Non-Control Widgets Tasks<hr></h1>
 
 
-<!-- master table -->
+<!-- summary table -->
 <table border>
 	<!-- table column headers -->
 	<th>
@@ -38,8 +38,138 @@
 			</td>
 		</table>
 	</th>
-	<th><strong>Task</strong></th>
+	<th><strong>Task Summary</strong></th>
 	<th><strong>Owner</strong></th>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BBox
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/Check.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BStringView
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BStatusBar
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			
+		</td>
+	</tr>
+
+</table>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<!-- detail table -->
+<table border>
+	<!-- table column headers -->
+	<th>
+		<table>
+			<td>
+				<a href="#legend">
+					<img src="../../images/DocumentDraw.gif" width="22" height="22" alt="Functional Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/User.gif" width="22" height="22" alt="Use Cases" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Help.gif" width="22" height="22" alt="Unit Tests" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Hammer.gif" width="22" height="22" alt="Technical Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/GoalFlag.gif" width="22" height="22" alt="Implementation" border="0">
+				</a>
+			</td>
+		</table>
+	</th>
+	<th width="100%"><strong>Task Details</strong></th>
+<!--	<th><strong>Owner</strong></th>	-->
 
 	<!-- Class header -->
 	<tr>
@@ -69,10 +199,6 @@
 		<td>
 			BBox(BRect bounds, const char* name = NULL, uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP, border_style border = B_FANCY_BORDER);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -97,10 +223,6 @@
 		<!-- task -->
 		<td>
 			BBox(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -127,10 +249,6 @@
 		<td>
 			virtual ~BBox(void);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -155,10 +273,6 @@
 		<!-- task -->
 		<td>
 			static BArchivable* Instantiate(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -185,10 +299,6 @@
 		<td>
 			virtual status_t Archive(BMessage* data, bool deep = true) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -213,10 +323,6 @@
 		<!-- task -->
 		<td>
 			virtual void SetBorder(border_style style);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -243,10 +349,6 @@
 		<td>
 			border_style Border() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -271,10 +373,6 @@
 		<!-- task -->
 		<td>
 			void SetLabel(const char* label);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -301,10 +399,6 @@
 		<td>
 			status_t SetLabel(BView* view_label);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -329,10 +423,6 @@
 		<!-- task -->
 		<td>
 			const char* Label() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -359,10 +449,6 @@
 		<td>
 			BView* LabelView() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -387,10 +473,6 @@
 		<!-- task -->
 		<td>
 			virtual void Draw(BRect bounds);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -417,10 +499,6 @@
 		<td>
 			virtual void AttachedToWindow();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -445,10 +523,6 @@
 		<!-- task -->
 		<td>
 			virtual void DetachedFromWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -475,10 +549,6 @@
 		<td>
 			virtual void AllAttached();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -503,10 +573,6 @@
 		<!-- task -->
 		<td>
 			virtual void AllDetached();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -533,10 +599,6 @@
 		<td>
 			virtual void FrameResized(float new_width, float new_height);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -561,10 +623,6 @@
 		<!-- task -->
 		<td>
 			virtual void MessageReceived(BMessage* msg);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -591,10 +649,6 @@
 		<td>
 			virtual void MouseDown(BPoint pt);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -619,10 +673,6 @@
 		<!-- task -->
 		<td>
 			virtual void MouseUp(BPoint pt);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -649,10 +699,6 @@
 		<td>
 			virtual void WindowActivated(bool state);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -677,10 +723,6 @@
 		<!-- task -->
 		<td>
 			virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -707,10 +749,6 @@
 		<td>
 			virtual void FrameMoved(BPoint new_position);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -735,10 +773,6 @@
 		<!-- task -->
 		<td>
 			virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -765,10 +799,6 @@
 		<td>
 			virtual void ResizeToPreferred();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -793,10 +823,6 @@
 		<!-- task -->
 		<td>
 			virtual void GetPreferredSize(float* width, float* height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -823,10 +849,6 @@
 		<td>
 			virtual void MakeFocus(bool state = true);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -851,10 +873,6 @@
 		<!-- task -->
 		<td>
 			virtual status_t GetSupportedSuites(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<!-- Class header -->
@@ -885,10 +903,6 @@
 		<td>
 			BStringView(BRect bounds, const char* name, const char* text, uint32 resizeFlags = B_FOLLOW_LEFT | B_FOLLOW_TOP, uint32 flags = B_WILL_DRAW);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -913,10 +927,6 @@
 		<!-- task -->
 		<td>
 			BStringView(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -943,10 +953,6 @@
 		<td>
 			virtual ~BStringView();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -971,10 +977,6 @@
 		<!-- task -->
 		<td>
 			static BArchivable* Instantiate(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1001,10 +1003,6 @@
 		<td>
 			virtual status_t Archive(BMessage* data, bool deep = true) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1029,10 +1027,6 @@
 		<!-- task -->
 		<td>
 			void SetText(const char* text);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1059,10 +1053,6 @@
 		<td>
 			const char* Text() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1087,10 +1077,6 @@
 		<!-- task -->
 		<td>
 			void SetAlignment(alignment flag);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1117,10 +1103,6 @@
 		<td>
 			alignment Alignment() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1145,10 +1127,6 @@
 		<!-- task -->
 		<td>
 			virtual void AttachedToWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1175,10 +1153,6 @@
 		<td>
 			virtual void Draw(BRect bounds);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1203,10 +1177,6 @@
 		<!-- task -->
 		<td>
 			virtual void MessageReceived(BMessage* msg);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1233,10 +1203,6 @@
 		<td>
 			virtual void MouseDown(BPoint pt);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1261,10 +1227,6 @@
 		<!-- task -->
 		<td>
 			virtual void MouseUp(BPoint pt);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1291,10 +1253,6 @@
 		<td>
 			virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1319,10 +1277,6 @@
 		<!-- task -->
 		<td>
 			virtual void DetachedFromWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1349,10 +1303,6 @@
 		<td>
 			virtual void FrameMoved(BPoint new_position);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1377,10 +1327,6 @@
 		<!-- task -->
 		<td>
 			virtual void FrameResized(float new_width, float new_height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1407,10 +1353,6 @@
 		<td>
 			virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1435,10 +1377,6 @@
 		<!-- task -->
 		<td>
 			virtual void ResizeToPreferred();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1465,10 +1403,6 @@
 		<td>
 			virtual void GetPreferredSize(float* width, float* height);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1493,10 +1427,6 @@
 		<!-- task -->
 		<td>
 			virtual void MakeFocus(bool state = true);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1523,10 +1453,6 @@
 		<td>
 			virtual void AllAttached();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1552,10 +1478,6 @@
 		<td>
 			virtual void AllDetached();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1580,10 +1502,6 @@
 		<!-- task -->
 		<td>
 			virtual status_t GetSupportedSuites(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<!-- Class header -->
@@ -1614,10 +1532,6 @@
 		<td>
 			BStatusBar(BRect frame, const char* name, const char* label = NULL, const char* trailing_label = NULL);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1642,10 +1556,6 @@
 		<!-- task -->
 		<td>
 			BStatusBar(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1672,10 +1582,6 @@
 		<td>
 			virtual ~BStatusBar();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1700,10 +1606,6 @@
 		<!-- task -->
 		<td>
 			static BArchivable* Instantiate(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1730,10 +1632,6 @@
 		<td>
 			virtual status_t Archive(BMessage* data, bool deep = true) const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1758,10 +1656,6 @@
 		<!-- task -->
 		<td>
 			virtual void AttachedToWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1788,10 +1682,6 @@
 		<td>
 			virtual void MessageReceived(BMessage* msg);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1816,10 +1706,6 @@
 		<!-- task -->
 		<td>
 			virtual void Draw(BRect updateRect);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1846,10 +1732,6 @@
 		<td>
 			virtual void SetBarColor(rgb_color color);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1874,10 +1756,6 @@
 		<!-- task -->
 		<td>
 			virtual void SetBarHeight(float height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1904,10 +1782,6 @@
 		<td>
 			virtual void SetText(const char* str);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1932,10 +1806,6 @@
 		<!-- task -->
 		<td>
 			virtual void SetTrailingText(const char* str);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -1962,10 +1832,6 @@
 		<td>
 			virtual void SetMaxValue(float max);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -1990,10 +1856,6 @@
 		<!-- task -->
 		<td>
 			virtual void Update(float delta, const char* main_text = NULL, const char* trailing_text = NULL);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2020,10 +1882,6 @@
 		<td>
 			virtual void Reset(const char* label = NULL, const char* trailing_label = NULL);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2048,10 +1906,6 @@
 		<!-- task -->
 		<td>
 			float CurrentValue() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2078,10 +1932,6 @@
 		<td>
 			float MaxValue() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2106,10 +1956,6 @@
 		<!-- task -->
 		<td>
 			rgb_color BarColor() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2136,10 +1982,6 @@
 		<td>
 			float BarHeight() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2164,10 +2006,6 @@
 		<!-- task -->
 		<td>
 			const char* Text() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2194,10 +2032,6 @@
 		<td>
 			const char* TrailingText() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2222,10 +2056,6 @@
 		<!-- task -->
 		<td>
 			const char* Label() const;
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2252,10 +2082,6 @@
 		<td>
 			const char* TrailingLabel() const;
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2280,10 +2106,6 @@
 		<!-- task -->
 		<td>
 			virtual void MouseDown(BPoint pt);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2310,10 +2132,6 @@
 		<td>
 			virtual void MouseUp(BPoint pt);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2338,10 +2156,6 @@
 		<!-- task -->
 		<td>
 			virtual void WindowActivated(bool state);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2368,10 +2182,6 @@
 		<td>
 			virtual void MouseMoved(BPoint pt, uint32 code, const BMessage* msg);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2396,10 +2206,6 @@
 		<!-- task -->
 		<td>
 			virtual void DetachedFromWindow();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2426,10 +2232,6 @@
 		<td>
 			virtual void FrameMoved(BPoint new_position);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2454,10 +2256,6 @@
 		<!-- task -->
 		<td>
 			virtual void FrameResized(float new_width, float new_height);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2484,10 +2282,6 @@
 		<td>
 			virtual BHandler* ResolveSpecifier(BMessage* msg, int32 index, BMessage* specifier, int32 form, const char* property);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2512,10 +2306,6 @@
 		<!-- task -->
 		<td>
 			virtual void ResizeToPreferred();
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2542,10 +2332,6 @@
 		<td>
 			virtual void GetPreferredSize(float* width, float* height);
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2570,10 +2356,6 @@
 		<!-- task -->
 		<td>
 			virtual void MakeFocus(bool state = true);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 	<tr>
@@ -2600,10 +2382,6 @@
 		<td>
 			virtual void AllAttached();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2629,10 +2407,6 @@
 		<td>
 			virtual void AllDetached();
 		</td>
-		<!-- owner -->
-		<td>
-			
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -2657,10 +2431,6 @@
 		<!-- task -->
 		<td>
 			virtual status_t GetSupportedSuites(BMessage* data);
-		</td>
-		<!-- owner -->
-		<td>
-			
 		</td>
 	</tr>
 

@@ -6,7 +6,7 @@
 <h1>IO Tasks<hr></h1>
 
 
-<!-- master table -->
+<!-- summary table -->
 <table border>
 	<!-- table column headers -->
 	<th>
@@ -38,8 +38,167 @@
 			</td>
 		</table>
 	</th>
-	<th><strong>Task</strong></th>
+	<th><strong>Task Summary</strong></th>
 	<th><strong>Owner</strong></th>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BDataIO
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			Steve Vallee
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BMallocIO
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			Steve Vallee
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BMemoryIO
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			Steve Vallee
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Functional Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Use Cases"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Unit Tests"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Technical Spec"></td>
+				<td><img src="
+../../images/blank-20.gif
+" width="22" height="22" alt="Implementation"></td>
+			</table>
+		</td>
+		<!-- task -->
+		<td width="100%">
+			BPositionIO
+		</td>
+		<!-- owner -->
+		<td width="25%">
+			Steve Vallee
+		</td>
+	</tr>
+
+</table>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<!-- detail table -->
+<table border>
+	<!-- table column headers -->
+	<th>
+		<table>
+			<td>
+				<a href="#legend">
+					<img src="../../images/DocumentDraw.gif" width="22" height="22" alt="Functional Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/User.gif" width="22" height="22" alt="Use Cases" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Help.gif" width="22" height="22" alt="Unit Tests" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/Hammer.gif" width="22" height="22" alt="Technical Spec" border="0">
+				</a>
+			</td>
+			<td>
+				<a href="#legend">
+					<img src="../../images/GoalFlag.gif" width="22" height="22" alt="Implementation" border="0">
+				</a>
+			</td>
+		</table>
+	</th>
+	<th width="100%"><strong>Task Details</strong></th>
+<!--	<th><strong>Owner</strong></th>	-->
 
 	<!-- Class header -->
 	<tr>
@@ -69,10 +228,6 @@
 		<td>
 			BDataIO
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -97,10 +252,6 @@
 		<!-- task -->
 		<td>
 			virtual ~BDataIO();
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<!-- Class header -->
@@ -131,10 +282,6 @@
 		<td>
 			BMallocIO();
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -159,10 +306,6 @@
 		<!-- task -->
 		<td>
 			virtual ~BMallocIO();
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -189,10 +332,6 @@
 		<td>
 			virtual ssize_t ReadAt(off_t pos, void *buffer, size_t size);
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -217,10 +356,6 @@
 		<!-- task -->
 		<td>
 			virtual ssize_t WriteAt(off_t pos, const void *buffer, size_t size);
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -247,10 +382,6 @@
 		<td>
 			virtual off_t Seek(off_t pos, uint32 seek_mode);
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -275,10 +406,6 @@
 		<!-- task -->
 		<td>
 			virtual off_t Position() const;
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -305,10 +432,6 @@
 		<td>
 			virtual status_t SetSize(off_t size);
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -333,10 +456,6 @@
 		<!-- task -->
 		<td>
 			void SetBlockSize(size_t blocksize);
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -363,10 +482,6 @@
 		<td>
 			const void* Buffer() const;
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -391,10 +506,6 @@
 		<!-- task -->
 		<td>
 			size_t BufferLength() const;
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<!-- Class header -->
@@ -425,10 +536,6 @@
 		<td>
 			BMemoryIO(void *p, size_t len);
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -453,10 +560,6 @@
 		<!-- task -->
 		<td>
 			BMemoryIO(const void *p, size_t len);
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -483,10 +586,6 @@
 		<td>
 			virtual ~BMemoryIO();
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -511,10 +610,6 @@
 		<!-- task -->
 		<td>
 			virtual ssize_t ReadAt(off_t pos, void *buffer, size_t size);
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -541,10 +636,6 @@
 		<td>
 			virtual ssize_t WriteAt(off_t pos, const void *buffer, size_t size);
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -569,10 +660,6 @@
 		<!-- task -->
 		<td>
 			virtual off_t Seek(off_t pos, uint32 seek_mode);
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -599,10 +686,6 @@
 		<td>
 			virtual off_t Position() const;
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -627,10 +710,6 @@
 		<!-- task -->
 		<td>
 			virtual status_t SetSize(off_t size);
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<!-- Class header -->
@@ -661,10 +740,6 @@
 		<td>
 			BPositionIO();
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -689,10 +764,6 @@
 		<!-- task -->
 		<td>
 			virtual ~BPositionIO();
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 	<tr>
@@ -719,10 +790,6 @@
 		<td>
 			virtual ssize_t Read(void *buffer, size_t size);
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -748,10 +815,6 @@
 		<td>
 			virtual ssize_t Write(const void *buffer, size_t size);
 		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
-		</td>
 	</tr>
 	<tr>
 		<td>
@@ -776,10 +839,6 @@
 		<!-- task -->
 		<td>
 			virtual status_t SetSize(off_t size);
-		</td>
-		<!-- owner -->
-		<td>
-			Steve Vallee
 		</td>
 	</tr>
 
