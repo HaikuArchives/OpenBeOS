@@ -1189,7 +1189,7 @@ void thread_exit(int retcode)
 		}
 		vm_put_aspace(p->aspace);
 		vm_delete_aspace(p->_aspace_id);
-		port_delete_owned_ports(p->id);
+		delete_owned_ports(p->id);
 		sem_delete_owned_sems(p->id);
 		vfs_free_ioctx(p->ioctx);
 		kfree(p);
