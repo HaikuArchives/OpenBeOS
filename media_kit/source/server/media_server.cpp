@@ -198,6 +198,55 @@ ServerApp::HandleMessage(int32 code, void *data, size_t size)
 			break;
 		}
 		
+		case SERVER_GET_DORMANT_NODES:
+		{
+			xfer_server_get_dormant_nodes *msg = (xfer_server_get_dormant_nodes *)data;
+			xfer_server_get_dormant_nodes_reply reply;
+			dormant_node_info * infos = new dormant_node_info[msg->maxcount];
+			reply.count = msg->maxcount;
+			reply.result = fNodeManager->GetDormantNodes(
+				infos, 
+				&reply.count,
+				msg->has_input ? &msg->inputformat : NULL,
+				msg->has_output ? &msg->outputformat : NULL,
+				msg->has_name ? msg->name : NULL,
+				msg->require_kinds,
+				msg->deny_kinds);
+			if (reply.result != B_OK)
+				reply.count = 0;
+			write_port(msg->reply_port, 0, &reply, sizeof(reply));
+			if (reply.count > 0)
+				write_port(msg->reply_port, 0, infos, reply.count * sizeof(dormant_node_info));
+			delete [] infos;
+			break;
+		}
+		
+		case SERVER_GET_DORMANT_FLAVOR_INFO:
+		{
+			xfer_server_get_dormant_flavor_info *msg = (xfer_server_get_dormant_flavor_info *)data;
+			dormant_flavor_info dfi;
+			status_t rv;
+
+			rv = fNodeManager->GetDormantFlavorInfoFor(msg->addon, msg->flavor_id, &dfi);
+			if (rv != B_OK) {
+				xfer_server_get_dormant_flavor_info_reply reply;
+				reply.result = rv;
+				write_port(msg->reply_port, 0, &reply, sizeof(reply));
+			} else {
+				xfer_server_get_dormant_flavor_info_reply *reply;
+				int replysize;
+				replysize = sizeof(xfer_server_get_dormant_flavor_info_reply) + dfi.FlattenedSize();
+				reply = (xfer_server_get_dormant_flavor_info_reply *)malloc(replysize);
+
+				reply->dfi_size = dfi.FlattenedSize();
+				reply->dfi_type = dfi.TypeCode();
+				reply->result = dfi.Flatten(reply->dfi, reply->dfi_size);
+				write_port(msg->reply_port, 0, reply, replysize);
+				free(reply);
+			}
+			break;
+		}
+		
 		default:
 			printf("media_server: received unknown message code %#08lx\n",code);
 	}

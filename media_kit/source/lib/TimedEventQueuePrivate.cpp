@@ -5,6 +5,7 @@
  *         not thread save!
  ***********************************************************************/
 
+#undef 	DEBUG
 #define DEBUG 1
 #include <TimedEventQueue.h>
 #include <Autolock.h>

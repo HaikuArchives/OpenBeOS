@@ -98,6 +98,8 @@ enum {
 	SERVER_GET_NODE,
 	SERVER_SET_NODE,
 	TIMESOURCE_OP, // datablock is a struct time_source_op_info
+	SERVER_GET_DORMANT_NODES,
+	SERVER_GET_DORMANT_FLAVOR_INFO,
 	END
 };
 
@@ -111,6 +113,41 @@ enum node_type
 	AUDIO_OUTPUT_EX, 
 	TIME_SOURCE, 
 	SYSTEM_TIME_SOURCE 
+};
+
+struct xfer_server_get_dormant_flavor_info
+{
+	media_addon_id addon;
+	int32 flavor_id;
+	port_id reply_port;
+};
+
+struct xfer_server_get_dormant_flavor_info_reply
+{
+	status_t 	result;
+	type_code	dfi_type; // the flatten type_code
+	size_t 		dfi_size; 
+	char 		dfi[1];   // a flattened dormant_flavor_info, dfi_size large
+};
+
+struct xfer_server_get_dormant_nodes
+{
+	int32 maxcount;
+	bool has_input;
+	media_format inputformat;
+	bool has_output;
+	media_format outputformat;
+	bool has_name;
+	char name[B_MEDIA_NAME_LENGTH + 1]; // 1 for a trailing "*"
+	uint64 require_kinds;
+	uint64 deny_kinds;
+	port_id reply_port;
+};
+
+struct xfer_server_get_dormant_nodes_reply
+{
+	status_t result;
+	int32 count; // if count > 0, a second reply containing count dormant_node_infos is send
 };
 
 struct xfer_server_set_node

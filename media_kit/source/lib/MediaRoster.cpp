@@ -11,6 +11,8 @@
 #include <OS.h>
 #include <String.h>
 #include <TimeSource.h>
+#undef 	DEBUG
+#define	DEBUG 3
 #include "debug.h"
 #include "PortPool.h"
 #include "../server/headers/ServerInterface.h"
@@ -966,8 +968,64 @@ BMediaRoster::GetDormantNodes(dormant_node_info * out_info,
 							  uint64 require_kinds /* = NULL */,
 							  uint64 deny_kinds /* = NULL */)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	if (out_info == NULL)
+		return B_BAD_VALUE;
+	if (io_count == NULL)
+		return B_BAD_VALUE;
+	if (*io_count <= 0)
+		return B_BAD_VALUE;
+
+	xfer_server_get_dormant_nodes msg;
+	port_id port;
+	status_t rv;
+
+	port = find_port("media_server port");
+	if (port <= B_OK)
+		return B_ERROR;
+	
+	msg.maxcount = *io_count;
+	msg.has_input = (bool) has_input;
+	if (has_input)
+		msg.inputformat = *has_input; // XXX we should not make a flat copy of media_format
+	msg.has_output = (bool) has_output;
+	if (has_output)
+		msg.outputformat = *has_output;; // XXX we should not make a flat copy of media_format
+	msg.has_name = (bool) name;
+	if (name) {
+		int len = min_c(strlen(name),sizeof(msg.name) - 1);
+		memcpy(msg.name,name,len);
+		msg.name[len] = 0;
+	}
+	msg.require_kinds = require_kinds;
+	msg.deny_kinds = deny_kinds;
+	msg.reply_port = _PortPool->GetPort();
+
+	rv = write_port(port, SERVER_GET_DORMANT_NODES, &msg, sizeof(msg));
+	if (rv != B_OK) {
+		_PortPool->PutPort(msg.reply_port);
+		return rv;
+	}
+
+	xfer_server_get_dormant_nodes_reply reply;
+	int32 code;
+
+	rv = read_port(msg.reply_port, &code, &reply, sizeof(reply));
+	if (rv < B_OK) {
+		_PortPool->PutPort(msg.reply_port);
+		return rv;
+	}
+
+	*io_count = reply.count;
+	
+	if (*io_count > 0) {
+		rv = read_port(msg.reply_port, &code, out_info, *io_count * sizeof(dormant_node_info));
+		if (rv < B_OK)
+			reply.result = rv;
+	}
+	_PortPool->PutPort(msg.reply_port);
+	
+	return reply.result;
 }
 
 
@@ -1021,7 +1079,7 @@ status_t
 BMediaRoster::InstantiateDormantNode(const dormant_node_info & in_info,
 									 media_node * out_node)
 {
-	CALLED();
+	UNIMPLEMENTED();
 	return B_ERROR;
 }
 
@@ -1040,8 +1098,46 @@ status_t
 BMediaRoster::GetDormantFlavorInfoFor(const dormant_node_info & in_dormant,
 									  dormant_flavor_info * out_flavor)
 {
-	UNIMPLEMENTED();
-	return B_ERROR;
+	CALLED();
+	
+	xfer_server_get_dormant_flavor_info msg;
+	xfer_server_get_dormant_flavor_info_reply *reply;
+	port_id port;
+	status_t rv;
+	int32 code;
+
+	port = find_port("media_server port");
+	if (port <= B_OK)
+		return B_ERROR;
+
+	reply = (xfer_server_get_dormant_flavor_info_reply *) malloc(16000);
+	if (reply == 0)
+		return B_ERROR;
+	
+	msg.addon 		= in_dormant.addon;
+	msg.flavor_id 	= in_dormant.flavor_id;
+	msg.reply_port 	= _PortPool->GetPort();
+	rv = write_port(port, SERVER_GET_DORMANT_FLAVOR_INFO, &msg, sizeof(msg));
+	if (rv != B_OK) {
+		free(reply);
+		_PortPool->PutPort(msg.reply_port);
+		return rv;
+	}
+	rv = read_port(msg.reply_port, &code, reply, 16000);
+	_PortPool->PutPort(msg.reply_port);
+
+	if (rv < B_OK) {
+		free(reply);
+		return rv;
+	}
+	
+	if (reply->result == B_OK)
+		rv = out_flavor->Unflatten(reply->dfi_type, &reply->dfi, reply->dfi_size);
+	else
+		rv = reply->result;
+	
+	free(reply);
+	return rv;
 }
 
 
@@ -1246,7 +1342,7 @@ BMediaRoster::AudioBufferSizeFor(int32 channel_count,
 								 bus_type bus_kind)
 {
 	UNIMPLEMENTED();
-	return 0;
+	return 4096;
 }
 
 								 

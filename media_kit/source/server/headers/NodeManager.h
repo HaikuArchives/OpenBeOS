@@ -1,3 +1,4 @@
+#include "TList.h"
 
 class BufferManager;
 
@@ -28,7 +29,20 @@ public:
 	void RemoveDormantFlavorInfo(media_addon_id id);	
 	void RegisterAddon(media_addon_id *newid);
 	void UnregisterAddon(media_addon_id id);
+	status_t GetDormantNodes(dormant_node_info * out_info,
+							  int32 * io_count,
+							  const media_format * has_input /* = NULL */,
+							  const media_format * has_output /* = NULL */,
+							  const char * name /* = NULL */,
+							  uint64 require_kinds /* = NULL */,
+							  uint64 deny_kinds /* = NULL */);
+
+	status_t GetDormantFlavorInfoFor(media_addon_id addon,
+									 int32 flavor_id,
+									 dormant_flavor_info *outFlavor);
 
 private:
 	media_addon_id nextaddonid;
+	
+	List<dormant_flavor_info> *fDormantFlavorList;
 };
