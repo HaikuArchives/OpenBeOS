@@ -9,6 +9,7 @@
 #include "net_module.h"
 #include "protocols.h"
 #include "ipv4/ipv4.h"
+#include "netinet/in_var.h"
 #include "netinet/in_pcb.h"
 #include "sys/domain.h"
 #include "sys/protosw.h"
