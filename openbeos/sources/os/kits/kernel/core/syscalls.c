@@ -146,6 +146,8 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 				(addr)arg3, (int)arg4, (int)arg5, (const char *)arg6,
 				(off_t)INT32TOINT64(arg7, arg8));
 			break;
+		case SYSCALL_VM_FIND_REGION_BY_NAME:
+			*call_ret = find_region_by_name((const char *)arg0);
 			break;
 		case SYSCALL_VM_DELETE_REGION:
 			*call_ret = vm_delete_region(vm_get_current_user_aspace_id(), (region_id)arg0);

@@ -2,6 +2,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <Errors.h>
 #include <kernel.h>
 #include <vm.h>
 #include <vm_priv.h>
@@ -1280,6 +1281,36 @@ static void dump_region(int argc, char **argv)
 	}
 }
 
+region_id find_region_by_address (addr vaddress)
+{
+	vm_address_space *aspace;
+	vm_region *region;
+	region_id result=B_ERROR;
+
+	aspace = vm_get_current_user_aspace();
+	for(region = aspace->virtual_map.region_list; region != NULL; region = region->aspace_next) 
+		{
+		if ((vaddress>=region->base) && (vaddress<=(region->base+region->size)))
+			result=region->id;
+		}
+	vm_put_aspace(aspace);
+	return result;
+}
+
+region_id find_region_by_name(const char *name)
+{
+	vm_region *region;
+	struct hash_iterator iter;
+	hash_open(region_table, &iter);
+	while((region = hash_next(region_table, &iter)) != NULL) 
+		{
+		if (!strcmp(region->name,name))
+			return region->id;
+		}
+	hash_close(region_table, &iter, false);
+	return B_NAME_NOT_FOUND;
+}
+
 static void dump_region_list(int argc, char **argv)
 {
 	vm_region *region;
@@ -1523,6 +1554,15 @@ int vm_delete_aspace(aspace_id aid)
 	vm_put_aspace(aspace);
 
 	return NO_ERROR;
+}
+
+int vm_resize_region (aspace_id aid, region_id rid, size_t newSize)
+{
+// Steps:
+// 1) Get the vm_cache_ref for the region
+// 2) Resize all of the regions from the vm_cache_ref (fix them all and fail if they can't be resized)
+// 3) Update the vm_cache size
+
 }
 
 int vm_aspace_walk_start(struct hash_iterator *i)
