@@ -1,5 +1,5 @@
 INCLUDES=-I. -I.. -I../include
-TARGET=../net_srv
+TARGET=../modules/core
 LOBJS=	../util/*.o
 DEBUG_OBJS=##area_malloc.o
 CORE_OBJS= 	socket.o \
@@ -17,6 +17,8 @@ CORE_OBJS= 	socket.o \
 		$(DEBUG_OBJS)
 
 CORE_C:=	$(CORE_OBJS:.o=.c)
+
+CFLAGS+=-D_NETWORK_STACK
 
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
@@ -39,8 +41,8 @@ clean:
 	@rm -f $(TARGET)
 	@rm -f *.o
 
-$(TARGET): $(CORE_OBJS) net_timer.o net_server.o
-	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(CORE_OBJS) -o $(TARGET) net_timer.o net_server.o
+$(TARGET): $(CORE_OBJS) net_timer.o core.o
+	@$(CC) -nostart $(CFLAGS) $(INCLUDES) -o $(TARGET) $(CORE_OBJS) net_timer.o core.o
 
 .SUFFIXES: .c .o
 

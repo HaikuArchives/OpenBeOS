@@ -11,7 +11,6 @@
 
 #include "net_malloc.h"
 
-#include "net_module.h"
 #include "sys/domain.h"
 #include "net/route.h" /* includes net/radix.h */
 #include "protocols.h"

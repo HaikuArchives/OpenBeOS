@@ -14,7 +14,6 @@
 #include "netinet/in.h"
 #include "netinet/in_pcb.h"
 #include "net/if.h"
-#include "net_module.h"
 #include "netinet/in_var.h"
 #include "sys/protosw.h"
 

@@ -2,6 +2,10 @@
  * network buffer implementation
  */
 
+#ifndef _KERNEL_MODE
+#include <stdio.h>
+#endif
+
 #include <stdlib.h>
 #include <kernel/OS.h>
 #include <string.h>
