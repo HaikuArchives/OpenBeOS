@@ -87,6 +87,13 @@ printf("%s::~ServerWindow()\n",title->String());
 	kill_thread(thread);
 }
 
+void ServerWindow::RequestDraw(BRect rect)
+{
+	winlink->SetOpCode(LAYER_DRAW);
+	winlink->Attach(&rect,sizeof(BRect));
+	winlink->Flush();
+}
+
 void ServerWindow::ReplaceDecorator(void)
 {
 #ifdef DEBUG_SERVERWIN

@@ -7,7 +7,7 @@ Decorator::Decorator(Layer *lay, uint32 windowflags, window_look wlook)
 	minsize.Set(0,0); 
 	bsize.Set(1,1,1,1);
 	look=wlook;
-	focused=false;
+	focused=true;
 	driver=get_gfxdriver();
 }
 
@@ -82,6 +82,18 @@ void Decorator::SetMinimizeButton(bool down)
 }
 
 void Decorator::Draw(BRect update)
+{
+}
+
+void Decorator::Draw(void)
+{
+}
+
+void Decorator::DrawTab(void)
+{
+}
+
+void Decorator::DrawFrame(void)
 {
 }
 

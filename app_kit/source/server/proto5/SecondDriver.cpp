@@ -1,320 +1,115 @@
-#include <stdio.h>
-#include <iostream.h>
-#include <Message.h>
-#include <Bitmap.h>
+/*******************************************************
+*   SecondDriver
+*   
+*   Second driver is a Drvier abstraction layer for the 
+*    OBOS app_server.  It provides access to the Graphic
+*    HW via the low level api calls.  This provides a 
+*    way to run the app_server on real HW.
+*   This driver also makes it easy for you to run the 
+*    OBOS app_server in parallel with the Be app_server
+*    when two or more video cards are installed in your
+*    computer.
+*
+*   @author YNOP (ynop@beunited.org)
+*   @version beta1 (p5)
+*   
+*   History:
+*   -  Added Ellipse (Stroke & Fill)
+*      Ran though test app to make sure worked
+*      Fixed HorizLine to used fill_span instead of fill_rect :P
+*      Updated the Cursor code to work again.
+*      Made new cursor (Be-hand like)
+*   -  Added StrokeBezir
+*      Added HorizLine for speed
+*   -  Added HW acceleration methods
+*   -  Brez Line added
+*   -  Created by YNOP
+*
+*   Todo:
+*      Clean up src and add more comments :P
+*      Redo StrokeLine to use PenSize
+*      Redo StrokeLine to use pattern
+*      Mouse Cursor seems to be broken in proto5 ?
+*      Add in a way to read app_server_settings file so we can get the real settings
+*      Make display mode settings more flexable
+*      Look into FreeType for DrawString :P fun fun fun
+*     
+*   Todo methods:
+*      Blit() DrawBitmap() DrawString() FillArc() FillBezier() FillPolygon()
+*      FillRegion() FillRoundRect() FillShape() FillTriangle()
+*      StrokeArc() StrokeRoundRect() StrokeShpae()
+*
+*******************************************************/
+#include <Accelerant.h>
 #include <OS.h>
+
+#include <stdio.h>
 
 #include "PortLink.h"
 #include "ServerProtocol.h"
 #include "ServerBitmap.h"
-#include "SecondDriver.h"
 #include "ServerCursor.h"
 #include "DebugTools.h"
+#include "SecondDriver.h"
+#include "SecondDriverHelper.h"
 
-#include <Accelerant.h>
-#include <GraphicsCard.h>
-#include <image.h>
-#include <FindDirectory.h>
-#include <graphic_driver.h>
-#include <dirent.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <malloc.h>
-#include <errno.h>
-#include <stdlib.h>
-
-
-int find_device(){
-   DIR *d;
-   struct dirent *e;
-   char name_buf[1024];
-   int fd = -1;
-   bool foundfirst = false; // hacky way of finding second video card in your box
-      
-   /* open directory apath */
-   d = opendir("/dev/graphics");
-   if(!d){ return B_ERROR; }
-   while((e = readdir(d)) != NULL){
-      if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..") || !strcmp(e->d_name, "stub")){
-         continue;
-      }
-      strcpy(name_buf, "/dev/graphics");
-      strcat(name_buf, "/");
-      strcat(name_buf, e->d_name);
-      fd = open(name_buf, B_READ_WRITE);
-      if(fd >= 0){ 
-         if(!foundfirst){
-            foundfirst = true;
-            printf("\tbut we are not going to use it as app_server is\n");
-         }else{
-            // found it :)
-            closedir(d);
-            return fd;
-         }
-      }
-   }
-   closedir(d);
-   return B_ERROR;
-}
-image_id load_accelerant(int fd, GetAccelerantHook *hook) {
-	status_t result;
-	image_id image = -1;
-	char
-		signature[1024],
-		path[PATH_MAX];
-	struct stat st;
-	const static directory_which vols[] = {
-		B_USER_ADDONS_DIRECTORY,
-		B_COMMON_ADDONS_DIRECTORY,
-		B_BEOS_ADDONS_DIRECTORY
-	};
-
-	/* get signature from driver */
-	result = ioctl(fd, B_GET_ACCELERANT_SIGNATURE, &signature, sizeof(signature));
-	if (result != B_OK) goto done;
-	printf("B_GET_ACCELERANT_SIGNATURE returned ->%s<-\n", signature);
-
-	// note failure by default
-	for(int32 i=0; i < (int32)(sizeof (vols) / sizeof (vols[0])); i++) {
-
-		/* ---
-			compute directory path to common or beos addon directory on
-			floppy or boot volume
-		--- */
-
-		printf("attempting to get path for %ld (%d)\n", i, vols[i]);
-		if (find_directory (vols[i], -1, false, path, PATH_MAX) != B_OK) {
-			printf("find directory failed\n");
-			continue;
-		}
-
-		strcat (path, "/accelerants/");
-		strcat (path, signature);
-
-		printf("about to stat(%s)\n", path);
-		// don't try to load non-existant files
-		if (stat(path, &st) != 0) continue;
-		printf("Trying to load accelerant: %s\n", path);
-		// load the image
-		image = load_add_on(path);
-		if (image >= 0) {
-			printf("Accelerant loaded!\n");
-			// get entrypoint from accelerant
-			result = get_image_symbol(image, B_ACCELERANT_ENTRY_POINT,
-#if defined(__INTEL__)
-				B_SYMBOL_TYPE_ANY,
-#else
-				B_SYMBOL_TYPE_TEXT,
-#endif
-				(void **)hook);
-			if (result == B_OK) {
-				init_accelerant ia;
-				printf("Entry point %s() found\n", B_ACCELERANT_ENTRY_POINT);
-				ia = (init_accelerant)(*hook)(B_INIT_ACCELERANT, NULL);
-				printf("init_accelerant is 0x%08lx\n", (uint32)ia);
-				if (ia && ((result = ia(fd)) == B_OK)) {
-					// we have a winner!
-					printf("Accelerant %s accepts the job!\n", path);
-					break;
-				} else {
-					printf("init_accelerant refuses the the driver: %ld\n", result);
-				}
-			} else {
-				printf("Couldn't find the entry point :-(\n");
-			}
-			// unload the accelerant, as we must be able to init!
-			unload_add_on(image);
-		}
-		if (image < 0) printf("image failed to load with reason %.8lx (%s)\n", image, strerror(image));
-		// mark failure to load image
-		image = -1;
-	}
-
-	printf("Add-on image id: %ld\n", image);
-
-done:
-	return image;
-}
-
-static const char *spaceToString(uint32 cs) {
-	const char *s;
-	switch (cs) {
-#define s2s(a) case a: s = #a ; break
-		s2s(B_RGB32);
-		s2s(B_RGBA32);
-		s2s(B_RGB32_BIG);
-		s2s(B_RGBA32_BIG);
-		s2s(B_RGB16);
-		s2s(B_RGB16_BIG);
-		s2s(B_RGB15);
-		s2s(B_RGBA15);
-		s2s(B_RGB15_BIG);
-		s2s(B_RGBA15_BIG);
-		s2s(B_CMAP8);
-		s2s(B_GRAY8);
-		s2s(B_GRAY1);
-		s2s(B_YCbCr422);
-		s2s(B_YCbCr420);
-		s2s(B_YUV422);
-		s2s(B_YUV411);
-		s2s(B_YUV9);
-		s2s(B_YUV12);
-		default:
-			s = "unknown"; break;
-#undef s2s
-	}
-	return s;
-}
-
-void dump_mode(display_mode *dm) {
-	display_timing *t = &(dm->timing);
-	printf("  pixel_clock: %ldKHz\n", t->pixel_clock);
-	printf("            H: %4d %4d %4d %4d\n", t->h_display, t->h_sync_start, t->h_sync_end, t->h_total);
-	printf("            V: %4d %4d %4d %4d\n", t->v_display, t->v_sync_start, t->v_sync_end, t->v_total);
-	printf(" timing flags:");
-	if (t->flags & B_BLANK_PEDESTAL) printf(" B_BLANK_PEDESTAL");
-	if (t->flags & B_TIMING_INTERLACED) printf(" B_TIMING_INTERLACED");
-	if (t->flags & B_POSITIVE_HSYNC) printf(" B_POSITIVE_HSYNC");
-	if (t->flags & B_POSITIVE_VSYNC) printf(" B_POSITIVE_VSYNC");
-	if (t->flags & B_SYNC_ON_GREEN) printf(" B_SYNC_ON_GREEN");
-	if (!t->flags) printf(" (none)\n");
-	else printf("\n");
-	printf(" refresh rate: %4.2f\n", ((double)t->pixel_clock * 1000) / ((double)t->h_total * (double)t->v_total));
-	printf("  color space: %s\n", spaceToString(dm->space));
-	printf(" virtual size: %dx%d\n", dm->virtual_width, dm->virtual_height);
-	printf("dispaly start: %d,%d\n", dm->h_display_start, dm->v_display_start);
-
-	printf("   mode flags:");
-	if (dm->flags & B_SCROLL) printf(" B_SCROLL");
-	if (dm->flags & B_8_BIT_DAC) printf(" B_8_BIT_DAC");
-	if (dm->flags & B_HARDWARE_CURSOR) printf(" B_HARDWARE_CURSOR");
-	if (dm->flags & B_PARALLEL_ACCESS) printf(" B_PARALLEL_ACCESS");
-//	if (dm->flags & B_SUPPORTS_OVERLAYS) printf(" B_SUPPORTS_OVERLAYS");
-	if (!dm->flags) printf(" (none)\n");
-	else printf("\n");
-}
-
-status_t get_and_set_mode(GetAccelerantHook gah, display_mode *dm) {
-
-	accelerant_mode_count gmc;
-	uint32 mode_count;
-	get_mode_list gml;
-	display_mode *mode_list, target, high, low;
-	propose_display_mode pdm;
-	status_t result = B_ERROR;
-	set_display_mode sdm;
-
-	/* find the propose mode hook */
-	pdm = (propose_display_mode)gah(B_PROPOSE_DISPLAY_MODE, NULL);
-	if (!pdm) {
-		printf("No B_PROPOSE_DISPLAY_MODE\n");
-		goto exit0;
-	}
-	/* and the set mode hook */
-	sdm = (set_display_mode)gah(B_SET_DISPLAY_MODE, NULL);
-	if (!sdm) {
-		printf("No B_SET_DISPLAY_MODE\n");
-		goto exit0;
-	}
-
-	/* how many modes does the driver support */
-	gmc = (accelerant_mode_count)gah(B_ACCELERANT_MODE_COUNT, NULL);
-	if (!gmc) {
-		printf("No B_ACCELERANT_MODE_COUNT\n");
-		goto exit0;
-	}
-	mode_count = gmc();
-	printf("mode_count = %lu\n", mode_count);
-	if (mode_count == 0) goto exit0;
-
-	/* get a list of graphics modes from the driver */
-	gml = (get_mode_list)gah(B_GET_MODE_LIST, NULL);
-	if (!gml) {
-		printf("No B_GET_MODE_LIST\n");
-		goto exit0;
-	}
-	mode_list = (display_mode *)calloc(sizeof(display_mode), mode_count);
-	if (!mode_list) {
-		printf("Couldn't calloc() for mode list\n");
-		goto exit0;
-	}
-	if (gml(mode_list) != B_OK) {
-		printf("mode list retrieval failed\n");
-		goto free_mode_list;
-	}
-
-	/* take the first mode in the list */
-	//dump_mode(&mode_list[69]);
-	target = high = low = mode_list[69];
-	/* make as tall a virtual height as possible */
-	target.virtual_height = high.virtual_height = 0xffff;
-	/* propose the display mode */
-	if (pdm(&target, &low, &high) == B_ERROR) {
-		printf("propose_display_mode failed\n");
-		goto free_mode_list;
-	}
-	printf("Target display mode: \n");
-	dump_mode(&target);
-	/* we got a display mode, now set it */
-	if (sdm(&target) == B_ERROR) {
-		printf("set display mode failed\n");
-		goto free_mode_list;
-	}
-	/* note the mode and success */
-	*dm = target;
-	result = B_OK;
-	
-free_mode_list:
-	free(mode_list);
-exit0:
-	return result;
-}
-
-
-void get_frame_buffer(GetAccelerantHook gah, frame_buffer_config *fbc) {
-	get_frame_buffer_config gfbc;
-	gfbc = (get_frame_buffer_config)gah(B_GET_FRAME_BUFFER_CONFIG, NULL);
-	gfbc(fbc);
-}
-
-sem_id get_sem(GetAccelerantHook gah) {
-	accelerant_retrace_semaphore ars;
-	ars = (accelerant_retrace_semaphore)gah(B_ACCELERANT_RETRACE_SEMAPHORE, NULL);
-	return ars();
-}
-
-void set_palette(GetAccelerantHook gah) {
-	set_indexed_colors sic;
-	sic = (set_indexed_colors)gah(B_SET_INDEXED_COLORS, NULL);
-	if (sic) {
-		/* booring grey ramp for now */
-		uint8 map[3 * 256];
-		uint8 *p = map;
-		int i;
-		for (i = 0; i < 256; i++) {
-			*p++ = i;
-			*p++ = i;
-			*p++ = i;
-		}
-		sic(256, 0, map, 0);
-	}
-}
-
+/*******************************************************
+*   @description
+*******************************************************/
 SecondDriver::SecondDriver(void):DisplayDriver(){
+   SetupBezier();
+   hide_cursor = false;
+   fd = -1;
+   image = -1;
+   
+   gah = NULL;
+   bits = NULL;
+   bpr = -1;
+   
+   scs = NULL;
+   mc = NULL;
+   sc = NULL;
+   
+   et = NULL;
+   re = NULL;
+   
+   s2sb = NULL;
+   fr = NULL;
+   ir = NULL;
+   s2stb = NULL;
+   fs = NULL;
+   
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 SecondDriver::~SecondDriver(void){
    if(is_initialized){
    }
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::Initialize(void){
    et = NULL;
    bits = NULL;
    
    // Find a driver
-   fd =  find_device();
+   fd = get_device();
    if(fd < 0){
+      printf("No Device settings found.\n");
+      fd =  find_device();
+   }else{
+      printf("Device read from settings file\n");
+   }
+   if(fd < 0){
+      printf("No device find, trying fallback stub\n");
+      fd = fallback_device();
+   }
+   if(fd < 0){
+      printf("Didn't find device :(\n");
       is_initialized = false;
    }
    /* load the accelerant */
@@ -330,21 +125,24 @@ void SecondDriver::Initialize(void){
          bits = (uint32*)fbc.frame_buffer/*_dma*/;
          bpr = fbc.bytes_per_row/4; // sould be by depth
          
-         // Lets chech out tha hardwar cursoer stuff :P
-         scs = (set_cursor_shape)gah(B_SET_CURSOR_SHAPE,NULL);
-         mc = (move_cursor)gah(B_MOVE_CURSOR,NULL);
-         sc = (show_cursor)gah(B_SHOW_CURSOR,NULL);
-         
+         if(dm.flags & B_HARDWARE_CURSOR){
+            // Lets check out tha hardwar cursoer stuff :P
+            printf("Mode supports Hardware cursors\n");
+            scs = (set_cursor_shape)gah(B_SET_CURSOR_SHAPE,NULL);
+            mc = (move_cursor)gah(B_MOVE_CURSOR,NULL);
+            sc = (show_cursor)gah(B_SHOW_CURSOR,NULL);
+         }
+   
          // Ok. now lets see if we can add some spiffy
          // 2D acceleration to this :)
          accelerant_engine_count aec = (accelerant_engine_count)gah(B_ACCELERANT_ENGINE_COUNT,NULL);
          uint32 count = aec();
-         
          if(count > 0){
             acquire_engine ae = (acquire_engine)gah(B_ACQUIRE_ENGINE,NULL);
             re = (release_engine)gah(B_RELEASE_ENGINE,NULL);
             if(ae(B_2D_ACCELERATION,1000,&st,&et) == B_OK){
                // Now lets see if we have some functions
+               printf("You should be verry happy. You have 2D hardware Acceleration\n");
                s2sb = (screen_to_screen_blit)gah(B_SCREEN_TO_SCREEN_BLIT,NULL);
                fr = (fill_rectangle)gah(B_FILL_RECTANGLE,NULL);
                ir = (invert_rectangle)gah(B_INVERT_RECTANGLE,NULL);
@@ -352,7 +150,6 @@ void SecondDriver::Initialize(void){
                fs = (fill_span)gah(B_FILL_SPAN,NULL);
             }
          }
-         
          is_initialized = true;
       }else{
          // failed to set mode
@@ -362,9 +159,26 @@ void SecondDriver::Initialize(void){
       // image failed to load
       is_initialized = false;
    }
+   
+   if(is_initialized){
+      printf("\n\tSecond Driver by YNOP (ynop@beunited.org)\n");
+      printf("\tSecond Driver is copyrigth YNOP 2002\n");
+      printf("\tHave fun, its all set up :)\n\n");
+   }
+   
+   SetCursor((ServerCursor*)NULL);
+   ShowCursor();
+   int32 h = GetHeight();
+   int32 w = GetWidth();
+   MoveCursorTo(w/2,h/2);
+   
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::Shutdown(void){
+   printf("\tShuting down SecondDriver\n");
    if(et){
       if(re(et,&st) != B_OK){
          printf("Failed to release engine\n");
@@ -383,20 +197,35 @@ void SecondDriver::Shutdown(void){
    is_initialized=false;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 bool SecondDriver::IsInitialized(void){
    return is_initialized;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SafeMode(void){
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::Reset(void){
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SetScreen(uint32 space){
   // Clear(51,102,152);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::Clear(uint8 red, uint8 green, uint8 blue){
    rgb_color r;
    r.red = red;
@@ -405,33 +234,65 @@ void SecondDriver::Clear(uint8 red, uint8 green, uint8 blue){
    Clear(r);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::Clear(rgb_color col){
    highcol = col;
    FillRect(BRect(0,0,GetHeight()-1,GetWidth()-1),NULL);
-   printf("calling clear\n");
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 int32 SecondDriver::GetHeight(void){
    // Gets the height of the current mode
    return dm.virtual_height;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 int32 SecondDriver::GetWidth(void){
    // Gets the width of the current mode
    return dm.virtual_width;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 int SecondDriver::GetDepth(void){
    // Gets the color depth of the current mode
    return 0;
 }
 
-void SecondDriver::Blit(BRect src, BRect dest){
+/*******************************************************
+*   @description
+*******************************************************/
+#ifdef PROTO_4
+ void SecondDriver::Blit(BPoint loc, ServerBitmap *src, ServerBitmap *dest)
+#else
+ void SecondDriver::Blit(BRect src, BRect dest)
+#endif
+{
+   printf("Calling Blit (not wirten yet)\n");
+   if(s2sb){
+      printf("Accelerated Blit\n");
+   }else{
+   
+   }
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::DrawBitmap(ServerBitmap *bitmap){
+   printf("Calling DrawBitmap (not writen yet)\n");
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::DrawChar(char c, BPoint point){
 	char string[2];
 	string[0]=c;
@@ -439,21 +300,48 @@ void SecondDriver::DrawChar(char c, BPoint point){
 	DrawString(string,2,point);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::DrawString(char *string, int length, BPoint point){
+   printf("DrawString is not writen yet\n");
+   
+   // i would say that libtruetype would do some good herer
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern){
+   printf("FillArc is not writen yet\n");
+   StrokeArc(centerx,centery,xradius,yradius,angle,span,pattern);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillBezier(BPoint *points, uint8 *pattern){
+   printf("FillBezier is not writen yet\n");
+   StrokeBezier(points,pattern);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern){
+   MidpointEllipse(centerx,centery,x_radius,y_radius,true,pattern);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillPolygon(int *x, int *y, int numpoints, bool is_closed){
+   printf("FillPolygon is not writen yet\n");
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillRect(BRect rect, uint8 *pattern){
    if(fr){
       // usieng accelertated 2d file
@@ -462,7 +350,7 @@ void SecondDriver::FillRect(BRect rect, uint8 *pattern){
          uint32 word;
       }c1;
 
-      printf("Accelerated Fill\n");
+      //printf("Accelerated Fill\n");
       fill_rect_params frp;
       frp.left =(uint16) rect.left;
       frp.top =(uint16) rect.top;
@@ -476,26 +364,55 @@ void SecondDriver::FillRect(BRect rect, uint8 *pattern){
       for(int32 i = 0;i < rect.Height()-1;i++){
          MovePenTo(BPoint(rect.left,rect.top+i));
          StrokeLine(BPoint(rect.right,rect.top+i),pattern);
+         //HorizLine(rect.left,rect.right,rect.top+i); // uses accel :P
       }
    }
 }
 
-void SecondDriver::FillRect(BRect rect, rgb_color col)
-{
+/*******************************************************
+*   @description
+*******************************************************/
+void SecondDriver::FillRect(BRect rect, rgb_color col){
+   rgb_color tmpc = highcol;
+   highcol = col;
+   FillRect(rect, NULL);
+   highcol = tmpc;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillRegion(BRegion *region){
+   printf("RillRegion is not writen yet\n");
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern){
+   printf("FillRoundRect is not writen yet\n");
+   StrokeRoundRect(rect,xradius,yradius,pattern);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillShape(BShape *shape){
+   printf("FillShape is not writen yet\n");
+   StrokeShape(shape);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern){
+   printf("FillTriangle is not writen yet\n");
+   StrokeTriangle(first,second,third,rect,pattern);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::HideCursor(void){
    if(sc){
       sc(false);
@@ -505,18 +422,26 @@ void SecondDriver::HideCursor(void){
    }
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 bool SecondDriver::IsCursorHidden(void){
    return cursor_visible;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::ObscureCursor(void){
    // Hides cursor until mouse is moved
    HideCursor();
    show_on_move = true;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::MoveCursorTo(float x, float y){
-//   printf("Callingmove cursoer to %f %f\n",x,y);
    if(show_on_move){
       ShowCursor();
    }
@@ -527,51 +452,88 @@ void SecondDriver::MoveCursorTo(float x, float y){
    }   
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::MovePenTo(BPoint pt){
    penpos = pt;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 BPoint SecondDriver::PenPosition(void){
    return penpos;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 float SecondDriver::PenSize(void){
    return pensize;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SetCursor(int32 value){
+   printf("Setcursoer value?\n");
    // Uh what is this all about?
 }
 
- uint8 andMask[] = { // cursor
-   0x00, 0x00, 0x00, 0x0e , 0x00, 0x1e, 0x00, 0x3e,
-   0x00, 0x5c, 0x00, 0x88 , 0x01, 0x10, 0x02, 0x20, 
-   0x04, 0x40, 0x08, 0x80, 0x11, 0x00, 0x22, 0x00, 
-   0x64, 0x00, 0x78, 0x00, 0xf0, 0x00, 0xc0, 0x00
-   };
- uint8 xorMask[] = { // mask
-   0x00, 0x00, 0x00, 0x0e, 0x00, 0x12, 0x00, 0x32,
-   0x00, 0x7c, 0x00, 0xf8, 0x01, 0xf0, 0x03, 0xe0,
-   0x07, 0xc0, 0x0f, 0x80, 0x1f, 0x00, 0x3e, 0x00,
-   0x7c, 0x00, 0x78, 0x00, 0xf0, 0x00, 0xc0, 0x00
+
+
+
+//0 - 1 = black
+//0 - 0 = what
+//1 - 0 = trans
+//1 - 1 = invert
+
+// Pointy cursor
+/*uint8 andMask[] = {
+   63,255,15,255,131,255,128,127,192,31,192,31,224,63,224,63,
+   224,31,240,15,243,7,255,131,255,193,255,224,255,240,255,248
+};
+uint8 xorMask[] = {
+   192,0,176,0,76,0,67,128,32,96,32,32,16,64,16,64,
+   16,32,11,16,12,136,0,68,0,34,0,17,0,9,0,7
+};*/
+// BeOS like cursor
+uint8 andMask[] = {
+   255,255,255,255,199,255,195,255,195,255,224,31,224,3,240,1,
+   240,0,192,0,128,0,128,0,192,0,240,0,252,1,254,7
+};
+uint8 xorMask[] = {
+   0,0,0,0,56,0,36,0,36,0,19,224,18,92,9,42,
+   8,1,60,0,76,0,66,0,48,0,12,0,2,0,1,0
 };
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SetCursor(ServerCursor *cursor){
    printf("Setting cursor\n");
    current_cursor = cursor;
 //   uint8 *andMask;
  //  uint8 *xorMask;
    if(scs){
-      scs(cursor->width,cursor->height,(short unsigned int)cursor->hotspot.x,(short unsigned int)cursor->hotspot.y,andMask,xorMask);
+//      scs(cursor->width,cursor->height,(short unsigned int)cursor->hotspot.x,(short unsigned int)cursor->hotspot.y,andMask,xorMask);
+      scs(16,16,3,3,andMask,xorMask);
    }else{
       printf("Setting software cursor\n");
    }
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SetPenSize(float size){
    pensize = size;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
    highcol.red = r;
    highcol.green = g;
@@ -579,6 +541,9 @@ void SecondDriver::SetHighColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
    highcol.alpha = a;   
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
    lowcol.red = r;
    lowcol.green = g;
@@ -586,6 +551,9 @@ void SecondDriver::SetLowColor(uint8 r,uint8 g,uint8 b,uint8 a=255){
    lowcol.alpha = a;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::SetPixel(int x, int y, uint8 *pattern){
    union{
       uint8 bytes[4];
@@ -600,7 +568,11 @@ void SecondDriver::SetPixel(int x, int y, uint8 *pattern){
    *(bits + x + y*bpr) = c1.word;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::ShowCursor(void){
+   printf("\tShow Cursor\n");
    show_on_move = false;
    cursor_visible = true;
    if(sc){
@@ -610,17 +582,46 @@ void SecondDriver::ShowCursor(void){
    }
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokeArc(int centerx, int centery, int xradius, int yradius, float angle, float span, uint8 *pattern){
+   printf("StrokeArch is not writen yet\n");
 }
 
-void SecondDriver::StrokeBezier(BPoint *points, uint8 *pattern){
-}
 
+/*******************************************************
+*   @description
+*******************************************************/
+void SecondDriver::StrokeBezier(BPoint *pts, uint8 *pattern){
+   BPoint segment[SEGMENTS + 1];
+   computeSegments(pts[0], pts[1],pts[2],pts[3], segment);
+    
+   MovePenTo(segment[0]);
+   
+   for(int32 s = 1 ; s <= SEGMENTS ; ++s ){
+     if(segment[s].x != segment[s - 1].x || segment[s].y != segment[s - 1].y ) {
+        StrokeLine(segment[s],pattern);
+     }
+   } 
+} 
+
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokeEllipse(float centerx, float centery, float x_radius, float y_radius,uint8 *pattern){
+   MidpointEllipse(centerx,centery,x_radius,y_radius,false,pattern);
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokeLine(BPoint point, uint8 *pattern){
-
+   if(penpos.y == point.y){
+      HorizLine(penpos.x,point.x,point.y,pattern);
+      return;
+   }
+      
    int oct = 0;
    int xoff = (int32)penpos.x;
    int yoff = (int32)penpos.y; 
@@ -628,7 +629,7 @@ void SecondDriver::StrokeLine(BPoint point, uint8 *pattern){
    int32 y2 = (int32)point.y-yoff; 
    int32 x1 = 0;
    int32 y1 = 0;
-   //if(y2==0){ if (x1>x2){int t=x1;x1=x2;x2=t;}horizLine(x1+xoff,x2+xoff,y1+yoff); return;}
+//   if(y2==0){ if (x1>x2){int t=x1;x1=x2;x2=t;}HorizLine(x1+xoff,x2+xoff,y1+yoff); return;}
    if(y2<0){ y2 = -y2; oct+=4; }//bit2=1
    if(x2<0){ x2 = -x2; oct+=2;}//bit1=1
    if(x2<y2){ int t=x2; x2=y2; y2=t; oct+=1;}//bit0=1
@@ -659,6 +660,9 @@ void SecondDriver::StrokeLine(BPoint point, uint8 *pattern){
    MovePenTo(point); // ends up in last position
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokePolygon(int *x, int *y, int numpoints, bool is_closed){
    BPoint first(x[0],y[0]);
    MovePenTo(first);
@@ -670,31 +674,160 @@ void SecondDriver::StrokePolygon(int *x, int *y, int numpoints, bool is_closed){
    }
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokeRect(BRect rect,uint8 *pattern){
    MovePenTo(BPoint(rect.left,rect.top));
    StrokeLine(BPoint(rect.right,rect.top),pattern);
    StrokeLine(BPoint(rect.right,rect.bottom),pattern);
    StrokeLine(BPoint(rect.left,rect.bottom),pattern);
    StrokeLine(BPoint(rect.left,rect.top),pattern);
-   printf("Strinking rect\n");
 }
 
-void SecondDriver::StrokeRect(BRect rect,rgb_color col)
-{
+/*******************************************************
+*   @description
+*******************************************************/
+void SecondDriver::StrokeRect(BRect rect,rgb_color col){
+   rgb_color tmpC = highcol;
+   highcol = col;
+   StrokeRect(rect,NULL);
+   highcol = tmpC;
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokeRoundRect(BRect rect,float xradius, float yradius, uint8 *pattern){
+   printf("StroekRoundRect is not writen yet\n");
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokeShape(BShape *shape){
+   printf("StrokeShape is not writen yet\n");
 }
 
+/*******************************************************
+*   @description
+*******************************************************/
 void SecondDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect rect, uint8 *pattern){
    MovePenTo(first);
    StrokeLine(second,pattern);
    StrokeLine(third,pattern);
    StrokeLine(first,pattern);
 }
+
+
+/*******************************************************
+*   
+*   Everthign below here is not part of the Driver API
+*    however we added it because it makes life easyer for
+*    everone :)
+*
+*******************************************************/
+
+
+/*******************************************************
+*   @description
+*******************************************************/
+void SecondDriver::HorizLine(int32 x1,int32 x2,int32 y, uint8 *pattern){
+   // we can do this forst as ponts are cached
+   MovePenTo(BPoint(x2,y)); // ends up in last position
+   // Swap so x1 < x2 or the fill wil not work
+   if(x1 > x2){ int32 t=x1;x1=x2;x2=t; }
+   if(fr){
+      union{
+         uint8 bytes[4];
+         uint32 word;
+      }c1;
+
+      //printf("Accelerated HorizLine\n");
+      uint16 list[3];
+      list[0] = y;
+      list[1] = x1;
+      list[2] = x2;
+      c1.bytes[0] = highcol.blue;
+      c1.bytes[1] = highcol.green;
+      c1.bytes[2] = highcol.red;
+      fs(et,c1.word,list,1);
+   }else{
+      //software hline
+      printf("\t!!HorizLine without HWaccel is a waist\n");
+      for(int32 i = x1; i <= x2;i++){
+         SetPixel(i,y,pattern);
+      }
+   }
+
+}
+
+//void EllipsePoints(float cx,float cy,int32 x, int32 y){
+//   view->StrokeLine(BPoint(x+cent.x,y+cent.y),BPoint(x+cent.x,y+cent.y));
+//   view->StrokeLine(BPoint(-x+cent.x,y+cent.y),BPoint(-x+cent.x,y+cent.y));
+//   view->StrokeLine(BPoint(x+cent.x,-y+cent.y),BPoint(x+cent.x,-y+cent.y));
+//   view->StrokeLine(BPoint(-x+cent.x,-y+cent.y),BPoint(-x+cent.x,-y+cent.y));
+#define EllipsePoints(cx,cy,x,y,pattern){ \
+   SetPixel( x+cx, y+cx,pattern); \
+   SetPixel(-x+cx, y+cx,pattern); \
+   SetPixel( x+cx,-y+cx,pattern); \
+   SetPixel(-x+cx,-y+cx,pattern); \
+}
+
+
+//void EllipsePointsFill(BPoint cent,int32 x, int32 y,pattern){
+//   view->StrokeLine(BPoint(-x+cent.x,y+cent.y),BPoint(x+cent.x,y+cent.y));
+//   view->StrokeLine(BPoint(-x+cent.x,-y+cent.y),BPoint(x+cent.x,-y+cent.y));
+  
+  #define EllipsePointsFill(cx,cy,x,y,pattern){ \
+   HorizLine(-x+cx,x+cx, y+cy, pattern);   \
+   HorizLine(-x+cx,x+cx, -y+cy, pattern);  \
+}
+
+
+/*******************************************************
+*   
+*******************************************************/
+void SecondDriver::MidpointEllipse(float centx,float centy,int32 xrad, int32 yrad,bool fill,uint8 *pattern){
+   if(xrad < 0){ xrad = -xrad; }
+   if(yrad < 0){ yrad = -yrad; }
+   double d2;
+   int32 x = 0;
+   int32 y = yrad;
+   
+   int32 xradSqr = xrad*xrad;
+   int32 yradSqr = yrad*yrad;
+   
+   double dl = yradSqr - (xradSqr*yrad) + (0.25 *xradSqr);
+   
+   if(fill){ EllipsePointsFill(centx,centy,x,y,pattern); }else{ EllipsePoints(centx,centy,x,y,pattern); }
+   
+   // Test gradient if still in region 1
+   while((xradSqr*(y-.5)) > (yradSqr*(x+1))){
+      if(dl < 0){  // Select E
+         dl += yradSqr*(2*x + 3);
+      }else{  // Select SE
+         dl += yradSqr*(2*x + 3) + xradSqr*(-2*y + 2);
+         y--;
+      }
+      x++;
+      if(fill){ EllipsePointsFill(centx,centy,x,y,pattern); }else{ EllipsePoints(centx,centy,x,y,pattern); }
+   }
+   
+   d2 = (yradSqr*(x + .5)*(x + .5)) + (xradSqr*(y-1)*(y-1)) - xradSqr*yradSqr;
+   while(y > 0){
+      if(d2 < 0){ // Select SE
+         d2 += yradSqr*(2*x + 2) + xradSqr*(-2*y + 3);
+         x++;
+      }else{  // Select E
+         d2 += xradSqr*(-2*y + 3);
+      }
+      y--;
+      if(fill){ EllipsePointsFill(centx,centy,x,y,pattern); }else{ EllipsePoints(centx,centy,x,y,pattern); }
+   }
+}
+
+
 
 #ifdef DEBUG_DRIVER_MODULE
 #undef DEBUG_DRIVER_MODULE

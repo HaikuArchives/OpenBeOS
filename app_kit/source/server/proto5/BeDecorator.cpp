@@ -1,8 +1,9 @@
 #include "Layer.h"
 #include "DisplayDriver.h"
+#include <View.h>
 #include "BeDecorator.h"
 
-//#define DEBUG_DECOR
+#define DEBUG_DECOR
 
 #ifdef DEBUG_DECOR
 #include <stdio.h>
@@ -85,6 +86,17 @@ printf("BeDecorator():Clicked() - Resize thumb\n");
 		return CLICK_RESIZE_RB;
 	}
 
+	// Clicking in the tab?
+	if(tabrect.Contains(pt))
+	{
+		// Here's part of our window management stuff
+		if(buttons==B_PRIMARY_MOUSE_BUTTON)
+			return CLICK_MOVETOFRONT;
+		if(buttons==B_SECONDARY_MOUSE_BUTTON)
+			return CLICK_MOVETOBACK;
+		return CLICK_TAB;
+	}
+
 	// We got this far, so user is clicking on the border?
 	BRect borderrect(frame);
 	borderrect.top+=19;
@@ -93,8 +105,8 @@ printf("BeDecorator():Clicked() - Resize thumb\n");
 	{
 #ifdef DEBUG_DECOR
 printf("BeDecorator():Clicked() - Drag\n");
-#endif
-		return CLICK_TAB;
+#endif		
+		return CLICK_DRAG;
 	}
 
 	// Guess user didn't click anything
@@ -181,28 +193,13 @@ printf("BeDecorator()::Draw():"); update.PrintToStream();
 	// We need to draw a few things: the tab, the resize thumb, the borders,
 	// and the buttons
 
-	// Draw the tab itself
-	driver->FillRect(tabrect,yellow);
-	driver->StrokeRect(tabrect,black);
+	DrawTab();
 
 	// Draw the top view's client area - just a hack :)
 	driver->FillRect(borderrect,blue);
 	
-	// Draw the border
-	driver->StrokeRect(borderrect,black);
-	
-	// Draw the resize thumb if we're supposed to
-	if(!(flags & B_NOT_RESIZABLE))
-	{
-		driver->FillRect(resizerect,gray);
-		driver->StrokeRect(resizerect,black);
-	}
+	DrawFrame();
 
-	// Draw the buttons if we're supposed to	
-	if(!(flags & B_NOT_CLOSABLE))
-		DrawClose(closerect);
-	if(!(flags & B_NOT_ZOOMABLE))
-		DrawZoom(zoomrect);
 }
 
 void BeDecorator::DrawZoom(BRect r)
@@ -232,6 +229,46 @@ void BeDecorator::DrawClose(BRect r)
 		driver->StrokeRect(r,black);
 		driver->StrokeRect(r.InsetByCopy(2,2),black);
 	}
+}
+
+void BeDecorator::Draw(void)
+{
+	// Easy way to draw everything - no worries about drawing only certain
+	// things
+
+	DrawTab();
+
+	// Draw the top view's client area - just a hack :)
+	driver->FillRect(borderrect,blue);
+	
+	DrawFrame();
+}
+
+void BeDecorator::DrawTab(void)
+{
+	if(focused)
+		driver->FillRect(tabrect,yellow);
+	else
+		driver->FillRect(tabrect,gray);
+	driver->StrokeRect(tabrect,black);
+}
+
+void BeDecorator::DrawFrame(void)
+{
+	driver->StrokeRect(borderrect,black);
+
+	// Draw the resize thumb if we're supposed to
+	if(!(flags & B_NOT_RESIZABLE))
+	{
+		driver->FillRect(resizerect,gray);
+		driver->StrokeRect(resizerect,black);
+	}
+
+	// Draw the buttons if we're supposed to	
+	if(!(flags & B_NOT_CLOSABLE))
+		DrawClose(closerect);
+	if(!(flags & B_NOT_ZOOMABLE))
+		DrawZoom(zoomrect);
 }
 
 void BeDecorator::SetLook(window_look wlook)

@@ -32,6 +32,7 @@ public:
 	bool IsHidden(void);
 	void SetFocus(bool value);
 	bool HasFocus(void);
+	void RequestDraw(BRect rect);
 	
 	void WorkspaceActivated(int32 NewDesktop, const BPoint Resolution, color_space CSpace);
 	void WindowActivated(bool Active);

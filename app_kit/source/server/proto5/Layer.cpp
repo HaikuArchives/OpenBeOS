@@ -4,6 +4,7 @@
 		also for window decorators
 */
 #include "Layer.h"
+#include "ServerWindow.h"
 #include <iostream.h>
 #include <string.h>
 #include <stdio.h>
@@ -88,7 +89,7 @@ Layer::Layer(BRect rect, const char *layername)
 Layer::~Layer(void)
 {
 #ifdef DEBUG_LAYERS
-	cout << "Layer Destructor for " << name->String() << endl;
+	cout << "Layer Destructor for " << name->String() << endl << flush;
 #endif
 	if(visible!=NULL)
 		delete visible;
@@ -106,7 +107,7 @@ void Layer::AddChild(Layer *layer)
 	
 	if(layer->parent!=NULL)
 	{
-		cout << "ERROR: AddChild(): View already has parent\n";
+		cout << "ERROR: AddChild(): View already has parent\n" << flush;
 		return;
 	}
 	layer->parent=this;
@@ -123,17 +124,17 @@ void Layer::RemoveChild(Layer *layer)
 {
 	// Remove a layer from the tree
 #ifdef DEBUG_LAYERS
-	cout << "RemoveChild " << layer->name->String() << endl;
+	cout << "RemoveChild " << layer->name->String() << endl << flush;
 #endif
 	
 	if(layer->parent==NULL)
 	{
-		cout << "ERROR: RemoveChild(): View doesn't have a parent\n";
+		cout << "ERROR: RemoveChild(): View doesn't have a parent\n" << flush;
 		return;
 	}
 	if(layer->parent!=this)
 	{
-		cout << "ERROR: RemoveChild(): View is not a child of this layer\n";
+		cout << "ERROR: RemoveChild(): View is not a child of this layer\n" << flush;
 		return;
 	}
 
@@ -162,7 +163,7 @@ void Layer::RemoveSelf(void)
 #endif
 	if(parent==NULL)
 	{
-		cout << "ERROR: RemoveSelf(): View doesn't have a parent\n";
+		cout << "ERROR: RemoveSelf(): View doesn't have a parent\n" << flush;
 		return;
 	}
 	parent->RemoveChild(this);
@@ -281,10 +282,36 @@ Layer *Layer::FindLayer(int32 token)
 
 void Layer::Invalidate(BRect rect)
 {
+	// Make our own section dirty and pass it on to any children, if necessary....
+	// YES, WE ARE SHARING DIRT! Mudpies anyone? :D
+	is_dirty=true;
+
+	// Crap. Not sure if we need to convert the invalid BRect to our own space
+	// because I'm not sure who will be calling this...	I *think* we need to convert
+	// it from the parent's space.
+	if(invalid)
+		invalid->Include(rect);
+	else
+		invalid=new BRegion(rect);
+	
+	Layer *lay;
+	for(lay=topchild;lay!=NULL; lay=lay->lowersibling)
+		lay->Invalidate(rect);
 }
 
 void Layer::RequestDraw(void)
 {
+	if(visible==NULL || hidecount>0)
+		return;
+
+	if(serverwin)
+	{
+		if(invalid==NULL)
+			invalid=new BRegion(*visible);
+		serverwin->RequestDraw(invalid->Frame());
+		delete invalid;
+		invalid=NULL;
+	}
 }
 
 void Layer::ShowLayer(void)

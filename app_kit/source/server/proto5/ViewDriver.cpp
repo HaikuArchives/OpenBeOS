@@ -309,7 +309,8 @@ void VDWindow::MessageReceived(BMessage *msg)
 			msg->FindFloat("ry",&ry);
 			msg->FindFloat("angle",&angle);
 			msg->FindFloat("span",&span);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -337,7 +338,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("ry",&ry);
 			msg->FindFloat("angle",&angle);
 			msg->FindFloat("span",&span);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -362,7 +364,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("p2",&(points[1]));
 			msg->FindPoint("p3",&(points[2]));
 			msg->FindPoint("p4",&(points[3]));
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -391,7 +394,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("p2",&(points[1]));
 			msg->FindPoint("p3",&(points[2]));
 			msg->FindPoint("p4",&(points[3]));
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -510,7 +514,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("cy",&cy);
 			msg->FindFloat("rx",&rx);
 			msg->FindFloat("ry",&ry);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -535,7 +540,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindFloat("cy",&cy);
 			msg->FindFloat("rx",&rx);
 			msg->FindFloat("ry",&ry);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -560,7 +566,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindRect("rect",&rect);
 			msg->FindFloat("x",&x);
 			msg->FindFloat("y",&y);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -584,7 +591,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindRect("rect",&rect);
 			msg->FindFloat("x",&x);
 			msg->FindFloat("y",&y);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -608,7 +616,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("second",&pt2);
 			msg->FindPoint("third",&pt3);
 			msg->FindRect("rect",&invalid);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -636,7 +645,8 @@ printf("pattern: {%llx}\n",temp64);
 			msg->FindPoint("second",&pt2);
 			msg->FindPoint("third",&pt3);
 			msg->FindRect("rect",&invalid);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -662,7 +672,8 @@ printf("pattern: {%llx}\n",temp64);
 
 			msg->FindPoint("from",&pt);
 			msg->FindPoint("to",&pt2);
-			msg->FindInt64("pattern",&temp64);
+			if(msg->FindInt64("pattern",&temp64)!=B_OK)
+				temp64=0xFFFFFFFF;	// B_SOLID_HIGH
 
 			view->viewbmp->Lock();
 			view->viewbmp->AddChild(view->drawview);
@@ -1067,8 +1078,11 @@ void ViewDriver::FillArc(int centerx, int centery, int xradius, int yradius, flo
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1077,14 +1091,17 @@ void ViewDriver::FillArc(int centerx, int centery, int xradius, int yradius, flo
 void ViewDriver::FillBezier(BPoint *points, uint8 *pattern)
 {
 	locker->Lock();
-	int64 pat=*((int64*)pattern);
 
 	BMessage *msg=new BMessage(VDWIN_FILLBEZIER);
 	msg->AddPoint("p1",points[0]);
 	msg->AddPoint("p2",points[1]);
 	msg->AddPoint("p3",points[2]);
 	msg->AddPoint("p4",points[3]);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 	
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1101,8 +1118,11 @@ void ViewDriver::FillEllipse(float centerx, float centery, float x_radius, float
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1120,8 +1140,11 @@ void ViewDriver::FillRect(BRect rect, uint8 *pattern)
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 	screenwin->PostMessage(msg);
 	locker->Unlock();
 }
@@ -1154,8 +1177,11 @@ void ViewDriver::FillRoundRect(BRect rect,float xradius, float yradius, uint8 *p
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1176,8 +1202,11 @@ void ViewDriver::FillTriangle(BPoint first, BPoint second, BPoint third, BRect r
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1326,8 +1355,11 @@ void ViewDriver::StrokeArc(int centerx, int centery, int xradius, int yradius, f
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1336,14 +1368,17 @@ void ViewDriver::StrokeArc(int centerx, int centery, int xradius, int yradius, f
 void ViewDriver::StrokeBezier(BPoint *points, uint8 *pattern)
 {
 	locker->Lock();
-	int64 pat=*((int64*)pattern);
 
 	BMessage *msg=new BMessage(VDWIN_STROKEBEZIER);
 	msg->AddPoint("p1",points[0]);
 	msg->AddPoint("p2",points[1]);
 	msg->AddPoint("p3",points[2]);
 	msg->AddPoint("p4",points[3]);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 	
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1360,8 +1395,11 @@ void ViewDriver::StrokeEllipse(float centerx, float centery, float x_radius, flo
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1376,8 +1414,11 @@ void ViewDriver::StrokeLine(BPoint point, uint8 *pattern)
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1395,8 +1436,11 @@ void ViewDriver::StrokeRect(BRect rect,uint8 *pattern)
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1426,8 +1470,11 @@ void ViewDriver::StrokeRoundRect(BRect rect,float xradius, float yradius, uint8 
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();
@@ -1448,8 +1495,11 @@ void ViewDriver::StrokeTriangle(BPoint first, BPoint second, BPoint third, BRect
 
 	// Have to actually copy the pattern data because a sort of race condition
 	// Using an int64 to make for an easy copy.
-	int64 pat=*((int64*)pattern);
-	msg->AddInt64("pattern",pat);
+	if(pattern)
+	{
+		int64 pat=*((int64*)pattern);
+		msg->AddInt64("pattern",pat);
+	}
 
 	screenwin->PostMessage(msg);
 	locker->Unlock();

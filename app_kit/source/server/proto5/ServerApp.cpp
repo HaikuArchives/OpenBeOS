@@ -5,7 +5,7 @@
 */
 //#define DEBUG_SERVERAPP_MSGS
 //#define DEBUG_SERVERAPP_CURSORS
-#define DEBUG_SERVERAPP_MISC
+//#define DEBUG_SERVERAPP_MISC
 
 #include <AppDefs.h>
 #include <Cursor.h>

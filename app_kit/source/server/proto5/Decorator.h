@@ -39,6 +39,9 @@ public:
 	virtual void SetZoomButton(bool down);
 	virtual void SetMinimizeButton(bool down);
 	virtual void Draw(BRect update);
+	virtual void Draw(void);
+	virtual void DrawTab(void);
+	virtual void DrawFrame(void);
 	virtual void DrawZoom(BRect r);
 	virtual void DrawClose(BRect r);
 	virtual void DrawMinimize(BRect r);

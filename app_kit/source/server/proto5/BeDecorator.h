@@ -21,9 +21,12 @@ public:
 	void SetFocus(bool focused);
 	void SetCloseButton(bool down);
 	void SetZoomButton(bool down);
+	void Draw(void);
 	void Draw(BRect update);
 	void DrawZoom(BRect r);
 	void DrawClose(BRect r);
+	void DrawTab(void);
+	void DrawFrame(void);
 	void CalculateBorders(void);
 
 	bool zoomstate;

@@ -39,7 +39,7 @@ void WindowBorder::MouseDown(BPoint pt, uint32 buttons)
 printf("WindowBorder()::MouseDown\n");
 #endif
 	mbuttons|=buttons;
-	click_type click=decor->Clicked(pt, buttons);
+	click_type click=decor->Clicked(pt, mbuttons);
 
 	switch(click)
 	{
@@ -55,6 +55,7 @@ printf("WindowBorder(): MoveToBack\n");
 			layerlock->Lock();
 			RemoveSelf();
 			top->AddChild(this);
+			decor->Draw();
 			layerlock->Unlock();
 			break;
 		}
@@ -131,9 +132,13 @@ printf("WindowBorder()::MouseUp\n");
 
 void WindowBorder::Draw(BRect update_rect)
 {
+	// Just a hard-coded placeholder for now
 	if(decor->Look()==B_NO_BORDER_WINDOW_LOOK)
 		return;
+
+#ifdef DEBUG_WINBORDER
 printf("WindowBorder()::Draw():"); update_rect.PrintToStream();
+#endif
 
 	if(update && visible!=NULL)
 		is_updating=true;

@@ -1,20 +1,3 @@
-To Do:
-Figure out what is necessary to have the proper ServerWindow receive MouseDown/MouseUp messages and make it so.
-Add MouseMoved functionality to ServerWindows
+Finish Layers code which is declared in header but unimplemented
 
-AtheOS input handling research:
-
-Input Handling:
-Very much multithreaded - input is handled by InputNodes, which are essentially looping node monitors. Keyboard and Mouse are monitored simultaneously, mouse by a derived class and keyboard by a spawned thread. Same parent class, different methods for each.
-
-Mouse:
-Mouse monitoring object (DosMouseDriver) monitors the mouse and enqueues events into the InputNode communal message queue. InputNode loop monitors for these messages and dispatches them by getting the active window and firing the mouse message at it, at which point the message is properly handled
-
-Keyboard:
-Key events are handled very differently the InitializeKeyboard() function spawns a thread which monitors the keyboard. When a key event occurs, then the thread calls the AppServer's SendKeyCode(), which dispatches the messages, handling server-specific codes or passing them on to the active window via ServerWindow::SendKbdEvent().
-
-OpenBeOS:
-What we shall do is have Poller monitor the port, find the active window (somehow), and send the message to it, provided that we don't have other fun things to do inside the server as a result of the message. :D
-
-Mouse Movement dispatching:
-The Layer class needs to have a GetChildAt(BPoint pt). This will allow us to get the layer which received the mouse message. if the current one != to the last one, send a MouseMoved (B_EXITED_VIEW) event and process normally for the new window, if there is one.
+Add Layer::Frame()
