@@ -1,0 +1,7 @@
+SubDir OBOS_TOP sources os kits kernel core net ;
+
+KernelObjects 
+	<$(SOURCE_GRIST)>pools.c 
+	: 
+	-DNEWOS=1 -fno-pic
+	;
