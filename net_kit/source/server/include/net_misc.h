@@ -38,7 +38,7 @@ typedef	uint32	ipv4_addr;
  */
 
 void net_server_add_device(ifnet *ifn);
-int in_cksum(struct mbuf *m, int len, int off);
+uint16 in_cksum(struct mbuf *m, int len, int off);
 void local_init(void);
 void insert_local_address(struct sockaddr *sa, ifnet *dev);
 int is_address_local(void *ptr, int len);

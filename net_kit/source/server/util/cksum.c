@@ -6,7 +6,7 @@
 #define ADDCARRY(x)	(x > 65535 ? x -= 65535 : x)
 #define REDUCE	{l_util.l = sum; sum = l_util.s[0] + l_util.s[1];ADDCARRY(sum);}
 
-int in_cksum(struct mbuf *m, int len, int off)
+uint16 in_cksum(struct mbuf *m, int len, int off)
 {
 	uint16 *w;
 	int sum = 0;
@@ -20,7 +20,7 @@ int in_cksum(struct mbuf *m, int len, int off)
 	} s_util;
 	union {
 		uint16 s[2];
-		long	l;
+		uint32	l;
 	} l_util;
 
 	if (off) {
@@ -36,7 +36,7 @@ int in_cksum(struct mbuf *m, int len, int off)
 		w = mtod(m, uint16 *);
 		if (mlen == -1) {
 			/* first byte is a continuation of
-			 8 a 16 bit word spanning this mbuf
+			 * a 16 bit word spanning this mbuf
 			 * and the previous one.
 			 *
 			 * s_util.c[0] is already saved.
@@ -94,13 +94,13 @@ int in_cksum(struct mbuf *m, int len, int off)
 				mlen = 0;
 			} else 
 				mlen = -1;
-		} else if (mlen == 1)
+		} else if (mlen == -1)
 			s_util.c[0] = *(char*)w;
 	}
 	if (len)
 		printf("cksum: out of data!\n");
 	if (mlen == -1) {
-		/* last mbuf was an odd numberof bytes! */
+		/* last mbuf was an odd number of bytes! */
 		s_util.c[1] = 0;
 		sum += s_util.s;
 	}
@@ -112,6 +112,6 @@ int in_cksum(struct mbuf *m, int len, int off)
 		if (orig_m->m_flags & M_PKTHDR)
 			orig_m->m_pkthdr.len += off;
 	}	
-	return (~sum & 0xffff);	
+	return (uint16)(~sum & 0xffff);	
 }
 
