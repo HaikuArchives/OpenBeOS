@@ -13,7 +13,6 @@
 
 #include <TLS.h>
 
-/* XXX - fix this correctly... */
 static int32 h_errno_tls;
 
 /* These should probably be moved to a seperate file as they

@@ -800,11 +800,12 @@ get_canonname(pai, ai, str)
 	struct addrinfo *ai;
 	const char *str;
 {
+printf("get_canonname\n");
 	if ((pai->ai_flags & AI_CANONNAME) != 0) {
 		ai->ai_canonname = (char *)malloc(strlen(str) + 1);
 		if (ai->ai_canonname == NULL)
 			return EAI_MEMORY;
-		strcpy(ai->ai_canonname, str);
+		strncpy(ai->ai_canonname, str, strlen(str));
 	}
 	return 0;
 }
@@ -817,14 +818,15 @@ get_ai(pai, afd, addr)
 {
 	char *p;
 	struct addrinfo *ai;
+printf("get_ai\n");
 
-	ai = (struct addrinfo *)malloc(sizeof(struct addrinfo)
-		+ (afd->a_socklen));
+	ai = (struct addrinfo *)malloc(sizeof(struct addrinfo) + (afd->a_socklen));
 	if (ai == NULL)
 		return NULL;
 
 	memcpy(ai, pai, sizeof(struct addrinfo));
 	ai->ai_addr = (struct sockaddr *)(void *)(ai + 1);
+
 	memset(ai->ai_addr, 0, (size_t)afd->a_socklen);
 	ai->ai_addr->sa_len = afd->a_socklen;
 	ai->ai_addrlen = afd->a_socklen;
@@ -1392,7 +1394,6 @@ _yphostent(line, pai)
 	char *cp;
 
 	addr = canonname = NULL;
-
 	memset(&sentinel, 0, sizeof(sentinel));
 	cur = &sentinel;
 

@@ -103,6 +103,7 @@ res_mkquery(op, dname, class, type, data, datalen, newrr_in, buf, buflen)
 
 	if ((buf == NULL) || (buflen < HFIXEDSZ))
 		return (-1);
+
 	memset(buf, 0, HFIXEDSZ);
 	hp = (HEADER *) buf;
 	_res.id = res_randomid();

@@ -271,7 +271,6 @@ res_init()
 			/* lookup types */
 			if (MATCH(buf, "lookup")) {
 			    char *sp = NULL;
-
 			    memset(_res.lookups, 0, sizeof _res.lookups);
 			    cp = buf + sizeof("lookup") - 1;
 			    for (n = 0;; cp++) {

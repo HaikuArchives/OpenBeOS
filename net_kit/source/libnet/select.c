@@ -84,7 +84,6 @@ _EXPORT int select(int nbits, struct fd_set * rbits,
 	} else
 		status = acquire_sem(rss.wait);  
 
-
 	// unregister socket event notification
  	for(fd = 1; fd < nbits; fd++) {
 		if (FD_ISSET(fd, &r)) {
