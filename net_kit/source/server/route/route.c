@@ -744,6 +744,12 @@ static int route_module_init(void *cpp)
 	return 0;
 }
 
+static int route_module_stop(void)
+{
+	remove_protocol(&my_protocol);
+	return 0;
+}
+
 _EXPORT struct kernel_net_module_info protocol_info = {
 	{
 		ROUTE_MODULE_PATH,
@@ -751,7 +757,7 @@ _EXPORT struct kernel_net_module_info protocol_info = {
 		route_ops
 	},
 	route_module_init,
-	NULL
+	route_module_stop
 };
 
 #ifdef _KERNEL_MODE

@@ -332,6 +332,9 @@ static int raw_module_stop(void)
 #else
 	put_module(IPV4_MODULE_PATH);
 #endif
+
+	remove_protocol(&my_protocol);
+	
 	return 0;
 }
 
