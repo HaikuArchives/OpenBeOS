@@ -51,6 +51,9 @@ class BInvoker {
 	virtual	void		_ReservedInvoker2();
 	virtual	void		_ReservedInvoker3();
 
+						BInvoker(const BInvoker&);
+			BInvoker	&operator=(const BInvoker&);
+
 	BMessage			*fMessage;
 	BMessenger			fMessenger;
 	BHandler			*fReplyTo;

@@ -164,6 +164,14 @@ void BInvoker::_ReservedInvoker1()	{}
 void BInvoker::_ReservedInvoker2()	{}
 void BInvoker::_ReservedInvoker3()	{}
 
+BInvoker::BInvoker(const BInvoker &){}
+
+BInvoker &BInvoker::operator=(const BInvoker &)
+{
+	return *this;
+}
+
+
 #ifdef USE_OPENBEOS_NAMESPACE
 }	// namespace OpenBeOS
 #endif
