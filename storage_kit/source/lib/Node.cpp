@@ -216,13 +216,51 @@ BNode::RewindAttrs() {
 	return B_OK;
 }
 
+// We need an OpenBeOS BString implementation before we can actually test
+// WriteAttrString() and ReadAttrString().
+
 status_t
 BNode::WriteAttrString(const char *name, const BString *data) {
+/*	return (data == NULL) ? B_BAD_VALUE :
+		WriteAttr(name, B_STRING_TYPE, 0, data->String(), data->Length()); */
+		
 	return B_ERROR;
 }
 
 status_t
 BNode::ReadAttrString(const char *name, BString *result) const {
+/*	if (result == NULL)
+		return B_BAD_VALUE;
+	
+	attr_info info;
+	status_t r;
+	
+	r = GetAttrInfo(name, &info);
+	if (r != B_OK)
+		return r;
+		
+	char *data = result->LockBuffer(info.size+1);
+		// Lock the string's buffer so we can meddle with it
+	
+	ssize_t bytes = ReadAttr(name, B_STRING_TYPE, 0, data, info.size);
+		// Read the attribute
+		
+	// Check for failure
+	if (bytes < 0) {
+		r = bytes;
+		bytes = 0;	// In this instance, we simply clear the string
+	} else {
+		r = B_OK;
+	}
+	
+	data[bytes] = 0;
+		// Null terminate the new string just to be sure (since it *is*
+		// possible to read and write non-NULL-terminated strings)
+		
+	result->UnlockBuffer(bytes+1);
+	
+	return r; */
+	
 	return B_ERROR;
 }
 
