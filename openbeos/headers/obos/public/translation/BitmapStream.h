@@ -17,6 +17,7 @@
 #include <TranslationDefs.h>
 #include <DataIO.h>
 #include <TranslatorFormats.h>
+#include <ByteOrder.h>
 
 
 class BBitmap;
@@ -52,22 +53,23 @@ public:
 				BBitmap * *		outMap);	/*	not NULL	*/
 
 protected:
-		TranslatorBitmap fHeader;
-		BBitmap * fMap;
-		size_t fPosition;
-		size_t fSize;
-		bool fDetached;
+	TranslatorBitmap fHeader;
+	BBitmap * fMap;
+	size_t fPosition;
+	size_t fSize;
+	bool fDetached;
 
-		void SwapHeader(
-				const TranslatorBitmap *	source,
-				TranslatorBitmap *			destination);
+	static status_t ConvertBEndianToHost(
+		TranslatorBitmap *);
+	status_t SetBigEndianHeader();
+	
 private:
 
+	TranslatorBitmap *fpBigEndianHeader; /* always in big-endian format */
+	long _reservedBitmapStream[5];
 virtual	void _ReservedBitmapStream1();
 virtual void _ReservedBitmapStream2();
 
-		TranslatorBitmap * fSwappedHeader; /* always in big-endian format */
-		long _reservedBitmapStream[5];
 };
 
 #endif /* _BITMAP_STREAM_H */
