@@ -41,13 +41,7 @@ enum {
 	ARP_LOOKUP_FAILED 	= 3
 };
 
-/* structure for Ethernet MAC address xx:xx:xx:xx:xx:xx */
-typedef struct ether_addr {
-        uint8 addr[6];
-} ether_addr;
-
 typedef	uint32	ipv4_addr;
-
 
 /* These should be in KernelExport.h */
 #define B_SELECT_READ        1
