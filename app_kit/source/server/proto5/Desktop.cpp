@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <Locker.h>
 #include "ServerWindow.h"
+#include "ServerCursor.h"
 #include "Layer.h"
 #include "DisplayDriver.h"
 #include "ViewDriver.h"
@@ -34,6 +35,7 @@ void set_rgb_color(rgb_color *col,uint8 red, uint8 green, uint8 blue, uint8 alph
 //--------------------GLOBALS-------------------------
 uint32 workspace_count, active_workspace;
 BList *desktop;
+ServerCursor *startup_cursor;
 Workspace *pactive_workspace;
 color_map system_palette;
 DisplayDriver *gfxdriver;
@@ -152,6 +154,8 @@ printf("Driver %s\n", (gfxdriver->IsInitialized()==true)?"initialized":"NOT init
 	// Clear the screen
 	set_rgb_color(&(pactive_workspace->bgcolor),80,85,152);
 	gfxdriver->Clear(pactive_workspace->bgcolor);
+	startup_cursor=new ServerCursor(default_cursor);
+	gfxdriver->SetCursor(startup_cursor);
 
 #ifdef DEBUG_WORKSPACES
 printf("Desktop initialized\n");
@@ -174,6 +178,7 @@ void shutdown_desktop(void)
 	delete gfxdriver;
 	delete workspacelock;
 	delete layerlock;
+	delete startup_cursor;
 }
 
 

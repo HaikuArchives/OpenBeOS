@@ -26,4 +26,6 @@ public:
 	bool is_initialized;
 };
 
+extern int8 default_cursor[];
+
 #endif
