@@ -1,4 +1,6 @@
 CVS
 *.o
 test1
-
+test2
+test3
+select_test

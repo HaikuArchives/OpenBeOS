@@ -47,14 +47,8 @@ int32 test_thread(void *data)
 int main(int argc, char **argv)
 {
 	thread_id t[THREADS];
-	int s, ls;
-	int i, rv;
+	int i;
 	status_t retval;
-	struct sockaddr_in sa;
-	struct sockaddr_in sb;
-	char buffer[100];
-	struct fd_set fds;
-	struct timeval tv;
 		
 	for (i=0;i<THREADS;i++) {
 		t[i] = spawn_thread(test_thread, "socket test thread", 
@@ -67,62 +61,6 @@ int main(int argc, char **argv)
 		wait_for_thread(t[i], &retval);
 	}
 
-	memset(&sa, 0, sizeof(sa));
-	sa.sin_family = AF_INET;
-	sa.sin_addr.s_addr = INADDR_LOOPBACK;
-	sa.sin_port = htons(7777);
-	sa.sin_len = sizeof(sa);
-
-	printf("opening loopback socket...\n");
-	if ((ls = socket(AF_INET, SOCK_DGRAM, 0)) > 0) {
-		printf("loopback socket is %d\n", ls);
-		i = bind(ls, (struct sockaddr*)&sa, sizeof(sa));
-		if (i < 0) {
-			printf("bind failed! %d [%s]\n", i, strerror(i));
-			exit(-1);
-		}
-		printf("successfully bound to port 7777\n");
-	} else {
-		printf("Failed to get a socket.\n");
-		printf("%d [%s]\n", i, strerror(i));
-		exit(-1);
-	}		
-	printf("opened the loopback and bound it OK.\n");
-	
-	sa.sin_addr.s_addr = INADDR_ANY;
-	sa.sin_port = htons(7772);
-
-	s = socket(AF_INET, SOCK_DGRAM, 0);
-	i = bind(s, (struct sockaddr *)&sa, sizeof(sa));
-	printf("bind = %d\n", i);
-
-	sa.sin_port = htons(7777);
-	sa.sin_addr.s_addr = INADDR_LOOPBACK;
-	i = sendto(s, TEST_PHRASE, strlen(TEST_PHRASE), 0,
-		(struct sockaddr*)&sa, sizeof(sa));
-	printf("sendto gave %d\n", i);
-	
-	i = recvfrom(ls, buffer, 100, 0, (struct sockaddr*)&sb, sizeof(sb));
-	printf("recvfrom gave %d\n", i);
-	printf("%s\n", i > 0 ? buffer : strerror(i));
-	printf("data came from %s:%d\n", inet_ntoa(sb.sin_addr),
-		ntohs(sb.sin_port));
-		
-	FD_ZERO(&fds);
-	FD_SET(s, &fds);
-	tv.tv_sec = 1;
-	tv.tv_usec = 0;
-	
-	rv = net_select(s +1, &fds, NULL, NULL, &tv);
-	printf("select gave %d\n", rv);
-	rv = net_select(s +1, NULL, &fds, NULL, &tv);
-	printf("select gave %d\n", rv);
-	rv = net_select(s +1, NULL, NULL, &fds, &tv);
-	printf("select gave %d\n", rv);
-	
-	closesocket(s);
-	closesocket(ls);
-	
 	printf("Test complete.\n");
 
 	return (0);

@@ -34,11 +34,7 @@ int main(int argc, char **argv)
 	tv.tv_usec = 0;
 	
 	printf("Trying with timeval...\n");
-	rv = select(s +1, &fdr, NULL, NULL, &tv);
-	printf("select gave %d\n", rv);
-	rv = select(s +1, &fdr, &fdw, &fde, &tv);
-	printf("select gave %d\n", rv);
-	rv = select(s +1, &fdr, &fdw, &fde, &tv);
+	rv = select(s + 1, &fdr, &fdw, &fde, &tv);
 	printf("select gave %d\n", rv);
 	
 	printf("Trying without timeval (= NULL)\n");

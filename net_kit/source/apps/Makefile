@@ -1,7 +1,7 @@
 CFLAGS=-O2 -g -Wall 
 INCLUDES=-I../server/include
 START_DYN=/boot/develop/lib/x86/start_dyn.o
-LIBNET_PATH=/boot/home/openbeos/net_kit/source/libnet
+LIBNET_PATH=`pwd`/../libnet
 LDFLAGS=-nostdlib -lroot -Wl,-rpath,$(LIBNET_PATH) -L$(LIBNET_PATH) -lnet $(START_DYN)
 OBJS = ufunc.o
 
@@ -12,17 +12,22 @@ all:	$(TGTS)
 clean:
 	@rm $(TGTS) *.o
 
-test1:	$(OBJS) test1.o
-	$(CC) $(LDFLAGS) -o test1 $(OBJS) test1.o
+test1:	libnet $(OBJS) test1.o
+	@$(CC) $(LDFLAGS) -o test1 $(OBJS) test1.o
 
-test2:	$(OBJS) test2.o
-	$(CC) $(LDFLAGS) -o test2 $(OBJS) test2.o
+test2:	libnet $(OBJS) test2.o
+	@$(CC) $(LDFLAGS) -o test2 $(OBJS) test2.o
 
-test3:	$(OBJS) test3.o
-	$(CC) $(LDFLAGS) -o test3 $(OBJS) test3.o
+test3:	libnet $(OBJS) test3.o
+	@$(CC) $(LDFLAGS) -o test3 $(OBJS) test3.o
 
-select_test:	$(OBJS) select_test.o
-	$(CC) $(LDFLAGS) -o select_test $(OBJS) select_test.o
+select_test:	libnet $(OBJS) select_test.o
+	@$(CC) $(LDFLAGS) -o select_test $(OBJS) select_test.o
+
+libnet:
+	@cd ../libnet;make;cd ../apps
+	@echo "libnet.so is up to date"
+
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
