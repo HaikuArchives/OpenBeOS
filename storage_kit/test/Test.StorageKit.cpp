@@ -11,6 +11,7 @@
 #include "FindDirectoryTest.h"
 #include "NodeTest.h"
 #include "PathTest.h"
+#include "QueryTest.h"
 #include "ResourcesTest.h"
 #include "ResourceStringsTest.h"
 #include "SymLinkTest.h"
@@ -25,6 +26,7 @@ int main(int argc, char *argv[]) {
 	shell.AddSuite( "BFile", &FileTest::Suite );
 	shell.AddSuite( "BNode", &NodeTest::Suite );
 	shell.AddSuite( "BPath", &PathTest::Suite );
+	shell.AddSuite( "BQuery", &QueryTest::Suite );
 	shell.AddSuite( "BResources", &ResourcesTest::Suite );
 	shell.AddSuite( "BResourceStrings", &ResourceStringsTest::Suite );
 	shell.AddSuite( "BSymLink", &SymLinkTest::Suite );

@@ -14,6 +14,7 @@ SOURCE_FILES =
 	FindDirectoryTest.cpp
 	NodeTest.cpp
 	PathTest.cpp
+	QueryTest.cpp
 	ResourcesTest.cpp
 	ResourceStringsTest.cpp
 	StatableTest.cpp
