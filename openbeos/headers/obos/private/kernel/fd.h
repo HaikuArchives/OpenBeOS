@@ -32,7 +32,7 @@ struct fd_ops {
 	char *fs_name;
 	ssize_t (*fd_read) (struct file_descriptor *, void *, off_t, size_t *);
 	ssize_t (*fd_write)(struct file_descriptor *, const void *, off_t, size_t *);
-	int     (*fd_ioctl)(struct file_descriptor *, int, void *, size_t);
+	int     (*fd_ioctl)(struct file_descriptor *, ulong, void *, size_t);
 //	int     (*fd_poll)(struct file_descriptor *, int);
 //	int     (*fd_stat)(struct file_descriptor *, ...); XXX - complete me :(
 	int     (*fd_close)(struct file_descriptor *, int, struct ioctx *);
@@ -54,6 +54,17 @@ void remove_fd(struct ioctx *, int);
 static void put_fd(struct file_descriptor *);
 void free_fd(struct file_descriptor *);
 static struct ioctx *get_current_ioctx(bool);
+
+
+/** @fn int sys_ioctl(int fd, ulong cmd, void *data, size_t len)
+ * The kernel version of ioctl()
+ */
+int sys_ioctl(int, ulong, void *, size_t);
+/** @fn int user_ioctl(int fd, ulong cmd, void *data, size_t len)
+ * The user_ioctl() function to interface with sys_ioctl()
+ */
+int user_ioctl(int, ulong, void *, size_t);
+
 
 static __inline struct ioctx *get_current_ioctx(bool kernel)
 {

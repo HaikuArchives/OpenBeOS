@@ -29,7 +29,7 @@ struct fs_calls {
 	int (*fs_seek)(void *fs_cookie, void *vnode, void *cookie, off_t pos, int seek_type);
 	int (*fs_read)(void *fs_cookie, void *vnode, void *cookie, void *buf, off_t pos, size_t *len);
 	int (*fs_write)(void *fs_cookie, void *vnode, void *cookie, const void *buf, off_t pos, size_t *len);
-	int (*fs_ioctl)(void *fs_cookie, void *vnode, void *cookie, int op, void *buf, size_t len);
+	int (*fs_ioctl)(void *fs_cookie, void *vnode, void *cookie, ulong op, void *buf, size_t len);
 	int (*fs_close)(void *fs_cookie, void *vnode, void *cookie);
 	int (*fs_create)(void *fs_cookie, void *base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir);
 	int (*fs_stat)(void *fs_cookie, void *base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir);
@@ -55,7 +55,7 @@ struct fs_calls {
 	ssize_t (*fs_read)(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, size_t *len);
 	ssize_t (*fs_write)(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, size_t *len);
 	int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, int st);
-	int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
+	int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, ulong op, void *buf, size_t len);
 
 	int (*fs_canpage)(fs_cookie fs, fs_vnode v);
 	ssize_t (*fs_readpage)(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
@@ -113,7 +113,7 @@ int sys_fsync(int fd);
 ssize_t sys_read(int fd, void *buf, off_t pos, size_t len);
 ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len);
 int sys_seek(int fd, off_t pos, int seek_type);
-int sys_ioctl(int fd, int op, void *buf, size_t len);
+//int sys_ioctl(int fd, int op, void *buf, size_t len);
 int sys_create(const char *path, stream_type stream_type);
 int sys_unlink(const char *path);
 int sys_rename(const char *oldpath, const char *newpath);
@@ -134,7 +134,7 @@ int user_fsync(int fd);
 ssize_t user_read(int fd, void *buf, off_t pos, size_t len);
 ssize_t user_write(int fd, const void *buf, off_t pos, size_t len);
 int user_seek(int fd, off_t pos, int seek_type);
-int user_ioctl(int fd, int op, void *buf, size_t len);
+//int user_ioctl(int fd, int op, void *buf, size_t len);
 int user_create(const char *path, stream_type stream_type);
 int user_unlink(const char *path);
 int user_rename(const char *oldpath, const char *newpath);

@@ -158,6 +158,7 @@ char  *gets(char *);
 int    getw(FILE *);
 int    getchar(void);
 int    putc(int, FILE *);
+int    putchar(int);
 int    puts(const char *);
 int    putw(int, FILE *);
 void   rewind(FILE *);
