@@ -26,9 +26,9 @@
  * Having a single option is sort of lame so I'm going to start adding more here...
  *
  */
-#define SHOW_DEBUG 	0	/* general debugging stuff (verbose!) */
-#define SHOW_ROUTE	0	/* show routing information */
-#define ARP_DEBUG	0	/* show ARP debug info */
+#define SHOW_DEBUG 	1	/* general debugging stuff (verbose!) */
+#define SHOW_ROUTE	1	/* show routing information */
+#define ARP_DEBUG	1	/* show ARP debug info */
 #define	SHOW_MALLOC_USAGE	1	/* show instances of malloc */
 
 typedef struct ifnet	ifnet;

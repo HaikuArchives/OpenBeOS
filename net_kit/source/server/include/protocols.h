@@ -10,14 +10,14 @@
 
 /* define some protocol numbers unique to ethernet */
 enum {
-	ETHER_IPV4  = 0x0800,
-	ETHER_ARP   = 0x0806,
-	ETHER_RARP  = 0x8035,	 
-	ETHER_ATALK = 0x809b,      /* Appletalk */
-	ETHER_SNMP  = 0x814c,      /* SNMP */
-	ETHER_IPV6  = 0x86dd,       /* IPv6 */
-	ETHER_PPPOE_DISC	= 0x8863, /* PPPoE Discovery */
-	ETHER_PPPOE_SESS	= 0x8864  /* PPPoE Session */
+	ETHER_IPV4        = 0x0800,
+	ETHER_ARP         = 0x0806,
+	ETHER_RARP        = 0x8035,	 
+	ETHER_ATALK       = 0x809b, /* Appletalk */
+	ETHER_SNMP        = 0x814c, /* SNMP */
+	ETHER_IPV6        = 0x86dd, /* IPv6 */
+	ETHER_PPPOE_DISC  = 0x8863, /* PPPoE Discovery */
+	ETHER_PPPOE_SESS  = 0x8864  /* PPPoE Session */
 };
 
 /* these are used when assigning slots in the protocol table, so they

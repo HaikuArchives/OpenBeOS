@@ -81,6 +81,8 @@ enum {
 
 struct protosw *pffindproto(int domain, int protocol, int type);
 struct protosw *pffindtype(int domain, int type);
+void add_protosw(struct protosw *[], int layer);
+struct in_ifaddr *get_primary_addr(void);
 
 #endif /* OBOS_NET_MODULE_H */
 
