@@ -716,13 +716,53 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 
 
 int 
-bfs_symlink(void *ns, void *dir, const char *name, const char *path)
+bfs_symlink(void *_ns, void *_directory, const char *name, const char *path)
 {
 	FUNCTION();
 
-	// ToDo: implement bfs_symlink()!
+	if (_ns == NULL || _directory == NULL || path == NULL
+		|| name == NULL || *name == '\0')
+		RETURN_ERROR(B_BAD_VALUE);
 
-	return B_ERROR;
+	Volume *volume = (Volume *)_ns;
+	Inode *directory = (Inode *)_directory;
+
+	if (!directory->IsDirectory())
+		RETURN_ERROR(B_BAD_TYPE);
+
+	status_t status = directory->CheckPermissions(W_OK);
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	Transaction transaction(volume,directory->BlockNumber());
+
+	Inode *link;
+	off_t id;
+	status = Inode::Create(&transaction,directory,name,S_SYMLINK | 0777,0,0,&id,&link);
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	size_t length = strlen(path);
+	if (length < SHORT_SYMLINK_NAME_LENGTH) {
+		strcpy(link->Node()->short_symlink,path);
+		status = link->WriteBack(&transaction);
+	} else {
+		link->Node()->flags |= INODE_LONG_SYMLINK;
+		// The following call will have to write the inode back, so
+		// we don't have to do that here...
+		status = link->WriteAt(&transaction,0,(const uint8 *)path,&length);
+	}
+
+	// Inode::Create() left the inode locked
+	put_vnode(volume->ID(),id);
+
+	if (status == B_OK) {
+		transaction.Done();
+
+		notify_listener(B_ENTRY_CREATED,volume->ID(),directory->ID(),0,id,name);
+	}
+
+	return status;
 }
 
 

@@ -1,4 +1,4 @@
-BFS - ToDo, April 21th, 2002
+BFS - ToDo, April 24th, 2002
 -----
 
 BlockAllocator
@@ -59,7 +59,7 @@ Volume
 
 kernel_interface
 
- - missing functions, maybe they are not all needed (but most of them are): bfs_rename_attr(), bfs_rename_index(), bfs_initialize(), bfs_sync(), bfs_setflags(), bfs_fsync(), bfs_link(), bfs_symlink()
+ - missing functions, maybe they are not all needed (but most of them are): bfs_rename_attr(), bfs_rename_index(), bfs_initialize(), bfs_sync(), bfs_setflags(), bfs_fsync(), bfs_link()
  - bfs_rename() currently doesn't respect any permissions
 
 
