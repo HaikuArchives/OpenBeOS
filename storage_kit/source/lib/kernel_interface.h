@@ -11,6 +11,7 @@
 
 #include <SupportKit.h>
 #include "Error.h"
+#include "dirent.h"
 
 typedef struct attr_info;
 
@@ -23,8 +24,16 @@ typedef enum {
 	READ_WRITE
 } OpenMode;
 
+// Specialized Exceptions
+class EEntryNotFound : public Error {
+public:
+	EEntryNotFound() : Error(ENOENT, "Entry not found") {};
+};
+
 // File descriptor type
 typedef int FileDescriptor;
+typedef DIR Dir;
+typedef dirent DirEntry;
 
 //----------------------------------------------------------------------
 // user_* functions pulled from NewOS's vfs.h (with the "user_" part removed)
@@ -51,8 +60,9 @@ typedef int FileDescriptor;
 //----------------------------------------------------------------------
 
 
-FileDescriptor Open(const char *path, OpenMode mode) throw (Error);
-int Close(FileDescriptor file);
+FileDescriptor open(const char *path, OpenMode mode);
+status_t close(FileDescriptor file);
+FileDescriptor dup(FileDescriptor file);
 
 ssize_t read_attr(FileDescriptor file, const char *attribute, uint32 type, 
 				off_t pos, void *buf, size_t count);
@@ -62,9 +72,10 @@ ssize_t write_attr (FileDescriptor file, const char *attribute, uint32 type,
 
 int remove_attr(FileDescriptor file, const char *attr );
 
-void rewind_attr_dir(void *cookie );
-
-int close_attr_dir(void *cookie );
+Dir* open_attr_dir( FileDescriptor file );
+void rewind_attr_dir( Dir *dir );
+DirEntry* read_attr_dir( Dir *dir ); 
+status_t close_attr_dir( Dir *dir );
 
 int stat_attr( FileDescriptor file, const char *name, attr_info *ai );
 
