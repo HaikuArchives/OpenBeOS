@@ -19,6 +19,7 @@ class Index {
 		~Index();
 
 		status_t SetTo(const char *name);
+		void Unset();
 
 		Inode *Node() const { return fNode; };
 		uint32 Type();

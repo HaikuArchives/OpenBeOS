@@ -43,7 +43,6 @@ enum ops {
 
 	OP_AND,
 	OP_OR,
-	OP_NOT,
 
 	OP_EQUATION,
 
@@ -80,6 +79,7 @@ class Term {
 		Term		*Parent() const { return fParent; }
 
 		virtual status_t Match(Inode *inode) = 0;
+		virtual void Complement() = 0;
 
 #ifdef DEBUG
 		virtual void	PrintToStream() = 0;
@@ -109,6 +109,8 @@ class Equation : public Term {
 		char		*CopyString(char *start, char *end);
 
 		virtual status_t Match(Inode *inode);
+		virtual void Complement();
+
 		status_t	PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator);
 		status_t	GetNextMatching(Volume *volume,TreeIterator *iterator,struct dirent *dirent,size_t bufferSize);
 
@@ -143,6 +145,9 @@ class Operator : public Term {
 		Term		*Left() const { return fLeft; }
 		Term		*Right() const { return fRight; }
 
+		virtual status_t Match(Inode *inode);
+		virtual void Complement();
+
 		//Term		*Copy() const;
 #ifdef DEBUG
 		virtual void PrintToStream();
@@ -152,30 +157,14 @@ class Operator : public Term {
 		Term		*fLeft,*fRight;
 };
 
-class AndOperator : public Operator {
-	public:
-		AndOperator(Term *,Term *);
-		~AndOperator();
-
-		virtual status_t Match(Inode *inode);
-};
-
-class OrOperator : public Operator {
-	public:
-		OrOperator(Term *,Term *);
-		~OrOperator();
-
-		virtual status_t Match(Inode *inode);
-};
-
 
 //---------------------------------
 
 
 void 
-skipWhitespace(char **expr)
+skipWhitespace(char **expr, int32 skip = 0)
 {
-	char *string = *expr;
+	char *string = (*expr) + skip;
 	while (*string == ' ' || *string == '\t') string++;
 	*expr = string;
 }
@@ -449,6 +438,20 @@ Equation::CompareTo(uint8 *value,uint16 size)
 }
 
 
+void 
+Equation::Complement()
+{
+	D(if (fOp <= OP_EQUATION || fOp > OP_LESS_THAN_OR_EQUAL) {
+		FATAL(("op out of range!"));
+		return;
+	});
+
+	int8 complementOp[] = {OP_UNEQUAL, OP_EQUAL, OP_LESS_THAN_OR_EQUAL,
+			OP_GREATER_THAN_OR_EQUAL, OP_LESS_THAN, OP_GREATER_THAN};
+	fOp = complementOp[fOp - OP_EQUAL];
+}
+
+
 /**	Matches the inode's attribute value with the equation.
  *	Returns MATCH_OK if it matches, NO_MATCH if not, < 0 if something went wrong
  */
@@ -505,6 +508,7 @@ Equation::Match(Inode *inode)
 			// If not, it will be converted to a string - and then be compared with "".
 			// That's why we have to call ConvertValue() here - but it will be
 			// a cheap call for the next time
+			// Should we do this only for OP_UNEQUAL?
 			if (fType != 0 && fType != B_STRING_TYPE)
 				return NO_MATCH;
 
@@ -529,7 +533,11 @@ Equation::Match(Inode *inode)
 status_t
 Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 {
-	if (index->SetTo(fAttribute) < B_OK) {
+	type_code type;
+	status_t status = index->SetTo(fAttribute);
+	
+	// special case for OP_UNEQUAL - it will always operate through the whole index
+	if (status < B_OK || fOp == OP_UNEQUAL) {
 		// Try to get an index that holds all files (name)
 		// Also sets the default type for all attributes without index
 		// to string.
@@ -537,16 +545,19 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 		// that tend to be the smallest index, but OTOH name may be
 		// the least frequently used one for write accesses...
 		// Perhaps some real world benchmarks would hint to the right
-		// thing - if this will be changed, be sure that ConvertValue()
-		// is not called with the type of the index
+		// thing
+		type = status < B_OK ? B_STRING_TYPE : index->Type();
+
 		if (index->SetTo("name") < B_OK)
 			return B_ENTRY_NOT_FOUND;
 		
 		fHasIndex = false;
-	} else
+	} else {
 		fHasIndex = true;
+		type = index->Type();
+	}
 
-	if (ConvertValue(index->Type()) < B_OK)
+	if (ConvertValue(type) < B_OK)
 		return B_BAD_VALUE;
 
 	BPlusTree *tree;
@@ -568,7 +579,7 @@ Equation::PrepareQuery(Volume *volume, Index *index, TreeIterator **iterator)
 			else
 				RETURN_ERROR(B_ENTRY_NOT_FOUND);
 		}
-		status_t status = (*iterator)->Find(Value(),keySize);
+		status = (*iterator)->Find(Value(),keySize);
 		if (fOp == OP_EQUAL)
 			return status;
 		else if (status == B_ENTRY_NOT_FOUND && (fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL))
@@ -682,6 +693,49 @@ Operator::~Operator()
 }
 
 
+status_t 
+Operator::Match(Inode *inode)
+{
+	if (fOp == OP_AND) {
+		if (fLeft != NULL) {
+			status_t status = fLeft->Match(inode);
+			if (status != MATCH_OK)
+				return status;
+		}
+		if (fRight != NULL)
+			return fRight->Match(inode);
+	
+		return false;
+	} else {
+		// should choose the term with the better score here!
+		if (fLeft != NULL) {
+			status_t status = fLeft->Match(inode);
+			if (status != false)
+				return status;
+		}
+		if (fRight != NULL)
+			return fRight->Match(inode);
+	
+		return false;
+	}
+}
+
+
+void 
+Operator::Complement()
+{
+	if (fOp == OP_AND)
+		fOp = OP_OR;
+	else
+		fOp = OP_AND;
+	
+	if (fLeft != NULL)
+		fLeft->Complement();
+	if (fRight != NULL)
+		fRight->Complement();
+}
+
+
 #if 0
 Term *
 Operator::Copy() const
@@ -716,58 +770,6 @@ Operator::Copy() const
 	return term;
 }
 #endif
-
-
-AndOperator::AndOperator(Term *left, Term *right)
-	: Operator(left,OP_AND,right)
-{
-}
-
-
-AndOperator::~AndOperator()
-{
-}
-
-
-status_t 
-AndOperator::Match(Inode *inode)
-{
-	if (fLeft != NULL) {
-		status_t status = fLeft->Match(inode);
-		if (status != MATCH_OK)
-			return status;
-	}
-	if (fRight != NULL)
-		return fRight->Match(inode);
-
-	return false;
-}
-
-
-OrOperator::OrOperator(Term *left, Term *right)
-	: Operator(left,OP_OR,right)
-{
-}
-
-
-OrOperator::~OrOperator()
-{
-}
-
-status_t 
-OrOperator::Match(Inode *inode)
-{
-	// should choose the term with the better score here!
-	if (fLeft != NULL) {
-		status_t status = fLeft->Match(inode);
-		if (status != false)
-			return status;
-	}
-	if (fRight != NULL)
-		return fRight->Match(inode);
-
-	return false;
-}
 
 
 //	#pragma mark -
@@ -844,12 +846,20 @@ Expression::ParseEquation(char **expr)
 {
 	skipWhitespace(expr);
 
+	bool not = false;
+	if (**expr == '!') {
+		skipWhitespace(expr, 1);
+		if (**expr != '(')
+			return NULL;
+		
+		not = true;
+	}
+
 	if (**expr == ')') {
 		// shouldn't be handled here
 		return NULL;
 	} else if (**expr == '(') {
-		(*expr)++;
-		skipWhitespace(expr);
+		skipWhitespace(expr, 1);
 		
 		Term *term = ParseOr(expr);
 		
@@ -859,9 +869,13 @@ Expression::ParseEquation(char **expr)
 			delete term;
 			return NULL;
 		}
-		(*expr)++;
 		
-		skipWhitespace(expr);
+		// If the term is negated, we just complement the tree, to get
+		// rid of the not, a.k.a. DeMorgan's Law.
+		if (not)
+			term->Complement();
+
+		skipWhitespace(expr, 1);
 
 		return term;
 	}
@@ -886,7 +900,7 @@ Expression::ParseAnd(char **expr)
 		Term *right = ParseAnd(expr);
 		Term *newParent = NULL;
 
-		if (right == NULL || (newParent = new AndOperator(left,right)) == NULL) {
+		if (right == NULL || (newParent = new Operator(left,OP_AND,right)) == NULL) {
 			delete left;
 			delete right;
 
@@ -910,7 +924,7 @@ Expression::ParseOr(char **expr)
 		Term *right = ParseAnd(expr);
 		Term *newParent = NULL;
 
-		if (right == NULL || (newParent = new OrOperator(left,right)) == NULL) {
+		if (right == NULL || (newParent = new Operator(left,OP_OR,right)) == NULL) {
 			delete left;
 			delete right;
 

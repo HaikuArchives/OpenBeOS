@@ -32,14 +32,22 @@ Index::~Index()
 }
 
 
+void
+Index::Unset()
+{
+	if (fNode == NULL)
+		return;
+
+	put_vnode(fVolume->ID(),fNode->ID());
+	fNode = NULL;
+}
+
+
 status_t 
 Index::SetTo(const char *name)
 {
 	// remove the old node, if the index is set for the second time
-	if (fNode != NULL) {
-		put_vnode(fVolume->ID(),fNode->ID());
-		fNode = NULL;
-	}
+	Unset();
 
 	Inode *indices = fVolume->IndicesNode();
 	if (indices == NULL)
