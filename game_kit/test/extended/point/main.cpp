@@ -30,24 +30,6 @@
 // DEALINGS IN THE SOFTWARE.
 /*****************************************************************************/
 
-/*************************************************/
-// point_test.cpp
-//
-// A simple test-harness to compare the Be-provided
-// BPoint class with our re-implementation.
-//
-// Basically, we do a bunch of stuff to a BPoint,
-// and to a "CPoint" (our reimplementation) in
-// parallel, and then check that they have the same
-// values.
-//
-// Written by:
-// 	Robert Medeiros
-// 	e-mail: robmed@users.sourceforge.net
-//
-// (C)2001 Robert Medeiros.
-/*************************************************/
-
 #include <iostream>
 #include <Point.h>
 #include <Rect.h>
