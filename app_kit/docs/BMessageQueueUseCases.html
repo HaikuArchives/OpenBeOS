@@ -1,4 +1,5 @@
 <HTML>
+<!-- $Id -->
 <HEAD>
 <TITLE>BMessageQueue Use Cases and Implementation Details</TITLE>
 </HEAD>
@@ -18,14 +19,14 @@ The document has the following sections:</P>
 <LI><A HREF="#implement">BMessageQueue Implementation</A></LI>
 </OL>
 
-<A NAME="interface"><H2>BMessageQueue Interface:</H2>
+<A NAME="interface"></A><H2>BMessageQueue Interface:</H2>
 
 <P>The BMessageQueue class is a simple class for managing a queue of BMessages.  The best
 source of information for the BMessageQueue interface can be found
 <A HREF="file:///boot/beos/documentation/Be%20Book/The%20Application%20Kit/MessageQueue.html">here in the Be Book</A>.
-</P></A>
+</P>
 
-<A NAME="usecases"><H2>BMessageQueue Use Cases:</H2>
+<A NAME="usecases"></A><H2>BMessageQueue Use Cases:</H2>
 
 <P>The following use cases cover the BMessageQueue functionality:</P>
 
@@ -120,9 +121,8 @@ corrupting the queue.  A NextMessage() attempt will block if another thread has 
 member to lock the BMessageQueue.</P></LI>
 
 </OL>
-</A>
 
-<A NAME="implement"><H2>BMessageQueue Implementation:</H2>
+<A NAME="implement"></A><H2>BMessageQueue Implementation:</H2>
 
 <P>Internally, the BMessageQueue uses a BLocker to ensure that member functions like AddMessage(),
 RemoveMessage() and NextMessage() do not corrupt the queue when used from multiple threads.  The
@@ -142,7 +142,6 @@ case in Be's implementation.  Although friendship in classes can cause some pret
 term headaches if abused (and I am not convinced that this is an abuse), the OpenBeOS 
 implementation will follow the same implementation for now.</P>
 
-</A>
 
 </BODY>
 </HTML>

@@ -1,4 +1,5 @@
 <HTML>
+<!-- $Id -->
 <HEAD>
 <TITLE>BLocker Use Cases and Implementation Details</TITLE>
 </HEAD>
@@ -18,14 +19,14 @@ The document has the following sections:</P>
 <LI><A HREF="#implement">BLocker Implementation</A></LI>
 </OL>
 
-<A NAME="interface"><H2>BLocker Interface:</H2>
+<A NAME="interface"></A><H2>BLocker Interface:</H2>
 
 <P>The BLocker class is a simple class for handling synchronization between threads.  The best
 source of information for the BLocker interface can be found
 <A HREF="file:///boot/beos/documentation/Be%20Book/The%20Support%20Kit/Locker.html">here in the Be Book</A>.
-</P></A>
+</P>
 
-<A NAME="usecases"><H2>BLocker Use Cases:</H2>
+<A NAME="usecases"></A><H2>BLocker Use Cases:</H2>
 
 <P>The following use cases cover the BLocker functionality:</P>
 
@@ -114,15 +115,15 @@ BeBook as far as I understand it.</P>
 BLocker.  If the BLocker is a benaphore, then the sem_id returned is the semaphore used to
 implement the benaphore.  If the BLocker is a not a benaphore, then the sem_id returned is the
 semaphore which the BLocker represents.</P></LI>
-</OL></A>
+</OL>
 
-<A NAME="implement"><H2>BLocker Implementation:</H2>
+<A NAME="implement"></A><H2>BLocker Implementation:</H2>
 
 <P>For more information about how to implement a benaphore, you can reference an implementation
 found on Be's website at
 
 <A HREF="http://www-classic.be.com/aboutbe/benewsletter/Issue26.html">http://www-classic.be.com/aboutbe/benewsletter/Issue26.html</A>.</P>
-</A>
+
 
 
 </BODY>
