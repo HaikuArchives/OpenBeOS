@@ -37,6 +37,7 @@ _EXPORT int select(int nbits, struct fd_set * rbits,
 
 	rss.lock = create_sem(1, "r5_select_lock");
 	rss.wait = create_sem(0, "r5_select_wait");
+	
 	rss.nfd = 0;
 	rss.rbits = rbits;
 	rss.wbits = wbits;
@@ -83,8 +84,6 @@ _EXPORT int select(int nbits, struct fd_set * rbits,
 	} else
 		status = acquire_sem(rss.wait);  
 
-	delete_sem(rss.lock);
-	delete_sem(rss.wait);
 
 	// unregister socket event notification
  	for(fd = 1; fd < nbits; fd++) {
@@ -101,6 +100,9 @@ _EXPORT int select(int nbits, struct fd_set * rbits,
 			ioctl(fd, NET_STACK_DESELECT, &args, sizeof(args));
 		}
 	};
+
+	delete_sem(rss.lock);
+	delete_sem(rss.wait);
 
 	if (status == B_TIMED_OUT)
 		return 0;
