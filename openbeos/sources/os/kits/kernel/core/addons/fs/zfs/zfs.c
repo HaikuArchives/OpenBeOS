@@ -15,10 +15,12 @@
 
 #include "zfs.h"
 
+/* XXX - not used and static
 static int zfs_read_superblock(zfs_fs *fs)
 {
 	return 0;
 }
+*/
 
 int zfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid)
 {

@@ -237,7 +237,7 @@ static struct isofs_vnode* iso_add_entry(struct isofs* fs, struct isofs_vnode* p
 //--------------------------------------------------------------------------------
 static void iso_scan_dir(struct isofs* fs, struct isofs_vnode* dir)
 {
-	iso_volume_descriptor voldesc;
+//	iso_volume_descriptor voldesc;
 	char entryBuf[ISODIRENTRYBUF_SIZE];
 	iso_dir_entry* e;
 	off_t start, end;
@@ -350,9 +350,9 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args,
 
 	return 0;
 
-err4:
+//err4:
 	isofs_delete_vnode(fs, v, true);
-err3:
+//err3:
 	hash_uninit(fs->vnode_list_hash);
 err2:
 	mutex_destroy(&fs->lock);
@@ -436,7 +436,7 @@ err:
 static int isofs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 {
 	struct isofs *fs = (struct isofs *)_fs;
-	int err;
+//	int err;
 
 	TRACE(("isofs_getvnode: asking for vnode 0x%x 0x%x, r %d\n", id, r));
 
@@ -459,7 +459,7 @@ static int isofs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 //--------------------------------------------------------------------------------
 static int isofs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
-	struct isofs_vnode *v = (struct isofs_vnode *)_v;
+//	struct isofs_vnode *v = (struct isofs_vnode *)_v;
 
 	TRACE(("isofs_putvnode: entry on vnode 0x%x 0x%x, r %d\n", v->id, r));
 
@@ -470,7 +470,7 @@ static int isofs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct isofs *fs = (struct isofs *)_fs;
 	struct isofs_vnode *v = (struct isofs_vnode *)_v;
-	struct isofs_vnode dummy;
+//	struct isofs_vnode dummy;
 	int err;
 
 	TRACE(("isofs_removevnode: remove 0x%x (0x%x 0x%x), r %d\n", v, v->id, r));
@@ -487,7 +487,7 @@ static int isofs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	err = 0;
 
-err:
+//err:
 	if(!r)
 		mutex_unlock(&fs->lock);
 
@@ -497,8 +497,10 @@ err:
 //--------------------------------------------------------------------------------
 static int isofs_fsync(fs_cookie _fs, fs_vnode _v)
 {
+#if ISOFS_TRACE
 	struct isofs_vnode *v = (struct isofs_vnode *)_v;
 	TRACE(("isofs_fsync: entry on vnode 0x%x\n", v->id));
+#endif
 	return 0;
 }
 
@@ -509,7 +511,7 @@ static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 	struct isofs_vnode *v = _v;
 	struct isofs_cookie *cookie;
 	int err = 0;
-	int start = 0;
+//	int start = 0;
 
 	TRACE(("isofs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
 
@@ -549,7 +551,7 @@ static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 	// Give cookie to caller
 	*_cookie = cookie;
 
-err1:
+//err1:
 	mutex_unlock(&fs->lock);
 err:
 	return err;
@@ -558,20 +560,23 @@ err:
 //--------------------------------------------------------------------------------
 static int isofs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 {
-	struct isofs *fs = _fs;
+//	struct isofs *fs = _fs;
+#if ISOFS_TRACE
 	struct isofs_vnode *v = _v;
 	struct isofs_cookie *cookie = _cookie;
 
 	TRACE(("isofs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
-
+#endif
 	return 0;
 }
 
 //--------------------------------------------------------------------------------
 static int isofs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 {
-	struct isofs *fs = _fs;
+//	struct isofs *fs = _fs;
+#if ISOFS_TRACE
 	struct isofs_vnode *v = _v;
+#endif
 	struct isofs_cookie *cookie = _cookie;
 
 	TRACE(("isofs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
@@ -588,7 +593,9 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 							void *buf, off_t pos, ssize_t len)
 {
 	struct isofs *fs = _fs;
+#if ISOFS_TRACE
 	struct isofs_vnode *v = _v;
+#endif
 	struct isofs_cookie *cookie = _cookie;
 	ssize_t err = 0;
 	ssize_t totread = 0;
@@ -699,7 +706,9 @@ static ssize_t isofs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const v
 static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
 {
 	struct isofs *fs = _fs;
+#if ISOFS_TRACE
 	struct isofs_vnode *v = _v;
+#endif
 	struct isofs_cookie *cookie = _cookie;
 	int err = 0;
 
@@ -775,19 +784,21 @@ static int isofs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, 
 //--------------------------------------------------------------------------------
 static int isofs_canpage(fs_cookie _fs, fs_vnode _v)
 {
+#if ISOFS_TRACE
 	struct isofs_vnode *v = _v;
 
 	TRACE(("isofs_canpage: vnode 0x%x\n", v));
-
+#endif
 	return 0;
 }
 
 //--------------------------------------------------------------------------------
 static ssize_t isofs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	struct isofs *fs = _fs;
+//	struct isofs *fs = _fs;
+#if ISOFS_TRACE
 	struct isofs_vnode *v = _v;
-
+#endif
 	TRACE(("isofs_readpage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
 	return ERR_NOT_ALLOWED;
@@ -814,9 +825,10 @@ static int isofs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs
 //--------------------------------------------------------------------------------
 static ssize_t isofs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	struct isofs *fs = _fs;
+//	struct isofs *fs = _fs;
+#if ISOFS_TRACE
 	struct isofs_vnode *v = _v;
-
+#endif
 	TRACE(("isofs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
 	return ERR_NOT_ALLOWED;
@@ -848,7 +860,7 @@ static int isofs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 			break;
 	}
 
-err:
+//err:
 	mutex_unlock(&fs->lock);
 
 	return err;
