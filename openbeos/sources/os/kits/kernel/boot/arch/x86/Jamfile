@@ -1,0 +1,4 @@
+SubDir OBOS_TOP sources os kits kernel boot arch x86 ;
+
+Stage2 stage2.c smp_boot.c stage2_asm.S smp_trampoline.S ;
+
