@@ -15,6 +15,7 @@ MimeType.cpp
 Node.cpp
 #NodeInfo.cpp
 Path.cpp
+Resources.cpp
 Statable.cpp
 String.cpp
 SymLink.cpp
