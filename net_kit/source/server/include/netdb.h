@@ -5,7 +5,9 @@
 
 #include <errno.h>
 
+#ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 64
+#endif
 
 #define HOST_NOT_FOUND 1
 #define TRY_AGAIN 2
