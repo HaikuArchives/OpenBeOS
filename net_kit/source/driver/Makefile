@@ -20,7 +20,7 @@ install: socket
 	fi
 
 socket: socket.o
-	$(CC) $(LDFLAGS) -o socket socket.o -Wl,-M=socket.xMAP
+	@$(CC) $(LDFLAGS) -o socket socket.o -Wl,-M=socket.xMAP
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

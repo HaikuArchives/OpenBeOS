@@ -265,6 +265,20 @@ dprintf("net_socket_control: op = %ld (%d)\n", op, NET_SOCKET_CREATE);
 			                          sa->newp, sa->newlen);
 			return B_OK;
 		}
+		case NET_SOCKET_GETSOCKOPT: {
+			struct getopt_args *ga = (struct getopt_args*)data;
+			
+			ga->rv = core->sogetopt(cookie, ga->level, ga->optnum,
+			                        ga->val, ga->valsize);
+			return ga->rv;
+		}
+		case NET_SOCKET_SETSOCKOPT: {
+			struct setopt_args *sa = (struct setopt_args*)data;
+			
+			sa->rv = core->sosetopt(cookie, sa->level, sa->optnum,
+			                        sa->val, sa->valsize);
+			return sa->rv;
+		}		
 		default:
 			return core->soo_ioctl(cookie, op, data);
 	}
@@ -300,7 +314,7 @@ static status_t net_socket_write(void *cookie,
 	int error;
 	dprintf("net_socket_write\n");
 	
-	iov.iov_base = buffer;
+	iov.iov_base = (void*)buffer;
 	iov.iov_len = *writelen;
 	
 	error = core->writeit(cookie, &iov, 0);
@@ -315,13 +329,15 @@ static status_t net_socket_select(void *cookie,
                                   uint32 ref,
                                   selectsync *sync)
 {
+	int rv = 0;
 	dprintf("net_socket_select!\n");
 	dprintf("\tevent = %d\n", event);
 	dprintf("\tref = %ld\n", ref);;
 	dprintf("\tsync = %p\n", sync);
 	
-	
-	return B_OK;
+	rv = core->soselect(cookie, event, ref, sync);
+	dprintf("soselect gave %d\n", rv);
+	return rv;
 }
 
 static status_t net_socket_deselect(void *cookie, 
