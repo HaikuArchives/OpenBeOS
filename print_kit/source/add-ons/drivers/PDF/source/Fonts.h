@@ -37,6 +37,32 @@ THE SOFTWARE.
 #include <List.h>
 
 
+enum font_encoding 
+{
+	macroman_encoding,
+	// TrueType
+	tt_encoding0,
+	tt_encoding1,
+	tt_encoding2,
+	tt_encoding3,
+	tt_encoding4,
+	// Type 1
+	t1_encoding0,
+	t1_encoding1,
+	t1_encoding2,
+	t1_encoding3,
+	t1_encoding4,
+	// CJK
+	japanese_encoding,
+	chinese_cns1_encoding,
+	chinese_gb1_encoding,
+	korean_encoding,
+	first_cjk_encoding  = japanese_encoding,
+	no_of_cjk_encodings = korean_encoding - first_cjk_encoding + 1,
+	invalid_encoding, 
+};
+
+
 enum font_type 
 {
 	true_type_type,
@@ -82,6 +108,11 @@ class Fonts : public BArchivable {
 private:
 	BList       fFontFiles;
 
+	struct {
+		font_encoding encoding;
+		bool          active;
+	} fCJKOrder[no_of_cjk_encodings];
+
 	status_t	LookupFontFiles(BPath path);	
 
 public:
@@ -97,6 +128,10 @@ public:
 
 	FontFile*	At(int i) const { return (FontFile*)fFontFiles.ItemAt(i); }
 	int32		Length() const  { return fFontFiles.CountItems(); }
+
+	void        SetDefaultCJKOrder();
+	bool        SetCJKOrder(int i, font_encoding  enc, bool  active);
+	bool        GetCJKOrder(int i, font_encoding& enc, bool& active) const;
 };
 
 #endif // FONTS_H

@@ -63,7 +63,12 @@ public:
 		CANCEL_MSG			= 'cncl',
 		EMBED_MSG           = 'mbed',
 		SUBST_MSG           = 'subs',
-		SELECTION_MSG       = 'sele'
+		SELECTION_MSG       = 'sele',
+		CJK_SELECTION_MSG   = 'cjks',
+		UP_MSG              = 'up__',
+		DOWN_MSG            = 'down',
+		ENABLE_MSG          = 'enbl',
+		DISABLE_MSG         = 'dsbl',
 	};
 			
 	// Virtual function overrides
@@ -82,9 +87,19 @@ private:
 	BButton*                fEmbedButton;
 	BButton*                fSubstButton;
 
+	BListView*              fCJKList;
+	BButton*                fUpButton;
+	BButton*                fDownButton;
+	BButton*                fEnableButton;
+	BButton*                fDisableButton;
+			
+
 	void                    FillFontList();
 	void                    EmptyFontList();
 	void                    SetItemText(BStringItem* i, FontFile* f);
+	void                    MoveItemInList(BListView* list, bool up);
+	void                    EnableItemInList(BListView* list, bool enable);
+
 	friend class EmbedFont;
 };
 

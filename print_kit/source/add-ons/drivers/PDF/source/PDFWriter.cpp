@@ -57,6 +57,11 @@ THE SOFTWARE.
 PDFWriter::PDFWriter()
 	:	PrinterDriver()
 {
+	fFontSearchOrder[0] = japanese_encoding;
+	fFontSearchOrder[1] = chinese_cns1_encoding;
+	fFontSearchOrder[2]	= chinese_gb1_encoding;
+	fFontSearchOrder[3]	= korean_encoding;
+	
 	fEmbedMaxFontSize = 250 * 1024;
 	fScreen = new BScreen();
 	fFonts = NULL;
@@ -172,11 +177,24 @@ PDFWriter::BeginJob()
 	if ( fPdf == NULL )
 		return B_ERROR;
 
+	// load font embedding settings
 	fFonts = new Fonts();
 	fFonts->CollectFonts();
 	BMessage fonts;
 	if (B_OK == JobMsg()->FindMessage("fonts", &fonts)) {
 		fFonts->SetTo(&fonts);
+	}
+	
+	// set font search order
+	int           j = 0; 
+	font_encoding enc; 
+	bool          active;
+	
+	for (int i = 0; j < no_of_cjk_encodings && fFonts->GetCJKOrder(i, enc, active); i ++) {
+		if (active) fFontSearchOrder[j++] = enc;
+	}
+	for (; j < no_of_cjk_encodings; j ++) {
+		fFontSearchOrder[j] = invalid_encoding;
 	}
 		
 	return InitWriter();

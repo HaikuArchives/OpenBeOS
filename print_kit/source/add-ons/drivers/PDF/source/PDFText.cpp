@@ -92,6 +92,7 @@ static unicode_to_encoding encodings[] =
 #include "japanese.h"
 #include "gb1.h"
 #include "cns1.h"
+#include "korean.h"
 
 
 static cid_table cid_tables[] = 
@@ -99,6 +100,7 @@ static cid_table cid_tables[] =
 	{ELEMS(japanese, unicode_to_cid), japanese},
 	{ELEMS(CNS1,     unicode_to_cid), CNS1},
 	{ELEMS(GB1,      unicode_to_cid), GB1},
+	{ELEMS(korean,   unicode_to_cid), korean}
 };
 
 
@@ -132,12 +134,15 @@ find_encoding(uint16 unicode, uint8 &encoding, uint16 &index)
 
 // --------------------------------------------------
 static bool 
-find_in_cid_tables(uint16 unicode, uint8 &encoding, uint16 &index) 
+find_in_cid_tables(uint16 unicode, font_encoding &encoding, uint16 &index, font_encoding* order) 
 {
 	for (unsigned int i = 0; i < ELEMS(cid_tables, cid_table); i++) {
+		encoding = order[i];
+		if (encoding == invalid_encoding) break;
+		int index = encoding - first_cjk_encoding;
 		int32 bottom = 0;
-		int32 top = cid_tables[i].length-1;
-		unicode_to_cid *table = cid_tables[i].table;
+		int32 top = cid_tables[index].length-1;
+		unicode_to_cid *table = cid_tables[index].table;
 		while (top >= bottom) {
 		    int32 m = (top + bottom) / 2;
 			if (unicode < table[m].unicode) {
@@ -146,7 +151,6 @@ find_in_cid_tables(uint16 unicode, uint8 &encoding, uint16 &index)
 				bottom = m+1;
 			} else {
 				index = table[m].cid;
-				encoding = i;
 				return true;
 			}
 		}
@@ -328,8 +332,10 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 	
 	if (convert_from_utf8(B_MAC_ROMAN_CONVERSION, utf8, &srcLen, dest, &destLen, &state, 0) != B_OK || dest[0] == 0 ) {
 		// could not convert to MacRoman
-		uint8  enc;
-		uint16 index;
+		uint8         enc;
+		uint16        index;
+		font_encoding fenc;
+		
 		// is code point in the Adobe Glyph List? 
 		if (find_encoding(unicode, enc, index)) {
 			// LOG((fLog, "encoding for %x -> %d %d\n", unicode, (int)enc, (int)index));
@@ -340,12 +346,12 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 				encoding = font_encoding(enc + t1_encoding0);
 			}
 			*dest = index;
-		} else if (find_in_cid_tables(unicode, enc, index)) {
+		} else if (find_in_cid_tables(unicode, fenc, index, fFontSearchOrder)) {
 			// LOG((fLog, "cid table %d index = %d\n", (int)enc, (int)index));
 			dest[0] = unicode / 256; 
 			dest[1] = unicode % 256; 
 			destLen = 2;
-			encoding = font_encoding(enc + japanese_encoding);
+			encoding = fenc;
 			embed = false;
 		} else {
 			// LOG((fLog, "encoding for %x not found!\n", unicode));

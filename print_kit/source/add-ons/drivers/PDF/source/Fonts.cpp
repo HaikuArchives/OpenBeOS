@@ -97,6 +97,7 @@ static status_t psf_get_fontname(const char * path, char * fontname, size_t fn_s
 // --------------------------------------------------
 Fonts::Fonts()
 {
+	SetDefaultCJKOrder();
 }
 
 
@@ -108,6 +109,41 @@ Fonts::~Fonts()
 	}
 	fFontFiles.MakeEmpty();
 }	
+
+
+void
+Fonts::SetDefaultCJKOrder()
+{
+	SetCJKOrder(0, japanese_encoding,     true);
+	SetCJKOrder(1, chinese_gb1_encoding,  true);
+	SetCJKOrder(2, chinese_cns1_encoding, true);
+	SetCJKOrder(3, korean_encoding,       true);
+}
+
+// --------------------------------------------------
+bool
+Fonts::SetCJKOrder(int i, font_encoding  enc, bool  active)
+{
+	if (0 <= i && i < no_of_cjk_encodings) {
+		fCJKOrder[i].encoding = enc;
+		fCJKOrder[i].active   = active;
+		return true;
+	}
+	return false;
+}
+
+
+// --------------------------------------------------
+bool
+Fonts::GetCJKOrder(int i, font_encoding& enc, bool& active) const
+{
+	if (0 <= i && i < no_of_cjk_encodings) {
+		enc    = fCJKOrder[i].encoding;
+		active = fCJKOrder[i].active;
+		return true;
+	}
+	return false;
+}
 
 
 // ---------------------------------------
@@ -127,6 +163,21 @@ Fonts::Fonts(BMessage *archive)
 			else delete f;
 		}
 	}
+	if (archive->FindMessage("cjk_order", &m) == B_OK) {
+		for (int i = 0; i < no_of_cjk_encodings; i++) {
+			bool active; int32 encoding;
+			if (m.FindInt32("encoding", i, &encoding) == B_OK &&
+				m.FindBool("active", i, &active) == B_OK &&
+				first_cjk_encoding <= encoding &&
+				encoding < first_cjk_encoding + no_of_cjk_encodings) {
+				SetCJKOrder(i, (font_encoding)encoding, active);
+			} else {
+				SetDefaultCJKOrder(); return;
+			}
+		}
+		return;
+	}		
+	SetDefaultCJKOrder();
 }
 
 
@@ -152,6 +203,14 @@ status_t Fonts::Archive(BMessage *archive, bool deep) const
 			archive->AddMessage("fontfile", &m);
 		}
 	}
+	BMessage m;
+	font_encoding enc;
+	bool active;
+	for (int i = 0; GetCJKOrder(i, enc, active); i++) {
+		m.AddInt32("encoding", enc);
+		m.AddBool("active", active);
+	}
+	archive->AddMessage("cjk_order", &m);
 	return B_OK;
 }
 
@@ -253,6 +312,12 @@ Fonts::SetTo(BMessage *archive)
 					break;
 				}
 			}
+		}
+		
+		font_encoding enc; 
+		bool          active;
+		for (int i = 0; f->GetCJKOrder(i, enc, active); i++) {
+			SetCJKOrder(i, enc, active);
 		}
 		delete f;
 	}

@@ -34,6 +34,74 @@ THE SOFTWARE.
 #include "FontsWindow.h"
 #include "Fonts.h"
 
+
+class DragListView : public BListView
+{
+public:
+	DragListView(BRect frame, const char *name,
+		list_view_type type = B_SINGLE_SELECTION_LIST,
+		uint32 resizingMode = B_FOLLOW_LEFT | B_FOLLOW_TOP, 
+		uint32 flags = B_WILL_DRAW | B_NAVIGABLE | B_FRAME_EVENTS);
+	bool InitiateDrag(BPoint point, int32 index, bool wasSelected);
+};
+
+DragListView::DragListView(BRect frame, const char *name,
+		list_view_type type,
+		uint32 resizingMode, uint32 flags)
+	: BListView(frame, name, type, resizingMode, flags)
+{
+}
+
+bool DragListView::InitiateDrag(BPoint point, int32 index, bool wasSelected)
+{
+	BMessage m;
+	DragMessage(&m, ItemFrame(index), this);
+	return true;
+}
+
+
+class CJKFontItem : public BStringItem
+{
+	font_encoding fEncoding;
+	bool          fActive;
+	
+public:
+	CJKFontItem(const char* label, font_encoding encoding, bool active = true);
+	void SetActive(bool active) { fActive = active; }
+	void DrawItem(BView* owner, BRect rect, bool drawEverything);	
+	
+	bool          Active() const   { return fActive; }
+	font_encoding Encoding() const { return fEncoding; }
+};
+
+CJKFontItem::CJKFontItem(const char* label, font_encoding encoding, bool active)
+	: BStringItem(label)
+	, fEncoding(encoding)
+	, fActive(active)
+{
+}
+
+void 
+CJKFontItem::DrawItem(BView* owner, BRect rect, bool drawEverything)
+{
+	BStringItem::DrawItem(owner, rect, drawEverything);
+	if (!fActive) {
+		owner->SetHighColor(0, 0, 0, 0);
+		float y = (rect.top + rect.bottom) / 2;
+		owner->StrokeLine(BPoint(rect.left, y), BPoint(rect.right, y));
+	}
+}
+
+static const char* FontName(font_encoding enc) {
+	switch(enc) {
+		case japanese_encoding:     return "Japanese";
+		case chinese_gb1_encoding:  return "Traditional Chinese";
+		case chinese_cns1_encoding: return "Simplified Chinese";
+		case korean_encoding:       return "Korean"; 
+		default:                    return "invalid font encoding!";
+	}
+}
+
 /**
  * Constuctor
  *
@@ -51,11 +119,20 @@ FontsWindow::FontsWindow(Fonts *fonts)
 	BButton		*button;
 	float		x, y, w, h;
 	BString 	setting_value;
+	BTabView    *tabView;
+	BTab        *tab;
 
 	fFonts = fonts;
 	
-	// add a *dialog* background
 	r = Bounds();
+	tabView = new BTabView(r, "tab_view");
+
+	// --- Embedding tab ---
+	tab = new BTab();
+	
+	// add a *dialog* background
+	r.InsetBy(5, 5); r.bottom -= tabView->TabHeight();
+	
 	panel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
 					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
 					B_PLAIN_BORDER);
@@ -102,8 +179,86 @@ FontsWindow::FontsWindow(Fonts *fonts)
 		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM );
 	panel->AddChild(line);
 
-	// Finally, add our panel to window
-	AddChild(panel);
+	tabView->AddTab(panel, tab);
+	tab->SetLabel("Embedding");
+
+	// --- CJK tab ---
+	tab = new BTab();
+
+	// add a *dialog* background
+	panel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
+					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
+					B_PLAIN_BORDER);
+
+	BListView* list = 
+		new DragListView(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30),
+		"cjk", B_MULTIPLE_SELECTION_LIST);
+	panel->AddChild(new BScrollView("cjk_scroll_list", list, 
+		B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true));
+
+	font_encoding enc; bool active;
+	for (int i = 0; fFonts->GetCJKOrder(i, enc, active); i++) {
+		list->AddItem(new CJKFontItem(FontName(enc), enc, active));
+	}
+	list->SetSelectionMessage(new BMessage(CJK_SELECTION_MSG));
+	fCJKList = list;
+
+	// add a "Embed" button
+	button 	= new BButton(r, NULL, "Enable", new BMessage(ENABLE_MSG), 
+		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
+	button->ResizeToPreferred();
+	button->GetPreferredSize(&w, &h);
+	x = r.right - w - 8;
+	y = r.bottom - h - 8;
+	button->MoveTo(x, y);
+	button->SetEnabled(false);
+	panel->AddChild(button);
+	fEnableButton = button;
+
+	// add a "Disable" button	
+	button 	= new BButton(r, NULL, "Disable", new BMessage(DISABLE_MSG), 
+		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
+	button->GetPreferredSize(&w, &h);
+	button->ResizeToPreferred();
+	x -= w + 8;
+	button->MoveTo(x, y);
+	button->SetEnabled(false);
+	panel->AddChild(button);
+	fDisableButton = button;
+
+	// add a "Down" button	
+	button 	= new BButton(r, NULL, "Down", new BMessage(DOWN_MSG), 
+		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
+	button->GetPreferredSize(&w, &h);
+	button->ResizeToPreferred();
+	x -= w + 8;
+	button->MoveTo(x, y);
+	button->SetEnabled(false);
+	panel->AddChild(button);
+	fDownButton = button;
+
+	// add a "Up" button	
+	button 	= new BButton(r, NULL, "Up", new BMessage(UP_MSG), 
+		B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
+	button->GetPreferredSize(&w, &h);
+	button->ResizeToPreferred();
+	x -= w + 8;
+	button->MoveTo(x, y);
+	button->SetEnabled(false);
+	panel->AddChild(button);
+	fUpButton = button;
+
+	// add a separator line...
+	line = new BBox(BRect(r.left, y - 9, r.right, y - 8), NULL,
+		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM );
+	panel->AddChild(line);
+
+
+	tabView->AddTab(panel, tab);
+	tab->SetLabel("CJK");
+
+	// add the tabView to the window	
+	AddChild(tabView);
 	
 	MoveTo(320, 320);
 }
@@ -215,6 +370,53 @@ EmbedFont::DoItem(BListItem* item)
 	return false;
 }
 
+// move selected item in list one position up or down
+void
+FontsWindow::MoveItemInList(BListView* list, bool up)
+{
+	int32 from = list->CurrentSelection(0);
+	if (from >= 0) {
+		int32 to;
+		if (up) {
+			if (from == 0) return; // at top of list
+			to = from - 1;
+		} else {
+			if (from == list->CountItems() -1) return; // at bottom of list
+			to = from + 1;
+		}
+		list->SwapItems(from, to);
+		
+		font_encoding enc;
+		bool          active;
+		fFonts->GetCJKOrder(from, enc, active);
+		
+		font_encoding enc1;
+		bool          active1;
+		fFonts->GetCJKOrder(to, enc1, active1);
+		fFonts->SetCJKOrder(to, enc,  active);
+		fFonts->SetCJKOrder(from, enc1, active1);
+	}
+}
+
+
+void
+FontsWindow::EnableItemInList(BListView* list, bool enable)
+{
+	int32 i = list->CurrentSelection(0);
+	if (i >= 0) {
+		BListItem* item0 = list->ItemAt(i);
+		CJKFontItem* item = dynamic_cast<CJKFontItem*>(item0);
+		if (item) {
+			item->SetActive(enable);
+			list->Invalidate();
+			font_encoding enc;
+			bool          active;
+			fFonts->GetCJKOrder(i, enc, active);
+			fFonts->SetCJKOrder(i, enc, enable);
+		}
+	}
+}
+
 // --------------------------------------------------
 void 
 FontsWindow::MessageReceived(BMessage *msg)
@@ -256,6 +458,34 @@ FontsWindow::MessageReceived(BMessage *msg)
 				fList->DoForEach(CountItems::DoIt, (void*)&count);
 				fEmbedButton->SetEnabled(count.GetNumSubst() > 0);
 				fSubstButton->SetEnabled(count.GetNumEmbed() > 0);
+			}
+			break;
+
+		case UP_MSG:
+		case DOWN_MSG:
+			MoveItemInList(fCJKList, msg->what == UP_MSG);
+			PostMessage(CJK_SELECTION_MSG);
+			break;
+		
+		case ENABLE_MSG:
+		case DISABLE_MSG:
+			EnableItemInList(fCJKList, msg->what == ENABLE_MSG);
+			PostMessage(CJK_SELECTION_MSG);
+			break;
+
+		case CJK_SELECTION_MSG:
+			{
+				int32 i = fCJKList->CurrentSelection(0);
+				if (i >= 0) {
+					BListItem* item0 = fCJKList->ItemAt(i);
+					CJKFontItem* item = dynamic_cast<CJKFontItem*>(item0);
+					if (item) {
+						fUpButton->SetEnabled(i != 0);
+						fDownButton->SetEnabled(i != fCJKList->CountItems()-1);
+						fEnableButton->SetEnabled(!item->Active());
+						fDisableButton->SetEnabled(item->Active());
+					}
+				}
 			}
 			break;
 	
