@@ -357,7 +357,7 @@ int ether_output(struct ifnet *ifp, struct mbuf *buf, struct sockaddr *dst,
 	uint16 type;
 	struct mbuf *mcopy = NULL;
 	int error = 0;
-
+	
 	if ((ifp->if_flags & (IFF_UP | IFF_RUNNING)) != (IFF_UP | IFF_RUNNING))
 		senderr(ENETDOWN);
 
@@ -393,8 +393,9 @@ lookup:
 
 	switch (dst->sa_family) {
 		case AF_INET:
-			if (!arpresolve(ac, rt, buf, dst, edst))
+			if (!arpresolve(ac, rt, buf, dst, edst)) {
 				return 0;
+			}
 			if ((buf->m_flags & M_BCAST) && (ifp->if_flags & IFF_SIMPLEX))
 				mcopy = m_copym(buf, 0, (int)M_COPYALL);
 			off = buf->m_pkthdr.len - buf->m_len;
@@ -436,13 +437,14 @@ lookup:
 	memcpy(&eh->ether_type, &type, sizeof(eh->ether_type));
 	memcpy(&eh->ether_dhost, edst, sizeof(edst));
 	memcpy(&eh->ether_shost, ac->ac_enaddr, sizeof(eh->ether_shost));
-	
+
 	IFQ_ENQUEUE(ifp->txq, buf);
 
 	return error;
 bad:
 	if (buf)
 		m_free(buf);
+	printf("ether_output: returning %d\n", error);
 	return error;
 }
 
@@ -463,7 +465,6 @@ static struct llinfo_arp *arplookup(uint32 addr, int create, int proxy)
 			printf("arptnew failed on %08lx\n", ntohl(addr));
 		return NULL;
 	}
-
 	return ((struct llinfo_arp *)rt->rt_llinfo);
 }
 	
@@ -481,6 +482,7 @@ int arpresolve(struct arpcom *ac, struct rtentry *rt, struct mbuf *m,
 		ETHER_MAP_IP_MULTICAST(&SIN(dst)->sin_addr, desten);
 		return 1;
 	}
+	
 	if (rt) {
 		la = (struct llinfo_arp*) rt->rt_llinfo;
 	} else {
