@@ -51,7 +51,7 @@ struct socket {
 
 	struct net_module *so_proto; /* pointer to protocol module */
 
-	struct socket *head;
+	struct socket *so_head;
 	struct sockaet *so_q0;
 	struct sockaet *so_q;
 
@@ -120,7 +120,8 @@ struct socket {
 
 /* Function prototypes */
 int     soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
-int     socreate (int dom, struct socket **aso, int type, int proto);
+int	initsocket(void **aso);
+int     socreate (int dom, void *aso, int type, int proto);
 int     sobind (struct socket *so, struct mbuf *nam);
 int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
            struct mbuf *control, int flags);
@@ -143,5 +144,8 @@ int     soreceive (struct socket *so, struct mbuf **paddr, struct uio *uio,
             struct mbuf **mp0, struct mbuf **controlp, int *flagsp);
 void    sowakeup(struct socket *so, struct sockbuf *sb);
 int     sbwait(struct sockbuf *sb);
+
+int 	soo_ioctl(void *sp, int cmd, caddr_t data);
+int	soclose(void *sp);
 
 #endif /* SYS_SOCKETVAR_H */
