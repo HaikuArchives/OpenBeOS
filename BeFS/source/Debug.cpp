@@ -186,7 +186,8 @@ dump_bplustree_node(bplustree_node *node,bplustree_header *header,Volume *volume
 		return;
 
 	if (node->all_key_count > node->all_key_length
-		|| uint32(node->all_key_count * 10) > (uint32)header->node_size) {
+		|| uint32(node->all_key_count * 10) > (uint32)header->node_size
+		|| node->all_key_count == 0) {
 		Print("\n");
 		dump_block((char *)node,header->node_size/*,sizeof(off_t)*/);
 		return;

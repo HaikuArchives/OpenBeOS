@@ -615,7 +615,8 @@ BPlusTree::FindFreeDuplicateFragment(bplustree_node *node,CachedNode *cached,off
 		}
 		
 		// see if there is some space left for us
-		for (int32 j = 0;j < fNodeSize / ((NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));j++) {
+		int32 num = (fNodeSize >> 3) / (NUM_FRAGMENT_VALUES + 1);
+		for (int32 j = 0;j < num;j++) {
 			duplicate_array *array = fragment->FragmentAt(j);
 
 			if (array->value_count == 0) {
@@ -1189,11 +1190,13 @@ BPlusTree::RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedN
 			values[index] = array->values[0];
 
 			// Remove the whole fragment node, if this was the only array,
-			// otherwise just write the changes back
+			// otherwise free the array and write the changes back
 			if (duplicate->FragmentsUsed(fNodeSize) == 1)
 				status = cachedDuplicate.Free(transaction,duplicateOffset);
-			else
+			else {
+				array->value_count = 0;
 				status = cachedDuplicate.WriteBack(transaction);
+			}
 			if (status < B_OK)
 				return status;
 
@@ -1207,7 +1210,6 @@ BPlusTree::RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedN
 	//
 
 	duplicate_array *array;
-	uint32 count = 1;
 
 	if (duplicate->left_link != BPLUSTREE_NULL) {
 		FATAL(("invalid duplicate node: first left link points to %Ld!\n",duplicate->left_link));
@@ -1230,76 +1232,98 @@ BPlusTree::RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedN
 			RETURN_ERROR(B_ENTRY_NOT_FOUND);
 		
 		duplicate = cachedDuplicate.SetTo(duplicateOffset,false);
-		count++;
 	}
 	if (duplicate == NULL)
 		RETURN_ERROR(B_IO_ERROR);
 
-	if (count == 1 && duplicate->right_link == BPLUSTREE_NULL
-		&& array->value_count <= NUM_FRAGMENT_VALUES) {
-		// If the number of entries fit in a duplicate fragment, then
-		// either find a free fragment node, or convert this node to a
-		// fragment node.
-		CachedNode cachedOther(this);
-
-		bplustree_node *fragment = NULL;
-		uint32 fragmentIndex = 0;
-		off_t offset;
-		if (FindFreeDuplicateFragment(node,&cachedOther,&offset,&fragment,&fragmentIndex) < B_OK) {
-			// convert node
-			memmove(duplicate,array,(NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));
-			memset((off_t *)duplicate + NUM_FRAGMENT_VALUES + 1,0,fNodeSize - (NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));
-		} else {
-			// move to other node
-			duplicate_array *target = fragment->FragmentAt(fragmentIndex);
-			memcpy(target,array,(NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));
-
-			cachedDuplicate.Free(transaction,duplicateOffset);
-			duplicateOffset = offset;
-		}
-		values[index] = bplustree_node::MakeLink(BPLUSTREE_DUPLICATE_FRAGMENT,duplicateOffset,fragmentIndex);
-
-		if ((status = cached->WriteBack(transaction)) < B_OK)
-			return status;
-
-		if (fragment != NULL)
-			return cachedOther.WriteBack(transaction);
-	} else if (array->value_count == 0) {
-		// Free empty duplicate page and link their siblings together
+	while (true) {
 		off_t left = duplicate->left_link;
 		off_t right = duplicate->right_link;
-		
-		// update the duplicate link if needed
-		if (duplicateOffset == bplustree_node::FragmentOffset(oldValue)) {
-			// possibly the original BFS don't convert duplicate node into
-			// duplicate fragment nodes - if this is the case, both, the
-			// right link, and the left link could be empty here
-			if (right == BPLUSTREE_NULL && left == BPLUSTREE_NULL) {
-				FATAL(("Empty duplicate node found! Change original value to 0.\n"));
-				values[index] = 0;
-			} else
-				values[index] = bplustree_node::MakeLink(BPLUSTREE_DUPLICATE_NODE,right);
+		bool isLast = left == BPLUSTREE_NULL && right == BPLUSTREE_NULL;
+	
+		if (isLast && array->value_count == 1 || array->value_count == 0) {
+			// Free empty duplicate page, link their siblings together, and
+			// update the duplicate link if needed (which should not be, if
+			// we are the only one working on that tree...)
+	
+			if (duplicateOffset == bplustree_node::FragmentOffset(oldValue)
+				|| array->value_count == 1) {
+				if (array->value_count == 1 && isLast)
+					values[index] = array->values[0];
+				else if (isLast) {
+					FATAL(("removed last value from duplicate!\n"));
+				} else
+					values[index] = bplustree_node::MakeLink(BPLUSTREE_DUPLICATE_NODE,right);
+	
+				if ((status = cached->WriteBack(transaction)) < B_OK)
+					return status;
+			}
+	
+			if ((status = cachedDuplicate.Free(transaction,duplicateOffset)) < B_OK)
+				return status;
+	
+			if (left != BPLUSTREE_NULL
+				&& (duplicate = cachedDuplicate.SetTo(left,false)) != NULL) {
+				duplicate->right_link = right;
+				
+				// If the next node is the last node, we need to free that node
+				// and convert the duplicate entry back into a normal entry
+				if (right == BPLUSTREE_NULL && duplicate->left_link == BPLUSTREE_NULL
+					&& duplicate->DuplicateArray()->value_count <= NUM_FRAGMENT_VALUES) {
+					duplicateOffset = left;
+					continue;
+				}
 
+				status = cachedDuplicate.WriteBack(transaction);
+				if (status < B_OK)
+					return status;
+			}
+			if (right != BPLUSTREE_NULL
+				&& (duplicate = cachedDuplicate.SetTo(right,false)) != NULL) {
+				duplicate->left_link = left;
+	
+				// Again, we may need to turn the duplicate entry back into a normal entry
+				array = duplicate->DuplicateArray();
+				if (left == BPLUSTREE_NULL && duplicate->right_link == BPLUSTREE_NULL
+					&& duplicate->DuplicateArray()->value_count <= NUM_FRAGMENT_VALUES) {
+					duplicateOffset = right;
+					continue;
+				}
+
+				return cachedDuplicate.WriteBack(transaction);
+			}
+			return status;
+		} else if (isLast && array->value_count <= NUM_FRAGMENT_VALUES) {
+			// If the number of entries fits in a duplicate fragment, then
+			// either find a free fragment node, or convert this node to a
+			// fragment node.
+			CachedNode cachedOther(this);
+	
+			bplustree_node *fragment = NULL;
+			uint32 fragmentIndex = 0;
+			off_t offset;
+			if (FindFreeDuplicateFragment(node,&cachedOther,&offset,&fragment,&fragmentIndex) < B_OK) {
+				// convert node
+				memmove(duplicate,array,(NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));
+				memset((off_t *)duplicate + NUM_FRAGMENT_VALUES + 1,0,fNodeSize - (NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));
+			} else {
+				// move to other node
+				duplicate_array *target = fragment->FragmentAt(fragmentIndex);
+				memcpy(target,array,(NUM_FRAGMENT_VALUES + 1) * sizeof(off_t));
+	
+				cachedDuplicate.Free(transaction,duplicateOffset);
+				duplicateOffset = offset;
+			}
+			values[index] = bplustree_node::MakeLink(BPLUSTREE_DUPLICATE_FRAGMENT,duplicateOffset,fragmentIndex);
+	
 			if ((status = cached->WriteBack(transaction)) < B_OK)
 				return status;
+	
+			if (fragment != NULL)
+				return cachedOther.WriteBack(transaction);
 		}
-
-		if ((status = cachedDuplicate.Free(transaction,duplicateOffset)) < B_OK)
-			return status;
-
-		if (left != BPLUSTREE_NULL
-			&& (duplicate = cachedDuplicate.SetTo(left,false)) != NULL) {
-			duplicate->right_link = right;
-			status = cachedDuplicate.WriteBack(transaction);
-		}
-		if (right != BPLUSTREE_NULL
-			&& (duplicate = cachedDuplicate.SetTo(right,false)) != NULL) {
-			duplicate->left_link = left;
-			return cachedDuplicate.WriteBack(transaction);
-		}
-		return status;
+		return cachedDuplicate.WriteBack(transaction);
 	}
-	return cachedDuplicate.WriteBack(transaction);
 }
 
 
@@ -1862,7 +1886,7 @@ TreeIterator::Dump()
 	__out("\tfTree = %p\n",fTree);
 	__out("\tfCurrentNodeOffset = %Ld\n",fCurrentNodeOffset);
 	__out("\tfCurrentKey = %ld\n",fCurrentKey);
-	__out("\tfDuplicateNode = %Ld\n",bplustree_node::FragmentOffset(fDuplicateNode));
+	__out("\tfDuplicateNode = %Ld (%Ld, 0x%Lx)\n",bplustree_node::FragmentOffset(fDuplicateNode),fDuplicateNode,fDuplicateNode);
 	__out("\tfDuplicate = %u\n",fDuplicate);
 	__out("\tfNumDuplicates = %u\n",fNumDuplicates);
 	__out("\tfIsFragment = %s\n",fIsFragment ? "true" : "false");
