@@ -21,6 +21,13 @@ int     close(int);
 int     dup(int);
 int     dup2(int, int);
 
+int     getopt(int, char * const, const char *);
+extern	 char *optarg;			/* getopt(3) external variables */
+extern	 int opterr;
+extern	 int optind;
+extern	 int optopt;
+extern	 int optreset;
+
 off_t   lseek(int, off_t, int);
 ssize_t read(int, void *, size_t);
 ssize_t pread(int, void *, size_t, off_t);
