@@ -52,9 +52,10 @@ void ScreenSaver::MessageReceived(BMessage *msg)
 void ScreenSaver::loadSettings(BMessage *msg)
 {
 	BRect frame;
-	msg->FindRect("windowframe",&frame);
-	MoveTo(frame.left,frame.top);
-	ResizeTo(frame.right-frame.left,frame.bottom-frame.top);
+	if (B_OK == msg->FindRect("windowframe",&frame)) {
+		MoveTo(frame.left,frame.top);
+		ResizeTo(frame.right-frame.left,frame.bottom-frame.top);
+	}
 
 	int32 value;
 	msg->FindInt32("windowtab",&value);

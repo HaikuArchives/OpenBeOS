@@ -14,7 +14,7 @@ class mouseAreaView;
 
 class ScreenSaver: public BWindow {
 public:
-  ScreenSaver(void) : BWindow(BRect(50,50,500,385),"OBOS Screen Saver Preferences",B_TITLED_WINDOW,B_ASYNCHRONOUS_CONTROLS)
+  ScreenSaver(void) : BWindow(BRect(50,50,500,385),"OBOS Screen Saver Preferences",B_TITLED_WINDOW,B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE | B_NOT_RESIZABLE)
   {
 	pwWin=NULL;
 	SetupForm();
