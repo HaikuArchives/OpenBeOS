@@ -19,13 +19,16 @@
 
 
 void list_area_info  (team_id id);
+void show_memory_totals (void);
 
 
 
 int
 main (int argc, char **argv)
 	{
-	//	
+	//
+	show_memory_totals ();
+	
 	if (argc == 1)
 		{
 		// list for all teams
@@ -49,6 +52,25 @@ main (int argc, char **argv)
 
 
 void
+show_memory_totals ()
+	{
+	int32       max = 0, used = 0, left;
+	system_info sys;
+	
+	if (get_system_info (&sys) == B_OK)
+		{
+		// pages are 4KB
+		max  = sys.max_pages * 4;
+		used = sys.used_pages * 4;
+		}
+	
+	left = max - used;
+	
+	printf ("memory: total: %4dKB, used: %4dKB, left: %4dKB\n", max, used, left);
+	}
+
+
+void
 list_area_info (team_id id)
 	{	
 	int32      cookie = 0;
@@ -62,12 +84,12 @@ list_area_info (team_id id)
 		}
 
 	printf ("\nTEAM %4d (%s):\n", id, this_team.args);
-	printf ("  ID                          name  address     size    alloc. #-cow  #-in #-out\n");
+	printf ("  ID                           name  address     size   alloc. #-cow  #-in #-out\n");
 	printf ("--------------------------------------------------------------------------------\n");
 	
 	while (get_next_area_info (id, &cookie, &this_area) == B_OK)
 		{
-		printf ("%4d %29s %.8x %8x %8x %5d %5d %5d\n",
+		printf ("%5d %29s %.8x %8x %8x %5d %5d %5d\n",
 		         this_area.area,
 		         this_area.name,
 		         this_area.address,
