@@ -28,20 +28,22 @@ namespace OpenBeOS {
 class BSymLink : public BNode {
 public:
 	BSymLink();
+	BSymLink(const BSymLink &link);
 	BSymLink(const entry_ref *ref);
 	BSymLink(const BEntry *entry);
 	BSymLink(const char *path);
 	BSymLink(const BDirectory *dir, const char *path);
-	BSymLink(const BSymLink &link);
 
 	virtual ~BSymLink();
 
-	ssize_t ReadLink(char *buf, size_t length) const;
+	ssize_t ReadLink(char *buf, size_t size);
 
 	ssize_t MakeLinkedPath(const char *dirPath, BPath *path);
 	ssize_t MakeLinkedPath(const BDirectory *dir, BPath *path);
 
 	bool IsAbsolute();
+
+//	BSymLink &operator=(const BSymLink &dir);
 
 private:
 	virtual void _ReservedSymLink1();
