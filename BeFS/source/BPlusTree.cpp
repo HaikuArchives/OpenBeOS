@@ -251,6 +251,17 @@ BPlusTree::BPlusTree()
 
 BPlusTree::~BPlusTree()
 {
+	// if there are any TreeIterators left, we need to stop them
+	// (can happen when the tree's inode gets deleted while
+	// traversing the tree - a TreeIterator doesn't lock the inode)
+	if (fIteratorLock.Lock() < B_OK)
+		return;
+
+	TreeIterator *iterator = NULL;
+	while ((iterator = fIterators.Next(iterator)) != NULL)
+		iterator->Stop();
+
+	fIteratorLock.Unlock();
 }
 
 
@@ -414,7 +425,7 @@ BPlusTree::ModeToKeyType(mode_t mode)
 
 
 void
-BPlusTree::UpdateIterators(off_t offset,uint16 keyIndex,int8 change)
+BPlusTree::UpdateIterators(off_t offset,off_t nextOffset,uint16 keyIndex,uint16 splitAt,int8 change)
 {
 	// Although every iterator which is affected by this update currently
 	// waits on a semaphore, other iterators could be added/removed at
@@ -424,7 +435,7 @@ BPlusTree::UpdateIterators(off_t offset,uint16 keyIndex,int8 change)
 
 	TreeIterator *iterator = NULL;
 	while ((iterator = fIterators.Next(iterator)) != NULL)
-		iterator->Update(offset,keyIndex,change);
+		iterator->Update(offset,nextOffset,keyIndex,splitAt,change);
 
 	fIteratorLock.Unlock();
 }
@@ -1051,6 +1062,8 @@ BPlusTree::Insert(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 			+ (node->all_key_count + 1) * (sizeof(uint16) + sizeof(off_t))) < fNodeSize)
 		{
 			InsertKey(node,nodeAndKey.keyIndex,keyBuffer,keyLength,value);
+			UpdateIterators(nodeAndKey.nodeOffset,BPLUSTREE_NULL,nodeAndKey.keyIndex,0,1);
+
 			return cached.WriteBack(transaction);
 		} else {
 			CachedNode cachedNewRoot(this);
@@ -1095,6 +1108,8 @@ BPlusTree::Insert(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 			if (cached.WriteBack(transaction) < B_OK
 				|| cachedOther.WriteBack(transaction) < B_OK)
 				RETURN_ERROR(B_ERROR);
+
+			UpdateIterators(nodeAndKey.nodeOffset,otherOffset,nodeAndKey.keyIndex,node->all_key_count,1);
 
 			// update the right link of the node in the left of the new node
 			if ((other = cachedOther.SetTo(other->left_link)) != NULL) {
@@ -1319,7 +1334,10 @@ BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 			if (status < B_OK)
 				RETURN_ERROR(status); 
 
-			UpdateIterators(nodeAndKey.nodeOffset,nodeAndKey.keyIndex,-1);
+			// If we will remove the last key, the iterator will be
+			// set to the next node after the current
+			UpdateIterators(nodeAndKey.nodeOffset,node->all_key_count == 1 ?
+								node->right_link : BPLUSTREE_NULL,nodeAndKey.keyIndex,0,-1);
 
 			// is this a duplicate entry?
 			if (bplustree_node::IsDuplicate(node->Values()[nodeAndKey.keyIndex])) {
@@ -1490,7 +1508,8 @@ TreeIterator::TreeIterator(BPlusTree *tree)
 
 TreeIterator::~TreeIterator()
 {
-	fTree->RemoveIterator(this);
+	if (fTree)
+		fTree->RemoveIterator(this);
 }
 
 
@@ -1554,6 +1573,8 @@ TreeIterator::Goto(int8 to)
 status_t
 TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLength,off_t *value,uint16 *duplicate)
 {
+	if (fTree == NULL)
+		return B_INTERRUPTED;
 	if (fCurrentNodeOffset == BPLUSTREE_NULL
 		&& Goto(direction == BPLUSTREE_FORWARD ? BPLUSTREE_BEGIN : BPLUSTREE_END) < B_OK) 
 		RETURN_ERROR(B_ERROR);
@@ -1694,6 +1715,8 @@ TreeIterator::Traverse(int8 direction,void *key,uint16 *keyLength,uint16 maxLeng
 status_t 
 TreeIterator::Find(const uint8 *key, uint16 keyLength)
 {
+	if (fTree == NULL)
+		return B_INTERRUPTED;
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
 		|| key == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
@@ -1733,11 +1756,18 @@ TreeIterator::SkipDuplicates()
 
 
 void 
-TreeIterator::Update(off_t offset, uint16 keyIndex, int8 change)
+TreeIterator::Update(off_t offset,off_t nextOffset,uint16 keyIndex,uint16 splitAt,int8 change)
 {
-	PRINT(("TreeIterator::Update() called: offset = %Ld, index = %d, change = %d!\n",offset,keyIndex,change));
 	if (offset != fCurrentNodeOffset)
 		return;
+
+	if (nextOffset != BPLUSTREE_NULL) {
+		fCurrentNodeOffset = nextOffset;
+		if (splitAt <= fCurrentKey) {
+			fCurrentKey -= splitAt;
+			keyIndex -= splitAt;
+		}
+	}
 
 	// Adjust fCurrentKey to point to the same key as before.
 	// Note, that if a key is inserted at the current position
@@ -1746,6 +1776,13 @@ TreeIterator::Update(off_t offset, uint16 keyIndex, int8 change)
 		fCurrentKey += change;
 
 	// ToDo: duplicate handling!
+}
+
+
+void 
+TreeIterator::Stop()
+{
+	fTree = NULL;
 }
 
 

@@ -212,7 +212,7 @@ class BPlusTree {
 		status_t	RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedNode *cached,uint16 keyIndex, off_t value);
 		void		RemoveKey(bplustree_node *node, uint16 index);
 
-		void		UpdateIterators(off_t offset, uint16 keyIndex, int8 change);
+		void		UpdateIterators(off_t offset,off_t nextOffset,uint16 keyIndex,uint16 splitAt,int8 change);
 		void		AddIterator(TreeIterator *iterator);
 		void		RemoveIterator(TreeIterator *iterator);
 
@@ -262,7 +262,8 @@ class TreeIterator {
 		friend Chain<TreeIterator>;
 		friend BPlusTree;
 
-		void Update(off_t offset,uint16 keyIndex,int8 change);
+		void Update(off_t offset,off_t nextOffset,uint16 keyIndex,uint16 splitAt,int8 change);
+		void Stop();
 		TreeIterator *fNext;
 };
 

@@ -702,15 +702,15 @@ Inode::RemoveAttribute(Transaction *transaction,const char *name)
 			return status;
 
 		if (attributes->IsEmpty()) {
-			// remove attribute directory (don't fail if to remove the
-			// attribute if that fails)
+			// remove attribute directory (don't fail if that can't be done)
 			if (remove_vnode(fVolume->ID(),attributes->ID()) == B_OK) {
 				// update the inode, so that no one will ever doubt it's deleted :-)
 				attributes->Node()->flags |= INODE_DELETED;
 				if (attributes->WriteBack(transaction) == B_OK) {
 					Attributes().SetTo(0,0,0);
 					WriteBack(transaction);
-				}
+				} else
+					unremove_vnode(fVolume->ID(),attributes->ID());
 			}
 		}
 	}
@@ -821,7 +821,7 @@ Inode::IsEmpty()
 	// "..", so we need to ignore those two
 
 	uint32 count = 0;
-	char name[16];
+	char name[BPLUSTREE_MAX_KEY_LENGTH];
 	uint16 length;
 	vnode_id id;
 	while (iterator.GetNextEntry(name,&length,B_FILE_NAME_LENGTH,&id) == B_OK) {
