@@ -1035,16 +1035,21 @@ BMediaRoster::InstantiateDormantNode(const dormant_node_info & in_info,
 									 uint32 flags /* currently B_FLAVOR_IS_GLOBAL or B_FLAVOR_IS_LOCAL */ )
 {
 	CALLED();
-	if ((flags & (B_FLAVOR_IS_GLOBAL | B_FLAVOR_IS_LOCAL)) == 0)
+	if ((flags & (B_FLAVOR_IS_GLOBAL | B_FLAVOR_IS_LOCAL)) == 0) {
+		printf("Error: BMediaRoster::InstantiateDormantNode called without flags\n");
 		return B_BAD_VALUE;
+	}
 	if (out_node == 0)
 		return B_BAD_VALUE;
 		
-	if (flags & B_FLAVOR_IS_LOCAL) {
+	// XXX we should not trust the values passed in by the user, 
+	// XXX and ask the server to determine where to insta
+		
+	if ((in_info.flavor_flags & B_FLAVOR_IS_GLOBAL) == 0 && (flags & B_FLAVOR_IS_LOCAL)) {
 		return InstantiateDormantNode(in_info,out_node);
 	}
 
-	if (flags & B_FLAVOR_IS_GLOBAL) {
+	if ((in_info.flavor_flags & B_FLAVOR_IS_GLOBAL) || (flags & B_FLAVOR_IS_GLOBAL)) {
 		// forward this request into the media_addon_server,
 		// which in turn will call InstantiateDormantNode()
 		// to create it there localy
@@ -1071,6 +1076,8 @@ BMediaRoster::InstantiateDormantNode(const dormant_node_info & in_info,
 		return reply.result;
 	}
 
+	printf("Error: BMediaRoster::InstantiateDormantNode in_info.flavor_flags = %#08lx, flags = %#08lx\n", in_info.flavor_flags, flags);
+
 	return B_ERROR;
 }
 
@@ -1080,6 +1087,19 @@ BMediaRoster::InstantiateDormantNode(const dormant_node_info & in_info,
 									 media_node * out_node)
 {
 	UNIMPLEMENTED();
+	in_info
+	
+	// to instantiate a dormant node in the current address space, we need to
+	// either load the add-on from file and create a new BMediaAddOn class, or
+	// reuse the cached BMediaAddOn from a previous call
+	// call BMediaAddOn::InstantiateNodeFor()
+	// and cache the BMediaAddOn after that for later reuse.
+	// BeOS R5 does not seem to delete it when the application quits
+	// if B_FLAVOR_IS_GLOBAL, we need to use the BMediaAddOn object that
+	// resides in the media_addon_server
+
+	// RegisterNode() is called automatically for nodes instantiated from add-ons
+
 	return B_ERROR;
 }
 

@@ -103,6 +103,12 @@ live_node_info::~live_node_info()
 BMediaNode::~BMediaNode()
 {
 	CALLED();
+	
+	// BeBook: UnregisterNode() unregisters a node from the Media Server. It's called automatically 
+	// BeBook: by the BMediaNode destructor, but it might be convenient to call it sometime before 
+	// BeBook: you delete your node instance, depending on your implementation and circumstances. 
+	(BMediaRoster::Roster())->UnregisterNode(this);
+	
 	if (fControlPort != -1)
 		delete_port(fControlPort);
 	if (fTimeSource)
