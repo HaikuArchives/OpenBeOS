@@ -33,6 +33,7 @@ static struct core_module_info *core = NULL;
 #define sowakeup			core->sowakeup
 #define in_pcbdetach		core->in_pcbdetach
 #define in_control          core->in_control
+#define soisconnected       core->soisconnected
 
 #define UDP_MODULE_PATH		"network/protocol/udp"
 
