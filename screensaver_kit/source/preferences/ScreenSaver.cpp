@@ -11,14 +11,22 @@
 #include <Path.h>
 #include <ScrollView.h>
 #include <FindDirectory.h>
-#include <stdio.h>
-#include "DrawMonitors.h"
+#include <Slider.h>
+#include <StringView.h>
+#include <iostream>
+#include "MouseAreaView.h"
+#include "PreviewView.h"
 
 void drawPositionalMonitor(BView *view,BRect areaToDrawIn,int state);
 BView *drawSampleMonitor(BView *view, BRect area);
   int columns[4]={15,175,195,430};
   int rows[6]={10,150,155,255,270,290};
 
+struct SSListItem
+{
+  BString fileName;
+  BString displayName;	
+};
 
 void ScreenSaver::MessageReceived(BMessage *msg)
 {
@@ -43,6 +51,12 @@ void ScreenSaver::MessageReceived(BMessage *msg)
 		be_app->PostMessage(B_QUIT_REQUESTED);
       	BWindow::MessageReceived(msg);
       	break;
+    case SAVER_SEL:
+   		updateStatus();
+		SelectedAddonFileName = reinterpret_cast<SSListItem*>(AddonList->ItemAt(ListView1->CurrentSelection()))->fileName;
+		previewDisplay->LoadNewAddon(SelectedAddonFileName.String());
+    	BWindow::MessageReceived(msg);
+    	break;
     default:
       	BWindow::MessageReceived(msg);
       	break;
@@ -185,8 +199,15 @@ void ScreenSaver::SetupForm(void)
 	setupTab1();
 	pwWin=new pwWindow;
 	pwMessenger=new BMessenger (NULL,pwWin);
-	pwWin->Show();
-	pwWin->Hide();
+	
+	//chng 5/31/02 adg
+	// replace this:
+	//pwWin->Show();
+	//pwWin->Hide();
+	// with this:
+	pwWin->Run();
+	//end chng
+	
 	// Time to load the settings into a message and implement them...
   	BPath path;
   	find_directory(B_USER_SETTINGS_DIRECTORY,&path);
@@ -226,36 +247,70 @@ void commonLookAndFeel(BView *widget,bool isSlider,bool isControl)
 		}
 	}
 
-void addScreenSavers (directory_which dir, BListView *list)
+//*******
+void addScreenSaversToList (directory_which dir, BList *list)
 {
   BPath path;
   find_directory(dir,&path);
   path.Append("Screen Savers",true);
-  BDirectory ssDir(path.Path());
+  
+  const char* pathName = path.Path();
+  
+  BDirectory ssDir(pathName);
   BEntry thisSS;
   char thisName[B_FILE_NAME_LENGTH];
 
   while (B_OK==ssDir.GetNextEntry(&thisSS,true))
   	{
 	thisSS.GetName(thisName);
-  	list->AddItem(new BStringItem(thisName)); 
+	SSListItem* tempListItem = new SSListItem;
+	tempListItem->fileName = pathName;
+	tempListItem->fileName += "/";
+	tempListItem->fileName += thisName;
+	tempListItem->displayName = thisName;
+	
+  	list->AddItem(tempListItem); 
   	}
+}
+
+// sorting function for SSListItems
+int compareSSListItems(const void* left, const void* right)
+{
+  SSListItem* leftItem  = *(SSListItem **)left;
+  SSListItem* rightItem = *(SSListItem **)right;
+  
+  return leftItem->displayName.Compare(rightItem->displayName);
+}
+
+void displayScreenSaversList(BList* list, BListView* view)
+{
+  list->SortItems(compareSSListItems);
+  
+  int numItems = list->CountItems();
+  for( int i = 0; i < numItems; ++i )
+  {
+    SSListItem* item = (SSListItem*)(list->ItemAt(i));
+    view->AddItem( new BStringItem(item->displayName.String()) );
+  }
 }
 
 void ScreenSaver::setupTab1(void)
 {
   {rgb_color clr = {216,216,216,255}; tab1->SetViewColor(clr);}
-  tab1->AddChild( Box1 = new BBox(BRect(columns[2],rows[0],columns[3],rows[5]),"Box1"));
-  commonLookAndFeel(Box1,false,false);
-  Box1->SetLabel("Module settings");
-  Box1->SetBorder(B_FANCY_BORDER);
+  tab1->AddChild( ModuleSettingsBox = new BBox(BRect(columns[2],rows[0],columns[3],rows[5]),"ModuleSettingsBox"));
+  commonLookAndFeel(ModuleSettingsBox,false,false);
+  ModuleSettingsBox->SetLabel("Module settings");
+  ModuleSettingsBox->SetBorder(B_FANCY_BORDER);
 
   ListView1 = new BListView(BRect(columns[0],rows[2],columns[1],rows[3]),"ListView1",B_SINGLE_SELECTION_LIST);
   tab1->AddChild(new BScrollView("scroll_list",ListView1,B_FOLLOW_NONE,0,false,true));
-  commonLookAndFeel(Box1,false,false);
+  commonLookAndFeel(ModuleSettingsBox,false,false);
   {rgb_color clr = {255,255,255,0}; ListView1->SetViewColor(clr);}
   ListView1->SetListType(B_SINGLE_SELECTION_LIST);
 
+  // selection message for screensaver list
+  ListView1->SetSelectionMessage( new BMessage( SAVER_SEL ) );
+  
   tab1->AddChild( TestButton = new BButton(BRect(columns[0],rows[4],94,rows[5]),"TestButton","Test", new BMessage (TAB1_CHG)));
   commonLookAndFeel(TestButton,false,true);
   TestButton->SetLabel("Test");
@@ -264,13 +319,20 @@ void ScreenSaver::setupTab1(void)
   commonLookAndFeel(AddButton,false,true);
   AddButton->SetLabel("Add...");
 
-  tab1->AddChild(new previewView(BRect(columns[0],rows[0],columns[1],rows[1]),"preview"));
+  tab1->AddChild(previewDisplay = new PreviewView(BRect(columns[0],rows[0],columns[1],rows[1]),"preview"));
   // -----------------------------------------------------------------------------------------
   // Populate the listview with the screensavers that exist.
+
+  previewDisplay->SetSettingsBoxPtr( ModuleSettingsBox );
+
+  AddonList = new BList;
   
-  addScreenSavers(B_BEOS_ADDONS_DIRECTORY,ListView1);
-  addScreenSavers(B_USER_ADDONS_DIRECTORY,ListView1);
-} 
+  addScreenSaversToList( B_BEOS_ADDONS_DIRECTORY, AddonList );
+  addScreenSaversToList( B_USER_ADDONS_DIRECTORY, AddonList );
+  
+  displayScreenSaversList( AddonList, ListView1 );
+} //end setupTab1()
+
 
 void ScreenSaver::setupTab2(void)
 {
@@ -328,8 +390,8 @@ void ScreenSaver::setupTab2(void)
 
 	// Bottom
 
-  EnableScreenSaverBox->AddChild(fadeNow=new mouseAreaView(BRect(20,205,80,260),"fadeNow"));
-  EnableScreenSaverBox->AddChild(fadeNever=new mouseAreaView(BRect(220,205,280,260),"fadeNever"));
+  EnableScreenSaverBox->AddChild(fadeNow=new MouseAreaView(BRect(20,205,80,260),"fadeNow"));
+  EnableScreenSaverBox->AddChild(fadeNever=new MouseAreaView(BRect(220,205,280,260),"fadeNever"));
 
   EnableScreenSaverBox->AddChild( FadeNowString = new BStringView(BRect(85,210,188,222),"FadeNowString","Fade now when"));
   commonLookAndFeel(FadeNowString,false,false);

@@ -1,22 +1,18 @@
 #ifndef _ScreenSaver_H
 #define _ScreenSaver_H
-#include <View.h>
-#include <Window.h>
-#include <Slider.h>
-#include <Button.h>
-#include <CheckBox.h>
-#include <StringView.h>
 #include <Picture.h>
 #include "Constants.h"
 #include "pwWindow.h"
 
-class mouseAreaView;
+class MouseAreaView;
+class PreviewView;
 
 class ScreenSaver: public BWindow {
 public:
   ScreenSaver(void) : BWindow(BRect(50,50,500,385),"OBOS Screen Saver Preferences",B_TITLED_WINDOW,B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE | B_NOT_RESIZABLE)
   {
 	pwWin=NULL;
+	sampleView=NULL;
 	SetupForm();
   }
   virtual void MessageReceived(BMessage *message);
@@ -33,10 +29,17 @@ private:
 
   int fadeState,noFadeState;
   BView *sampleView;
+  
   BView *tab1,*tab2;
   BTabView *tabView;
-  BBox *Box1;
+  BBox *ModuleSettingsBox;
+
+  PreviewView *previewDisplay;
   BListView *ListView1;
+  BList *AddonList;
+  BString SelectedAddonFileName;
+  image_id currentAddon;
+  
   BButton *TestButton;
   BButton *AddButton;
   BBox *EnableScreenSaverBox;
@@ -56,9 +59,10 @@ private:
   BStringView *DontFadeString;
   BStringView *DontFadeString2;
   BPicture samplePicture;
-  mouseAreaView *fadeNow,*fadeNever;
+  MouseAreaView *fadeNow,*fadeNever;
   pwWindow *pwWin;
   BMessenger *pwMessenger;
+  
 };
 
 #endif // _ScreenSaver_H

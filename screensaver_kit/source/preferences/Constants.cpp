@@ -22,23 +22,23 @@ static const int timeInSeconds[]={ 	30,    60,   90,
 
 int secondsToSlider(int);
 
-const int TAB1_CHG       ='TAB1';
-const int TAB2_CHG       ='TAB2';
-const int PWBUTTON       ='PWBT';
-const int DONE_CLICKED   ='DONE';
-const int CANCEL_CLICKED ='CNCL';
-const int BUTTON_CHANGED ='BTNC';
-const int SHOW           ='SHOW';
-const int POPULATE       ='POPU';
-const int UTILIZE        ='UTIL';
-const int SAVER_SEL      ='SSEL';
+const int TAB1_CHG='TAB1';
+const int TAB2_CHG='TAB2';
+const int PWBUTTON='PWBT';
+const int DONE_CLICKED='DONE';
+const int CANCEL_CLICKED='CNCL';
+const int BUTTON_CHANGED='BTNC';
+const int SHOW='SHOW';
+const int POPULATE='POPU';
+const int UTILIZE='UTIL';
+const int SAVER_SEL='SSEL';
 
-const rgb_color black      = {0,0,0,0};
-const rgb_color darkGrey   = {150,150,150,0};
-const rgb_color grey       = {200,200,200,0};
-const rgb_color lightBlue  = {200,200,255,0};
-const rgb_color lightGreen = {255,200,200,0};
-const rgb_color red        = {255,100,100,0};
+rgb_color black = {0,0,0,0};
+rgb_color darkGrey = {150,150,150,0};
+rgb_color grey = {200,200,200,0};
+rgb_color lightBlue = {200,200,255,0};
+rgb_color lightGreen = {255,200,200,0};
+rgb_color red = {255,100,100,0};
 
 
 #endif

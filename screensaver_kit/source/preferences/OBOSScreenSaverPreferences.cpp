@@ -1,5 +1,4 @@
 #include <Application.h>
-#include <stdio.h>
 
 #include "OBOSScreenSaverPreferences.h"
 #include "ScreenSaver.h"
