@@ -169,8 +169,8 @@ enum {
 	n = (struct mbuf*) pool_get(mbpool); \
 	if (n) { \
 		(n)->m_type = (type); \
-		(n)->m_next = (struct mbuf*)NULL; \
-		(n)->m_nextpkt = (struct mbuf*)NULL; \
+		(n)->m_next = NULL; \
+		(n)->m_nextpkt = NULL; \
 		(n)->m_data = (n)->m_dat; \
 		(n)->m_flags = 0; \
 		(n)->m_cksum = 0; \
@@ -180,8 +180,8 @@ enum {
 	n = (struct mbuf*) pool_get(mbpool); \
 	if (n) { \
 		(n)->m_type = (type); \
-		(n)->m_next = (struct mbuf*)NULL; \
-		(n)->m_nextpkt = (struct mbuf*)NULL; \
+		(n)->m_next = NULL; \
+		(n)->m_nextpkt = NULL; \
 		(n)->m_data = (n)->m_pktdat; \
 		(n)->m_flags = M_PKTHDR; \
 		(n)->m_cksum = 0; \
