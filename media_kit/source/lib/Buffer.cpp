@@ -165,21 +165,21 @@ BBuffer::Size()
 
 /* explicit */
 BBuffer::BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info) : 
-	fGroupReclaimSem(group_reclaim_sem),
+	fGroupReclaimSem(0),
 	fBufferList(0), // must be 0 if not correct initialized
 	fData(0) // must be 0 if not correct initialized
 {
 	CALLED();
 	
 	// special case for BSmallBuffer
-	if (group_reclaim_sem <= 0)
+	if (group_reclaim_sem == -1)
 		return;
 
 	area_id id;
 
 	// first ask media_server to get the area_id of the shared buffer list
-	id = 0; // XXX call media server
 
+	id = 0; // XXX call media server
 
 	fBufferList = _shared_buffer_list::Clone(id);
 	if (fBufferList == NULL)
@@ -193,14 +193,15 @@ BBuffer::BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info) :
 	create.AddInt32("size",info.size);
 	create.AddInt32("flags",info.flags);
 	create.AddInt32("buffer",info.buffer);
+	create.AddInt32("group",group_reclaim_sem); // it is possible that this one is 0 (but "buffer" is then != 0)
 
 	// ask media_server to register this buffer, 
 	// either identified by "buffer" or by area information.
 	// media_server either has a copy of the area identified
 	// by "buffer", or creates a new area.
-	// the information and the area is cashed by the media_server
+	// the information and the area is cached by the media_server
 	// until the last buffer has been unregistered
-	// the area_id of the cashed area is passed back to us, and we clone it.
+	// the area_id of the cached area is passed back to us, and we clone it.
 
 	// XXX call media server
 
@@ -211,6 +212,7 @@ BBuffer::BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info) :
 	fFlags = response.FindInt32("flags");
 	fOffset = response.FindInt32("offset");
 	id = response.FindInt32("area");
+	fGroupReclaimSem = response.FindInt32("group");
 
 	fArea = clone_area("a cloned BBuffer", &fData, B_ANY_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
 	if (fArea <= B_OK) {
@@ -240,7 +242,7 @@ BBuffer::~BBuffer()
 
 		// ask media_server to unregister the buffer
 		// when the last clone of this buffer is gone,
-		// media_server will also remove it's cashed area
+		// media_server will also remove it's cached area
 
 		// XXX call media server
 		

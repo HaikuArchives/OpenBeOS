@@ -64,6 +64,7 @@ public:
 
 private:
 
+		friend struct			_buffer_id_cache;
 		friend struct			_shared_buffer_list;
 		friend class 			BMediaRoster;
 		friend class 			BBufferProducer;
