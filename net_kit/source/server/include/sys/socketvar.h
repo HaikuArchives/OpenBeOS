@@ -5,7 +5,7 @@
 #define SYS_SOCKETVAR_H
 
 #include <kernel/OS.h>
-#include "mbuf.h"
+#include "sys/mbuf.h"
 #include "sys/net_uio.h"
 #include "sys/socket.h"
 

@@ -49,7 +49,12 @@ inet_ntoa(in)
 
 	p = (char *)&in;
 #define	UC(b)	(((int)b)&0xff)
-	(void)snprintf(b, sizeof(b),
-	    "%d.%d.%d.%d", UC(p[0]), UC(p[1]), UC(p[2]), UC(p[3]));
+	#ifdef _MWERKS_STDIO_H_
+		(void)sprintf(b,
+	    	"%d.%d.%d.%d", UC(p[0]), UC(p[1]), UC(p[2]), UC(p[3]));
+	#else
+		(void)snprintf(b, sizeof(b),
+	    	"%d.%d.%d.%d", UC(p[0]), UC(p[1]), UC(p[2]), UC(p[3]));
+	#endif
 	return (b);
 }

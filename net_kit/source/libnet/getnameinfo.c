@@ -141,7 +141,11 @@ getnameinfo(sa, salen, host, hostlen, serv, servlen, flags)
 				return EAI_MEMORY;
 			strcpy(serv, sp->s_name);
 		} else {
-			snprintf(numserv, sizeof(numserv), "%d", ntohs(port));
+			#ifdef _MWERKS_STDIO_H_
+				sprintf(numserv, "%d", ntohs(port));
+			#else
+				snprintf(numserv, sizeof(numserv), "%d", ntohs(port));
+			#endif
 			if (strlen(numserv) + 1 > servlen)
 				return EAI_MEMORY;
 			strcpy(serv, numserv);

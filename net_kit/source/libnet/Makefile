@@ -1,6 +1,11 @@
 TARGET=libnet.so
-CFLAGS=-fPIC -DPIC -g -Wall -DDEBUG
-LDFLAGS=-nostart -nostdlib -lroot -Wl,-soname=libnet.so
+ifeq ($(BE_CPLUS_COMPILER),mwcc)
+	CFLAGS=-g -w all -DDEBUG
+	LDFLAGS=-xms -nostdlib -f libnet.exp -L$(BELIBRARIES) -lroot -lglue-noinit.a -linit_term_dyn.o
+else
+	CFLAGS=-fPIC -DPIC -g -Wall -DDEBUG
+	LDFLAGS=-nostart -nostdlib -lroot -Wl,-soname=libnet.so
+endif
 INCLUDES=-I../server/include -I../driver
 
 ETC_FILES=	protocols \

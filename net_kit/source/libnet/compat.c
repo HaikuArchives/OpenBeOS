@@ -53,7 +53,7 @@ _EXPORT int herror()
 
 _EXPORT int *_h_errnop()
 {
-	return tls_address(h_errno_tls);
+	return (int *)tls_address(h_errno_tls);
 }
 
 

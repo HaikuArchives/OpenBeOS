@@ -194,6 +194,10 @@ struct res_target {
 	int n;			/* result length */
 };
 
+#ifdef __MWERKS__
+	#define __P(a) a
+#endif
+
 static int str_isnumber __P((const char *));
 static int explore_fqdn __P((const struct addrinfo *, const char *,
 	const char *, struct addrinfo **));
@@ -1270,8 +1274,9 @@ _dns_getaddrinfo(name, pai)
 	return sentinel.ai_next;
 }
 
-static FILE *hostf;
-
+/* static FILE *hostf;
+	I'm assuming this is the same hostf as above. -Nathan */
+	
 static void
 _sethtent()
 {
@@ -1813,7 +1818,11 @@ res_querydomainN(name, domain, target)
 			h_errno = NO_RECOVERY;
 			return (-1);
 		}
-		snprintf(nbuf, sizeof(nbuf), "%s.%s", name, domain);
+		#ifdef _MWERKS_STDIO_H_
+			sprintf(nbuf, "%s.%s", name, domain);
+		#else
+			snprintf(nbuf, sizeof(nbuf), "%s.%s", name, domain);
+		#endif
 	}
 	return (res_queryN(longname, target));
 }

@@ -92,6 +92,11 @@
  *   property.
  */
 
+
+#ifdef __MWERKS__
+	#define __P(a) a
+#endif
+
 static void res_setoptions __P((char *, char *));
 
 #ifdef RESOLVSORT

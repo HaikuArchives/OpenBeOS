@@ -99,6 +99,10 @@ static int af = 0;		/* address family of socket */
 
 #define CAN_RECONNECT 1
 
+#ifdef __MWERKS__
+	#define __P(a) a
+#endif
+
 #ifndef DEBUG
 #   define Dprint(cond, args) /*empty*/
 #   define DprintQ(cond, args, query, size) /*empty*/

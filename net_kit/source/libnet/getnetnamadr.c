@@ -267,6 +267,7 @@ getnetbyaddr(net, net_type)
 			for (nn = 4, net2 = net; net2; net2 >>= 8)
 				netbr[--nn] = net2 & 0xff;
 			switch (nn) {
+		  #ifndef _MWERKS_STDIO_H_
 			case 3: 	/* Class A */
 				snprintf(qbuf, sizeof(qbuf),
 				    "0.0.0.%u.in-addr.arpa", netbr[3]);
@@ -286,6 +287,27 @@ getnetbyaddr(net, net_type)
 				    "%u.%u.%u.%u.in-addr.arpa",
 				    netbr[3], netbr[2], netbr[1], netbr[0]);
 				break;
+		  #else
+			case 3: 	/* Class A */
+				sprintf(qbuf,
+				    "0.0.0.%u.in-addr.arpa", netbr[3]);
+				break;
+			case 2: 	/* Class B */
+				sprintf(qbuf,
+				    "0.0.%u.%u.in-addr.arpa",
+		    		    netbr[3], netbr[2]);
+				break;
+			case 1: 	/* Class C */
+				sprintf(qbuf,
+				    "0.%u.%u.%u.in-addr.arpa",
+		    		    netbr[3], netbr[2], netbr[1]);
+				break;
+			case 0: 	/* Class D - E */
+				sprintf(qbuf,
+				    "%u.%u.%u.%u.in-addr.arpa",
+				    netbr[3], netbr[2], netbr[1], netbr[0]);
+				break;
+		  #endif
 			}
 			anslen = res_query(qbuf, C_IN, T_PTR, (u_char *)&buf,
 			    sizeof(buf));
