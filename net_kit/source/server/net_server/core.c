@@ -37,7 +37,11 @@
 #include "sys/domain.h"
 #include "sys/protosw.h"
 
-loaded_net_module *global_modules;
+#ifdef USE_DEBUG_MALLOC
+#define malloc dbg_malloc
+#define free dbg_free
+#endif
+
 static int nmods = 0;
 int prot_table[255];
 
@@ -70,8 +74,12 @@ static int32 if_thread(void *data)
 
 dprintf("if_thread: read %d bytes of data!\n", status);
 
-		if (i->input)
+		if (i->input) {
+			dprintf("calling input\n");
 			i->input(mb);
+			dprintf("input has returned\n");
+		}
+		
 		atomic_add(&i->if_ipackets, 1);
 		count++;
 		len = i->if_mtu;
@@ -151,11 +159,12 @@ static int32 tx_thread(void *data)
 	
 ifq *start_ifq(void)
 {
-	ifq *nifq;
+	ifq *nifq = NULL;
+	
 #if SHOW_MALLOC_USAGE
-	dprintf("core.c: start_ifq: malloc(%ld)\n", sizeof(ifq));
+	dprintf("core.c: start_ifq: malloc(%ld)\n", sizeof(*nifq));
 #endif
-	nifq = malloc(sizeof(ifq));
+	nifq = (ifq*)malloc(sizeof(*nifq));
 
 	nifq->lock = create_sem(1, "ifq_lock");
 	nifq->pop = create_sem(0, "ifq_pop");
@@ -179,10 +188,10 @@ void net_server_add_device(ifnet *ifn)
 		return;
 
 	sprintf(dname, "%s%d", ifn->name, ifn->unit);
-dprintf("net_server_add_device: %s\n", dname);
 	ifn->if_name = strdup(dname);
-dprintf("ifn->if_name = %s\n", ifn->if_name);
 dprintf("devices = %p\n", devices);
+dprintf("pdevices = %p\n", pdevices);
+dprintf("ifn = %p\n", ifn);
 
 	if (ifn->devid < 0) {
 		/* pseudo device... */
@@ -191,15 +200,16 @@ dprintf("devices = %p\n", devices);
 		else
 			ifn->next = NULL;
 		pdevices = ifn;
+printf("added pdevice: pdevices = %p\n", pdevices);
 	} else {
 		if (devices)
 			ifn->next = devices;
 		else
 			ifn->next = NULL;
+dprintf("ifn->next = %p\n", ifn->next);
 		ifn->id = ndevs++;
 		devices = ifn;
 	}
-dprintf("device was id %d\n", ndevs - 1);
 }
 
 /* For all the devices we need to, here we start the threads
@@ -338,24 +348,19 @@ static void list_devices(void)
 static void start_devices(void) 
 {
 	ifnet *d = NULL;
-	ifnet *old = NULL;
-	int i;
 
-	merge_devices();
+//	merge_devices();
 
 	if (devices == NULL)
 		return;
 
 	d = devices;
 	while (d) {
-		if (d->start(d) != 0) {
-			/* if we had a problem, remove the device... */
-			if (old)
-				old->next = d->next;
-		} else 
-			old = d;
+		dprintf("device (%s) = %p\n", d->if_name, d);
+		d->start(d);
 		d = d->next;
 	}
+	dprintf("Done starting devices!\n");
 }
 
 static void close_devices(void)
@@ -575,21 +580,6 @@ static void find_interface_modules(void)
 	close_module_list(ml);
 }
 
-static void list_modules(void)
-{
-	int i;
-
-	dprintf("Network modules List\n"
-		"====================\n");
-
-	for (i=0;i<nmods;i++) {
-		dprintf("%d: %s provided by %s\n", i,
-			global_modules[i].mod->name,
-			global_modules[i].path);
-	}
-}
-
-
 struct protosw *pffindtype(int domain, int type)
 {
 	struct domain *d;
@@ -657,23 +647,17 @@ int start_stack(void)
 	sockets_init();
 	inpcb_init();
 	route_init();
-
-#if SHOW_MALLOC_USAGE
-	dprintf("core.c: start_ifq: malloc(%ld)\n", 
-		sizeof(loaded_net_module) * 255);
-#endif
-
-	global_modules = malloc(sizeof(loaded_net_module) * 255);
+	if_init();
+	
 	dev_lock = create_sem(1, "device_lock");
 	set_sem_owner(dev_lock, B_SYSTEM_TEAM);
 
 	find_interface_modules();
+dprintf("finished finding interface modules...\n");
 	start_devices();
 
 	list_devices();
 	start_device_threads();
-
-	list_modules();
 
 	return 0;
 }
@@ -751,6 +735,7 @@ static struct core_module_info core_info = {
 	
 	ifa_ifwithdstaddr,
 	ifa_ifwithnet,
+	if_attach,
 	
 	get_primary_addr
 };
