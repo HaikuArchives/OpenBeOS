@@ -286,6 +286,55 @@ BMimeType::GetPreferredApp(char *signature, app_verb verb) const
 }
 
 // GetAttrInfo
+/*! \brief Fetches from the MIME database a BMessage describing the attributes
+	typically associated with files of the given MIME type
+	
+	The attribute information is returned in a pre-allocated BMessage pointed to by
+	the \c info parameter (note that the any prior contents of the message
+	will be destroyed). If the method succeeds, the format of the BMessage
+	pointed to by \c info will be the following:
+	
+	<table>
+		<tr>
+			<td><b>field name</b></td>
+			<td><b>type</b></td>
+			<td><b>element[0..n]</b></td>
+		</tr>
+		<tr>
+			<td> "attr:name"</td>
+			<td> \c B_STRING_TYPE </td>
+			<td> The name of each attribute </td>
+		</tr>
+		<tr>
+			<td> "attr:public_name"</td>
+			<td> \c B_STRING_TYPE </td>
+			<td> The human-readable name of each attribute </td>
+		</tr>
+		<tr>
+			<td> "attr:type"</td>
+			<td> \c B_INT32_TYPE </td>
+			<td> The type code for each attribute </td>
+		</tr>
+		<tr>
+			<td> "attr:viewable"</td>
+			<td> \c B_BOOL_TYPE </td>
+			<td> For each attribute: \c true if the attribute is public, \c false if it's private </td>
+		</tr>
+		<tr>
+			<td> "attr:editable"</td>
+			<td> \c B_BOOL_TYPE </td>
+			<td> For each attribute: \c true if the attribute should be user editable, \c false if not </td>
+		</tr>
+	</table>
+	
+	The \c BMessage::what value is set to decimal \c 233, but is otherwise meaningless.
+	
+	\param info Pointer to a pre-allocated BMessage into which information about
+	            the MIME type's associated file attributes is stored.
+	\return
+	- \c B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::GetAttrInfo(BMessage *info) const
 {
@@ -421,6 +470,54 @@ BMimeType::SetPreferredApp(const char *signature, app_verb verb)
 }
 
 // SetAttrInfo
+/*! \brief Sets the description of the attributes typically associated with files
+	of the given MIME type
+	
+	The attribute information is technically arbitrary, but the expected
+	format of the BMessage pointed to by the \c info parameter is as follows:
+	
+	<table>
+		<tr>
+			<td><b>field name</b></td>
+			<td><b>type</b></td>
+			<td><b>element[0..n]</b></td>
+		</tr>
+		<tr>
+			<td> "attr:name"</td>
+			<td> \c B_STRING_TYPE </td>
+			<td> The name of each attribute </td>
+		</tr>
+		<tr>
+			<td> "attr:public_name"</td>
+			<td> \c B_STRING_TYPE </td>
+			<td> The human-readable name of each attribute </td>
+		</tr>
+		<tr>
+			<td> "attr:type"</td>
+			<td> \c B_INT32_TYPE </td>
+			<td> The type code for each attribute </td>
+		</tr>
+		<tr>
+			<td> "attr:viewable"</td>
+			<td> \c B_BOOL_TYPE </td>
+			<td> For each attribute: \c true if the attribute is public, \c false if it's private </td>
+		</tr>
+		<tr>
+			<td> "attr:editable"</td>
+			<td> \c B_BOOL_TYPE </td>
+			<td> For each attribute: \c true if the attribute should be user editable, \c false if not </td>
+		</tr>
+	</table>
+	
+	The \c BMessage::what value is ignored.
+	
+	\param info Pointer to a pre-allocated and properly formatted BMessage containing 
+	            information about the file attributes typically associated with the
+	            MIME type.
+	\return
+	- \c B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::SetAttrInfo(const BMessage *info)
 {
