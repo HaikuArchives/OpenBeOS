@@ -7,38 +7,65 @@
 
 #include "kernel_interface.h"
 
+#include <fcntl.h>
+
 #include <stdio.h>
-	// fopen, fclose
+	// open, close
+	
+#include <errno.h>
+	// errno
 
+#include "SKError.h"
+	// SKError
 
-fd storage_kit::open(const char *path, storage_kit::open_mode mode) {
-	char posix_mode[4]		// Posix modes are at most 3 characters long
-
-	// Choose the proper posix mode
-	switch (mode) {
-		case READ:
-			mode = "rb";	// Binary open read mode
+// Used to throw the appropriate error as noted by errno
+void throw_error()
+{
+	switch (errno)
+	{
+		case ENAMETOOLONG:
+			throw new SKError(errno, "Specified pathname is too long");
 			break;
-		case WRITE:
-			mode = "wb";	// Binary open write mode
+			
+		default:
+			throw new SKError(errno);
 			break;
-		case READ_WRITE:
-			mode = "rb+"	// Binary open read/write mode
-			break;	
 	}
-
-	// Open the file
-	FILE *file = fopen(path, posix_mode);
-
-	// Check for validity
-	if (file == NULL)
-		{}	//	An error occurred. How do we want to handle these?
-	else
-		return file;
-		
 }
 
 
-storage_kit::close(storage_kit::fd file) {
-	return ( fclose(file) == 0 ) ? B_OK : B_ERROR;
+storage_kit::fd storage_kit::open(const char *path, storage_kit::open_mode mode) {
+	// Choose the proper posix flags
+	int posix_flags;
+	switch (mode) { 
+		case READ: 
+			posix_flags = O_RDONLY;	// Read only
+			break; 
+		case WRITE: 
+			posix_flags = O_WRONLY;	// Write only 
+			break; 
+		case READ_WRITE: 
+			posix_flags = O_RDWR;	// Read/Write
+			break;       
+	}
+	
+	// Add in O_CREAT so the file will be created if necessary
+	posix_flags &= O_CREAT;
+	
+	// Choose rwxrwxrwx as default persmissions
+	mode_t posix_mode = S_IRWXU | S_IRWXG | S_IRWXO;
+	
+	// Open the file
+	fd result = ::open(path, posix_flags, posix_mode);
+	
+	// Check for errors
+	if (result == -1)
+		throw_error();
+	
+	return result;
+}
+
+
+int storage_kit::close(storage_kit::fd file) {
+	return close(file);
 }

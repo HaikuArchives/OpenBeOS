@@ -6,7 +6,7 @@
 #ifndef _sk_kernel_interface_h_
 #define _sk_kernel_interface_h_
 
-#include <SupportKit.h>	
+//#include <SupportKit.h>	
 
 namespace storage_kit {
 
@@ -46,7 +46,7 @@ typedef int fd;
 
 
 fd open(const char *path, open_mode mode);
-status_t close(fd file);
+int close(fd file);
 
 
 }
