@@ -15,7 +15,6 @@
 #include <MediaDefs.h>
 
 struct _shared_buffer_list;
-class _buffer_id_cache;
 
 class BBufferGroup
 {
@@ -57,40 +56,25 @@ explicit	BBufferGroup();
 		status_t ReclaimAllBuffers();
 
 private:
-
-static	status_t _entry_reclaim(void *);
-
-		friend class _BMediaRosterP;
-		friend class BMediaRoster;
-		friend class BBufferProducer;
-		friend class BBufferConsumer;	//	for SetOwnerPort()
-
-		BBufferGroup(const BBufferGroup &);	/* not implemented */
-		BBufferGroup& operator=(const BBufferGroup&); /* not implemented */
-
-		status_t 				IBufferGroup();
-		status_t 				AddToList(BBuffer *buffer);
+		/* in BeOS R5 this is a deprecated api, from BeOS R4 times */
 		status_t 				AddBuffersTo(BMessage * message, const char * name, bool needLock=true);
-		status_t 				_RequestBuffer(	size_t size, media_buffer_id wantID,
-												BBuffer **buffer, bigtime_t timeout);
+		
+		status_t				InitBufferGroup(); 		/* used internally */
+		BBufferGroup(const BBufferGroup &);				/* not implemented */
+		BBufferGroup& operator=(const BBufferGroup&);	/* not implemented */
 
-		void					SetOwnerPort(
-									port_id owner);
+		friend struct 			_shared_buffer_list;
 
-		bool					CanReclaim();
-		void 					WillReclaim();
+		status_t 				fInitError;
+		status_t 				fRequestError;
+		int32					fBufferCount;
+		_shared_buffer_list *	fBufferList;
+		
+		// this is a BBufferGroup specific semaphore used for reclaiming BBuffers of this group
+		// is also is a system wide unique identifier of this group
+		sem_id					fReclaimSem;
 
-		status_t				Lock();
-		status_t				Unlock();
-
-		status_t 				_m_init_error;
-		uint32 					_mFlags;
-		int32					_mBufferCount;
-		area_id 				_mBufferListArea;
-		_shared_buffer_list *	_mBufferList;
-		_buffer_id_cache * 		_mBufferCache;
-		status_t				_m_local_err;
-		uint32 					_reserved_buffer_group_[7];
+		uint32 					_reserved_buffer_group_[9];
 };
 
 #endif /* _BUFFER_GROUP_H */
