@@ -235,7 +235,7 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	struct mbuf *opts = NULL;
 	struct inpcb *inp = NULL;
 
-printf("udp_input: hdrlen = %d\n", hdrlen);
+//printf("udp_input: hdrlen = %d\n", hdrlen);
 
 #if SHOW_DEBUG
         dump_udp(buf);
@@ -249,7 +249,6 @@ printf("udp_input: hdrlen = %d\n", hdrlen);
 		m_adj(buf, len + hdrlen - ip->length);
 	}
 	saved_ip = *ip;
-printf("udp->length = %d\n", len);
 
 	p->length = udp->length;
 	p->zero = 0; /* just to make sure */
@@ -259,7 +258,6 @@ printf("udp->length = %d\n", len);
 	/* XXX - if we have options we need to be careful when calculating the
 	 * checksum here...
 	 */
-printf("udp: checking cksum\n");
 	if ((ck = in_cksum(buf, len + sizeof(*ip), 0)) != 0) {
 		printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
 		goto bad;
@@ -272,10 +270,6 @@ printf("udp: checking cksum\n");
 		inp->faddr.s_addr != ip->src.s_addr ||
 		inp->laddr.s_addr != ip->dst.s_addr) {
 
-printf("doing in_pcblookup for %08lx:%d %08lx:%d\n",
-		ntohl(ip->src.s_addr), ntohs(udp->src_port),
-		ntohl(ip->dst.s_addr), ntohs(udp->dst_port));
-		
 		inp = in_pcblookup(&udb, ip->src, udp->src_port,
 				   ip->dst, udp->dst_port, INPLOOKUP_WILDCARD);
 		if (inp)
@@ -289,7 +283,7 @@ printf("doing in_pcblookup for %08lx:%d %08lx:%d\n",
 		}
 		*ip = saved_ip;
 		ip->length += hdrlen;
-		printf("UDP: we'd send an ICMP reply...\n");
+		//printf("UDP: we'd send an ICMP reply...\n");
 		/* XXX - send ICMP reply... */
 		return 0;
 	}
@@ -307,17 +301,15 @@ printf("doing in_pcblookup for %08lx:%d %08lx:%d\n",
 	buf->m_pkthdr.len -= hdrlen;
 	buf->m_data += hdrlen;
 
-printf("calling sbappendaddr (%p)\n", sbappendaddr);
 	if (sbappendaddr(&inp->inp_socket->so_rcv, (struct sockaddr*)&udp_in,
 			buf, opts) == 0) {
 		goto bad;
 	}
-printf("waking up socket!\n");
+
 	sorwakeup(inp->inp_socket);
 	return 0;
 
 bad:
-printf("udp_input: bad: freeing %p\n", buf);
 	if (opts)
 		m_freem(opts);
 	m_freem(buf);
@@ -352,8 +344,9 @@ static struct protosw my_proto = {
 	
 	&udp_init,
 	&udp_input,
-	NULL,
+	NULL,                  /* pr_output */
 	&udp_userreq,
+	NULL,                  /* pr_sysctl */
 	
 	NULL,
 	NULL

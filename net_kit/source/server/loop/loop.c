@@ -16,6 +16,7 @@
 #include "net_malloc.h"
 
 #ifdef _KERNEL_MODE
+#include <KernelExport.h>
 #include <module.h>
 #include "net_server/core_module.h"
 #include "net_device.h"
@@ -45,6 +46,7 @@ int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 	ip->src.s_addr = INADDR_LOOPBACK;
 
 	IFQ_ENQUEUE(ifp->rxq, m);
+	return 0;
 }
 
 int loop_input(struct mbuf *buf)

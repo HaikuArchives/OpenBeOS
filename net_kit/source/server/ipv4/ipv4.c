@@ -240,7 +240,8 @@ struct protosw my_proto = {
 	&ipv4_init,
 	&ipv4_input,
 	&ipv4_output,
-	NULL,
+	NULL,             /* pr_userreq */
+	NULL,             /* pr_sysctl */
 	
 	NULL,
 	NULL
