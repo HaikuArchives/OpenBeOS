@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <fs_attr.h> // for struct attr_info
 
-BNode::BNode() : fFd(-1), fAttrFd(-1), fAttrDir(NULL), fCStatus(B_NO_INIT) {
+BNode::BNode() : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fAttrDir(NULL), fCStatus(B_NO_INIT) {
 }
 
 BNode::BNode(const entry_ref *ref) {
@@ -18,7 +18,7 @@ BNode::BNode(const entry_ref *ref) {
 BNode::BNode(const BEntry *entry) {
 }
 
-BNode::BNode(const char *path) : fFd(-1), fAttrFd(-1), fAttrDir(NULL), fCStatus(B_NO_INIT)  {
+BNode::BNode(const char *path) : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fAttrDir(NULL), fCStatus(B_NO_INIT)  {
 	SetTo(path);
 }
 
@@ -186,7 +186,7 @@ BNode::GetNextAttrName(char *buffer) {
 	if (InitAttrDir() != B_OK)
 		return B_ENTRY_NOT_FOUND;
 		
-	StorageKit::DirEntry *entry = StorageKit::read_attr_dir(fAttrDir);
+	StorageKit::DirEntry *entry = StorageKit::read_attr_dir(fAttrFd);
 	if (entry == NULL) {
 		buffer[0] = 0;
 		return errno;
@@ -201,7 +201,7 @@ BNode::RewindAttrs() {
 	if (InitAttrDir() != B_OK)
 		return B_BAD_ADDRESS;	// This is what R5::BNode actually returns. Go figure...	
 	
-	StorageKit::rewind_attr_dir(fAttrDir);
+	StorageKit::rewind_attr_dir(fAttrFd);
 
 	return B_OK;
 }
@@ -318,14 +318,14 @@ BNode::set_fd(int fd) {
 
 void
 BNode::close_fd() {
-	if (fAttrDir != NULL) {
-		StorageKit::close_attr_dir(fAttrDir);
-		fAttrDir = NULL;
+	if (fAttrFd != StorageKit::NullFd) {
+		StorageKit::close_attr_dir(fAttrFd);
+		fAttrFd = StorageKit::NullFd;
 	}
-
-	if (fFd != -1) {
+	
+	if (fFd != StorageKit::NullFd) {
 		close(fFd);
-		fFd = -1;
+		fFd = StorageKit::NullFd;
 	}	
 		
 	fCStatus = B_NO_INIT;	
@@ -371,8 +371,10 @@ BNode::set_to(const BDirectory *dir, const char *path, bool traverse) {
 
 status_t
 BNode::InitAttrDir() {
-	if (fCStatus == B_OK && fAttrDir == NULL)
-		fAttrDir = StorageKit::open_attr_dir(fFd);
+	if (fCStatus == B_OK && fAttrFd == StorageKit::NullFd) {
+		//fAttrDir = StorageKit::open_attr_dir(fFd);
+		fAttrFd = StorageKit::open_attr_dir(fFd);
+	}
 
 	return fCStatus;	
 }

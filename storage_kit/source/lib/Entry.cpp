@@ -84,7 +84,7 @@ entry_ref::operator=(const entry_ref &ref) {
 /*! Creates an uninitialized BEntry object. */
 BEntry::BEntry() :
 	fCStatus(B_NO_INIT),
-	fDir(StorageKit::NullDir),
+	fDirFd(StorageKit::NullFd),
 	fName(NULL)
 {
 }
@@ -93,7 +93,7 @@ BEntry::BEntry() :
 	resolves symlinks if traverse is true */
 BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false) :
 	fCStatus(B_NO_INIT),
-	fDir(StorageKit::NullDir),
+	fDirFd(StorageKit::NullFd),
 	fName(NULL)
 {
 	SetTo(dir, path, traverse);
@@ -103,7 +103,7 @@ BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false) :
 	symlinks if traverse is true */
 BEntry::BEntry(const entry_ref *ref, bool traverse = false) :
 	fCStatus(B_NO_INIT),
-	fDir(StorageKit::NullDir),
+	fDirFd(StorageKit::NullFd),
 	fName(NULL)
 {
 	SetTo(ref, traverse);
@@ -113,7 +113,7 @@ BEntry::BEntry(const entry_ref *ref, bool traverse = false) :
 	symlinks if traverse is true */
 BEntry::BEntry(const char *path, bool traverse = false) :
 	fCStatus(B_NO_INIT),
-	fDir(StorageKit::NullDir),
+	fDirFd(StorageKit::NullFd),
 	fName(NULL)
 {
 	SetTo(path, traverse);
@@ -122,7 +122,7 @@ BEntry::BEntry(const char *path, bool traverse = false) :
 /*! Copy constructor; creates a BEntry object initialized as a duplicate of another entry. */
 BEntry::BEntry(const BEntry &entry) :
 	fCStatus(B_NO_INIT),
-	fDir(StorageKit::NullDir),
+	fDirFd(StorageKit::NullFd),
 	fName(NULL)
 {
 	entry_ref ref;
@@ -155,7 +155,7 @@ BEntry::Exists() const {
 		
 	// Attempt to find the entry in our current directory
 	StorageKit::DirEntry *entry;
-	return StorageKit::find_dir(fDir, fName, entry) == B_OK;
+	return StorageKit::find_dir(fDirFd, fName, entry) == B_OK;
 };
 
 /*! Gets a stat structure for the Entry */
@@ -165,7 +165,7 @@ BEntry::GetStat(struct stat *result) const{
 		return fCStatus;
 		
 	entry_ref ref;
-	status_t status = StorageKit::find_dir(fDir, fName, ref);
+	status_t status = StorageKit::find_dir(fDirFd, fName, ref);
 	if (status != B_OK)
 		return status;
 		
@@ -222,12 +222,12 @@ BEntry::SetTo(const char *path, bool traverse = false) {
 //			printf("leaf == '%s'\n", leafStr);
 			
 			// Open the directory
-			StorageKit::Dir dir;
-			fCStatus = StorageKit::open_dir(pathStr, dir);
+			StorageKit::FileDescriptor dirFd;
+			fCStatus = StorageKit::open_dir(pathStr, dirFd);
 			if (fCStatus == B_OK) {
-				fCStatus = set(dir, leafStr, traverse);
+				fCStatus = set(dirFd, leafStr, traverse);
 				if (fCStatus != B_OK)
-					StorageKit::close_dir(dir);		
+					StorageKit::close_dir(dirFd);		
 			}				
 		}
 		
@@ -242,8 +242,8 @@ BEntry::SetTo(const char *path, bool traverse = false) {
 void
 BEntry::Unset() {
 	// Close the directory
-	if (fDir != StorageKit::NullDir) {
-		StorageKit::close_dir(fDir);
+	if (fDirFd != StorageKit::NullFd) {
+		StorageKit::close_dir(fDirFd);
 	}
 	
 	// Free our leaf name
@@ -251,7 +251,7 @@ BEntry::Unset() {
 		delete [] fName;
 	}
 
-	fDir = StorageKit::NullDir;
+	fDirFd = StorageKit::NullFd;
 	fName = NULL;
 	fCStatus = B_NO_INIT;
 };
@@ -272,7 +272,7 @@ BEntry::GetRef(entry_ref *ref) const {
 	status_t status;
 		
 	// Convert our directory to an self-referencing entry_ref 
-	status = StorageKit::dir_to_self_entry_ref(fDir, ref);
+	status = StorageKit::dir_to_self_entry_ref(fDirFd, ref);
 	if (status != B_OK)
 		return status;
 		
@@ -502,7 +502,7 @@ BEntry::operator=(const BEntry &item) {
 
 	Unset();
 	if (item.fCStatus == B_OK) {
-		fCStatus = StorageKit::dup_dir(item.fDir, fDir);
+		fCStatus = StorageKit::dup_dir(item.fDirFd, fDirFd);
 		if (fCStatus == B_OK) {
 			fCStatus = SetName(item.fName);
 		}
@@ -542,7 +542,8 @@ BEntry::move(int fd, const char *path){
 	otherwise this function will return B_BAD_VALUE. If B_OK is returned, 
 	the caller is no longer responsible for StorageKit::close_dir()ing dir. */
 status_t
-BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
+BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
+//	printf("leaf == %s\n", leaf);
 
 	// Verify that path is valid
 	if (leaf == NULL) {
@@ -564,12 +565,14 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 	if (traverse) {
 	
 		StorageKit::DirEntry *entry;
-		for (	entry = StorageKit::read_dir(dir);
+		for (	entry = StorageKit::read_dir(dirFd);
 				entry != NULL;
-				entry = StorageKit::read_dir(dir)	) {
+				entry = StorageKit::read_dir(dirFd)	) {
 
 			if (strcmp(entry->d_name, leaf) == 0) {
 //				printf("Found Leaf '%s'\n", leaf);
+//				printf("Found PDev %d\n", entry->d_pdev);
+//				printf("Found PIno %d\n", entry->d_pino);
 			
 				// We've found the entry in the directory, now we convert
 				// it to an absolute pathname and find out if it's a symbolic
@@ -577,6 +580,8 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 				char path[B_PATH_NAME_LENGTH+1];
 				status_t result = StorageKit::entry_ref_to_path(entry->d_pdev,
 					entry->d_pino, leaf, path, B_PATH_NAME_LENGTH+1);
+//				printf("+Found PDev %d\n", entry->d_pdev);
+//				printf("+Found PIno %d\n", entry->d_pino);
 					
 				if (result == B_OK) {
 //					printf("Entry == '%s'\n", path);	// Prints out the full path of this entry
@@ -586,9 +591,9 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 					// If this fails, the entry is not a symlink.
 					char target[B_PATH_NAME_LENGTH+1];
 					ssize_t len = StorageKit::read_link(path, target, B_PATH_NAME_LENGTH+1);
-					
+//					printf("len == %d\n", len);
 					if (len >= 0) {
-					
+//						printf("target == %s\n", target);
 						// target is now the pathname of the entry the link points
 						// to, so we now recursively SetTo() ourselves to this
 						// new entry. If target is absolute, we just set ourselves
@@ -599,7 +604,7 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 							// Absolute path
 							status_t result = SetTo(target, traverse);
 							if (result == B_OK) {
-								StorageKit::close_dir(dir);
+								StorageKit::close_dir(dirFd);
 									// We're responsible for dir when successful
 							}
 							
@@ -610,13 +615,14 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 							// Relative path
 							status_t result = StorageKit::entry_ref_to_path(entry->d_pdev,
 								entry->d_pino, target, path, B_PATH_NAME_LENGTH+1);
-							
+//							printf("result == 0x%X\n", result);
 							if (result == B_OK) {
+//								printf("path == '%s', traversing...\n", path);
 								result = SetTo(path, traverse);
 							}
 							
 							if (result == B_OK) {
-								StorageKit::close_dir(dir);
+								StorageKit::close_dir(dirFd);
 									// We're responsible for dir when successful
 							}							
 
@@ -650,7 +656,7 @@ BEntry::set(StorageKit::Dir dir, const char *leaf, bool traverse) {
 			(thus we're taking the easy way out and making it abstract).
 	*/
 	
-	fDir = dir;
+	fDirFd = dirFd;
 	SetName(leaf);
 	return B_OK;
 };
@@ -800,11 +806,11 @@ BEntry::Dump(const char *name = NULL) {
 	printf("fCStatus == %d\n", fCStatus);
 	
 	StorageKit::DirEntry *entry;
-	if (fDir != StorageKit::NullDir && StorageKit::find_dir(fDir, ".", entry) == B_OK) {
+	if (fDirFd != StorageKit::NullFd && StorageKit::find_dir(fDirFd, ".", entry) == B_OK) {
 		printf("dir.device == %ld\n", entry->d_pdev);
 		printf("dir.inode  == %lld\n", entry->d_pino);
 	} else {
-		printf("dir == NullDir\n");
+		printf("dir == NullFd\n");
 	}
 	
 	printf("leaf == '%s'\n", fName);
