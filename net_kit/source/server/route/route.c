@@ -4,7 +4,6 @@
 #include <stdio.h>
 
 #include "net_malloc.h"
-#include "mbuf.h"
 
 #include "net_module.h"
 #include "net/route.h" /* includes net/radix.h */

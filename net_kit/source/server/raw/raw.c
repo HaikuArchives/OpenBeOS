@@ -5,7 +5,6 @@
 #include <string.h>
 #endif
 
-#include "mbuf.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
 #include "sys/socket.h"
@@ -43,7 +42,7 @@ void rip_init(void)
 	ripsrc.sin_len = sizeof(ripsrc);
 }
 
-int rip_input(struct mbuf *m, int hdrlen)
+void rip_input(struct mbuf *m, int hdrlen)
 {
 	struct ip *ip = mtod(m, struct ip*);
 	struct inpcb *inp;
@@ -80,7 +79,7 @@ int rip_input(struct mbuf *m, int hdrlen)
 		ipstat.ips_noproto++;
 		ipstat.ips_delivered--;
 	}
-	return 0;
+	return;
 }
 
 int rip_output(struct mbuf *m, struct socket *so, uint32 dst)

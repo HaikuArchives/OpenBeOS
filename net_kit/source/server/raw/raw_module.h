@@ -20,7 +20,7 @@ struct raw_module_info {
 #ifdef _KERNEL_MODE
 	module_info info;
 #endif
-	int (*input)(struct mbuf *, int);
+	void (*input)(struct mbuf *, int);
 };
 
 #endif /* RAW_MODULE_H */
