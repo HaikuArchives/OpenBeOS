@@ -22,7 +22,8 @@
 
 // Used for providing identifiers for views
 int32 view_counter=0;
-bool movewin=false;
+
+// Used in window focus management
 ServerWindow *active_serverwindow=NULL;
 
 ServerWindow::ServerWindow(BRect rect, const char *string, uint32 wlook,
@@ -403,7 +404,6 @@ void ServerWindow::HandleMouseEvent(int32 code, int8 *buffer)
 			{
 				mousewin=winborder->Window();
 				ASSERT(mousewin!=NULL);
-				
 				winborder->MouseDown(pt,buttons);
 				
 #ifdef DEBUG_SERVERWIN
@@ -464,15 +464,23 @@ printf("ServerWindow() %s: MouseUp(%.1f,%.1f)\n",mousewin->title->String(),x,y);
 			uint32 buttons=*((uint32*)index);
 			BPoint pt(x,y);
 
-			winborder=(WindowBorder*)root->GetChildAt(pt);
-			if(winborder)
+			if(!is_moving_window)
 			{
-				mousewin=winborder->Window();
+				winborder=(WindowBorder*)root->GetChildAt(pt);
+				if(winborder)
+				{
+					mousewin=winborder->Window();
+					ASSERT(mousewin!=NULL);
+	
+					winborder->MouseMoved(pt,buttons);
+				}
+			}				
+			else
+			{
+				mousewin=active_serverwindow;
 				ASSERT(mousewin!=NULL);
 
-				winborder->MouseMoved(pt,buttons);
-
-				// Do cool mouse stuff here
+				mousewin->winborder->MouseMoved(pt,buttons);
 			}
 			break;
 		}
