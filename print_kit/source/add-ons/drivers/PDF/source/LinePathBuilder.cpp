@@ -49,7 +49,7 @@ LinePathBuilder::Vector(BPoint a, BPoint b, float w, BPoint &v)
 {
 	v = b - a;
 	float l = 2.0 * sqrt(v.x * v.x + v.y * v.y);
-	if (fabs(l) <= 0.00000001) return false;
+	if (fabs(l) <= kNearZero) return false;
 	w /= l;
 	v.x *= w;
 	v.y *= w;	
@@ -79,7 +79,7 @@ LinePathBuilder::Cut(BPoint a, BPoint b, BPoint c, BPoint d, BPoint &e)
 	BPoint s = d - c;
 	BPoint v = c - a;
 	float div = r.x * s.y - r.y * s.x;
-	if (fabs(div) <= 0.00000001) return false;
+	if (fabs(div) <= kNearZero) return false;
 	float u = (r.y * v.x - r.x * v.y) / div;
 	e.x = c.x + s.x * u;
 	e.y = c.y + s.y * u;
