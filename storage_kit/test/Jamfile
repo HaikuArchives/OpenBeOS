@@ -13,6 +13,7 @@ SOURCE_FILES =
 	FileTest.cpp
 	NodeTest.cpp
 	PathTest.cpp
+	StatableTest.cpp
 	SymLinkTest.cpp
 ;
 
