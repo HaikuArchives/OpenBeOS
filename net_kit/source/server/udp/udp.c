@@ -13,6 +13,7 @@
 #include "netinet/in_pcb.h"
 #include "sys/domain.h"
 #include "sys/protosw.h"
+#include "netinet/udp_var.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -39,12 +40,12 @@ static struct core_module_info *core = NULL;
 #define UDP_MODULE_PATH	    "modules/protocol/udp"
 #endif
 
-int *prot_table;
-loaded_net_module *net_modules;
+struct protosw *proto[IPPROTO_MAX];
 static struct inpcb udb;	/* head of the UDP PCB list! */
 static struct inpcb *udp_last_inpcb = NULL;
 static struct sockaddr_in udp_in;
 static int udpcksum = 1;	/* do we calculate the UDP checksum? */
+static struct udpstat udpstat;
 
 static uint32 udp_sendspace;	/* size of send buffer */
 static uint32 udp_recvspace;	/* size of recieve buffer */
@@ -120,7 +121,7 @@ int udp_output(struct inpcb *inp, struct mbuf *m, struct mbuf *addr,struct mbuf 
 
 
 	/* XXX - add multicast options when available! */
-	error = net_modules[prot_table[IPPROTO_IP]].mod->output(m,
+	error = proto[IPPROTO_IP]->pr_output(m,
 					inp->inp_options, &inp->inp_route,
 					inp->inp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST),
 					NULL /* inp->inp_moptions */ );
@@ -253,8 +254,8 @@ printf("udp: checking cksum\n");
 		inp->laddr.s_addr != ip->dst.s_addr) {
 
 printf("doing in_pcblookup for %08lx:%d %08lx:%d\n",
-		ip->src.s_addr, udp->src_port,
-		ip->dst.s_addr, udp->dst_port);
+		ntohl(ip->src.s_addr), ntohs(udp->src_port),
+		ntohl(ip->dst.s_addr), ntohs(udp->dst_port));
 		
 		inp = in_pcblookup(&udb, ip->src, udp->src_port,
 				   ip->dst, udp->dst_port, INPLOOKUP_WILDCARD);
@@ -262,8 +263,9 @@ printf("doing in_pcblookup for %08lx:%d %08lx:%d\n",
 			udp_last_inpcb = inp;
 	}
 	if (!inp) {
-printf("inp is NULL!\n");
+		atomic_add(&udpstat.udps_noport, 1);
 		if (buf->m_flags & (M_BCAST | M_MCAST)) {
+			atomic_add(&udpstat.udps_noportbcast, 1);
 			goto bad;
 		}
 		*ip = saved_ip;
@@ -285,8 +287,8 @@ printf("inp is NULL!\n");
 	buf->m_len -= hdrlen;
 	buf->m_pkthdr.len -= hdrlen;
 	buf->m_data += hdrlen;
-printf("calling sbappendaddr (%p)\n", sbappendaddr);
 
+printf("calling sbappendaddr (%p)\n", sbappendaddr);
 	if (sbappendaddr(&inp->inp_socket->so_rcv, (struct sockaddr*)&udp_in,
 			buf, opts) == 0) {
 		goto bad;
@@ -309,6 +311,15 @@ void udp_init(void)
 	udb.inp_prev = udb.inp_next = &udb;
 	udp_sendspace = 9216; /* default size */
 	udp_recvspace = 41600; /* default size */
+	udp_in.sin_len = sizeof(udp_in);
+	memset(&udpstat, 0, sizeof(udpstat));
+		
+	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
+#ifndef _KERNEL_MODE
+	add_protosw(proto, NET_LAYER2);
+#else
+	core->add_protosw(proto, NET_LAYER2);
+#endif
 }
 
 static struct protosw my_proto = {
