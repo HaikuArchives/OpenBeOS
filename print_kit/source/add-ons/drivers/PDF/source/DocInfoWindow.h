@@ -55,7 +55,8 @@ public:
 		OK_MSG				= 'ok__',
 		CANCEL_MSG			= 'cncl',
 		ADD_KEY_MSG         = 'add_',
-		REMOVE_KEY_MSG      = 'rmov'
+		REMOVE_KEY_MSG      = 'rmov',
+		DEFAULT_KEY_MSG     = 'dflt',
 	};
 			
 	// Virtual function overrides
@@ -74,7 +75,7 @@ private:
 	void                    ReadFieldsFromTable(BMessage *toDocInfo);
 	void                    EmptyKeyList();
 	bool                    IsValidKey(const char *key);
-	void                    AddKey(BMessage* msg);
+	void                    AddKey(BMessage* msg, bool textControl);
 	void                    RemoveKey(BMessage* msg);
 };
 

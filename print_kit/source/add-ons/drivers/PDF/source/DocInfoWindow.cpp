@@ -257,7 +257,7 @@ DocInfoWindow::DocInfoWindow(BMessage *doc_info)
 
 	// add list of keys
 	fKeyList = new BMenu("Delete Key");
-	BMenuField *menu = new BMenuField(BRect(0, 0, 180, 10), "delete", "", fKeyList);
+	BMenuField *menu = new BMenuField(BRect(0, 0, 90, 10), "delete", "", fKeyList);
 	menu->SetDivider(0);
 	panel->AddChild(menu);
 
@@ -272,11 +272,26 @@ DocInfoWindow::DocInfoWindow(BMessage *doc_info)
 	// position list of keys
 	menu->MoveTo(5, fTableScrollView->Frame().bottom+2);
 
+	BMenu* defaultKeys = new BMenu("Default Keys");
+	defaultKeys->AddItem(new BMenuItem("Author",       new BMessage(DEFAULT_KEY_MSG)));
+	defaultKeys->AddItem(new BMenuItem("Subject",      new BMessage(DEFAULT_KEY_MSG)));
+	defaultKeys->AddItem(new BMenuItem("Keywords",     new BMessage(DEFAULT_KEY_MSG)));
+	defaultKeys->AddItem(new BMenuItem("Creator",      new BMessage(DEFAULT_KEY_MSG)));
+	// PDFlib sets these itselves:
+	// defaultKeys->AddItem(new BMenuItem("Producer",     new BMessage(DEFAULT_KEY_MSG)));
+	// defaultKeys->AddItem(new BMenuItem("CreationDate", new BMessage(DEFAULT_KEY_MSG)));
+	// Not meaningful to set the modification date at creation time!
+	// defaultKeys->AddItem(new BMenuItem("ModDate",      new BMessage(DEFAULT_KEY_MSG)));
+	BMenuField *keys = new BMenuField(BRect(0, 0, 90, 10), "add", "", defaultKeys);
+	keys->SetDivider(0);
+	panel->AddChild(keys);
+	keys->MoveTo(menu->Frame().right + 5, menu->Frame().top);
+
 	// add add key text control
 	BTextControl *add = new BTextControl(BRect(0, 0, 180, 20), "add", "Add Key:", "", new BMessage(ADD_KEY_MSG));
 	add->SetDivider(60);
 	panel->AddChild(add);
-	add->MoveTo(menu->Frame().right + 5, menu->Frame().top);
+	add->MoveTo(keys->Frame().right + 5, keys->Frame().top);
 
 	// fill table
 	BuildTable(fDocInfo);
@@ -341,7 +356,8 @@ DocInfoWindow::MessageReceived(BMessage *msg)
 		case CANCEL_MSG: Quit();
 			break;
 			
-		case ADD_KEY_MSG: AddKey(msg);
+		case DEFAULT_KEY_MSG:
+		case ADD_KEY_MSG: AddKey(msg, msg->what == ADD_KEY_MSG);
 			break;
 		
 		case REMOVE_KEY_MSG: RemoveKey(msg);
@@ -441,16 +457,21 @@ DocInfoWindow::IsValidKey(const char* key)
 
 // --------------------------------------------------
 void 
-DocInfoWindow::AddKey(BMessage *msg) 
+DocInfoWindow::AddKey(BMessage *msg, bool textControl) 
 {
-	void *p;
+	void         *p;
 	BTextControl *text;
-	BString key;
-	BMessage docInfo;
-	if (msg->FindPointer("source", &p) != B_OK) return;
-	text = reinterpret_cast<BTextControl*>(p);
-	if (!text) return;
-	key = text->Text();
+	BMenuItem    *item;
+	BString      key;
+	BMessage     docInfo;
+	if (msg->FindPointer("source", &p) != B_OK || p == NULL) return;
+	if (textControl) {
+		text = reinterpret_cast<BTextControl*>(p);
+		key = text->Text();
+	} else {
+		item = reinterpret_cast<BMenuItem*>(p);
+		key = item->Label();
+	}
 	
 	// key is valid and is not in list already
 	if (IsValidKey(key.String())) {
