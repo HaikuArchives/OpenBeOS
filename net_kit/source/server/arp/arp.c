@@ -515,8 +515,7 @@ int arp_init(void)
 			B_PERIODIC_TIMER);
 
 	if (rv != B_OK) {
-		printf("arp_init: add_timer failed %d [%s]\n",
-			rv, strerror(rv));
+		printf("arp_init: add_timer failed\n");
 	} 
 #else
 	/* now, start the cleanser... */
