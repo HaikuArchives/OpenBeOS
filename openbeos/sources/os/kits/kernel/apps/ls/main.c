@@ -6,33 +6,54 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 extern char *__progname;
 
-void (*disp_func)(const char *, struct file_stat *) = NULL;
+void (*disp_func)(const char *, struct stat *) = NULL;
+static int show_all = 0;
 
-static void display_l(const char *filename, struct file_stat *stat)
+mode_t perms [9] = {
+	S_IRUSR,
+	S_IWUSR,
+	S_IXUSR,
+	S_IRGRP,
+	S_IWGRP,
+	S_IXGRP,
+	S_IROTH,
+	S_IWOTH,
+	S_IXOTH
+};
+	
+static void display_l(const char *filename, struct stat *stat)
 {
 	const char *type;
-
-	switch(stat->type) {
-		case STREAM_TYPE_FILE:
-			type = "FILE";
-			break;
-		case STREAM_TYPE_DEVICE:
-			type = "DEV ";
-			break;
-		case STREAM_TYPE_DIR:
-			type = "DIR ";
-			break;
-		default:
-			type = "UNKN";
+	char perm[11];
+	int i;
+	memset(perm, '-', 10);
+	perm[10] = '\0';
+	
+	for (i=0; i < sizeof(perms) / sizeof(mode_t); i++) {
+		if (stat->st_mode & perms[i]) {
+			switch(i % 3) {
+				case 0:
+					perm[i + 1] = 'r';
+					break;
+				case 1:
+					perm[i+1] = 'w';
+					break;
+				case 2:
+					perm[i+1] = 'x';
+			}
+		}
 	}
-
-	printf("%s %12lld %s\n", type, stat->size, filename);
+	if (S_ISDIR(stat->st_mode))
+		perm[0] = 'd';
+			
+	printf("%10s %12lld %s\n" ,perm ,stat->st_size ,filename);
 }
 
-static void display(const char *filename, struct file_stat *stat)
+static void display(const char *filename, struct stat *stat)
 {
 	printf("%s\n", filename);
 }
@@ -42,16 +63,21 @@ int main(int argc, char *argv[])
 	int rc;
 	int rc2;
 	int count = 0;
-	struct file_stat stat;
+	struct stat st;
 	char *arg;
 	int ch;
+	uint64 totbytes = 0;
 	
 	disp_func = display;
 	
-	while ((ch = getopt(argc, argv, "l")) != -1) {
+	while ((ch = getopt(argc, argv, "al")) != -1) {
 		switch (ch) {
+			case 'a':
+				show_all = 1;
+				break;
 			case 'l':
 				disp_func = display_l;
+				break;
 		}
 	}
 	argc -= optind;
@@ -63,25 +89,30 @@ int main(int argc, char *argv[])
 		arg = *argv;
 	}
 	
-	rc = sys_rstat(arg, &stat);
+	rc = stat(arg, &st);
 	if(rc < 0) {
 		printf("%s: %s: %s\n", __progname,
 		       arg, strerror(rc));
 		goto err_ls;
 	}
 
-	switch(stat.type) {
-		case STREAM_TYPE_DIR: {
-			int fd;
-			char buf[1024];
+	if (S_ISDIR(st.st_mode)) {
+		int fd;
+		char buf[1024];
 
-			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
-			if(fd < 0) {
-				printf("%s: %s: %s\n", 
-				       __progname, arg, strerror(fd));
-				break;
+		fd = sys_open(arg, STREAM_TYPE_DIR, 0);
+		if(fd < 0) {
+			printf("ls: %s: %s\n", arg, strerror(fd));
+		} else {
+			if (show_all) {
+				/* process the '.' entry */
+				rc = fstat(fd, &st);
+				if (rc == 0) {
+					(*disp_func)(".", &st);
+					totbytes += st.st_size;
+				}
 			}
-
+			
 			for(;;) {
 				char buf2[1024];
 
@@ -90,26 +121,26 @@ int main(int argc, char *argv[])
 					break;
 
 				buf2[0] = 0;
+
 				if(strcmp(arg, ".") != 0) {
 					strlcpy(buf2, arg, sizeof(buf2));
 					strlcat(buf2, "/", sizeof(buf2));
 				}
 				strlcat(buf2, buf, sizeof(buf2));
-
-				rc2 = sys_rstat(buf2, &stat);
+	
+				rc2 = stat(buf2, &st);
 				if(rc2 >= 0) {
-					(*disp_func)(buf2, &stat);
+					(*disp_func)(buf, &st);
+					totbytes += st.st_size;
 				}
 				count++;
 			}
 			sys_close(fd);
-
-			printf("%d files found\n", count);
-			break;
 		}
-		default:
-			(*disp_func)(argv[1], &stat);
-			break;
+
+		printf("%lld bytes in %d files\n", totbytes, count);
+	} else {
+		(*disp_func)(arg, &st);
 	}
 
 err_ls:
