@@ -218,7 +218,7 @@ private:
 	virtual void _RudeNode6();
 	
 	/*! Attribute directory */
-	StorageKit::Dir *fAttrDir;	
+	StorageKit::Dir fAttrDir;	
 	
 	/*! (currently unused) */
 	uint32 rudeData[3];

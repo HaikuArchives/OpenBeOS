@@ -54,8 +54,10 @@ BNode::SetTo(const BEntry *entry) {
 
 status_t
 BNode::SetTo(const char *path) {
-	close_fd();	
-	fCStatus = StorageKit::open(path, StorageKit::READ_WRITE, fFd);	
+	Unset();	
+	if (path != NULL) {	
+		fCStatus = StorageKit::open(path, StorageKit::READ_WRITE, fFd);
+	}	
 	return fCStatus;
 }
 
