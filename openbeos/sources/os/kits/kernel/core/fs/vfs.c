@@ -625,6 +625,137 @@ static int path_to_dir_vnode(char *path, struct vnode **v, char *filename, bool 
 	return path_to_vnode(path, v, kernel);
 }
 
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+//
+// XXX -- Warning: horrible hack, just ahead!
+//
+// the following code implements a version of vnode_to_path()
+// which takes an arbitrary vnode and generates the full file path string.
+// this is used by vfs_get_cwd() so that the user shell can implement 'pwd'
+//
+// however...
+//
+// the method used is to peek into the private vnodes of the filesystem modules.
+// this is *BAD MOJO* and only works because all of the current filesystems
+// were implemented with a common structure, mimicked by the struct below.
+//
+// the hack was required because the VFS layer, as it was forked from NewOS,
+// did not have a means of acquiring the path info thru a standard method.
+// Once we have our own proper implementation of the VFS layer, then the
+// gross hack below can be removed...
+// 
+
+int vnode_to_path(struct vnode *, char *, int);
+
+
+typedef struct generic_vnode {
+	struct generic_vnode *all_next;
+	vnode_id              id;
+	char                 *name;
+	void                 *redir_vnode;
+	struct generic_vnode *parent;
+	struct generic_vnode *dir_next;
+}
+generic_vnode;
+
+
+int vnode_to_path(struct vnode *v, char *buf, int buflen)
+{
+	int rc;  // return code
+	
+	
+	if ((v == NULL) || (buf == NULL) || (buflen <= 0))
+		return EINVAL;
+	
+	//
+	// ask the filesystem containing the given vnode to fetch
+	// its local vnode structure for us (returned in v->priv_vnode).
+	// this fs vnode contains the leaf name and parent link required
+	//
+	rc = v->mount->
+	     fs->calls->
+         fs_getvnode(v->mount->fscookie, v->vnid, &v->priv_vnode, true);
+	if (rc < 0)
+		return rc;
+	
+	else {
+		//
+		// construct the full path, which is:
+		// {mount_point}/{relative_path}
+		//
+		// the mount point has already been stored,
+		// but the relative path has to be generated on-the-fly
+		//
+		generic_vnode *g = (generic_vnode *) v->priv_vnode;
+
+		char *mpoint     = v->mount->mount_point;
+		int   mpointlen  = strlen (mpoint);
+		
+		char rpath[SYS_MAX_NAME_LEN];  // buffer to hold relative path
+		int  i = sizeof rpath;         // current insertion point
+		int  rpathlen = 0;
+		int  len;
+
+		//
+		// generate relative path:
+		// start with given leaf vnode and back up to mount point,
+		// copying leaf names into buffer (right to left) as we go
+		//
+		rpath[--i] = '\0';
+		
+		for (; g; g = g->parent) {
+			// 
+			if (g->name[0]) {
+				len = strlen (g->name);
+				i -= len;
+				memcpy (rpath+i, g->name, len);
+				rpathlen += len;
+			}
+			if (g->parent) {
+				if (g->parent->id == g->id)
+					// hit mount point
+					break;
+				
+				rpath[--i] = '/';
+				++rpathlen;
+			}
+		}
+		
+		if ((mpointlen + rpathlen) > buflen)
+			return ENOBUFS;
+		
+		//
+		// copy results to output buffer
+		//
+		strcpy (buf, mpoint);
+		if (rpathlen > 0)
+			strcat (buf, rpath+i);
+		
+		return B_OK;
+	}
+}
+
+
+//
+//
+// XXX - end of the vnode_to_path() hack
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
 void *vfs_new_ioctx(void *_parent_ioctx)
 {
 	size_t table_size;
@@ -1461,28 +1592,37 @@ ssize_t vfs_writepage(void *_v, iovecs *vecs, off_t pos)
 	return v->mount->fs->calls->fs_writepage(v->mount->fscookie, v->priv_vnode, vecs, pos);
 }
 
+
+//
+// XXX -- Fixme: uses vnode_to_path() hack
+//
+
 static int vfs_get_cwd(char* buf, size_t size, bool kernel)
 {
 	// Get current working directory from io context
-//	struct vnode* v = get_current_ioctx(kernel)->cwd;
-	int rc;
 
 #if MAKE_NOIZE
 	dprintf("vfs_get_cwd: buf 0x%x, 0x%x\n", buf, size);
 #endif
-	//TODO: parse cwd back into a full path
-	if (size >= 2) {
-		buf[0] = '.';
-		buf[1] = 0;
 
-		rc = 0;
-	} else {
-		rc = ENOBUFS;
+	{
+	struct vnode* cwd = get_current_ioctx(kernel)->cwd;
+	if (cwd)
+		//
+		// vnode_to_path() takes the cwd vnode and computes
+		// a full path string from it, which is then copied
+		// into the given buffer.
+		//
+		// WARNING: the current version of this function
+		// utilizes a gross hack and will be removed and/or
+		// replaced in the future...
+		//
+		return vnode_to_path(cwd, buf, size);
+	else
+		return B_ERROR; 
 	}
-
-	// Tell caller all is ok
-	return rc;
 }
+
 
 static int vfs_set_cwd(char* path, bool kernel)
 {
