@@ -12,6 +12,7 @@ using namespace OpenBeOS;
 #endif
 
 
+
 BPath::BPath() {
 }
 	
@@ -33,23 +34,80 @@ BPath::BPath(const entry_ref *ref) {
 BPath::~BPath() {
 }
 
+/*
+
 status_t BPath::InitCheck() const {
-	return B_ERROR;
 }
 
 status_t BPath::SetTo(const char *path, const char *leaf = NULL, bool normalize = false) {
-	return B_ERROR;
 }
 	
 status_t BPath::SetTo(const BDirectory *dir, const char *path, bool normalize = false) {
-	return B_ERROR;
 }
 	
 status_t BPath::SetTo(const BEntry *entry) {
-	return B_ERROR;
 }
 	
 status_t BPath::SetTo(const entry_ref *ref) {
+}
+
+status_t BPath::Append(const char *path, bool normalize = false) {
+}
+	
+void BPath::Unset() {
+}
+	
+const char *BPath::Path() const {
+}
+	
+const char *BPath::Leaf() const {
+}
+
+status_t BPath::GetParent(BPath *) const {
+}
+	
+bool BPath::operator==(const BPath &item) const {
+}
+
+bool BPath::operator==(const char *path) const {
+}
+
+bool BPath::operator!=(const BPath &item) const {
+}
+
+bool BPath::operator!=(const char *path) const {
+}
+	
+
+BPath& BPath::operator=(const BPath &item) {
+}
+
+BPath& BPath::operator=(const char *path) {
+}
+
+	
+bool BPath::IsFixedSize() const {
+	return false;
+}
+	
+type_code BPath::TypeCode() const {
+	return B_REF_TYPE;
+}
+	
+ssize_t BPath::FlattenedSize() const {
+	return -1;
+}
+	
+status_t BPath::Flatten(void *buffer, ssize_t size) const {
+	return B_ERROR;
+}
+	
+bool BPath::AllowsTypeCode(type_code code) const {
+	return (code == B_REF_TYPE);
+}
+	
+status_t BPath::Unflatten(type_code c, const void *buf, ssize_t size) {
 	return B_ERROR;
 }
 
+*/
