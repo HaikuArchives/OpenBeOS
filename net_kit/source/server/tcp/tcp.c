@@ -504,6 +504,7 @@ static struct protosw my_proto = {
 	NULL,                  /* pr_output    */
 	&tcp_userreq,          /* pr_userreq   */
 	NULL,                  /* pr_sysctl    */
+	NULL,                  /* pr_ctlinput  */
 	NULL,                  /* pr_ctloutput */
 		
 	NULL,
