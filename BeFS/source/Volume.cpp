@@ -55,6 +55,14 @@ Volume::IsValidSuperBlock()
 }
 
 
+void 
+Volume::Panic()
+{
+	FATAL(("we have to panic... switch to read-only mode!"));
+	fFlags |= VOLUME_READ_ONLY;
+}
+
+
 status_t
 Volume::Mount(const char *deviceName,uint32 flags)
 {

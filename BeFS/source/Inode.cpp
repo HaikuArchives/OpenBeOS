@@ -281,7 +281,7 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 			|| ((uint8 *)last + length - item->data_size) < ((uint8 *)Node() + fVolume->InodeSize())) {
 			// make room for the new attribute if needed (and we are forced to do so)
 			if (force
-				&& ((uint8 *)last + length - item->data_size) < ((uint8 *)Node() + fVolume->InodeSize())) {
+				&& ((uint8 *)last + length - item->data_size) > ((uint8 *)Node() + fVolume->InodeSize())) {
 				// ToDo: we're lazy here and requesting the full difference between
 				// the old size and the new size - we could also take the free bytes
 				// at the end of the section into account...

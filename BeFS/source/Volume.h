@@ -36,6 +36,7 @@ class Volume {
 
 		bool				IsValidSuperBlock();
 		bool				IsReadOnly() const { return fFlags & VOLUME_READ_ONLY; }
+		void				Panic();
 
 		block_run			Root() const { return fSuperBlock.root_dir; }
 		Inode				*RootNode() const { return fRootNode; }

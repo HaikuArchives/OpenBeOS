@@ -762,14 +762,14 @@ bfs_unlink(void *_ns, void *_directory, const char *name)
 int 
 bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const char *newName)
 {
-	FUNCTION_START(("oldName = \"%s\", newName = \"%s\"\n",oldName,newName));
+	FUNCTION_START(("oldDir = %p, oldName = \"%s\", newDir = %p, newName = \"%s\"\n",_oldDir,oldName,_newDir,newName));
 	
 	// there may be some more tests needed?!
 	if (_ns == NULL || _oldDir == NULL || _newDir == NULL
 		|| oldName == NULL || *oldName == '\0'
 		|| newName == NULL || *newName == '\0'
-		|| strcmp(oldName,".") || strcmp(oldName,"..")
-		|| strcmp(newName,".") || strcmp(newName,".."))
+		|| !strcmp(oldName,".") || !strcmp(oldName,"..")
+		|| !strcmp(newName,".") || !strcmp(newName,".."))
 		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
@@ -820,31 +820,63 @@ bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const c
 
 	Transaction transaction(volume,oldDirectory->BlockNumber());
 
-	if (inode->SetName(&transaction,newName) < B_OK)
-		return status;
-
-	status = tree->Remove(&transaction,(const uint8 *)oldName,strlen(oldName),id);
-	if (status < B_OK)
-		return status;
-
-	Index index(volume);
-	index.UpdateName(&transaction,oldName,newName,id);
-
+	// First, try to make sure there is nothing that will stop us in
+	// the target directory - since this is the only non-critical
+	// failure, we will test this case first
+	BPlusTree *newTree = tree;
 	if (newDirectory != oldDirectory) {
-		status = newDirectory->GetTree(&tree);
+		status = newDirectory->GetTree(&newTree);
 		if (status < B_OK)
 			RETURN_ERROR(status);
 	}
 	
-	status = tree->Insert(&transaction,(const uint8 *)newName,strlen(newName),id);
-	if (status < B_OK)
+	status = newTree->Insert(&transaction,(const uint8 *)newName,strlen(newName),id);
+	if (status == B_NAME_IN_USE) {
+		off_t clobber;
+		if (newTree->Find((const uint8 *)newName,strlen(newName),&clobber) < B_OK)
+			return B_NAME_IN_USE;
+
+		Vnode vnode(volume,clobber);
+		Inode *other;
+		if (vnode.Get(&other) < B_OK)
+			return B_NAME_IN_USE;
+
+		status = newDirectory->Remove(&transaction,newName,other->IsDirectory());
+		if (status < B_OK)
+			return status;
+
+		status = newTree->Insert(&transaction,(const uint8 *)newName,strlen(newName),id);
+	} else if (status < B_OK)
 		return status;
 
-	inode->Node()->parent = newDirectory->BlockRun();
-	status = inode->WriteBack(&transaction);
-
-	if (status == B_OK)	
-		transaction.Done();
+	// If anything fails now, we have to remove the inode from the
+	// new directory in any case to restore the previous state
+	status_t bailStatus = B_OK;
+	if (inode->SetName(&transaction,newName) == B_OK) {
+		status = tree->Remove(&transaction,(const uint8 *)oldName,strlen(oldName),id);
+		if (status == B_OK) {
+			Index index(volume);
+			index.UpdateName(&transaction,oldName,newName,id);
+		
+			inode->Node()->parent = newDirectory->BlockRun();
+			status = inode->WriteBack(&transaction);
+			if (status == B_OK)	{
+				transaction.Done();
+				return B_OK;
+			}
+			// those better don't fail, or we switch to a read-only
+			// device for safety reasons (Volume::Panic() does this
+			// for us)
+			bailStatus = tree->Insert(&transaction,(const uint8 *)oldName,strlen(oldName),id);
+		}
+		if (bailStatus == B_OK)
+			bailStatus = inode->SetName(&transaction,oldName);
+	}
+	if (bailStatus == B_OK)
+		bailStatus = newTree->Remove(&transaction,(const uint8 *)newName,strlen(newName),id);
+	
+	if (bailStatus < B_OK)
+		volume->Panic();
 
 	return status;
 }
