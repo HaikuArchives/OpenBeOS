@@ -18,9 +18,9 @@ enum {
 enum {
 	NET_STACK_SOCKET = NET_STACK_IOCTL_BASE,	// socket_args *
 	NET_STACK_BIND,								// sockaddr_args *
-	NET_STACK_RECVFROM,							// data_xfer_args *
+	NET_STACK_RECVFROM,							// struct msghdr *
 	NET_STACK_RECV,								// data_xfer_args *
-	NET_STACK_SENDTO,							// data_xfer_args *
+	NET_STACK_SENDTO,							// struct msghdr *
 	NET_STACK_SEND,								// data_xfer_args *
 	NET_STACK_LISTEN,							// int_args * (value = backlog)
 	NET_STACK_ACCEPT,							// accept_args *
@@ -56,7 +56,7 @@ struct sockopt_args {	// used by NET_STACK_SETSOCKOPT/_GETSOCKOPT
 	int   	optlen;
 };
 
-struct data_xfer_args {	// used by NET_STACK_SEND/_SENDTO/_RECV/_RECVFROM
+struct data_xfer_args {	// used by NET_STACK_SEND/_RECV
 	void *data;
 	size_t datalen;
 	int flags;
@@ -68,6 +68,10 @@ struct socket_args {	// used by NET_STACK_SOCKET
 	int family;
 	int type;
 	int proto;
+};
+
+struct getcookie_args {	// used by NET_STACK_GET_COOKIE
+	void **cookie;
 };
 
 struct accept_args {	// used by NET_STACK_ACCEPT

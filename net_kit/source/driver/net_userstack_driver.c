@@ -20,6 +20,7 @@
 #include "userland_ipc.h"
 #include "lock.h"
 #include "sys/sockio.h"
+#include "sys/socket.h"
 #include "net/if.h"
 //#include "netinet/in_var.h"
 //#include "sys/protosw.h"
@@ -94,8 +95,8 @@ typedef struct {
 // Prototypes
 //*****************************************************/
 
+/* command queue */
 static net_command *get_command(net_stack_cookie *cookie,int32 *_index);
-static char *get_buffer(net_stack_cookie *cookie,uint32 size,int32 *_offset);
 static status_t execute_command(net_stack_cookie *cookie, int32 op, void *data, uint32 length);
 static status_t init_connection(void **_cookie);
 static void shutdown_connection(net_stack_cookie *cookie);
@@ -144,173 +145,6 @@ port_id gStackPort = -1;
 //*****************************************************/
 
 
-static int32
-get_length(int32 op,uint8 *buffer)
-{
-	// this is *so* ugly, but BeOS' ioctl() doesn't know the size
-	// of the data - the length parameter is just set to zero, so
-	// we actually have to know here what we are doing later, which
-	// is really unfortunate.
-	switch (op) {
-		case NET_STACK_LISTEN:
-		case NET_STACK_SHUTDOWN:
-			return sizeof(struct int_args);
-		case NET_STACK_SOCKET:
-			return sizeof(struct socket_args);
-		case NET_STACK_CONNECT:
-		case NET_STACK_BIND:
-		case NET_STACK_GETSOCKNAME:
-		case NET_STACK_GETPEERNAME:
-			return sizeof(struct sockaddr_args) + ((struct sockaddr_args *)buffer)->addrlen;
-		case NET_STACK_SETSOCKOPT:
-		case NET_STACK_GETSOCKOPT:
-			return sizeof(struct sockopt_args) + ((struct sockopt_args *)buffer)->optlen;
-		case NET_STACK_ACCEPT:
-			return sizeof(struct accept_args) + ((struct accept_args *)buffer)->addrlen;
-		case NET_STACK_SEND:
-		case NET_STACK_SENDTO:
-		case NET_STACK_RECV:
-		case NET_STACK_RECVFROM:
-			return sizeof(struct data_xfer_args) + ((struct data_xfer_args *)buffer)->datalen
-				+ ((struct data_xfer_args *)buffer)->addrlen;
-		case NET_STACK_SELECT:
-			return sizeof(struct select_args) + 3*sizeof(struct fd_set) + sizeof(struct timeval);
-//		case NET_STACK_SYSCTL:
-//			return sizeof(struct sysctl_args) + ((struct sysctl_args *)buffer)->namelen
-//				+ ((struct sysctl_args *)buffer)->oldlenp + ((struct sysctl_args *)buffer)->newlen;
-
-		case OSIOCGIFCONF:
-		case SIOCGIFCONF:
-			return sizeof(struct ifconf) + ((struct ifconf *)buffer)->ifc_len;
-
-		default:
-			if (IOCGROUP(op) == 'i' || IOCGROUP(op) == 'f')
-				return IOCPARM_MASK & (op >> 16);
-			PRINT(("unhandled ioctl op: %lx\n",op));
-			return 0;
-	}
-}
-
-
-static void
-copy_to_stack(int32 op,uint8 *from,uint8 *to,int32 length)
-{
-	switch (op) {
-		case NET_STACK_GETSOCKOPT:
-		case NET_STACK_SETSOCKOPT:
-		{
-			struct sockopt_args *sockopt = (struct sockopt_args *)from;
-			void *opt = to + sizeof(struct sockopt_args);
-
-			memcpy(to,from,sizeof(struct sockopt_args));
-
-			if (sockopt->optlen > 0) {
-				memcpy(opt,sockopt->optval,sockopt->optlen);
-				((struct sockopt_args *)to)->optval = opt;
-			}
-			break;
-		}
-		
-		case NET_STACK_SYSCTL:
-		{
-			struct sysctl_args *fromSys = (struct sysctl_args *)from;
-			struct sysctl_args *toSys = (struct sysctl_args *)to;
-			void *name = to + sizeof(struct sysctl_args);
-			void *oldp = (uint8 *)name + fromSys->namelen;
-			size_t *oldlenp = (size_t *)((uint8 *)oldp + *fromSys->oldlenp);
-			void *newp = (uint8 *)oldlenp + sizeof(size_t);
-
-			memset(toSys,0,sizeof(struct sysctl_args));
-
-			toSys->namelen = fromSys->namelen;
-			if (toSys->namelen > 0) {
-				memcpy(name,fromSys->name,fromSys->namelen);
-				toSys->name = name;
-			}
-			
-			toSys->oldlenp = oldlenp;
-			*oldlenp = *fromSys->oldlenp;
-			if (*oldlenp > 0 && fromSys->oldp) {
-				memcpy(oldp,fromSys->oldp,*oldlenp);
-				toSys->oldp = oldp;
-			}
-			
-			toSys->newlen = fromSys->newlen;
-			if (toSys->namelen > 0 && fromSys->newp) {
-				memcpy(newp,fromSys->newp,fromSys->newlen);
-				toSys->newp = newp;
-			}
-			break;
-		}
-
-		case OSIOCGIFCONF:
-		case SIOCGIFCONF:
-		{
-			struct ifconf *ifc = (struct ifconf *)from;
-			struct ifconf *ifc_to = (struct ifconf *)to;
-			void *buffer = to + sizeof(struct ifconf);
-			
-			ifc_to->ifc_len = ifc->ifc_len;
-
-			if (ifc->ifc_len > 0) {
-				memcpy(buffer,ifc->ifc_buf,ifc->ifc_len);
-				ifc_to->ifc_buf = buffer;
-			}
-			break;
-		}
-
-		case NET_STACK_LISTEN:
-		case NET_STACK_SHUTDOWN:
-		case NET_STACK_SOCKET:
-		default:
-			memcpy(to,from,length);
-	}
-}
-
-
-static void
-copy_from_stack(int32 op,uint8 *from,uint8 *to,int32 length)
-{
-	switch (op) {
-		case NET_STACK_SETSOCKOPT:
-		case NET_STACK_GETSOCKOPT:
-		{
-			struct sockopt_args *sockopt = (struct sockopt_args *)from;
-			void *opt = from + sizeof(struct sockopt_args);
-			void *oldOptval = ((struct sockopt_args *)to)->optval;
-
-			memcpy(to,from,sizeof(struct sockopt_args));
-			((struct sockopt_args *)to)->optval = oldOptval;
-
-			if (sockopt->optlen > 0)
-				memcpy(oldOptval,opt,sockopt->optlen);
-			break;
-		}
-		case NET_STACK_SEND:
-		case NET_STACK_SENDTO:
-			break;
-
-		case OSIOCGIFCONF:
-		case SIOCGIFCONF:
-		{
-			struct ifconf *ifc = (struct ifconf *)from;
-			struct ifconf *ifc_to = (struct ifconf *)to;
-
-			PRINT(("first name %p = %s\n",ifc->ifc_req,ifc->ifc_req->ifr_name));
-			ifc_to->ifc_len = ifc->ifc_len;
-			if (ifc->ifc_len > 0)
-				memcpy(ifc_to->ifc_buf,ifc->ifc_buf,ifc->ifc_len);
-			break;
-		}
-
-		default:
-			if ((IOCGROUP(op) == 'i' || IOCGROUP(op) == 'f') && (op & IOC_INOUT) == IOC_IN)
-				break;
-			memcpy(to,from,length);
-	}
-}
-
-
 static net_command *
 get_command(net_stack_cookie *cookie,int32 *_index)
 {
@@ -332,34 +166,114 @@ get_command(net_stack_cookie *cookie,int32 *_index)
 }
 
 
-static char *
-get_buffer(net_stack_cookie *cookie,uint32 size,int32 *_offset)
+static status_t
+get_area_from_address(net_area_info *info,void *data)
 {
-	// ToDo: this can currently overwrite memory which is still used
+	area_info areaInfo;
 
-	uint8 *buffer;
+	if (data == NULL)
+		return B_OK;
 
-	if (size > cookie->bufferSize)
-		return NULL;
+	info->id = area_for(data);
+	if (info->id < B_OK)
+		return info->id;
 
-	if (ACQUIRE_BENAPHORE(cookie->bufferLock) < B_OK)
-		return NULL;
+	if (get_area_info(info->id,&areaInfo) != B_OK)
+		return B_BAD_VALUE;
 
-PRINT(("buffer = %p,bufferOffset = %ld, bufferSize = %ld, size = %ld\n",cookie->buffer,cookie->bufferOffset,cookie->bufferSize,size));
-	if (cookie->bufferOffset + size > cookie->bufferSize) {
-		PRINT(("buffer overflow, start from 0\n"));
-		buffer = cookie->buffer;
-		*_offset = 0;
-		cookie->bufferOffset = size;
-	} else {
-		buffer = cookie->buffer + cookie->bufferOffset;
-		*_offset = cookie->bufferOffset;
-		cookie->bufferOffset += size;
-	}
-PRINT((" -> offset = %ld, targetBuffer = %p, newOffset = %ld\n",*_offset,buffer,cookie->bufferOffset));
+	info->offset = areaInfo.address;
+	return B_OK;
+}
 
-	RELEASE_BENAPHORE(cookie->bufferLock);
-	return buffer;
+
+static void
+set_command_areas(net_command *command)
+{
+	void *data = command->data;
+	if (data == NULL)
+		return;
+
+	if (get_area_from_address(&command->area[0],data) < B_OK)
+		return;
+
+	switch (command->op) {
+		case NET_STACK_GETSOCKOPT:
+		case NET_STACK_SETSOCKOPT:
+		{
+			struct sockopt_args *sockopt = (struct sockopt_args *)data;
+
+			get_area_from_address(&command->area[1],sockopt->optval);
+			break;
+		}
+
+		case NET_STACK_CONNECT:
+		case NET_STACK_BIND:
+		case NET_STACK_GETSOCKNAME:
+		case NET_STACK_GETPEERNAME:
+		{
+			struct sockaddr_args *args = (struct sockaddr_args *)data;
+			
+			get_area_from_address(&command->area[1],args->addr);
+			break;
+		}
+
+		case NET_STACK_RECV:
+		case NET_STACK_SEND:
+		{
+			struct data_xfer_args *args = (struct data_xfer_args *)data;
+			get_area_from_address(&command->area[1],args->data);
+			get_area_from_address(&command->area[2],args->addr);
+			break;
+		}
+		case NET_STACK_RECVFROM:
+		case NET_STACK_SENDTO:
+		{
+			struct msghdr *mh = (struct msghdr *)data;
+			get_area_from_address(&command->area[1],mh->msg_name);
+			get_area_from_address(&command->area[2],mh->msg_iov);
+			get_area_from_address(&command->area[3],mh->msg_control);
+			break;
+		}
+
+		case NET_STACK_ACCEPT:
+		{
+			struct accept_args *args = (struct accept_args *)data;
+			/* accept_args.cookie is always in the address space of the server */
+			get_area_from_address(&command->area[1],args->addr);
+			break;
+		}
+
+		case NET_STACK_SELECT:
+		{
+			struct select_args *args = (struct select_args *)data;
+
+			get_area_from_address(&command->area[1],args->rbits);
+			get_area_from_address(&command->area[2],args->wbits);
+			get_area_from_address(&command->area[3],args->ebits);
+			get_area_from_address(&command->area[4],args->timeout);
+			break;
+		}
+
+		case NET_STACK_SYSCTL:
+		{
+			struct sysctl_args *sysctl = (struct sysctl_args *)data;
+
+			get_area_from_address(&command->area[1],sysctl->name);
+			get_area_from_address(&command->area[2],sysctl->oldp);
+			get_area_from_address(&command->area[3],sysctl->oldlenp);
+			get_area_from_address(&command->area[4],sysctl->newp);
+			break;
+		}
+
+		case OSIOCGIFCONF:
+		case SIOCGIFCONF:
+		{
+			struct ifconf *ifc = (struct ifconf *)data;
+
+			get_area_from_address(&command->area[1],ifc->ifc_buf);
+			break;
+		}
+	}	
 }
 
 
@@ -368,7 +282,6 @@ execute_command(net_stack_cookie *cookie,int32 op,void *data,uint32 length)
 {
 	uint32 commandIndex;
 	net_command *command = get_command(cookie,&commandIndex);
-	uint8 *buffer;
 	status_t status;
 	ssize_t bytes;
 
@@ -377,24 +290,11 @@ execute_command(net_stack_cookie *cookie,int32 op,void *data,uint32 length)
 		return B_ERROR;
 	}
 
-	if (length == -1) {
-		length = get_length(op,data);
-		PRINT(("****** got length: %ld\n",length));
-	}
+	memset(command,0,sizeof(net_command));
 
 	command->op = op;
-	command->buffer = 0;
-	command->length = length;
-	command->result = 0;
-
-	if (length > 0) {
-		buffer = get_buffer(cookie,length,&command->buffer);
-		if (buffer == NULL)
-			return B_NO_MEMORY;
-
-		copy_to_stack(op,data,buffer,length);	
-	}
-	PRINT(("send command (%ld): op = %lx, buffer = %ld, length = %ld\n",commandIndex,command->op,command->buffer,command->length));
+	command->data = data;
+	set_command_areas(command);
 
 	bytes = write_port(cookie->port,commandIndex,NULL,0);
 	if (bytes < B_OK) {
@@ -415,10 +315,6 @@ execute_command(net_stack_cookie *cookie,int32 op,void *data,uint32 length)
 				release_sem(cookie->commandSemaphore);
 				continue;
 			}
-			// copy the commands data back
-			if (length)
-				copy_from_stack(op,buffer,data,length);
-
 			return command->result;
 		}
 		FATAL(("command couldn't be executed: %s\n",strerror(status)));
@@ -534,7 +430,6 @@ net_stack_open(const char *name,uint32 flags,void **_cookie)
 		return status;
 
 	cookie = *_cookie;
-	PRINT(("Connection established!\n"));
 
 	status = execute_command(cookie,NET_STACK_OPEN,&flags,sizeof(uint32));
 	if (status < B_OK)
@@ -576,7 +471,7 @@ net_stack_control(void *_cookie, uint32 op, void *data, size_t length)
 {
 	net_stack_cookie *cookie = (net_stack_cookie *)_cookie;
 
-	FUNCTION_START(("cookie = %p, op = %lx, data = %p, length = %ld\n",cookie,op,data,length));
+	//FUNCTION_START(("cookie = %p, op = %lx, data = %p, length = %ld\n",cookie,op,data,length));
 
 	if (cookie == NULL)
 		return B_BAD_VALUE;
@@ -588,14 +483,38 @@ net_stack_control(void *_cookie, uint32 op, void *data, size_t length)
 static status_t
 net_stack_read(void *_cookie,off_t pos,void *buffer,size_t *length)
 {
-	return B_ERROR;
+	struct data_xfer_args args;
+	int status;
+
+	memset(&args,0,sizeof(args));
+	args.data = buffer;
+	args.datalen = *length;
+
+	status = execute_command(_cookie,NET_STACK_RECV,&args,sizeof(args));
+	if (status > 0) {
+		*length = status;
+		return B_OK;
+	}
+	return status;
 }
 
 
 static status_t
 net_stack_write(void *_cookie,off_t pos,const void *buffer,size_t *length)
 {
-	return B_ERROR;
+	struct data_xfer_args args;
+	int status;
+	
+	memset(&args,0,sizeof(args));
+	args.data = (void *)buffer;
+	args.datalen = *length;
+	
+	status = execute_command(_cookie,NET_STACK_SEND,&args,sizeof(args));
+	if (status > 0) {
+		*length = status;
+		return B_OK;
+	}
+	return status;
 }
 
 
