@@ -39,6 +39,7 @@ public:
 
 	BRect zoomrect,closerect,tabrect,frame,
 		resizerect,borderrect;
+	int textoffset;
 };
 
 #endif

@@ -226,10 +226,6 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 
 void WindowBorder::Draw(BRect update_rect)
 {
-	// Just a hard-coded placeholder for now
-	if(decor->Look()==WLOOK_NO_BORDER)
-		return;
-
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder()::Draw():"); update_rect.PrintToStream();
 #endif

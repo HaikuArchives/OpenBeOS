@@ -90,7 +90,7 @@ printf("BeDecorator():Clicked() - Zoom\n");
 		return CLICK_ZOOM;
 	}
 	
-	if(resizerect.Contains(pt))
+	if(resizerect.Contains(pt) && dlook==WLOOK_DOCUMENT)
 	{
 
 #ifdef DEBUG_DECOR
@@ -112,14 +112,17 @@ printf("BeDecorator():Clicked() - Resize thumb\n");
 	}
 
 	// We got this far, so user is clicking on the border?
-	BRect borderrect(frame);
-	borderrect.top+=19;
-	BRect clientrect(borderrect.InsetByCopy(3,3));
-	if(borderrect.Contains(pt) && !clientrect.Contains(pt))
+	BRect brect(frame);
+	brect.top+=19;
+	BRect clientrect(brect.InsetByCopy(3,3));
+	if(brect.Contains(pt) && !clientrect.Contains(pt))
 	{
 #ifdef DEBUG_DECOR
 printf("BeDecorator():Clicked() - Drag\n");
 #endif		
+		if(resizerect.Contains(pt))
+			return CLICK_RESIZE;
+		
 		return CLICK_DRAG;
 	}
 
@@ -142,13 +145,13 @@ void BeDecorator::Resize(BRect rect)
 printf("BeDecorator()::Resize()"); rect.PrintToStream();
 #endif
 	frame=rect;
-	closerect=frame;
 	tabrect=frame;
 	resizerect=frame;
 	borderrect=frame;
+	closerect=frame;
 
-	closerect.left+=2;
-	closerect.top+=2;
+	closerect.left+=(dlook==WLOOK_FLOATING)?2:4;
+	closerect.top+=(dlook==WLOOK_FLOATING)?6:4;
 	closerect.right=closerect.left+10;
 	closerect.bottom=closerect.top+10;
 
@@ -162,18 +165,24 @@ printf("BeDecorator()::Resize()"); rect.PrintToStream();
 	{
 		float titlewidth=closerect.right
 			+driver->StringWidth(layer->name->String(),
-			layer->name->Length())+35;
-		tabrect.right=(titlewidth<frame.right-1)?titlewidth:frame.right;
+			layer->name->Length())
+			+35;
+		tabrect.right=(titlewidth<frame.right -1)?titlewidth:frame.right;
 	}
 	else
 		tabrect.right=tabrect.left+tabrect.Width()/2;
-	
+
+	if(dlook==WLOOK_FLOATING)
+		tabrect.top+=4;
+
 	zoomrect=tabrect;
-	zoomrect.top+=2;
-	zoomrect.right-=2;
-	zoomrect.bottom-=2;
+	zoomrect.top+=(dlook==WLOOK_FLOATING)?2:4;
+	zoomrect.right-=4;
+	zoomrect.bottom-=4;
 	zoomrect.left=zoomrect.right-10;
 	zoomrect.bottom=zoomrect.top+10;
+	
+	textoffset=(dlook==WLOOK_FLOATING)?5:7;
 }
 
 void BeDecorator::MoveBy(BPoint pt)
@@ -225,7 +234,7 @@ void BeDecorator::UpdateTitle(const char *string)
 		rgb_color tmpcol=driver->HighColor();
 		driver->SetHighColor(textcol.red,textcol.green,textcol.blue);
 		driver->DrawString((char *)string,strlen(string),
-			BPoint(closerect.right+7,closerect.bottom));
+			BPoint(closerect.right+textoffset,closerect.bottom-1));
 		driver->SetHighColor(tmpcol.red,tmpcol.green,tmpcol.blue);
 		driver->SetDrawingMode(B_OP_COPY);
 	}
@@ -269,7 +278,6 @@ void BeDecorator::Draw(BRect update)
 		driver->FillRect(borderrect,blue);
 	
 	DrawFrame();
-
 }
 
 void BeDecorator::Draw(void)
@@ -282,12 +290,14 @@ void BeDecorator::Draw(void)
 	// Draw the top view's client area - just a hack :)
 	rgb_color blue={100,100,255,255};
 	driver->FillRect(borderrect,blue);
-	
+	borderrect.PrintToStream();
 	DrawFrame();
 }
 
 void BeDecorator::DrawZoom(BRect r)
 {
+	// If this has been implemented, then the decorator has a Zoom button
+	// which should be drawn based on the state of the member zoomstate
 	BRect zr=r;
 	zr.left+=zr.Width()/3;
 	zr.top+=zr.Height()/3;
@@ -298,11 +308,17 @@ void BeDecorator::DrawZoom(BRect r)
 
 void BeDecorator::DrawClose(BRect r)
 {
+	// Just like DrawZoom, but for a close button
 	DrawBlendedRect(r,closestate);
 }
 
 void BeDecorator::DrawTab(void)
 {
+	// If a window has a tab, this will draw it and any buttons which are
+	// in it.
+	if(dlook==WLOOK_NO_BORDER)
+		return;
+	
 	rgb_color tmpcol;
 	float rstep,gstep,bstep;
 
@@ -333,7 +349,7 @@ void BeDecorator::DrawBlendedRect(BRect r, bool down)
 {
 	// This bad boy is used to draw a rectangle with a gradient.
 	// Note that it is not part of the Decorator API - it's specific
-	// to just the BeDecorator. Called by DrawZoom and Draw Close
+	// to just the BeDecorator. Called by DrawZoom and DrawClose
 
 	// Actually just draws a blended square
 	int32 w=r.IntegerWidth(),  h=r.IntegerHeight();
@@ -381,6 +397,11 @@ void BeDecorator::DrawBlendedRect(BRect r, bool down)
 
 void BeDecorator::DrawFrame(void)
 {
+	// Duh, draws the window frame, I think. ;)
+
+	if(dlook==WLOOK_NO_BORDER)
+		return;
+	
 	BRect r=borderrect;
 	bool down=false;
 	
@@ -484,6 +505,8 @@ void BeDecorator::SetLook(uint32 wlook)
 
 void BeDecorator::CalculateBorders(void)
 {
+	// Here we calculate the size of the border on each side - how much the
+	// decorator's visible area "sticks out" past the client rectangle.
 	switch(dlook)
 	{
 		case WLOOK_NO_BORDER:
