@@ -1,8 +1,8 @@
 /*
 
-DUNView by Sikosis
+DUNView by Sikosis (beos@gravity24hr.com)
 
-(C) 2002
+(C) 2002 OpenBeOS under MIT license
 
 */
 
