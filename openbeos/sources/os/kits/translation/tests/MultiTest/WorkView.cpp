@@ -8,7 +8,7 @@
 #include "MultiTest.h"
 #include "WorkView.h"
 
-const char *kPath1 = "../data/images/image.ppm";
+const char *kPath1 = "../data/images/image.jpg";
 const char *kPath2 = "../data/images/image.gif";
 
 WorkView::WorkView(BRect rect)
