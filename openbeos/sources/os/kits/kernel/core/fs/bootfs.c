@@ -2,6 +2,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
 #include <kernel.h>
 #include <vfs.h>
 #include <debug.h>
@@ -755,14 +756,33 @@ static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 	return err;
 }
 
-static int bootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
+
+static int
+bootfs_read_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie, struct dirent *buffer, size_t bufferSize, uint32 *_num)
+{
+	// ToDo: implement me!
+	return B_OK;
+}
+
+
+static int
+bootfs_rewind_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie)
+{
+	// ToDo: me too!
+	return B_OK;
+}
+
+
+static int
+bootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
 {
 	TRACE(("bootfs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
-dprintf("bootfs_ioctl\n");
 	return EINVAL;
 }
 
-static int bootfs_canpage(fs_cookie _fs, fs_vnode _v)
+
+static int
+bootfs_canpage(fs_cookie _fs, fs_vnode _v)
 {
 	struct bootfs_vnode *v = _v;
 
@@ -896,6 +916,10 @@ static struct fs_calls bootfs_calls = {
 	&bootfs_read,
 	&bootfs_write,
 	&bootfs_seek,
+
+	&bootfs_read_dir,
+	&bootfs_rewind_dir,
+
 	&bootfs_ioctl,
 
 	&bootfs_canpage,
@@ -910,7 +934,9 @@ static struct fs_calls bootfs_calls = {
 	&bootfs_wstat,
 };
 
-int bootstrap_bootfs(void)
+
+int
+bootstrap_bootfs(void)
 {
 	region_id rid;
 	vm_region_info rinfo;

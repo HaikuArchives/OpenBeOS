@@ -42,9 +42,11 @@ static struct fd_ops socket_functions = {
 	so_read,
 	so_write,
 	so_ioctl,
+	NULL,	/* fd_read_dir */
+	NULL,	/* fd_rewind_dir */
 	so_stat,
 	so_close,
-	NULL
+	NULL	/* fd_free */
 };
 
 int sockets_init(kernel_args *ka)

@@ -208,19 +208,26 @@ user_ioctl(int fd, ulong op, void *buffer, size_t length)
 }
 
 
-int
-user_close(int fd)
+ssize_t
+user_read_dir(int fd, struct dirent *buffer,size_t bufferSize)
 {
-	struct io_context *ioContext = get_current_io_context(false);
-	struct file_descriptor *descriptor = get_fd(ioContext, fd);
-	int retval;
+	struct file_descriptor *descriptor;
+	ssize_t retval;
 
+	CHECK_USER_ADDR(buffer)
+
+	PRINT(("user_read_dir(fd = %d, buffer = 0x%p, bufferSize = %ld)\n",fd,buffer,bufferSize));
+
+	descriptor = get_fd(get_current_io_context(false), fd);
 	if (descriptor == NULL)
 		return EBADF;
 
-	if (descriptor->ops->fd_close)
-		retval = descriptor->ops->fd_close(descriptor, fd, ioContext);
-	else
+	if (descriptor->ops->fd_read_dir) {
+		uint32 count;
+		retval = descriptor->ops->fd_read_dir(descriptor,buffer,bufferSize,&count);
+		if (retval >= 0)
+			retval = count;
+	} else
 		retval = EOPNOTSUPP;
 
 	put_fd(descriptor);
@@ -228,11 +235,33 @@ user_close(int fd)
 }
 
 
+status_t
+user_rewind_dir(int fd)
+{
+	struct file_descriptor *descriptor;
+	status_t status;
+
+	PRINT(("user_rewind_dir(fd = %d)\n",fd));
+
+	descriptor = get_fd(get_current_io_context(false), fd);
+	if (descriptor == NULL)
+		return EBADF;
+
+	if (descriptor->ops->fd_rewind_dir)
+		status = descriptor->ops->fd_rewind_dir(descriptor);
+	else
+		status = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return status;
+}
+
+
 int
 user_fstat(int fd, struct stat *stat)
 {
 	struct file_descriptor *descriptor;
-	ssize_t retval = 0;
+	ssize_t retval;
 
 	/* This is a user_function, so abort if we have a kernel address */
 	CHECK_USER_ADDR(stat)
@@ -250,6 +279,26 @@ user_fstat(int fd, struct stat *stat)
 		if (retval >= 0)
 			retval = user_memcpy(stat, &kstat, sizeof(*stat));
 	} else
+		retval = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return retval;
+}
+
+
+int
+user_close(int fd)
+{
+	struct io_context *ioContext = get_current_io_context(false);
+	struct file_descriptor *descriptor = get_fd(ioContext, fd);
+	int retval;
+
+	if (descriptor == NULL)
+		return EBADF;
+
+	if (descriptor->ops->fd_close)
+		retval = descriptor->ops->fd_close(descriptor, fd, ioContext);
+	else
 		retval = EOPNOTSUPP;
 
 	put_fd(descriptor);
@@ -331,6 +380,53 @@ sys_ioctl(int fd, ulong op, void *buffer, size_t length)
 
 	if (descriptor->ops->fd_ioctl)
 		status = descriptor->ops->fd_ioctl(descriptor, op, buffer, length);
+	else
+		status = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return status;
+}
+
+
+ssize_t
+sys_read_dir(int fd, struct dirent *buffer,size_t bufferSize)
+{
+	struct file_descriptor *descriptor;
+	ssize_t retval;
+
+	PRINT(("sys_read_dir(fd = %d, buffer = 0x%p, bufferSize = %ld)\n",fd,buffer,bufferSize));
+
+	descriptor = get_fd(get_current_io_context(false), fd);
+	if (descriptor == NULL)
+		return EBADF;
+
+	if (descriptor->ops->fd_read_dir) {
+		uint32 count;
+		retval = descriptor->ops->fd_read_dir(descriptor,buffer,bufferSize,&count);
+		if (retval >= 0)
+			retval = count;
+	} else
+		retval = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return retval;
+}
+
+
+status_t
+sys_rewind_dir(int fd)
+{
+	struct file_descriptor *descriptor;
+	status_t status;
+
+	PRINT(("user_rewind_dir(fd = %d)\n",fd));
+
+	descriptor = get_fd(get_current_io_context(false), fd);
+	if (descriptor == NULL)
+		return EBADF;
+
+	if (descriptor->ops->fd_rewind_dir)
+		status = descriptor->ops->fd_rewind_dir(descriptor);
 	else
 		status = EOPNOTSUPP;
 

@@ -780,8 +780,25 @@ static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 	return err;
 }
 
-//--------------------------------------------------------------------------------
-static int isofs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
+
+static int
+isofs_read_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie, struct dirent *buffer, size_t bufferSize, uint32 *_num)
+{
+	// ToDo: implement me!
+	return B_OK;
+}
+
+
+static int
+isofs_rewind_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie)
+{
+	// ToDo: me too!
+	return B_OK;
+}
+
+
+static int
+isofs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
 {
 	TRACE(("isofs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
 
@@ -903,6 +920,10 @@ static struct fs_calls isofs_calls = {
 	&isofs_read,		// read
 	&isofs_write,		// write
 	&isofs_seek,		// seek
+
+	&isofs_read_dir,
+	&isofs_rewind_dir,
+
 	&isofs_ioctl,		// ioctl
 
 	&isofs_canpage,		// canpage

@@ -2,6 +2,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
 #include <kernel.h>
 #include <vfs.h>
 #include <debug.h>
@@ -525,29 +526,55 @@ static int rootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 	return err;
 }
 
-static int rootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
+
+static int
+rootfs_read_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie, struct dirent *buffer, size_t bufferSize, uint32 *_num)
+{
+	// ToDo: implement me!
+	return B_OK;
+}
+
+
+static int
+rootfs_rewind_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie)
+{
+	// ToDo: me too!
+	return B_OK;
+}
+
+
+static int
+rootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
 {
 	TRACE(("rootfs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
 
 	return EINVAL;
 }
 
-static int rootfs_canpage(fs_cookie _fs, fs_vnode _v)
+
+static int
+rootfs_canpage(fs_cookie _fs, fs_vnode _v)
 {
 	return -1;
 }
 
-static ssize_t rootfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
+
+static ssize_t
+rootfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	return EPERM;
 }
 
-static ssize_t rootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
+
+static ssize_t
+rootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	return EPERM;
 }
 
-static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+
+static int
+rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
 {
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *dir = _dir;
@@ -559,7 +586,7 @@ static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_
 	TRACE(("rootfs_create: dir 0x%x, name = '%s', stream_type = %d\n", dir, name, st));
 
 	// we only support stream types of STREAM_TYPE_DIR
-	if(st != STREAM_TYPE_DIR) {
+	if (st != STREAM_TYPE_DIR) {
 		err = EPERM;
 		goto err;
 	}
@@ -567,7 +594,7 @@ static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_
 	mutex_lock(&fs->lock);
 
 	new_vnode = rootfs_find_in_dir(dir, name);
-	if(new_vnode == NULL) {
+	if (new_vnode == NULL) {
 		dprintf("rootfs_create: creating new vnode\n");
 		new_vnode = rootfs_create_vnode(fs);
 		if(new_vnode == NULL) {
@@ -760,6 +787,10 @@ static struct fs_calls rootfs_calls = {
 	&rootfs_read,
 	&rootfs_write,
 	&rootfs_seek,
+	
+	&rootfs_read_dir,
+	&rootfs_rewind_dir,
+
 	&rootfs_ioctl,
 
 	&rootfs_canpage,

@@ -79,6 +79,10 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_seek((int)arg0, (off_t)INT32TOINT64(arg1, arg2), (int)arg3);
 			break;
 		case SYSCALL_IOCTL:
+			// ToDo: this is not correct; IOCPARM is only valid for calls to the networking stack
+			// The socket/fd_ioctl should do this, but I think we have to pass 0 here -- axeld.
+			// currently ignoring arg3 (which is supposed to be the length, but currently
+			// always 0 - in libc/system/wrappers.c
 			*call_ret = user_ioctl((int)arg0, (ulong)arg1, (void *)arg2, (size_t)IOCPARM_LEN((ulong)arg1));
 			break;
 		case SYSCALL_CREATE:

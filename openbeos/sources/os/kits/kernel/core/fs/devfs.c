@@ -775,7 +775,25 @@ static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 	return err;
 }
 
-static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
+
+static int
+devfs_read_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie, struct dirent *buffer, size_t bufferSize, uint32 *_num)
+{
+	// ToDo: implement me!
+	return B_OK;
+}
+
+
+static int
+devfs_rewind_dir(fs_cookie _fs, fs_vnode _vnode, file_cookie _cookie)
+{
+	// ToDo: me too!
+	return B_OK;
+}
+
+
+static int
+devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op, void *buf, size_t len)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
@@ -783,7 +801,7 @@ static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, ulong op
 
 	TRACE(("devfs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
 	
-	if(v->stream.type == STREAM_TYPE_DEVICE) {
+	if (v->stream.type == STREAM_TYPE_DEVICE) {
 		switch( op ) {
 		case IOCTL_DEVFS_GET_PARTITION_INFO:
 			return devfs_get_partition_info( fs, v, cookie, buf, len );
@@ -968,6 +986,10 @@ static struct fs_calls devfs_calls = {
 	&devfs_read,
 	&devfs_write,
 	&devfs_seek,
+	
+	&devfs_read_dir,
+	&devfs_rewind_dir,
+
 	&devfs_ioctl,
 
 	NULL,
