@@ -1,5 +1,5 @@
-SUBDIRS=net_server ipv4 udp ethernet arp icmp loop route raw test 
-KERNELDIRS=net_server arp ethernet icmp ipv4 loop udp route raw
+SUBDIRS=net_server ipv4 udp ethernet icmp loop route raw tcp test 
+KERNELDIRS=net_server ethernet icmp ipv4 loop udp route raw tcp
 
 # for profiling, uncomment these next 2 lines.
 #CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
@@ -34,13 +34,13 @@ subdirs: clean $(OBJS)
 	@if test -e _APP_; then rm _APP_; fi
 
 installkernel: clean
-	if ! test -d /boot/home/config/add-ons/kernel/network; then \
+	@if ! test -d /boot/home/config/add-ons/kernel/network; then \
 		mkdir /boot/home/config/add-ons/kernel/network; \
 		mkdir /boot/home/config/add-ons/kernel/network/interface; \
 		mkdir /boot/home/config/add-ons/kernel/network/protocol; \
 		mkdir /boot/home/config/add-ons/kernel/network/misc; \
 	fi
-	for i in $(KERNELDIRS); do \
+	@for i in $(KERNELDIRS); do \
 		(cd $$i && $(MAKE) installkernel) || exit 1; \
 	done
 	@echo '***** WARNING *****'
@@ -64,10 +64,10 @@ installkernel: clean
 	@echo "on your travel plans!"
 
 installdriver:
-	(cd ../driver && make install) || exit 1
+	@(cd ../driver && make install) || exit 1
 
 removedriver:
-	(cd ../driver && make clean) || exit 1
+	@(cd ../driver && make clean) || exit 1
 
 clean:
 	@if test -e net_srv; then rm net_srv; fi
