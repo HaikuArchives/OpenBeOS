@@ -293,9 +293,16 @@ static int
 bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vnode_id *vnid)
 {
 	FUNCTION_START(("file = %s\n",file));
+
+	if (_ns == NULL || _directory == NULL || file == NULL)
+		return B_BAD_VALUE;
+
 	Volume *volume = (Volume *)_ns;
-	
 	Inode *directory = (Inode *)_directory;
+
+	if (!directory->CheckPermissions(X_OK))
+		return B_NOT_ALLOWED;
+
 	BPlusTree *tree;
 	if (directory->GetTree(&tree) != B_OK)
 		RETURN_ERROR(B_BAD_VALUE);
