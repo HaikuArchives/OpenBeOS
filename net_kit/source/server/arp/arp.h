@@ -17,6 +17,11 @@ enum {
 	RARP_RPLY
 };
 
+enum {
+	ARP_WAITING,
+	ARP_COMPLETE
+};
+
 /* split the arp header into 2 ytpes in case we have different hardware
  * types we want to use the cache!
  */
@@ -55,11 +60,12 @@ struct arp_cache_entry {
 typedef struct arp_q_entry	arp_q_entry;
 struct arp_q_entry {
 	arp_q_entry *next;
-	struct sockaddr *src;
+	struct mbuf *buf;
 	struct sockaddr *tgt;
-	ifnet *ifn;
 	int attempts;
 	bigtime_t lasttx;
+	int status;
+	void (*callback)(int, struct mbuf *, struct sockaddr *);
 };
 
 

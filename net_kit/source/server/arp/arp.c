@@ -32,6 +32,7 @@ static int arp_inuse = 0;	/* how many entries do we have? */
 static int arp_allocated = 0;	/* how many arp entries have we created? */
 static int arp_maxtries = 5;	/* max tries before a pause */
 
+#if SHOW_DEBUG
 void walk_arp_cache(void)
 {
 	arp_cache_entry *c = arpcache;
@@ -83,6 +84,7 @@ static void dump_arp(void *buffer)
 	print_ipv4_addr(&arp->target_ip);
 	printf("]\n");
 }
+#endif /* SHOW_DEBUG */
 
 /* Returns 1 is new cache entry added, 0 if not */
 static int insert_cache_entry(void *link, int lf, void *addr, int af)
@@ -114,18 +116,24 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 		arpcache->next = ace;
 		arpcache->prev = ace;
 	}
-	nhash_set(arphash, addr, ace->ip_addr.sa_len, (void*)ace);
+
+	nhash_set(arphash, &ace->ip_addr.sa_data, ace->ip_addr.sa_len, (void*)ace);
 	/* this is handy! */
-	//walk_arp_cache();
+#if SHOW_DEBUG
+	walk_arp_cache();
+#endif
 	return 1;
 }
 
 int arp_input(struct mbuf *buf)
 {
 	ether_arp *arp = mtod(buf, ether_arp*);
+	int rv = -1;
 
+#if SHOW_DEBUG
 	dump_arp(arp);
-	
+#endif
+
 	switch (ntohs(arp->arp_op)) {
 		case ARP_RQST:
 			/* The RFC states we should send this back on the same interface it came 
@@ -136,16 +144,13 @@ int arp_input(struct mbuf *buf)
                                 sa.sa_family = AF_LINK;
                                 sa.sa_len = 6;
 				insert_cache_entry((char*)&arp->sender, AF_LINK, &arp->sender_ip, AF_INET);
-				//buf->m_pkthdr.rcvif = interface_for_address(&arp->target_ip, 4);
+				memcpy(&sa.sa_data, &arp->target_ip, 4);
 				memcpy(&arp->target_ip, &arp->sender_ip, 4);
 				memcpy(&arp->target, &arp->sender, 6);
 				memcpy(&arp->sender, &buf->m_pkthdr.rcvif->link_addr->sa_data, 6);
 				memcpy(&arp->sender_ip, &sa.sa_data, 4);
 				memcpy(&sa.sa_data, &arp->target, 6);
 				arp->arp_op = htons(ARP_RPLY);
-				buf->m_len = 28;
-				if (buf->m_flags & M_PKTHDR)
-					buf->m_pkthdr.len = 28;
 				global_modules[prot_table[NS_ETHER]].mod->output(buf, NS_ARP, &sa);
 				return 1;
 			}
@@ -153,11 +158,28 @@ int arp_input(struct mbuf *buf)
 			break;
 		case ARP_RPLY: 
 			/* we only accept our own replies... */
-			if (is_address_local(&arp->target_ip, 4))
-				insert_cache_entry(&arp->sender, AF_LINK, &arp->sender_ip, AF_INET);
-			/* we need to check the return value and find out if we have any waiters on the
-			 * arp_q for this ip address
-			 */
+			if (is_address_local(&arp->target_ip, 4)) {
+				rv = insert_cache_entry(&arp->sender, AF_LINK, &arp->sender_ip, AF_INET);
+				if (rv == 1) {
+					arp_q_entry *aqe;
+					struct sockaddr res;
+					/* we've added an entry... */
+					acquire_sem(arpq_lock);
+					aqe = arp_lookup_q;
+					while (aqe && aqe->status == ARP_WAITING) {
+						if (memcmp(aqe->tgt->sa_data, &arp->sender_ip, 4) == 0) {
+							/* woohoo - it's a match! */
+							res.sa_family = AF_LINK;
+							res.sa_len = 6;
+							memcpy(&res.sa_data, &arp->sender, 6);
+							aqe->callback(ARP_LOOKUP_OK, aqe->buf, &res);
+							aqe->status = ARP_COMPLETE;
+						}
+						aqe = aqe->next;
+					}
+					release_sem(arpq_lock);
+				}
+			}	
 			break;
 		default:
 			printf("unknown ARP packet accepted (op_code was %d)\n", ntohs(arp->arp_op));
@@ -167,8 +189,7 @@ int arp_input(struct mbuf *buf)
 	return 0;
 }
 
-static void arp_send_request(ifnet *ifa, struct sockaddr *from, 
-				struct sockaddr *tgt)
+static void arp_send_request(arp_q_entry *aqe, struct sockaddr *tgt)
 {
 	struct mbuf *buf = m_gethdr(MT_DATA);
 	ether_arp *arp;
@@ -190,21 +211,21 @@ static void arp_send_request(ifnet *ifa, struct sockaddr *from,
 	arp->arp_psz = 4;
 
 	arp->arp_op = htons(ARP_RQST);
-	arp->sender_ip = *(ipv4_addr*)&from->sa_data;
+	arp->sender_ip = *paddr(aqe->buf->m_pkthdr.rcvif, AF_INET, ipv4_addr*);
 	arp->target_ip = *(ipv4_addr*)&tgt->sa_data;
 
 	memset(&ether.sa_data, 0xff, 6);
 	ether.sa_family = AF_LINK;
 	ether.sa_len = 6;
 
-	memcpy(&arp->sender, &ifa->link_addr->sa_data, 6);
+	memcpy(&arp->sender, &aqe->buf->m_pkthdr.rcvif->link_addr->sa_data, 6);
 	memset(&arp->target, 0, 6);
 
 	buf->m_flags |= M_BCAST;
 	buf->m_pkthdr.len = 28;
-	buf->m_len = 28;
-	buf->m_pkthdr.rcvif = ifa;
-
+	/* send request on same interface we'll send packet */
+	buf->m_pkthdr.rcvif = aqe->buf->m_pkthdr.rcvif;
+	aqe->status = ARP_WAITING;
 	global_modules[prot_table[NS_ETHER]].mod->output(buf, NS_ARP, &ether);
 }
 
@@ -229,17 +250,18 @@ int arp_init(loaded_net_module *ln, int *pt)
 	return 0;
 }
 
-struct sockaddr *arp_lookup(struct sockaddr *src, struct sockaddr *tgt)
+int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 {
-	arp_cache_entry *ace;
+	arp_cache_entry *ace = NULL;
 	arp_q_entry *aqe;
 
 	ace = (arp_cache_entry *)nhash_get(arphash, &tgt->sa_data, 
-			tgt->sa_family == AF_INET ? 4 : 6);
+			tgt->sa_len);
 
 	if (ace) {
 		ace->expires = system_time() + (arp_keep * 1000000);
-		return &ace->ll_addr;
+		memcpy(tgt, &ace->ll_addr, sizeof(struct sockaddr));
+		return ARP_LOOKUP_OK;
 	}
 
 	/* ok, we didn't get one! */
@@ -252,19 +274,19 @@ struct sockaddr *arp_lookup(struct sockaddr *src, struct sockaddr *tgt)
 	}
 	if (!aqe) {
 		aqe = malloc(sizeof(struct arp_q_entry));
-		aqe->src = src;
+		aqe->buf = buf;
 		aqe->tgt = tgt;
-		aqe->ifn = interface_for_address(&src->sa_data, src->sa_len);
+		aqe->callback = callback;
 
 		aqe->attempts = 1;
 		if (arp_lookup_q)
 			aqe->next = arp_lookup_q;
 		arp_lookup_q = aqe;
-		arp_send_request(aqe->ifn, src, tgt);
+		arp_send_request(aqe, tgt);
 	}
 	release_sem(arpq_lock);
 
-	return NULL;
+	return ARP_LOOKUP_QUEUED;
 }
 
 net_module net_module_data = {
