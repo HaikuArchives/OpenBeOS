@@ -42,8 +42,6 @@ enum {
 	IFF_SIMPLEX     = 0x2000
 };
 
-typedef struct ifq	ifq;
-
 struct ifq {
 	struct mbuf *head;
 	struct mbuf *tail;
@@ -56,26 +54,26 @@ struct ifq {
 
 #define IFQ_ENQUEUE(ifq, m) { \
 	acquire_sem((ifq)->lock); \
-        (m)->m_nextpkt = 0; \
-        if ((ifq)->tail == 0) \
-                (ifq)->head = m; \
-        else \
-                (ifq)->tail->m_nextpkt = m; \
-        (ifq)->tail = m; \
-        (ifq)->len++; \
+	(m)->m_nextpkt = 0; \
+	if ((ifq)->tail == 0) \
+		(ifq)->head = m; \
+	else \
+		(ifq)->tail->m_nextpkt = m; \
+	(ifq)->tail = m; \
+	(ifq)->len++; \
 	release_sem((ifq)->lock); \
 	release_sem((ifq)->pop); \
 }
 
 #define IFQ_DEQUEUE(ifq, m) { \
 	acquire_sem((ifq)->lock); \
-        (m) = (ifq)->head; \
-        if (m) { \
-                if (((ifq)->head = (m)->m_nextpkt) == 0) \
-                        (ifq)->tail = 0; \
-                (m)->m_nextpkt = 0; \
-                (ifq)->len--; \
-        } \
+	(m) = (ifq)->head; \
+	if (m) { \
+		if (((ifq)->head = (m)->m_nextpkt) == 0) \
+			(ifq)->tail = 0; \
+		(m)->m_nextpkt = 0; \
+		(ifq)->len--; \
+	} \
 	release_sem((ifq)->lock); \
 }
 
@@ -136,10 +134,11 @@ struct ifnet {
 	int if_flags;                /* if flags */
 	int if_index;                /* our index in ifnet_addrs and interfaces */
 
-	ifq *rxq;
+	struct ifq *rxq;
 	thread_id rx_thread;
-	ifq *txq;
+	struct ifq *txq;
 	thread_id tx_thread;
+	struct ifq *devq;
 
 	int	 (*start) (struct ifnet *);
 	int	 (*stop)  (struct ifnet *);	
@@ -251,7 +250,7 @@ struct ifa_msghdr {
 
 /* function declaration */
 struct  ifq    *start_ifq(void);
-
+void            stop_ifq(struct ifq *);
 struct  ifnet  *get_interfaces(void); 
 struct	ifnet  *ifunit(char *name);
 struct	ifaddr *ifa_ifwithaddr(struct sockaddr *);
