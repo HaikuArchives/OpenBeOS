@@ -5,11 +5,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <kernel/OS.h>
+#include <sys/time.h>
 
 #include "netinet/in.h"
 #include "netinet/in_var.h"
-#include "ipv4/ipv4.h"
-#include "ipv4/ipv4_var.h"	/* for stats */
+#include "netinet/in_systm.h"
+#include "netinet/ip.h"
+#include "netinet/ip_var.h"
 #include "protocols.h"
 #include "net_module.h"
 #include "mbuf.h"
@@ -18,6 +20,7 @@
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
+#include "ipv4_module.h"
 #include "net_server/core_module.h"
 
 #define m_free              core->m_free
@@ -39,55 +42,53 @@
 #define ifa_ifwithnet       core->ifa_ifwithnet
 
 static struct core_module_info *core = NULL;
-#define IPV4_MODULE_PATH	"network/protocol/ipv4"
+
 #else
 #define IPV4_MODULE_PATH	"modules/interface/ipv4"
 #endif
 
 struct protosw *proto[IPPROTO_MAX];
-static struct ipstat	ipstat;
-static uint16 ip_identifier = 0; /* XXX - set this better */
+static uint16 ip_identifier = 0;
 struct in_ifaddr *in_ifaddr;
 
 #if SHOW_DEBUG
 static void dump_ipv4_header(struct mbuf *buf)
 {
-	ipv4_header *ip = mtod(buf, ipv4_header *);
+	struct ip *ip = mtod(buf, struct ip *);
 
-        printf("IPv4 Header :\n");
-        printf("            : version       : %d\n", ip->ver);
-        printf("            : header length : %d\n", ip->hl * 4);
-        printf("            : tos           : %d\n", ip->tos);
-        printf("            : total length  : %d\n", ntohs(ip->length));
-        printf("            : id            : %d\n", ntohs(ip->id));
-        printf("            : flags         : 0x%02x\n", IPV4_FLAGS(ip));
-        printf("            : frag offset   : %d\n", ntohs(IPV4_FRAG(ip)));
-        printf("            : ttl           : %d\n", ip->ttl);
-        dump_ipv4_addr("            : src address   :", &ip->src);
-        dump_ipv4_addr("            : dst address   :", &ip->dst);
+	printf("IPv4 Header :\n");
+	printf("            : version       : %d\n", ip->ip_v);
+	printf("            : header length : %d\n", ip->ip_hl * 4);
+	printf("            : tos           : %d\n", ip->ip_tos);
+	printf("            : total length  : %d\n", ntohs(ip->ip_len));
+	printf("            : id            : %d\n", ntohs(ip->ip_id));
+//	printf("            : flags         : 0x%02x\n", IPV4_FLAGS(ip));
+//	printf("            : frag offset   : %d\n", ntohs(IPV4_FRAG(ip)));
+	printf("            : ttl           : %d\n", ip->ip_ttl);
+	dump_ipv4_addr("            : src address   :", &ip->ip_src);
+	dump_ipv4_addr("            : dst address   :", &ip->ip_dst);
 
-        printf("            : protocol      : ");
+	printf("            : protocol      : ");
 
-        switch(ip->prot) {
-                case IPPROTO_ICMP:
-                        printf("ICMP\n");
-                        break;
-                case IPPROTO_UDP: {
-                        printf("UDP\n");
-                        break;
-                }
-                case IPPROTO_TCP:
-                        printf("TCP\n");
-                        break;
-                default:
-                        printf("unknown (0x%02x)\n", ip->prot);
-        }
+	switch(ip->ip_p) {
+		case IPPROTO_ICMP:
+			printf("ICMP\n");
+			break;
+		case IPPROTO_UDP:
+			printf("UDP\n");
+			break;
+		case IPPROTO_TCP:
+			printf("TCP\n");
+			break;
+		default:
+			printf("unknown (0x%02x)\n", ip->prot);
+	}
 }
 #endif
 
 int ipv4_input(struct mbuf *buf, int hdrlen)
 {
-	ipv4_header *ip = mtod(buf, ipv4_header *);
+	struct ip *ip = mtod(buf, struct ip *);
 
 #if SHOW_DEBUG
         dump_ipv4_header(buf);
@@ -95,14 +96,14 @@ int ipv4_input(struct mbuf *buf, int hdrlen)
 
 	atomic_add(&ipstat.ips_total, 1);
 
-	if (ip->ver != 4) {
+	if (ip->ip_v != IPVERSION) {
 		printf("Wrong IP version!\n");
 		atomic_add(&ipstat.ips_badvers, 1);
 		m_freem(buf);
 		return 0;
 	}
 
-	if (in_cksum(buf, ip->hl * 4, 0) != 0) {
+	if (in_cksum(buf, ip->ip_hl * 4, 0) != 0) {
 		printf("Bogus checksum! Discarding packet.\n");
 		atomic_add(&ipstat.ips_badsum, 1);
 		m_freem(buf);
@@ -110,24 +111,24 @@ int ipv4_input(struct mbuf *buf, int hdrlen)
 	}
 
 	/* we put the length into host order here... */
-	ip->length = ntohs(ip->length);
+	ip->ip_len = ntohs(ip->ip_len);
 
 	/* Strip excess data from mbuf */
-	if (buf->m_len > ip->length)
-		 m_adj(buf, ip->length - buf->m_len);
+	if (buf->m_len > ip->ip_len)
+		 m_adj(buf, ip->ip_len - buf->m_len);
 
-	if (proto[ip->prot] && proto[ip->prot]->pr_input) {
-		return proto[ip->prot]->pr_input(buf, ip->hl * 4);
+	if (proto[ip->ip_p] && proto[ip->ip_p]->pr_input) {
+		return proto[ip->ip_p]->pr_input(buf, ip->ip_hl * 4);
 	} else
-		printf("proto[%d] = %p\n", ip->prot, proto[ip->prot]);
+		printf("proto[%d] = %p\n", ip->ip_p, proto[ip->ip_p]);
 
 	return 0; 
 }
 
 int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
-		int flags, void *optp)
+                int flags, void *optp)
 {
-	ipv4_header *ip = mtod(buf, ipv4_header*);
+	struct ip *ip = mtod(buf, struct ip*);
 	struct route iproute; /* temporary route we may need */
 	struct sockaddr_in *dst; /* destination address */
 	struct in_ifaddr *ia;
@@ -143,14 +144,14 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 
 	if (ro && ro->ro_rt && 
 	    ((ro->ro_rt->rt_flags & RTF_UP) == 0 || /* route isn't available */
-	     dst->sin_addr.s_addr != ip->dst.s_addr)) { /* not same ip address */
+	     dst->sin_addr.s_addr != ip->ip_dst.s_addr)) { /* not same ip address */
 		RTFREE(ro->ro_rt);
 		ro->ro_rt = NULL;
 	}
 	if (ro->ro_rt == NULL) {
 		dst->sin_family = AF_INET;
 		dst->sin_len = sizeof(*dst);
-		dst->sin_addr = ip->dst;
+		dst->sin_addr = ip->ip_dst;
 	}
 	if (flags & IP_ROUTETOIF) {
 		/* we're routing to an interface... */
@@ -180,27 +181,29 @@ int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
 	/* make sure we have an outgoing address. if not yet specified, use the
 	 * address of the outgoing interface
 	 */
-	if (ip->src.s_addr == INADDR_ANY)
-		ip->src = IA_SIN(ia)->sin_addr;
+	if (ip->ip_src.s_addr == INADDR_ANY)
+		ip->ip_src = IA_SIN(ia)->sin_addr;
 
 	/* XXX - deal with broadcast */
 
 #if SHOW_ROUTE
 	/* This just shows which interface we're planning on using */
 	printf("Sending to address ");
-	printf("%08lx", ip->dst.s_addr);
+	printf("%08lx", ip->ip_dst.s_addr);
 	printf(" via device %s using source ", ifp->if_name);
-	printf("%08lx\n", ip->src.s_addr);
+	printf("%08lx\n", ip->ip_src.s_addr);
 #endif
 
-	ip->ver = 4;
-	ip->hl = 5; /* XXX - only if we have no options following...hmmm fix this! */
+	ip->ip_v = IPVERSION;
+	ip->ip_hl = 5; /* XXX - only if we have no options following...hmmm fix this! */
 
-	if (ip->length <= ifp->if_mtu) { /* can we send it? */
-		ip->length = htons(ip->length);
-		ip->id = htons(ip_identifier++);
-		ip->hdr_cksum = 0;
-		ip->hdr_cksum = in_cksum(buf, (ip->hl * 4), 0);
+	if (ip->ip_len <= ifp->if_mtu) { /* can we send it? */
+		ip->ip_len = htons(ip->ip_len);
+/* XXX - locking!! */		
+		ip->ip_id = htons(ip_identifier++);
+/* XXX - unlock me !! */
+		ip->ip_sum = 0;
+		ip->ip_sum = in_cksum(buf, (ip->ip_hl * 4), 0);
 		/* now send the packet! */
 		error = (*ifp->output)(ifp, buf, (struct sockaddr *)dst, ro->ro_rt);
 	}
@@ -218,8 +221,20 @@ bad:
 	goto done;
 }
 
+uint16 ip_id(void)
+{
+/* XXX - locking */
+	return ip_identifier++;
+/* XXX - unlocking */
+}
+
 static void ipv4_init(void)
 {
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	if (ip_identifier == 0)
+		ip_identifier = tv.tv_sec & 0xffff;
+
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
 #ifndef _KERNEL_MODE
 	add_protosw(proto, NET_LAYER2);
@@ -287,10 +302,14 @@ static status_t ipv4_ops(int32 op, ...)
 	return B_OK;
 }
 
-static module_info my_module = {
+static struct ipv4_module_info my_module = {
+		{
 		IPV4_MODULE_PATH,
 		B_KEEP_LOADED,
 		ipv4_ops
+		},
+		ipv4_output,
+		ip_id
 };
 
 _EXPORT module_info *modules[] = {

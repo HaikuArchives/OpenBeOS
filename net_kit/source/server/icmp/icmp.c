@@ -4,8 +4,9 @@
 #include <stdio.h>
 
 #include "mbuf.h"
-#include "icmp.h"
-#include "ipv4/ipv4.h"
+#include "netinet/in_systm.h"
+#include "netinet/ip.h"
+#include "netinet/ip_icmp.h"
 #include "net_module.h"
 #include "protocols.h"
 #include "sys/socket.h"
@@ -30,15 +31,15 @@ static struct route icmprt;
 #if SHOW_DEBUG
 static void dump_icmp(struct mbuf *buf)
 {
-	ipv4_header *ip = mtod(buf, ipv4_header *);
-	icmp_header *ic =  (icmp_header*)((caddr_t)ip + (ip->hl * 4));
+	struct ip *ip = mtod(buf, struct ip *);
+	struct icmp *ic =  (struct icmp*)((caddr_t)ip + (ip->hl * 4));
 
-        printf("ICMP: ");
-        switch (ic->type) {
-		case ICMP_ECHO_RQST:
+	printf("ICMP: ");
+	switch (ic->icmp_type) {
+		case ICMP_ECHORQST:
 			printf ("Echo request\n");
 			break;
-		case ICMP_ECHO_RPLY:
+		case ICMP_ECHORPLY:
 			printf("echo reply\n");
 			break;
 		default:
@@ -49,14 +50,14 @@ static void dump_icmp(struct mbuf *buf)
 
 int icmp_input(struct mbuf *buf, int hdrlen)
 {
-	ipv4_header *ip = mtod(buf, ipv4_header *);	
-	icmp_header *ic;
-	int icl = ip->length - hdrlen;
+	struct ip *ip = mtod(buf, struct ip *);	
+	struct icmp *ic;
+	int icl = ip->ip_len - hdrlen;
 	struct route rt;
 	int error = 0;
 	struct in_addr tmp;
 
-	ic = (icmp_header*)((caddr_t)ip + hdrlen);
+	ic = (struct icmp*)((caddr_t)ip + hdrlen);
 	rt.ro_rt = NULL;
 
 #if SHOW_DEBUG
@@ -69,24 +70,23 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 		return 0;
 	}	
 
-	switch (ic->type) {
-		case ICMP_ECHO_RQST: {
-			icmp_echo *ie = (icmp_echo *)ic;
-			ie->hdr.type = ICMP_ECHO_RPLY;
+	switch (ic->icmp_type) {
+		case ICMP_ECHO: {	
+			ic->icmp_type = ICMP_ECHOREPLY;
 
-			ie->hdr.cksum = 0;
-			ie->hdr.cksum = in_cksum(buf, icl, hdrlen);
-			tmp = ip->src;
-			ip->src = ip->dst;
-			ip->dst = tmp;
+			ic->icmp_cksum = 0;
+			ic->icmp_cksum = in_cksum(buf, icl, hdrlen);
+			tmp = ip->ip_src;
+			ip->ip_src = ip->ip_dst;
+			ip->ip_dst = tmp;
 
-			if (satosin(&icmprt.ro_dst)->sin_addr.s_addr == ip->src.s_addr)
+			if (satosin(&icmprt.ro_dst)->sin_addr.s_addr == ip->ip_src.s_addr)
 				rt = icmprt;
 			else {
 				/* fill in target structure... */
 				satosin(&rt.ro_dst)->sin_family = AF_INET;
 				satosin(&rt.ro_dst)->sin_len = sizeof(rt.ro_dst);
-				satosin(&rt.ro_dst)->sin_addr = ip->src;
+				satosin(&rt.ro_dst)->sin_addr = ip->ip_src;
 			}
 			error = proto[IPPROTO_IP]->pr_output(buf, NULL, &rt, 0, NULL);
 			if (error == 0)
@@ -94,7 +94,7 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 			return error;
 			break;
 		}
-		case ICMP_ECHO_RPLY:
+		case ICMP_ECHOREPLY:
 			break;
 		default:
 	}
