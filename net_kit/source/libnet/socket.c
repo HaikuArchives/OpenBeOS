@@ -52,14 +52,14 @@ int socket(int domain, int type, int protocol)
 		/* we have old be types... convert... */
 		if (type == 1)
 			type = SOCK_DGRAM;
-		if (type == 2)
+		else if (type == 2)
 			type = SOCK_STREAM;
 
 		if (protocol == 1)
 			protocol = IPPROTO_UDP;
-		if (protocol == 2)
+		else if (protocol == 2)
 			protocol = IPPROTO_TCP;
-		if (protocol == 3)
+		else if (protocol == 3)
 			protocol = IPPROTO_ICMP;
 	};
 	
@@ -406,11 +406,11 @@ static void	convert_from_beos_r5_sockopt(int * level, int * optnum)
 		*level = SOL_SOCKET;
 		
 	switch (*optnum) {
-	case 1: *optnum = SO_DEBUG;
-	case 2: *optnum = SO_REUSEADDR;
-	// case 3: *optnum = SO_NONBLOCK;
-	case 4: *optnum = SO_REUSEPORT;
-	// case 5: *optnum = SO_FIONREAD;
+	case 1: *optnum = SO_DEBUG; break;
+	case 2: *optnum = SO_REUSEADDR; break;
+	// case 3: *optnum = SO_NONBLOCK; break;
+	case 4: *optnum = SO_REUSEPORT; break;
+	// case 5: *optnum = SO_FIONREAD; break;
 	};
 }
 
