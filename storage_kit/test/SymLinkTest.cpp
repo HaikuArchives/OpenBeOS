@@ -189,11 +189,11 @@ SymLinkTest::Suite()
 {
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 	
-//	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Init Test 1", &SymLinkTest::InitTest1) );
-//	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Init Test 2", &SymLinkTest::InitTest2) );
-//	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::ReadLink Test", &SymLinkTest::ReadLinkTest) );
-//	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::MakeLinkedPath Test", &SymLinkTest::MakeLinkedPathTest) );
-//	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::IsAbsolute Test", &SymLinkTest::IsAbsoluteTest) );
+	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Init Test 1", &SymLinkTest::InitTest1) );
+	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Init Test 2", &SymLinkTest::InitTest2) );
+	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::ReadLink Test", &SymLinkTest::ReadLinkTest) );
+	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::MakeLinkedPath Test", &SymLinkTest::MakeLinkedPathTest) );
+	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::IsAbsolute Test", &SymLinkTest::IsAbsoluteTest) );
 	suite->addTest( new SymLinkTestCaller<SymLinkTest>("BSymLink::Assignment Test", &SymLinkTest::AssignmentTest) );
 	
 	return suite;
