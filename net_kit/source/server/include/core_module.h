@@ -30,7 +30,11 @@ struct core_module_info {
 	net_timer_id (*net_add_timer)(net_timer_hook ,void *,
 	                              bigtime_t);
 	status_t (*net_remove_timer)(net_timer_id);
-	                           	
+
+	/* ifq functions */
+	struct ifq *(*start_ifq)(void);
+	void (*stop_ifq)(struct ifq *);
+		                           	
 	/* pool functions */
 	status_t (*pool_init)(pool_ctl **p, size_t sz);
 	char *(*pool_get)(pool_ctl *p);
@@ -75,6 +79,7 @@ struct core_module_info {
 	/* mbuf routines... */
 	struct mbuf * (*m_gethdr)(int);
 	struct mbuf * (*m_get)(int);
+	void (*m_cat)(struct mbuf *, struct mbuf *);
 	void (*m_adj)(struct mbuf*, int);
 	struct mbuf * (*m_prepend)(struct mbuf*, int);
 	struct mbuf *(*m_pullup)(struct mbuf *, int);

@@ -18,6 +18,9 @@
 #   define net_add_timer       core->net_add_timer
 #   define net_remove_timer    core->net_remove_timer
 
+#   define start_ifq           core->start_ifq
+#   define stop_ifq            core->stop_ifq
+ 
 #	define pool_init           core->pool_init
 #	define pool_get            core->pool_get
 #	define pool_put            core->pool_put
@@ -26,6 +29,7 @@
 #	define m_gethdr            core->m_gethdr
 #	define m_free              core->m_free
 #	define m_freem             core->m_freem
+#   define m_cat               core->m_cat
 #	define m_adj               core->m_adj
 #	define m_prepend           core->m_prepend
 #	define m_pullup            core->m_pullup
