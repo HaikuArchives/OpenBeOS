@@ -94,20 +94,18 @@
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
 #include <netinet/tcpip.h>
-
 #include <netinet/tcp_debug.h>
 
-#include "ipv4/ipv4_module.h"
-
-extern struct ipv4_module_info *ipm;
 #include "core_module.h"
 #include "core_funcs.h"
+#include "ipv4/ipv4_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #endif
 
 extern struct core_module_info *core;
+extern struct ipv4_module_info *ipm;
 
 int	    tcprexmtthresh = 3;
 struct	tcpiphdr tcp_saveti;

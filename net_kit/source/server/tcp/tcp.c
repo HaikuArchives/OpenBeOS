@@ -23,11 +23,10 @@
 #include "netinet/tcp_var.h"
 #include "netinet/tcpip.h"
 
-#include "ipv4/ipv4_module.h"
-
 #include "core_module.h"
 #include "net_module.h"
 #include "core_funcs.h"
+#include "ipv4/ipv4_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>

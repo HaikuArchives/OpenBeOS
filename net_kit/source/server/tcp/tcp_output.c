@@ -18,9 +18,9 @@
 #include "netinet/tcp_fsm.h"
 #include "netinet/tcp_debug.h"
 
-#include "ipv4/ipv4_module.h"
 #include "core_module.h"
 #include "core_funcs.h"
+#include "ipv4/ipv4_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
