@@ -7,7 +7,7 @@
 #include <syscalls.h>
 #include <user_runtime.h>
 
-
+void __init__dlfcn(struct uspace_prog_args_t const *);
 static struct rld_export_t const *rld;
 
 void *
