@@ -1,6 +1,6 @@
 /*
  * DataTranslationsSettings.cpp
- * DataTranslations mccall@digitalparadise.co.uk
+ * DataTranslations Oliver Siebenmarck
  *
  */
  

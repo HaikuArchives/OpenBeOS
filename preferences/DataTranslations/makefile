@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= Calculator
+NAME= DataTranslations 
 
 # specify the type of binary
 #	APP:	Application
@@ -30,11 +30,11 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= Keyboard.cpp KeyboardWindow.cpp KeyboardView.cpp KeyboardSettings.cpp
+SRCS= Datatranslations.cpp DataTranslationswindow.cpp DataTranslationsView.cpp DataTranslationsSettings.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS= Keyboard.rsrc
+RSRCS= DataTranslations.rsrc
 
 # @<-src@ 
 #%}
