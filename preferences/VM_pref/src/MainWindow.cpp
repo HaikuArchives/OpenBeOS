@@ -71,7 +71,7 @@ MainWindow::MainWindow(BRect frame, int physMemVal, int currSwapVal, int minVal,
 	 */
 	sprintf(sliderMinLabel, "%d MB", minSwapVal);
 	sprintf(sliderMaxLabel, "%d MB", maxSwapVal);
-	reqSizeSlider = new BSlider(*(new BRect(10, 55, 210, 100)), "ReqSwapSizeSlider", "", new BMessage(MEMORY_SLIDER_MSG), minSwapVal, maxSwapVal, B_TRIANGLE_THUMB);
+	reqSizeSlider = new BSlider(*(new BRect(10, 55, 210, 100)), "ReqSwapSizeSlider", "", new BMessage(MEMORY_SLIDER_MSG), minSwapVal, maxSwapVal, B_TRIANGLE_THUMB, B_FOLLOW_LEFT, B_WILL_DRAW);
 	reqSizeSlider->SetLimitLabels(sliderMinLabel, sliderMaxLabel);
 	reqSizeSlider->UseFillColor(TRUE, &fillColor);
 	reqSizeSlider->SetModificationMessage(new BMessage(SLIDER_UPDATE_MSG));
@@ -130,7 +130,7 @@ void MainWindow::MessageReceived(BMessage *message){
 			if(currVal != origMemSize){
 			
 				revertButton->SetEnabled(true);
-				sprintf(msg, "You must reboot to apply changes.");
+				sprintf(msg, "Changes will take effect on restart.");
 				restart->SetText(msg);
 				
 			}//if
