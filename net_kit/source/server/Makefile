@@ -1,5 +1,5 @@
-SUBDIRS=net_server ipv4 udp ethernet arp icmp loop route test 
-KERNELDIRS=net_server arp ethernet icmp ipv4 loop udp route
+SUBDIRS=net_server ipv4 udp ethernet arp icmp loop route raw test 
+KERNELDIRS=net_server arp ethernet icmp ipv4 loop udp route raw
 
 # for profiling, uncomment these next 2 lines.
 #CFLAGS=-O0 -p -g -Wall -fPIC -DPIC
