@@ -19,10 +19,10 @@
 /* This is the place we store a few of the "global variables" that the OS
  * needs.
  */
-char hostname[MAXHOSTNAMELEN] = "openbeos.rock.my.world.com\0";
-int  hostnamelen = 27;
-char domainname[MAXHOSTNAMELEN];
-int  domainnamelen;
+char hostname[MAXHOSTNAMELEN] = "openbeos\0";
+int  hostnamelen = 9;
+char domainname[MAXHOSTNAMELEN] = "rocks.my.world.com\0";
+int  domainnamelen = 19;
 
 /* These really don't belong here, but just for the moment until we figure out where
  * these should live...
@@ -32,6 +32,7 @@ char ostype[] = "OpenBeOS";
 char osrelease[] = "0.01";
 char osversion[] = "alpha";
 char version[] = "0.0.1";
+char kernel[] = "DEV";
 
 char machine[] = "Intel";
 char model[] =	"MODEL";
@@ -87,7 +88,7 @@ int kern_sysctl(int *name, uint namelen, void *oldp, size_t *oldlenp,
 				domainnamelen = newlen;
 			return (error);
 		case KERN_VERSION:
-			return sysctl_rdstring(oldp, oldlenp, newp, version);
+			return sysctl_rdstring(oldp, oldlenp, newp, kernel);
 		default:
 			return EOPNOTSUPP;
 	}
