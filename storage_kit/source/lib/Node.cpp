@@ -12,40 +12,170 @@
 #include "kernel_interface.h"
 #include "storage_support.h"
 
-BNode::BNode() : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fCStatus(B_NO_INIT) {
+// node_ref
+
+// constructor
+/*! \brief Creates an uninitialized node_ref object.
+*/
+node_ref::node_ref()
+		: device(0),
+		  node(0)
+{
 }
 
-BNode::BNode(const entry_ref *ref) {
+// copy constructor
+/*! \brief Creates a copy of the given node_ref object.
+	\param ref the node_ref to be copied
+*/
+node_ref::node_ref(const node_ref &ref)
+{
+	*this = ref;
 }
 
-BNode::BNode(const BEntry *entry) {
+// ==
+/*! \brief Tests whether this node_ref and the supplied one are equal.
+	\param ref the node_ref to be compared with
+	\return \c true, if the objects are equal, \c false otherwise
+*/
+bool
+node_ref::operator==(const node_ref &ref) const
+{
+	return (device == ref.device && node == ref.node);
 }
 
-BNode::BNode(const char *path) : fFd(StorageKit::NullFd), fAttrFd(StorageKit::NullFd), fCStatus(B_NO_INIT)  {
+// !=
+/*! \brief Tests whether this node_ref and the supplied one are not equal.
+	\param ref the node_ref to be compared with
+	\return \c false, if the objects are equal, \c true otherwise
+*/
+bool
+node_ref::operator!=(const node_ref &ref) const
+{
+	return !(*this == ref);
+}
+
+// =
+/*! \brief Makes this node ref a copy of the supplied one.
+	\param ref the node_ref to be copied
+	\return a reference to this object
+*/
+node_ref&
+node_ref::operator=(const node_ref &ref)
+{
+	device = ref.device;
+	node = ref.node;
+	return *this;
+}
+
+
+// BNode
+
+/*!	\brief Creates an uninitialized BNode object
+*/
+BNode::BNode()
+	 : fFd(StorageKit::NullFd),
+	   fAttrFd(StorageKit::NullFd),
+	   fCStatus(B_NO_INIT)
+{
+}
+
+/*!	\brief Creates a BNode object and initializes it to the specified
+	entry_ref.
+	\param ref the entry_ref referring to the entry
+*/
+BNode::BNode(const entry_ref *ref)
+	 : fFd(StorageKit::NullFd),
+	   fAttrFd(StorageKit::NullFd),
+	   fCStatus(B_NO_INIT)
+{
+	SetTo(ref);
+}
+
+/*!	\brief Creates a BNode object and initializes it to the specified
+	filesystem entry.
+	\param entry the BEntry representing the entry
+*/
+BNode::BNode(const BEntry *entry)
+	 : fFd(StorageKit::NullFd),
+	   fAttrFd(StorageKit::NullFd),
+	   fCStatus(B_NO_INIT)
+{
+	SetTo(entry);
+}
+
+/*!	\brief Creates a BNode object and initializes it to the entry referred
+	to by the specified path.
+	\param path the path referring to the entry
+*/
+BNode::BNode(const char *path)
+	 : fFd(StorageKit::NullFd),
+	   fAttrFd(StorageKit::NullFd),
+	   fCStatus(B_NO_INIT)
+{
 	SetTo(path);
 }
 
-BNode::BNode(const BDirectory *dir, const char *path) {
+/*!	\brief Creates a BNode object and initializes it to the entry referred
+	to by the specified path rooted in the specified directory.
+	\param dir the BDirectory, relative to which the entry's path name is
+		   given
+	\param path the entry's path name relative to \a dir
+*/
+BNode::BNode(const BDirectory *dir, const char *path)
+	 : fFd(StorageKit::NullFd),
+	   fAttrFd(StorageKit::NullFd),
+	   fCStatus(B_NO_INIT)
+{
+	SetTo(dir, path);
 }
 
-BNode::BNode(const BNode &node) {
+/*! \brief Creates a copy of the given BNode.
+	\param node the BNode to be copied
+*/
+BNode::BNode(const BNode &node)
+	 : fFd(StorageKit::NullFd),
+	   fAttrFd(StorageKit::NullFd),
+	   fCStatus(B_NO_INIT)
+{
+	*this = node;
 }
 
+/*!	\brief Frees all resources associated with this BNode.
+*/
 BNode::~BNode() {
 	close_fd();
 }
 
+/*!	\brief Checks whether the object has been properly initialized or not.
+	\return
+	- \c B_OK, if the object has been properly initialized,
+	- an error code, otherwise.
+*/
 status_t
 BNode::InitCheck() const {
 	return fCStatus;
 }
 
+/*! \brief Fills in the given stat structure with \code stat() \endcode
+		   information for this object.
+	\param st a pointer to a stat structure to be filled in
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a st.
+	- another error code, e.g., if the object wasn't properly initialized
+*/
 status_t
 BNode::GetStat(struct stat *st) const {
 	return (fCStatus != B_OK) ? fCStatus : StorageKit::get_stat(fFd, st) ;
 }
 
-/*!
+/*! \brief Reinitializes the object to the specified entry_ref.
+	\param ref the entry_ref referring to the entry
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a ref.
+	- \c B_ENTRY_NOT_FOUND: The entry could not be found.
+	- \c B_BUSY: The entry is locked.
 	\todo Currently implemented using StorageKit::entry_ref_to_path().
 		  Reimplement!
 */
@@ -61,7 +191,13 @@ BNode::SetTo(const entry_ref *ref) {
 	return error;
 }
 
-/*!
+/*!	\brief Reinitializes the object to the specified filesystem entry.
+	\param entry the BEntry representing the entry
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a entry.
+	- \c B_ENTRY_NOT_FOUND: The entry could not be found.
+	- \c B_BUSY: The entry is locked.
 	\todo Implemented using SetTo(entry_ref*). Check, if necessary to
 		  reimplement!
 */
@@ -79,6 +215,15 @@ BNode::SetTo(const BEntry *entry) {
 	return error;
 }
 
+/*!	\brief Reinitializes the object to the entry referred to by the specified
+		   path.
+	\param path the path referring to the entry
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a path.
+	- \c B_ENTRY_NOT_FOUND: The entry could not be found.
+	- \c B_BUSY: The entry is locked.
+*/
 status_t
 BNode::SetTo(const char *path) {
 	Unset();	
@@ -88,7 +233,16 @@ BNode::SetTo(const char *path) {
 	return fCStatus;
 }
 
-/*!
+/*! \brief Reinitializes the object to the entry referred to by the specified
+	path rooted in the specified directory.
+	\param dir the BDirectory, relative to which the entry's path name is
+		   given
+	\param path the entry's path name relative to \a dir
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a dir or \a path.
+	- \c B_ENTRY_NOT_FOUND: The entry could not be found.
+	- \c B_BUSY: The entry is locked.
 	\todo Implemented using SetTo(BEntry*). Check, if necessary to reimplement!
 */
 status_t
@@ -105,11 +259,20 @@ BNode::SetTo(const BDirectory *dir, const char *path) {
 	return error;
 }
 
+/*!	\brief Returns the object to an uninitialized state.
+*/
 void
 BNode::Unset() {
 	close_fd();
 }
 
+/*!	\brief Attains an exclusive lock on the data referred to by this node, so
+	that it may not be modified by any other objects or methods.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_FILE_ERROR: The object is not initialized.
+	- \c B_BUSY: The node is already locked.
+*/
 status_t
 BNode::Lock() {
 	if (fCStatus != B_OK)
@@ -124,6 +287,12 @@ BNode::Lock() {
 //	return StorageKit::lock(fFd, StorageKit::READ_WRITE, &lock);
 }
 
+/*!	\brief Unlocks the node.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_FILE_ERROR: The object is not initialized.
+	- \c B_BAD_VALUE: The node is not locked.
+*/
 status_t
 BNode::Unlock() {
 	if (fCStatus != B_OK)
@@ -133,14 +302,39 @@ BNode::Unlock() {
 	return B_FILE_ERROR;
 }
 
+/*!	\brief Immediately performs any pending disk actions on the node.
+	\return
+	- \c B_OK: Everything went fine.
+	- an error code, if something went wrong.
+*/
 status_t
 BNode::Sync() {
 	return (fCStatus != B_OK) ? fCStatus : StorageKit::sync(fFd) ;
 }
 
+/*!	\brief Writes data from a buffer to an attribute.
+	Write the \a len bytes of data from \a buffer to
+	the attribute specified by \a name after erasing any data
+	that existed previously. The type specified by \a type \em is
+	remembered, and may be queried with GetAttrInfo(). The value of
+	\a offset is currently ignored.
+	\param attr the name of the attribute
+	\param type the type of the attribute
+	\param offset the index at which to write the data (currently ignored)
+	\param buffer the buffer containing the data to be written
+	\param len the number of bytes to be written
+	\return
+	- the number of bytes actually written
+	- \c B_BAD_VALUE: \c NULL \a attr or \a buffer
+	- \c B_FILE_ERROR: The object is not initialized or the node it refers to
+	  is read only.
+	- \c B_NOT_ALLOWED: The node resides on a read only volume.
+	- \c B_DEVICE_FULL: Insufficient disk space.
+	- \c B_NO_MEMORY: Insufficient memory to complete the operation.
+*/
 ssize_t
 BNode::WriteAttr(const char *attr, type_code type, off_t offset,
-const void *buffer, size_t len) {
+				 const void *buffer, size_t len) {
 	if (fCStatus == B_NO_INIT)
 		return B_FILE_ERROR;
 	else {
@@ -149,9 +343,24 @@ const void *buffer, size_t len) {
 	}
 }
 
+/*!	\brief Reads data from an attribute into a buffer.
+	Reads the data of the attribute given by \a name into
+	the buffer specified by \a buffer with length specified
+	by \a len. \a type and \a offset are currently ignored.
+	\param attr the name of the attribute
+	\param type the type of the attribute (currently ignored)
+	\param offset the index from which to read the data (currently ignored)
+	\param buffer the buffer for the data to be read
+	\param len the number of bytes to be read
+	\return
+	- the number of bytes actually read
+	- \c B_BAD_VALUE: \c NULL \a attr or \a buffer
+	- \c B_FILE_ERROR: The object is not initialized.
+	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a attr.
+*/
 ssize_t
 BNode::ReadAttr(const char *attr, type_code type, off_t offset,
-void *buffer, size_t len) const {
+				void *buffer, size_t len) const {
 	if (fCStatus == B_NO_INIT)
 		return B_FILE_ERROR;
 	else {
@@ -160,12 +369,32 @@ void *buffer, size_t len) const {
 	}
 }
 
+/*!	\brief Deletes the attribute given by \a name.
+	\param name the name of the attribute
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a name
+	- \c B_FILE_ERROR: The object is not initialized or the node it refers to
+	  is read only.
+	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a name.
+	- \c B_NOT_ALLOWED: The node resides on a read only volume.
+*/
 status_t
 BNode::RemoveAttr(const char *name) {
 	return (fCStatus == B_NO_INIT) ? B_FILE_ERROR : StorageKit::remove_attr(fFd, name);
 }
 
-
+/*!	\brief Moves the attribute given by \a oldname to \a newname.
+	If \a newname already exists, the current data is clobbered.
+	\param oldname the name of the attribute to be renamed
+	\param newname the new name for the attribute
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a oldname or \a newname
+	- \c B_FILE_ERROR: The object is not initialized or the node it refers to
+	  is read only.
+	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a oldname.
+	- \c B_NOT_ALLOWED: The node resides on a read only volume.
+*/
 status_t
 BNode::RenameAttr(const char *oldname, const char *newname) {
 
@@ -209,11 +438,38 @@ BNode::RenameAttr(const char *oldname, const char *newname) {
 }
 
 
+/*!	\brief Fills in the pre-allocated attr_info struct pointed to by \a info
+	with useful information about the attribute specified by \a name.
+	\param name the name of the attribute
+	\param info the attr_info structure to be filled in
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a name
+	- \c B_FILE_ERROR: The object is not initialized.
+	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a name.
+*/
 status_t
 BNode::GetAttrInfo(const char *name, struct attr_info *info) const {
 	return (fCStatus == B_NO_INIT) ? B_FILE_ERROR : StorageKit::stat_attr(fFd, name, info) ;
 }
 
+/*!	\brief Returns the next attribute in the node's list of attributes.
+	Every BNode maintains a pointer to its list of attributes.
+	GetNextAttrName() retrieves the name of the attribute that the pointer is
+	currently pointing to, and then bumps the pointer to the next attribute.
+	The name is copied into the buffer, which should be at least
+	B_ATTR_NAME_LENGTH characters long. The copied name is NULL-terminated.
+	When you've asked for every name in the list, GetNextAttrName()
+	returns \c B_ENTRY_NOT_FOUND.
+	\param buffer the buffer the name of the next attribute shall be stored in
+		   (must be at least \c B_ATTR_NAME_LENGTH bytes long)
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a buffer.
+	- \c B_FILE_ERROR: The object is not initialized.
+	- \c B_ENTRY_NOT_FOUND: There are no more attributes, the last attribute
+	  name has already been returned.
+ */
 status_t
 BNode::GetNextAttrName(char *buffer) {
 	// We're allowed to assume buffer is at least
@@ -235,6 +491,12 @@ BNode::GetNextAttrName(char *buffer) {
 	}
 }
 
+/*! \brief Resets the object's attribute pointer to the first attribute in the
+	list.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_ADDRESS: Some error occured.
+*/
 status_t
 BNode::RewindAttrs() {
 	if (InitAttrDir() != B_OK)
@@ -248,6 +510,19 @@ BNode::RewindAttrs() {
 // We need an OpenBeOS BString implementation before we can actually test
 // WriteAttrString() and ReadAttrString().
 
+/*!	Writes the specified string to the specified attribute, clobbering any
+	previous data.
+	\param name the name of the attribute
+	\param data the BString to be written to the attribute
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a name or \a data
+	- \c B_FILE_ERROR: The object is not initialized or the node it refers to
+	  is read only.
+	- \c B_NOT_ALLOWED: The node resides on a read only volume.
+	- \c B_DEVICE_FULL: Insufficient disk space.
+	- \c B_NO_MEMORY: Insufficient memory to complete the operation.
+	\todo Implement, when OBOS BString is available.
+*/
 status_t
 BNode::WriteAttrString(const char *name, const BString *data) {
 /*	return (data == NULL) ? B_BAD_VALUE :
@@ -256,6 +531,17 @@ BNode::WriteAttrString(const char *name, const BString *data) {
 	return B_ERROR;
 }
 
+/*!	\brief Reads the data of the specified attribute into the pre-allocated
+		   \a result.
+	\param name the name of the attribute
+	\param result the BString to be set to the value of the attribute
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a name or \a result
+	- \c B_FILE_ERROR: The object is not initialized.
+	- \c B_ENTRY_NOT_FOUND: The node has no attribute \a attr.
+	\todo Implement, when OBOS BString is available.
+*/
 status_t
 BNode::ReadAttrString(const char *name, BString *result) const {
 /*	if (result == NULL)
@@ -293,6 +579,10 @@ BNode::ReadAttrString(const char *name, BString *result) const {
 	return B_ERROR;
 }
 
+/*!	\brief Reinitializes the object as a copy of the \a node.
+	\param node the BNode to be copied
+	\return a reference to this BNode object.
+*/
 BNode&
 BNode::operator=(const BNode &node) {
 	// No need to do any assignment if already equal
@@ -310,6 +600,12 @@ BNode::operator=(const BNode &node) {
 	return *this;
 }
 
+/*!	Tests whether this and the supplied BNode object are equal.
+	Two BNode objects are said to be equal if they're set to the same node,
+	or if they're both \c B_NO_INIT.
+	\param node the BNode to be compared with
+	\return \c true, if the BNode objects are equal, \c false otherwise
+*/
 bool
 BNode::operator==(const BNode &node) const {
 	if (fCStatus == B_NO_INIT && node.InitCheck() == B_NO_INIT)
@@ -328,17 +624,29 @@ BNode::operator==(const BNode &node) const {
 	return false;	
 }
 
+/*!	Tests whether this and the supplied BNode object are not equal.
+	Two BNode objects are said to be equal if they're set to the same node,
+	or if they're both \c B_NO_INIT.
+	\param node the BNode to be compared with
+	\return \c false, if the BNode objects are equal, \c true otherwise
+*/
 bool
 BNode::operator!=(const BNode &node) const {
 	return !(*this == node);
 }
 
+/*!	\brief Returns a POSIX file descriptor to the node this object refers to.
+	Remember to call close() on the file descriptor when you're through with
+	it.
+	\return a valid file descriptor, or -1, if something went wrong.
+*/
 int
 BNode::Dup() {
 	return StorageKit::dup(fFd);
 }
 
 
+/*! (currently unused) */
 void BNode::_RudeNode1() { }
 void BNode::_RudeNode2() { }
 void BNode::_RudeNode3() { }
@@ -346,8 +654,15 @@ void BNode::_RudeNode4() { }
 void BNode::_RudeNode5() { }
 void BNode::_RudeNode6() { }
 
+/*!	\brief Sets the node's file descriptor.
+	Used by each implementation (i.e. BNode, BFile, BDirectory, etc.) to set
+	the node's file descriptor. This allows each subclass to use the various
+	file-type specific system calls for opening file descriptors.
+	\param fd the file descriptor this BNode should be set to (may be -1)
+	\return \c B_OK, if everything went fine, an error code otherwise.
+*/
 status_t
-BNode::set_fd(int fd) {
+BNode::set_fd(StorageKit::FileDescriptor fd) {
 	if (fFd != -1)
 		close_fd();
 		
@@ -355,6 +670,12 @@ BNode::set_fd(int fd) {
 	return B_OK;
 }
 
+/*!	\brief Closes the node's file descriptor(s).
+	To be implemented by subclasses to close the file descriptor using the
+	proper system call for the given file-type. This implementation calls
+	StorageKit::close(fFd) and also StorageKit::close_attr_dir(fAttrDir)
+	if necessary.
+*/
 void
 BNode::close_fd() {
 	if (fAttrFd != StorageKit::NullFd) {
@@ -370,16 +691,13 @@ BNode::close_fd() {
 	fCStatus = B_NO_INIT;	
 }
 
-status_t
-BNode::clear_virtual() {
-	return B_ERROR;
-}
-
-status_t
-BNode::clear() {
-	return B_ERROR;
-}
-
+/*! \brief Modifies a certain setting for this node based on \a what and the
+	corresponding value in \a st.
+	Inherited from and called by BStatable.
+	\param st a stat structure containing the value to be set
+	\param what specifies what setting to be modified
+	\return \c B_OK if everything went fine, an error code otherwise.
+*/
 status_t
 BNode::set_stat(struct stat &st, uint32 what) {
 	if (fCStatus != B_OK)
@@ -388,26 +706,11 @@ BNode::set_stat(struct stat &st, uint32 what) {
 	return StorageKit::set_stat(fFd, st, what);
 }
 
-status_t
-BNode::set_to(const entry_ref *ref, bool traverse) {
-	return B_ERROR;
-}
-
-status_t
-BNode::set_to(const BEntry *entry, bool traverse) {
-	return B_ERROR;
-}
-
-status_t
-BNode::set_to(const char *path, bool traverse) {
-	return B_ERROR;
-}
-
-status_t
-BNode::set_to(const BDirectory *dir, const char *path, bool traverse) {
-	return B_ERROR;
-}
-
+/*! \brief Verifies that the BNode has been properly initialized, and then
+	(if necessary) opens the attribute directory on the node's file
+	descriptor, storing it in fAttrDir.
+	\return \c B_OK if everything went fine, an error code otherwise.
+*/
 status_t
 BNode::InitAttrDir() {
 	if (fCStatus == B_OK && fAttrFd == StorageKit::NullFd) {
@@ -417,3 +720,19 @@ BNode::InitAttrDir() {
 
 	return fCStatus;	
 }
+
+/*!	\var BNode::fFd
+	File descriptor for the given node.
+*/
+
+/*!	\var BNode::fAttrFd
+	This appears to be passed to the attribute directory functions
+	like a StorageKit::Dir would be, but it's actually a file descriptor.
+	Best I can figure, the R5 syscall for reading attributes must've
+	just taken a file descriptor. Depending on what our kernel ends up
+	providing, this may or may not be replaced with an Dir*
+*/
+
+/*!	\var BNode::fCStatus
+	The object's initialization status.
+*/
