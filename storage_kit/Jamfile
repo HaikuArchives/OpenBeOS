@@ -5,7 +5,7 @@ SubDir TOP ;
 # Comment out the following line if you don't want
 # debugging info included at compilation time. This
 # option also turns optimization off.
-AddDebugInfo ;
+#AddDebugInfo ;
 
 SubInclude TOP cppunit ;
 SubInclude TOP source ;
