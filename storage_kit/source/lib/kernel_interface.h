@@ -114,6 +114,11 @@ off_t get_position(FileDescriptor fd);
 	on the file descriptor when through with it. */
 FileDescriptor dup( FileDescriptor file );
 
+/*! \brief Similar to the first version, aside from that an error code is
+	returned and the resulting file descriptor is passed back via a reference
+	parameter an. */
+status_t dup( FileDescriptor file, FileDescriptor& result );
+
 /*! Flushes any buffers associated with the given file to disk
 	and then returns. */
 status_t sync( FileDescriptor file );

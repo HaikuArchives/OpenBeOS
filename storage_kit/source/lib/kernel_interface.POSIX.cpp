@@ -248,6 +248,26 @@ StorageKit::dup(StorageKit::FileDescriptor file) {
 	return ::dup(file);
 }
 
+/*!	If the supplied file descriptor is -1, the copy will be -1 as well and
+	B_OK is returned.
+	\param file the file descriptor to be duplicated
+	\param result the variable the resulting file descriptor will be stored in
+	\return B_OK, if everything went fine, or an error code.
+*/
+status_t
+StorageKit::dup( FileDescriptor file, FileDescriptor& result )
+{
+	status_t error = B_OK;
+	if (file == -1)
+		result = -1;
+	else {
+		result = dup(file);
+		if (result == -1)
+			error = errno;
+	}
+	return error;
+}
+
 
 ssize_t
 StorageKit::read_attr ( StorageKit::FileDescriptor file, const char *attribute, 
