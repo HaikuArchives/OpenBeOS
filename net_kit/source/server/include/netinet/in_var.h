@@ -26,6 +26,15 @@ struct in_ifaddr {
 #define ifatoia(ifa)    ((struct in_ifaddr *)(ifa))
 #define sintosa(sin)	((struct sockaddr *)(sin))
 
+/* used to pass in additional information, such as aliases */
+struct in_aliasreq {
+	char ifa_name[IFNAMSIZ];
+	struct sockaddr_in ifra_addr;
+	struct sockaddr_in ifra_broadaddr;
+#define ifra_dstaddr	ifra_broadaddr
+	struct sockaddr_in ifra_mask;
+};
+
 /*
  * Given a pointer to an in_ifaddr (ifaddr),
  * return a pointer to the addr as a sockaddr_in.
