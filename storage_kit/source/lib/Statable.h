@@ -113,14 +113,12 @@ namespace OpenBeOS {
 	friend class BEntry;
 	friend class BNode;
 
-	
-	virtual	status_t set_stat(struct stat &st, uint32 what) = 0;
-
 	virtual	void _OhSoStatable1(); 	//< FBC
 	virtual	void _OhSoStatable2(); 	//< FBC
 	virtual	void _OhSoStatable3(); 	//< FBC
 	uint32 _ohSoData[4]; 			//< FBC
-	
+
+	virtual	status_t set_stat(struct stat &st, uint32 what) = 0;
   };
 
 #ifdef USE_OPENBEOS_NAMESPACE
