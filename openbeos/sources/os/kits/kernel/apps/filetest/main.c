@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <resource.h>
 #include <Errors.h>
-//#include <ioctl.h>
+#include <fcntl.h>
 
 #define FORTUNES "/boot/etc/fortunes"
 
@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 
 	for (i=0;i<3;i++) {
 		printf("%d : ", i + 1);
-		fd[i] = open(FORTUNES, 0);
+		fd[i] = open(FORTUNES, O_RDONLY, 0);
 		printf("fd %d\n", fd[i]);
 	}
 	
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	}
 
 	printf("\nNow we have no open fd's so next socket should be 3\n");
-	fd[0] = open(FORTUNES, 0);
+	fd[0] = open(FORTUNES, O_RDONLY, 0);
 	printf("new fd %d\n", fd[0]);
 	
 #if 0

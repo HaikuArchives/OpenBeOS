@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <syscalls.h>
+#include <fcntl.h>
 
 #define FORTUNES "/boot/etc/fortunes"
 
@@ -24,7 +25,7 @@ main(void)
 
 	buf= malloc(stat.size+1);
 
-	fd= open(FORTUNES, 0);
+	fd= open(FORTUNES, O_RDONLY, 0);
 	read(fd, buf, stat.size);
 	buf[stat.size]= 0;
 	close(fd);

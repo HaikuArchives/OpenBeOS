@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <resource.h>
 #include <Errors.h>
+#include <fcntl.h>
 
 #define DIGIT "/dev/misc/digit"
 
@@ -23,7 +24,7 @@ int main(int argc, char **argv)
 	       "to make sure it works with OpenBeOS.\n"
 	       "\nNB This is a simple test :)\n\n");
 
-	fd = open(DIGIT, 0);
+	fd = open(DIGIT, O_RDONLY, 0);
 	if (fd < 0) {
 		printf("Failed at first hurdle :( Couldn't open the device!\n");
 		return -1;

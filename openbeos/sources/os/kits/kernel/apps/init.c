@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <syscalls.h>
+#include <fcntl.h>
 
 static void setup_io()
 {
@@ -14,9 +15,13 @@ static void setup_io()
 		close(i);
 	}
 
-	open("/dev/console", 0); /* stdin  */
-	open("/dev/console", 0); /* stdout */
-	open("/dev/console", 0); /* stderr */
+	/* XXX - open currently ignores these flags, but they
+	 * should be checked once it doesn't :)
+	 * Is STDERR really O_WRONLY?
+	 */
+	open("/dev/console", O_RDONLY, 0); /* stdin  */
+	open("/dev/console", O_WRONLY, 0); /* stdout */
+	open("/dev/console", O_WRONLY, 0); /* stderr */
 }
 
 int main()
