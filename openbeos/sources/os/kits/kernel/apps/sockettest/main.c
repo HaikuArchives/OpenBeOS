@@ -8,12 +8,8 @@
 #include <unistd.h>
 #include <resource.h>
 #include <Errors.h>
-#include <socket.h>
+#include <sys/socket.h>
 #include <sys/ioctl.h>
-
-/* XXX - temporary hack until socket.h is fully included */
-#define PF_INET 0
-#define SOCK_DGRAM 11
 
 int main(int argc, char **argv)
 {

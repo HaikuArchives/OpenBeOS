@@ -23,9 +23,6 @@
 #define B_READ_AREA			1	
 #define B_WRITE_AREA		2	
 
-typedef int32   uid_t; // This should go in POSIX sys/types
-typedef int32   gid_t; // Ditto above
-
 enum {
 	B_ONE_SHOT_ABSOLUTE_ALARM = 1,	/* alarm is one-shot and time is specified absolutely */
 	B_ONE_SHOT_RELATIVE_ALARM = 2,	/* alarm is one-shot and time is specified relatively */

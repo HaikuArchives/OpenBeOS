@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <syscalls.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #define FORTUNES "/boot/etc/fortunes"
 
@@ -15,38 +17,43 @@ main(void)
 	char *buf;
 	unsigned i;
 	unsigned found;
-	struct file_stat stat;
+	struct stat stat;
 
-	rc = sys_rstat(FORTUNES, &stat);
-	if(rc< 0) {
+	fd = open(FORTUNES, O_RDONLY, 0);
+	if (fd < 0) {
+		printf("Couldn't open %s: %s\n", FORTUNES, strerror(errno));
+		return -1;
+	}
+
+	rc = fstat(fd, &stat);
+	if(rc < 0) {
 		printf("Cookie monster was here!!!\n");
 		sys_exit(1);
 	}
 
-	buf= malloc(stat.size+1);
-
-	fd= open(FORTUNES, O_RDONLY, 0);
-	read(fd, buf, stat.size);
-	buf[stat.size]= 0;
+	buf= malloc(stat.st_size + 1);
+	
+	read(fd, buf, stat.st_size);
+	buf[stat.st_size]= 0;
 	close(fd);
 
 	found= 0;
-	for(i= 0; i< stat.size; i++) {
+	for(i= 0; i< stat.st_size; i++) {
 		if(strncmp(buf+i, "#@#", 3)== 0) {
 			found+= 1;
 		}
 	}
 
-	found= 1+(sys_system_time()%found);
+	found = 1 + (sys_system_time() % found);
 
-	for(i= 0; i< stat.size; i++) {
+	for(i = 0; i < stat.st_size; i++) {
 		if(strncmp(buf+i, "#@#", 3)== 0) {
 			found-= 1;
 		}
 		if(found== 0) {
 			unsigned j;
 
-			for(j= i+1; j< stat.size; j++) {
+			for(j= i+1; j< stat.st_size; j++) {
 				if(strncmp(buf+j, "#@#", 3)== 0) {
 					buf[j]= 0;
 				}

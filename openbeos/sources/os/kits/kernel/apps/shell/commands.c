@@ -166,7 +166,7 @@ int cmd_pwd(int argc, char *argv[])
 int cmd_stat(int argc, char *argv[])
 {
 	int rc;
-	struct file_stat stat;
+	struct stat stat;
 
 	if(argc < 2) {
 		printf("not enough arguments to stat\n");
@@ -176,9 +176,9 @@ int cmd_stat(int argc, char *argv[])
 	rc = sys_rstat(argv[1], &stat);
 	if(rc >= 0) {
 		printf("stat of file '%s': \n", argv[1]);
-		printf("vnid 0x%x\n", (unsigned int)stat.vnid);
-		printf("type %d\n", stat.type);
-		printf("size %d\n", (int)stat.size);
+		printf("vnid 0x%x\n", (unsigned int)stat.st_ino);
+//		printf("type %d\n", stat.type);
+		printf("size %d\n", (int)stat.st_size);
 	} else {
 		printf("stat failed for file '%s'\n", argv[1]);
 	}

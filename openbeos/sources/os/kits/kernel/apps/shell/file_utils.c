@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <Errors.h>
+#include <fcntl.h>
 
 #include "file_utils.h"
 #include "statements.h"
@@ -82,31 +83,31 @@ int exec_file(int argc,char *argv[],int *retcode)
 
 int read_file_in_buffer(const char *filename,char **buffer)
 {
-	struct file_stat stat;
+	struct stat stat;
 	int file_no;
 	int err;
 	int size;
 
 	*buffer = NULL;
 
-	err = sys_rstat(filename,&stat);
-	if(err < 0) return err;
-
-	*buffer = malloc(stat.size+1);
-	if(*buffer == NULL) return ERR_NO_MEMORY;
-
-	file_no = sys_open(filename,STREAM_TYPE_FILE,0);
-
-	if(file_no < 0){
-		free(*buffer);
+	file_no = open(filename, O_RDONLY);
+	if (file_no < 0){
 		return file_no;
 	}
 
-	size = sys_read(file_no,*buffer,0,stat.size);
+	err = fstat(file_no,&stat);
+	if (err < 0)
+		return err;
+
+	*buffer = malloc(stat.st_size + 1);
+	if(*buffer == NULL) return ERR_NO_MEMORY;
+
+	size = sys_read(file_no,*buffer,0,stat.st_size);
 
 	sys_close(file_no);
 
-	if(size < 0) free(*buffer);
+	if (size < 0)
+		free(*buffer);
 
 	return size;
 }
