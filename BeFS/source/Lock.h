@@ -3,7 +3,7 @@
 /* Lock - read/write lock implementation
 **
 ** Initial version by Axel Dörfler, axeld@pinc-software.de
-** Roughly based on a sample code from Nathan Schrenk.
+** Roughly based on a Be sample code written by Nathan Schrenk.
 **
 ** This file may be used under the terms of the OpenBeOS License.
 */
@@ -12,10 +12,10 @@
 #include <KernelExport.h>
 
 
-// These is a "fast" implementation of a sinlge writer/many reader
+// This is a "fast" implementation of a single writer/many reader
 // locking scheme. It's fast because it uses the benaphore idea
-// to do lazy semaphore locking - in most cases it will only do
-// simple integer arithmetic.
+// to do lazy semaphore locking - in most cases it will only have
+// to do some simple integer arithmetic.
 
 #define MAX_READERS 100000
 
@@ -87,12 +87,7 @@ class WriteLocked {
 				// Acquire sem for all readers currently not using a semaphore.
 				// But if we are not the only write lock in the queue, just get
 				// the one for us
-				if (readers <= 0)
-					readers = 1;
-				else
-					readers = MAX_READERS - readers;
-
-				fStatus = acquire_sem_etc(lock.fSemaphore,readers,0,0);
+				fStatus = acquire_sem_etc(lock.fSemaphore,readers <= 0 ? 1 : MAX_READERS - readers,0,0);
 			} else
 				fStatus = B_OK;
 		}
@@ -102,9 +97,7 @@ class WriteLocked {
 			int32 readers = atomic_add(&fLock.fCount,MAX_READERS);
 			if (readers < 0) {
 				// release sem for all readers only when we were the only writer
-				if (readers <= -MAX_READERS)
-					readers = -1;
-				release_sem_etc(fLock.fSemaphore,-readers,0);
+				release_sem_etc(fLock.fSemaphore,readers <= -MAX_READERS ? 1 : -readers,0);
 			}
 		}
 

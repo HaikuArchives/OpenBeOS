@@ -263,8 +263,7 @@ bfs_read_fs_stat(void *_ns, struct fs_info *info)
 	Volume *volume = (Volume *)_ns;
 	
 	// File system flags.
-	info->flags = B_FS_IS_PERSISTENT | B_FS_IS_READONLY | B_FS_HAS_ATTR
-			| B_FS_HAS_MIME | B_FS_HAS_QUERY;
+	info->flags = B_FS_IS_PERSISTENT | B_FS_HAS_ATTR | B_FS_HAS_MIME | B_FS_HAS_QUERY;
 
 	// whatever is appropriate here? Just use the same value as BFS (and iso9660) for now
 	info->io_size = BFS_IO_SIZE;
@@ -360,7 +359,9 @@ int
 bfs_secure_vnode(void *ns, void *node)
 {
 	FUNCTION();
-	return B_ERROR;
+	// if this function returns an error, you can't access anything anymore
+	// I don't know what you can use it for, though.
+	return B_OK;
 }
 
 
