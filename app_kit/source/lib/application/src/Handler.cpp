@@ -128,6 +128,7 @@
 #include <PropertyInfo.h>
 
 // Project Includes ------------------------------------------------------------
+#include "TokenSpace.h"
 
 // Local Includes --------------------------------------------------------------
 
@@ -137,6 +138,7 @@
 
 using std::map;
 using std::vector;
+using BPrivate::gDefaultTokens;
 
 const char*	gArchiveNameField = "_name";
 static property_info gHandlerPropInfo[] =
@@ -243,6 +245,8 @@ BHandler::~BHandler()
 	{
 		free(fName);
 	}
+
+	gDefaultTokens.RemoveToken(fToken);
 }
 //------------------------------------------------------------------------------
 BHandler::BHandler(BMessage* data)
@@ -477,7 +481,7 @@ bool BHandler::LockLooper()
 /**
 	@note	BeBook says that this function "retrieves the handler's looper and
 			unlocks it in a pseudo-atomic operation, thus avoiding a race
-			condition."  What "pseudo-atomic" would look completely escapes me,
+			condition."  How "pseudo-atomic" would look completely escapes me,
 			so we'll go with the dumb version for now.  Maybe I should use a
 			benaphore?
  */
@@ -495,7 +499,7 @@ status_t BHandler::LockLooperWithTimeout(bigtime_t timeout)
 /**
 	@note	BeBook says that this function "retrieves the handler's looper and
 			unlocks it in a pseudo-atomic operation, thus avoiding a race
-			condition."  What "pseudo-atomic" would look completely escapes me,
+			condition."  How "pseudo-atomic" would look completely escapes me,
 			so we'll go with the dumb version for now.  Maybe I should use a
 			benaphore?
  */
@@ -513,7 +517,7 @@ void BHandler::UnlockLooper()
 /**
 	@note	BeBook says that this function "retrieves the handler's looper and
 			unlocks it in a pseudo-atomic operation, thus avoiding a race
-			condition."  What "pseudo-atomic" would look completely escapes me,
+			condition."  How "pseudo-atomic" would look completely escapes me,
 			so we'll go with the dumb version for now.  Maybe I should use a
 			benaphore?
  */
@@ -669,6 +673,8 @@ void BHandler::InitData(const char* name)
 	fNextHandler	= NULL;
 	fFilters		= NULL;
 	fObserverList	= NULL;
+
+	fToken = gDefaultTokens.NewToken(B_HANDLER_TOKEN, this);
 }
 //------------------------------------------------------------------------------
 BHandler::BHandler(const BHandler& )

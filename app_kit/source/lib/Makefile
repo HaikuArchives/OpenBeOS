@@ -52,7 +52,8 @@ SRCS=	application/src/Cursor.cpp				\
 		interface/src/TextInput.cpp				\
 		support/src/Archivable.cpp				\
 		support/src/Locker.cpp					\
-		support/src/StopWatch.cpp
+		support/src/StopWatch.cpp				\
+		private/TokenSpace.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

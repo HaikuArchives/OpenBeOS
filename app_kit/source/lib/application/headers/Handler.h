@@ -19,7 +19,7 @@
 //	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //	DEALINGS IN THE SOFTWARE.
 //
-//	File Name:		Handler.h
+//	File Name:		Handler.cpp
 //	Author:			Erik Jaesler (erik@cgsoftware.com)
 //	Description:	BHandler defines the message-handling protocol.
 //					MessageReceived() is its lynchpin.
