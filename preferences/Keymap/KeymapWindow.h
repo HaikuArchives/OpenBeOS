@@ -1,22 +1,10 @@
 #ifndef OBOS_KEYMAP_WINDOW_H
 #define OBOS_KEYMAP_WINDOW_H
 
-#ifdef DEBUG
-	#include <iostream.h>
-#endif //DEBUG
 
-#include <be/app/Application.h>
-#include <be/support/List.h>
 #include <be/interface/Window.h>
-#include <be/interface/View.h>
-#include <be/interface/GraphicsDefs.h>
+#include <be/support/List.h>
 #include <be/interface/MenuBar.h>
-#include <be/interface/MenuItem.h>
-#include <be/interface/Box.h>
-#include <be/interface/ListView.h>
-#include <be/interface/ScrollView.h>
-#include <be/interface/Button.h>
-//#include "KeymapApplication.h"
 #include "KeymapListItem.h"
 
 
@@ -51,7 +39,7 @@ class KeymapWindow : public BWindow
 	
 	protected:
 //		KeymapApplication	*fApplication;
-		BView				*placeholderView;
+		BView				*fPlaceholderView;
 		BListView			*fSystemListView;
 		BListView			*fUserListView;
 		// the map that's currently highlighted
@@ -65,6 +53,8 @@ class KeymapWindow : public BWindow
 		KeymapListItem* ItemFromEntry( BEntry *entry );
 		void			HandleSystemMapSelected( BMessage* );
 		void			HandleUserMapSelected( BMessage* );
+		void			HandleMapSelected( BMessage *selectionMessage,
+							BListView * selectedView, BListView * otherView );
 		void			UseKeymap();
 
 };

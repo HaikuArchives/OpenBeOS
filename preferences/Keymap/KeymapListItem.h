@@ -18,7 +18,7 @@ class KeymapListItem : public BStringItem
 		BEntry	*KeymapEntry();
 	
 	protected:
-		BEntry	*keymap;
+		BEntry	*fKeymap;
 
 };
 

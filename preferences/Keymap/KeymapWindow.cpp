@@ -1,3 +1,15 @@
+#include <be/app/Application.h>
+#include <be/interface/View.h>
+#include <be/interface/GraphicsDefs.h>
+#include <be/interface/MenuItem.h>
+#include <be/interface/ListView.h>
+#include <be/interface/ScrollView.h>
+#include <be/interface/Button.h>
+#include <be/interface/Alert.h>
+#include <be/interface/Box.h>
+#ifdef DEBUG
+	#include <iostream.h>
+#endif //DEBUG
 #include "KeymapWindow.h"
 #include "KeymapListItem.h"
 #include "KeymapApplication.h"
@@ -22,11 +34,11 @@ KeymapWindow::KeymapWindow( BRect frame )
 
 	// The view to hold all but the menu bar
 	bounds.top = menubar->Bounds().bottom + 1;
-	placeholderView = new BView( bounds, "placeholderView", 
+	fPlaceholderView = new BView( bounds, "placeholderView", 
 		B_FOLLOW_NONE, 0 );
 	temp_color = ui_color( B_MENU_BACKGROUND_COLOR );
-	placeholderView->SetViewColor( temp_color );
-	AddChild( placeholderView );
+	fPlaceholderView->SetViewColor( temp_color );
+	AddChild( fPlaceholderView );
 
 	// Create the Maps box and contents
 	AddMaps();
@@ -35,7 +47,7 @@ KeymapWindow::KeymapWindow( BRect frame )
 	bounds.Set( 527,200, 600,220 );
 	fUseButton = new BButton( bounds, "useButton", "Use",
 		new BMessage( USE_KEYMAP ));
-	placeholderView->AddChild( fUseButton );
+	fPlaceholderView->AddChild( fUseButton );
 	
 }
 
@@ -110,7 +122,7 @@ void KeymapWindow::AddMaps()
 	bounds = BRect( 9,11, 140, 227 );
 	mapsBox = new BBox( bounds );
 	mapsBox->SetLabel( "Maps" );
-	placeholderView->AddChild( mapsBox );
+	fPlaceholderView->AddChild( mapsBox );
 
 	// The System list
 	mapsBox->DrawString( "System", BPoint( 13, 20 ) );
@@ -233,35 +245,52 @@ void KeymapWindow::MessageReceived( BMessage* message )
 
 void KeymapWindow::HandleSystemMapSelected( BMessage *selectionMessage )
 {
-	// Deselect all user maps
-	fUserListView->Deselect( fUserListView->CurrentSelection() );
-
-	// Get matching entry
-	void			**item = new void*;	
-	KeymapListItem	*keymapListItem;
-
-	selectionMessage->FindPointer( "index", 0, item );
-	keymapListItem = (KeymapListItem*)&item;
-	fSelectedMap = keymapListItem->KeymapEntry();
-	delete item;
-
-	// Display selected map
-
+	cout << "System map selected" << endl;
+	HandleMapSelected( selectionMessage, fSystemListView, fUserListView );
 }
 
 void KeymapWindow::HandleUserMapSelected( BMessage *selectionMessage )
 {
-	// Deselect all system maps
-	fSystemListView->Deselect( fSystemListView->CurrentSelection() );
+	cout << "User map selected" << endl;
+	HandleMapSelected( selectionMessage, fUserListView, fSystemListView );
+}
 
-	// Get matching entry
-	void			**item = new void*;	
+void KeymapWindow::HandleMapSelected( BMessage *selectionMessage,
+	BListView * selectedView, BListView * otherView )
+{
+	// Deselect current other map
+	int32	otherIndex;
+
+	otherIndex = otherView->CurrentSelection();
+/*	if( otherIndex >= 0 )
+	{
+		int32	selectedIndex;
+		
+		selectedIndex = selectedView->CurrentSelection();
+*/
+		otherView->Deselect( otherIndex );
+/*//		otherView->InvalidateItem( otherIndex );
+		selectedView->Select( selectedIndex );		
+		selectedView->InvalidateItem( selectedIndex );
+	}
+*/
+	// save entry for selected map in fSelectedMap
+	int32			index;
 	KeymapListItem	*keymapListItem;
 
-	selectionMessage->FindPointer( "index", 0, item );
-	keymapListItem = (KeymapListItem*)&item;
+	index = selectedView->CurrentSelection( 0 );
+	if( index < 0 )
+		return;
+	keymapListItem = (KeymapListItem*)selectedView->ItemAt( index );
+	if( keymapListItem == NULL )
+		return;
 	fSelectedMap = keymapListItem->KeymapEntry();
-	delete item;
+	#ifdef DEBUG
+		char	name[B_FILE_NAME_LENGTH];
+		
+		fSelectedMap->GetName( name );
+		cout << "fSelectedMap has been set to " << name << endl;
+	#endif //DEBUG
 
 	// Display selected map
 
@@ -270,5 +299,18 @@ void KeymapWindow::HandleUserMapSelected( BMessage *selectionMessage )
 void KeymapWindow::UseKeymap()
 {
 
+	KeymapApplication	*theApplication;
 
+	if( fSelectedMap != NULL )
+	{
+		theApplication = (KeymapApplication*) be_app;
+		theApplication->UseKeymap( fSelectedMap );
+	}
+	else
+	{ // There is no keymap selected!
+		BAlert	*alert;
+		alert = new BAlert( "w>noKeymap", "No keymap has been selected", "Bummer",
+			NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT );
+		alert->Go();
+	}
 }

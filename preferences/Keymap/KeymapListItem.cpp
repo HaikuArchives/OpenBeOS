@@ -6,25 +6,23 @@
 #include "KeymapListItem.h"
 
 
-KeymapListItem::KeymapListItem( BEntry *_keymap )
+KeymapListItem::KeymapListItem( BEntry *keymap )
 	: BStringItem( "" )
 {
 	char	name[B_FILE_NAME_LENGTH];
 	
-	keymap = _keymap;
-	_keymap->GetName( name );
+	fKeymap = keymap;
+	keymap->GetName( name );
 	
-//	name = "boe";
 	SetText( name );
-//	delete name;
 }
 
 KeymapListItem::~KeymapListItem()
 {
-	delete keymap;
+	delete fKeymap;
 }
 
 BEntry* KeymapListItem::KeymapEntry()
 {
-	return keymap;
+	return fKeymap;
 }

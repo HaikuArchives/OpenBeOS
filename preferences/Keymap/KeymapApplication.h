@@ -1,19 +1,13 @@
 #ifndef OBOS_KEYMAP_APPLICATION_H
 #define OBOS_KEYMAP_APPLICATION_H
 
-#ifdef DEBUG
-	#include <iostream.h>
-#endif //DEBUG
-
-
-#include <be/app/Application.h>
-#include <be/storage/Directory.h>
 #include <be/storage/Entry.h>
 #include <be/support/List.h>
 #include "KeymapWindow.h"
 
 
-#define APP_SIGNATURE	"application/x-vnd.Keymap"
+#define APP_SIGNATURE		"application/x-vnd.Keymap"
+#define COPY_BUFFER_SIZE	1 * 1024
 
 
 class KeymapApplication : public BApplication
@@ -24,9 +18,10 @@ class KeymapApplication : public BApplication
 		BList*	SystemMaps();
 		BList*	UserMaps();
 		BEntry* CurrentMap();
+		bool	UseKeymap( BEntry *keymap );
 
 	protected:
-		KeymapWindow	* window;
+		KeymapWindow	* fWindow;
 		
 		BList*	EntryList( char *directoryPath );
 
