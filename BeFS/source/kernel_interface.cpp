@@ -456,7 +456,7 @@ bfs_ioctl(void *_ns, void *_node, void *_cookie, int cmd, void *buffer, size_t b
 			Transaction transaction(volume,0);
 			CachedBlock cached(volume);
 			block_run run;
-			while (allocator.AllocateBlocks(&transaction,8,0,64,64,run) == B_OK) {
+			while (allocator.AllocateBlocks(&transaction,8,0,64,1,run) == B_OK) {
 				PRINT(("write block_run(%ld, %d, %d)\n",run.allocation_group,run.start,run.length));
 				for (int32 i = 0;i < run.length;i++) {
 					uint8 *block = cached.SetTo(run);

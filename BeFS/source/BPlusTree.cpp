@@ -1000,8 +1000,14 @@ TreeIterator::Goto(int8 to)
 
 		// get the next node offset depending on the direction (and if there
 		// are any keys in that node at all)
-		off_t nextOffset = to == BPLUSTREE_END || node->all_key_count == 0 ?
-				node->overflow_link : *node->Values();
+		off_t nextOffset;
+		if (to == BPLUSTREE_END || node->all_key_count == 0)
+			nextOffset = node->overflow_link;
+		else {
+			if (node->all_key_length > fTree->fNodeSize
+				|| (uint32)node->Values() > (uint32)node + fTree->fNodeSize - 8 * node->all_key_count)
+			nextOffset = *node->Values();
+		}
 		if (nextOffset == nodeOffset)
 			break;
 

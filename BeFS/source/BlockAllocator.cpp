@@ -58,8 +58,11 @@ class AllocationGroup {
 	public:
 		AllocationGroup();
 
+		void AddFreeRange(int32 start,int32 blocks);
+
 		int32 fNumBits;
 		int32 fStart;
+		int32 fFirstFree,fLargest,fLargestFirst;
 		bool fIsFull;
 };
 
@@ -104,11 +107,11 @@ AllocationBlock::Allocate(uint16 start,uint16 numBlocks)
 	int32 block = start >> 5;
 
 	while (numBlocks > 0) {
-		uint32 mask = ((uint32 *)fBlock)[block];
+		uint32 mask = 0;
 		for (int32 i = start % 32;i < 32 && numBlocks;i++,numBlocks--)
 			mask |= 1UL << i % 32;
 
-		((uint32 *)fBlock)[block++] = mask;
+		((uint32 *)fBlock)[block++] |= mask;
 		start = 0;
 	}
 }
@@ -144,8 +147,27 @@ AllocationBlock::Free(uint16 start,uint16 numBlocks)
 
 AllocationGroup::AllocationGroup()
 	:
+	fFirstFree(-1),
+	fLargest(-1),
+	fLargestFirst(-1),
 	fIsFull(true)
 {
+}
+
+
+void 
+AllocationGroup::AddFreeRange(int32 start, int32 blocks)
+{
+	D(if (blocks > 512)
+		PRINT(("range of %ld blocks starting at %ld\n",blocks,start)));
+
+	if (fFirstFree == -1)
+		fFirstFree = start;
+
+	if (fLargest < blocks) {
+		fLargest = blocks;
+		fLargestFirst = start;
+	}
 }
 
 
@@ -211,36 +233,22 @@ BlockAllocator::initialize(BlockAllocator *allocator)
 		groups[i].fStart = offset;
 
 		// finds all free ranges in this allocation group
-		// this is currently not used at all!
-		// It will be used to optimize access to the free blocks
-		int32 maxRange = 0;
-		off_t start;
-		int32 range = 0;
+		int32 start,range = 0;
 		int32 size = groups[i].fNumBits,num = 0;
 
-		for (int32 k = 0;k < (size >> 2);k++)
-		{
-			for (int32 j = 0;j < 32 && num < size;j++,num++)
-			{
-				if (buffer[k] & (1UL << j))
-				{
-					if (range > 0)
-					{
-						if (range > 512)
-							PRINT(("ag %ld: range of %ld blocks starting at %Ld\n",k,range,start));
-						if (maxRange < range)
-							maxRange = range;
+		for (int32 k = 0;k < (size >> 2);k++) {
+			for (int32 j = 0;j < 32 && num < size;j++,num++) {
+				if (buffer[k] & (1UL << j)) {
+					if (range > 0) {
+						groups[i].AddFreeRange(start,range);
 						range = 0;
 					}
-				}
-				else
-				{
-					if (range == 0)
-						start = num;
-					range++;
-				}
+				} else if (range++ == 0)
+					start = num;
 			}
 		}
+		if (range)
+			groups[i].AddFreeRange(start,range);
 
 		offset += blocks;
 	}
@@ -251,64 +259,98 @@ BlockAllocator::initialize(BlockAllocator *allocator)
 
 
 status_t
-BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start,uint16 numBlocks,uint16 minimum, block_run &run)
+BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start,uint16 maximum,uint16 minimum, block_run &run)
 {
 	AllocationBlock cached(fVolume);
+	Locker lock(fLock);
 
-	for (int32 i = 0;i < fNumGroups;i++,group++) {
+	// the first scan through all allocation groups will look for the
+	// wanted maximum of blocks, the second scan will just look to
+	// satisfy the minimal requirement
+	uint16 numBlocks = maximum;
+
+	for (int32 i = 0;i < fNumGroups * 2;i++,group++) {
+		group = group % fNumGroups;
+
+		if (i >= fNumGroups)
+			numBlocks = minimum;
+
+		// the wanted maximum is smaller than the largest free block in the group
+		// or already smaller than the minimum
+		// -> disabled because it's currently not maintained after the first allocation
+		//if (numBlocks > fGroups[group].fLargest)
+		//	continue;
+
+		if (start < fGroups[group].fFirstFree)
+			start = fGroups[group].fFirstFree;
+
 		// there may be more than one block per allocation group - and
 		// we iterate through it to find a place for the allocation.
 		// (one allocation can't exceed one allocation group)
 
-		uint32 block = start / cached.NumBlockBits();
+		uint32 block = start / fGroups[group].fNumBits;
 		int32 range = 0, rangeStart = 0,rangeBlock = 0;
-		group = group % fNumGroups;
 
 		for (;block < fBlocksPerGroup;block++) {
 			if (cached.SetTo(fGroups[group],block) < B_OK)
-				return B_ERROR;
+				RETURN_ERROR(B_ERROR);
 
-			for (i = start % cached.NumBlockBits();i < cached.NumBlockBits();i++) {
-				if (!cached.IsUsed(i)) {
+			// find a block large enough to hold the allocation
+			for (int32 bit = start % cached.NumBlockBits();bit < cached.NumBlockBits();bit++) {
+				if (!cached.IsUsed(bit)) {
 					if (range == 0) {
 						// start new range
-						rangeStart = block * cached.NumBlockBits() + i;
+						rangeStart = block * cached.NumBlockBits() + bit;
 						rangeBlock = block;
 					}
 
 					// have we found a range large enough to hold numBlocks?
-					// if so, mark them as in use, and write the updated block
-					// bitmap back to disk
-					if (++range >= numBlocks) {
-						if (block != rangeBlock) {
-							// allocate the part that's in the current block
-							cached.Allocate(0,(rangeStart + numBlocks) % cached.NumBlockBits());
-							if (cached.WriteBack(transaction) < B_OK)
-								RETURN_ERROR(B_ERROR);
-
-							// set the blocks in the previous block
-							if (cached.SetTo(fGroups[group],block - 1) < B_OK)
-								cached.Allocate(rangeStart);
-							else
-								RETURN_ERROR(B_ERROR);
-						} else {
-							// just allocate the bits in the current block
-							cached.Allocate(rangeStart,numBlocks);
-						}
-						run.allocation_group = group;
-						run.start = rangeStart;
-						run.length = numBlocks;
-						
-						// ToDo: the super block has to be written back to disk!
-						fVolume->SuperBlock().used_blocks += numBlocks;
-
-						return cached.WriteBack(transaction);
-					}
+					if (++range >= maximum)
+						break;
+				} else if (i >= fNumGroups && range >= minimum) {
+					// we have found a block larger than the required minimum (second pass)
+					break;
 				} else {
 					// end of a range
 					range = 0;
 				}
 			}
+
+			// if we found a suitable block, mark the blocks as in use, and write
+			// the updated block bitmap back to disk
+			if (range >= numBlocks) {
+				// adjust allocation size
+				if (numBlocks < maximum)
+					numBlocks = range;
+				// update first free block in group (doesn't have to be free)
+				if (rangeStart == fGroups[group].fFirstFree)
+					fGroups[group].fFirstFree = rangeStart + numBlocks;
+
+				if (block != rangeBlock) {
+					// allocate the part that's in the current block
+					cached.Allocate(0,(rangeStart + numBlocks) % cached.NumBlockBits());
+					if (cached.WriteBack(transaction) < B_OK)
+						RETURN_ERROR(B_ERROR);
+
+					// set the blocks in the previous block
+					if (cached.SetTo(fGroups[group],block - 1) < B_OK)
+						cached.Allocate(rangeStart);
+					else
+						RETURN_ERROR(B_ERROR);
+				} else {
+					// just allocate the bits in the current block
+					cached.Allocate(rangeStart,numBlocks);
+				}
+				run.allocation_group = group;
+				run.start = rangeStart;
+				run.length = numBlocks;
+				
+				// ToDo: the super block has to be written back to disk!
+				fVolume->SuperBlock().used_blocks += numBlocks;
+
+				return cached.WriteBack(transaction);
+			}
+
 			// start from the beginning of the next block
 			start = 0;
 		}

@@ -69,8 +69,20 @@ Volume::Mount(const char *deviceName,uint32 flags)
 	}
 
 	if (fDevice < B_OK)
-		return fDevice;
+		RETURN_ERROR(fDevice);
 
+	// check if it's a regular file, and if so, disable the cache for the
+	// underlaying file system
+	struct stat stat;
+	if (fstat(fDevice,&stat) < 0)
+		RETURN_ERROR(B_ERROR);
+
+	if (stat.st_mode & S_FILE && ioctl(fDevice,IOCTL_FILE_UNCACHED_IO,NULL) < 0) {
+		// don't mount if the cache couldn't be disabled
+		RETURN_ERROR(B_ERROR);
+	}
+
+	// read the super block
 	char buffer[1024];
 	if (read_pos(fDevice,0,buffer,sizeof(buffer)) != sizeof(buffer))
 		return B_IO_ERROR;

@@ -54,6 +54,9 @@ typedef ino_t		vnode_id;
 #define		SELECT_WRITE		2
 #define 	SELECT_EXCEPTION	3
 
+// missing ioctl() call added
+#define		IOCTL_FILE_UNCACHED_IO	10000
+
 #define		B_CUR_FS_API_VERSION	2
 
 struct attr_info;

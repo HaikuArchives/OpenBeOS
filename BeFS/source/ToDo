@@ -7,7 +7,7 @@ BlockAllocator
    low on-disk memory well; it just fails instead of providing the requested
    minimum of disk space.
  - the allocation policies are not yet done
- - when they are done, the will have to stand against some real world tests
+ - when they are done, they will have to stand against some real world tests
  - the access to the block bitmap is currently unlocked
  - the updated disk's super block is not written back yet
 
