@@ -348,7 +348,7 @@ dprintf("net_stack: net_socket_control %p: NET_SOCKET_GET_COOKIE.\n", nsc);
 			net_socket_cookie *	ansc = (net_socket_cookie *) aa->cookie;
 			// aa->cookie == net_socket_cookie * of the already opened fd to use for the 
 			// newly accepted socket
-			// aa->rv = core->soaccept(nsc->socket, &ansc->socket, aa->name, &aa->namelen);
+			aa->rv = core->soaccept(nsc->socket, &ansc->socket, aa->name, &aa->namelen);
 			return B_OK;
 		}	
 		case NET_SOCKET_RECVFROM:

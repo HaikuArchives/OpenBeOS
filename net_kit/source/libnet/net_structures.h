@@ -14,6 +14,7 @@ struct socket_args {
 	int dom;
 	int type;
 	int prot;
+	int	r5;
 };
 
 struct bind_args {

@@ -25,6 +25,9 @@
 #include "core_module.h"
 #endif
 
+// Private prototypes
+static int checkevent(struct socket *so);
+
 static pool_ctl *spool;
 static benaphore sockets_lock;
 
@@ -1208,6 +1211,8 @@ int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie
 		
 	so->event_callback = cb;
 	so->event_callback_cookie = cookie;
+	
+	checkevent(so);	// notify any event condition ASAP! 
 	return B_OK;
 }
 
@@ -1371,11 +1376,11 @@ void wakeup(sem_id chan)
 }
 
 /* This file is too big - split it up!! */
-int sogetsockname(void *sp, struct sockaddr *sa, uint32 *alen)
+int sogetsockname(void *sp, struct sockaddr *sa, int *alen)
 {
 	struct socket *so = (struct socket*)sp;
 	struct mbuf *m = m_getclr(MT_SONAME);
-	uint32 len;
+	int len;
 	int error;
 
 	if (!m)
@@ -1392,11 +1397,11 @@ int sogetsockname(void *sp, struct sockaddr *sa, uint32 *alen)
 	return error;
 }
 
-int sogetpeername(void *sp, struct sockaddr *sa, uint32 *alen)
+int sogetpeername(void *sp, struct sockaddr *sa, int * alen)
 {
         struct socket *so = (struct socket*)sp;
         struct mbuf *m = m_getclr(MT_SONAME);
-        uint32 len;
+        int len;
         int error;
 
         if (!m)
@@ -1415,10 +1420,11 @@ int sogetpeername(void *sp, struct sockaddr *sa, uint32 *alen)
         return error;
 }
 
-int soaccept(void *sp, struct sockaddr *sa, uint32 *alen)
+int soaccept(void *sp, void ** nsp, struct sockaddr *sa, int *alen)
 {
-	struct socket *so = (struct socket *)sp;
-	uint32 len;
+	struct socket * so = (struct socket *)sp;
+	struct socket * aso;
+	int len;
 	int error;
 	
 	if (sa)
@@ -1440,7 +1446,17 @@ int soaccept(void *sp, struct sockaddr *sa, uint32 *alen)
 		so->so_error = 0;
 		return error;
 	}
+
 	/* how do we create the new socket and return it??? */
+
+	// take the first connection pending socket available
+	aso = so->so_head;
+	// How to finish the connection phase on this "aso"?
+
+	// remove this socket from connection pending queue
+	if (soqremque(so, true))
+		// okay, attach this new socket
+		*nsp = aso;
 	
 	return 0;
 }

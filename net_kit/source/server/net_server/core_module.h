@@ -122,9 +122,9 @@ struct core_module_info {
 	int (*sosetopt)(void *, int, int, const void *, size_t);
 	int (*sogetopt)(void *, int, int, void *, size_t *);
 	int (*set_socket_event_callback)(void *, socket_event_callback, void *);
-	int (*sogetpeername)(void *, struct sockaddr *, uint32 *);
-	int (*sogetsockname)(void *, struct sockaddr *, uint32 *);
-	int (*soaccept)(void *, struct sockaddr *, uint32 *);
+	int (*sogetpeername)(void *, struct sockaddr *, int *);
+	int (*sogetsockname)(void *, struct sockaddr *, int *);
+	int (*soaccept)(void *, void **, struct sockaddr *, int *);
 };
 
 #ifdef _KERNEL_MODE

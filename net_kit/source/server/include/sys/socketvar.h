@@ -148,10 +148,10 @@ int     recvit(void *, struct msghdr *, caddr_t, int *);
 int     sosetopt(void *, int, int, const void *, size_t);
 int     sogetopt(void *, int, int, void *, size_t *);
 
-int     sogetpeername(void *, struct sockaddr *, uint32 *);
-int     sogetsockname(void *, struct sockaddr *, uint32 *);
+int     sogetpeername(void *, struct sockaddr *, int *);
+int     sogetsockname(void *, struct sockaddr *, int *);
 
-int     soaccept(void *sp, struct sockaddr *sa, uint32 *alen);
+int     soaccept(void *sp, void ** asp, struct sockaddr *sa, int * alen);
 
 /* these are all private to the stack...although may be shared with 
  * other network modules.
