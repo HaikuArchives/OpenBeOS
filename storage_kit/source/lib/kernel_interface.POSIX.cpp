@@ -9,6 +9,7 @@
 //----------------------------------------------------------------------
 
 #include "kernel_interface.h"
+#include "storage_support.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -35,6 +36,10 @@
 // This is just for cout while developing; shouldn't need it
 // when all is said and done.
 #include <iostream>
+
+// for convenience:
+struct LongDIR : DIR { char _buffer[B_FILE_NAME_LENGTH]; };
+
 
 class DirCache {
 public:
@@ -463,7 +468,7 @@ StorageKit::get_stat(const char *path, Stat *s) {
 	if (path == NULL || s == NULL)
 		return B_BAD_VALUE;
 		
-	return (::stat(path, s) == -1) ? errno : B_OK ;
+	return (::lstat(path, s) == -1) ? errno : B_OK ;
 }
 
 status_t
@@ -540,20 +545,45 @@ StorageKit::dopen_dir( const char *path, Dir &result ) {
 
 status_t
 StorageKit::open_dir( const char *path, FileDescriptor &result ) {
-//	result = dir_to_fd( ::opendir( path ) );
-	dirCache.DoOutput();
-//	cout << "open_dir: path == " << path << endl;
-	DIR *dir = ::opendir(path);
-	if (dir == NULL) {
-//		cout << "open_dir: dir == NULL" << endl;
-	} else {
-//		cout << "open_dir: dir->p_dev == " << dir->ent.d_pdev << endl;
-//		cout << "open_dir: dir->p_ino == " << dir->ent.d_pino << endl;
-//		cout << "open_dir: dir->dev == " << dir->ent.d_dev << endl;
-//		cout << "open_dir: dir->ino == " << dir->ent.d_ino << endl;
+//	cout << endl << "open_dir()" << endl;
+	result = NullFd;
+	if (DIR *dir = ::opendir(path)) {
+		result = dir->fd;
+		free(dir);
 	}
-	result = dir_to_fd(dir);
-	return (result == NullFd) ? errno : B_OK ;
+	return (result < 0) ? errno : B_OK ;
+}
+
+/*!	The parent directory must already exist.
+	\param path the directory's path name
+	\param mode the file permissions
+	\return B_OK, if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::create_dir( const char *path, mode_t mode )
+{
+	status_t error = (path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		if (mkdir(path, mode) == -1)
+			error = errno;
+	}
+	return error;
+}
+
+/*!	The parent directory must already exist.
+	\param path the directory's path name
+	\param result set to a file descriptor for the new directory
+	\param mode the file permissions
+	\return B_OK, if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::create_dir( const char *path, FileDescriptor &result,
+						mode_t mode )
+{
+	status_t error = create_dir(path, mode);
+	if (error == B_OK)
+		error = open_dir(path, result);
+	return error;
 }
 
 StorageKit::DirEntry*
@@ -561,18 +591,41 @@ StorageKit::dread_dir( Dir dir ) {
 	return (dir == NullDir) ? NULL : readdir(dir) ;
 }
 
-StorageKit::DirEntry*
-StorageKit::read_dir( FileDescriptor dirFd ) {
-	if (dirFd == NullFd) {
-		return NULL;
-	} else {
-		DIR *dir = fd_to_dir(dirFd);
-		if (dir == NULL)
-			return NULL;
-		DirEntry* result = readdir(dir);
-//		free(dir);
-		return result;
+/*!	\param dir the directory
+	\param buffer the dirent structure to be filled
+	\param length the size of the dirent structure
+	\param count the maximal number of entries to be read
+	\return
+	- the number of entries stored in the supplied buffer,
+	- \c 0, if at the end of the entry list,
+	- \c B_BAD_VALUE, if \a buffer is NULL, or the supplied buffer is too small
+*/
+int32
+StorageKit::read_dir( FileDescriptor dir, DirEntry *buffer, size_t length,
+					  int32 count ) {
+	// init a DIR structure
+	LongDIR dirDir;
+	dirDir.fd = dir;
+	// check parameters
+	int32 result = (buffer == NULL ? B_BAD_VALUE : 0);
+	if (result == 0 && count > 0) {
+		// read one entry and copy it into the buffer
+		if (dirent *entry = readdir(&dirDir)) {
+			// Don't trust entry->d_reclen.
+			// Unlike stated in BeBook::BEntryList, the value is not the length
+			// of the whole structure, but only of the name. Some FSs count
+			// the terminating '\0', others don't.
+			// So we calculate the size ourselves (including the '\0'):
+			size_t entryLen = entry->d_name + strlen(entry->d_name) + 1
+							  - (char*)entry;
+			if (length >= entryLen) {
+				memcpy(buffer, entry, entryLen);
+				result = 1;
+			} else	// buffer too small
+				result = B_BAD_VALUE;
+		}
 	}
+	return result;
 }
 
 status_t
@@ -586,15 +639,14 @@ StorageKit::drewind_dir( Dir dir ) {
 }
 
 status_t
-StorageKit::rewind_dir( FileDescriptor dirFd ) {
-	if (dirFd == NullFd) {
+StorageKit::rewind_dir( FileDescriptor dir ) {
+	if (dir < 0)
 		return B_BAD_VALUE;
-	} else {
-		DIR *dir = fd_to_dir(dirFd);
-		if (dir == NULL)
-			return B_NO_MEMORY;
-		::rewinddir(dir);
-//		free(dir);
+	else {
+		// init a DIR structure
+		LongDIR dirDir;
+		dirDir.fd = dir;
+		::rewinddir(&dirDir);
 		return B_OK;
 	}
 }
@@ -623,18 +675,16 @@ StorageKit::dfind_dir( Dir dir, const char *name, DirEntry *&result ) {
 }
 
 status_t
-StorageKit::find_dir( FileDescriptor dirFd, const char *name, DirEntry *&result ) {
-	if (dirFd == NullFd || name == NULL)
+StorageKit::find_dir( FileDescriptor dir, const char *name,
+					  DirEntry *result, size_t length ) {
+	if (dir < 0 || name == NULL || result == NULL)
 		return B_BAD_VALUE;
 	
 	status_t status;
-
-	//! /todo The following for loop could be optimized a bit by converting dirFD to a DIR* once and calling fs_read_dir().				
-	status = StorageKit::rewind_dir(dirFd);
+	
+	status = StorageKit::rewind_dir(dir);
 	if (status == B_OK) {
-		for (	result = StorageKit::read_dir(dirFd);
-				result != NULL;
-				result = StorageKit::read_dir(dirFd)	)
+		while (	StorageKit::read_dir(dir, result, length, 1) == 1)
 		{
 			if (strcmp(result->d_name, name) == 0)
 				return B_OK;
@@ -642,7 +692,6 @@ StorageKit::find_dir( FileDescriptor dirFd, const char *name, DirEntry *&result 
 		status = B_ENTRY_NOT_FOUND;
 	}
 	
-	result = NULL;
 	return status;
 }
 
@@ -659,15 +708,15 @@ StorageKit::dfind_dir( Dir dir, const char *name, entry_ref &result ) {
 }
 
 status_t
-StorageKit::find_dir( FileDescriptor dirFd, const char *name, entry_ref &result ) {
-	DirEntry *entry;
-	status_t status = StorageKit::find_dir(dirFd, name, entry);
+StorageKit::find_dir( FileDescriptor dir, const char *name, entry_ref *result )
+{
+	LongDirEntry entry;
+	status_t status = StorageKit::find_dir(dir, name, &entry, sizeof(entry));
 	if (status != B_OK)
 		return status;
-		
-	result.device = entry->d_pdev;
-	result.directory = entry->d_pino;
-	return result.set_name(entry->d_name);
+	result->device = entry.d_pdev;
+	result->directory = entry.d_pino;
+	return result->set_name(entry.d_name);
 }
 
 status_t
@@ -709,20 +758,21 @@ StorageKit::ddup_dir( Dir dir, Dir &result ) {
 }
 
 status_t
-StorageKit::dup_dir( FileDescriptor dirFd, FileDescriptor &result ) {
-	//! /todo Since we're using file descriptors now, it'd be worth trying a simple call to ::dup() 
-	status_t status = B_ERROR;
+StorageKit::dup_dir( FileDescriptor dir, FileDescriptor &result )
+{
+/*	status_t status = B_ERROR;
 
-	if (dirFd == NullFd) {
+	if (dir == NullDir) {
 		status = B_BAD_VALUE;
 	} else {
+
 		// We need to find the entry for "." in the
 		// given directory, get its full path, and
 		// open it as a directory.
 
 		// Find "."
 		DirEntry *entry;
-		status = StorageKit::find_dir(dirFd, ".", entry);
+		status = StorageKit::find_dir(dir, ".", entry);
 
 		if (status == B_OK) {
 		
@@ -740,10 +790,12 @@ StorageKit::dup_dir( FileDescriptor dirFd, FileDescriptor &result ) {
 	
 	
 	if (status != B_OK) {
-		result = NullFd;
+		result = NullDir;
 	}
 
 	return status;		 	
+*/
+	return StorageKit::dup(dir, result);
 }
 
 
@@ -753,15 +805,44 @@ StorageKit::dclose_dir( Dir dir ) {
 }
 
 status_t
-StorageKit::close_dir( FileDescriptor dirFd ) {
-	DIR *dir = fd_to_dir(dirFd);
-	if (dir == NULL) {
-		return B_NO_MEMORY;
-	} else {
-		return (::closedir(dir) == -1) ? errno : B_OK;
-	}
+StorageKit::close_dir( FileDescriptor dir ) {
+	// init a DIR structure
+	LongDIR* dirDir = (LongDIR*)malloc(sizeof(LongDIR));
+	dirDir->fd = dir;
+	return (::closedir(dirDir) == -1) ? errno : B_OK;	
 }
 
+/*!	The parent directory must already exist.
+	\param path the link's path name
+	\param linkToPath the path name the link shall point to
+	\return B_OK, if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::create_link( const char *path, const char *linkToPath )
+{
+	status_t error = (path && linkToPath ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		if (symlink(linkToPath, path) == -1)
+			error = errno;
+	}
+	return error;
+}
+
+/*!	The parent directory must already exist.
+	\param path the link's path name
+	\param linkToPath the path name the link shall point to
+	\param result set to a file descriptor for the new symbolic link
+	\return B_OK, if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::create_link( const char *path, const char *linkToPath,
+						 FileDescriptor &result)
+{
+	status_t error = create_link(path, linkToPath);
+	if (error == B_OK)
+		error = open(path, O_RDWR, result);
+	return error;
+}
 
 ssize_t
 StorageKit::read_link( const char *path, char *result, int size ) {
@@ -789,6 +870,59 @@ StorageKit::entry_ref_to_path( const struct entry_ref *ref, char *result, int si
 	}
 }
 
+const char *kEntryRefToPathToolPaths[] = {
+	"tools/EntryRefToPath",
+	"../tools/EntryRefToPath",
+	"../../tools/EntryRefToPath",
+	"storage_kit/tools/EntryRefToPath",
+	"../../../tools/EntryRefToPath",
+	"open-beos/storage_kit/tools/EntryRefToPath",
+	"OpenBeOS/storage_kit/tools/EntryRefToPath",
+	"/boot/home/config/lib/EntryRefToPath",
+	"/boot/home/config/bin/EntryRefToPath",
+};
+const int kEntryRefToPathToolPathCount
+	= sizeof(kEntryRefToPathToolPaths) / sizeof(char*);
+static char *entryRefToPathToolPath = NULL;
+
+struct InitEntryRefToPathToolPath {
+	InitEntryRefToPathToolPath()
+	{
+		// Try to find our EntryRefToPath program
+		const char *path = NULL;
+		for (int i = 0; !path && i < kEntryRefToPathToolPathCount; i++) {
+			int fd = ::open(kEntryRefToPathToolPaths[i], O_RDONLY);
+			if (fd != -1) {
+				::close(fd);
+				path = (char *)kEntryRefToPathToolPaths[i];
+			}
+		}
+		if (path) {
+			if (StorageKit::is_absolute_path(path)) {
+				entryRefToPathToolPath = new char[strlen(path) + 1];
+				strcpy(entryRefToPathToolPath, path);
+			} else {
+				char buffer[B_PATH_NAME_LENGTH];
+				if (char *cwd = getcwd(buffer, B_PATH_NAME_LENGTH)) {
+					entryRefToPathToolPath
+						= new char[strlen(cwd) + 1 + strlen(path) + 1];
+					strcpy(entryRefToPathToolPath, cwd);
+					strcat(entryRefToPathToolPath, "/");
+					strcat(entryRefToPathToolPath, path);
+				}
+			}
+		}
+printf("InitEntryRefToPathToolPath() done: `%s'\n", entryRefToPathToolPath);
+	}
+
+	~InitEntryRefToPathToolPath()
+	{
+		delete[] entryRefToPathToolPath;
+	}
+
+} _InitEntryRefToPathToolPath;
+
+
 status_t
 StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, char *result, int size ) {
 //	printf("device = %ld \n", device);
@@ -800,27 +934,7 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 		return B_BAD_VALUE;
 
 	// A list of possible relative pathnames to our EntryRefToPath program
-	const char app1[] = "tools/EntryRefToPath";
-	const char app2[] = "../tools/EntryRefToPath";
-	const char app3[] = "../../tools/EntryRefToPath";
-	const char app4[] = "storage_kit/tools/EntryRefToPath";
-	const char app5[] = "../../../tools/EntryRefToPath";
-	const char app6[] = "open-beos/storage_kit/tools/EntryRefToPath";
-	const char app7[] = "OpenBeOS/storage_kit/tools/EntryRefToPath";
-	const char app8[] = "/boot/home/config/lib/EntryRefToPath";
-	const int APP_COUNT = 8;
-	const char *app[APP_COUNT] = { app1, app2, app3, app4, app5, app6, app7, app8 };
-	char *app_path = NULL;
-	
-	// Try to find our EntryRefToPath program
-	for (int i = 0; i < APP_COUNT; i++) {
-		int fd = ::open(app[i], O_RDONLY);
-		if (fd != -1) {
-			::close(fd);
-			app_path = (char *)app[i];
-			break;
-		}
-	}
+	const char *app_path = entryRefToPathToolPath;
 	
 	if (app_path == NULL) {
 		result[0] = 0;
@@ -831,7 +945,7 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 	// Attempt to invoke our EntryRefToPath program using the
 	// various pathnames from above. If one succeeds, it will
 	// return B_OK and the others will not be tried.
-	char cmd[B_PATH_NAME_LENGTH];
+	char cmd[B_PATH_NAME_LENGTH + 30 + B_FILE_NAME_LENGTH];
 
 	// Create our command line
 	sprintf(cmd, "%s %ld %lld %s", app_path, device, directory, name);
@@ -891,76 +1005,137 @@ status_t
 StorageKit::ddir_to_self_entry_ref( Dir dir, entry_ref *result ) {
 	if (dir == StorageKit::NullDir || result == NULL)
 		return B_BAD_VALUE;
-
-/*		
-	// Here we're ignoring the fact that we're not supposed to know
-	// what exactly a StorageKit::Dir is, since it's much more efficient
-	result->device = dir->ent.d_pdev;
-	result->directory = dir->ent.d_pino;
-	return result->set_name( dir->ent.d_name );
-*/
-
-	// Convert our directory to an entry_ref 
-	StorageKit::drewind_dir(dir);	
-	StorageKit::DirEntry *entry;
-	for (	entry = StorageKit::dread_dir(dir);
-			entry != NULL;
-			entry = StorageKit::dread_dir(dir)	) {
-		if (strcmp(entry->d_name, ".") == 0) {
-			result->device = entry->d_dev;
-			result->directory = entry->d_ino;
-			result->set_name(".");
-			return B_OK;					
-		}
-	}
-	return B_ENTRY_NOT_FOUND;
-	
+	return dfind_dir(dir, ".", *result);
 }
 
 status_t
-StorageKit::dir_to_self_entry_ref( FileDescriptor dirFd, entry_ref *result ) {
-	if (dirFd == StorageKit::NullFd || result == NULL)
+StorageKit::dir_to_self_entry_ref( FileDescriptor dir, entry_ref *result ) {
+	if (dir == StorageKit::NullFd || result == NULL)
 		return B_BAD_VALUE;
-
-/*		
-	// Here we're ignoring the fact that we're not supposed to know
-	// what exactly a StorageKit::Dir is, since it's much more efficient
-	result->device = dir->ent.d_pdev;
-	result->directory = dir->ent.d_pino;
-	return result->set_name( dir->ent.d_name );
-*/
-
-	//! /todo The following for loop could be optimized to convert dirFd to a DIR once and call ::readdir() directly
-	// Convert our directory to an entry_ref 
-	StorageKit::rewind_dir(dirFd);	
-	StorageKit::DirEntry *entry;
-	for (	entry = StorageKit::read_dir(dirFd);
-			entry != NULL;
-			entry = StorageKit::read_dir(dirFd)	) {
-		if (strcmp(entry->d_name, ".") == 0) {
-			result->device = entry->d_dev;
-			result->directory = entry->d_ino;
-			result->set_name(".");
-			return B_OK;					
-		}
-	}
-	return B_ENTRY_NOT_FOUND;
-	
+	return find_dir(dir, ".", result);
 }
 
 status_t
-StorageKit::dir_to_path( Dir dir, char *result, int size ) {
-	if (dir == StorageKit::NullDir || result == NULL)
+StorageKit::dir_to_path( FileDescriptor dir, char *result, int size ) {
+	if (dir < 0 || result == NULL)
 		return B_BAD_VALUE;
 
 	entry_ref entry;
 	status_t status;
 	
-	status = ddir_to_self_entry_ref(dir, &entry);
+	status = dir_to_self_entry_ref(dir, &entry);
 	if (status != B_OK)
 		return status;
 		
 	return entry_ref_to_path(&entry, result, size);
+}
+
+/*!	\param path the path name.
+	\param result a pointer to a buffer the resulting path name shall be
+		   written into.
+	\param size the size of the buffer
+	\return \c B_OK if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::get_canonical_path(const char *path, char *result, size_t size)
+{
+	status_t error = (path && result ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		char *dirPath;
+		char *leafName;
+		if (split_path(path, dirPath, leafName)) {
+			// handle special leaf names ("." and "..")
+			if (strcmp(leafName, ".") == 0 || strcmp(leafName, "..") == 0)
+				error = get_canonical_dir_path(path, result, size);
+			else {
+				// get the canonical dir path and append the leaf name
+				error = get_canonical_dir_path(dirPath, result, size);
+				if (error == B_OK) {
+					size_t dirPathLen = strlen(result);
+					if (dirPathLen + 1 + strlen(leafName) + 1 <= size) {
+						strcat(result + dirPathLen, "/");
+						strcat(result + dirPathLen + 1, leafName);
+					} else
+						error = B_BAD_VALUE;
+				}
+			}
+			delete[] dirPath;
+			delete[] leafName;
+		} else
+			error = B_BAD_VALUE;
+	}
+
+	return error;
+}
+
+/*!	The caller is responsible for deleting the returned path name.
+	\param path the path name.
+	\param result in this variable the resulting path name is returned
+	\return \c B_OK if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::get_canonical_path(const char *path, char *&result)
+{
+	status_t error = (path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		result = new char[B_PATH_NAME_LENGTH];
+		error = get_canonical_path(path, result, B_PATH_NAME_LENGTH);
+		if (error != B_OK) {
+			delete[] result;
+			result = NULL;
+		}
+	}
+	return error;
+}
+
+/*!	\param path the path name.
+	\param result a pointer to a buffer the resulting path name shall be
+		   written into.
+	\param size the size of the buffer
+	\return \c B_OK if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::get_canonical_dir_path(const char *path, char *result, size_t size)
+{
+	status_t error = (path && result ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		FileDescriptor dir;
+		error = open_dir(path, dir);
+		if (error == B_OK) {
+			error = dir_to_path(dir, result, size);
+			close_dir(dir);
+		}
+	}
+	return error;
+}
+
+/*!	The caller is responsible for deleting the returned path name.
+	\param path the path name.
+	\param result in this variable the resulting path name is returned
+	\return \c B_OK if everything went fine, an error code otherwise
+*/
+status_t
+StorageKit::get_canonical_dir_path(const char *path, char *&result)
+{
+	status_t error = (path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		result = new char[B_PATH_NAME_LENGTH];
+		error = get_canonical_dir_path(path, result, B_PATH_NAME_LENGTH);
+		if (error != B_OK) {
+			delete[] result;
+			result = NULL;
+		}
+	}
+	return error;
+}
+
+/*!	\param path the path
+	\return \c true, if \a path is not \c NULL and absolute, \c false otherwise
+*/
+bool
+StorageKit::is_absolute_path(const char *path)
+{
+	return (path && path[0] == '/');
 }
 
 bool

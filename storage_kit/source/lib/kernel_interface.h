@@ -45,6 +45,9 @@ typedef int OpenFlags;			// open() flags
 typedef mode_t CreationFlags;	// open() mode
 typedef int SeekMode;			// lseek() mode
 
+// for convenience:
+struct LongDirEntry : DirEntry { char _buffer[B_FILE_NAME_LENGTH]; };
+
 // Constants -- POSIX versions
 const FileDescriptor NullFd = -1;
 const Dir NullDir = NULL;
@@ -188,14 +191,22 @@ status_t close_attr_dir( FileDescriptor dirFd );
 status_t dopen_dir( const char *path, Dir &result );
 status_t open_dir( const char *path, FileDescriptor &result );
 
-/*! Returns the next entry in the given directory, or B_ENTRY_NOT_FOUND
-	if at the end of the list. */
+//! Creates a new directory.
+status_t create_dir( const char *path,
+					 mode_t mode = S_IRWXU | S_IRWXG | S_IRWXU );
+
+//! Creates a new directory and opens it.
+status_t create_dir( const char *path, FileDescriptor &result,
+					 mode_t mode = S_IRWXU | S_IRWXG | S_IRWXU);
+
+//! \brief Returns the next entries in the given directory.
 DirEntry* dread_dir( Dir dir );
-DirEntry* read_dir( FileDescriptor dirFd );
+int32 read_dir( FileDescriptor dir, DirEntry *buffer, size_t length,
+				int32 count = INT_MAX);
 
 /*! Rewindes the directory to the first entry in the list. */
 status_t drewind_dir( Dir dir );
-status_t rewind_dir( FileDescriptor dirFd );
+status_t rewind_dir( FileDescriptor dir );
 
 /*! Iterates through the given directory searching for an entry whose name
 	matches that given by name. On success, places the DirEntry in result
@@ -204,26 +215,34 @@ status_t rewind_dir( FileDescriptor dirFd );
 	
 	<b>Note:</b> This call modifies the internal position marker of dir. */
 status_t dfind_dir( Dir dir, const char *name, DirEntry *&result );
-status_t find_dir( FileDescriptor dirFd, const char *name, DirEntry *&result );
+status_t find_dir( FileDescriptor dir, const char *name, DirEntry *result,
+				   size_t length );
 
 /*! Calls the other version of StorageKit::find_dir() and stores the results
 	in the given entry_ref. */
 status_t dfind_dir( Dir dir, const char *name, entry_ref &result );
-status_t find_dir( FileDescriptor dirFd, const char *name, entry_ref &result );
+status_t find_dir( FileDescriptor dir, const char *name, entry_ref *result );
 
 /*! Creates a duplicated of the given directory and places it in result if successful,
-	returning B_OK. Returns an error code and sets result to StorageKit::NullDir if
+	returning B_OK. Returns an error code and sets result to -1 if
 	unsuccessful. */
 status_t ddup_dir( Dir dir, Dir &result );
-status_t dup_dir( FileDescriptor dirFd, FileDescriptor &result );
+status_t dup_dir( FileDescriptor dir, FileDescriptor &result );
 
 /*! Closes the given directory. */
 status_t dclose_dir( Dir dir );
-status_t close_dir( FileDescriptor dirFd );
+status_t close_dir( FileDescriptor dir );
 
 //------------------------------------------------------------------------------
 // SymLink functions
 //------------------------------------------------------------------------------
+//! Creates a new symbolic link.
+status_t create_link( const char *path, const char *linkToPath );
+
+//! Creates a new symbolic link and opens it.
+status_t create_link( const char *path, const char *linkToPath,
+					  FileDescriptor &result );
+
 /*! If path refers to a symlink, the pathname of the target to which path
 	is linked is copied into result and NULL terminated, the path being truncated
 	at size-1 chars if necessary (a buffer of size B_PATH_NAME_LENGTH+1 is a good
@@ -256,11 +275,11 @@ status_t entry_ref_to_path( dev_t device, ino_t directory, const char *name, cha
 
 	Returns B_OK if successful.
 	
-	If dir equals StorageKit::NullDir or result is NULL, B_BAD_VALUE is returned.
+	If dir is < 0 or result is NULL, B_BAD_VALUE is returned.
 	Otherwise, an appropriate error code is returned.
  */
 status_t ddir_to_self_entry_ref( Dir dir, entry_ref *result );
-status_t dir_to_self_entry_ref( FileDescriptor dirFd, entry_ref *result );
+status_t dir_to_self_entry_ref( FileDescriptor dir, entry_ref *result );
 
 
 /*! Converts the given directory into an absolute pathname, returning the
@@ -269,11 +288,30 @@ status_t dir_to_self_entry_ref( FileDescriptor dirFd, entry_ref *result );
 	
 	Returns B_OK if successful.
 	
-	If dir equals StorageKit::NullDir or result is NULL or size is -1, B_BAD_VALUE
+	If dir is < 0 or result is NULL or size is -1, B_BAD_VALUE
 	is returned. Otherwise, an error code is returned. The state of result after
 	an error is undefined.
 */
-status_t dir_to_path( Dir dir, char *result, int size );
+status_t dir_to_path( FileDescriptor dir, char *result, int size );
+
+/*!	\brief Returns the canonical representation of a given path referring to an
+	potentially abstract entry in an existing directory. */
+status_t get_canonical_path(const char *path, char *result, size_t size);
+
+/*!	\brief Returns the canonical representation of a given path referring to an
+	potentially abstract entry in an existing directory. */
+status_t get_canonical_path(const char *path, char *&result);
+
+/*!	\brief Returns the canonical representation of a given path referring to an
+	existing directory. */
+status_t get_canonical_dir_path(const char *path, char *result, size_t size);
+
+/*!	\brief Returns the canonical representation of a given path referring to an
+	existing directory. */
+status_t get_canonical_dir_path(const char *path, char *&result);
+
+//! Returns whether the supplied path is absolute.
+bool is_absolute_path(const char *path);
 
 /*! Returns true if the given entry_ref represents the root directory, false otherwise. */
 bool entry_ref_is_root_dir( entry_ref &ref );
