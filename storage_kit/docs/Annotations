@@ -296,6 +296,7 @@ Location:    {Get,Set}IconForType(char*, BBitmap*, icon_size)
 Description: Passing NULL as the first parameter is the same as calling
              {Get,Set}Icon() with the second two parameters (i.e. {gets,sets}
              the icon for the type itself).
+
              
 OS:          BeOS R5
 Module:      BMimeType
@@ -303,6 +304,7 @@ Location:    SetFileExtensions()
 Description: Passing a NULL message does not clear the File Extensions field
              for the MIME type as indicated by the Be Book; instead, it crashes
              the application :-)
+
             
 OS:          BeOS R5
 Module:      BMimeType
@@ -315,3 +317,17 @@ Description: A B_STRING_TYPE field of name "type" is *added* to the result
              the original BMessage.
 
 
+OS:          BeOS R5
+Module:      BMimeType
+Location:    Install()
+Description: From the Be Book: "Currently, Install() may return a random value
+             if the object is already installed." 
+             
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    
+Description: MIME Type strings are converted to lowercase before being used
+             as filenames in the MIME database.
+             
+           
