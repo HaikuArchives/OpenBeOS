@@ -37,20 +37,8 @@ THE SOFTWARE.
 #include "PrinterDriver.h"
 #include "PageSetupWindow.h"
 
-// Simon: added
 #include "MarginView.h"
 #include "PrinterSettings.h"
-
-/*
-#include <stdio.h>
-#include <stdlib.h>
-
-static void ShowFloat(const char *name, float f) {
-	BString str;
-	str << name << " = " <<  f;
-	(new BAlert("",str.String(), "OK"))->Go();
-}
-*/
 
 // static global variables
 static struct {
