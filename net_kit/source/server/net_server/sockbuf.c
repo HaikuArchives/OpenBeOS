@@ -39,41 +39,40 @@ int sbreserve(struct sockbuf *sb, uint32 cc)
 
 void sbdrop(struct sockbuf *sb, int len)
 {
-        struct mbuf *m, *mn;
-        struct mbuf *next;
+	struct mbuf *m, *mn;
+	struct mbuf *next;
 
-        next = (m = sb->sb_mb) ? m->m_nextpkt : 0;
-        while (len > 0) {
-                if (m == 0) {
-                        if (next == 0) {
-                                printf("sbdrop");
-				exit(-1);
-			}
-                        m = next;
-                        next = m->m_nextpkt;
-                        continue;
-                }
-                if (m->m_len > len) {
-                        m->m_len -= len;
-                        m->m_data += len;
-                        sb->sb_cc -= len;
-                        break;
-                }
-                len -= m->m_len;
-                sbfree(sb, m);
-                MFREE(m, mn);
-                m = mn;
-        }
-        while (m && m->m_len == 0) {
-                sbfree(sb, m);
-                MFREE(m, mn);
-                m = mn;
-        }
-        if (m) {
-                sb->sb_mb = m;
-                m->m_nextpkt = next;
-        } else
-                sb->sb_mb = next;
+	next = (m = sb->sb_mb) ? m->m_nextpkt : NULL;
+	while (len > 0) {
+		if (m == NULL) {
+			if (next == NULL)
+				return;
+
+			m = next;
+			next = m->m_nextpkt;
+			continue;
+		}
+		if (m->m_len > len) {
+			m->m_len -= len;
+			m->m_data += len;
+			sb->sb_cc -= len;
+			break;
+		}
+		len -= m->m_len;
+		sbfree(sb, m);
+		MFREE(m, mn);
+		m = mn;
+	}
+	while (m && m->m_len == 0) {
+		sbfree(sb, m);
+		MFREE(m, mn);
+		m = mn;
+	}
+	if (m) {
+		sb->sb_mb = m;
+		m->m_nextpkt = next;
+	} else
+		sb->sb_mb = next;
 }
 
 /*
@@ -82,17 +81,13 @@ void sbdrop(struct sockbuf *sb, int len)
  */
 void sbflush(struct sockbuf *sb)
 {
-
-        if (sb->sb_flags & SB_LOCK) {
-                printf("sbflush");
-		exit(-1);
+	if (sb->sb_flags & SB_LOCK) {
+		return;
 	}
-        while (sb->sb_mbcnt)
-                sbdrop(sb, (int)sb->sb_cc);
-        if (sb->sb_cc || sb->sb_mb) {
-                printf("sbflush 2\n");
-		exit(-1);
-	}	
+	while (sb->sb_mbcnt)
+		sbdrop(sb, (int)sb->sb_cc);
+	if (sb->sb_cc || sb->sb_mb)
+		return;
 }
 
 /*
@@ -153,44 +148,44 @@ void sbappendrecord(struct sockbuf *sb, struct mbuf *m0)
 int sbappendaddr(struct sockbuf *sb, struct sockaddr *asa, 
 		 struct mbuf *m0, struct mbuf *control)
 {
-        struct mbuf *m, *n;
-        int space = asa->sa_len;
+	struct mbuf *m, *n;
+	int space = asa->sa_len;
 
-        if (m0 && (m0->m_flags & M_PKTHDR) == 0) {
+	if (m0 && (m0->m_flags & M_PKTHDR) == 0) {
 		printf("sbappendaddr\n");
-		exit(-1);
+		return(-1);
 	}
 
-        if (m0)
-                space += m0->m_pkthdr.len;
-        for (n = control; n; n = n->m_next) {
-                space += n->m_len;
-                if (n->m_next == 0)     /* keep pointer to last control buf */
-                        break;
-        }
-        if (space > sbspace(sb))
-                return (0);
-        if (asa->sa_len > MLEN)
-                return (0);
-        MGET(m, MT_SONAME);
-        if (m == 0)
-                return (0);
-        m->m_len = asa->sa_len;
-        memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
-        if (n)
-                n->m_next = m0;         /* concatenate data to control */
-        else
-                control = m0;
-        m->m_next = control;
-        for (n = m; n; n = n->m_next)
-                sballoc(sb, n);
-        if ((n = sb->sb_mb) != NULL) {
-                while (n->m_nextpkt)
-                        n = n->m_nextpkt;
-                n->m_nextpkt = m;
-        } else
-                sb->sb_mb = m;
-        return (1);
+	if (m0)
+		space += m0->m_pkthdr.len;
+	for (n = control; n; n = n->m_next) {
+		space += n->m_len;
+		if (n->m_next == 0)     /* keep pointer to last control buf */
+			break;
+	}
+	if (space > sbspace(sb))
+		return (0);
+	if (asa->sa_len > MLEN)
+		return (0);
+	MGET(m, MT_SONAME);
+	if (m == 0)
+		return (0);
+	m->m_len = asa->sa_len;
+	memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
+	if (n)
+		n->m_next = m0;         /* concatenate data to control */
+	else
+		control = m0;
+	m->m_next = control;
+	for (n = m; n; n = n->m_next)
+		sballoc(sb, n);
+	if ((n = sb->sb_mb) != NULL) {
+		while (n->m_nextpkt)
+			n = n->m_nextpkt;
+		n->m_nextpkt = m;
+	} else
+		sb->sb_mb = m;
+	return (1);
 }
 
 void sbcompress(struct sockbuf *sb, struct mbuf *m, struct mbuf *n)
