@@ -176,9 +176,7 @@ Volume::Mount(const char *deviceName,uint32 flags)
 status_t
 Volume::Unmount()
 {
-	// This will also flush the log
-	Sync();
-	
+	// This will also flush the log & all blocks to disk
 	delete fJournal;
 	fJournal = NULL;
 
@@ -194,8 +192,7 @@ Volume::Unmount()
 status_t 
 Volume::Sync()
 {
-	fJournal->FlushLog();
-	return flush_device(fDevice,0);
+	return fJournal->FlushLogAndBlocks();
 }
 
 

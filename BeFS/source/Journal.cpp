@@ -30,7 +30,7 @@ Journal::Journal(Volume *volume)
 
 Journal::~Journal()
 {
-	// be sure to have flushed all logged blocks at this point
+	FlushLogAndBlocks();
 }
 
 
@@ -315,7 +315,7 @@ Journal::WriteLogEntry()
 
 
 status_t 
-Journal::FlushLog()
+Journal::FlushLogAndBlocks()
 {
 	status_t status = Lock((Transaction *)this);
 	if (status != B_OK)
@@ -331,6 +331,7 @@ Journal::FlushLog()
 		if (status < B_OK)
 			FATAL(("writing current log entry failed: %s\n",status));
 	}
+	status = flush_device(fVolume->Device(),0);
 
 	Unlock((Transaction *)this,true);
 	return status;

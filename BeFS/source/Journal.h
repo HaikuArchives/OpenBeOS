@@ -57,7 +57,7 @@ class Journal {
 		Transaction *CurrentTransaction() const { return fOwner; }
 		uint32 TransactionSize() const { return fArray.CountItems() + fArray.BlocksUsed(); }
 
-		status_t FlushLog();
+		status_t FlushLogAndBlocks();
 		Volume *GetVolume() const { return fVolume; }
 
 		inline int32 FreeLogBlocks() const;
