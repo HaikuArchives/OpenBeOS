@@ -18,6 +18,9 @@ SOURCE_FILES =
 	SymLinkTest.cpp
 ;
 
+# targets to shorted make time, when only one version should be made
+NOTFILE r5 posix ;
+
 # Version of our test suite that links with Be's R5 libraries
 
 LibraryFromR5Sources $(TOP)/test/libstoragetest.R5.a : $(SOURCE_FILES) ;
@@ -30,6 +33,7 @@ LinkSharedOSLibs Test.StorageKit.R5 :
 	/boot/develop/lib/x86/libstdc++.r4.so
 	/boot/develop/lib/x86/libbe.so
 ;
+DEPENDS r5 : Test.StorageKit.R5 ;
 
 
 # Version of our test suite that links with OpenBeOS libraries
@@ -55,3 +59,4 @@ LinkSharedOSLibs Test.StorageKit.OpenBeOS :
 LinkSharedOSLibs Test.StorageKit.OpenBeOS :
 	/boot/develop/lib/x86/libstdc++.r4.so
 ;
+DEPENDS posix : Test.StorageKit.OpenBeOS ;
