@@ -10,6 +10,7 @@
 #include "protocols.h"
 #include "sys/socket.h"
 #include "sys/protosw.h"
+#include "sys/domain.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -178,3 +179,4 @@ _EXPORT module_info *modules[] = {
 };
 
 #endif
+
