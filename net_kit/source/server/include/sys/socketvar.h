@@ -114,6 +114,10 @@ int     socreate(int dom, void *aso, int type, int proto);
 int     sobind(void *so, caddr_t, int);
 int     solisten(void *sp, int backlog);
 int     soconnect(void *sp, caddr_t, int);
+int     sosysctl (int *, uint, void *, size_t *, void *, size_t);
+int     soshutdown(void *sp, int how);
+int     writeit(void *, struct iovec *, int);
+int     readit(void *, struct iovec *, int *);
 
 int     sendit(void *, struct msghdr *, int, int *);
 int     recvit(void *, struct msghdr *, caddr_t, int *);
@@ -144,12 +148,16 @@ int     soo_ioctl(void *sp, int cmd, caddr_t data);
 int     soclose(void *sp);
 int     sodisconnect(struct socket *);
 void    sofree(struct socket *);
+
+void    socantsendmore(struct socket *so);
+void    socantrcvmore(struct socket *so);
 void    soisconnected (struct socket *so);
 void    soisconnecting (struct socket *so);
 void    soisdisconnected (struct socket *so);
 void    soisdisconnecting (struct socket *so);
 void    soqinsque (struct socket *head, struct socket *so, int q);
 int     soqremque (struct socket *so, int q);
+int     sorflush(struct socket *so);
 
 int     nsleep(sem_id chan, char *msg, int timeo);
 void    wakeup(sem_id chan);

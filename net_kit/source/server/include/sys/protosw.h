@@ -3,6 +3,7 @@
 #ifndef PROTOSW_H
 #define PROTOSW_H
 
+#include "sys/socketvar.h" /* for struct socket */
 #include "net/route.h"
 
 /* every protocol module init's one of these and passes it into
@@ -30,6 +31,7 @@ struct protosw {
 					  struct mbuf *, 
 					  struct mbuf *, 
 					  struct mbuf *);
+	int (*pr_sysctl)(int *, uint, void *, size_t *, void *, size_t);
 	
 	struct protosw *pr_next;	/* pointer to next proto structure */
 	struct protosw *dom_next;	/* next protosw pointed by the domain */
