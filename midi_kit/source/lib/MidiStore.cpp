@@ -14,6 +14,8 @@
 #define PACK_2_U8_TO_U16(_d1, _d2) \
 	_d2 = (uint16)_d1[0] << 8 | (uint16)_d1[1];
 
+//-----------------------------------------------------------------------------
+// Public Access Routines
 BMidiStore::BMidiStore() {
 	_evt_list = new BList();
 	_tempo = 60;
@@ -28,43 +30,118 @@ BMidiStore::~BMidiStore() {
 	delete _evt_list;
 }
 
-void BMidiStore::NoteOff(uchar chan, uchar note, uchar vel, uint32 time) {
+void BMidiStore::NoteOff(uchar chan, uchar note, uchar vel, uint32 time) {	
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_NOTE_OFF;
+	e->time = B_NOW;
+	e->data.note_off.channel = chan;
+	e->data.note_off.note = note;
+	e->data.note_off.velocity = vel;
+	_evt_list->AddItem(e);
 }
     	                 
 void BMidiStore::NoteOn(uchar chan, uchar note, uchar vel, uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_NOTE_ON;
+	e->time = B_NOW;
+	e->data.note_on.channel = chan;
+	e->data.note_on.note = note;
+	e->data.note_on.velocity = vel;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::KeyPressure(uchar chan, uchar note, uchar pres,
 	uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_KEY_PRESSURE;
+	e->time = B_NOW;
+	e->data.key_pressure.channel = chan;
+	e->data.key_pressure.note = note;
+	e->data.key_pressure.pressure = pres;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::ControlChange(uchar chan, uchar ctrl_num, uchar ctrl_val,
 	uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_CONTROL_CHANGE;
+	e->time = B_NOW;
+	e->data.control_change.channel = chan;
+	e->data.control_change.number = ctrl_num;
+	e->data.control_change.value = ctrl_val;
+	_evt_list->AddItem(e);
 }
                                
 void BMidiStore::ProgramChange(uchar chan, uchar prog_num, uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_PROGRAM_CHANGE;
+	e->time = B_NOW;
+	e->data.program_change.channel = chan;
+	e->data.program_change.number = prog_num;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::ChannelPressure(uchar chan, uchar pres, uint32 time) {                                
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_CHANNEL_PRESSURE;
+	e->time = B_NOW;
+	e->data.channel_pressure.channel = chan;
+	e->data.channel_pressure.pressure = pres;
+	_evt_list->AddItem(e);
 }                                 
                                  
 void BMidiStore::PitchBend(uchar chan, uchar lsb, uchar msb, uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_PITCH_BEND;
+	e->time = B_NOW;
+	e->data.pitch_bend.channel = chan;
+	e->data.pitch_bend.lsb = lsb;
+	e->data.pitch_bend.msb = msb;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::SystemExclusive(void * data, size_t data_len, uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_SYSTEM_EXCLUSIVE;
+	e->time = B_NOW;
+	e->data.system_exclusive.data = (uint8 *)data;
+	e->data.system_exclusive.length = data_len;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::SystemCommon(uchar stat_byte, uchar data1, uchar data2,
 	uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_SYSTEM_COMMON;
+	e->time = B_NOW;
+	e->data.system_common.status = stat_byte;
+	e->data.system_common.data1 = data1;
+	e->data.system_common.data2 = data2;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::SystemRealTime(uchar stat_byte, uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_SYSTEM_REAL_TIME;
+	e->time = B_NOW;
+	e->data.system_real_time.status = stat_byte;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::TempoChange(int32 bpm, uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_TEMPO_CHANGE;
+	e->time = B_NOW;
+	e->data.tempo_change.beats_per_minute = bpm;
+	_evt_list->AddItem(e);
 }
 
 void BMidiStore::AllNotesOff(bool just_chan, uint32 time) {
+	BMidiEvent * e = new BMidiEvent;
+	e->opcode = BMidiEvent::OP_ALL_NOTES_OFF;
+	e->time = B_NOW;
+	e->data.all_notes_off.just_channel = just_chan;
+	_evt_list->AddItem(e);
 }
 
 status_t BMidiStore::Import(const entry_ref * ref) {
@@ -106,6 +183,9 @@ status_t BMidiStore::Import(const entry_ref * ref) {
 	PACK_2_U8_TO_U16(d,tracks);
 	d += 2;
 	PACK_2_U8_TO_U16(d,division);
+	if(!(division & 0x8000)) {
+		_ticks_per_beat = division;
+	}
 	d += 2;
 	status_t ret;
 	try {
@@ -133,10 +213,14 @@ status_t BMidiStore::Export(const entry_ref * ref, int32 format) {
 	if(!ouf) {
 		return B_ERROR;
 	}
+	ouf.write("MHdr",4);
+	
+	ouf.close();
 	return B_OK;
 }
 
 void BMidiStore::SortEvents(bool force) {
+	_evt_list->SortItems(_CompareEvents);
 }
 
 uint32 BMidiStore::CountEvents() const {
@@ -157,7 +241,9 @@ uint32 BMidiStore::DeltaOfEvent(uint32 event_num) const {
 }
 
 uint32 BMidiStore::EventAtDelta(uint32 time) const {
-	return 0;
+	uint32 event_num = 0;
+	
+	return event_num;
 }
 
 uint32 BMidiStore::BeginTime() const {
@@ -173,78 +259,77 @@ int32 BMidiStore::Tempo() const {
 }
 
 void BMidiStore::Run() {
+	_start_time = B_NOW;
+	uint32 last_tick = 0;
+	uint32 last_time = _start_time;
 	while(KeepRunning()) {
 		BMidiEvent * e = (BMidiEvent *)_evt_list->ItemAt(_cur_evt);
 		if(e == NULL) {
 			return;
 		}
-		uint32 cur_time = e->time;
-		uint32 now = B_NOW;
-		while(e->time == cur_time) {
-			BMidiEvent::Data & d = e->data;
-			switch(e->opcode) {
-			case BMidiEvent::OP_NOTE_OFF:
-				SprayNoteOff(d.note_off.channel,
-					d.note_off.note, d.note_off.velocity,now);
-				break;
-			case BMidiEvent::OP_NOTE_ON:
-				SprayNoteOn(d.note_on.channel,
-					d.note_on.note,d.note_on.velocity,now);
-				break;
-			case BMidiEvent::OP_KEY_PRESSURE:
-				SprayKeyPressure(d.key_pressure.channel,
-					d.key_pressure.note,d.key_pressure.pressure,now);
-				break;
-			case BMidiEvent::OP_CONTROL_CHANGE:
-				SprayControlChange(d.control_change.channel,
-					d.control_change.number,d.control_change.value,now);
-				break;
-			case BMidiEvent::OP_PROGRAM_CHANGE:
-				SprayProgramChange(d.program_change.channel,
-					d.program_change.number,now);
-				break;
-			case BMidiEvent::OP_CHANNEL_PRESSURE:
-				SprayChannelPressure(d.channel_pressure.channel,
-					d.channel_pressure.pressure,now);
-				break;
-			case BMidiEvent::OP_PITCH_BEND:
-				SprayPitchBend(d.pitch_bend.channel,
-					d.pitch_bend.lsb,d.pitch_bend.msb,now);
-				break;
-			case BMidiEvent::OP_SYSTEM_EXCLUSIVE:
-				SpraySystemExclusive(d.system_exclusive.data,
-					d.system_exclusive.length,now);
-				break;
-			case BMidiEvent::OP_SYSTEM_COMMON:
-				SpraySystemCommon(d.system_common.status,
-					d.system_common.data1,d.system_common.data2,now);
-				break;
-			case BMidiEvent::OP_SYSTEM_REAL_TIME:
-				SpraySystemRealTime(d.system_real_time.status,now);
-				break;
-			case BMidiEvent::OP_TEMPO_CHANGE:
-				SprayTempoChange(d.tempo_change.beats_per_minute,now);
-				_tempo = d.tempo_change.beats_per_minute;
-				break;
-			case BMidiEvent::OP_ALL_NOTES_OFF:
-				break;
-			default:
-				break;
-			}
-			_cur_evt++;
-			e = (BMidiEvent *)_evt_list->ItemAt(_cur_evt);
-			if(e == NULL) {
-				return;
-			}
+		uint32 tick = e->time;
+		uint32 tick_delta = tick - last_tick;
+		uint32 beat_len = (60000 / _tempo);
+		uint32 delta_time = (beat_len * tick_delta) / _ticks_per_beat;
+		uint32 time = last_time + delta_time;
+		last_time = time;
+		last_tick = tick;
+		BMidiEvent::Data & d = e->data;
+		switch(e->opcode) {
+		case BMidiEvent::OP_NOTE_OFF:
+			SprayNoteOff(d.note_off.channel,
+				d.note_off.note, d.note_off.velocity,time);
+			break;
+		case BMidiEvent::OP_NOTE_ON:
+			SprayNoteOn(d.note_on.channel,
+				d.note_on.note,d.note_on.velocity,time);
+			break;
+		case BMidiEvent::OP_KEY_PRESSURE:
+			SprayKeyPressure(d.key_pressure.channel,
+				d.key_pressure.note,d.key_pressure.pressure,time);
+			break;
+		case BMidiEvent::OP_CONTROL_CHANGE:
+			SprayControlChange(d.control_change.channel,
+				d.control_change.number,d.control_change.value,time);
+			break;
+		case BMidiEvent::OP_PROGRAM_CHANGE:
+			SprayProgramChange(d.program_change.channel,
+				d.program_change.number,time);
+			break;
+		case BMidiEvent::OP_CHANNEL_PRESSURE:
+			SprayChannelPressure(d.channel_pressure.channel,
+				d.channel_pressure.pressure,time);
+			break;
+		case BMidiEvent::OP_PITCH_BEND:
+			SprayPitchBend(d.pitch_bend.channel,
+				d.pitch_bend.lsb,d.pitch_bend.msb,time);
+			break;
+		case BMidiEvent::OP_SYSTEM_EXCLUSIVE:
+			SpraySystemExclusive(d.system_exclusive.data,
+				d.system_exclusive.length,time);
+			break;
+		case BMidiEvent::OP_SYSTEM_COMMON:
+			SpraySystemCommon(d.system_common.status,
+				d.system_common.data1,d.system_common.data2,time);
+			break;
+		case BMidiEvent::OP_SYSTEM_REAL_TIME:
+			SpraySystemRealTime(d.system_real_time.status,time);
+			break;
+		case BMidiEvent::OP_TEMPO_CHANGE:
+			SprayTempoChange(d.tempo_change.beats_per_minute,time);
+			_tempo = d.tempo_change.beats_per_minute;
+			break;
+		case BMidiEvent::OP_ALL_NOTES_OFF:
+			break;
+		default:
+			break;
 		}
-		uint32 beat_len = 6000000 / _tempo;
-		uint32 next_time = e->time;
-		snooze((next_time - cur_time) * beat_len);
+		_cur_evt++;
 	}
 }
 
 //-----------------------------------------------------------------------------
-//
+// Decode and Encode Routines
 void BMidiStore::_DecodeFormat0Tracks(uint8 * data, uint16 tracks,
 	uint32 len) {
 	uint8 * last_byte = data + len;
@@ -262,15 +347,15 @@ void BMidiStore::_DecodeFormat0Tracks(uint8 * data, uint16 tracks,
 	uint32 time = 0;
 	try {
 		while(d < last_byte) {
-			uint32 evt_dtime = _GetVarLength(&d,last_byte);
+			uint32 evt_dtime = _ReadVarLength(&d,last_byte);
 			time += evt_dtime;
 			BMidiEvent * event = new BMidiEvent();
-			bool track_end = _GetEvent(&d,last_byte,event);
-			if(track_end) {
-				break;
-			}
+			_ReadEvent(&d,last_byte,event);
 			event->time = time;
 			_evt_list->AddItem(event);
+			if(event->opcode == BMidiEvent::OP_TRACK_END) {
+				break;
+			}
 		}
 	} catch(status_t e) {
 		if(e == B_OK) {
@@ -285,13 +370,21 @@ void BMidiStore::_DecodeFormat1Tracks(uint8 * data, uint16 tracks,
 	return;	
 }
 
-
 void BMidiStore::_DecodeFormat2Tracks(uint8 * data, uint16 tracks,
 	uint32 len) {	
 	return;
 }
 
-bool BMidiStore::_GetEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
+void BMidiStore::_EncodeFormat0Tracks(uint8 *) {
+}
+
+void BMidiStore::_EncodeFormat1Tracks(uint8 *) {
+}
+
+void BMidiStore::_EncodeFormat2Tracks(uint8 *) {
+}
+
+void BMidiStore::_ReadEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
 #define CHECK_DATA(_d) if((_d) > max_d) throw B_BAD_MIDI_DATA;
 #define INC_DATA(_d) CHECK_DATA(_d); d = _d;
 	uint8 tmp8;
@@ -317,13 +410,13 @@ bool BMidiStore::_GetEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
 			}
 		} else if(d[0] > 0x00 && d[0] < 0x0a) {
 			INC_DATA(d+1);
-			len = _GetVarLength(&d,max_d);
+			len = _ReadVarLength(&d,max_d);
 			INC_DATA(d+len);
 		} else if(d[0] == 0x2f) {
 			INC_DATA(d+1);
 			if(d[0] == 0x00) {
 				INC_DATA(d+1);
-				return true; // End of track.
+				event->opcode = BMidiEvent::OP_TRACK_END;
 			} else {
 				throw B_BAD_MIDI_DATA;
 			}
@@ -381,7 +474,7 @@ bool BMidiStore::_GetEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
 			}
 		} else if(d[0] == 0x7f) {
 			INC_DATA(d+1);
-			uint32 len = _GetVarLength(&d,max_d);
+			uint32 len = _ReadVarLength(&d,max_d);
 			INC_DATA(d+len);
 		} else if(d[0] == 0x20) {
 			INC_DATA(d+1);
@@ -460,15 +553,17 @@ bool BMidiStore::_GetEvent(uint8 ** data, uint8 * max_d, BMidiEvent * event) {
 	} else {
 		cerr << "Unsupported Code:0x" << hex << (int)d[0] << endl;
 		INC_DATA(d+1);
-		return event;
+		throw B_BAD_MIDI_DATA;
 	}
 	*data = d;
-	return false;
 #undef INC_DATA
 #undef CHECK_DATA
 }
 
-uint32 BMidiStore::_GetVarLength(uint8 ** data, uint8 * max_d) {
+void BMidiStore::_WriteEvent(BMidiEvent * e) {
+}
+
+uint32 BMidiStore::_ReadVarLength(uint8 ** data, uint8 * max_d) {
 	uint32 val;
 	uint8 bytes = 1;
 	uint8 byte = 0;
@@ -489,4 +584,14 @@ uint32 BMidiStore::_GetVarLength(uint8 ** data, uint8 * max_d) {
 	}
 	*data = d;
 	return val;
+}
+
+
+void BMidiStore::_WriteVarLength(uint32 length) {
+}
+
+int BMidiStore::_CompareEvents(const void * e1, const void *e2) {
+	BMidiEvent * evt1 = (BMidiEvent *)e1;
+	BMidiEvent * evt2 = (BMidiEvent *)e2;
+	return evt1->time - evt2->time;
 }

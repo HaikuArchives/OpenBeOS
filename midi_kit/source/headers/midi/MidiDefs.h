@@ -5,7 +5,7 @@
 #include <OS.h>
 #include <Errors.h>
 
-#define B_NOW ((uint32)system_time()/1000)
+#define B_NOW ((uint32)(system_time()/1000))
 
 #define B_SYNTH_DIRECTORY B_BEOS_ETC_DIRECTORY
 #define B_BIG_SYNTH_FILE "synth/big_synth.sy"

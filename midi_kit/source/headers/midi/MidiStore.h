@@ -52,18 +52,24 @@ virtual ~BMidiStore();
 private:
 	virtual void Run();
 	void _RunThread();
-	void _DecodeFormat0Tracks(uint8 * data, uint16 tracks, uint32 len);
-	void _DecodeFormat1Tracks(uint8 * data, uint16 tracks, uint32 len);
-	void _DecodeFormat2Tracks(uint8 * data, uint16 tracks, uint32 len);
-	void _EncodeFormat0Tracks(uint8 * data);
-	bool _GetEvent(uint8 ** data, uint8 * max_d, BMidiEvent *);
-	uint32 _GetVarLength(uint8 ** d, uint8 * max_d);
+	void _DecodeFormat0Tracks(uint8 *, uint16, uint32);
+	void _DecodeFormat1Tracks(uint8 *, uint16, uint32);
+	void _DecodeFormat2Tracks(uint8 *, uint16, uint32);
+	void _EncodeFormat0Tracks(uint8 *);
+	void _EncodeFormat1Tracks(uint8 *);
+	void _EncodeFormat2Tracks(uint8 *);
+	void _ReadEvent(uint8 **, uint8 *, BMidiEvent *);
+	void _WriteEvent(BMidiEvent *);
+	uint32 _ReadVarLength(uint8 **, uint8 *);
+	void _WriteVarLength(uint32);
+	static int _CompareEvents(const void *, const void *);
 
 private:
 	BList * _evt_list;
-	int32 _tempo;
+	uint32 _tempo;
 	uint32 _cur_evt;
 	uint32 _start_time;
+	uint32 _ticks_per_beat;
 };
 
 #endif _MIDI_STORE_H_

@@ -19,9 +19,16 @@ int main(int argc, char * argv[]) {
 	entry.GetRef(&e_ref);
 	store->Import(&e_ref);
 	store->Connect(text);
+	uint32 start_time = B_NOW;
 	store->Start();
-	snooze(100000000);
+	while(store->IsRunning()) {
+		snooze(100000);
+	}
 	store->Stop();
+	uint32 stop_time = B_NOW;
+	cout << "Start Time: " << dec << start_time << "ms" << endl;
+	cout << "Stop Time: " << dec << stop_time << "ms" << endl;
+	cout << "Total time: " << dec << stop_time - start_time << "ms" << endl;
 	
 	store->Disconnect(text);
 	delete store;
