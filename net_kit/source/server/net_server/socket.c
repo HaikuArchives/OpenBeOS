@@ -15,7 +15,6 @@
 #include "net/if.h"
 #include "netinet/in.h"
 #include "netinet/in_pcb.h"
-#include "net_module.h"
 #include "net_misc.h"
 #include "protocols.h"
 #include "sys/net_uio.h"
@@ -130,8 +129,6 @@ int socreate(int dom, void *sp, int type, int proto)
 	struct socket *so = (struct socket*)sp;
 	int error;
 
-printf("socreate: (%d, %d, %d)\n", dom, type, proto);
-
 	if (so == NULL) {
 		printf("socreate: EINVAL\n");
 		return EINVAL;
@@ -234,19 +231,21 @@ int solisten(void *sp, int backlog)
 	struct socket *so = (struct socket *)sp;
 	int error;
 
-        error = so->so_proto->pr_userreq(so, PRU_LISTEN, NULL, NULL, NULL);
-        if (error)
-                return error;
+printf("solisten...\n");
+
+	error = so->so_proto->pr_userreq(so, PRU_LISTEN, NULL, NULL, NULL);
+	if (error)
+		return error;
         
-        if (so->so_q == 0)
-                so->so_options |= SO_ACCEPTCONN;
-        if (backlog < 0 || backlog > somaxconn)
-                backlog = somaxconn;
+	if (so->so_q == 0)
+		so->so_options |= SO_ACCEPTCONN;
+	if (backlog < 0 || backlog > somaxconn)
+		backlog = somaxconn;
 	/* OpenBSD defines a minimum of 80...hmmm... */
-        if (backlog < 0)
-                backlog = 0;
-        so->so_qlimit = backlog;
-        return 0;
+	if (backlog < 0)
+		backlog = 0;
+	so->so_qlimit = backlog;
+	return 0;
 }
 
 int soconnect(void *sp, caddr_t data, int len)
@@ -254,8 +253,6 @@ int soconnect(void *sp, caddr_t data, int len)
 	struct socket *so = (struct socket *)sp;
 	struct mbuf *nam = m_get(MT_SONAME);
 	int error;
-
-printf("soconnect...\n");
 
 	if (!nam)
 		return ENOMEM;
@@ -309,6 +306,8 @@ struct socket *sonewconn(struct socket *head, int connstatus)
 {
 	struct socket *so;
 	int soqueue = connstatus ? 1 : 0;
+
+printf("sonewconn\n");
 	
 	if (head->so_qlen + head->so_q0len > 3 * head->so_qlimit / 2)
 		return NULL;
@@ -769,8 +768,6 @@ restart:
 		if (uio->uio_resid == 0)
 			goto release;
 		if ((so->so_state & SS_NBIO) || (flags & MSG_DONTWAIT)) {
-			printf("so->so_state & SS_NBIO (%d) || flags & MSG_DONTWAIT (%d)\n",
-			       so->so_state & SS_NBIO, flags & MSG_DONTWAIT);
 			error = EWOULDBLOCK;	
 			goto release;
 		}
@@ -1064,7 +1061,10 @@ void sofree(struct socket *so)
 	sorflush(so);
 	
 	delete_sem(so->so_rcv.sb_pop);
+	delete_sem(so->so_snd.sb_pop);
 	delete_sem(so->so_timeo);
+	delete_sem(so->so_rcv.sb_sleep);
+	delete_sem(so->so_snd.sb_sleep);
 	
 	pool_put(spool, so);
 
@@ -1076,6 +1076,8 @@ int sosetopt(void *sp, int level, int optnum, const void *data, size_t datalen)
 	struct socket *so = (struct socket*)sp;
 	struct mbuf *m, *m0;
 	int error = 0;
+
+printf("sosetopt\n");
 	
 	m = m_get(MT_SOOPTS);
 	if (!m)
@@ -1163,7 +1165,6 @@ int sosetopt(void *sp, int level, int optnum, const void *data, size_t datalen)
 				}
 				break;
 			}	
-/* XXX - add the others... */
 			default:
 				error = ENOPROTOOPT;
 		}
@@ -1263,7 +1264,7 @@ int set_socket_event_callback(void * sp, socket_event_callback cb, void * cookie
 	so->event_callback = cb;
 	so->event_callback_cookie = cookie;
 	
-	checkevent(so);	// notify any event condition ASAP! 
+	checkevent(so);	/* notify any event condition ASAP! */
 	return B_OK;
 }
 
@@ -1404,7 +1405,7 @@ void soisdisconnected(struct socket *so)
 int nsleep(sem_id chan, char *msg, int timeo)
 {
 	status_t rv;
-	printf("nsleep: %s\n", msg);
+	printf("nsleep: %s (%ld)\n", msg, chan);
 
 	if (timeo > 0)
 		rv = acquire_sem_etc(chan, 1, B_TIMEOUT|B_CAN_INTERRUPT, timeo);
@@ -1476,9 +1477,9 @@ int sogetpeername(void *sp, struct sockaddr *sa, int * alen)
 int soaccept(void *sp, void ** nsp, struct sockaddr *sa, int *alen)
 {
 	struct socket * so = (struct socket *)sp;
-	struct socket * aso;
 	int len;
 	int error;
+	struct mbuf *nam;
 	
 	if (sa)
 		memcpy(&len, alen, sizeof(len));
@@ -1500,16 +1501,24 @@ int soaccept(void *sp, void ** nsp, struct sockaddr *sa, int *alen)
 		return error;
 	}
 
-	/* how do we create the new socket and return it??? */
-
-	// take the first connection pending socket available
-	aso = so->so_head;
-	// How to finish the connection phase on this "aso"?
-
-	// remove this socket from connection pending queue
-	if (soqremque(so, true))
-		// okay, attach this new socket
-		*nsp = aso;
-	
-	return 0;
+	{
+		struct socket *aso = so->so_q;
+		if (soqremque(aso, 1) == 0) {
+			printf("PANIC: accep!\n");
+			return ENOMEM;
+		}
+		so = aso;
+	}
+	nam = m_get(MT_SONAME);
+	so->so_state &= ~SS_NOFDREF;
+	error = (*so->so_proto->pr_userreq)(so, PRU_ACCEPT, NULL, nam, NULL);
+	if (sa) {
+		if (len > nam->m_len)
+			len = nam->m_len;
+		if (memcpy(sa, mtod(nam, caddr_t), len) == NULL)
+			memcpy(alen, (caddr_t)&len, sizeof(len));
+	}
+	m_freem(nam);
+				
+	return error;
 }
