@@ -5,9 +5,19 @@ SubDir TOP cppunit src ;
 HDRS += "$(TOP)/cppunit/include" ;
 
 # Compile everything into a big fat CppUnit library
-Library $(TOP)/cppunit/cppunit : Exception.cpp NotEqualException.cpp
-TestAssert.cpp TestFailure.cpp TestSuite.cpp TypeInfoHelper.cpp
-TestCase.cpp TestRegistry.cpp TextTestResult.cpp
-RepeatedTest.cpp TestFactoryRegistry.cpp TestResult.cpp TextTestRunner.cpp ;
+Library $(TOP)/cppunit/cppunit : CppUnitShell.cpp 
+Exception.cpp 
+NotEqualException.cpp
+TestAssert.cpp 
+TestFailure.cpp 
+TestSuite.cpp 
+TypeInfoHelper.cpp
+TestCase.cpp 
+TestRegistry.cpp 
+TextTestResult.cpp
+RepeatedTest.cpp 
+TestFactoryRegistry.cpp 
+TestResult.cpp 
+TextTestRunner.cpp ;
 
 
