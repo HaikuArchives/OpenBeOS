@@ -36,6 +36,8 @@
 		virtual			~FontMenu();
 		virtual void	GetFonts();
 		virtual void	Update();
+		virtual status_t PlaceCheckMarkOnFont(font_family family, font_style style);
+		virtual void	ClearAllMarkedItems();
 	
 		menu_info		info;
 		BMenuItem		*fontFamily;
