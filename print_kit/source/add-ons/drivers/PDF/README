@@ -1,8 +1,67 @@
 PDF Writer
-12/19/01
+1/16/2002
 
-is now part of the print_kit of the OpenBeOS project.
+is now part of the print_kit of the OBOS (OpenBeOS) project.
+http://open-beos.sourceforge.net
 
-Initial developers: Phillipe Houdoin, Simon Gauvin	
-Additional developer: Michael Pfeiffer
+Developers: 
+  Name             Email address                Native language
+  Phillipe Houdoin <philippe.houdoin@free.fr>   French
+  Simon Gauvin     <gauvins@cs.dal.ca>          English/French?
+  Michael Pfeiffer <michael.pfeiffer@utanet.at> German
 
+
+Installation
+
+1. Execute the "Install" shell script with Tracker.
+2. Open the Printers preferences application and install "PDF Writer"
+ as a new printer that prints to file and make it the default printer.
+
+
+Known Bugs/Limitations
+
+- alpha channel is not supported
+- patterns not supported
+- only characters that are in the MacRoman character set are supported;
+  no CJK fonts supported; no Symbol fonts supported
+- only bitmaps in 32bpp are supported 
+- clipping to inverse BPicture not supported
+- canceling the "save file as" window crashes PDF Writer
+
+
+Contact
+
+Either one of the developers or post to the print_kit mailing list
+open-beos-printing@freelists.org
+
+
+Build Instructions for BeOS on x86 platform
+
+Building for x86
+- copy libpdf.so into /boot/home/config/lib
+- make "PDF Writer" with "PDF Writer (release).proj"
+
+Building for PPC
+- copy libpdf.so into /boot/develop/tools/develop_ppc/lib/ppc
+- make "PDF Writer.ppc" with "PDF Writer-ppc.proj"
+
+Both
+After making the binary copy it to /boot/home/config/add-ons/Print
+and restart the print_server by executing
+/boot/beos/system/servers/print_server
+
+Install PDF Writer with the Printers preferences application.
+
+
+Links
+
+Latest PDF Writer release
+http://www.bebits.com/app/2494
+
+CVS 
+https://sourceforge.net/cvs/?group_id=33869
+
+CVS Browser
+http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/open-beos/print_kit/source/add-ons/drivers/PDF/
+
+ 
