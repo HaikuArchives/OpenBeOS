@@ -846,35 +846,61 @@ bfs_rename(void *_ns, void *_oldDir, const char *oldName, void *_newDir, const c
 			return status;
 
 		status = newTree->Insert(&transaction,(const uint8 *)newName,strlen(newName),id);
-	} else if (status < B_OK)
+	}
+	if (status < B_OK)
 		return status;
 
 	// If anything fails now, we have to remove the inode from the
 	// new directory in any case to restore the previous state
 	status_t bailStatus = B_OK;
-	if (inode->SetName(&transaction,newName) == B_OK) {
-		status = tree->Remove(&transaction,(const uint8 *)oldName,strlen(oldName),id);
+	
+	// update the name only when they differ
+	bool nameUpdated = false;
+	if (strcmp(oldName,newName)) {
+		status = inode->SetName(&transaction,newName);
 		if (status == B_OK) {
 			Index index(volume);
 			index.UpdateName(&transaction,oldName,newName,id);
-		
+			nameUpdated = true;
+		}
+	}
+	
+	if (status == B_OK) {
+		status = tree->Remove(&transaction,(const uint8 *)oldName,strlen(oldName),id);
+		if (status == B_OK) {
 			inode->Node()->parent = newDirectory->BlockRun();
-			status = inode->WriteBack(&transaction);
-			if (status == B_OK)	{
-				transaction.Done();
-				return B_OK;
+			
+			// if it's a directory, update the parent directory pointer
+			// in its tree if necessary
+			BPlusTree *movedTree = NULL;
+			if (oldDirectory != newDirectory
+				&& inode->IsDirectory()
+				&& (status = inode->GetTree(&movedTree)) == B_OK)
+				status = movedTree->Replace(&transaction,(const uint8 *)"..",2,newDirectory->ID());
+
+			if (status == B_OK) {
+				status = inode->WriteBack(&transaction);
+				if (status == B_OK)	{
+					transaction.Done();
+					return B_OK;
+				}
 			}
-			// those better don't fail, or we switch to a read-only
+			// Those better don't fail, or we switch to a read-only
 			// device for safety reasons (Volume::Panic() does this
 			// for us)
+			// Anyway, if we overwrote a file in the target directory
+			// this is lost now (only in-memory, not on-disk)...
 			bailStatus = tree->Insert(&transaction,(const uint8 *)oldName,strlen(oldName),id);
+			if (movedTree != NULL)
+				movedTree->Replace(&transaction,(const uint8 *)"..",2,oldDirectory->ID());
 		}
-		if (bailStatus == B_OK)
-			bailStatus = inode->SetName(&transaction,oldName);
 	}
+	if (bailStatus == B_OK && nameUpdated)
+		bailStatus = inode->SetName(&transaction,oldName);
+
 	if (bailStatus == B_OK)
 		bailStatus = newTree->Remove(&transaction,(const uint8 *)newName,strlen(newName),id);
-	
+
 	if (bailStatus < B_OK)
 		volume->Panic();
 

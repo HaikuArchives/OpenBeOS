@@ -1382,6 +1382,53 @@ BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 }
 
 
+/**	Replaces the value for the key in the tree.
+ *	Returns B_OK if the key could be found and its value replaced,
+ *	B_ENTRY_NOT_FOUND if the key couldn't be found, and other errors
+ *	to indicate that something went terribly wrong.
+ *	Note that this doesn't work with duplicates - it will just
+ *	return B_BAD_TYPE if you call this function on a tree where
+ *	duplicates are allowed.
+ */
+
+status_t
+BPlusTree::Replace(Transaction *transaction,const uint8 *key,uint16 keyLength,off_t value)
+{
+	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
+		|| key == NULL)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	if (fAllowDuplicates)
+		RETURN_ERROR(B_BAD_TYPE);
+
+	// lock access to stream (a read lock is okay for this purpose)
+	ReadLocked locked(fStream->Lock());
+
+	off_t nodeOffset = fHeader->root_node_pointer;
+	CachedNode cached(this);
+	bplustree_node *node;
+
+	while ((node = cached.SetTo(nodeOffset)) != NULL) {
+		uint16 keyIndex = 0;
+		off_t nextOffset;
+		status_t status = FindKey(node,key,keyLength,&keyIndex,&nextOffset);
+
+		if (node->overflow_link == BPLUSTREE_NULL) {
+			if (status == B_OK) {
+				node->Values()[keyIndex] = value;
+				return cached.WriteBack(transaction);
+			}
+
+			return status;
+		} else if (nextOffset == nodeOffset)
+			RETURN_ERROR(B_ERROR);
+
+		nodeOffset = nextOffset;
+	}
+	RETURN_ERROR(B_ERROR);
+}
+
+
 /**	Searches the key in the tree, and stores the offset found in
  *	_value, if successful.
  *	It's very similar to BPlusTree::SeekDown(), but doesn't fill

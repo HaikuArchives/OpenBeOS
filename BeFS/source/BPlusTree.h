@@ -192,6 +192,7 @@ class BPlusTree {
 		status_t	Insert(Transaction *transaction,float key, off_t value);
 		status_t	Insert(Transaction *transaction,double key, off_t value);
 
+		status_t	Replace(Transaction *transaction, const uint8 *key, uint16 keyLength, off_t value);
 		status_t	Find(const uint8 *key, uint16 keyLength, off_t *value);
 
 		static int32 TypeCodeToKeyType(type_code code);
