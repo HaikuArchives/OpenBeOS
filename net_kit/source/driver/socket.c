@@ -190,19 +190,23 @@ dprintf("net_socket_control: op = %ld (%d)\n", op, NET_SOCKET_CREATE);
 	switch (op) {
 		case NET_SOCKET_CREATE: {
 			struct socket_args *sa = (struct socket_args*)data;
-			return core->socreate(sa->dom, cookie, sa->type, sa->prot);
+			sa->rv = core->socreate(sa->dom, cookie, sa->type, sa->prot);
+			return B_OK;
 		}
 		case NET_SOCKET_BIND: {
 			struct bind_args *ba = (struct bind_args*)data;
-			return core->sobind(cookie, ba->data, ba->dlen);
+			ba->rv = core->sobind(cookie, ba->data, ba->dlen);
+			return B_OK;
 		}
 		case NET_SOCKET_LISTEN: {
 			struct listen_args *la = (struct listen_args*)data;
-			return core->solisten(cookie, la->backlog);
+			la->rv = core->solisten(cookie, la->backlog);
+			return B_OK;
 		}
 		case NET_SOCKET_CONNECT: {
 			struct connect_args *ca = (struct connect_args*)data;
-			return core->soconnect(cookie, ca->name, ca->namelen);
+			ca->rv = core->soconnect(cookie, ca->name, ca->namelen);
+			return B_OK;
 		}
 		case NET_SOCKET_SELECT: {
 			struct select_args *sa = (struct select_args *)data;
@@ -225,9 +229,9 @@ dprintf("net_socket_control: op = %ld (%d)\n", op, NET_SOCKET_CREATE);
 			tv.tv_sec = 1;
 			tv.tv_usec = 0;
 			
-			i = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, &tv);
-			dprintf("kernel select returned %d\n", i);
-			return i;
+			sa->rv = select(sa->mfd, sa->rbits, sa->wbits, sa->ebits, &tv);
+			dprintf("kernel select returned %d\n", sa->rv);
+			return B_OK;
 		}
 		case NET_SOCKET_RECVFROM:
 		{
@@ -259,7 +263,7 @@ dprintf("net_socket_control: op = %ld (%d)\n", op, NET_SOCKET_CREATE);
 			sa->rv = core->net_sysctl(sa->name, sa->namelen,
 			                          sa->oldp, sa->oldlenp,
 			                          sa->newp, sa->newlen);
-			return sa->rv;
+			return B_OK;
 		}
 		default:
 			return core->soo_ioctl(cookie, op, data);

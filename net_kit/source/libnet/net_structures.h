@@ -10,26 +10,31 @@
 #include <sys/time.h>
 
 struct socket_args {
+	int	rv;
 	int dom;
 	int type;
 	int prot;
 };
 
 struct bind_args {
+	int	rv;
 	caddr_t data;
 	int dlen;
 };
 
 struct listen_args {
+	int rv;
 	int backlog;
 };
 
 struct connect_args {
+	int rv;
 	caddr_t name;
 	int namelen;
 };
 
 struct select_args {
+	int rv;
 	int mfd;
 	struct fd_set *rbits;
 	struct fd_set *wbits;
@@ -38,6 +43,7 @@ struct select_args {
 };
 
 struct shutdown_args {
+	int rv;
 	int how;
 };
 
