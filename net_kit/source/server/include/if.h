@@ -1,12 +1,12 @@
 /* if.h
  * Interface definitions for beos
  */
+
+#include <Drivers.h>
+#include "../include/sys/socket.h"
  
 #ifndef OBOS_IF_H
 #define OBOS_IF_H
-
-#include <Drivers.h>
-#include "net_misc.h"
 
 enum {
 	IF_GETADDR = B_DEVICE_OP_CODES_END,
@@ -75,20 +75,20 @@ ifq *start_ifq(void);
 
 struct ifaddr {
         struct ifaddr *next;
-        ifnet *ifn;
+        struct ifnet *ifn;
 
-        sockaddr if_addr;
+        struct sockaddr if_addr;
 };
 
 struct ifnet {
-	ifnet *next;		/* next device */
+	struct ifnet *next;		/* next device */
 	ifaddr *if_addrlist;	/* linked list of addresses */
 	int dev;		/* device handle */
 	int id;			/* id within the stack's device list */
 	char *name;		/* name of driver e.g. tulip*/
 	int unit;		/* number of unit e.g  0*/
 	int type;		/* what type of interface are we? */
-	sockaddr *link_addr;	/* pointer to sockaddr structure with link address */
+	struct sockaddr *link_addr;	/* pointer to sockaddr structure with link address */
 	int flags;		/* flags */
 	int mtu;		/* mtu */
 
@@ -98,3 +98,4 @@ struct ifnet {
 };
 
 #endif /* OBOS_IF_H */
+

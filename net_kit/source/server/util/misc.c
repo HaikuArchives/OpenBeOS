@@ -1,8 +1,10 @@
 /* some misc functions... */
 
 #include <stdio.h>
+#include <strings.h>
 
 #include "net_misc.h"
+#include "sys/socket.h"
 
 /* Basically use dump_ to see the address plus message on a line,
  * print_ to simply have the address printed with nothing else...
@@ -49,5 +51,12 @@ void dump_buffer(char *buffer, int len)
 			printf(" %02x", b[i]);
 	}
 	printf("\n\n");
+}
+
+int compare_sockaddr(struct sockaddr *a, struct sockaddr *b)
+{
+	if (a->sa_len == 4) /* IPv4 address, basically a uint32 */
+		return (*(a->sa_data) = *(b->sa_data));
+	return memcmp((void*)a->sa_data, (void*)b->sa_data, a->sa_len);
 }
 
