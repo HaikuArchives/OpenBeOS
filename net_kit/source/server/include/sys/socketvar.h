@@ -49,11 +49,11 @@ struct socket {
 	int16 so_linger;	/* dreaded linger value */
 	int16 so_state;		/* socket state */
 
-	struct net_module *so_proto; /* pointer to protocol module */
+	struct protosw *so_proto; /* pointer to protocol module */
 
 	struct socket *so_head;
-	struct sockaet *so_q0;
-	struct sockaet *so_q;
+	struct socket *so_q0;
+	struct socket *so_q;
 
 	int16 so_q0len;
 	int16 so_qlen;
@@ -106,7 +106,7 @@ struct socket {
 
 /* do we have to send all at once on a socket? */
 #define sosendallatonce(so) \
-    ((so)->so_proto->flags & PR_ATOMIC)
+    ((so)->so_proto->pr_flags & PR_ATOMIC)
 
 /* adjust counters in sb reflecting allocation of m */
 #define sballoc(sb, m) { \
@@ -149,7 +149,9 @@ int     soreceive (struct socket *so, struct mbuf **paddr, struct uio *uio,
 void    sowakeup(struct socket *so, struct sockbuf *sb);
 int     sbwait(struct sockbuf *sb);
 
-int	soo_ioctl(void *sp, int cmd, caddr_t data);
-int	soclose(void *sp);
+int     soo_ioctl(void *sp, int cmd, caddr_t data);
+int     soclose(void *sp);
+int     sodisconnect(struct socket *);
+void    sofree(struct socket *);
 
 #endif /* SYS_SOCKETVAR_H */

@@ -92,6 +92,7 @@ struct cmsghdr {
 
 /* Function declarations */
 int socket (int, int, int);
+int closesocket(int);
 int	bind(int, struct sockaddr *, size_t);
 int	sendto(int, caddr_t, size_t, int, struct sockaddr*, size_t);
 int	sendit(int, struct msghdr *, int, size_t *);

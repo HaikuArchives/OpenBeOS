@@ -41,7 +41,7 @@
 #define SIOCGIFMETRIC   _IOWR('i', 23, struct ifreq)    /* get IF metric */
 #define SIOCSIFMETRIC   _IOW('i', 24, struct ifreq)    /* set IF metric */
 #define SIOCDIFADDR     _IOW('i', 25, struct ifreq)    /* delete IF addr */
-//#define SIOCAIFADDR      _IOW('i', 26, struct ifaliasreq)/* add/chg IF alias */
+#define SIOCAIFADDR      _IOW('i', 26, struct ifaliasreq)/* add/chg IF alias */
 #define SIOCGIFDATA     _IOWR('i', 27, struct ifreq)    /* get if_data */
 
 #endif /* SYS_NET_IOCTL_H */
