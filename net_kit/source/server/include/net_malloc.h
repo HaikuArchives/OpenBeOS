@@ -11,6 +11,20 @@
 
 #if USE_DEBUG_MALLOC
 
+
+
+/* We check the boundary of the malloc'd area at one end of the
+ * area allocated. If we are outside the area it'll stop, but we can
+ * check only one end of the boundary. So the following essentially
+ * allows us to choose which end.
+ */
+//#define OVERRUN
+#ifdef OVERRUN
+#define CHECK_OVERRUN 1
+#else
+#define CHECK_UNDERRUN 1
+#endif
+
 /* use the area malloc code from marcus Overhagen */
 void *dbg_malloc(char *file, int line, size_t size);
 void  dbg_free  (char *file, int line, void *ptr);

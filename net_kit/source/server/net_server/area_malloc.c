@@ -71,10 +71,11 @@ void *dbg_malloc(char *file, int line, size_t size)
 		panic("out of memory or address space");
 
 	// align it to make the first byte after (adr + size) to be in an unallocated page
+#ifdef CHECK_OVERRUN
 	adr += realsize - size;
-
 	*(uint32*)adr = 0xDEADC0DE;
 	adr += 4;
+#endif
 
 	// release lock sem
 
@@ -88,7 +89,9 @@ void dbg_free(char *file, int line, void *ptr)
 	char text[64];
 	char *t;
 	
+#ifdef CHECK_OVERRUN
 	p -= 4;
+#endif
 
 	t = strrchr(file, '/');
 	t = (t == 0) ? file : t + 1;
@@ -96,9 +99,11 @@ void dbg_free(char *file, int line, void *ptr)
 
 	printf("FREE: %s: free'ing %p\n", text, ptr);
 	
+#ifdef CHECK_OVERRUN
 	if (*(uint32*)p != 0xDEADC0DE)
 		panic(text);
-	
+#endif
+
 	id = area_for(p);
 	if (id < 0)
 		panic(text);
