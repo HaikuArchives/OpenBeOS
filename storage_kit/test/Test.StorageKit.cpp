@@ -1,6 +1,7 @@
 #include "CppUnitShell.h"
 
 // ##### Include your test headers here #####
+#include "EntryTest.h"
 #include "NodeTest.h"
 #include "PathTest.h"
 
@@ -14,6 +15,7 @@ int main(int argc, char *argv[]) {
 	StorageKitShell shell;
 
 	// ##### Add your test suites here #####
+	shell.AddSuite( "BEntry", &EntryTest::Suite );
 	shell.AddSuite( "BNode", &NodeTest::Suite );
 	shell.AddSuite( "BPath", &PathTest::Suite );
 
