@@ -306,17 +306,19 @@ connection_runner(void *_cookie)
 
 			case B_SET_BLOCKING_IO:
 				cookie->openFlags &= ~O_NONBLOCK;
-				return B_OK;
-	
+				break;
+
 			case B_SET_NONBLOCKING_IO:
 				cookie->openFlags |= O_NONBLOCK;
-				return B_OK;
+				break;
 
 			case NET_STACK_SELECT:
 			{
 				//struct select_args *args = (struct select_args *)data;
 
+				puts("select called - not yet implemented!");
 				//status = select(args->nbits, args->rbits, args->wbits, args->ebits, args->timeout);
+				break;
 			}
 
 			case OSIOCGIFCONF:
