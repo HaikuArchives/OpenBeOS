@@ -13,8 +13,6 @@
 
 template <typename Fixture,
 		  typename ExpectedException = class CppUnit::NoExceptionExpected>
-//		  typename ExpectedException>
-//struct FileTest::FileTestCaller
 struct FileTestCaller
 	: public CppUnit::TestCaller<Fixture, ExpectedException> {
 	FileTestCaller(std::string name, TestMethod test)

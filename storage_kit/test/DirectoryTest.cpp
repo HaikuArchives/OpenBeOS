@@ -15,6 +15,7 @@
 #include "DirectoryTest.h"
 
 // == for struct stat
+static
 bool
 operator==(const struct stat &st1, const struct stat &st2)
 {

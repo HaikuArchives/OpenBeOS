@@ -17,7 +17,7 @@ namespace OpenBeOS {
 #endif
 
 // constructor
-//! Creates an uninitialized Directory object.
+//! Creates an uninitialized BDirectory object.
 BDirectory::BDirectory()
 		  : BNode(),
 			BEntryList()
@@ -849,7 +849,7 @@ BDirectory::operator=(const BDirectory &dir)
 	if (dir.InitCheck() == B_OK) {
 		// duplicate the file descriptor
 		StorageKit::FileDescriptor fd = -1;
-		status_t status = StorageKit::dup(dir.get_fd(), fd);
+		status_t status = StorageKit::dup_dir(dir.get_fd(), fd);
 		// set it
 		if (status == B_OK) {
 			status = set_fd(fd);
