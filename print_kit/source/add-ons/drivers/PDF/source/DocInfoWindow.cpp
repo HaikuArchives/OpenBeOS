@@ -1,12 +1,10 @@
 /*
 
-PDF Writer printer driver.
+DocInfoWindow.cpp
 
 Copyright (c) 2002 OpenBeOS. 
 
-Authors: 
-	Philippe Houdoin
-	Simon Gauvin	
+Author: 
 	Michael Pfeiffer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -34,16 +32,37 @@ THE SOFTWARE.
 #include "DocInfoWindow.h"
 #include <ctype.h>
 
-/* TODO:
-  - scroll to TextControl that receives focus
-*/
+
+// --------------------------------------------------
+class TextView : public BTextView
+{
+public:
+	typedef BTextView inherited;
+	
+	TextView(BRect frame,
+				const char *name,
+				BRect textRect,
+				uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP,
+				uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
+
+	TextView(BRect frame,
+				const char *name,
+				BRect textRect,
+				const BFont *font, const rgb_color *color,
+				uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP,
+				uint32 flags = B_WILL_DRAW | B_NAVIGABLE);
+
+	void KeyDown(const char *bytes, int32 numBytes);
+	void MakeFocus(bool focus = true);
+	void Draw(BRect r);
+};
 
 
-#if 0
+// --------------------------------------------------
 class TextControl : public BView
 {
 	BStringView *fLabel;
-	BTextView   *fText;
+	TextView   *fText;
 public:
 	TextControl(BRect frame,
 				const char *name,
@@ -52,92 +71,170 @@ public:
 				BMessage *message,
 				uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP,
 				uint32 flags = B_WILL_DRAW | B_NAVIGABLE); 
-	void MakeFocus(bool focus = true);	
 	const char *Label() { return fLabel->Text(); }
 	const char *Text()  { return fText->Text(); }
+	void MakeFocus(bool focus = true) { fText->MakeFocus(focus); }	
+	void ConvertToParent(BView* parent, BView* child, BRect &rect);
+	void FocusSetTo(BView* child);
 };
 
 
+// --------------------------------------------------
+class Table : public BView
+{
+public:
+	typedef BView inherited;
+	
+	Table(BRect frame, const char *name, uint32 rmode, uint32 flags);
+	void ScrollTo(BPoint p);
+};
+
+
+// --------------------------------------------------
+TextView::TextView(BRect frame,
+				const char *name,
+				BRect textRect,
+				uint32 rmask,
+				uint32 flags)
+	: BTextView(frame, name, textRect, rmask, flags)
+{
+}
+
+
+// --------------------------------------------------
+TextView::TextView(BRect frame,
+				const char *name,
+				BRect textRect,
+				const BFont *font, const rgb_color *color,
+				uint32 rmask,
+				uint32 flags)
+	: BTextView(frame, name, textRect, font, color, rmask, flags)
+{
+}
+
+
+// --------------------------------------------------
+void 
+TextView::KeyDown(const char *bytes, int32 numBytes)
+{
+	if (numBytes == 1 && *bytes == B_TAB) {
+		BView::KeyDown(bytes, numBytes);
+		return;
+	}
+	inherited::KeyDown(bytes, numBytes);
+}
+
+
+// --------------------------------------------------
+void 
+TextView::Draw(BRect update)
+{
+	inherited::Draw(update);
+	if (IsFocus()) {
+		// stroke focus rectangle
+		SetHighColor(ui_color(B_KEYBOARD_NAVIGATION_COLOR));
+		StrokeRect(Bounds());
+	}
+}
+
+
+// --------------------------------------------------
+void 
+TextView::MakeFocus(bool focus)
+{
+	Invalidate();
+	inherited::MakeFocus(focus);
+	// notify TextControl
+	BView* parent = Parent(); // BBox
+	if (focus && parent) {
+		parent = parent->Parent(); // TextControl
+		TextControl* control = dynamic_cast<TextControl*>(parent);
+		if (control) control->FocusSetTo(this);
+	}
+}
+
+
+// --------------------------------------------------
 TextControl::TextControl(BRect frame,
 				const char *name,
 				const char *label, 
 				const char *initial_text, 
 				BMessage *message,
-				uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP,
-				uint32 flags = B_WILL_DRAW | B_NAVIGABLE)
+				uint32 rmask,
+				uint32 flags)
 	: BView(frame, name, rmask, flags)
 {
 	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
-	BRect r(0, 0, frame.Width() / 2, frame.Height());
+	BRect r(0, 0, frame.Width() / 2 -1, frame.Height());
 	fLabel = new BStringView(r, "", label);
 	BRect f(r);
 	f.OffsetTo(frame.Width() / 2 + 1, 0);
+	// box around TextView
+	BBox *box = new BBox(f, "", B_FOLLOW_LEFT | B_FOLLOW_TOP, B_WILL_DRAW);
+	f.OffsetTo(0, 0);
+	f.InsetBy(1,1);
 	r.InsetBy(2,2);
-	fText  = new BTextView(f, "", r, rmask, flags | B_NAVIGABLE);
+	fText  = new TextView(f, "", r, rmask, flags | B_NAVIGABLE);
 	fText->SetWordWrap(false);
-	fText->DisallowChar('\n'); fText->DisallowChar('\t');
+	fText->DisallowChar('\n');
 	fText->Insert(initial_text);
-	AddChild(fLabel); AddChild(fText);
+	AddChild(fLabel); 
+	AddChild(box);
+	box->AddChild(fText);
 }
 
+
+// --------------------------------------------------
 void 
-TextControl::MakeFocus(bool focus)
+TextControl::ConvertToParent(BView* parent, BView* child, BRect &rect) 
 {
-	if (focus && Parent()) {
-		BView *p = Parent();
-		p->ScrollTo(0, Frame().top);
-//		(new BAlert("test", "test", "test", NULL, NULL))->Go();
+	do {
+		child->ConvertToParent(&rect);
+		child = child->Parent();
+	} while (child != NULL && child != parent);
+}
+
+
+// --------------------------------------------------
+void
+TextControl::FocusSetTo(BView *child)
+{
+	BRect r;
+	BView* parent = Parent(); // Table
+	if (parent) {
+		ConvertToParent(parent, child, r);
+		parent->ScrollTo(0, r.top);
 	}
-	fText->MakeFocus(focus);
 }
 
-#else
-#define TextControl BTextControl
-/*
-class TextControl : public BTextControl
-{
-public:
-	TextControl(BRect frame,
-				const char *name,
-				const char *label, 
-				const char *initial_text, 
-				BMessage *message,
-				uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP,
-				uint32 flags = B_WILL_DRAW | B_NAVIGABLE); 
-	void MakeFocus(bool focus = true);	
-};
 
-
-TextControl::TextControl(BRect frame,
-				const char *name,
-				const char *label, 
-				const char *initial_text, 
-				BMessage *message,
-				uint32 rmask = B_FOLLOW_LEFT | B_FOLLOW_TOP,
-				uint32 flags = B_WILL_DRAW | B_NAVIGABLE)
-	: BTextControl(frame, name, label, initial_text, message, rmask, flags)
+// --------------------------------------------------
+Table::Table(BRect frame, const char *name, uint32 rmode, uint32 flags)
+	: BView(frame, name, rmode, flags)
 {
 }
 
-void 
-TextControl::MakeFocus(bool focus)
+
+// --------------------------------------------------
+void
+Table::ScrollTo(BPoint p)
 {
-	if (focus && Parent()) {
-		BView *p = Parent();
-		p->ScrollTo(0, Frame().top);
-		(new BAlert("test", "test", "test", NULL, NULL))->Go();
+	float h = Frame().Height()+1;
+	if (Parent()) {
+		BScrollView* scrollView = dynamic_cast<BScrollView*>(Parent());
+		if (scrollView) {
+			BScrollBar *sb = scrollView->ScrollBar(B_VERTICAL);
+			float min, max;
+			sb->GetRange(&min, &max);
+			if (p.y < (h/2)) p.y = 0;
+			else if (p.y > max) p.y = max;
+		}
 	}
-	BTextControl::MakeFocus(focus);
+	inherited::ScrollTo(p);
 }
-*/
-#endif
 
-/**
- * Constuctor
- *
- * @param 
- * @return
- */
+
+// --------------------------------------------------
 DocInfoWindow::DocInfoWindow(BMessage *doc_info)
 	:	HWindow(BRect(0,0,400,220), "Document Information", B_TITLED_WINDOW_LOOK,
  			B_MODAL_APP_WINDOW_FEEL, B_NOT_RESIZABLE | B_NOT_MINIMIZABLE |
@@ -163,11 +260,9 @@ DocInfoWindow::DocInfoWindow(BMessage *doc_info)
 	BMenuField *menu = new BMenuField(BRect(0, 0, 180, 10), "delete", "", fKeyList);
 	menu->SetDivider(0);
 	panel->AddChild(menu);
-//	menu->PreferredSize(&w, &h);
-//	menu->ResizeTo(100, 20);
 
 	// add table for text controls (document info key and value)
-	fTable = new BView(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30-20), "table", B_FOLLOW_ALL, B_WILL_DRAW);
+	fTable = new Table(BRect(r.left+5, r.top+5, r.right-5-B_V_SCROLL_BAR_WIDTH, r.bottom-5-B_H_SCROLL_BAR_HEIGHT-30-20), "table", B_FOLLOW_ALL, B_WILL_DRAW);
 	fTable->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 
 	// add table to ScrollView
@@ -195,7 +290,6 @@ DocInfoWindow::DocInfoWindow(BMessage *doc_info)
 	y = r.bottom - h - 8;
 	button->MoveTo(x, y);
 	panel->AddChild(button);
-//	button->MakeDefault(true);
 
 	// add a "Cancel button	
 	button 	= new BButton(r, NULL, "Cancel", new BMessage(CANCEL_MSG), 
@@ -289,7 +383,7 @@ DocInfoWindow::BuildTable(BMessage *docInfo)
 			BString value;
 			if (docInfo->FindString(name, &value) == B_OK) {
 				BString s;
-				TextControl* v = new TextControl(BRect(0, 0, w, 20), name, name, value.String(), new BMessage());
+				TextControl* v = new TextControl(BRect(0, 0, w, 20), name, name, value.String(), new BMessage(), B_FOLLOW_LEFT | B_FOLLOW_TOP, B_WILL_DRAW);
 				float w;
 				fTable->AddChild(v);
 				v->GetPreferredSize(&w, &rowHeight);
@@ -308,7 +402,7 @@ DocInfoWindow::BuildTable(BMessage *docInfo)
 		if (h > 0) {
 			sb->SetProportion(th / (float)y);
 			sb->SetRange(0, h);
-			sb->SetSteps(rowHeight + 2, th);
+			sb->SetSteps(rowHeight + 2 + 2, th);
 		} else {
 			sb->SetRange(0, 0);
 		}
@@ -358,7 +452,7 @@ DocInfoWindow::AddKey(BMessage *msg)
 	if (!text) return;
 	key = text->Text();
 	
-	// key is valid and is not list already
+	// key is valid and is not in list already
 	if (IsValidKey(key.String())) {
 		BMessage docInfo;
 		ReadFieldsFromTable(&docInfo);
