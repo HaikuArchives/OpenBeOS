@@ -39,7 +39,8 @@ THE SOFTWARE.
  * @param none
  * @return none
  */
-PrinterPrefs::PrinterPrefs() {
+PrinterPrefs::PrinterPrefs() 
+{
 }
 
 /**
@@ -48,7 +49,8 @@ PrinterPrefs::PrinterPrefs() {
  * @param none
  * @return none
  */
-PrinterPrefs::~PrinterPrefs() {
+PrinterPrefs::~PrinterPrefs() 
+{
 }
 
 /**
@@ -57,19 +59,20 @@ PrinterPrefs::~PrinterPrefs() {
  * @param BMessage*, the settings
  * @return status_t, any result from the operation
  */
-status_t PrinterPrefs::LoadSettings(BMessage *settings)
+status_t 
+PrinterPrefs::LoadSettings(BMessage *settings)
 {
 	status_t status;
 	BFile file;
 
-	status = find_directory(B_COMMON_SETTINGS_DIRECTORY, &settingsPath);
+	status = find_directory(B_COMMON_SETTINGS_DIRECTORY, &fSettingsPath);
 	if (status != B_OK) {
 		// Could not find settings folder.
 		return status;
 	}
 
-	settingsPath.Append(SETTINGS_FILE_NAME);
-	status = file.SetTo(settingsPath.Path(), B_READ_ONLY);
+	fSettingsPath.Append(SETTINGS_FILE_NAME);
+	status = file.SetTo(fSettingsPath.Path(), B_READ_ONLY);
 	if (status == B_OK) {
 		status = settings->Unflatten(&file);
 	}	
@@ -83,12 +86,13 @@ status_t PrinterPrefs::LoadSettings(BMessage *settings)
  * @param BMessage*, the settings
  * @return status_t 
  */
-status_t PrinterPrefs::SaveSettings(BMessage* settings)
+status_t 
+PrinterPrefs::SaveSettings(BMessage* settings)
 {
 	status_t status;
 	BFile file;
 
-	status = file.SetTo(settingsPath.Path(), B_WRITE_ONLY | B_CREATE_FILE);
+	status = file.SetTo(fSettingsPath.Path(), B_WRITE_ONLY | B_CREATE_FILE);
 	if (status == B_OK) {
 		return settings->Flatten(&file);
 	}

@@ -57,8 +57,8 @@ const BRect PRINT_RECT(0, 0, LETTER_W, LETTER_H);
 class PrinterSettings
 {
 private:
-	BNode node;
-	status_t _err;
+	BNode		fNode;
+	status_t	fErr;
 
 public:
 	PrinterSettings() { }

@@ -127,13 +127,13 @@ THE SOFTWARE.
 class MarginManager;
 
 // Messages that the MarginManager accepts
-const uint32 TOP_MARGIN_CHANGED = 'tchg';
-const uint32 RIGHT_MARGIN_CHANGED = 'rchg';
-const uint32 LEFT_MARGIN_CHANGED = 'lchg';
+const uint32 TOP_MARGIN_CHANGED    = 'tchg';
+const uint32 RIGHT_MARGIN_CHANGED  = 'rchg';
+const uint32 LEFT_MARGIN_CHANGED   = 'lchg';
 const uint32 BOTTOM_MARGIN_CHANGED = 'bchg';
-const uint32 MARGIN_CHANGED = 'mchg';
-const uint32 CHANGE_PAGE_SIZE = 'chps';
-const uint32 FLIP_PAGE = 'flip';
+const uint32 MARGIN_CHANGED        = 'mchg';
+const uint32 CHANGE_PAGE_SIZE      = 'chps';
+const uint32 FLIP_PAGE             = 'flip';
 
 /**
  * Class MarginView
@@ -153,33 +153,26 @@ public:
 private:
 
 	// GUI components
-	BBox *box;
-	BTextControl *top, *bottom, *left, *right;
-	BPopUpMenu *menu;
-	BMenuItem *item;
-	BMenuField *mf;
-
-	// BLooper to handle messages
-	MarginManager *marginMgr;
+	BTextControl *fTop, *fBottom, *fLeft, *fRight;
 
 	// rect that holds the margins for the page as a set of point offsets
-	BRect margins;
+	BRect fMargins;
 
 	// the maximum size of the page view calculated from the view size
-	float maxPageWidth;
-	float maxPageHeight;
+	float fMaxPageWidth;
+	float fMaxPageHeight;
 
 	// the actual size of the page in points
-	float pageHeight;
-	float pageWidth;
+	float fPageHeight;
+	float fPageWidth;
 
 	// the units used to calculate the page size
-	uint32 units;
-	float unitValue;
+	uint32 fUnits;
+	float fUnitValue;
 
 	// the size of the drawing area we have to draw the view in pixels
-	float viewHeight;
-	float viewWidth;
+	float fViewHeight;
+	float fViewWidth;
 
 	// Calculate the view size for the margins
 	void CalculateViewSize(uint32 msg);

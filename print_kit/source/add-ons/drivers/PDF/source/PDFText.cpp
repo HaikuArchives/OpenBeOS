@@ -41,19 +41,22 @@ THE SOFTWARE.
 #include "PDFWriter.h"
 #include "pdflib.h"
 
-typedef struct {
+typedef struct
+{
 	uint16 from;
 	uint16 to;
 	int16  length;
 	uint16 *unicodes;
 } unicode_to_encoding;
 
-typedef struct {
+typedef struct
+{
 	uint16 unicode;
 	uint16 cid;
 } unicode_to_cid;
 
-typedef struct {
+typedef struct
+{
 	uint16         length;
 	unicode_to_cid *table;	
 } cid_table;
@@ -72,7 +75,8 @@ typedef struct {
 #include "unicode3.h"
 #include "unicode4.h"
 
-static unicode_to_encoding encodings[] = {
+static unicode_to_encoding encodings[] = 
+{
 	{UNICODE0_FROM, UNICODE0_TO, ELEMS(unicode0, uint16), unicode0},
 	{UNICODE1_FROM, UNICODE1_TO, ELEMS(unicode1, uint16), unicode1},
 	{UNICODE2_FROM, UNICODE2_TO, ELEMS(unicode2, uint16), unicode2},
@@ -85,13 +89,19 @@ static unicode_to_encoding encodings[] = {
 #include "gb1.h"
 #include "cns1.h"
 
-static cid_table cid_tables[] = {
+
+static cid_table cid_tables[] = 
+{
 	{ELEMS(japanese, unicode_to_cid), japanese},
 	{ELEMS(CNS1,     unicode_to_cid), CNS1},
 	{ELEMS(GB1,      unicode_to_cid), GB1},
 };
 
-static bool find_encoding(uint16 unicode, uint8 &encoding, uint16 &index) {
+
+// --------------------------------------------------
+static bool 
+find_encoding(uint16 unicode, uint8 &encoding, uint16 &index) 
+{
 	for (unsigned int i = 0; i < ELEMS(encodings, unicode_to_encoding); i++) {
 		if (encodings[i].from <= unicode && unicode <= encodings[i].to) {
 			int16 bottom = 0;
@@ -115,7 +125,11 @@ static bool find_encoding(uint16 unicode, uint8 &encoding, uint16 &index) {
 	return false;
 }
 
-static bool find_in_cid_tables(uint16 unicode, uint8 &encoding, uint16 &index) {
+
+// --------------------------------------------------
+static bool 
+find_in_cid_tables(uint16 unicode, uint8 &encoding, uint16 &index) 
+{
 	for (unsigned int i = 0; i < ELEMS(cid_tables, cid_table); i++) {
 		int32 bottom = 0;
 		int32 top = cid_tables[i].length-1;
@@ -137,6 +151,7 @@ static bool find_in_cid_tables(uint16 unicode, uint8 &encoding, uint16 &index) {
 }
 
 
+// --------------------------------------------------
 void 
 PDFWriter::GetFontName(BFont *font, char *fontname, bool &embed, font_encoding encoding) 
 {
@@ -161,7 +176,9 @@ PDFWriter::GetFontName(BFont *font, char *fontname, bool &embed, font_encoding e
 	}
 }
 
-static const char* encoding_names[] = {
+
+static const char* encoding_names[] = 
+{
 	"macroman",
 	// TrueType
 	"ttenc0",
@@ -182,6 +199,8 @@ static const char* encoding_names[] = {
 	"UniKS-UCS2-H"
 };
 
+
+// --------------------------------------------------
 int 
 PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding) 
 {
@@ -212,8 +231,11 @@ PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding)
 	return font;
 }
 
+
+// --------------------------------------------------
 void 
-PDFWriter::ToUtf8(uint32 encoding, const char *string, BString &utf8) {
+PDFWriter::ToUtf8(uint32 encoding, const char *string, BString &utf8)
+{
 	int32 len = strlen(string);
 	int32 srcLen = len, destLen = 255;
 	int32 state = 0;
@@ -231,8 +253,11 @@ PDFWriter::ToUtf8(uint32 encoding, const char *string, BString &utf8) {
 	} while (len > 0);
 };
 
+
+// --------------------------------------------------
 void 
-PDFWriter::ToUnicode(const char *string, BString &unicode) {
+PDFWriter::ToUnicode(const char *string, BString &unicode)
+{
 	int32 len = strlen(string);
 	int32 srcLen = len, destLen = 255;
 	int32 state = 0;
@@ -254,15 +279,21 @@ PDFWriter::ToUnicode(const char *string, BString &unicode) {
 	} while (len > 0);
 }
 
+
+// --------------------------------------------------
 uint16 
-PDFWriter::CodePointSize(const char* s) {
+PDFWriter::CodePointSize(const char* s)
+{
 	uint16 i = 1;
 	for (s++; !BeginsChar(*s); s++) i++; 
 	return i;
 }
 
+
+// --------------------------------------------------
 void
-PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size) {
+PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
+{
 	// try to convert from utf8 to MacRoman encoding schema...
 	int32 srcLen  = size;
 	int32 destLen = 1;
@@ -342,9 +373,11 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size) {
 	}
 }
 
+
 // --------------------------------------------------
 void
-PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 size) {
+PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 size)
+{
 	bool hasGlyph[1];
 	font->GetHasGlyphs(utf8, 1, hasGlyph);
 	if (hasGlyph[0]) {
@@ -363,6 +396,7 @@ PDFWriter::ClipChar(BFont* font, const char* unicode, const char* utf8, int16 si
 		fprintf(fLog, "glyph for %*.*s not found!", size, size, utf8);
 	}
 }
+
 
 // --------------------------------------------------
 void	
@@ -418,9 +452,11 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 	}
 }
 
+
 // --------------------------------------------------
 bool
-PDFWriter::EmbedFont(const char* name) {
+PDFWriter::EmbedFont(const char* name)
+{
 	static FontFile* cache = NULL;
 	if (cache && cache->name.Compare(name)) return cache->size < fEmbedMaxFontSize;
 	

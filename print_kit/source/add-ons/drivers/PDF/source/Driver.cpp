@@ -59,7 +59,8 @@ static PrinterDriver *instanciate_driver(BNode *spoolDir);
 
 //  ======== For testing only ==================
 
-BMessage* take_job(BFile *spoolFile, BNode *spoolDir, BMessage *msg) 
+BMessage* 
+take_job(BFile *spoolFile, BNode *spoolDir, BMessage *msg) 
 {
 	PrinterDriver *driver;
 	
@@ -75,7 +76,9 @@ BMessage* take_job(BFile *spoolFile, BNode *spoolDir, BMessage *msg)
 }
 
 
-BMessage* config_page(BNode *spoolDir, BMessage *msg) 
+// --------------------------------------------------
+BMessage* 
+config_page(BNode *spoolDir, BMessage *msg) 
 {
 	BMessage		*pagesetupMsg;
 	PrinterDriver	*driver;
@@ -128,7 +131,9 @@ BMessage* config_page(BNode *spoolDir, BMessage *msg)
 }
 
 
-BMessage* config_job(BNode *spoolDir, BMessage *msg)
+// --------------------------------------------------
+BMessage* 
+config_job(BNode *spoolDir, BMessage *msg)
 {
 	BMessage		*jobsetupMsg;
 	PrinterDriver	*driver;
@@ -180,13 +185,18 @@ BMessage* config_job(BNode *spoolDir, BMessage *msg)
 }
 
 
-
-char* add_printer(char *printerName) {
+// --------------------------------------------------
+char* 
+add_printer(char *printerName)
+{
 	return printerName; 
 }
 
 
-static PrinterDriver* instanciate_driver(BNode *spoolDir) {
+// --------------------------------------------------
+static PrinterDriver* 
+instanciate_driver(BNode *spoolDir)
+{
 	return new PDFWriter();
 }
 
@@ -196,7 +206,8 @@ static PrinterDriver* instanciate_driver(BNode *spoolDir) {
  * @param BNode* printer spool directory
  * @return BMessage* the settings
  */
-BMessage* default_settings(BNode* printer)
+BMessage* 
+default_settings(BNode* printer)
 {
 // (new BAlert("", "default_settings()", "Driver.cpp"))->Go(); 
 	

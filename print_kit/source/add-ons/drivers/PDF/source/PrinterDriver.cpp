@@ -53,6 +53,7 @@ THE SOFTWARE.
 // Constructor & destructor
 // ------------------------
 
+// --------------------------------------------------
 PrinterDriver::PrinterDriver()
 	:	fJobFile(NULL),
 		fPrinterNode(NULL),
@@ -65,7 +66,10 @@ PrinterDriver::PrinterDriver()
 {
 }
 
-PrinterDriver::~PrinterDriver() {
+
+// --------------------------------------------------
+PrinterDriver::~PrinterDriver() 
+{
 }
 
 #ifdef CODEWARRIOR
@@ -125,10 +129,10 @@ PrinterDriver::PrintJob
 
 	status = BeginJob();
 
-	printing = true;
-	for (copy = 0; copy < copies && status == B_OK && printing; copy++) 
+	fPrinting = true;
+	for (copy = 0; copy < copies && status == B_OK && fPrinting; copy++) 
 	{
-		for (page = 1; page <= pfh.page_count && status == B_OK && printing; page++) {
+		for (page = 1; page <= pfh.page_count && status == B_OK && fPrinting; page++) {
 			fStatusWindow->PostMessage(new BMessage('page'));
 			status = PrintPage(page, pfh.page_count);
 		}
@@ -159,17 +163,22 @@ PrinterDriver::PrintJob
  * @param none
  * @return void
  */
-void PrinterDriver::StopPrinting() {
-	printing = false;
+void 
+PrinterDriver::StopPrinting()
+{
+	fPrinting = false;
 }
 
 
+// --------------------------------------------------
 status_t
-PrinterDriver::BeginJob() {
+PrinterDriver::BeginJob() 
+{
 	return B_OK;
 }
 
 
+// --------------------------------------------------
 status_t 
 PrinterDriver::PrintPage(int32 pageNumber, int32 pageCount) 
 {
@@ -182,12 +191,15 @@ PrinterDriver::PrintPage(int32 pageNumber, int32 pageCount)
 }
 
 
+// --------------------------------------------------
 status_t
-PrinterDriver::EndJob() {
+PrinterDriver::EndJob() 
+{
 	return B_OK;
 }
 
 
+// --------------------------------------------------
 status_t 
 PrinterDriver::PrinterSetup(char *printerName)
 	// name of printer, to attach printer settings
@@ -199,7 +211,9 @@ PrinterDriver::PrinterSetup(char *printerName)
 }
 
 
-status_t PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
+// --------------------------------------------------
+status_t 
+PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
 {
 	/*
 	BRect paperRect;
@@ -232,8 +246,7 @@ status_t PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
 	*/
 
 	// check to see if the messag is built correctly...
-	if (setupMsg->HasFloat("scaling") != B_OK)
-	{
+	if (setupMsg->HasFloat("scaling") != B_OK) {
 		PrinterSettings *ps = new PrinterSettings(printerName);
 
 		if (ps->InitCheck() == B_OK) {
@@ -257,7 +270,7 @@ status_t PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
 }
 
 
-
+// --------------------------------------------------
 status_t 
 PrinterDriver::JobSetup(BMessage *jobMsg, const char *printerName)
 {
@@ -278,7 +291,9 @@ PrinterDriver::JobSetup(BMessage *jobMsg, const char *printerName)
 }
 
 
-status_t PrinterDriver::OpenTransport()
+// --------------------------------------------------
+status_t 
+PrinterDriver::OpenTransport()
 {
 	char	buffer[512];
 	BPath	*path;
@@ -354,6 +369,7 @@ status_t PrinterDriver::OpenTransport()
 }
 
 
+// --------------------------------------------------
 status_t 
 PrinterDriver::CloseTransport()
 {

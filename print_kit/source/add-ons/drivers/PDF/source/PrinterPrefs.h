@@ -43,8 +43,7 @@ const char SETTINGS_FILE_NAME[] = "pdf_printer_settings";
 class PrinterPrefs 
 {
 private:
-	BPath		settingsPath;
-	BString		printerDirName;
+	BPath		fSettingsPath;
 
 public:	
 	PrinterPrefs();

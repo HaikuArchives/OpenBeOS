@@ -45,8 +45,8 @@ THE SOFTWARE.
  */
 PrinterSettings::PrinterSettings(BNode &printer)
 {
-	node = printer;	
-	_err = node.InitCheck();
+	fNode = printer;	
+	fErr = fNode.InitCheck();
 }
 
 /**
@@ -62,7 +62,7 @@ PrinterSettings::PrinterSettings(const char *printer)
 	find_directory(B_USER_SETTINGS_DIRECTORY, &path);
 	path.Append(PRINTER_SETTINGS_PATH);
 	path.Append(printer);
-	_err = node.SetTo(path.Path());
+	fErr = fNode.SetTo(path.Path());
 }
 
 /**
@@ -71,8 +71,10 @@ PrinterSettings::PrinterSettings(const char *printer)
  * @param none
  * @return status_t the status
  */
-status_t PrinterSettings::InitCheck() {
-	return _err;
+status_t 
+PrinterSettings::InitCheck()
+{
+	return fErr;
 }
 
 /**
@@ -90,7 +92,8 @@ PrinterSettings::~PrinterSettings() { }
  * @param BMessage* the settings in a message object
  * @return status_t the status of the read operation
  */
-status_t PrinterSettings::ReadSettings(BMessage *msg)
+status_t 
+PrinterSettings::ReadSettings(BMessage *msg)
 {
 	attr_info info;
 	char *data = NULL;
@@ -99,14 +102,11 @@ status_t PrinterSettings::ReadSettings(BMessage *msg)
 	msg->MakeEmpty();
 	msg->what = 0;
 	
-	if (node.GetAttrInfo(ATTR_NAME, &info) == B_OK) 
-	{
+	if (fNode.GetAttrInfo(ATTR_NAME, &info) == B_OK) {
 		data = (char *)malloc(info.size);
-		if (data != NULL) 
-		{ 
-			err = node.ReadAttr(ATTR_NAME, B_MESSAGE_TYPE, 0, data, info.size); 
-			if (err >= 0) 
-			{
+		if (data != NULL) { 
+			err = fNode.ReadAttr(ATTR_NAME, B_MESSAGE_TYPE, 0, data, info.size); 
+			if (err >= 0) {
 				err = B_OK;
 				msg->Unflatten(data);	 
 			}
@@ -126,7 +126,8 @@ status_t PrinterSettings::ReadSettings(BMessage *msg)
  * @param BMessage* the settings to save in a BMessage object
  * @return status_t the status of the write operation
  */
-status_t PrinterSettings::WriteSettings(BMessage* msg)
+status_t 
+PrinterSettings::WriteSettings(BMessage* msg)
 {
 	size_t length;	
  	char *data = NULL;
@@ -134,10 +135,9 @@ status_t PrinterSettings::WriteSettings(BMessage* msg)
 
 	length = msg->FlattenedSize();
 	data = (char *) malloc(length);
-	if (data != NULL) 
-	{
+	if (data != NULL) {
 		msg->Flatten(data, length);
-		err = node.WriteAttr(ATTR_NAME, B_MESSAGE_TYPE, 0, data, length);
+		err = fNode.WriteAttr(ATTR_NAME, B_MESSAGE_TYPE, 0, data, length);
 		if (err > 0) {
 			err = B_OK;
 		}
@@ -153,7 +153,8 @@ status_t PrinterSettings::WriteSettings(BMessage* msg)
  * @param BMessage* the settings in a message object
  * @return status_t the status of the read operation
  */
-status_t PrinterSettings::GetDefaults(BMessage *msg)
+status_t 
+PrinterSettings::GetDefaults(BMessage *msg)
 {
 	// check to see if there is a pdf_printer_settings file
 	PrinterPrefs *prefs = new PrinterPrefs();
@@ -195,7 +196,8 @@ status_t PrinterSettings::GetDefaults(BMessage *msg)
  * @return status_t, B_OK if the message is correctly structured
  *					 B_ERROR if the message is corrupt
  */
-status_t PrinterSettings::Validate(const BMessage *msg)
+status_t 
+PrinterSettings::Validate(const BMessage *msg)
 {
 	int64 i64;
 	int32 i32;

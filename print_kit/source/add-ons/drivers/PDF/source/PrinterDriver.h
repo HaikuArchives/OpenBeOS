@@ -35,8 +35,6 @@ THE SOFTWARE.
 #include <AppKit.h>
 #include <InterfaceKit.h>
 
-//#include "StatusWindow.h"
-
 #ifndef ROUND_UP
 	#define ROUND_UP(x, y) (((x) + (y) - 1) & ~((y) - 1))
 #endif
@@ -98,7 +96,7 @@ private:
 
 	volatile Orientation	fOrientation;
 	
-	bool					printing;
+	bool					fPrinting;
 	
 	// transport-related 
 	BDataIO					*fTransport;
