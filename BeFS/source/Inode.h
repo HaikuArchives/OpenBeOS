@@ -23,6 +23,7 @@ extern "C" {
 
 
 class BPlusTree;
+class TreeIterator;
 
 
 class CachedBlock
@@ -89,14 +90,20 @@ class Inode : public CachedBlock
 		Inode(Volume *volume,vnode_id id,uint8 reenter = 0);
 		~Inode();
 
+		bfs_inode *Node() const { return (bfs_inode *)fBlock; }
+		vnode_id VnodeID() const { return fVolume->ToVnode(fBlockNumber); }
+
 		mode_t Mode() const { return Node()->mode; }
 		bool IsDirectory() const { return S_ISDIR(Node()->mode); }
 		bool IsSymLink() const { return S_ISLNK(Node()->mode); }
 
-		bfs_inode *Node() const { return (bfs_inode *)fBlock; }
-		vnode_id VnodeID() const { return fVolume->ToVnode(fBlockNumber); }
+		block_run Parent() const { return Node()->parent; }
+		block_run Attributes() const { return Node()->attributes; }
+		Volume *GetVolume() const { return fVolume; }
 
 		status_t InitCheck();
+
+		status_t GetNextSmallData(small_data **smallData);
 
 		// for directories only:
 		status_t GetTree(BPlusTree **);
@@ -107,7 +114,25 @@ class Inode : public CachedBlock
 		status_t WriteAt(off_t pos,void *buffer,size_t *length);
 	
 	private:
-		BPlusTree *fTree;
+		BPlusTree	*fTree;
+		Inode		*fAttributes;
+};
+
+
+class AttributeIterator
+{
+	public:
+		AttributeIterator(Inode *inode);
+		~AttributeIterator();
+		
+		status_t Rewind();
+		status_t GetNext(char *name,uint32 *type,void **data,size_t *length);
+
+	private:
+		small_data	*fCurrentSmallData;
+		Inode		*fInode, *fAttributes;
+		TreeIterator *fIterator;
+		void		*fBuffer;
 };
 
 #endif	/* INODE_H */

@@ -8,6 +8,8 @@
 #include "Inode.h"
 #include "BPlusTree.h"
 
+#include <string.h>
+
 
 Inode::Inode(Volume *volume,vnode_id id,uint8 reenter)
 	: CachedBlock(volume,volume->VnodeToBlock(id)),
@@ -53,6 +55,30 @@ Inode::InitCheck()
 
 
 status_t
+Inode::GetNextSmallData(small_data **smallData)
+{
+	if (!Node())
+		return B_ERROR;
+
+	small_data *data = *smallData;
+
+	// begin from the start?
+	if (data == NULL)
+		data = Node()->small_data_start;
+	else
+		data = data->Next();
+
+	// is already last item?
+	if (data->IsLast(Node()))
+		return B_ENTRY_NOT_FOUND;
+
+	*smallData = data;
+
+	return B_OK;
+}
+
+
+status_t
 Inode::GetTree(BPlusTree **tree)
 {
 	if (fTree) {
@@ -72,7 +98,8 @@ Inode::GetTree(BPlusTree **tree)
 }
 
 
-status_t Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
+status_t
+Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 {
 	// Inode::ReadAt() does already does this
 	//if (pos > Node()->data.size)
@@ -289,4 +316,115 @@ Inode::WriteAt(off_t pos,void *buffer,size_t *length)
 	return B_ERROR;
 }
 
+
+//	#pragma mark -
+
+
+AttributeIterator::AttributeIterator(Inode *inode)
+	:
+	fCurrentSmallData(NULL),
+	fInode(inode),
+	fAttributes(NULL),
+	fIterator(NULL),
+	fBuffer(NULL)
+{
+}
+
+
+AttributeIterator::~AttributeIterator()
+{
+	if (fAttributes)
+		put_vnode(fAttributes->GetVolume()->ID(),fAttributes->VnodeID());
+
+	delete fIterator;
+}
+
+
+status_t 
+AttributeIterator::Rewind()
+{
+	fCurrentSmallData = NULL;
+
+	if (fIterator != NULL)
+		fIterator->Rewind();
+
+	return B_OK;
+}
+
+
+status_t 
+AttributeIterator::GetNext(char *name, uint32 *type, void **data, size_t *length)
+{
+	// read attributes out of the small data section
+
+	if (fCurrentSmallData == NULL || !fCurrentSmallData->IsLast(fInode->Node())) {
+		if (fCurrentSmallData == NULL)
+			fCurrentSmallData = fInode->Node()->small_data_start;
+		else
+			fCurrentSmallData = fCurrentSmallData->Next();
+
+		// skip name attribute
+		if (!fCurrentSmallData->IsLast(fInode->Node())
+			&& fCurrentSmallData->name_size == FILE_NAME_NAME_LENGTH
+			&& *fCurrentSmallData->Name() == FILE_NAME_NAME)
+			fCurrentSmallData = fCurrentSmallData->Next();
+
+		if (!fCurrentSmallData->IsLast(fInode->Node())) {
+			strncpy(name,fCurrentSmallData->Name(),B_FILE_NAME_LENGTH);
+			*type = fCurrentSmallData->type;
+			*data = fCurrentSmallData->Data();
+			*length = fCurrentSmallData->data_size;
+			
+			return B_OK;
+		}
+	}
+	
+	// read attributes out of the attribute directory
+
+	if (fInode->Attributes().IsZero())
+		return B_ENTRY_NOT_FOUND;
+
+	if (fAttributes == NULL) {
+		Volume *volume = fInode->GetVolume();
+		if (get_vnode(volume->ID(),volume->ToVnode(fInode->Attributes()),(void **)&fAttributes) != 0
+			|| fAttributes == NULL)
+			return B_ENTRY_NOT_FOUND;
+		
+		BPlusTree *tree;
+		if (fAttributes->GetTree(&tree) < B_OK
+			|| (fIterator = new TreeIterator(tree)) == NULL)
+			return B_ENTRY_NOT_FOUND;
+	}
+
+//	block_run run;
+//	status = fAttributes->GetNextEntry(name,&run);
+//	if (status < B_OK)
+//	{
+//		free(fAttributeBuffer);  fAttributeBuffer = NULL;
+//		return status;
+//	}
+//	
+//	Attribute *attribute = (Attribute *)Inode::Factory(fDisk,run);
+//	if (attribute == NULL || attribute->InitCheck() < B_OK)
+//		return B_IO_ERROR;
+//	
+//	*type = attribute->Type();
+//
+//	void *buffer = realloc(fAttributeBuffer,attribute->Size());
+//	if (buffer == NULL)
+//	{
+//		free(fAttributeBuffer);  fAttributeBuffer = NULL;
+//		delete attribute;
+//		return B_NO_MEMORY;
+//	}
+//	fAttributeBuffer = buffer;
+//	
+//	ssize_t size =  attribute->Read(fAttributeBuffer,attribute->Size());
+//	delete attribute;
+//	
+//	*length = size;
+//	*data = fAttributeBuffer;
+//
+//	return size < B_OK ? size : B_OK;
+}
 
