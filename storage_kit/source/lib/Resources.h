@@ -16,6 +16,11 @@
 namespace OpenBeOS {
 #endif
 
+namespace StorageKit {
+	class ResourcesContainer;
+	class ResourceFile;
+};
+
 /*!
 	\class BResources
 	\brief Represent the resources in a file
@@ -34,7 +39,6 @@ public:
 
 	status_t SetTo(BFile *file, bool clobber = false);
 	void Unset();
-	status_t InitCheck() const;
 
 	const BFile &File() const;
 
@@ -93,12 +97,12 @@ private:
 	virtual void _ReservedResources8();
 
 private:
-	BFile	fFile;
-	bool	fReadOnly;
-	bool	fDirty;
-	bool	_pad[2];
-	uint32	_unused1[2];
-	uint32	_reserved[3];	// FBC
+	BFile							fFile;
+	StorageKit::ResourcesContainer	*fContainer;
+	StorageKit::ResourceFile		*fResourceFile;
+	bool							fReadOnly;
+	bool							_pad[3];
+	uint32							_reserved[3];	// FBC
 };
 
 

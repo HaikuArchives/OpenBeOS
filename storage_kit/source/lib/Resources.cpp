@@ -5,8 +5,25 @@
 /*!
 	\file Resources.cpp
 	BResources implementation.
+
+	BResources delegates most of the work to ResourcesContainer and
+	ResourceFile. The first one manages a collections of ResourceItem's,
+	the actual resources, whereas the latter provides the file I/O
+	functionality.
+	An InitCheck() method is not needed, since a BResources object will
+	never be invalid. It always serves as a resources container, even if
+	it is not associated with a file. It is always possible to WriteTo()
+	the resources BResources contains to a file (a valid one of course).
 */
 #include <Resources.h>
+
+#include <stdlib.h>
+
+#include "ResourceFile.h"
+#include "ResourceItem.h"
+#include "ResourcesContainer.h"
+
+using namespace StorageKit;
 
 enum {
 	NOT_IMPLEMENTED	= B_ERROR,
@@ -16,7 +33,12 @@ enum {
 /*!	\brief Creates an unitialized BResources object.
 */
 BResources::BResources()
+		  : fFile(),
+			fContainer(NULL),
+			fResourceFile(NULL),
+			fReadOnly(false)
 {
+	fContainer = new ResourcesContainer();
 }
 
 // constructor
@@ -33,7 +55,13 @@ BResources::BResources()
 	\param clobber if \c true, the \a file is truncated to size 0
 */
 BResources::BResources(BFile *file, bool clobber)
+		  : fFile(),
+			fContainer(NULL),
+			fResourceFile(NULL),
+			fReadOnly(false)
 {
+	fContainer = new ResourcesContainer();
+	SetTo(file, clobber);
 }
 
 // destructor
@@ -43,6 +71,8 @@ BResources::BResources(BFile *file, bool clobber)
 */
 BResources::~BResources()
 {
+	Unset();
+	delete fContainer;
 }
 
 // SetTo
@@ -68,7 +98,28 @@ BResources::~BResources()
 status_t
 BResources::SetTo(BFile *file, bool clobber)
 {
-	return NOT_IMPLEMENTED;
+	Unset();
+	status_t error = B_OK;
+	if (file) {
+		error = file->InitCheck();
+		if (error == B_OK) {
+			fFile = *file;
+			error = fFile.InitCheck();
+		}
+		if (error == B_OK) {
+			fReadOnly = !fFile.IsWritable();
+			fResourceFile = new ResourceFile;
+			error = fResourceFile->SetTo(&fFile, clobber);
+		}
+		if (error == B_OK)
+			error = fResourceFile->InitContainer(*fContainer);
+	}
+	if (error != B_OK) {
+		delete fResourceFile;
+		fResourceFile = NULL;
+		fContainer->MakeEmpty();
+	}
+	return error;
 }
 
 // Unset
@@ -80,18 +131,13 @@ BResources::SetTo(BFile *file, bool clobber)
 void
 BResources::Unset()
 {
-}
-
-// InitCheck
-/*!	\brief Returns the result of the last initialization (via constructor or
-	SetTo()).
-	\return The result of the last initialization (\see SetTo()).
-	\note This method extends the BeOS R5 API.
-*/
-status_t
-BResources::InitCheck() const
-{
-	return NOT_IMPLEMENTED;
+	if (fContainer->IsModified())
+		Sync();
+	delete fResourceFile;
+	fResourceFile = NULL;
+	fFile.Unset();
+	fContainer->MakeEmpty();
+	fReadOnly = false;
 }
 
 // File
@@ -121,7 +167,23 @@ BResources::File() const
 const void *
 BResources::LoadResource(type_code type, int32 id, size_t *outSize)
 {
-	return NULL;	// not implemented
+	// find the resource
+	status_t error = B_OK;
+	ResourceItem *resource
+		= fContainer->ResourceAt(fContainer->IndexOf(type, id));
+	if (!resource)
+		error = B_ENTRY_NOT_FOUND;
+	// load it, if necessary
+	if (error == B_OK && !resource->IsLoaded() && fResourceFile)
+		error = fResourceFile->ReadResource(*resource);
+	// return the result
+	const void *result = NULL;
+	if (error == B_OK) {
+		result = resource->Data();
+		if (outSize)
+			*outSize = resource->DataSize();
+	}
+	return result;
 }
 
 // LoadResource
@@ -144,7 +206,23 @@ BResources::LoadResource(type_code type, int32 id, size_t *outSize)
 const void *
 BResources::LoadResource(type_code type, const char *name, size_t *outSize)
 {
-	return NULL;	// not implemented
+	// find the resource
+	status_t error = B_OK;
+	ResourceItem *resource
+		= fContainer->ResourceAt(fContainer->IndexOf(type, name));
+	if (!resource)
+		error = B_ENTRY_NOT_FOUND;
+	// load it, if necessary
+	if (error == B_OK && !resource->IsLoaded() && fResourceFile)
+		error = fResourceFile->ReadResource(*resource);
+	// return the result
+	const void *result = NULL;
+	if (error == B_OK) {
+		result = resource->Data();
+		if (outSize)
+			*outSize = resource->DataSize();
+	}
+	return result;
 }
 
 // PreloadResourceType
@@ -160,7 +238,24 @@ BResources::LoadResource(type_code type, const char *name, size_t *outSize)
 status_t
 BResources::PreloadResourceType(type_code type)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = B_OK;
+	if (fResourceFile) {
+		if (type == 0)
+			error = fResourceFile->ReadResources(*fContainer);
+		else {
+			int32 count = fContainer->CountResources();
+			int32 errorCount = 0;
+			for (int32 i = 0; i < count; i++) {
+				ResourceItem *resource = fContainer->ResourceAt(i);
+				if (resource->Type() == type) {
+					if (fResourceFile->ReadResource(*resource) != B_OK)
+						errorCount++;
+				}
+			}
+			error = -errorCount;
+		}
+	}
+	return error;
 }
 
 // Sync
@@ -184,7 +279,18 @@ BResources::PreloadResourceType(type_code type)
 status_t
 BResources::Sync()
 {
-	return NOT_IMPLEMENTED;
+	status_t error = fFile.InitCheck();
+	if (error == B_OK) {
+		if (fReadOnly)
+			error = B_NOT_ALLOWED;
+		else if (!fResourceFile)
+			error = B_FILE_ERROR;
+	}
+	if (error == B_OK)
+		error = fResourceFile->ReadResources(*fContainer);
+	if (error == B_OK)
+		error = fResourceFile->WriteResources(*fContainer);
+	return error;
 }
 
 // MergeFrom
@@ -200,7 +306,19 @@ BResources::Sync()
 status_t
 BResources::MergeFrom(BFile *fromFile)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (fromFile ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		ResourceFile resourceFile;
+		error = resourceFile.SetTo(fromFile);
+		ResourcesContainer container;
+		if (error == B_OK)
+			error = resourceFile.InitContainer(container);
+		if (error == B_OK)
+			error = resourceFile.ReadResources(container);
+		if (error == B_OK)
+			fContainer->AssimilateResources(container);
+	}
+	return error;
 }
 
 // WriteTo
@@ -217,7 +335,25 @@ BResources::MergeFrom(BFile *fromFile)
 status_t
 BResources::WriteTo(BFile *file)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (file ? B_OK : B_BAD_VALUE);
+	// make sure, that all resources are loaded
+	if (error == B_OK && fResourceFile) {
+		error = fResourceFile->ReadResources(*fContainer);
+		fResourceFile->Unset();
+	}
+	// set the new file, but keep the old container
+	if (error == B_OK) {
+		ResourcesContainer *container = fContainer;
+		fContainer = new ResourcesContainer;
+//		error = SetTo(file, true);
+		error = SetTo(file, false);
+		delete fContainer;
+		fContainer = container;
+	}
+	// write the resources
+	if (error == B_OK && fResourceFile)
+		error = fResourceFile->WriteResources(*fContainer);
+	return error;
 }
 
 // AddResource
@@ -242,7 +378,23 @@ status_t
 BResources::AddResource(type_code type, int32 id, const void *data,
 						size_t length, const char *name)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (data ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
+	if (error == B_OK) {
+		ResourceItem *item = new ResourceItem;
+		item->SetIdentity(type, id, name);
+		ssize_t written = item->WriteAt(0, data, length);
+		if (written < 0)
+			error = written;
+		else if (written != length)
+			error = B_ERROR;
+		if (error == B_OK)
+			fContainer->AddResource(item);
+		else
+			delete item;
+	}
+	return error;
 }
 
 // HasResource
@@ -255,7 +407,7 @@ BResources::AddResource(type_code type, int32 id, const void *data,
 bool
 BResources::HasResource(type_code type, int32 id)
 {
-	return false;	// not implemented
+	return (fContainer->IndexOf(type, id) >= 0);
 }
 
 // HasResource
@@ -268,7 +420,7 @@ BResources::HasResource(type_code type, int32 id)
 bool
 BResources::HasResource(type_code type, const char *name)
 {
-	return false;	// not implemented
+	return (fContainer->IndexOf(type, name) >= 0);
 }
 
 // GetResourceInfo
@@ -289,7 +441,18 @@ BResources::GetResourceInfo(int32 byIndex, type_code *typeFound,
 							int32 *idFound, const char **nameFound,
 							size_t *lengthFound)
 {
-	return false;	// not implemented
+	ResourceItem *item = fContainer->ResourceAt(byIndex);
+	if (item) {
+		if (typeFound)
+			*typeFound = item->Type();
+		if (idFound)
+			*idFound = item->ID();
+		if (nameFound)
+			*nameFound = item->Name();
+		if (lengthFound)
+			*lengthFound = item->DataSize();
+	}
+	return item;
 }
 
 // GetResourceInfo
@@ -309,7 +472,17 @@ bool
 BResources::GetResourceInfo(type_code byType, int32 andIndex, int32 *idFound,
 							const char **nameFound, size_t *lengthFound)
 {
-	return false;	// not implemented
+	ResourceItem *item
+		= fContainer->ResourceAt(fContainer->IndexOfType(byType, andIndex));
+	if (item) {
+		if (idFound)
+			*idFound = item->ID();
+		if (nameFound)
+			*nameFound = item->Name();
+		if (lengthFound)
+			*lengthFound = item->DataSize();
+	}
+	return item;
 }
 
 // GetResourceInfo
@@ -326,7 +499,15 @@ bool
 BResources::GetResourceInfo(type_code byType, int32 andID,
 							const char **nameFound, size_t *lengthFound)
 {
-	return false;	// not implemented
+	ResourceItem *item
+		= fContainer->ResourceAt(fContainer->IndexOf(byType, andID));
+	if (item) {
+		if (nameFound)
+			*nameFound = item->Name();
+		if (lengthFound)
+			*lengthFound = item->DataSize();
+	}
+	return item;
 }
 
 // GetResourceInfo
@@ -344,7 +525,15 @@ bool
 BResources::GetResourceInfo(type_code byType, const char *andName,
 							int32 *idFound, size_t *lengthFound)
 {
-	return false;	// not implemented
+	ResourceItem *item
+		= fContainer->ResourceAt(fContainer->IndexOf(byType, andName));
+	if (item) {
+		if (idFound)
+			*idFound = item->ID();
+		if (lengthFound)
+			*lengthFound = item->DataSize();
+	}
+	return item;
 }
 
 // GetResourceInfo
@@ -366,7 +555,19 @@ BResources::GetResourceInfo(const void *byPointer, type_code *typeFound,
 							int32 *idFound, size_t *lengthFound,
 							const char **nameFound)
 {
-	return false;	// not implemented
+	ResourceItem *item
+		= fContainer->ResourceAt(fContainer->IndexOf(byPointer));
+	if (item) {
+		if (typeFound)
+			*typeFound = item->Type();
+		if (idFound)
+			*idFound = item->ID();
+		if (nameFound)
+			*nameFound = item->Name();
+		if (lengthFound)
+			*lengthFound = item->DataSize();
+	}
+	return item;
 }
 
 // RemoveResource
@@ -384,7 +585,18 @@ BResources::GetResourceInfo(const void *byPointer, type_code *typeFound,
 status_t
 BResources::RemoveResource(const void *resource)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (resource ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
+	if (error == B_OK) {
+		ResourceItem *item
+			= fContainer->RemoveResource(fContainer->IndexOf(resource));
+		if (item)
+			delete item;
+		else
+			error = B_BAD_VALUE;
+	}
+	return error;
 }
 
 // RemoveResource
@@ -401,7 +613,16 @@ BResources::RemoveResource(const void *resource)
 status_t
 BResources::RemoveResource(type_code type, int32 id)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
+	if (error == B_OK) {
+		ResourceItem *item
+			= fContainer->RemoveResource(fContainer->IndexOf(type, id));
+		if (item)
+			delete item;
+		else
+			error = B_BAD_VALUE;
+	}
+	return error;
 }
 
 
@@ -430,7 +651,27 @@ status_t
 BResources::WriteResource(type_code type, int32 id, const void *data,
 						  off_t offset, size_t length)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (data && offset >= 0 ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
+	ResourceItem *item = NULL;
+	if (error == B_OK) {
+		item = fContainer->ResourceAt(fContainer->IndexOf(type, id));
+		if (!item)
+			error = B_BAD_VALUE;
+	}
+	if (error == B_OK && fResourceFile)
+		error = fResourceFile->ReadResource(*item);
+	if (error == B_OK) {
+		if (item) {
+			ssize_t written = item->WriteAt(offset, data, length);
+			if (written < 0)
+				error = written;
+			else if (written != length)
+				error = B_ERROR;
+		}
+	}
+	return error;
 }
 
 // ReadResource
@@ -457,7 +698,24 @@ status_t
 BResources::ReadResource(type_code type, int32 id, void *data, off_t offset,
 						 size_t length)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (data && offset >= 0 ? B_OK : B_BAD_VALUE);
+	ResourceItem *item = NULL;
+	if (error == B_OK) {
+		item = fContainer->ResourceAt(fContainer->IndexOf(type, id));
+		if (!item)
+			error = B_BAD_VALUE;
+	}
+	if (error == B_OK && fResourceFile)
+		error = fResourceFile->ReadResource(*item);
+	if (error == B_OK) {
+		if (item) {
+			ssize_t read = item->ReadAt(offset, data, length);
+			if (read < 0)
+				error = read;
+		} else
+			error = B_BAD_VALUE;
+	}
+	return error;
 }
 
 // FindResource
@@ -475,7 +733,15 @@ BResources::ReadResource(type_code type, int32 id, void *data, off_t offset,
 void *
 BResources::FindResource(type_code type, int32 id, size_t *lengthFound)
 {
-	return NULL;	// not implemented
+	void *result = NULL;
+	size_t size = 0;
+	if (const void *data = LoadResource(type, id, &size)) {
+		if (result = malloc(size))
+			memcpy(result, data, size);
+	}
+	if (lengthFound)
+		*lengthFound = size;
+	return result;
 }
 
 // FindResource
@@ -493,7 +759,15 @@ BResources::FindResource(type_code type, int32 id, size_t *lengthFound)
 void *
 BResources::FindResource(type_code type, const char *name, size_t *lengthFound)
 {
-	return NULL;	// not implemented
+	void *result = NULL;
+	size_t size = 0;
+	if (const void *data = LoadResource(type, name, &size)) {
+		if (result = malloc(size))
+			memcpy(result, data, size);
+	}
+	if (lengthFound)
+		*lengthFound = size;
+	return result;
 }
 
 
