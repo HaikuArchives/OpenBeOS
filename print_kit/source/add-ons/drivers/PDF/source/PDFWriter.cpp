@@ -187,7 +187,6 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 		if ( fPdf == NULL )
 			return B_ERROR;
 		
-		PDF_open_mem(fPdf, _WriteData);	// use callback to stream PDF document data to printer transport
 		InitWriter();
 	}
 	
@@ -222,8 +221,15 @@ PDFWriter::InitWriter()
 {
 	char	buffer[512];
 
-	fprintf(fLog, ">>>> PDF_open_mem\n");
-		
+	const char * compatibility;
+	if (JobMsg()->FindString("pdf_compatibility", &compatibility) == B_OK) {
+		PDF_set_parameter(fPdf, "compatibility", compatibility);
+		fprintf(fLog, "compatibility %s\n", compatibility);
+	}
+
+	fprintf(fLog, ">>>> PDF_open_mem\n");	
+	PDF_open_mem(fPdf, _WriteData);	// use callback to stream PDF document data to printer transport
+
 	PDF_set_parameter(fPdf, "flush", "heavy");
 		
 	// find job title 
@@ -234,13 +240,11 @@ PDFWriter::InitWriter()
 	if (JobFile()->ReadAttr("_spool/MimeType", B_STRING_TYPE, 0, buffer, sizeof(buffer)))
 	    PDF_set_info(fPdf, "Creator", buffer);
 
-	const char * compatibility;
-	if (JobMsg()->FindString("pdf_compatibility", &compatibility) == B_OK)
-		PDF_set_parameter(fPdf, "compatibility", compatibility);
-		
 	int32 compression;
-	if (JobMsg()->FindInt32("pdf_compression", &compression) == B_OK)
+	if (JobMsg()->FindInt32("pdf_compression", &compression) == B_OK) {
 	    PDF_set_value(fPdf, "compress", compression);
+		fprintf(fLog, "compression %d\n", compression);
+	}
 
     // PDF_set_parameter(fPdf, "warning", "false");
 
