@@ -107,8 +107,6 @@ void assign_addresses(void)
 	       "Have you changed these to match your card and network?\n"
 	       "******************************************************\n");
 
-printf("initsocket = %p\n", initsocket);
-
 	rv = initsocket(&sp);
 	if (rv < 0) {
 		printf("Couldn't get a socket!\n");
@@ -122,36 +120,43 @@ printf("initsocket = %p\n", initsocket);
 	}
 	
 	strcpy(ifr.ifr_name, "tulip0");
-	
 	memset(&ifr.ifr_addr, 0, sizeof(ifr.ifr_addr));
+	
 	
 	rv = soo_ioctl(sp, SIOCGIFFLAGS, (caddr_t)&ifr);
 	if (rv < 0) {
+		printf("failed to configure %s\n", ifr.ifr_name);
 		printf("soo_ioctl gave %d\n", rv);
-		return;
+		goto loop;
 	}
 
 	((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr = htonl(0xc0a80085);
-	((struct sockaddr_in*)&ifr.ifr_addr)->sin_family = AF_INET;
-	((struct sockaddr_in*)&ifr.ifr_addr)->sin_len = sizeof(struct sockaddr_in);
 	
 	rv = soo_ioctl(sp, SIOCSIFADDR, (caddr_t)&ifr);
 	if (rv < 0) {
+		printf("failed to configure %s\n", ifr.ifr_name);
 		printf("error %d [%s]\n", rv, strerror(rv));
-		return;
+	} else {
+		printf("%s configured\n", ifr.ifr_name);
 	}
+
+
+loop:
 	
 	strcpy(ifr.ifr_name,"loop0");
 	((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr = htonl(0x7f000001);
+	((struct sockaddr_in*)&ifr.ifr_addr)->sin_family = AF_INET;
+	((struct sockaddr_in*)&ifr.ifr_addr)->sin_len = sizeof(struct sockaddr_in);
 	rv = soo_ioctl(sp, SIOCSIFADDR, (caddr_t)&ifr);
 	if (rv < 0) {
+		printf("failed to configure %s\n", ifr.ifr_name);
 		printf("error %d [%s]\n", rv, strerror(rv));
-		return;
+	} else {
+		printf("%s configured\n", ifr.ifr_name);
 	}
 	
 	soclose(sp);
 
-	printf("Addresses appear to be assigned correctly...let's check :\n");
 }
 
 #define TEST_DATA "Hello World"
@@ -196,6 +201,154 @@ static void sysctl_test(void)
 	}
 	printf("got data...\n");
 }
+
+#define HELLO "Hello from net_srv"
+#define RESPONSE "Knock, knock"
+
+static int32 accept_test_server(void *data)
+{
+	void *sp, *nsp;
+	struct sockaddr_in sin;
+	int rv;
+	int salen = sizeof(sin);
+	char buff[50];
+	struct iovec iov;
+	int flags = 0;
+		
+	rv = initsocket(&sp);
+	if (rv < 0) {
+		err(rv, "initsocket");
+		return -1;
+	}	
+
+	rv = socreate(AF_INET, sp, SOCK_STREAM, 0);
+	if (rv < 0) {
+		err(rv, "Failed to create a socket to use...");
+		return -1;
+	}
+
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_len = sizeof(sin);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(7777);
+	sin.sin_addr.s_addr = INADDR_LOOPBACK;
+		
+	rv = sobind(sp, (caddr_t)&sin, salen);
+	if (rv < 0) {
+		err(rv, "bind");
+		return -1;
+	}	
+	
+	rv = solisten(sp, 5);
+	if (rv < 0) {
+		err(rv, "bind");
+		return -1;
+	}	
+	printf("server listening...\n");
+
+	rv = soaccept(sp, &nsp, (struct sockaddr *)&sin, &salen);
+	if (rv < 0) {
+		err(rv, "soaccept");
+		return -1;
+	}	
+	printf("\n *** WooHoo - accepted a socket! ***\n\n");
+
+	memset(&buff, 0, 50);
+	memcpy(&buff, HELLO, strlen(HELLO));
+	iov.iov_base = &buff;
+	iov.iov_len = strlen(HELLO);
+	
+	rv = writeit(nsp, &iov, flags);
+	if (rv < 0) {
+		err(rv, "writeit");
+		return -1;
+	}
+	printf("Sent hello to connected socket\n");
+
+	memset(&buff, 0, 50);
+	iov.iov_base = &buff;
+	iov.iov_len = 50;
+	rv = readit(nsp, &iov, &flags);
+	if (rv < 0) {
+		err(rv, "readit");
+		return -1;
+	}
+	printf("Got reply from connected socket: %s\n", buff);
+	
+	soclose(nsp);
+	soclose(sp);
+}
+
+static int32 accept_test_client(void *data)
+{
+	void *sp;
+	struct sockaddr_in sin;
+	int rv;
+	int salen = sizeof(sin);
+	char buffer[50];
+	int flags = 0;
+	struct iovec iov;
+	
+	rv = initsocket(&sp);
+	if (rv < 0) {
+		err(rv, "initsocket");
+		return -1;
+	}	
+
+	rv = socreate(AF_INET, sp, SOCK_STREAM, 0);
+	if (rv < 0) {
+		err(rv, "Failed to create a socket to use...");
+		return -1;
+	}
+
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_len = sizeof(sin);
+	sin.sin_family = AF_INET;
+	sin.sin_port = 0;
+	sin.sin_addr.s_addr = INADDR_LOOPBACK;
+		
+	rv = sobind(sp, (caddr_t)&sin, salen);
+	if (rv < 0) {
+		err(rv, "bind");
+		return -1;
+	}	
+
+	sin.sin_port = htons(7777);
+
+	printf("client about to try and connect\n");	
+	rv = soconnect(sp, (caddr_t)&sin, salen);	
+	if (rv < 0) {
+		err(rv, "soconnect");
+		return -1;
+	}
+	printf("client has connected!!!\n");
+
+	memset(&buffer, 0, 50);
+	iov.iov_base = &buffer;
+	iov.iov_len = 50;
+	
+	rv = readit(sp, &iov, &flags);	
+	if (rv < 0) {
+		err(rv, "readit");
+		return -1;
+	}
+	printf("Got a greeting...%s\n", buffer);
+
+	memset(&buffer, 0, 50);
+	memcpy(&buffer, RESPONSE, strlen(RESPONSE)); 	
+	iov.iov_base = &buffer;
+	iov.iov_len = strlen(RESPONSE);
+	flags = 0;
+	rv = writeit(sp, &iov, flags);	
+	if (rv < 0) {
+		err(rv, "writeit");
+		return -1;
+	}
+
+	soclose(sp);
+	printf("Client completed OK\n");	
+}
+	
 	
 static void tcp_test(uint32 srv)
 {
@@ -278,7 +431,9 @@ static void tcp_test(uint32 srv)
 
 int main(int argc, char **argv)
 {
-	int qty = 1000;
+//	int qty = 1000;
+	thread_id srv, clt;
+
 	/* XXX - change this line to query a different web server! */
 	uint32 web_server = 0xc0a80001;
 	
@@ -293,8 +448,25 @@ int main(int argc, char **argv)
 	//create_sockets((void*)&qty);
 	tcp_test(web_server);
 	sysctl_test();
+
+	snooze(1000000);
+	
+	srv = spawn_thread(accept_test_server, "accept_test_server", 
+	                   B_NORMAL_PRIORITY, NULL);
+	if (srv > 0)
+		resume_thread(srv);
+
+	clt = spawn_thread(accept_test_client, "accept_test_client", 
+	                   B_NORMAL_PRIORITY, NULL);
+	if (clt > 0)
+		resume_thread(clt);
+	
 	
 	printf("\n\n Tests completed!\n");
+	printf("\nTo stop, use CTRL-C :( \n");
+	
+	/* infinite loop */
+	while (1) {}
 	
 	return 0;
 }
