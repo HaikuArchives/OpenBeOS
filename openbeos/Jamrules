@@ -227,14 +227,14 @@ actions Link bind NEEDLIBS
 
 rule KernelStaticLibrary
 {
-	# SharedLibrary <name> : <sources> ;
+	# KernelStaticLibrary <name> : <sources> ;
 	UsePublicHeaders kernel ;
 	UsePrivateHeaders kernel ;
 	UseArchHeaders $(OBOS_ARCH) ;
 
 	SetupObjectsDir ;
-	CCFLAGS += -nostdinc ;
-	C++FLAGS += -nostdinc ;
+	CCFLAGS += -nostdinc -Wall ;
+	C++FLAGS += -nostdinc -Wall ;
 	Library lib$(<).a : $(>) ;
 	MakeLocate lib$(<).so : $(OBOS_STLIB_DIR) ;
 }
