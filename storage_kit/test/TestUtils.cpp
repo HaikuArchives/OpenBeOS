@@ -152,6 +152,10 @@ status_t DecodeResult(status_t result) {
 			str = "B_BAD_ADDRESS";
 			break;
 
+		// OS Errors
+		case B_BAD_PORT_ID:
+			str = "B_BAD_PORT_ID";
+			break;
 
 		// Anything Else
 		default:
