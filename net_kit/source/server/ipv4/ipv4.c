@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <kernel/OS.h>
+#include <malloc.h>
 
 #include "ipv4/ipv4.h"
 #include "protocols.h"
@@ -72,6 +73,23 @@ int ipv4_init(loaded_net_module *ln, int *pt)
 
 int ipv4_dev_init(ifnet *dev)
 {
+	ifaddr *ifa = malloc(sizeof(ifaddr));
+
+	ifa->if_addr.type = AF_INET;
+	ifa->if_addr.len = 4;
+	/* Yuck - hard coded address! */
+	ifa->if_addr.addr[0] = 192; 
+	ifa->if_addr.addr[1] = 168;
+	ifa->if_addr.addr[2] = 0;
+	ifa->if_addr.addr[3] = 133;
+
+	ifa->ifn = dev;
+	ifa->next = NULL;
+	if (dev->if_addrlist)
+		dev->if_addrlist->next = ifa;
+	else
+		dev->if_addrlist = ifa;
+
 	/* so far all devices will use this!! */
 	return 1;
 }

@@ -165,6 +165,24 @@ static void list_devices(void)
 		if (d->flags & IFF_MULTICAST)
 			printf(" MULTICAST");
 		printf("\n");
+		if (d->if_addrlist) {
+			ifaddr *ifa = d->if_addrlist;
+			printf("\t\t Addresses:\n");
+			while (ifa) {
+				printf("\t\t\t");
+				if (ifa->if_addr.type == AF_LINK) {
+					printf("Link Address: ");
+			                print_ether_addr((ether_addr*)&ifa->if_addr.addr);
+				}
+				if (ifa->if_addr.type == AF_INET) {
+					printf("IPv4: ");
+					print_ipv4_addr((ipv4_addr*)&ifa->if_addr.addr);
+				}
+				printf("\n");
+				ifa = ifa->next;
+			}
+		}
+
 		d = d->next; 
 	}
 }

@@ -204,7 +204,10 @@ int ether_dev_init(ifnet *dev)
 	ifa->if_addr.type = AF_LINK;
 	ifa->ifn = dev;
 	ifa->next = NULL;
-	dev->if_addrlist = ifa;
+	if (dev->if_addrlist)
+		dev->if_addrlist->next = ifa;
+	else
+		dev->if_addrlist = ifa;
 	/* also add link from dev->link_addr */
 	dev->link_addr = &ifa->if_addr;
 
