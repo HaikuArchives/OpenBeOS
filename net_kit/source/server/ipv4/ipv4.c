@@ -17,7 +17,6 @@
 #include "netinet/in_pcb.h"
 #include "protocols.h"
 #include "net_module.h"
-#include "mbuf.h"
 #include "sys/protosw.h"
 #include "sys/domain.h"
 
@@ -149,7 +148,7 @@ printf("ip_srcroute\n");
 	return m;
 }
 
-int ipv4_input(struct mbuf *m, int hdrlen)
+void ipv4_input(struct mbuf *m, int hdrlen)
 {
 	struct ip *ip;
 	struct in_ifaddr *ia = get_primary_addr();
@@ -161,7 +160,7 @@ int ipv4_input(struct mbuf *m, int hdrlen)
 	dump_ipv4_header(buf);
 #endif
 	if (!m)
-		return -1;
+		return;
 	/* If we don't have a pointer to our IP addresses we can't go on */
 	if (!ia)
 		goto bad;
@@ -171,9 +170,10 @@ int ipv4_input(struct mbuf *m, int hdrlen)
 	if (m->m_len < sizeof(struct ip) && 
 	    (m = m_pullup(m, sizeof(struct ip))) == NULL) {
 		ipstat.ips_toosmall++;
-		return -1;
+		return;
 	}
 	ip = mtod(m, struct ip *);
+
 
 	/* Check IP version... */
 	if (ip->ip_v != IPVERSION) {
@@ -232,7 +232,7 @@ int ipv4_input(struct mbuf *m, int hdrlen)
 	/* options processing */	
 	ip_nhops = 0;
 	if (hlen > sizeof(struct ip) && ip_dooptions(m))
-		return 0;
+		return;
 	
 	for (;ia; ia = ia->ia_next) {
 		if (IA_SIN(ia)->sin_addr.s_addr == ip->ip_dst.s_addr)
@@ -264,7 +264,7 @@ int ipv4_input(struct mbuf *m, int hdrlen)
 		m_freem(m);
 	}
 	/* XXX - Add ip_forward routine and call it here */
-	return -1;
+	return;
 ours:
 	/* If offset or IF_MF are set, datagram must be reassembled.
 	 * Otherwise, we don't need to do anything.
@@ -280,10 +280,10 @@ ours:
 		goto bad;
 	}
 	
-	return 0; 
+	return;
 bad:
 	m_freem(m);
-	return -1;
+	return;
 }
 
 int ipv4_output(struct mbuf *buf, struct mbuf *opt, struct route *ro,
