@@ -897,8 +897,8 @@ PDFWriter::DrawString(char *string, float deltax, float deltay)
 	} else {
 		// conversion failed, send unconverted string...
 		PDF_show(fPdf, string);
-		w = fState->beFont.StringWidth(string);
 	}
+	w = fState->beFont.StringWidth(string);
 
 	if (rotate) {
 		PDF_restore(fPdf);
