@@ -106,10 +106,12 @@ int uiomove(caddr_t cp, int n, struct uio *uio)
 
 int initsocket(void **sp)
 {
-	struct socket *so = (struct socket*)pool_get(spool);
-
+	struct socket *so;
+	
+	so = (struct socket*)pool_get(spool);
+	
 	if (so == NULL) {
-		printf("initsocket - no memory!!\n");
+		printf("initsocket: ENOMEM\n");
 		return ENOMEM;
 	}
 
@@ -127,7 +129,7 @@ int socreate(int dom, void *sp, int type, int proto)
 	int error;
 
 	if (so == NULL) {
-		printf("socket passed in was NULL!\n");
+		printf("socreate: EINVAL\n");
 		return EINVAL;
 	}
 	
@@ -136,11 +138,15 @@ int socreate(int dom, void *sp, int type, int proto)
 	else
 		prm = pffindtype(dom, type);
 
-	if (!prm || !prm->pr_userreq)
+	if (!prm || !prm->pr_userreq) {
+		printf("socreate: EPROTONOSUPPORT\n");
 		return EPROTONOSUPPORT;
+	}
 	
-	if (prm->pr_type != type)
+	if (prm->pr_type != type) {
+		printf("socreate: EPROTOTYPE\n");
 		return EPROTOTYPE;
+	}
 	
 	so->so_type = type;
 	so->so_proto = prm;
@@ -177,6 +183,7 @@ int soreserve(struct socket *so, uint32 sndcc, uint32 rcvcc)
 bad2:
 	sbrelease(&so->so_snd);
 bad:
+	printf("soreserve: ENOBUFS\n");
 	return (ENOBUFS);
 }
 
@@ -184,20 +191,23 @@ bad:
 int sobind(void *sp, caddr_t data, int len)
 {
 	int error;
-	struct mbuf *nam = m_get(MT_DATA);
+	struct mbuf *nam;
 	struct socket *so = (struct socket*)sp;
 
-	if (!nam)
+	nam = m_get(MT_SONAME);
+	if (!nam) {
+		printf("sobind: ENOMEM\n");
 		return ENOMEM;
+	}
 
 	nam->m_len = len;
 	memcpy(mtod(nam, char*), data, len);
 
-/* xxx - locking! */
+	/* xxx - locking! */
 	error = (*so->so_proto->pr_userreq) (so, PRU_BIND, NULL, nam, NULL);
-	
+
 	m_freem(nam);
-	
+
 	return error;
 }
 
@@ -221,13 +231,21 @@ int solisten(void *sp, int backlog)
         return 0;
 }
 
-int soconnect(void *sp, struct mbuf *nam)
+int soconnect(void *sp, caddr_t data, int len)
 {
 	struct socket *so = (struct socket *)sp;
+	struct mbuf *nam = m_get(MT_SONAME);
 	int error;
+
+	if (!nam)
+		return ENOMEM;
 
 	if (so->so_options & SO_ACCEPTCONN)
 		return (EOPNOTSUPP);
+
+	nam->m_len = len;
+	memcpy(mtod(nam, char*), data, len);
+
 	/*
 	 * If protocol is connection-based, can only connect once.
 	 * Otherwise, if connected, try to disconnect first.
@@ -736,12 +754,14 @@ int soo_ioctl(void *sp, int cmd, caddr_t data)
 
 	switch (cmd) {
 		case FIONBIO:
+			printf("soo_ioctl: FIONBIO\n");
 			if (*(int*)data)
 				so->so_state |= SS_NBIO;
 			else
 				so->so_state &= ~SS_NBIO;
 			return 0;
 		case FIONREAD:
+			printf("soo_ioctl: FIONREAD\n");
 			/* how many bytes do we have waiting... */
 			*(int*)data = so->so_rcv.sb_cc;
 			return 0;
@@ -821,7 +841,8 @@ void sofree(struct socket *so)
 	}
 	
 	delete_sem(so->so_rcv.sb_pop);
-
+	delete_sem(so->so_timeo);
+	
 	pool_put(spool, so);
 
 	return;
@@ -927,11 +948,6 @@ void soisdisconnected(struct socket *so)
 int nsleep(sem_id chan, char *msg, int timeo)
 {
 	status_t rv;
-/* XXX - OK, this is no longer supported, how do we do this then?
-#ifdef _KERNEL_MODE
-	struct thread_rec str;
-#endif
-*/
 	printf("nsleep: %s\n", msg);
 
 	if (timeo > 0)
@@ -941,14 +957,9 @@ int nsleep(sem_id chan, char *msg, int timeo)
 
 	if (rv == B_TIMED_OUT)
 		return EWOULDBLOCK;
-/* ???
-#ifdef _KERNEL_MODE
-	if (has_sigal_pending(&str) == 0)
-		return 0;
-	// we should check the signal mask here... 
-#endif
-*/
-	return EINTR;
+	if (rv == B_INTERRUPTED)
+		return EINTR;
+	return 0;
 }
 
 void wakeup(sem_id chan)
