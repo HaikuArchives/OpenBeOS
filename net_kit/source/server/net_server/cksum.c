@@ -4,7 +4,6 @@
 #include <KernelExport.h>
 #endif
 
-#include "mbuf.h"
 #include "net_misc.h"
 
 /* This from Stevens Vol.2 */

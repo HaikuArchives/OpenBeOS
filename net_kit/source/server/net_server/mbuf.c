@@ -2,17 +2,15 @@
  * network buffer implementation
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <kernel/OS.h>
 #include <string.h>
 
-#include "mbuf.h"
+#include "net_misc.h"
 #include "pools.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#define printf dprintf
 #endif
 
 #define MBUF_ALLOCSIZE		4096

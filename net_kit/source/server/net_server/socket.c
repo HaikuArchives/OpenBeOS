@@ -18,7 +18,6 @@
 #include "net_module.h"
 #include "net_misc.h"
 #include "protocols.h"
-#include "mbuf.h"
 #include "sys/net_uio.h"
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
@@ -723,7 +722,7 @@ bad:
 		(*pr->pr_userreq)(so, PRU_RCVD, NULL, NULL, NULL);
 		
 restart:
-	if (error = sblock(&so->so_rcv, SBLOCKWAIT(flags)))
+	if ((error = sblock(&so->so_rcv, SBLOCKWAIT(flags))))
 		return error;
 	m = so->so_rcv.sb_mb;
 	/*
@@ -1019,9 +1018,9 @@ int sorflush(struct socket *so)
 	struct sockbuf asb;
 
 	sb->sb_flags |= SB_NOINTR;
-//	sblock(sb);
+	sblock(sb, M_WAITOK);
 	socantrcvmore(so);
-//	sbunlock(sb);
+	sbunlock(sb);
 	asb = *sb;
 	memset(sb, 0, sizeof(*sb));
 	

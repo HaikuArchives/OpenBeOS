@@ -14,7 +14,6 @@
 #include "net_module.h"
 #include "net_misc.h"
 #include "protocols.h"
-#include "mbuf.h"
 
 uint32 sb_max = SB_MAX; /* hard value, recompile needed to alter :( */
 

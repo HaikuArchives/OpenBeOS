@@ -10,7 +10,6 @@
 #endif
 
 #include "pools.h"
-#include "mbuf.h"
 #include "sys/socketvar.h"
 #include "netinet/in.h"
 #include "netinet/in_pcb.h"

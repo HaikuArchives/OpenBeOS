@@ -6,7 +6,7 @@
 #define OBOS_CORE_MODULE_H
 
 #include <module.h>
-#include "mbuf.h"
+#include "sys/mbuf.h"
 #include "sys/protosw.h"
 #include "sys/socketvar.h"
 #include "netinet/in_pcb.h"
