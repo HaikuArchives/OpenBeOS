@@ -1,6 +1,6 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=arp
-CFLAGS=-Wall -g -O0 -fPIC -DPIC -nostart
+CFLAGS=-Wall -g -O2 -fPIC -DPIC -nostart
 LOBJS=../util/nhash.o ../util/misc.o
 LDFLAGS=../_APP_
 

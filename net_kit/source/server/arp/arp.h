@@ -17,10 +17,13 @@ enum {
 	RARP_RPLY
 };
 
+/* These are used by the arp lookup queue structures */
 enum {
 	ARP_WAITING,
 	ARP_COMPLETE
 };
+
+#define USECS_PER_SEC		1000000
 
 /* split the arp header into 2 ytpes in case we have different hardware
  * types we want to use the cache!

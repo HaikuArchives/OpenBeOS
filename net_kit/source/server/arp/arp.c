@@ -14,29 +14,42 @@
 #include "nhash.h"
 #include "pools.h"
 #include "net_misc.h"
+#include "net_timer.h"
 
 loaded_net_module *global_modules;
 int *prot_table;
+
+/* arp cache */
 static net_hash *arphash;
 static arp_cache_entry *arpcache;
 static pool_ctl *arpp;
+static sem_id arpc_lock;
+
+/* arp queue */
 static sem_id arpq_lock;
 static arp_q_entry *arp_lookup_q; 
+
 /* these are in seconds... */
 static int arp_prune = 300; 	/* time interval we prune the arp cache? 5 minutes */
 static int arp_keep  = 1200;	/* length of time we keep entries... (20 mins) */
-static int arp_noflood = 1200;	/* seconds between arp flooding */
+static int arp_noflood = 20;	/* seconds between arp flooding (20 secs) */
+static int arp_maxtries = 5;    /* max tries before a pause */
 
 /* stats */
-static int arp_inuse = 0;	/* how many entries do we have? */
-static int arp_allocated = 0;	/* how many arp entries have we created? */
-static int arp_maxtries = 5;	/* max tries before a pause */
+static int32 arp_inuse = 0;	/* how many entries do we have? */
+static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 
 #if SHOW_DEBUG
 void walk_arp_cache(void)
 {
 	arp_cache_entry *c = arpcache;
 	int i = 1;
+
+	printf( "Arp Cache\n"
+		"=========\n\n"
+		"Total allocations : %ld\n"
+		"Current entries   : %ld\n\n",
+		arp_allocated, arp_inuse);
 
 	while (c) {
 		printf("%2d: ", i++);
@@ -105,7 +118,9 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 	ace->ll_addr.sa_family = lf;
 	ace->ll_addr.sa_len = alen;
 	memcpy(&ace->ll_addr.sa_data, link, alen);
-	ace->expires = system_time() + (arp_keep * 1000000);
+	ace->expires = real_time_clock_usecs() + (arp_keep * USECS_PER_SEC);
+
+	acquire_sem(arpc_lock);
 	if (arpcache) {
 		arpcache->prev->next = ace;
  		ace->prev = arpcache->prev;
@@ -118,7 +133,14 @@ static int insert_cache_entry(void *link, int lf, void *addr, int af)
 	}
 
 	nhash_set(arphash, &ace->ip_addr.sa_data, ace->ip_addr.sa_len, (void*)ace);
-	/* this is handy! */
+	release_sem(arpc_lock);
+
+	/* thes should be oK outside the sem locked area as we use atomic_add and
+	 * we don't reference them in many places...
+	 */
+	atomic_add(&arp_inuse, 1);
+	atomic_add(&arp_allocated, 1);
+
 #if SHOW_DEBUG
 	walk_arp_cache();
 #endif
@@ -173,6 +195,10 @@ int arp_input(struct mbuf *buf)
 							res.sa_len = 6;
 							memcpy(&res.sa_data, &arp->sender, 6);
 							aqe->callback(ARP_LOOKUP_OK, aqe->buf, &res);
+							/* Don't worry about removing it, just set the status
+							 * and let the next pass of arpq_run remove it
+							 * for us. Less overhead.
+							 */
 							aqe->status = ARP_COMPLETE;
 						}
 						aqe = aqe->next;
@@ -189,31 +215,32 @@ int arp_input(struct mbuf *buf)
 	return 0;
 }
 
-static void arp_send_request(arp_q_entry *aqe, struct sockaddr *tgt)
+static void arp_send_request(arp_q_entry *aqe)
 {
 	struct mbuf *buf = m_gethdr(MT_DATA);
 	ether_arp *arp;
 	struct sockaddr ether;
+
+	if (!aqe->tgt || !aqe->buf->m_pkthdr.rcvif)
+		return;
+
+	if (aqe->tgt->sa_family != AF_INET) {
+		m_freem(buf);
+		return;
+	}
 
 	m_reserve(buf, 16);
 	arp =  mtod(buf, ether_arp*);
 
 	arp->arp_ht = htons(1);
 	arp->arp_hsz = 6;
-
-	if (tgt->sa_family != AF_INET) {
-		printf("target type doesn't agree with IPv4, 
-			killing packet %p\n", buf);
-		m_freem(buf);
-		return;
-	}
 	arp->arp_pro = htons(ETHER_IPV4);
 	arp->arp_psz = 4;
-
 	arp->arp_op = htons(ARP_RQST);
 	arp->sender_ip = *paddr(aqe->buf->m_pkthdr.rcvif, AF_INET, ipv4_addr*);
-	arp->target_ip = *(ipv4_addr*)&tgt->sa_data;
+	arp->target_ip = *(ipv4_addr*)&aqe->tgt->sa_data;
 
+	/* we send to the broadcast address, ff:ff:ff:ff:ff:ff */
 	memset(&ether.sa_data, 0xff, 6);
 	ether.sa_family = AF_LINK;
 	ether.sa_len = 6;
@@ -221,12 +248,106 @@ static void arp_send_request(arp_q_entry *aqe, struct sockaddr *tgt)
 	memcpy(&arp->sender, &aqe->buf->m_pkthdr.rcvif->link_addr->sa_data, 6);
 	memset(&arp->target, 0, 6);
 
+	/* setup buf details... */
 	buf->m_flags |= M_BCAST;
 	buf->m_pkthdr.len = 28;
+
 	/* send request on same interface we'll send packet */
 	buf->m_pkthdr.rcvif = aqe->buf->m_pkthdr.rcvif;
+
+	/* update the queue details... */
 	aqe->status = ARP_WAITING;
+	aqe->lasttx = real_time_clock_usecs();
+	aqe->attempts++;
+
 	global_modules[prot_table[NS_ETHER]].mod->output(buf, NS_ARP, &ether);
+}
+
+static void arp_cleanse(void *data)
+{
+	arp_cache_entry *ace = arpcache;
+	arp_cache_entry *temp;
+
+	acquire_sem(arpc_lock);
+	while (ace) {
+		if (ace->expires <= real_time_clock_usecs()) {
+			/* we've expired... */
+			/* XXX - can this be tidied up??? */
+			if (ace->next != ace) {
+				ace->prev->next = ace->next;
+				ace->next->prev = ace->prev;
+			} else {
+				/* we're probably the only entry... */
+				ace->next = NULL;
+			}
+			if (ace == arpcache)
+				arpcache = ace->next;
+
+			temp = ace;
+			ace = ace->next;
+
+			/* remove from hash table */
+			nhash_set(arphash, &temp->ip_addr.sa_data, 
+				temp->ip_addr.sa_len, NULL);
+			pool_put(arpp, ace);
+			atomic_add(&arp_inuse, -1);
+			continue;
+		}
+		ace = ace->next;
+		if (ace == arpcache)
+			break;
+	}
+	release_sem(arpc_lock);
+#if SHOW_DEBUG
+	printf("ARP: cache has been cleaned\n");
+	walk_arp_cache();
+#endif
+}
+
+static void arpq_run(void *data)
+{
+	arp_q_entry *aqe = arp_lookup_q;
+	arp_q_entry *temp;
+
+	/* if the q is empty, don't bother locking etc, just return */
+	if (!arp_lookup_q)
+		return;
+
+	acquire_sem(arpq_lock);
+	while (aqe) {
+		if (aqe->status == ARP_COMPLETE) {
+			temp = aqe;
+			aqe = aqe->next;
+			if (temp == arp_lookup_q)
+				arp_lookup_q = aqe;
+			free(temp);
+			continue;
+		}
+		/* OK, so we're not yet done...*/
+		/* is it time to send again? */
+		if (aqe->lasttx < real_time_clock_usecs() - arp_noflood * USECS_PER_SEC) {
+			if (aqe->attempts++ > arp_maxtries) {
+				/* No! we've run out of tries. */
+				aqe->callback(ARP_LOOKUP_FAILED, aqe->buf, aqe->tgt);
+				temp = aqe;
+				aqe = aqe->next;
+				if (temp == arp_lookup_q)
+					arp_lookup_q = aqe;
+				free(temp);
+				continue;
+			}
+			/* yes, send another request */
+			arp_send_request(aqe);
+		}
+
+		aqe = aqe->next;
+
+	}
+	release_sem(arpq_lock);
+
+//#if SHOW_DEBUG
+	printf("ARP: lookup queue was run.\n");
+//#endif
 }
 
 int arp_init(loaded_net_module *ln, int *pt)
@@ -245,7 +366,19 @@ int arp_init(loaded_net_module *ln, int *pt)
 		}
 	}
 	arpcache = NULL;
+	arp_lookup_q = NULL;
 	arpq_lock = create_sem(1, "arp_q_lock");
+	arpc_lock = create_sem(1, "arp cache lock");
+
+	/* now, start the cleanser... */
+	net_add_timer(&arp_cleanse, NULL, arp_prune * USECS_PER_SEC);
+
+/* XXX - would we be better to onyl add this when we have a q and remove it when
+ *       the q was completed? It'd impose less overhead for sure...
+ */
+
+	/* now add the arp_q run function... */
+	net_add_timer(&arpq_run, NULL, arp_noflood * USECS_PER_SEC);
 
 	return 0;
 }
@@ -259,7 +392,7 @@ int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 			tgt->sa_len);
 
 	if (ace) {
-		ace->expires = system_time() + (arp_keep * 1000000);
+		ace->expires = real_time_clock_usecs() + (arp_keep * USECS_PER_SEC);
 		memcpy(tgt, &ace->ll_addr, sizeof(struct sockaddr));
 		return ARP_LOOKUP_OK;
 	}
@@ -282,7 +415,7 @@ int arp_lookup(struct mbuf *buf, struct sockaddr *tgt, void *callback)
 		if (arp_lookup_q)
 			aqe->next = arp_lookup_q;
 		arp_lookup_q = aqe;
-		arp_send_request(aqe, tgt);
+		arp_send_request(aqe);
 	}
 	release_sem(arpq_lock);
 
