@@ -5,128 +5,10 @@
  ***********************************************************************/
 #include <BufferGroup.h>
 #include <Buffer.h>
+#include <Message.h>
 #include "debug.h"
+#include "SharedBufferList.h"
 
-/*************************************************************
- * _shared_buffer_list
- *************************************************************/
-
-#define MAX_BUFFER 256 // this is probably evil
-
-struct _shared_buffer_info
-{
-	media_buffer_id id;
-	team_id 		team;
-	BBuffer *		buffer;
-	BBufferGroup *	group;
-	bool 			reclaimed;
-};
-
-// created in the media server, cloned into 
-// each BBufferGroup (visible in all address spaces / teams)
-struct _shared_buffer_list
-{
-	sem_id		locker_sem;
-	int32		locker_atom;
-
-	sem_id		recycled_sem;
-	
-	_shared_buffer_info info[MAX_BUFFER];
-	
-	void 		AddBuffer(BBuffer *buffer);
-	
-		
-	status_t 	Init();
-
-	static _shared_buffer_list *Clone(area_id id = -1);
-	void 		Terminate();
-
-	void 		Lock();
-	void 		Unlock();
-	
-};
-
-status_t
-_shared_buffer_list::Init()
-{
-	locker_atom = 0;
-	locker_sem = create_sem(0,"shared buffer list lock");
-	recycled_sem = create_sem(0,"shared buffer free count");
-	for (int i = 0; i < MAX_BUFFER; i++) {
-		info.id = -1;
-		info.team = 0;
-		info.buffer = 0;
-		info.group = 0;
-		info.reclaimed = false;
-	}
-	
-	return B_OK;
-}
-
-_shared_buffer_list *
-_shared_buffer_list::Clone(area_id id)
-{
-	// if id == -1, we are in the media_server team, 
-	// and create the initial list, else we clone it
-
-	_shared_buffer_list *adr;
-	status_t status;
-
-	if (id == -1) {
-		size_t size = ((sizeof(_shared_buffer_list)) + (B_PAGE_SIZE - 1)) & ~(B_PAGE_SIZE - 1);
-		status = create_area("shared buffer list",(void **)&adr,B_ANY_KERNEL_ADDRESS,size,B_LAZY_LOCK,B_READ_AREA | B_WRITE_AREA);
-		if (status >= B_OK) {
-			status = adr->Init();
-			if (status != B_OK)
-				delete_area(area_for(adr));
-		}
-	} else {
-		status = clone_area("shared buffer list clone",(void **)&adr,B_ANY_KERNEL_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
-	}
-	
-	return (status < B_OK) ? NULL : adr;
-}
-
-void
-_shared_buffer_list::Terminate()
-{
-	area_id id;
-	id = area_for(this);
-	if (id >= B_OK)
-		delete_area(id);
-}
-
-void 
-_shared_buffer_list::Lock()
-{ 
-	if (atomic_add(&locker_atom, 1) > 0)
-		while (B_INTERRUPTED == acquire_sem(locker_sem))
-			;
-}
-
-void
-_shared_buffer_list::Unlock()
-{ 
-	if (atomic_add(&locker_atom, -1) > 1)
-		release_sem(locker_sem);
-}
-
-void
-_shared_buffer_list::AddBuffer(BBuffer *buffer)
-{
-	Lock();
-	Unlock();
-}
-
-
-
-/*************************************************************
- * _buffer_id_cache
- *************************************************************/
-
-class _buffer_id_cache
-{
-};
 
 /*************************************************************
  * private BBufferGroup
@@ -137,9 +19,15 @@ BBufferGroup::InitBufferGroup()
 {
 	area_id id;
 
-	//ask media_server to get the area_id of the shared buffer list
-	id = 0;
+	// first ask media_server to get the area_id of the shared buffer list
+	id = 0; // XXX
 
+	fReclaimSem = create_sem(0,"buffer reclaim sem");
+	if (fReclaimSem < B_OK) {
+		fInitError = (status_t)fReclaimSem;
+		return fInitError;
+	}
+	
 	fRequestError = B_OK;
 	fBufferCount = 0;
 	fBufferList = _shared_buffer_list::Clone(id);
@@ -147,6 +35,7 @@ BBufferGroup::InitBufferGroup()
 
 	return fInitError;
 }
+
 
 /*************************************************************
  * public BBufferGroup
@@ -157,12 +46,6 @@ BBufferGroup::BBufferGroup(size_t size,
 						   uint32 placement,
 						   uint32 lock)
 {
-	void *start_addr;
-	area_id buffer_area;
-	size_t area_size;
-	buffer_clone_info bci;
-	BBuffer *buffer;
-
 	CALLED();
 	if (InitBufferGroup() != B_OK)
 		return;
@@ -173,6 +56,12 @@ BBufferGroup::BBufferGroup(size_t size,
 	// The BBuffers created will clone the area, and
 	// then we delete our area. This way BBuffers are
 	// independent from the BBufferGroup
+
+	void *start_addr;
+	area_id buffer_area;
+	size_t area_size;
+	buffer_clone_info bci;
+	BBuffer *buffer;
 
 	// don't allow all placement parameter values
 	if (placement != B_ANY_ADDRESS && placement != B_ANY_KERNEL_ADDRESS) {
@@ -207,7 +96,7 @@ BBufferGroup::BBufferGroup(size_t size,
 			fInitError = B_ERROR;
 			break;
 		}
-		fBufferList->AddBuffer(buffer);
+		fBufferList->AddBuffer(fReclaimSem,buffer);
 	}
 
 	delete_area(buffer_area);
@@ -248,7 +137,7 @@ BBufferGroup::BBufferGroup(int32 count,
 			fInitError = B_ERROR;
 			break;
 		}
-		fBufferList->AddBuffer(buffer);
+		fBufferList->AddBuffer(fReclaimSem,buffer);
 	}
 }
 
@@ -256,7 +145,9 @@ BBufferGroup::BBufferGroup(int32 count,
 BBufferGroup::~BBufferGroup()
 {
 	CALLED();
-	fBufferList->Terminate();
+	if (fBufferList)
+		fBufferList->Terminate(fReclaimSem);
+	delete_sem(fReclaimSem);
 }
 
 
@@ -273,6 +164,9 @@ BBufferGroup::AddBuffer(const buffer_clone_info &info,
 						BBuffer **out_buffer)
 {
 	CALLED();
+	if (fInitError != B_OK)
+		return B_NO_INIT;
+
 	BBuffer *buffer;	
 	buffer = new BBuffer(info);
 	if (0 == buffer->Data()) {
@@ -281,7 +175,9 @@ BBufferGroup::AddBuffer(const buffer_clone_info &info,
 		delete buffer;
 		return B_ERROR;
 	}
-	fBufferList->AddBuffer(buffer);
+	fBufferList->AddBuffer(fReclaimSem,buffer);
+	atomic_add(&fBufferCount,1);
+	
 	if (out_buffer != 0)
 		*out_buffer = buffer;
 
@@ -293,8 +189,21 @@ BBuffer *
 BBufferGroup::RequestBuffer(size_t size,
 							bigtime_t timeout)
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	if (fInitError != B_OK)
+		return NULL;
+
+	if (size <= 0)
+		return NULL;
+		
+	BBuffer *buffer;
+	status_t status;
+
+	buffer = NULL;
+	status = fBufferList->RequestBuffer(fReclaimSem, fBufferCount, size, 0, &buffer, timeout);
+	fRequestError = status;
+		
+	return (status == B_OK) ? buffer : NULL;
 }
 
 
@@ -302,10 +211,18 @@ status_t
 BBufferGroup::RequestBuffer(BBuffer *buffer,
 							bigtime_t timeout)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
+	CALLED();
+	if (fInitError != B_OK)
+		return B_NO_INIT;
+	
+	if (buffer == NULL)
+		return B_BAD_VALUE;
 
-	return dummy;
+	status_t status;
+	status = fBufferList->RequestBuffer(fReclaimSem, fBufferCount, 0, 0, &buffer, timeout);
+	fRequestError = status;
+		
+	return status;
 }
 
 
@@ -313,6 +230,9 @@ status_t
 BBufferGroup::RequestError()
 {
 	CALLED();
+	if (fInitError != B_OK)
+		return B_NO_INIT;
+
 	return fRequestError;
 }
 
@@ -322,7 +242,7 @@ BBufferGroup::CountBuffers(int32 *out_count)
 {
 	CALLED();
 	if (fInitError != B_OK)
-		return fInitError;
+		return B_NO_INIT;
 
 	*out_count = fBufferCount;
 	return B_OK;
@@ -333,10 +253,14 @@ status_t
 BBufferGroup::GetBufferList(int32 buf_count,
 							BBuffer **out_buffers)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
+	CALLED();
+	if (fInitError != B_OK)
+		return B_NO_INIT;
+		
+	if (buf_count <= 0 || buf_count > fBufferCount)
+		return B_BAD_VALUE;
 
-	return dummy;
+	return fBufferList->GetBufferList(fReclaimSem,buf_count,out_buffers);
 }
 
 
@@ -344,7 +268,28 @@ status_t
 BBufferGroup::WaitForBuffers()
 {
 	CALLED();
-	return B_OK;
+	if (fInitError != B_OK)
+		return B_NO_INIT;
+
+	// XXX this function is not really useful anyway, and will 
+	// XXX not work exactly as documented, but it is close enough
+
+	if (fBufferCount <= 0)
+		return B_BAD_VALUE;
+
+	// we need to wait until at least one buffer belonging to this group is reclaimed.
+	// this has happened when can aquire "fReclaimSem"
+
+	status_t status;
+	while (B_INTERRUPTED == (status = acquire_sem(fReclaimSem)))
+		;
+	
+	if (status != B_OK) // some error happened
+		return status;
+		
+	// we need to release the "fReclaimSem" now, else we would block requesting of new buffers
+
+	return release_sem(fReclaimSem);
 }
 
 
@@ -352,23 +297,33 @@ status_t
 BBufferGroup::ReclaimAllBuffers()
 {
 	CALLED();
-	status_t dummy;
+	if (fInitError != B_OK)
+		return B_NO_INIT;
 
-	return dummy;
+	// because additional BBuffers might get added to this group betweeen acquire and release		
+	int32 count = fBufferCount;
+
+	if (count <= 0)
+		return B_BAD_VALUE;
+
+	// we need to wait until all BBuffers belonging to this group are reclaimed.
+	// this has happened when the "fReclaimSem" can be aquired "fBufferCount" times
+
+	status_t status;
+	while (B_INTERRUPTED == (status = acquire_sem_etc(fReclaimSem, count, 0, 0)))
+		;
+	
+	if (status != B_OK) // some error happened
+		return status;
+		
+	// we need to release the "fReclaimSem" now, else we would block requesting of new buffers
+
+	return release_sem_etc(fReclaimSem, count, 0);
 }
 
 /*************************************************************
  * private BBufferGroup
  *************************************************************/
-
-/* static */ status_t
-BBufferGroup::_entry_reclaim(void *)
-{
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
-}
 
 /* not implemented */
 /*
@@ -377,91 +332,37 @@ BBufferGroup & BBufferGroup::operator=(const BBufferGroup &)
 */
 
 status_t
-BBufferGroup::IBufferGroup()
+BBufferGroup::AddBuffersTo(BMessage * message, const char * name, bool needLock)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
+	CALLED();
+	if (fInitError != B_OK)
+		return B_NO_INIT;
+	
+	// BeOS R4 legacy API. Implemented as a wrapper around GetBufferList
+	// "needLock" is ignored, GetBufferList will do locking
 
-	return dummy;
+	if (message == NULL)
+		return B_BAD_VALUE;
+
+	if (name == NULL || strlen(name) == 0)
+		return B_BAD_VALUE;
+	
+	BBuffer ** buffers;
+	status_t status;
+	int32 count;
+	
+	count = fBufferCount;
+	buffers = new BBuffer * [count];
+	
+	if (B_OK != (status = GetBufferList(count,buffers)))
+		goto end;
+		
+	for (int32 i = 0; i < count; i++)
+		if (B_OK != (status = message->AddInt32(name,int32(buffers[i]->ID()))))
+			goto end;
+	
+end:
+	delete buffers;
+	return status;
 }
-
-
-status_t
-BBufferGroup::AddToList(BBuffer *buffer)
-{
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
-}
-
-
-status_t
-BBufferGroup::AddBuffersTo(BMessage *message,
-						   const char *name,
-						   bool needLock)
-{
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
-}
-
-
-status_t
-BBufferGroup::_RequestBuffer(size_t size,
-							 media_buffer_id wantID,
-							 BBuffer **buffer,
-							 bigtime_t timeout)
-{
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
-}
-
-
-void
-BBufferGroup::SetOwnerPort(port_id owner)
-{
-	UNIMPLEMENTED();
-}
-
-
-bool
-BBufferGroup::CanReclaim()
-{
-	UNIMPLEMENTED();
-	bool dummy;
-
-	return dummy;
-}
-
-
-void
-BBufferGroup::WillReclaim()
-{
-	UNIMPLEMENTED();
-}
-
-
-status_t
-BBufferGroup::Lock()
-{
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
-}
-
-
-status_t
-BBufferGroup::Unlock()
-{
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
-}
-
 
