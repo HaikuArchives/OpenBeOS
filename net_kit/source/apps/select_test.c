@@ -16,7 +16,8 @@ int main(int argc, char **argv)
 	int rv;
 	struct fd_set fdr, fdw, fde;
 	struct timeval tv;
-
+	int32 rtc;
+	
 	test_banner("Select test");
 			
 	s = socket(AF_INET, SOCK_DGRAM, 0);
@@ -30,17 +31,33 @@ int main(int argc, char **argv)
 	FD_ZERO(&fde);
 	FD_SET(s, &fde);
 	
-	tv.tv_sec = 1;
+	tv.tv_sec = 5;
 	tv.tv_usec = 0;
 	
-	printf("Trying with timeval...\n");
-	rv = select(s + 1, &fdr, &fdw, &fde, &tv);
-	printf("select gave %d\n", rv);
+	printf("Trying with timeval (5 secs)...\n");
+	rtc = real_time_clock();
+	rv = select(s + 1, &fdr, NULL, &fde, &tv);
+	rtc = real_time_clock() - rtc;
+	printf("select gave %d in %ld seconds\n", rv, rtc);
+
+	FD_ZERO(&fdr);
+	FD_SET(s, &fdr);
+	FD_ZERO(&fdw);
+	FD_SET(s, &fdw);
+	FD_ZERO(&fde);
+	FD_SET(s, &fde);
 	
 	printf("Trying without timeval (= NULL)\n");
 	rv = select(s +1, &fdr, &fdw, &fde, NULL);
 	printf("select gave %d\n", rv);
 	
+	if (FD_ISSET(s, &fdr))
+		printf("Data to read\n");
+	if (FD_ISSET(s, &fdw))
+		printf("OK to write\n");
+	if (FD_ISSET(s, &fde))
+		printf("Exception!\n");
+		
 	closesocket(s);
 	
 	printf("Test complete.\n");
