@@ -30,10 +30,9 @@ public:
 	void DrawFrame(void);
 	void CalculateBorders(void);
 
-	bool zoomstate;
-	bool closestate;
 	uint32 taboffset;
 	rgb_color blue,blue2,black,gray,white,yellow;
+	rgb_color ltyellow,mdyellow, dkyellow;
 	BRect zoomrect,closerect,tabrect,frame,
 		resizerect,borderrect;
 };

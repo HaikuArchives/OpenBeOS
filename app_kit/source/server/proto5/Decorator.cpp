@@ -85,6 +85,21 @@ void Decorator::SetMinimizeButton(bool down)
 {
 }
 
+bool Decorator::GetCloseButton(void) const
+{
+	return closestate;
+}
+
+bool Decorator::GetZoomButton(void) const
+{
+	return zoomstate;
+}
+
+bool Decorator::GetMinimizeButton(void) const
+{
+	return minstate;
+}
+
 void Decorator::Draw(BRect update)
 {
 }
@@ -116,4 +131,3 @@ void Decorator::DrawMinimize(BRect r)
 void Decorator::CalculateBorders(void)
 {
 }
-

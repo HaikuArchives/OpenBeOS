@@ -39,6 +39,9 @@ public:
 	virtual void SetCloseButton(bool down);
 	virtual void SetZoomButton(bool down);
 	virtual void SetMinimizeButton(bool down);
+	bool GetCloseButton(void) const;
+	bool GetZoomButton(void) const;
+	bool GetMinimizeButton(void) const;
 	virtual void Draw(BRect update);
 	virtual void Draw(void);
 	virtual void DrawTab(void);
@@ -54,6 +57,7 @@ protected:
 	BRect bsize;
 	uint32 look;
 	bool focused;
+	bool zoomstate, closestate, minstate;
 	DisplayDriver *driver;
 };
 
