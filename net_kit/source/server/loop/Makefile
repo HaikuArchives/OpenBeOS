@@ -1,13 +1,30 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=loop
-CFLAGS=-Wall -g -O2 -fPIC -DPIC -nostart
+CFLAGS+=-nostart
 LOBJS=../util/misc.o
 LDFLAGS=../_APP_
+OBJS=loop.o
+
+KCFLAGS=-nostart -no-fpic -D_KERNEL_MODE
+KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 
 all:	$(TARGET)
 
-clean:
-	@if test -e ../modules/$(TARGET); then rm ../modules/$(TARGET); fi
+kernel:
+	$(CC) $(KCFLAGS) $(INCLUDES) -c loop.c
+	$(CC) $(KLDFLAGS) -o loop loop.o
 
-$(TARGET):
-	@$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $(LOBJS) -o ../modules/$(TARGET) $(TARGET).c
+installkernel:	kernel
+	cp loop /boot/home/config/add-ons/kernel/network/interface/loop
+
+clean:
+	@if test -e ../modules/interface/$(TARGET); then \
+	rm ../modules/interface/$(TARGET) *.o; \
+	fi
+	@if test -e $(TARGET); then rm $(TARGET) *.o ; fi
+
+$(TARGET): $(OBJS)
+	$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o ../modules/interface/$(TARGET)
+
+.c.o:
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
