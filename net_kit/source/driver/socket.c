@@ -89,8 +89,7 @@ status_t init_driver (void)
 	/* switch on/off at top of file */
 	/* XXX ??? - do we need this here? */
 	set_dprintf_enabled(true);
-	rv = load_driver_symbols("net/socket");
-	dprintf("load-driver_symbols gave %d\n", rv);
+//	rv = load_driver_symbols("net/socket");
 #endif
 
 	rv = get_module(CORE_MODULE_PATH, (module_info **)&core);
@@ -186,7 +185,7 @@ static status_t net_socket_control(void *cookie,
 #if SHOW_INSANE_DEBUGGING
 	dprintf("socket_driver: net_socket_control: \n");
 #endif
-dprintf("net_socket_control: op = %ld (%d)\n", op, NET_SOCKET_CREATE);
+
 	switch (op) {
 		case NET_SOCKET_CREATE: {
 			struct socket_args *sa = (struct socket_args*)data;
@@ -248,7 +247,6 @@ dprintf("net_socket_control: op = %ld (%d)\n", op, NET_SOCKET_CREATE);
 		{
 			struct msghdr *mh = (struct msghdr *)data;
 			int retsize, error;
-			printf("NET_SOCKET_SENDTO\n");
 
 			error = core->sendit(cookie, mh, mh->msg_flags, 
 			                     &retsize);
@@ -292,7 +290,6 @@ static status_t net_socket_read(void *cookie,
 	struct iovec iov;
 	int error;
 	int flags;
-	dprintf("net_socket_read\n");
 	
 	iov.iov_base = buffer;
 	iov.iov_len = *readlen;
@@ -312,7 +309,6 @@ static status_t net_socket_write(void *cookie,
 {
 	struct iovec iov;
 	int error;
-	dprintf("net_socket_write\n");
 	
 	iov.iov_base = (void*)buffer;
 	iov.iov_len = *writelen;
@@ -331,9 +327,6 @@ static status_t net_socket_select(void *cookie,
 {
 	int rv = 0;
 	dprintf("net_socket_select!\n");
-	dprintf("\tevent = %d\n", event);
-	dprintf("\tref = %ld\n", ref);;
-	dprintf("\tsync = %p\n", sync);
 	
 	rv = core->soselect(cookie, event, ref, sync);
 	dprintf("soselect gave %d\n", rv);
@@ -345,9 +338,8 @@ static status_t net_socket_deselect(void *cookie,
                                     selectsync *sync)
 {
 	dprintf("net_socket_deselect!\n");
-	dprintf("event = %d\n", event);
-	dprintf("sync = %p\n", sync);
 
+	return core->sodeselect(cookie, event, sync);
 	return B_OK;
 }
 
