@@ -111,7 +111,7 @@ public:
 
 //	virtual status_t GetSize(off_t *size) const;
 
-	//! Assigns another file to this BFile.
+	//! Assigns another BFile to this BFile.
 	BFile &operator=(const BFile &file);
 
 private:
