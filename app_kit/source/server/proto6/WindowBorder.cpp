@@ -15,6 +15,7 @@
 #endif
 
 bool is_moving_window=false;
+bool is_resizing_window=false;
 WindowBorder *activeborder=NULL;
 
 WindowBorder::WindowBorder(ServerWindow *win, const char *bordertitle)
@@ -134,6 +135,18 @@ printf("WindowBorder(): Click Tab\n");
 			}
 			break;
 		}
+		case CLICK_RESIZE:
+		{
+#ifdef DEBUG_WINBORDER
+printf("WindowBorder(): Click Resize\n");
+#endif
+			if(buttons==B_PRIMARY_MOUSE_BUTTON)
+			{
+				is_resizing_window=true;
+				activeborder=this;
+			}
+			break;
+		}
 		case CLICK_NONE:
 		{
 #ifdef DEBUG_WINBORDER
@@ -186,6 +199,28 @@ void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 			decor->Draw();
 		}
 	}
+	if(is_resizing_window==true)
+	{
+		float dx=pt.x-mousepos.x,
+			dy=pt.y-mousepos.y;
+		if(dx!=0 || dy!=0)
+		{
+			clientframe.right+=dx;
+			clientframe.bottom+=dy;
+	
+			swin->Lock();
+			swin->frame.right+=dx;
+			swin->frame.bottom+=dy;
+			swin->Unlock();
+	
+			layerlock->Lock();
+			ResizeBy(dx,dy);
+			parent->RequestDraw();
+			layerlock->Unlock();
+			decor->Resize(swin->frame);
+			decor->Draw();
+		}
+	}
 	mousepos=pt;
 }
 
@@ -195,6 +230,7 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 	mbuttons=buttons;
 	activeborder=NULL;
 	is_moving_window=false;
+	is_resizing_window=false;
 
 	click_type click=decor->Clicked(pt, mbuttons);
 
@@ -250,4 +286,18 @@ void WindowBorder::SetDecorator(Decorator *newdecor)
 ServerWindow *WindowBorder::Window(void) const
 {
 	return swin;
+}
+
+void WindowBorder::RequestDraw(void)
+{
+/*
+	if(invalid)
+	{
+		for(int32 i=0; i<invalid->CountRects();i++)
+			decor->Draw(ConvertToTop(invalid->RectAt(i)));
+		delete invalid;
+		invalid=NULL;
+		is_dirty=false;
+	}
+*/
 }

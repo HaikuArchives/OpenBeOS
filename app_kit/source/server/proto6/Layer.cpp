@@ -224,8 +224,12 @@ Layer *Layer::GetChildAt(BPoint pt, bool recursive=false)
 			if(child->hidecount>0)
 				continue;
 			
-			if(child->frame.Contains(pt))
+			if(visible && visible->Contains(pt))
 				return child;
+//			if(child->frame.Contains(pt))
+//			{
+//				return child;
+//			}
 		}
 	}
 	else
@@ -481,6 +485,41 @@ void Layer::MoveBy(float x, float y)
 	Invalidate(Bounds());
 }
 
+void Layer::ResizeBy(float x, float y)
+{
+	BRect oldframe=frame;
+	frame.right+=x;
+	frame.bottom+=y;
+
+	if(parent)
+		parent->RebuildRegions();
+	else
+		RebuildRegions();
+
+//	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+//		lay->ResizeBy(x,y);
+	if(x<0 || y<0)
+		parent->Invalidate(oldframe);
+	Invalidate(Bounds());
+}
+
+void Layer::RebuildRegions(bool include_children=true)
+{
+	if(visible)
+		visible->Include(Bounds());
+	else
+		visible=new BRegion(Bounds());
+
+	if(include_children)
+	{
+		for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+		{
+			if(lay->topchild)
+				lay->RebuildRegions(true);
+		}
+	}
+}
+
 void Layer::PrintToStream(void)
 {
 	printf("-----------\nLayer %s\n",name->String());
@@ -712,12 +751,12 @@ printf("Root::RequestDraw:FillRect, color %u,%u,%u,%u\n",bgcolor.red,bgcolor.gre
 	invalid=NULL;
 	is_dirty=false;
 	
-/*	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
+	for(Layer *lay=topchild; lay!=NULL; lay=lay->lowersibling)
 	{
 		if(lay->IsDirty())
 			lay->RequestDraw();
 	}
-*/
+
 }
 
 void RootLayer::SetColor(rgb_color col)

@@ -20,6 +20,7 @@ public:
 	void SystemColorsUpdated(void);
 	void SetDecorator(Decorator *newdecor);
 	ServerWindow *Window(void) const;
+	void RequestDraw(void);
 
 	ServerWindow *swin;
 	BString *title;
@@ -32,6 +33,6 @@ public:
 	bool hresizewin,vresizewin;
 };
 
-extern bool is_moving_window;
+extern bool is_moving_window, is_resizing_window;
 extern WindowBorder *activeborder;
 #endif
