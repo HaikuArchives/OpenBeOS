@@ -47,6 +47,7 @@ ifnet *interface_for_address(void *data, int len);
 
 /* sockets and in_pcb init */
 int sockets_init(void);
+void sockets_shutdown(void);
 int inpcb_init(void);
 
 void *protocol_address(ifnet *ifa, int family);

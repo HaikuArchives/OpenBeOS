@@ -22,16 +22,16 @@
                                            socket */
 
 struct  sockbuf {
-	uint32  sb_cc;          /* actual chars in buffer */
-	uint32  sb_hiwat;       /* max actual char count */
-	uint32  sb_mbcnt;       /* chars of mbufs used */
-	uint32  sb_mbmax;       /* max chars of mbufs to use */
-	int32   sb_lowat;       /* low water mark */
-	struct  mbuf *sb_mb;    /* the mbuf chain */
+	uint32  sb_cc;			/* actual chars in buffer */
+	uint32  sb_hiwat;		/* max actual char count (high water mark) */
+	uint32  sb_mbcnt;		/* chars of mbufs used */
+	uint32  sb_mbmax;		/* max chars of mbufs to use */
+	int32   sb_lowat;		/* low water mark */
+	struct  mbuf *sb_mb;	/* the mbuf chain */
 	/* XXX - add info for select here ! */
-	int16   sb_flags;       /* flags, see below */
-	int16   sb_timeo;       /* timeout for read/write */
-	sem_id	sb_pop;		/* sem to wait on... */
+	int16   sb_flags;		/* flags, see below */
+	int16   sb_timeo;		/* timeout for read/write */
+	sem_id	sb_pop;			/* sem to wait on... */
 };
 
 #define SB_MAX          (256*1024)      /* default for max chars in sockbuf */
@@ -122,7 +122,7 @@ struct socket {
 int     soreserve (struct socket *so, uint32 sndcc, uint32 rcvcc);
 int     socreate (int dom, struct socket **aso, int type, int proto);
 int     sobind (struct socket *so, struct mbuf *nam);
-int	sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
+int	    sosend(struct socket *so, struct mbuf *addr, struct uio *uio, struct mbuf *top,
            struct mbuf *control, int flags);
 
 void    sbrelease (struct sockbuf *sb);
@@ -141,7 +141,7 @@ void    sbcheck (struct sockbuf *sb);
 void    sbcompress (struct sockbuf *sb, struct mbuf *m, struct mbuf *n);
 int     soreceive (struct socket *so, struct mbuf **paddr, struct uio *uio,
             struct mbuf **mp0, struct mbuf **controlp, int *flagsp);
-void sowakeup(struct socket *so, struct sockbuf *sb);
-int sbwait(struct sockbuf *sb);
+void    sowakeup(struct socket *so, struct sockbuf *sb);
+int     sbwait(struct sockbuf *sb);
 
 #endif /* SYS_SOCKETVAR_H */

@@ -226,9 +226,15 @@ void pool_put(struct pool_ctl *p, void *ptr)
 
 void pool_destroy(struct pool_ctl *p)
 {
-	struct pool_mem *mp = p->list;
-	struct pool_mem *temp;
+	struct pool_mem *mp,*temp;
 
+	if (p == NULL)
+		return;
+
+	/* the semaphore will be deleted, so we don't have to unlock */
+	ACQUIRE_WRITE_LOCK(p->lock);
+
+	mp = p->list;
 	while (mp != NULL) {
 		delete_area(mp->aid);
 		temp = mp;

@@ -447,7 +447,6 @@ int main(int argc, char **argv)
 	list_devices();
 	list_modules();
 
-	
 	/* Just to see if it works! */
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	memset(&sin, 0, sizeof(sin));
@@ -474,11 +473,11 @@ int main(int argc, char **argv)
 		printf("WooHoo - we sent %d bytes!\n", rv);
 
 	rv = recvfrom(s, bigbuf, 1024, 0, (struct sockaddr*)&sin, sizeof(sin));
-        if (rv < 0)
-                printf("recvfrom gave %d [%s]\n", rv, strerror(rv));
-        else
-                printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
- 	
+	if (rv < 0)
+		printf("recvfrom gave %d [%s]\n", rv, strerror(rv));
+	else
+		printf("WooHoo - we got %d bytes!\n%s\n", rv, bigbuf);
+
 	d = devices;
 	while (d) {
 		if (d->rx_thread  && d->type == IFD_ETHERNET) {
@@ -487,6 +486,8 @@ int main(int argc, char **argv)
 		}
 		d = d->next; 
 	}
+
+	sockets_shutdown();
 
 	close_devices();
 

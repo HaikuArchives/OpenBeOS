@@ -37,8 +37,8 @@ typedef struct rw_lock rw_lock;
 
 #define INIT_BENAPHORE(lock,name) \
 	{ \
-		(lock).sem = create_sem(0, name); \
 		(lock).count = 1; \
+		(lock).sem = create_sem(0, name); \
 	}
 
 #define CHECK_BENAPHORE(lock) \
