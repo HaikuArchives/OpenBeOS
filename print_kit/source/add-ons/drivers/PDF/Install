@@ -1,0 +1,8 @@
+#!/bin/sh
+
+launchdir=$(dirname $0)
+copyattr -d "$launchdir/PDF Writer" "$HOME/config/add-ons/Print/PDF Writer"
+copyattr -d "$launchdir/libpdf.so" "$HOME/config/lib/libpdf.so"
+copyattr -d "$launchdir/pdflib.upr" "$HOME/config/settings/pdflib.upr"
+
+alert --info "PDF Writer driver is installed"
