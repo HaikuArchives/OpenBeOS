@@ -443,7 +443,7 @@ BMediaEventLooper::DispatchEvent(const media_timed_event *event,
 BMediaEventLooper::_ControlThreadStart(void *arg)
 {
 	CALLED();
-	((BMediaEventLooper *)arg)->fRunState = B_STARTED;
+	((BMediaEventLooper *)arg)->fRunState = B_STOPPED;
 	((BMediaEventLooper *)arg)->ControlLoop();
 	((BMediaEventLooper *)arg)->fRunState = B_QUITTING;
 	return 0;
