@@ -11,6 +11,7 @@
 #include "NodeTest.h"
 #include "PathTest.h"
 #include "ResourcesTest.h"
+#include "ResourceStringsTest.h"
 #include "SymLinkTest.h"
 
 
@@ -24,6 +25,7 @@ int main(int argc, char *argv[]) {
 	shell.AddSuite( "BNode", &NodeTest::Suite );
 	shell.AddSuite( "BPath", &PathTest::Suite );
 	shell.AddSuite( "BResources", &ResourcesTest::Suite );
+	shell.AddSuite( "BResourceStrings", &ResourceStringsTest::Suite );
 	shell.AddSuite( "BSymLink", &SymLinkTest::Suite );
 
 	return shell.Run(argc, argv);
