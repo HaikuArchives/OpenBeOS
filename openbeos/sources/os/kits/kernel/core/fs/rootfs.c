@@ -456,11 +456,12 @@ static ssize_t rootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	struct rootfs_cookie *cookie = _cookie;
 	int err = 0;
 
-	TRACE(("rootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+	TRACE(("rootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, *len));
 
 	mutex_lock(&fs->lock);
 
 	if(cookie->ptr == NULL) {
+		*len = 0;
 		err = 0;
 		goto err;
 	}
@@ -474,7 +475,7 @@ static ssize_t rootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	if(err < 0)
 		goto err;
 
-	err = strlen(cookie->ptr->name) + 1;
+	*len = strlen(cookie->ptr->name) + 1;
 
 	cookie->ptr = cookie->ptr->dir_next;
 
