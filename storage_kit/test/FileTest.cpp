@@ -2,7 +2,9 @@
 
 #include <Entry.h>
 #include <File.h>
+#include <SupportKit.h>		
 
+#include "Test.StorageKit.h"	// For "shell" global variable
 #include "FileTest.h"
 
 // FileTestCaller
@@ -37,7 +39,9 @@ struct FileTestCaller
 			 i++) {
 			FileTest::execCommand("rm -f ", FileTest::allFilenames[i]);
 		}
-		printf("\n");
+		if (shell.BeVerbose()) {
+			printf("\n");
+		}
 	}
 };
 
@@ -90,11 +94,14 @@ FileTest::InitTest1()
 		void testAll() const
 		{
 			for (int32 i = 0; i < initTestCasesCount; i++) {
-				printf("[%ld]", i);
-				fflush(stdin);
+				if (shell.BeVerbose()) {
+					printf("[%ld]", i);
+					fflush(stdout);
+				}
 				test(initTestCases[i]);
 			}
-			printf("\n");
+			if (shell.BeVerbose()) 
+				printf("\n");
 		}
 
 		virtual void test(const InitTestCase& tc) const = 0;
@@ -177,11 +184,14 @@ FileTest::InitTest2()
 		void testAll() const
 		{
 			for (int32 i = 0; i < initTestCasesCount; i++) {
-				printf("[%ld]", i);
-				fflush(stdin);
+				if (shell.BeVerbose()) {
+					printf("[%ld]", i);
+					fflush(stdout);
+				}
 				test(initTestCases[i]);
 			}
-			printf("\n");
+			if (shell.BeVerbose()) 
+				printf("\n");
 		}
 
 		virtual void test(const InitTestCase& tc) const = 0;
@@ -679,7 +689,8 @@ FileTest::AssignmentTest()
 void
 FileTest::nextSubTest()
 {
-	printf("[%ld]", subTestNumber++);
+	if (shell.BeVerbose()) 
+		printf("[%ld]", subTestNumber++);
 }
 
 // Calls system() with the concatenated string of command and parameter.
