@@ -1,6 +1,7 @@
 # Determine if we're building on PPC or x86
 # Determine mimetype of executable
 # Cross compiling can come later
+
 if $(METROWERKS) {
 	OBOS_TARGET ?= "ppc.R5" ;
 	OBOS_TARGET_TYPE ?= "application/x-be-executable" ;
@@ -10,9 +11,13 @@ if $(METROWERKS) {
 	OBOS_TARGET ?= "x86.R5" ;
 	OBOS_TARGET_TYPE ?= "application/x-vnd.Be-elfexecutable" ;
 	OBOS_ARCH ?= "x86" ;
-	OBOS_TARGET_DEFINE ?= "ARCH_i386" ;
-	OBOS_TARGET_DIR ?= "i386" ;
+	OBOS_TARGET_DEFINE ?= "ARCH_x86" ;
+	OBOS_TARGET_DIR ?= "x86" ;
 }
+
+
+KERNEL_CCFLAGS ?= "-Wall -Wno-multichar -Wmissing-prototypes -finline -nostdinc" ;
+KERNEL_CCFLAGS += "-fno-builtin -D$(OBOS_TARGET_DEFINE) " ;
 
 # If no OBOS_OBJECT_TARGET is not defined yet, use our default directory and
 # include our "OBOS_TARGET" as subdirectory in there (to prevent different
@@ -52,6 +57,19 @@ rule SetupIncludes
 {
 	OBOS_INCLUDES ?= . add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
 	UsePublicHeaders $(OBOS_INCLUDES) ;
+}
+
+#-------------------------------------------------------------------------------
+# Things Jam needs in order to work :)
+#-------------------------------------------------------------------------------
+
+rule UserObject
+{
+	switch $(2)
+	{
+	case *.S    : assemble $(1) : $(2) ;
+	case *      : ECHO "unknown suffix on" $(2) ;
+	}
 }
 
 #-------------------------------------------------------------------------------
@@ -218,27 +236,15 @@ rule Link
 
 actions Link bind NEEDLIBS
 {
-	$(LINK) $(LINKFLAGS) -o "$(<)" $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) ;
-	xres -o "$(<)" $(RESFILES) ;
-	setversion "$(<)" -system $(OBOS_BUILD_VERSION) -short "$(OBOS_BUILD_DESCRIPTION)" ;
-	chmod +x "$(<)" ;
-	settype -t $(OBOS_TARGET_TYPE) "$(<)" ;
-	mimeset -f "$(<)" ;
+	$(LINK) $(LINKFLAGS) -o "$(1)" $(UNDEFS) $(2) $(NEEDLIBS) $(LINKLIBS) ;
+#	xres -o "$(1)" $(RESFILES) ;
+	setversion "$(1)" -system $(OBOS_BUILD_VERSION) -short "$(OBOS_BUILD_DESCRIPTION)" ;
+	chmod +x "$(1)" ;
+	settype -t $(OBOS_TARGET_TYPE) "$(1)" ;
+	mimeset -f "$(1)" ;
 }
 
-rule KernelStaticLibrary
-{
-	# KernelStaticLibrary <name> : <sources> ;
-	UsePublicHeaders kernel ;
-	UsePrivateHeaders kernel ;
-	UseArchHeaders $(OBOS_ARCH) ;
 
-	SetupObjectsDir ;
-	CCFLAGS += -nostdinc -Wall -fno-pic -finline ;
-	C++FLAGS += -nostdinc -Wall -fno-pic -finline ;
-	Library lib$(<).a : $(>) ;
-	MakeLocate lib$(<).so : $(OBOS_STLIB_DIR) ;
-}
 
 rule Kernel
 {
@@ -260,53 +266,100 @@ rule Kernel
 	LINKFLAGS on $(<) += -nostart -Xlinker -soname=\"$(<)\" ;
 }
 
-rule UserObject
-{
-	switch $(>)
-	{
-	case *.S    : assemble $(<) : $(>) ;
-	case *      : ECHO "unknown suffix on" $(>) ;
-	}
-}
 
 rule assemble
 {
-	DEPENDS $(<) : $(>) ;
-	Clean clean : $(<) ;
+	DEPENDS $(1) : $(2) ;
+	Clean clean : $(1) ;
 }
 
 actions assemble
 {
-gcc -c $(>) -O2 -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_i386 -DNEWOS=1 -fno-pic -o $(<) ;
+$(CC) -c $(2) $(OPTIM) $(KERNEL_CCFLAGS) -o $(1) ;
 }
 
-rule Stage2
+## Kernel stuff!
+
+rule SetupKernel
 {
-	# Builds the stage 2 loader
-	# Stage2 <sources> ;
-	SetupObjectsDir ;
+	# Usage SetupKernel ;
+
 	UsePublicHeaders kernel ;
 	UsePrivateHeaders kernel ;
 	UseArchHeaders $(OBOS_ARCH) ;
 
-	CCFLAGS on stage2 += -nostdinc -Wall -fno-pic -finline ;
-	LINK on stage2 = ld ;
+	SetupObjectsDir ;
+	
+	SubDirCcFlags $(KERNEL_CCFLAGS) ;
+}
 
-	# XXX - fix me!!
-	LINKFLAGS on stage2 = -dN --script=stage2.ld ;
+rule KernelObjects
+{
+	SetupKernel ;
 
-	# libc.a should be the entire of libc, but as we have in smaller chunks, just include
-	# the chunks we need. Messy, but it works.
-	LINKLIBS on stage2 = [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc libc.a ] ;
-	LINKLIBS on stage2 +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc stdio libstdio.a ] ;
-	LINKLIBS on stage2 +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc string libstring.a ] ;
-	LINKLIBS on stage2 +=  [ FDirName $(OBOS_OBJECT_TARGET) os kits kernel libc locale liblocale.a ] ;
+	if $(2) {
+		SubDirCcFlags $(2) ;
+	}
 
-	# TODO - This location of libgcc.a should be detected and set at a higher level
-	LINKLIBS on stage2 += -L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc ;
+	Objects $(1) ;
+}
 
-	# ??? - this will invoke a load of apps to do various things to the file. Do we really want
-	#         or need them all to be run on stage2?
-	Main stage2 :  $(<) ;
+rule KernelLd
+{
+	# KernelLd <name> : <objs> : <linkerscript> : <args> ;
 
+	local _obj = [ FGristFiles $(1) ] ;
+
+	SetupKernel ;
+	LINK on $(1) = ld ;
+
+	LINKFLAGS on $(1) = $(4) -nostdlib ;
+	if $(2) { LINKFLAGS on $(1) += --script=$(3) ; }
+
+	# Remove any preset LINKLIBS
+	LINKLIBS on $(1) =  ;
+
+	# Show that we depend on the libraries we need
+	Clean clean : $(1) ;
+	Depends all : $(1) ;
+	Depends $(1) : $(2) ;
+	Depends all : $(_obj) ;
+	Depends $(_obj) : $(2) ;
+
+	MakeLocate $(1) : $(LOCATE_TARGET) ;
+
+	# Add libgcc.a - NB this should be detected not hard coded!
+	LINKLIBS on $(1) += "-L /boot/develop/tools/gnupro/lib/gcc-lib/i586-beos/2.9-beos-991026 -lgcc" ;
+}
+
+actions KernelLd
+{
+$(LINK) $(LINKFLAGS) -o $(1) $(2) $(LINKLIBS) ;
+}
+
+rule KernelStaticLibrary
+{
+	# Usage KernelStaticLibrary <name> : <sources> : <extra cc flags>  ;
+	# This is designed to take a set of sources and libraries and create
+	# a file called lib<name>.a
+
+	SetupKernel $(1) ;
+
+	if $(3) {
+		SubDirCcFlags $(3) ;
+	}
+
+	Library $(1) : $(2) ;
+}
+ 
+rule SystemMain
+{
+	# Just use as Main but this sets nothing special...
+	SetupObjectsDir ;
+
+	CCFLAGS = $(OPTIM) ;
+	C++FLAGS = $(OPTIM) ;
+	LINKLIBS = ;
+
+	Main $(1) : $(2) ;
 }
