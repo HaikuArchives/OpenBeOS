@@ -75,29 +75,24 @@ list_team_ports (team_id id)
 	int32      cookie = 0;
 	port_info  this_port;
 	team_info  this_team;
-	image_info team_image;
 	
 	if (get_team_info (id, &this_team) == B_BAD_TEAM_ID)
 		{
 		printf ("\nteam %d unknown\n", id);
 		return;
 		}
+
+	printf ("\nTEAM %4d (%s):\n", id, this_team.args);
+	printf ("   ID                         name  capacity  queued\n");
+	printf ("----------------------------------------------------\n");
 	
-	if (get_next_image_info (id, &cookie, &team_image) == B_OK)
+	while (get_next_port_info (id, &cookie, &this_port) == B_OK)
 		{
-		printf ("\nTEAM %4d (%s):\n", id, team_image.name);
-		printf ("   ID                         name  capacity  queued\n");
-		printf ("----------------------------------------------------\n");
-		
-		cookie = 0;
-		while (get_next_port_info (id, &cookie, &this_port) == B_OK)
-			{
-			printf ("%5d %28s  %8d  %6d\n",
-			         this_port.port,
-			         this_port.name,
-			         this_port.capacity,
-			         this_port.queue_count);
-			}
+		printf ("%5d %28s  %8d  %6d\n",
+		         this_port.port,
+		         this_port.name,
+		         this_port.capacity,
+		         this_port.queue_count);
 		}
 	}
 
