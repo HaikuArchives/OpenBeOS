@@ -1,0 +1,23 @@
+#!/bin/sh
+# Shell script to compile stuff until we get
+# around to using Jam like we're supposed to
+
+# Make some blank space so compiler messages from
+# different runs are easier to distinguis
+# SKError + Test.SKError
+echo
+echo ----------------------------------------------------------------------
+echo Compiling SKError and Test.SKError.cpp
+echo ----------------------------------------------------------------------
+gcc Test.SKError.cpp SKError.cpp
+
+
+# kernel_interface
+echo
+echo ----------------------------------------------------------------------
+echo Compiling kernel_interface.POSIX.cpp
+echo ----------------------------------------------------------------------
+gcc -c kernel_interface.POSIX.cpp
+
+
+echo
