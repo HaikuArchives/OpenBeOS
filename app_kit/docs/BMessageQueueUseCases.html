@@ -106,7 +106,7 @@ error would be deleting the BMessageQueue.</P></LI>
 
 <LI><P><B>Unlock:</B> The Unlock() member function releases a lock on the BMessageQueue.  If the
 thread no longer holds any locks on the BMessageQueue, other threads are free to acquire the
-BMessageQueue lock or call member functions like AddMessage(), RemoveMessage(), FindMessage() or
+BMessageQueue lock or call member functions like AddMessage(), RemoveMessage(), NextMessage() or
 delete the BMessageQueue.</P></LI>
 
 <LI><P><B>Next Message 1:</B> The NextMessage() member function removes the BMessage which is the
