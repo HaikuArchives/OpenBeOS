@@ -21,6 +21,8 @@ MainWindow::MainWindow(BRect frame, PosSettings *Settings)
 	BRect bRect;
 	BMenu *menu;
 	BMenu *tmpMenu;
+	BMenuItem *emptyItem;
+	
 	fSettings = Settings;
 	
 	bRect = Bounds();
@@ -30,12 +32,14 @@ MainWindow::MainWindow(BRect frame, PosSettings *Settings)
 	//Setup Mount menu
 	menu = new BMenu("Mount");
 	menu->AddItem(new BMenuItem("Mount All Partitions", new BMessage(MOUNT_MOUNT_ALL_MSG), 'M'));
-	//add menu items for list of partitions
+	menu->AddSeparatorItem();
 	rootMenu->AddItem(menu);
 	
 	//Setup Unmount menu
 	menu = new BMenu("Unmount");
-	//add menu items for list of partitions
+	emptyItem = new BMenuItem("<empty>", NULL);
+	emptyItem->SetEnabled(false);
+	menu->AddItem(emptyItem);
 	rootMenu->AddItem(menu);
 	
 	//Setup Setup menu
@@ -46,7 +50,7 @@ MainWindow::MainWindow(BRect frame, PosSettings *Settings)
 	tmpMenu->AddItem(new BMenuItem("intel...", new BMessage(SETUP_PARTITION_INTEL_MSG)));
 	menu->AddItem(tmpMenu);
 	tmpMenu = new BMenu("Initialize");
-	//add menu items for list of partitions
+	//add menu for formats
 	menu->AddItem(tmpMenu);
 	
 	rootMenu->AddItem(menu);
@@ -157,7 +161,48 @@ void MainWindow::FrameMoved(BPoint origin)
 
 void MainWindow::AddDeviceInfo(dev_info d){
 
+	BMenuItem *tmp;
+	int cnt;
+		
 	printf("Got %s\n", d.device);
-	//refresh the devices view
+	
+	cnt = 0;
+	while(cnt < d.numParts){
+		
+		if(d.parts[cnt].mounted){
+		
+			//Check to see if we have to get rid of the <empty> item
+			if(strcmp(rootMenu->SubmenuAt(1)->ItemAt(0)->Label(), "<empty>") == 0){
+			
+				rootMenu->SubmenuAt(1)->RemoveItem((int32) 0);
+			
+			}//if
+			//add to Unmount menu
+			tmp = new BMenuItem(d.parts[cnt].mount_pt, new BMessage(UNMOUNT_UNMOUNT_SELECTED_MSG));
+			if(strcmp(d.parts[cnt].mount_pt, "/boot") == 0){
+			
+				tmp->SetEnabled(false);
+			
+			}//if
+			rootMenu->SubmenuAt(1)->AddItem(tmp);
+		
+		}//if
+		
+		//add to Mount menu
+		//This label comes from the type mapping
+		tmp = new BMenuItem(d.parts[cnt].fs, new BMessage(MOUNT_MOUNT_SELECTED_MSG));
+		if(d.parts[cnt].mounted){
+		
+			tmp->SetEnabled(false);
+		
+		}//if
+		rootMenu->SubmenuAt(0)->AddItem(tmp);
+				
+		cnt++;
+		
+	}//while
+	
+	//send to view
 
 }//SetDeviceInfo
+

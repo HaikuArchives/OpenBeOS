@@ -66,22 +66,22 @@ PosSettings::PosSettings()
 
 PosSettings::~PosSettings()
 {//VMSettings::~VMSettings
-printf("enter\n");
+//printf("enter\n");
 	BPath path;
 	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path) < B_OK)
 		return;
-printf("find_directory\n");
+//printf("find_directory\n");
 	path.Append(kVMSettingsFile);
-printf("path.Append\n");
+//printf("path.Append\n");
 	BFile file(path.Path(), B_WRITE_ONLY | B_CREATE_FILE);
-printf("create file\n");
+//printf("create file\n");
 	if (file.InitCheck() == B_OK)
 	{
-		printf("in if statement\n");
+		//printf("in if statement\n");
 		file.Write(&fcorner, sizeof(BPoint));
 		file.Write(&brCorner, sizeof(BPoint));
 	}
-printf("exit\n");
+//printf("exit\n");
 }//MouseSettings::~MouseSettings
 
 void PosSettings::SetWindowPosition(BRect f)

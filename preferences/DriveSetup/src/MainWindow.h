@@ -78,7 +78,7 @@
 			virtual bool QuitRequested();
 			virtual void MessageReceived(BMessage *message);
 			virtual void FrameMoved(BPoint origin);
-			void MainWindow::AddDeviceInfo(dev_info d);
+			void AddDeviceInfo(dev_info d);
 						
 	};
 	

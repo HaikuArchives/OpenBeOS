@@ -9,18 +9,21 @@
 	
 	struct partition_info{
 	
-		int type;			/* partition type */
-		char fs[255];		/* file system */
-		char name[255];		/* volume name */
-		char mount_pt[255];	/* mounted at */
+		int32 type;			/* partition type */
+		/* Maybe get this from the type mapping? */
+		char *fs;		/* file system */
+		char *name;		/* volume name */
+		char *mount_pt;	/* mounted at */
 		double size;		/* size (in MB) */
+		bool mounted;	/* TRUE if mounted, FALSE if not */
 	
 	};
 	
 	struct dev_info{
 	
 		char *device;   /* the path to the device */
-		bool map;			/* TRUE for intel, FALSE for apple */
+		int map;			/* 0 for none, 1 for intel, 2 for apple */
+		int numParts;	/* number of partitions */
 		partition_info parts[4];	/* information on the partitions on the device */
 		
 	};
