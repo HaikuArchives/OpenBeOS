@@ -140,6 +140,20 @@ public:
 	
 	void GetOwner()
 	{
+  		STATABLE folder("/", false);
+		STATABLE link("/system/", false);
+		STATABLE file("/system/Tracker", false);
+		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
+
+		uid_t folderOwner;
+		uid_t linkOwner;
+		uid_t fileOwner;
+		uid_t f404Owner;
+		
+		CPPUNIT_ASSERT( folder.GetOwner( &folderOwner ) == B_OK );
+		CPPUNIT_ASSERT( link.GetOwner( &linkOwner ) == B_OK );
+		CPPUNIT_ASSERT( file.GetOwner( &fileOwner ) == B_OK );
+		CPPUNIT_AsSERT( f404.GetOwner( &f404Owner ) == B_BAD_VALUE );
 	}
 	  
 	void SetOwner()
@@ -148,6 +162,20 @@ public:
 	
 	void GetGroup()
 	{
+  		STATABLE folder("/", false);
+		STATABLE link("/system/", false);
+		STATABLE file("/system/Tracker", false);
+		STATABLE f404("/what_ya_bet/some_one_has a file called this", false);
+
+		gid_t folderGroup;
+		gid_t linkGroup;
+		gid_t fileGroup;
+		gid_t f404Group;
+		
+		CPPUNIT_ASSERT( folder.GetGroup( &folderGroup ) == B_OK );
+		CPPUNIT_ASSERT( link.GetGroup( &linkGroup ) == B_OK );
+		CPPUNIT_ASSERT( file.GetGroup( &fileGroup ) == B_OK );
+		CPPUNIT_AsSERT( f404.GetGroup( &f404Group ) == B_BAD_VALUE );
 	}
 
 	void SetGroup()
