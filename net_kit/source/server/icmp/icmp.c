@@ -102,12 +102,10 @@ int icmp_input(struct mbuf *buf, int hdrlen)
 		default:
 			break;
 	}
-//raw:
-#ifdef _KERNEL_MODE
+
 	raw->input(buf, 0);
-#endif
+
 	return 0;
-//bad:
 	m_freem(buf);
 	return 0;
 }
@@ -121,6 +119,9 @@ static void icmp_init(void)
 	add_protosw(proto, NET_LAYER2);
 #else
 	core->add_protosw(proto, NET_LAYER2);
+	if (!raw)
+		get_module(RAW_MODULE_PATH, (module_info**)&raw);
+
 #endif
 }
 
@@ -170,9 +171,7 @@ static status_t icmp_ops(int32 op, ...)
 			
 			core->add_domain(NULL, AF_INET);
 			core->add_protocol(&my_proto, AF_INET);			
-			if (!raw)
-				get_module(RAW_MODULE_PATH, (module_info**)&raw);
-			
+
 			return B_OK;
 		case B_MODULE_UNINIT:
 			break;
