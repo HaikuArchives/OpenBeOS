@@ -38,7 +38,6 @@ int printf(const char *fmt, ...)
 int getchar(void)
 {
 	char c;
-	int len;
 
 	sys_read(0, &c, 0, 1);
 	return c;
