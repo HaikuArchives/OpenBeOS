@@ -89,8 +89,13 @@ Volume::Mount(const char *deviceName,uint32 flags)
 
 #ifndef USER
 	if (stat.st_mode & S_FILE && ioctl(fDevice,IOCTL_FILE_UNCACHED_IO,NULL) < 0) {
-		// don't mount if the cache couldn't be disabled
-		RETURN_ERROR(B_ERROR);
+		// mount read-only if the cache couldn't be disabled
+#	ifdef DEBUG
+		FATAL(("couldn't disable cache for image file - system may dead-lock!\n"));
+#	else
+		FATAL(("couldn't disable cache for image file!\n"));
+		Panic();
+#	endif
 	}
 #endif
 

@@ -333,7 +333,7 @@ BPlusTree::SetTo(Inode *stream)
 	// is header valid?
 
 	if (fHeader->magic != BPLUSTREE_MAGIC
-		|| fHeader->maximum_size != stream->Node()->data.size
+		|| fHeader->maximum_size != stream->Size()
 		|| (fHeader->root_node_pointer % fHeader->node_size) != 0
 		|| !fHeader->IsValidLink(fHeader->root_node_pointer)
 		|| !fHeader->IsValidLink(fHeader->free_node_pointer))

@@ -236,10 +236,7 @@ bfs_mount(nspace_id nsid, const char *device, ulong flags, void *parms,
 	else
 		delete volume;
 
-	D(if (status < B_OK)
-		RETURN_ERROR(status);
-	);
-	return status;
+	RETURN_ERROR(status);
 }
 
 
@@ -677,10 +674,9 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 
 			Index index(volume);
 			index.UpdateSize(&transaction,inode);
-			
-			// ToDo: should we also update the last_modified time?
-			//if ((mask & WSTAT_MTIME) == 0)
-			//	index.UpdateLastModified(&transaction,inode);
+
+			if ((mask & WSTAT_MTIME) == 0)
+				index.UpdateLastModified(&transaction,inode);
 		}
 	}
 
@@ -1551,10 +1547,17 @@ bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *bu
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
 
-	// writing the name attribute using this function is not allowed
-	if (_ns == NULL || _node == NULL || name == NULL || *name == '\0'
-		|| (name[0] == FILE_NAME_NAME && name[1] == '\0'))
+	if (_ns == NULL || _node == NULL || name == NULL || *name == '\0')
 		RETURN_ERROR(B_BAD_VALUE);
+
+	// Writing the name attribute using this function is not allowed,
+	// also using the reserved indices name, last_modified, and size
+	// shouldn't be allowed.
+	if (name[0] == FILE_NAME_NAME && name[1] == '\0'
+		|| !strcmp(name,"name")
+		|| !strcmp(name,"last_modified")
+		|| !strcmp(name,"size"))
+		RETURN_ERROR(B_NOT_ALLOWED);
 
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
