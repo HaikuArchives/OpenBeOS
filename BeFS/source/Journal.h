@@ -38,6 +38,12 @@ class Transaction {
 		{
 		}
 
+		Transaction(Volume *volume,block_run refRun)
+			:
+			fVolume(volume)
+		{
+		}
+
 		~Transaction()
 		{
 		}

@@ -306,6 +306,9 @@ int
 bfs_initialize(const char *deviceName, void *parms, size_t len)
 {
 	FUNCTION_START(("deviceName = %s, parameter len = %ld\n",deviceName,len));
+
+	// ToDo: implement me!
+
 	return B_ERROR;
 }
 
@@ -314,6 +317,9 @@ int
 bfs_sync(void *ns)
 {
 	FUNCTION();
+
+	// ToDo: implement me!
+
 	return B_ERROR;
 }
 
@@ -352,7 +358,7 @@ bfs_read_vnode(void *_ns, vnode_id id, char reenter, void **node)
 static int
 bfs_release_vnode(void *ns, void *_node, char reenter)
 {
-	FUNCTION_START(("node = %p\n",_node));
+	//FUNCTION_START(("node = %p\n",_node));
 	Inode *inode = (Inode *)_node;
 	
 	delete inode;
@@ -526,6 +532,9 @@ int
 bfs_setflags(void *ns, void *node, void *cookie, int flags)
 {
 	FUNCTION_START(("node = %p, flags = %d",node,flags));
+
+	// ToDo: implement me!
+
 	return B_OK;
 }
 
@@ -552,6 +561,9 @@ int
 bfs_fsync(void *ns, void *node)
 {
 	FUNCTION();
+
+	// ToDo: implement me?!
+
 	return B_ERROR;
 }
 
@@ -609,7 +621,7 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 	if (locked.IsLocked() < B_OK)
 		RETURN_ERROR(B_ERROR);
 
-	Transaction transaction(volume,volume->ToBlock(inode->BlockRun()));
+	Transaction transaction(volume,inode->BlockNumber());
 
 	bfs_inode *node = inode->Node();
 	
@@ -678,7 +690,7 @@ bfs_create(void *_ns, void *_directory, const char *name, int omode, int mode, v
 	// we need to safe the open mode for O_APPEND in bfs_write()
 	*(int *)_cookie = omode;
 
-	Transaction transaction(volume,volume->ToBlock(directory->BlockRun()));
+	Transaction transaction(volume,directory->BlockNumber());
 
 	status = Inode::Create(&transaction,directory,name,S_FILE | (mode & S_IUMSK),omode,0,vnid);
 	if (status == B_OK)
@@ -692,6 +704,9 @@ int
 bfs_symlink(void *ns, void *dir, const char *name, const char *path)
 {
 	FUNCTION();
+
+	// ToDo: implement me!
+
 	return B_ERROR;
 }
 
@@ -700,6 +715,9 @@ int
 bfs_link(void *ns, void *dir, const char *name, void *node)
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
+
+	// ToDo: implement me?!?
+
 	return B_ERROR;
 }
 
@@ -732,6 +750,9 @@ int
 bfs_rename(void *ns, void *oldDir, const char *oldName, void *newDir, const char *newName)
 {
 	FUNCTION_START(("oldName = \"%s\", newName = \"%s\"\n",oldName,newName));
+
+	// ToDo: implement me!
+
 	return B_ERROR;
 }
 
@@ -950,7 +971,7 @@ bfs_mkdir(void *_ns, void *_directory, const char *name, int mode)
 	if (status < B_OK)
 		RETURN_ERROR(status);
 
-	Transaction transaction(volume,volume->ToBlock(directory->BlockRun()));
+	Transaction transaction(volume,directory->BlockNumber());
 
 	status = Inode::Create(&transaction,directory,name,S_DIRECTORY | (mode & S_IUMSK),0,0);
 	if (status == B_OK)
@@ -1180,14 +1201,39 @@ bfs_remove_attr(void *_ns, void *_node, const char *name)
 
 	Transaction transaction(volume,inode->BlockNumber());
 
+	Index index(volume);
+	bool hasIndex = index.SetTo(name) == B_OK;
+
+	// update index for attributes in the small_data section
+	if (hasIndex) {
+		small_data *smallData = inode->FindSmallData(name);
+		if (smallData != NULL) {
+			uint32 length = smallData->data_size;
+			if (length > BPLUSTREE_MAX_KEY_LENGTH)
+				length = BPLUSTREE_MAX_KEY_LENGTH;
+			index.Update(&transaction,name,0,smallData->Data(),length,NULL,0,inode->ID());
+		}
+	}
+
 	if ((status = inode->RemoveSmallData(&transaction,name)) == B_OK) {
 		status = inode->WriteBack(&transaction);
-	} else if (status == B_ENTRY_NOT_FOUND) {
+	} else if (status == B_ENTRY_NOT_FOUND && !inode->Attributes().IsZero()) {
 		// remove the attribute file if it exists
 		Vnode vnode(volume,inode->Attributes());
 		Inode *attributes;
 		if ((status = vnode.Get(&attributes)) < B_OK)
 			return status;
+
+		// update index
+		Inode *attribute;
+		if (hasIndex && inode->GetAttribute(name,&attribute) == B_OK) {
+			uint8 data[BPLUSTREE_MAX_KEY_LENGTH];
+			size_t length = BPLUSTREE_MAX_KEY_LENGTH;
+			if (attribute->ReadAt(0,data,&length) == B_OK)
+				index.Update(&transaction,name,0,data,length,NULL,0,inode->ID());
+
+			inode->ReleaseAttribute(attribute);
+		}
 
 		if ((status = attributes->Remove(&transaction,name)) < B_OK)
 			return status;
@@ -1216,6 +1262,9 @@ int
 bfs_rename_attr(void *ns, void *node, const char *oldname,const char *newname)
 {
 	FUNCTION_START(("name = \"%s\",to = \"%s\"\n",oldname,newname));
+
+	// ToDo: implement me!
+
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
@@ -1252,7 +1301,7 @@ bfs_stat_attr(void *ns, void *_node, const char *name,struct attr_info *attrInfo
 
 
 int
-bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *buffer, size_t *length, off_t pos)
+bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *buffer, size_t *_length, off_t pos)
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
 
@@ -1266,13 +1315,31 @@ bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *bu
 
 	Transaction transaction(volume,inode->BlockNumber());
 
+	// needed to maintain the index
+	uint8 oldBuffer[BPLUSTREE_MAX_KEY_LENGTH],*oldData = NULL;
+	size_t oldLength = 0;
+
+	Index index(volume);
+	bool hasIndex = index.SetTo(name) == B_OK;
+
 	Inode *attribute = NULL;
 	status_t status;
 	if (inode->GetAttribute(name,&attribute) < B_OK) {
-		// if the attribute doesn't exist yet, try to put it in the small_data
-		// section first - if that fails (due to insufficent space), create
-		// a real attribute file
-		status = inode->AddSmallData(&transaction,name,type,(const uint8 *)buffer,*length);
+		// save the old attribute data
+		if (hasIndex) {
+			small_data *smallData = inode->FindSmallData(name);
+			if (smallData != NULL) {
+				oldLength = smallData->data_size;
+				if (oldLength > BPLUSTREE_MAX_KEY_LENGTH)
+					oldLength = BPLUSTREE_MAX_KEY_LENGTH;
+				memcpy(oldData = oldBuffer,smallData->Data(),oldLength);
+			}
+		}
+
+		// if the attribute doesn't exist yet (as a file), try to put it in the
+		// small_data section first - if that fails (due to insufficent space),
+		// create a real attribute file
+		status = inode->AddSmallData(&transaction,name,type,(const uint8 *)buffer,*_length);
 		if (status == B_DEVICE_FULL) {
 			status = inode->CreateAttribute(&transaction,name,type,&attribute);
 			if (status < B_OK)
@@ -1282,12 +1349,29 @@ bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *bu
 	}
 
 	if (attribute != NULL) {
-		status = attribute->WriteAt(&transaction,pos,(const uint8 *)buffer,length);
+		// save the old attribute data (if this fails, oldLength will reflect it)
+		if (hasIndex) {
+			oldLength = BPLUSTREE_MAX_KEY_LENGTH;
+			if (attribute->ReadAt(0,oldBuffer,&oldLength) == B_OK)
+				oldData = oldBuffer;
+		}
+		status = attribute->WriteAt(&transaction,pos,(const uint8 *)buffer,_length);
 		inode->ReleaseAttribute(attribute);
 	}
 
-	if (status == B_OK)
+	if (status == B_OK) {
+		// ToDo: find a better way for that "pos" thing...
+		// Update index
+		if (hasIndex && pos == 0) {
+			// index only the first BPLUSTREE_MAX_KEY_LENGTH bytes
+			uint16 length = *_length;
+			if (length > BPLUSTREE_MAX_KEY_LENGTH)
+				length = BPLUSTREE_MAX_KEY_LENGTH;
+
+			index.Update(&transaction,name,0,oldData,oldLength,(const uint8 *)buffer,length,inode->ID());
+		}
 		transaction.Done();
+	}
 
 	return status;
 }
@@ -1346,13 +1430,14 @@ bfs_open_indexdir(void *_ns, void **_cookie)
 		RETURN_ERROR(B_BAD_VALUE);
 
 	Volume *volume = (Volume *)_ns;
-	
+
 	if (volume->IndicesNode() == NULL)
 		RETURN_ERROR(B_ENTRY_NOT_FOUND);
 
-	// since we are storing the indices root node in our Volume object,
-	// we can just use the directory traversal functions (and since it is
-	// just a directory)
+	// Since the indices root node is just a directory, and we are storing
+	// a pointer to it in our Volume object, we can just use the directory
+	// traversal functions.
+	// In fact we're storing it in the Volume object for that reason.
 
 	RETURN_ERROR(bfs_open_dir(_ns,volume->IndicesNode(),_cookie));
 }
@@ -1407,10 +1492,26 @@ bfs_read_indexdir(void *_ns, void *_cookie, long *num, struct dirent *dirent, si
 
 
 int 
-bfs_create_index(void *ns, const char *name, int type, int flags)
+bfs_create_index(void *_ns, const char *name, int type, int flags)
 {
-	FUNCTION();
-	RETURN_ERROR(B_ERROR);
+	FUNCTION_START(("name = \"%s\", type = %ld, flags = %ld\n",name,type,flags));
+	if (_ns == NULL || name == NULL || *name == '\0')
+		return B_BAD_VALUE;
+
+	Volume *volume = (Volume *)_ns;
+
+	if (volume->IsReadOnly())
+		return B_READ_ONLY_DEVICE;
+
+	Transaction transaction(volume,volume->Indices());
+
+	Index index(volume);
+	status_t status = index.Create(&transaction,name,type);
+
+	if (status == B_OK)
+		transaction.Done();
+
+	RETURN_ERROR(status);
 }
 
 
@@ -1418,6 +1519,9 @@ int
 bfs_remove_index(void *ns, const char *name)
 {
 	FUNCTION();
+
+	// ToDo: implement me!
+
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 
@@ -1426,6 +1530,9 @@ int
 bfs_rename_index(void *ns, const char *oldname, const char *newname)
 {
 	FUNCTION_START(("from = %s, to = %s\n",oldname,newname));
+
+	// ToDo: implement me!
+
 	RETURN_ERROR(B_ENTRY_NOT_FOUND);
 }
 

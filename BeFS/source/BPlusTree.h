@@ -210,6 +210,10 @@ class BPlusTree {
 		status_t	RemoveDuplicate(Transaction *transaction,bplustree_node *node,CachedNode *cached,uint16 keyIndex, off_t value);
 		void		RemoveKey(bplustree_node *node, uint16 index);
 
+		void		UpdateIterators(off_t offset, uint16 keyIndex, int8 change);
+		void		AddIterator(TreeIterator *iterator);
+		void		RemoveIterator(TreeIterator *iterator);
+
 	private:
 		friend TreeIterator;
 		friend CachedNode;
@@ -220,6 +224,8 @@ class BPlusTree {
 		int32		fNodeSize;
 		bool		fAllowDuplicates;
 		status_t	fStatus;
+		SimpleLock	fIteratorLock;
+		TreeIterator *fFirstIterator;
 };
 
 
@@ -249,6 +255,12 @@ class TreeIterator {
 		off_t		fDuplicateNode;
 		uint16		fDuplicate, fNumDuplicates;
 		bool		fIsFragment;
+
+	private:
+		friend BPlusTree;
+		void Update(off_t offset,uint16 keyIndex,int8 change);
+
+		TreeIterator *fNext;
 };
 
 // BPlusTree's inline functions (most of them may not be needed)

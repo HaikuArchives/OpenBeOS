@@ -389,7 +389,7 @@ BlockAllocator::AllocateForInode(Transaction *transaction,const block_run *paren
 	// files are going in the same allocation group as its parent, sub-directories
 	// will be inserted 8 allocation groups after the one of the parent
 	uint16 group = parent->allocation_group;
-	if (type & S_DIRECTORY)
+	if ((type & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR)) == S_DIRECTORY)
 		group += 8;
 
 	return AllocateBlocks(transaction,group,0,1,1,run);

@@ -479,10 +479,9 @@ Inode::CreateAttribute(Transaction *transaction,const char *name,uint32 type,Ino
 		// since Inode::Create() lets the created inode open if "id" is specified,
 		// we don't need to call Vnode::Keep() here
 		Vnode vnode(fVolume,id);
-		if (vnode.Get(attribute) == B_OK)
-			return B_OK;
+		return vnode.Get(attribute);
 	}
-	return B_ERROR;
+	return status;
 }
 
 
@@ -1232,10 +1231,12 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 	// are updated here (name, size, & last_modified)
 
 	Index index(fVolume);
-	index.RemoveName(transaction,name,id);
-		// If removing from the index fails, it is not regarded as a
-		// fatal error and will not be reported back!
-		// Deleted inodes won't be visible in queries anyway.
+	if ((inode->Mode() & (S_ATTR_DIR | S_ATTR | S_INDEX_DIR)) == 0) {
+		index.RemoveName(transaction,name,id);
+			// If removing from the index fails, it is not regarded as a
+			// fatal error and will not be reported back!
+			// Deleted inodes won't be visible in queries anyway.
+	}
 	
 	if ((inode->Mode() & (S_FILE | S_SYMLINK)) != 0) {
 		index.RemoveSize(transaction,inode);
@@ -1245,6 +1246,17 @@ Inode::Remove(Transaction *transaction,const char *name,bool isDirectory)
 	return B_OK;
 }
 
+
+/**	Creates the inode with the specified parent directory, and automatically
+ *	adds the created inode to that parent directory. If an attribute directory
+ *	is created, it will also automatically added to the parent inode as such.
+ *	However, the indices root node, and the regular root node won't be added
+ *	to the super block.
+ *	It will also create the initial B+tree for the inode if it's a directory
+ *	of any kind.
+ *	If the "id" variable is given to store the inode's ID, the inode stays
+ *	locked - you have to call put_vnode() if you don't use it anymore.
+ */
 
 status_t 
 Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mode, int omode, uint32 type, off_t *id)
@@ -1325,7 +1337,10 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 
 	node->inode_size = volume->InodeSize();
 
-	if (tree && inode->SetName(transaction,name) < B_OK)
+	// only add the name to regular files, directories, or symlinks
+	// don't add it to attributes, or indices
+	if (tree && (mode & (S_INDEX_DIR | S_ATTR_DIR | S_ATTR)) == 0
+		&& inode->SetName(transaction,name) < B_OK)
 		return B_ERROR;
 
 	// initialize b+tree if it's a directory (and add "." & ".." if it's
@@ -1335,7 +1350,7 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 		if (tree == NULL || tree->InitCheck() < B_OK)
 			return B_ERROR;
 
-		if (mode & S_DIRECTORY) {
+		if ((mode & (S_INDEX_DIR | S_ATTR_DIR)) == 0) {
 			if (tree->Insert(transaction,".",inode->BlockNumber()) < B_OK
 				|| tree->Insert(transaction,"..",volume->ToBlock(inode->Parent())) < B_OK)
 				return B_ERROR;
@@ -1344,9 +1359,11 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 
 	// update the main indices (name, size & last_modified)
 	Index index(volume);
-	status = index.InsertName(transaction,name,inode->ID());
-	if (status < B_OK && status != B_BAD_INDEX)
-		return status;
+	if ((mode & (S_ATTR_DIR | S_ATTR | S_INDEX_DIR)) == 0) {
+		status = index.InsertName(transaction,name,inode->ID());
+		if (status < B_OK && status != B_BAD_INDEX)
+			return status;
+	}
 
 	inode->UpdateOldLastModified();
 

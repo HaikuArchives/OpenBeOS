@@ -763,7 +763,7 @@ Equation::Match(Inode *inode)
 		// then for attributes in the small_data section, and finally for the
 		// real attributes
 		Inode *attribute;
-		small_data *smallData;
+		small_data *smallData = inode->FindSmallData(fAttribute);
 
 		if (smallData != NULL) {
 			buffer = smallData->Data();

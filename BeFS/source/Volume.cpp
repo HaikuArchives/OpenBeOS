@@ -108,7 +108,7 @@ Volume::Mount(const char *deviceName,uint32 flags)
 						// question: why doesn't get_vnode() work here??
 						// answer: we have not yet backpropagated the pointer to the
 						// volume in bfs_mount(), so bfs_read_vnode() can't get it.
-						// But it's not needed to that anyway.
+						// But it's not needed to do that anyway.
 
 						fIndicesNode = new Inode(this,ToVnode(Indices()));
 						if (fIndicesNode == NULL
@@ -117,7 +117,9 @@ Volume::Mount(const char *deviceName,uint32 flags)
 							INFORM(("bfs: volume doesn't have indices!\n"));
 	
 							if (fIndicesNode) {
-								// in this case, BFS should be mounted as read-only
+								// if this is the case, the index root node is gone bad, and
+								// BFS switch to read-only mode
+								fFlags |= VOLUME_READ_ONLY;
 								fIndicesNode = NULL;
 							}
 						}
@@ -160,6 +162,36 @@ Volume::Unmount()
 	close(fDevice);
 
 	return B_OK;
+}
+
+
+block_run 
+Volume::ToBlockRun(off_t block) const
+{
+	block_run run;
+	run.allocation_group = block >> fSuperBlock.ag_shift;
+	run.start = block & ~((1LL << fSuperBlock.ag_shift) - 1);
+	run.length = 1;
+	return run;
+}
+
+
+status_t
+Volume::CreateIndicesRoot(Transaction *transaction)
+{
+	off_t id;
+	status_t status = Inode::Create(transaction,NULL,NULL,
+							S_INDEX_DIR | S_STR_INDEX | S_DIRECTORY | 0700,0,0,&id);
+	if (status < B_OK)
+		RETURN_ERROR(status);
+
+	fSuperBlock.indices = ToBlockRun(id);
+	// ToDo: write back super block!
+
+	// The Vnode destructor will unlock the inode, but it has already been
+	// locked by the Inode::Create() call.
+	Vnode vnode(this,id);
+	return vnode.Get(&fIndicesNode);
 }
 
 

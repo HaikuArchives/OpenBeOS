@@ -70,6 +70,9 @@ Index::SetTo(const char *name)
 		put_vnode(fVolume->ID(),id);
 		return B_ERROR;
 	}
+	fName = name;
+		// only stores the pointer, so it assumes that it will stay constant
+		// in further comparisons (currently only used in Index::Update())
 
 	return B_OK;
 }
@@ -133,6 +136,58 @@ Index::KeySize()
 }
 
 
+status_t
+Index::Create(Transaction *transaction,const char *name,uint32 type)
+{
+	Unset();
+
+	int32 mode = 0;
+	switch (type) {
+		case B_INT32_TYPE:
+			mode = S_INT_INDEX;
+			break;
+		case B_UINT32_TYPE:
+			mode = S_UINT_INDEX;
+			break;
+		case B_INT64_TYPE:
+			mode = S_LONG_LONG_INDEX;
+			break;
+		case B_UINT64_TYPE:
+			mode = S_ULONG_LONG_INDEX;
+			break;
+		case B_FLOAT_TYPE:
+			mode = S_FLOAT_INDEX;
+			break;
+		case B_DOUBLE_TYPE:
+			mode = S_DOUBLE_INDEX;
+			break;
+		case B_STRING_TYPE:
+			mode = S_STR_INDEX;
+			break;
+		default:
+			return B_BAD_TYPE;
+	}
+
+	status_t status;
+
+	// do we need to create the index directory first?
+	if (fVolume->IndicesNode() == NULL) {
+		if ((status = fVolume->CreateIndicesRoot(transaction)) < B_OK)
+			RETURN_ERROR(status);
+	}
+
+	vnode_id id;
+	status = Inode::Create(transaction,fVolume->IndicesNode(),name,S_INDEX_DIR | S_DIRECTORY | mode,0,type,&id);
+	if (status == B_OK) {
+		// since Inode::Create() lets the created inode open if "id" is specified,
+		// we don't need to call Vnode::Keep() here
+		Vnode vnode(fVolume,id);
+		return vnode.Get(&fNode);
+	}
+	return status;
+}
+
+
 /**	Updates the specified index, the oldKey will be removed from, the newKey
  *	inserted into the tree.
  *	If the method returns B_BAD_INDEX, it means the index couldn't be found -
@@ -143,17 +198,22 @@ Index::KeySize()
 status_t
 Index::Update(Transaction *transaction,const char *name,int32 type,const uint8 *oldKey,uint16 oldLength,const uint8 *newKey,uint16 newLength,off_t id)
 {
-	if (oldKey == NULL && newKey == NULL)
+	if (name == NULL
+		|| oldKey == NULL && newKey == NULL
+		|| oldKey != NULL && oldLength == 0
+		|| newKey != NULL && newLength == 0)
 		return B_BAD_VALUE;
 
 	// if the two keys are identical, don't do anything
 	if (type != 0 && !compareKeys(type,oldKey,oldLength,newKey,newLength))
 		return B_OK;
 
-	status_t status = SetTo(name);
-	if (status < B_OK)
+	status_t status;
+	if (name != fName && (status = SetTo(name)) < B_OK)
 		return B_BAD_INDEX;
 
+if (Type() == B_STRING_TYPE)
+	PRINT(("Index::Update(name = %s): oldKey = \"%s\" (%u), newKey = \"%s\" (%u)\n",name,oldKey,oldLength,newKey,newLength));
 	// now that we have the type, check again for equality
 	if (type == 0 && !compareKeys(Type(),oldKey,oldLength,newKey,newLength))
 		return B_OK;

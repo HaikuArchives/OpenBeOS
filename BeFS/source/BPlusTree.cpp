@@ -221,7 +221,8 @@ BPlusTree::BPlusTree(Transaction *transaction,Inode *stream,int32 nodeSize)
 	:
 	fStream(NULL),
 	fHeader(NULL),
-	fCachedHeader(this)
+	fCachedHeader(this),
+	fFirstIterator(NULL)
 {
 	SetTo(transaction,stream);
 }
@@ -231,7 +232,8 @@ BPlusTree::BPlusTree(Inode *stream)
 	:
 	fStream(NULL),
 	fHeader(NULL),
-	fCachedHeader(this)
+	fCachedHeader(this),
+	fFirstIterator(NULL)
 {
 	SetTo(stream);
 }
@@ -244,7 +246,8 @@ BPlusTree::BPlusTree()
 	fCachedHeader(this),
 	fNodeSize(BPLUSTREE_NODE_SIZE),
 	fAllowDuplicates(true),
-	fStatus(B_NO_INIT)
+	fStatus(B_NO_INIT),
+	fFirstIterator(NULL)
 {
 }
 
@@ -411,6 +414,56 @@ BPlusTree::ModeToKeyType(mode_t mode)
 
 
 //	#pragma mark -
+
+
+void
+BPlusTree::UpdateIterators(off_t offset,uint16 keyIndex,int8 change)
+{
+	// Although every iterator which is affected by this update currently
+	// waits on a semaphore, other iterators could be added/removed at
+	// any time, so we need to protect this loop
+	if (!fIteratorLock.Lock())
+		return;
+
+	for (TreeIterator *iterator = fFirstIterator;iterator;iterator = iterator->fNext)
+		iterator->Update(offset,keyIndex,change);
+
+	fIteratorLock.Unlock();
+}
+
+
+void
+BPlusTree::AddIterator(TreeIterator *iterator)
+{
+	if (!fIteratorLock.Lock())
+		return;
+
+	iterator->fNext = fFirstIterator;
+	fFirstIterator = iterator;
+
+	fIteratorLock.Unlock();
+}
+
+
+void 
+BPlusTree::RemoveIterator(TreeIterator *iterator)
+{
+	if (!fIteratorLock.Lock())
+		return;
+
+	// search list for the correct iterator to remove
+	TreeIterator *last = NULL,*entry;
+	for (entry = fFirstIterator;iterator != entry;entry = entry->fNext)
+		last = entry;
+	if (iterator == entry) {
+		if (last)
+			last->fNext = iterator->fNext;
+		else
+			fFirstIterator = iterator->fNext;
+	}
+
+	fIteratorLock.Unlock();
+}
 
 
 int32
@@ -1267,6 +1320,8 @@ BPlusTree::Remove(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 			if (status < B_OK)
 				RETURN_ERROR(status); 
 
+			UpdateIterators(nodeAndKey.nodeOffset,nodeAndKey.keyIndex,-1);
+
 			// is this a duplicate entry?
 			if (bplustree_node::IsDuplicate(node->Values()[nodeAndKey.keyIndex])) {
 				if (fAllowDuplicates)
@@ -1380,13 +1435,16 @@ BPlusTree::Find(const uint8 *key,uint16 keyLength,off_t *_value)
 TreeIterator::TreeIterator(BPlusTree *tree)
 	:
 	fTree(tree),
-	fCurrentNodeOffset(BPLUSTREE_NULL)
+	fCurrentNodeOffset(BPLUSTREE_NULL),
+	fNext(NULL)
 {
+	tree->AddIterator(this);
 }
 
 
 TreeIterator::~TreeIterator()
 {
+	fTree->RemoveIterator(this);
 }
 
 
@@ -1625,6 +1683,22 @@ void
 TreeIterator::SkipDuplicates()
 {
 	fDuplicateNode = BPLUSTREE_NULL;
+}
+
+
+void 
+TreeIterator::Update(off_t offset, uint16 keyIndex, int8 change)
+{
+	PRINT(("TreeIterator::Update() called: offset = %Ld, index = %d, change = %d!\n",offset,keyIndex,change));
+	if (offset != fCurrentNodeOffset)
+		return;
+
+	// adjust fCurrentKey to point to the same key as before
+	// ToDo: test if this is correct in both cases :-)
+	if (keyIndex >= fCurrentKey)
+		fCurrentKey += change;
+
+	// ToDo: duplicate handling!
 }
 
 

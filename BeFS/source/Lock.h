@@ -235,7 +235,8 @@ class ReadWriteLock {
 class ReadLocked {
 	public:
 		ReadLocked(ReadWriteLock &lock)
-			: fLock(lock)
+			:
+			fLock(lock)
 		{
 			lock.Lock();
 		}
@@ -253,7 +254,8 @@ class ReadLocked {
 class WriteLocked {
 	public:
 		WriteLocked(ReadWriteLock &lock)
-			: fLock(lock)
+			:
+			fLock(lock)
 		{
 			fStatus = lock.LockWrite();
 		}
@@ -271,6 +273,40 @@ class WriteLocked {
 	private:
 		ReadWriteLock	&fLock;
 		status_t		fStatus;
+};
+
+
+// A simple locking structure that doesn't use a semaphore - it's useful
+// if you have to protect critical parts with a short runtime.
+
+class SimpleLock {
+	public:
+		SimpleLock()
+			:
+			fLock(0)
+		{
+		}
+
+		bool Lock(bigtime_t time = 250)
+		{
+			int32 turn = atomic_add(&fLock,1);
+			if (turn != 0) {
+				int32 tries = 20;
+				while (turn != fLock && tries-- > 0)
+					snooze(time);
+				if (turn != fLock)
+					return false;
+			}
+			return true;
+		}
+
+		void Unlock()
+		{
+			atomic_add(&fLock,-1);
+		}
+
+	private:
+		vint32	fLock;		
 };
 
 #endif	/* LOCK_H */

@@ -26,6 +26,8 @@ class Index {
 		uint32 Type();
 		size_t KeySize();
 
+		status_t Create(Transaction *transaction, const char *name, uint32 type);
+
 		status_t Update(Transaction *transaction, const char *name, int32 type, const uint8 *oldKey, uint16 oldLength, const uint8 *newKey, uint16 newLength, off_t id);
 
 		status_t InsertName(Transaction *transaction,const char *name,off_t id);
@@ -43,6 +45,7 @@ class Index {
 	private:
 		Volume		*fVolume;
 		Inode		*fNode;
+		const char	*fName;
 };
 
 #endif	/* INDEX_H */
