@@ -21,11 +21,6 @@ static int udpcksum = 1;	/* do we calculate the UDP checksum? */
 static uint32 udp_sendspace;	/* size of send buffer */
 static uint32 udp_recvspace;	/* size of recieve buffer */
 
-
-/* temporary hack */
-#undef SHOW_DEBUG
-#define SHOW_DEBUG 1
-
 #if SHOW_DEBUG
 static void dump_udp(struct mbuf *buf)
 {
@@ -46,7 +41,6 @@ int udp_output(struct inpcb *inp, struct mbuf *m, struct mbuf *addr,struct mbuf 
 	uint16 hdrlen = len + (uint16)sizeof(struct udpiphdr);
 	struct in_addr laddr;
 	int error = 0;
-	struct sockaddr sin;
 
 	if (control)
 		m_freem(control);
@@ -92,15 +86,23 @@ int udp_output(struct inpcb *inp, struct mbuf *m, struct mbuf *addr,struct mbuf 
 	if (ui->udp.cksum == 0)
 		ui->udp.cksum = 0xffff;
 
-	((ipv4_header*)ui)->length = htons(hdrlen);
+	((ipv4_header*)ui)->length = hdrlen;
 	((ipv4_header*)ui)->ttl = 64;	/* XXX - Fix this! */
 	((ipv4_header*)ui)->tos = 0;	/* XXX - Fix this! */
 
-	sin.sa_family = AF_INET;
-	sin.sa_len = 4;
-	memcpy(&sin.sa_data, &inp->faddr.s_addr, 4); /* we always use network order */
 
-	error = net_modules[prot_table[IPPROTO_IP]].mod->output(m, IPPROTO_IP, &sin);
+	/* XXX - add multicast options when available! */
+	error = net_modules[prot_table[IPPROTO_IP]].mod->output(m,
+					inp->inp_options, &inp->inp_route,
+					inp->inp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST),
+					NULL /* inp->inp_moptions */ );
+
+	if (addr) {
+		in_pcbdisconnect(inp); /* remove temporary route */
+		inp->laddr = laddr;
+	}
+
+	return error;
 
 release:
 	m_freem(m);
@@ -153,13 +155,12 @@ release:
 	return error;
 }
 
-int udp_input(struct mbuf *buf)
+int udp_input(struct mbuf *buf, int hdrlen)
 {
 	ipv4_header *ip = mtod(buf, ipv4_header*);
-	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->hl * 4));
+	udp_header *udp = (udp_header*)((caddr_t)ip + hdrlen);
 	pudp_header *p = (pudp_header *)ip;
 	uint16 ck = 0;
-	int iphlen = (ip->hl * 4);
 	int len;
 	ipv4_header saved_ip;
 	struct mbuf *opts = NULL;
@@ -169,12 +170,12 @@ int udp_input(struct mbuf *buf)
         dump_udp(buf);
 #endif
 	/* check and adjust sizes as required... */
-	len = ntohs(ip->length) - iphlen;
-	if (len != ntohs(udp->length)) {
-		if (ntohs(udp->length) > ip->length)
+	len = ntohs(udp->length);//ip->length - hdrlen;
+	if (len + hdrlen != ip->length) {
+		if (len + hdrlen > ip->length)
 			/* we got a corrupt packet as we are missing data... */
 			goto bad;
-		m_adj(buf, len - ntohs(udp->length));
+		m_adj(buf, len + hdrlen - ip->length);
 	}
 	saved_ip = *ip;
 
@@ -183,8 +184,12 @@ int udp_input(struct mbuf *buf)
 	p->lead = 0;
 	p->lead2 = 0;
 
-	if ((ck = in_cksum(buf, len + sizeof(ipv4_header), 0)) != 0) {
-		printf("UDP Checksum check failed. (%d over %d bytes)\n", ck, len);
+	/* XXX - if we have options we need to be careful when calculating the
+	 * checksum here...
+	 */
+	if ((ck = in_cksum(buf, len + sizeof(*ip), 0)) != 0) {
+		printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
+		dump_buffer(mtod(buf, void *), len + hdrlen);
 		goto bad;
 	}
 
@@ -193,7 +198,7 @@ int udp_input(struct mbuf *buf)
 		inp->fport != udp->src_port ||
 		inp->faddr.s_addr != ip->src.s_addr ||
 		inp->laddr.s_addr != ip->dst.s_addr) {
-		
+
 		inp = in_pcblookup(&udb, ip->src, udp->src_port,
 				   ip->dst, udp->dst_port, INPLOOKUP_WILDCARD);
 		if (inp)
@@ -204,8 +209,8 @@ int udp_input(struct mbuf *buf)
 			goto bad;
 		}
 		*ip = saved_ip;
-		ip->length += iphlen;
-printf("UDP: we'd send an ICMP reply...\n");
+		ip->length += hdrlen;
+		printf("UDP: we'd send an ICMP reply...\n");
 		/* XXX - send ICMP reply... */
 		return 0;
 	}
@@ -218,10 +223,10 @@ printf("UDP: we'd send an ICMP reply...\n");
 		/* XXX - add code to do this... */
 	}
 
-	iphlen += sizeof(udp_header);
-	buf->m_len -= iphlen;
-	buf->m_pkthdr.len -= iphlen;
-	buf->m_data += iphlen;
+	hdrlen += sizeof(udp_header);
+	buf->m_len -= hdrlen;
+	buf->m_pkthdr.len -= hdrlen;
+	buf->m_data += hdrlen;
 
 	if (sbappendaddr(&inp->inp_socket->so_rcv, (struct sockaddr*)&udp_in,
 			buf, opts) == 0) {
