@@ -5,11 +5,22 @@
  ***********************************************************************/
 #include <MediaDefs.h>
 #include <Buffer.h>
+#include <Message.h>
+#include "SharedBufferList.h"
 #include "debug.h"
 
-struct _shared_buffer_list
-{
+enum {
+	MEDIA_SERVER_REGISTER_BUFFER,
+	MEDIA_SERVER_UNREGISTER_BUFFER
 };
+
+static team_id CurrentTeam();
+team_id CurrentTeam()
+{
+	thread_info info;
+	get_thread_info(find_thread(NULL),&info);
+	return info.team;
+}
 
 /*************************************************************
  * public struct buffer_clone_info
@@ -18,13 +29,11 @@ struct _shared_buffer_list
 buffer_clone_info::buffer_clone_info()
 {
 	CALLED();
-	buffer = -1;
-	area = B_ERROR;
-	buffer = 0;
-	area = 0;
-	offset = 0;
-	size = 0;
-	flags = 0;
+	buffer	= 0;
+	area 	= 0;
+	offset 	= 0;
+	size 	= 0;
+	flags 	= 0;
 }
 
 
@@ -40,114 +49,113 @@ buffer_clone_info::~buffer_clone_info()
 void *
 BBuffer::Data()
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return fData;
 }
 
 
 size_t
 BBuffer::SizeAvailable()
 {
-	UNIMPLEMENTED();
-	size_t dummy;
-
-	return dummy;
+	CALLED();
+	return fSize;
 }
 
 
 size_t
 BBuffer::SizeUsed()
 {
-	UNIMPLEMENTED();
-	size_t dummy;
-
-	return dummy;
+	CALLED();
+	return fMediaHeader.size_used;
 }
 
 
 void
 BBuffer::SetSizeUsed(size_t size_used)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	fMediaHeader.size_used = min_c(size_used,fSize);
 }
 
 
 uint32
 BBuffer::Flags()
 {
-	UNIMPLEMENTED();
-	uint32 dummy;
-
-	return dummy;
+	CALLED();
+	return fFlags;
 }
 
 
 void
 BBuffer::Recycle()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	if (fBufferList == NULL)
+		return;
+	fBufferList->ReclaimBuffer(fGroupReclaimSem,this);
 }
 
 
 buffer_clone_info
 BBuffer::CloneInfo() const
 {
-	UNIMPLEMENTED();
-	buffer_clone_info dummy;
+	CALLED();
+	buffer_clone_info info;
 
-	return dummy;
+	info.buffer	= fBufferID;
+	info.area	= fArea;
+	info.offset	= fOffset;
+	info.size	= fSize;
+	info.flags	= fFlags;
+
+	return info;
 }
 
 
 media_buffer_id
 BBuffer::ID()
 {
-	UNIMPLEMENTED();
-	media_buffer_id dummy;
-
-	return dummy;
+	CALLED();
+	return fBufferID;
 }
 
 
 media_type
 BBuffer::Type()
 {
-	UNIMPLEMENTED();
-	media_type dummy;
-
-	return dummy;
+	CALLED();
+	return fMediaHeader.type;
 }
 
 
 media_header *
 BBuffer::Header()
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return &fMediaHeader;
 }
 
 
 media_audio_header *
 BBuffer::AudioHeader()
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return &fMediaHeader.u.raw_audio;
 }
 
 
 media_video_header *
 BBuffer::VideoHeader()
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return &fMediaHeader.u.raw_video;
 }
 
 
 size_t
 BBuffer::Size()
 {
-	UNIMPLEMENTED();
-	// deprecated; use SizeAvailable()
+	CALLED();
 	return SizeAvailable();
 }
 
@@ -155,97 +163,119 @@ BBuffer::Size()
  * private BBuffer
  *************************************************************/
 
-BBuffer::BBuffer(area_id area,
-				 size_t offset,
-				 size_t size,
-				 int32 flags)
+/* explicit */
+BBuffer::BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info) : 
+	fGroupReclaimSem(group_reclaim_sem),
+	fBufferList(0), // must be 0 if not correct initialized
+	fData(0) // must be 0 if not correct initialized
 {
-	UNIMPLEMENTED();
-}
+	CALLED();
+	
+	// special case for BSmallBuffer
+	if (group_reclaim_sem <= 0)
+		return;
+
+	area_id id;
+
+	// first ask media_server to get the area_id of the shared buffer list
+	id = 0; // XXX call media server
 
 
-BBuffer::BBuffer(media_header *_mHeader)
-{
-	UNIMPLEMENTED();
+	fBufferList = _shared_buffer_list::Clone(id);
+	if (fBufferList == NULL)
+		return;
+
+	BMessage response;
+	BMessage create(MEDIA_SERVER_REGISTER_BUFFER);
+	create.AddInt32("team",CurrentTeam());
+	create.AddInt32("area",info.area);
+	create.AddInt32("offset",info.offset);
+	create.AddInt32("size",info.size);
+	create.AddInt32("flags",info.flags);
+	create.AddInt32("buffer",info.buffer);
+
+	// ask media_server to register this buffer, 
+	// either identified by "buffer" or by area information.
+	// media_server either has a copy of the area identified
+	// by "buffer", or creates a new area.
+	// the information and the area is cashed by the media_server
+	// until the last buffer has been unregistered
+	// the area_id of the cashed area is passed back to us, and we clone it.
+
+	// XXX call media server
+
+	// the response from media server contains enough information
+	// to clone the memory for this buffer
+	fBufferID = response.FindInt32("buffer");
+	fSize = response.FindInt32("size");
+	fFlags = response.FindInt32("flags");
+	fOffset = response.FindInt32("offset");
+	id = response.FindInt32("area");
+
+	fArea = clone_area("a cloned BBuffer", &fData, B_ANY_ADDRESS,B_READ_AREA | B_WRITE_AREA,id);
+	if (fArea <= B_OK) {
+		TRACE("buffer cloning failed\n");
+		fData = 0;
+		return;
+	}
+
+	fData = (char *)fData + fOffset;
+	fMediaHeader.size_used = 0;
 }
 
 
 BBuffer::~BBuffer()
 {
-	UNIMPLEMENTED();
-}
+	CALLED();
+	// unmap the BufferList
+	if (fBufferList != NULL) {
+		fBufferList->Unmap();
+	}
+	// unmap the Data
+	if (fData != NULL) {
+		BMessage unregister(MEDIA_SERVER_UNREGISTER_BUFFER);
+		BMessage respose;
+		unregister.AddInt32("team",(int32)CurrentTeam());
+		unregister.AddInt32("buffer",fBufferID);
 
+		// ask media_server to unregister the buffer
+		// when the last clone of this buffer is gone,
+		// media_server will also remove it's cashed area
 
-BBuffer::BBuffer()
-{
-	UNIMPLEMENTED();
-}
-
-
-BBuffer::BBuffer(const BBuffer &clone)
-{
-	UNIMPLEMENTED();
-}
-
-
-BBuffer &
-BBuffer::operator=(const BBuffer &clone)
-{
-	UNIMPLEMENTED();
-	return *this;
-}
-
-
-void
-BBuffer::SetOwnerArea(area_id owner)
-{
-	UNIMPLEMENTED();
+		// XXX call media server
+		
+		delete_area(fArea);
+	}
 }
 
 
 void
 BBuffer::SetHeader(media_header *header)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	fMediaHeader = *header;
+	fMediaHeader.buffer = fBufferID;
 }
 
-/* explicit */
-BBuffer::BBuffer(const buffer_clone_info &info)
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BBuffer::SetGroupOwnerPort(port_id port)
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BBuffer::SetCurrentOwner(port_id port)
-{
-	UNIMPLEMENTED();
-}
 
 /*************************************************************
  * public BSmallBuffer
  *************************************************************/
 
+static const buffer_clone_info info;
 BSmallBuffer::BSmallBuffer()
+	: BBuffer(-1,info)
 {
 	UNIMPLEMENTED();
+	debugger("BSmallBuffer::BSmallBuffer called\n");
 }
 
 
 size_t
 BSmallBuffer::SmallBufferSizeLimit()
 {
-	UNIMPLEMENTED();
-	size_t dummy;
-
-	return dummy;
+	CALLED();
+	return 64;
 }
 
 

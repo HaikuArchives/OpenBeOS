@@ -64,47 +64,34 @@ public:
 
 private:
 
-		friend class 			_BMediaRosterP;
+		friend struct			_shared_buffer_list;
 		friend class 			BMediaRoster;
 		friend class 			BBufferProducer;
 		friend class 			BBufferConsumer;	/* for buffer receiving */
 		friend class 			BBufferGroup;
 		friend class			BSmallBuffer;
 
-		BBuffer(area_id area, size_t offset, size_t size, int32 flags = 0);
-		BBuffer(media_header * _mHeader);	//	for "small buffer" placement new
+		explicit BBuffer(sem_id group_reclaim_sem, const buffer_clone_info & info);
 		~BBuffer();	/* BBuffer is NOT a virtual class!!! */
 
-		BBuffer();
-		BBuffer(const BBuffer & clone);
-		BBuffer & operator=(const BBuffer & clone);
+		BBuffer(); /* not implemented */
+		BBuffer(const BBuffer & clone); /* not implemented */
+		BBuffer & operator=(const BBuffer & clone); /* not implemented */
 
-		void					SetOwnerArea(area_id owner);
 		void					SetHeader(media_header *header);
 
-		media_header			_mHeader;
-		area_id 				_mArea;
-		area_id 				_mOrigArea;
-		area_id 				_mListArea;
-		area_id 				_mOrigListArea;
-		_shared_buffer_list *	_mList;
-		
-		void * 			_mData;
-		size_t 			_mOffset;
-		size_t 			_mSize;
-		media_buffer_id _mBufferID;
-		int32 			_mFlags;
-		int32			_mRefCount;
-		int32			_m_listOffset;
-		uint32 			_reserved_buffer_[6];
+		media_header			fMediaHeader;
+		sem_id					fGroupReclaimSem;
+		_shared_buffer_list *	fBufferList;
+		area_id 				fArea;
+		void * 					fData;
+		size_t 					fOffset;
+		size_t 					fSize;
+		media_buffer_id 		fBufferID;
+		int32 					fFlags;
 
-explicit	BBuffer(
-				const buffer_clone_info & info);
+		uint32 			_reserved_buffer_[10];
 
-		void			SetGroupOwnerPort(
-								port_id port);
-		void			SetCurrentOwner(
-								port_id port);
 };
 
 

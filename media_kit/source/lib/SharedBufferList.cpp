@@ -50,6 +50,17 @@ _shared_buffer_list::Clone(area_id id)
 }
 
 void
+_shared_buffer_list::Unmap()
+{
+	// unmap the memory used by this struct
+	// XXX is this save?
+	area_id id;
+	id = area_for(this);
+	if (id >= B_OK)
+		delete_area(id);
+}
+
+void
 _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 {
 	CALLED();
@@ -68,13 +79,8 @@ _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 	}
 	
 	Unlock();
-
-	// unmap the memory used by this struct
-	// XXX is this save?
-	area_id id;
-	id = area_for(this);
-	if (id >= B_OK)
-		delete_area(id);
+	
+	Unmap();
 }
 
 void 
@@ -165,6 +171,34 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 	} while (count <= buffers_in_group);
 
 	return B_ERROR;
+}
+
+
+void
+_shared_buffer_list::ReclaimBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
+{
+	CALLED();
+	
+	bool debug_reclaim = false;
+
+	Lock();
+	for (int32 i = 0; i < buffercount; i++) {
+		// find the buffer, and reclaim it
+		if (info[i].reclaim_sem == group_reclaim_sem && info[i].buffer == buffer) {
+			debug_reclaim = true;
+			if (info[i].reclaimed) {
+				TRACE("Error, BBuffer 0x%08x, id = 0x%08x already reclaimed\n",buffer,buffer->ID());
+				break;
+			}
+			info[i].reclaimed = true;
+			release_sem_etc(group_reclaim_sem, 0, B_DO_NOT_RESCHEDULE);
+			break;
+		}
+	}
+	Unlock();
+	
+	if (debug_reclaim)
+		TRACE("Error, BBuffer 0x%08x, id = 0x%08x NOT reclaimed\n",buffer,buffer->ID());
 }
 
 

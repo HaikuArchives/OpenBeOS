@@ -88,7 +88,7 @@ BBufferGroup::BBufferGroup(size_t size,
 		bci.area = buffer_area;
 		bci.offset = i * size;
 		bci.size = size;
-		buffer = new BBuffer(bci);
+		buffer = new BBuffer(fReclaimSem,bci);
 		if (0 == buffer->Data()) {
 			// BBuffer::Data() will return 0 if an error occured
 			TRACE("error while creating buffer\n");
@@ -129,7 +129,7 @@ BBufferGroup::BBufferGroup(int32 count,
 	BBuffer *buffer;
 	for (int32 i = 0; i < count; i++) {	
 		bci.buffer = buffers[i];
-		buffer = new BBuffer(bci);
+		buffer = new BBuffer(fReclaimSem,bci);
 		if (0 == buffer->Data()) {
 			// BBuffer::Data() will return 0 if an error occured
 			TRACE("error while creating buffer\n");
@@ -168,7 +168,7 @@ BBufferGroup::AddBuffer(const buffer_clone_info &info,
 		return B_NO_INIT;
 
 	BBuffer *buffer;	
-	buffer = new BBuffer(info);
+	buffer = new BBuffer(fReclaimSem,info);
 	if (0 == buffer->Data()) {
 		// BBuffer::Data() will return 0 if an error occured
 		TRACE("error while creating buffer\n");

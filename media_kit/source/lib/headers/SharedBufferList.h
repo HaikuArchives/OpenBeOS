@@ -34,12 +34,14 @@ struct _shared_buffer_list
 	void 		AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer);
 	status_t	RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_group, size_t size, media_buffer_id wantID, BBuffer **buffer, bigtime_t timeout);
 	status_t	GetBufferList(sem_id group_reclaim_sem, int32 buf_count, BBuffer **out_buffers);
+	void 		ReclaimBuffer(sem_id group_reclaim_sem, BBuffer *buffer);
 	
 		
 	status_t 	Init();
 
 	static _shared_buffer_list *Clone(area_id id = -1);
 	void 		Terminate(sem_id group_reclaim_sem);
+	void 		Unmap();
 
 	void 		Lock();
 	void 		Unlock();
