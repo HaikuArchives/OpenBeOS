@@ -1,3 +1,3 @@
 SubDir OBOS_TOP sources os kits kernel libm common_source ;
 
-KernelStaticLibrary mcommon_source : acosh.c asincos.c asinh.c atan.c atanh.c cosh.c erf.c exp.c exp__E.c expm1.c floor.c fmod.c gamma.c j0.c j1.c jn.c lgamma.c log.c log10.c log1p.c log__L.c pow.c sinh.c tanh.c ;
+KernelStaticLibrary libmcommon_source : acosh.c asincos.c asinh.c atan.c atanh.c cosh.c erf.c exp.c exp__E.c expm1.c floor.c fmod.c gamma.c j0.c j1.c jn.c lgamma.c log.c log10.c log1p.c log__L.c pow.c sinh.c tanh.c ;

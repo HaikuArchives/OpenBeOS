@@ -1,3 +1,3 @@
 SubDir OBOS_TOP sources os kits kernel libm common ;
 
-KernelStaticLibrary mcommon : atan2.c sincos.c tan.c ;
+KernelStaticLibrary libmcommon : atan2.c sincos.c tan.c ;
