@@ -1,4 +1,6 @@
 test_mbuf
 timer_test
 test_cpy
+test_pools
+test_hash
 *.o

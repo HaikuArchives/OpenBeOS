@@ -4,10 +4,13 @@ MBUF_OBJS=	../util/mbuf.o \
 
 TIMER_OBJS = ../util/net_timer.o
 
+POOL_OBJS=	../util/pools.o
+HASH_OBJS=	../util/nhash.o ../util/pools.o
+
 CFLAGS=-O2 -g -Wall
 INCLUDES=-I. -I../include
 
-all: test_mbuf timer_test test_cpy
+all: test_mbuf timer_test test_cpy test_pools test_hash
 
 0 test: test_mbuf
 	@test_mbuf
@@ -23,6 +26,12 @@ timer_test:
 
 test_cpy:
 	$(CC) $(CFLAGS) -o test_cpy test_cpy.c
+
+test_pools: test_pools.o
+	$(CC) $(CFLAGS) $(INCLUDES) -o test_pools $(POOL_OBJS) test_pools.o
+
+test_hash: test_hash.o $(HASH_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o test_hash $(HASH_OBJS) test_hash.o
 
 clean:
 	@rm -f test_mbuf timer_test
