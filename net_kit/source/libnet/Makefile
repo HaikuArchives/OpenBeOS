@@ -14,6 +14,7 @@ OBJS=	socket.o \
 	compat.o \
 	arc4random.o \
 	base64.o \
+	ethers.o \
 	inet_addr.o \
 	inet_ntoa.o \
 	inet_neta.o \
