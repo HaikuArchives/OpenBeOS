@@ -170,7 +170,7 @@ status_t PrinterDriver::PageSetup(BMessage *setupMsg, const char *printerName)
 	BRect paperRect;
 	BRect printRect;
 
-	const float kScale			= 8.3333f;
+	// const float kScale			= 8.3333f;
 	const float kScreen			= 72.0f;
 	const float kLetterWidth	= 8.5;
 	const float kLetterHeight	= 11;

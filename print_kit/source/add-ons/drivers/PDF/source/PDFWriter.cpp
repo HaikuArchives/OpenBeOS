@@ -445,7 +445,7 @@ void PDFWriter::Op(int number)
 // --------------------------------------------------
 void PDFWriter::Op21(BPicture *picture, int32 a, int32 b, int32 c, int32 d)
 {
-	fprintf(fLog, "Unhandled operand Op21 %x %x %x %x %x\n", picture, a, b, c, d);
+	fprintf(fLog, "Unhandled operand Op21 %p %lx %lx %lx %lx\n", picture, a, b, c, d);
 }
 
 
@@ -687,6 +687,8 @@ PDFWriter::StrokePolygon(int32 numPoints, BPoint *points, bool isClosed)
 
 	if (numPoints <= 1) return;
 	
+	x0 = y0 = 0.0;
+		
 	SetColor();		
 	for ( i = 0; i < numPoints; i++, points++ ) {
 		fprintf(fLog, " [%f, %f]", points->x, points->y);
@@ -728,6 +730,7 @@ PDFWriter::FillPolygon(int32 numPoints, BPoint *points, bool isClosed)
 	fprintf(fLog, "\n");
 }
 
+#if 0
 // --- String Handling ----
 struct FontSubst {
 	char *pdfFont, 
@@ -754,6 +757,7 @@ static FontSubst fontSubst[16] = {
  { "Symbol",				"SymbolProp BT",		"Regular"},
  { "Symbol",				"SymbolProp BT",		"Regular"}
 };
+#endif
 
 void 
 PDFWriter::GetFontName(BFont *font, char *fontname, int *embed) 
@@ -771,7 +775,6 @@ PDFWriter::GetFontName(BFont *font, char *fontname, int *embed)
 		    return;
 		}
 	}
-#endif
 	
 	// substitute font by face description
 /*
@@ -781,6 +784,7 @@ PDFWriter::GetFontName(BFont *font, char *fontname, int *embed)
 	uint8 fixed  = font->IsFixed() ? 8 : 0;
 	strcpy(fontname, fontSubst[fixed+italic+bold].pdfFont);	 
 */
+#endif
 
 	*embed = 1;
 	strcat(strcat(strcpy(fontname, family), "-"), style);
