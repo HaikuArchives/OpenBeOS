@@ -322,7 +322,6 @@ virtual		status_t _Reserved_MediaNode_15(void *);
 
 mutable	port_id fControlPort;
 
-		void _inspect_classes();
 		BBufferProducer	*fProducerThis;
 		BBufferConsumer	*fConsumerThis;
 		BFileInterface	*fFileInterfaceThis;
@@ -332,23 +331,6 @@ mutable	port_id fControlPort;
 		uint32 _reserved_media_node_[8];
 
 
-		void PStart(
-				bigtime_t performance_time);
-		void PStop(
-				bigtime_t performance_time,
-				bool immediate);
-		void PSeek(
-				bigtime_t media_time,
-				bigtime_t performance_time);
-		void PSetRunMode(
-				run_mode mode,
-				bigtime_t recordDelay);
-		void PTimeWarp(
-				bigtime_t at_real_time,
-				bigtime_t to_performance_time);
-		void PPreroll();
-		void PSetTimeSource(
-				BTimeSource * time_source);
 
 protected:
 

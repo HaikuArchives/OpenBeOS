@@ -203,9 +203,10 @@ BMediaNode::ReportError(node_error what,
 						const BMessage *info)
 {
 	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	// XXX Transmits the error code specified by whichError to anyone
+	// XXX that's receiving notifications from this node (see 
+	// XXX BMediaRoster::StartWatching() and BMediaRoster::StopWatching() on).
+	return B_OK;
 }
 
 
@@ -213,9 +214,16 @@ status_t
 BMediaNode::NodeStopped(bigtime_t whenPerformance)
 {
 	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	// called by derived classes when they have
+	// finished handling a stop request.
+	
+	// XXX nototify anyone who is listening for stop notifications!
+	
+	// XXX If your node is a BBufferProducer, downstream consumers 
+	// XXX will be notified that your node stopped (automatically, no less) 
+	// XXX through the BBufferConsumer::ProducerDataStatus(B_PRODUCER_STOPPED) call.
+	
+	return B_OK;
 }
 
 
@@ -225,6 +233,10 @@ BMediaNode::TimerExpired(bigtime_t notifyPoint,
 						 status_t error)
 {
 	UNIMPLEMENTED();
+	// Used with AddTimer
+	// This will, in turn, cause the BMediaRoster::SyncToNode() call 
+	// that instigated the timer to return to the caller. 
+	// Probably only important to classes derived from BTimeSource.
 }
 
 
@@ -245,17 +257,48 @@ BMediaNode::WaitForMessage(bigtime_t waitUntil,
 						   uint32 flags,
 						   void *_reserved_)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
+	CALLED();
+	// This function waits until either real time specified by 
+	// waitUntil or a message is received on the control port.
+	// The flags are currently unused and should be 0. 
 
-	return dummy;
+	char data[B_MEDIA_MESSAGE_SIZE]; // about 16 KByte stack used
+	status_t rv;
+	int32 message;
+	ssize_t size;
+	
+	size = port_buffer_size_etc(fControlPort, B_ABSOLUTE_TIMEOUT, waitUntil);
+	if (size <= 0) {
+		if (size != B_TIMED_OUT)
+			TRACE("port_buffer_size_etc error 0x%08lx\n",size);
+		return B_TIMED_OUT;
+	}
+	rv = read_port(fControlPort, &message, data, sizeof(data));
+	if (rv != B_OK) {
+		TRACE("read_port error 0x%08lx\n",rv);
+		return B_TIMED_OUT;
+	}
+
+	if (B_OK == HandleMessage(message, data, size))
+		return B_OK;
+	
+	HandleBadMessage(message, data, size);
+
+	return B_ERROR;
 }
 
 
 /* virtual */ void
 BMediaNode::Start(bigtime_t performance_time)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	// This hook function is called when a node is started
+	// by a call to the BMediaRoster. The specified 
+	// performanceTime, the time at which the node 
+	// should start running, may be in the future.
+	// It may be overriden by derived classes.
+	// The BMediaEventLooper class handles this event!
+	// The BMediaNode class does nothing here.
 }
 
 
@@ -263,7 +306,14 @@ BMediaNode::Start(bigtime_t performance_time)
 BMediaNode::Stop(bigtime_t performance_time,
 				 bool immediate)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	// This hook function is called when a node is stopped
+	// by a call to the BMediaRoster. The specified 
+	// performanceTime, the time at which the node 
+	// should stop running, may be in the future.
+	// It may be overriden by derived classes.
+	// The BMediaEventLooper class handles this event!
+	// The BMediaNode class does nothing here.
 }
 
 
@@ -271,7 +321,15 @@ BMediaNode::Stop(bigtime_t performance_time,
 BMediaNode::Seek(bigtime_t media_time,
 				 bigtime_t performance_time)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	// This hook function is called when a node is asked
+	// to seek to the specified mediaTime by a call to 
+	// the BMediaRoster. The specified performanceTime, 
+	// the time at which the node should begin the seek
+	// operation, may be in the future.
+	// It may be overriden by derived classes.
+	// The BMediaEventLooper class handles this event!
+	// The BMediaNode class does nothing here.
 }
 
 
@@ -288,14 +346,16 @@ BMediaNode::SetRunMode(run_mode mode)
 BMediaNode::TimeWarp(bigtime_t at_real_time,
 					 bigtime_t to_performance_time)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	// May be overriden by derived classes.
 }
 
 
 /* virtual */ void
 BMediaNode::Preroll()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	// May be overriden by derived classes.
 }
 
 
@@ -393,10 +453,10 @@ BMediaNode::operator delete(void * ptr,
 /* virtual */ status_t
 BMediaNode::RequestCompleted(const media_request_info &info)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	// This function is called whenever a request issued by the node is completed.
+	// May be overriden by derived classes.
+	return B_OK;
 }
 
 /*************************************************************
@@ -454,7 +514,9 @@ BMediaNode::DeleteHook(BMediaNode *node)
 /* virtual */ void
 BMediaNode::NodeRegistered()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	// The Media Server calls this hook function after the node has been registered. 
+	// May be overriden by derived classes.
 }
 
 /*************************************************************
@@ -466,9 +528,8 @@ BMediaNode::GetNodeAttributes(media_node_attribute *outAttributes,
 							  size_t inMaxCount)
 {
 	UNIMPLEMENTED();
-	status_t dummy;
 
-	return dummy;
+	return B_ERROR;
 }
 
 
@@ -477,9 +538,8 @@ BMediaNode::AddTimer(bigtime_t at_performance_time,
 					 int32 cookie)
 {
 	UNIMPLEMENTED();
-	status_t dummy;
 
-	return dummy;
+	return B_ERROR;
 }
 
 
@@ -516,7 +576,12 @@ BMediaNode::BMediaNode(const char *name,
 	fRunMode(B_INCREASE_LATENCY),
 	fKinds(kinds),
 	fTimeSourceID(0),
-	fControlPort(-1)
+	fControlPort(-1),
+	fProducerThis(0),
+	fConsumerThis(0),
+	fFileInterfaceThis(0),
+	fControllableThis(0),
+	fTimeSourceThis(0)
 {
 	CALLED();
 	
@@ -545,65 +610,6 @@ BMediaNode::BMediaNode(const char *name,
 	
 }
 
-
-void
-BMediaNode::_inspect_classes()
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BMediaNode::PStart(bigtime_t performance_time)
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BMediaNode::PStop(bigtime_t performance_time,
-				  bool immediate)
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BMediaNode::PSeek(bigtime_t media_time,
-				  bigtime_t performance_time)
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BMediaNode::PSetRunMode(run_mode mode,
-						bigtime_t recordDelay)
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BMediaNode::PTimeWarp(bigtime_t at_real_time,
-					  bigtime_t to_performance_time)
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BMediaNode::PPreroll()
-{
-	UNIMPLEMENTED();
-}
-
-
-void
-BMediaNode::PSetTimeSource(BTimeSource *time_source)
-{
-	UNIMPLEMENTED();
-}
 
 /*************************************************************
  * protected BMediaNode
