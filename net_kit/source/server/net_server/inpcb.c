@@ -340,3 +340,72 @@ int in_pcbdisconnect(struct inpcb *inp)
 	return 0;
 }
 
+void in_losing(struct inpcb *inp)
+{
+	struct rtentry *rt;
+	struct rt_addrinfo info;
+	
+	if ((rt = inp->inp_route.ro_rt)) {
+		inp->inp_route.ro_rt = NULL;
+		memset(&info, 0, sizeof(info));
+		info.rti_info[RTAX_DST] = (struct sockaddr*)&inp->inp_route.ro_dst;
+		info.rti_info[RTAX_GATEWAY] = rt->rt_gateway;
+		info.rti_info[RTAX_NETMASK] = rt_mask(rt);
+		//rt_missmsg 
+		
+		if (rt->rt_flags & RTF_DYNAMIC)
+			rtrequest(RTM_DELETE, rt_key(rt), rt->rt_gateway, rt_mask(rt),
+			           rt->rt_flags, NULL);
+		else
+			rtfree(rt);
+	}
+}
+
+struct rtentry *in_pcbrtentry(struct inpcb *inp)
+{
+	struct route *ro;
+
+	ro = &inp->inp_route;
+
+	/*
+	 * No route yet, so try to acquire one.
+	 */
+	if (ro->ro_rt == NULL) {
+		memset(ro, 0, sizeof(struct route));
+
+		if (inp->faddr.s_addr != INADDR_ANY) {
+			ro->ro_dst.sa_family = AF_INET;
+			ro->ro_dst.sa_len = sizeof(ro->ro_dst);
+			satosin(&ro->ro_dst)->sin_addr = inp->faddr;
+			rtalloc(ro);
+		}
+	}
+	return (ro->ro_rt);
+}
+
+void in_setsockaddr(struct inpcb *inp, struct mbuf *nam)
+{
+	struct sockaddr_in *sin;
+	
+	nam->m_len = sizeof(*sin);
+	sin = mtod(nam, struct sockaddr_in *);
+	memset(sin, 0, sizeof(*sin));
+	sin->sin_family = AF_INET;
+	sin->sin_len = sizeof(*sin);
+	sin->sin_port = inp->lport;
+	sin->sin_addr = inp->laddr;
+}
+
+void in_setpeeraddr(struct inpcb *inp, struct mbuf *nam)
+{
+	struct sockaddr_in *sin;
+	
+	nam->m_len = sizeof(*sin);
+	sin = mtod(nam, struct sockaddr_in *);
+	memset(sin, 0, sizeof(*sin));
+	sin->sin_family = AF_INET;
+	sin->sin_len = sizeof(*sin);
+	sin->sin_port = inp->fport;
+	sin->sin_addr = inp->faddr;
+}
+
