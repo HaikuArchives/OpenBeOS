@@ -21,4 +21,6 @@ typedef unsigned char      uint8;
 typedef char                int8;
 typedef unsigned long       addr;
 
+#define _OBOS_TIME_T_   int   /* basic time_t type */
+
 #endif /* _ARCH_x86_TYPES_H */
