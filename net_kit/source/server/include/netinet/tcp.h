@@ -37,13 +37,13 @@
 #ifndef NETINET_TCP_H
 #define NETINET_TCP_H
 
-typedef unsigned long tcp_seq;
+typedef uint32 tcp_seq;
 
 struct tcphdr {
 	uint16 th_sport;        /* src port */
 	uint16 th_dport;        /* dest. port */
 	tcp_seq th_seq;         /* seq number */
-	tcp_seq th_ack;         /*ack number */
+	tcp_seq th_ack;         /* ack number */
 	
 #if B_HOST_IS_BENDIAN
 	uint8 th_off:4,
