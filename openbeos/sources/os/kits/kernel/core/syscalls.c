@@ -3,6 +3,7 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
 #include <kernel.h>
 #include <ksyscalls.h>
 #include <int.h>
@@ -282,7 +283,9 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = socket((int)arg0, (int)arg1, (int)arg2, false);
 			break;
 		case SYSCALL_GETDTABLESIZE:
-			*call_ret = (get_current_ioctx(false))->table_size;
+			// ToDo: the correct way would be to lock the io_context
+			// or just call vfs_getrlimit()
+			*call_ret = (get_current_io_context(false))->table_size;
 			break;
 		default:
 			*call_ret = -1;

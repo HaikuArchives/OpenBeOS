@@ -23,8 +23,16 @@
 		return EINVAL; 
 
 
-/* General fd routines */
-struct file_descriptor *alloc_fd(void)
+#define PRINT(x) dprintf x
+
+
+/*** General fd routines ***/
+
+
+/** Allocates and initializes a new file_descriptor */
+
+struct file_descriptor *
+alloc_fd(void)
 {
 	struct file_descriptor *f;
 
@@ -37,20 +45,22 @@ struct file_descriptor *alloc_fd(void)
 	return f;
 }
 
-int new_fd(struct ioctx *ioctx, struct file_descriptor *f)
+
+int
+new_fd(struct io_context *ioctx, struct file_descriptor *f)
 {
 	int fd = -1;
 	int i;
 
 	mutex_lock(&ioctx->io_mutex);
 
-	for(i=0; i<ioctx->table_size; i++) {
-		if(!ioctx->fds[i]) {
+	for (i = 0; i < ioctx->table_size; i++) {
+		if (!ioctx->fds[i]) {
 			fd = i;
 			break;
 		}
 	}
-	if(fd < 0) {
+	if (fd < 0) {
 		fd = ERR_NO_MORE_HANDLES;
 		goto err;
 	}
@@ -64,13 +74,29 @@ err:
 	return fd;
 }
 
-struct file_descriptor *get_fd(struct ioctx *ioctx, int fd)
+
+void
+put_fd(struct file_descriptor *f)
+{
+	/* Run a cleanup (fd_free) routine if there is one and free structure, but only
+	 * if we've just removed the final reference to it :)
+	 */
+	if (atomic_add(&f->ref_count, -1) == 1) {
+		if (f->ops->fd_free)
+			f->ops->fd_free(f);
+		kfree(f);
+	}
+}
+
+
+struct file_descriptor *
+get_fd(struct io_context *ioctx, int fd)
 {
 	struct file_descriptor *f;
 
 	mutex_lock(&ioctx->io_mutex);
 
-	if(fd >= 0 && fd < ioctx->table_size && ioctx->fds[fd]) {
+	if (fd >= 0 && fd < ioctx->table_size && ioctx->fds[fd]) {
 		// valid fd
 		f = ioctx->fds[fd];
 		atomic_add(&f->ref_count, 1);
@@ -82,13 +108,15 @@ struct file_descriptor *get_fd(struct ioctx *ioctx, int fd)
 	return f;
 }
 
-void remove_fd(struct ioctx *ioctx, int fd)
+
+void
+remove_fd(struct io_context *ioctx, int fd)
 {
 	struct file_descriptor *f;
 
 	mutex_lock(&ioctx->io_mutex);
 
-	if(fd >= 0 && fd < ioctx->table_size && ioctx->fds[fd]) {
+	if (fd >= 0 && fd < ioctx->table_size && ioctx->fds[fd]) {
 		// valid fd
 		f = ioctx->fds[fd];
 		ioctx->fds[fd] = NULL;
@@ -99,188 +127,234 @@ void remove_fd(struct ioctx *ioctx, int fd)
 
 	mutex_unlock(&ioctx->io_mutex);
 
-	if(f)
+	if (f)
 		put_fd(f);
 }
 
-/* USER routines */ 
-ssize_t user_read(int fd, void *buf, off_t pos, size_t len)
-{
-	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
-	ssize_t rv = 0;	
 
-//	dprintf("user_read: fd %d\n", fd);
-	
-	if(!f)
-		return EBADF;
+//	#pragma mark -
+/*** USER routines ***/ 
+
+
+ssize_t
+user_read(int fd, void *buffer, off_t pos, size_t length)
+{
+	struct file_descriptor *descriptor;
+	ssize_t retval;
 
 	/* This is a user_function, so abort if we have a kernel address */
-	CHECK_USER_ADDR(buf)
-	
-	if (f->ops->fd_read) {
-		size_t rlen = len;
-		rv = f->ops->fd_read(f, buf, pos, &rlen);
-		if (rv < 0)
-			return rv;
-		return rlen;
+	CHECK_USER_ADDR(buffer)
+
+	descriptor = get_fd(get_current_io_context(false), fd);
+	if (!descriptor)
+		return EBADF;
+
+	if (descriptor->ops->fd_read) {
+		retval = descriptor->ops->fd_read(descriptor, buffer, pos, &length);
+		if (retval >= 0)
+			retval = (ssize_t)length;
 	} else
-		return EOPNOTSUPP;
+		retval = EINVAL;
+
+	put_fd(descriptor);
+	return retval;
 }
 
-ssize_t user_write(int fd, const void *buf, off_t pos, size_t len)
+
+ssize_t
+user_write(int fd, const void *buffer, off_t pos, size_t length)
 {
-	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
-	ssize_t rv = 0;
-	
-//	dprintf("user_write: fd %d, %ld bytes\n", fd, len);
-	
-	if(!f)
+	struct file_descriptor *descriptor;
+	ssize_t retval = 0;
+
+	CHECK_USER_ADDR(buffer)
+
+	descriptor = get_fd(get_current_io_context(false), fd);
+	if (!descriptor)
 		return EBADF;
 
-	CHECK_USER_ADDR(buf)
-
-	if (f->ops->fd_write) {
-		size_t rlen = len;
-		rv = f->ops->fd_write(f, buf, pos, &rlen);
-		if (rv < 0)
-			return rv;
-		return rlen;
+	if (descriptor->ops->fd_write) {
+		retval = descriptor->ops->fd_write(descriptor, buffer, pos, &length);
+		if (retval >= 0)
+			retval = (ssize_t)length;
 	} else
-		return EOPNOTSUPP;
+		retval = EINVAL;
+
+	put_fd(descriptor);
+	return retval;
 }
 
-int user_ioctl(int fd, ulong op, void *buf, size_t len)
-{
-	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
 
-	dprintf("user_ioctl: fd %d\n", fd);
-	
-	if(!f)
+int
+user_ioctl(int fd, ulong op, void *buffer, size_t length)
+{
+	struct file_descriptor *descriptor;
+	int status;
+
+	CHECK_USER_ADDR(buffer)
+
+	PRINT(("user_ioctl: fd %d\n", fd));
+
+	descriptor = get_fd(get_current_io_context(false), fd);
+	if (!descriptor)
 		return EBADF;
 
-	CHECK_USER_ADDR(buf)
-
-	if (f->ops->fd_ioctl)
-		return f->ops->fd_ioctl(f, op, buf, len);
+	if (descriptor->ops->fd_ioctl)
+		status = descriptor->ops->fd_ioctl(descriptor, op, buffer, length);
 	else
-		return EOPNOTSUPP;
+		status = EOPNOTSUPP;
+
+	return status;
 }
 
 
-int user_close(int fd)
+int
+user_close(int fd)
 {
-	struct ioctx *ic = get_current_ioctx(false);
-	struct file_descriptor *f = get_fd(ic, fd);
-	
-	if (!f)
+	struct io_context *ioContext = get_current_io_context(false);
+	struct file_descriptor *descriptor = get_fd(ioContext, fd);
+	int retval;
+
+	if (descriptor == NULL)
 		return EBADF;
-	
-	if (f->ops->fd_close)
-		return f->ops->fd_close(f, fd, ic);
+
+	if (descriptor->ops->fd_close)
+		retval = descriptor->ops->fd_close(descriptor, fd, ioContext);
 	else
-		return EOPNOTSUPP;
+		retval = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return retval;
 }
 
-int user_fstat(int fd, struct stat *stat)
-{
-	struct file_descriptor *f = get_fd(get_current_ioctx(false), fd);
-	struct stat kstat;
-	ssize_t rv = 0;
-	int cpo = 0;
 
-	if(!f)
-		return EBADF;
+int
+user_fstat(int fd, struct stat *stat)
+{
+	struct file_descriptor *descriptor;
+	ssize_t retval = 0;
 
 	/* This is a user_function, so abort if we have a kernel address */
 	CHECK_USER_ADDR(stat)
-			
-	if (f->ops->fd_stat) {
-		rv = f->ops->fd_stat(f, &kstat);
-		if (rv < 0)
-			return rv;
-		cpo = user_memcpy(stat, &kstat, sizeof(*stat));
-		if (cpo < 0)
-			return cpo;
 
-		return rv;
-	} else
-		return EOPNOTSUPP;
-}
-
-/* SYSTEM functions */
-
-ssize_t sys_read(int fd, void *buf, off_t pos, size_t len)
-{
-	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
-	
-//	dprintf("sys_read: fd %d\n", fd);
-	
-	if(!f)
+	descriptor = get_fd(get_current_io_context(false), fd);
+	if (descriptor == NULL)
 		return EBADF;
 
-	/* This is a user_function, so abort if we have a kernel address */
-	CHECK_SYS_ADDR(buf)
-	
-	if (f->ops->fd_read) {
-		size_t rlen = len;
-		ssize_t rv = f->ops->fd_read(f, buf, pos, &rlen);
-		if (rv < 0)
-			return rv;
-		return rlen;
+	if (descriptor->ops->fd_stat) {
+		// we're using the stat buffer on the stack to not have to
+		// lock the given stat buffer in memory
+		struct stat kstat;
+
+		retval = descriptor->ops->fd_stat(descriptor, &kstat);
+		if (retval >= 0)
+			retval = user_memcpy(stat, &kstat, sizeof(*stat));
 	} else
-		return EOPNOTSUPP;
+		retval = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return retval;
 }
 
-ssize_t sys_write(int fd, const void *buf, off_t pos, size_t len)
+
+//	#pragma mark -
+/*** SYSTEM functions ***/
+
+
+ssize_t
+sys_read(int fd, void *buffer, off_t pos, size_t length)
 {
-	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
+	struct file_descriptor *descriptor;
+	ssize_t retval;
+
+	/* This is a sys_function, so abort if we have a kernel address */
+	// I've removed those checks because we have to be able to load things
+	// into user memory as well -- axeld.
+	//CHECK_SYS_ADDR(buffer)
+
+	descriptor = get_fd(get_current_io_context(true), fd);
+	if (!descriptor)
+		return EBADF;
+
+	if (descriptor->ops->fd_read) {
+		retval = descriptor->ops->fd_read(descriptor, buffer, pos, &length);
+		if (retval >= 0)
+			retval = (ssize_t)length;
+	} else
+		retval = EINVAL;
+
+	put_fd(descriptor);
+	return retval;
+}
+
+
+ssize_t
+sys_write(int fd, const void *buffer, off_t pos, size_t length)
+{
+	struct file_descriptor *descriptor;
+	ssize_t retval;
 
 //	dprintf("sys_write: fd %d\n", fd);
+//	CHECK_SYS_ADDR(buffer)
 	
-	if(!f)
+	descriptor = get_fd(get_current_io_context(true), fd);
+	if (descriptor == NULL)
 		return EBADF;
 
-	CHECK_SYS_ADDR(buf)
+	if (descriptor->ops->fd_write) {
+		retval = descriptor->ops->fd_write(descriptor, buffer, pos, &length);
+		if (retval >= 0)
+			retval = (ssize_t)length;
 
-	if (f->ops->fd_write) {
-		size_t rlen = len;
-		ssize_t rv = f->ops->fd_write(f, buf, pos, &rlen);
-		dprintf("sys_write(%d) = %ld (rlen = %ld)\n", fd, rv, rlen);
-		if (rv < 0)
-			return rv;
-		return rlen;
+		PRINT(("sys_write(%d) = %ld (rlen = %ld)\n", fd, retval, length));
 	} else
-		return EOPNOTSUPP;
+		retval = EINVAL;
+
+	put_fd(descriptor);
+	return retval;
 }
 
-int sys_ioctl(int fd, ulong op, void *buf, size_t len)
-{
-	struct file_descriptor *f = get_fd(get_current_ioctx(true), fd);
 
-	dprintf("sys_ioctl: fd %d\n", fd);
-	
-	if(!f)
+int
+sys_ioctl(int fd, ulong op, void *buffer, size_t length)
+{
+	struct file_descriptor *descriptor;
+	int status;
+
+	PRINT(("sys_ioctl: fd %d\n", fd));
+
+	CHECK_SYS_ADDR(buffer)
+
+	descriptor = get_fd(get_current_io_context(true), fd);
+	if (descriptor == NULL)
 		return EBADF;
 
-	CHECK_SYS_ADDR(buf)
-
-	if (f->ops->fd_ioctl)
-		return f->ops->fd_ioctl(f, op, buf, len);
+	if (descriptor->ops->fd_ioctl)
+		status = descriptor->ops->fd_ioctl(descriptor, op, buffer, length);
 	else
-		return EOPNOTSUPP;
+		status = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return status;
 }
 
-int sys_close(int fd)
+
+int
+sys_close(int fd)
 {
-	struct ioctx *ic = get_current_ioctx(true);
-	struct file_descriptor *f = get_fd(ic, fd);
-	
-	if (!f)
+	struct io_context *ioContext = get_current_io_context(true);
+	struct file_descriptor *descriptor = get_fd(ioContext, fd);
+	int status;
+
+	if (descriptor == NULL)
 		return EBADF;
-	
-	if (f->ops->fd_close)
-		return f->ops->fd_close(f, fd, ic);
+
+	if (descriptor->ops->fd_close)
+		status = descriptor->ops->fd_close(descriptor, fd, ioContext);
 	else
-		return EOPNOTSUPP;
+		status = EOPNOTSUPP;
+
+	put_fd(descriptor);
+	return status;
 }
 

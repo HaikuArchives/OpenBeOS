@@ -4,6 +4,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
 #include <kernel.h>
 #include <debug.h>
 #include <console.h>
@@ -925,7 +926,7 @@ int thread_init(kernel_args *ka)
 		panic("could not create kernel proc!\n");
 	kernel_proc->state = PROC_STATE_NORMAL;
 
-	kernel_proc->ioctx = vfs_new_ioctx(NULL);
+	kernel_proc->ioctx = vfs_new_io_context(NULL);
 	if(kernel_proc->ioctx == NULL)
 		panic("could not create ioctx for kernel proc!\n");
 
@@ -1194,7 +1195,7 @@ void thread_exit(int retcode)
 		vm_delete_aspace(p->_aspace_id);
 		delete_owned_ports(p->id);
 		sem_delete_owned_sems(p->id);
-		vfs_free_ioctx(p->ioctx);
+		vfs_free_io_context(p->ioctx);
 		kfree(p);
 	}
 
@@ -1749,7 +1750,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	pargs->args = args;
 
 	// create a new ioctx for this process
-	p->ioctx = vfs_new_ioctx(thread_get_current_thread()->proc->ioctx);
+	p->ioctx = vfs_new_io_context(thread_get_current_thread()->proc->ioctx);
 	if(!p->ioctx) {
 		err = ERR_NO_MEMORY;
 		goto err3;
@@ -1759,7 +1760,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 
 	// create an address space for this process
 	p->_aspace_id = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
-	if(p->_aspace_id < 0) {
+	if (p->_aspace_id < 0) {
 		err = p->_aspace_id;
 		goto err4;
 	}
@@ -1767,7 +1768,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 
 	// create a kernel thread, but under the context of the new process
 	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, pargs, p);
-	if(tid < 0) {
+	if (tid < 0) {
 		err = tid;
 		goto err5;
 	}
@@ -1780,7 +1781,7 @@ err5:
 	vm_put_aspace(p->aspace);
 	vm_delete_aspace(p->_aspace_id);
 err4:
-	vfs_free_ioctx(p->ioctx);
+	vfs_free_io_context(p->ioctx);
 err3:
 	kfree(pargs->path);
 err2:
