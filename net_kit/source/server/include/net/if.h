@@ -38,7 +38,8 @@ enum {
 	IFF_DEBUG       = 0x0200,
 	IFF_LINK0       = 0x0400,
 	IFF_LINK1       = 0x0800,
-	IFF_LINK2       = 0x1000
+	IFF_LINK2       = 0x1000,
+	IFF_SIMPLEX     = 0x2000
 };
 
 typedef struct ifq	ifq;
@@ -129,7 +130,7 @@ struct ifnet {
 	int devid;                   /* our device id if we have one... */
 	int id;                      /* id within the stack's device list */
 	char *name;                  /* name of driver e.g. tulip */
-	int unit;                    /* number of unit e.g  0 */
+	int if_unit;                 /* number of unit e.g  0 */
 	char *if_name;               /* full name, e.g. tulip0 */
 	struct if_data ifd;	         /* if_data structure, shortcuts below */
 	int if_flags;                /* if flags */
@@ -146,6 +147,7 @@ struct ifnet {
 	int	(*output)(struct ifnet *, struct mbuf*, 
 			  struct sockaddr*, struct rtentry *); 
 	int	(*ioctl) (struct ifnet *, int, caddr_t);
+	
 };
 #define if_mtu          ifd.ifi_mtu
 #define if_type         ifd.ifi_type
