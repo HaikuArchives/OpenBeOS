@@ -17,6 +17,10 @@ LinkSharedOSLibs libopenbeos.so :
 	/boot/beos/system/lib/libbe.so
 	/boot/beos/system/lib/libstdc++.r4.so ;
 
+File /boot/home/config/lib/libopenbeos.so : $(OBOS_SHLIB_DIR)/libopenbeos.so ;
+
+Depends /boot/home/config/lib/libopenbeos.so : libopenbeos.so ;
+
 SubInclude OBOS_TOP sources os kits app ;
 SubInclude OBOS_TOP sources os kits device ;
 SubInclude OBOS_TOP sources os kits game ;

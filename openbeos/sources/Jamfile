@@ -2,3 +2,4 @@ SubDir OBOS_TOP sources ;
 
 SubInclude OBOS_TOP sources tools ;
 SubInclude OBOS_TOP sources os ;
+SubInclude OBOS_TOP sources tests ;
