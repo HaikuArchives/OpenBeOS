@@ -133,6 +133,7 @@ all:	depend default
 		$(APPKITROOT)/test/add-ons/BMessageQueueTest
 
 clean::	FORCE cleandepend
+	rm -rf $(OBJ_DIR)
 	rm -f $(APPKITROOT)/test/add-ons/BMessageQueueTest
 
 ## include the makefile-engine

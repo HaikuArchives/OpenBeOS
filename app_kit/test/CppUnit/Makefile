@@ -124,6 +124,7 @@ makeLibs:
 	cd lib; make
 
 clean::	FORCE cleandepend
+	rm -rf $(OBJ_DIR)
 	cd lib; make clean
 	rm -f TestRunner
 

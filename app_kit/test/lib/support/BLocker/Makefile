@@ -135,6 +135,7 @@ all:	depend default
 		$(APPKITROOT)/test/add-ons/BLockerTest
 
 clean::	FORCE cleandepend
+	rm -rf $(OBJ_DIR)
 	rm -f $(APPKITROOT)/test/add-ons/BLockerTest
 
 ## include the makefile-engine

@@ -122,6 +122,7 @@ all:	depend default
 	ln -s ../../../source/lib/$(OBJ_DIR)/libopenbeos.so .
 
 clean::	FORCE cleandepend
+	rm -rf $(OBJ_DIR)
 	rm -f libCppUnit.so libopenbeos.so
 
 ## include the makefile-engine
