@@ -96,6 +96,26 @@ template<class MessageQueue>
 	}
 	return(result);
 }
+
+
+template<class MessageQueue>
+	BMessage *TestMessageQueue<MessageQueue>::FindMessage(uint32 what, int index)
+{
+	int listCount = messageList.CountItems();
+	int i;
+	
+	for (i = 0; i < listCount; i++) {
+		BMessage *theMessage = (BMessage *)messageList.ItemAt(i);
+		if (theMessage->what == what) {
+			if (index == 0) {
+				return(theMessage);
+			}
+			index--;
+		}
+	}
+	
+	return(NULL);
+}
 	
 
 template class TestMessageQueue<BMessageQueue>;

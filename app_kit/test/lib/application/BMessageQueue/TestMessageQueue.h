@@ -39,6 +39,7 @@ protected:
 	void AddMessage(BMessage *message);
 	void RemoveMessage(BMessage *message);
 	BMessage *NextMessage(void);
+	BMessage *FindMessage(uint32 what, int index);
 	
 	bool CheckQueueAgainstList(void);
 	

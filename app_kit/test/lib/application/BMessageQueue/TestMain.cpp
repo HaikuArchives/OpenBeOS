@@ -10,6 +10,7 @@
 #include "Test1.h"	
 #include "Test2.h"
 #include "Test3.h"
+#include "Test4.h"
 #include <stdio.h>
 #include <OS.h>
 #include <MessageQueue.h>
@@ -27,6 +28,8 @@ int main(void)
 							                 "Test2"),
 						  new Test3<BMessageQueue>(new BMessageQueue,
 							                 "Test3"),
+						  new Test4<BMessageQueue>(new BMessageQueue,
+							                 "Test4"),
 						  NULL
 						  };
 	TestMessageQueue<OpenBeOS::BMessageQueue> *testListNew[] = {
@@ -39,6 +42,9 @@ int main(void)
 						  new Test3<OpenBeOS::BMessageQueue>(
 						  		new OpenBeOS::BMessageQueue,
 							    "Test3"),
+						  new Test4<OpenBeOS::BMessageQueue>(
+						  		new OpenBeOS::BMessageQueue,
+							    "Test4"),
 						  NULL
 						  };
 	bigtime_t startTime;

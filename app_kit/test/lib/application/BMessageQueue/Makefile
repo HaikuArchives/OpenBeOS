@@ -37,7 +37,8 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= TestMessageQueue.cpp Test1.cpp Test2.cpp Test3.cpp TestMain.cpp
+SRCS= TestMessageQueue.cpp Test1.cpp Test2.cpp Test3.cpp Test4.cpp \
+		TestMain.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
