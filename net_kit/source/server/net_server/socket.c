@@ -249,7 +249,7 @@ int soconnect(void *sp, caddr_t data, int len)
 	 * This allows user to disconnect by connecting to, e.g.,
 	 * a null address.
 	 */
-	if (so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING) &&
+	if ((so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING)) &&
 	    ((so->so_proto->pr_flags & PR_CONNREQUIRED) ||
 	    (error = sodisconnect(so))))
 		error = EISCONN;
@@ -370,7 +370,7 @@ int writeit(void *sp, struct iovec *iov, int flags)
 	struct uio auio;
 	int len = iov->iov_len;
 	int error;
-			
+
 	auio.uio_iov = iov;
 	auio.uio_iovcnt = 1;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -379,6 +379,7 @@ int writeit(void *sp, struct iovec *iov, int flags)
 	auio.uio_resid = iov->iov_len;
 
 	error = sosend(so, NULL, &auio, NULL, NULL, flags);
+
 	if (error < 0)
 		return error;
 	return (len - auio.uio_resid);
@@ -421,8 +422,8 @@ restart:
 	
 	/* Main Loop! We should loop here until resid == 0 */
 	do { 
-		if (so->so_state & SS_CANTSENDMORE)
-			snderr(EPIPE); /* ??? */
+		if ((so->so_state & SS_CANTSENDMORE))
+			snderr(EPIPE);
 		if (so->so_error)
 			snderr(so->so_error);
 		if ((so->so_state & SS_ISCONNECTED) == 0) {
@@ -699,7 +700,7 @@ restart:
 				so->so_error = 0;
 			goto release;
 		}
-		if (so->so_state & SS_CANTRCVMORE) {
+		if ((so->so_state & SS_CANTRCVMORE)) {
 			if (m)
 				goto dontblock;
 			else
