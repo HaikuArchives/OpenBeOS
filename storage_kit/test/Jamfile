@@ -25,6 +25,7 @@ Library $(TOP)/test/libstoragetest :
 	FileTest.cpp
 	NodeTest.cpp
 	PathTest.cpp
+	SymLinkTest.cpp
 ;
 
 # Version of our test suite that links with OpenBeOS libraries

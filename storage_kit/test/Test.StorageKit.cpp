@@ -6,6 +6,7 @@
 #include "FileTest.h"
 #include "NodeTest.h"
 #include "PathTest.h"
+#include "SymLinkTest.h"
 
 StorageKitShell shell;
 
@@ -16,6 +17,7 @@ int main(int argc, char *argv[]) {
 	shell.AddSuite( "BFile", &FileTest::Suite );
 	shell.AddSuite( "BNode", &NodeTest::Suite );
 	shell.AddSuite( "BPath", &PathTest::Suite );
+	shell.AddSuite( "BSymLink", &SymLinkTest::Suite );
 
 	return shell.Run(argc, argv);
 }
