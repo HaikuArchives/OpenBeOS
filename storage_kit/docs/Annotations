@@ -283,3 +283,10 @@ Description: The BBitmap passed to BMimeType::GetIcon() must be in the B_CMAP8
              color space. If not, the call returns B_OK but doesn't actually
              modify the bitmap. We should remember to be smarter about this.
              
+
+OS:          BeOS R5
+Module:      BMimeType
+Location:    IsValid(const char*), GetSupertype(), Contains()
+Description: Chrash when passing NULL.
+             
+
