@@ -99,6 +99,7 @@ enum {
 	EPROTO,
 	EPROTOOPT,
 	ETIME,
+	EFTYPE
 };
 
 /*
