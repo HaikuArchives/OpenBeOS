@@ -228,7 +228,7 @@ MimeTypeTest::DescriptionTest(GetDescriptionFunc getDescr, SetDescriptionFunc se
 			CHK(mime.Install() == B_OK);
 		// Get() with no description installed
 		CHK(mime.IsInstalled());
-		CHK((mime.*getDescr)(str) != B_OK);	// R5 == B_ENTRY_NOT_FOUND
+		CHK((mime.*getDescr)(str) == B_ENTRY_NOT_FOUND);	// R5 == B_ENTRY_NOT_FOUND
 		// Initial Set()/Get()
 		CHK((mime.*setDescr)(testDescr) == B_OK);
 		CHK((mime.*getDescr)(str) == B_OK);
