@@ -6,11 +6,11 @@
 ## Environment
 ##
 
-SOURCES= test.cpp Volume.cpp Inode.cpp BPlusTree.cpp Debug.cpp cache.cpp
+SOURCES= test.cpp Volume.cpp Inode.cpp BPlusTree.cpp Debug.cpp Utility.cpp cache.cpp
 NAME= btreeTest
 TARGET_DIR=.
 
-CFLAGS= -g -O0 -DUSER -DDEBUG -fno-exceptions -fno-rtti #-fcheck-memory-usage -D_NO_INLINE_ASM
+CFLAGS= -O2 -DUSER -DDEBUG -fno-exceptions -fno-rtti #-fcheck-memory-usage -D_NO_INLINE_ASM
 INCLUDES= -I../../source
 LIBS= -lbe
 
