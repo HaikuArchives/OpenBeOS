@@ -43,6 +43,7 @@ struct ctlname {
 #define CTL_VM           2  /* VM */
 #define CTL_FS           3  /* Filesystem */
 #define CTL_NET          4  /* networking (socket.h) */
+#define CTL_HW		 5  /* hardware */
 
 #define CTL_NAMES { \
 	{ 0, 0 }, \
@@ -50,14 +51,16 @@ struct ctlname {
 	{ "vm"  , CTLTYPE_NODE }, \
 	{ "fs"  , CTLTYPE_NODE }, \
 	{ "net" , CTLTYPE_NODE }, \
+	{ "hardware", CTL_TYPE_NODE }, \
 }
 
 /* Identifiers for use in the CTL_KERN subsystem  */
-#define KERN_OSTYPE      1  /* string: system version */
+#define KERN_OSTYPE      1  /* string: system type string */
 #define KERN_OSRELEASE   2  /* string: system release */
 #define KERN_OSVERSION   3  /* int: system revision */
 #define KERN_HOSTNAME    4  /* string: hostname of system */
 #define KERN_DOMAINNAME  5  /* string: (YP) domain name */
+#define KERN_VERSION	 6  /* string: system version string */
 
 #define CTL_KERN_NAMES { \
 	{ 0, 0 }, \
@@ -66,11 +69,43 @@ struct ctlname {
 	{ "osversion"  , CTLTYPE_STRING }, \
 	{ "hostname"   , CTLTYPE_STRING }, \
 	{ "domainname" , CTLTYPE_STRING }, \
+	{ "version"    , CTLTYPE_STRING }, \
 }
+
+/*
+ * CTL_HW identifiers
+ */
+#define	HW_MACHINE	 1		/* string: machine class */
+#define	HW_MODEL	 2		/* string: specific machine model */
+#define	HW_NCPU		 3		/* int: number of cpus */
+#define	HW_BYTEORDER	 4		/* int: machine byte order */
+#define	HW_PHYSMEM	 5		/* int: total memory */
+#define	HW_USERMEM	 6		/* int: non-kernel memory */
+#define	HW_PAGESIZE	 7		/* int: software page size */
+#define	HW_DISKNAMES	 8		/* strings: disk drive names */
+#define	HW_DISKSTATS	 9		/* struct: diskstats[] */
+#define	HW_DISKCOUNT	10		/* int: number of disks */
+#define	HW_MAXID	11		/* number of valid hw ids */
+
+#define	CTL_HW_NAMES { \
+	{ 0, 0 }, \
+	{ "machine", CTLTYPE_STRING }, \
+	{ "model", CTLTYPE_STRING }, \
+	{ "ncpu", CTLTYPE_INT }, \
+	{ "byteorder", CTLTYPE_INT }, \
+	{ "physmem", CTLTYPE_INT }, \
+	{ "usermem", CTLTYPE_INT }, \
+	{ "pagesize", CTLTYPE_INT }, \
+	{ "disknames", CTLTYPE_STRING }, \
+	{ "diskstats", CTLTYPE_STRUCT }, \
+	{ "diskcount", CTLTYPE_INT }, \
+}
+
 
 #ifdef _KERNEL_
 typedef int (sysctlfn)(int *, uint, void *, size_t *, void *, size_t);
 int kern_sysctl(int *, uint, void *, size_t *, void *, size_t);
+int hw_sysctl(int *, uint, void *, size_t *, void *, size_t);
 int sysctl_int (void *, size_t *, void *, size_t, int *);
 int sysctl_rdint (void *, size_t *, void *, int);
 int sysctl_tstring(void *, size_t *, void *, size_t, char *, int);
