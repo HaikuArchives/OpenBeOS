@@ -44,6 +44,7 @@ static PrinterDriver *instanciate_driver(BNode *spoolDir);
 /*  ======== For testing only ================== */
 
 //#include "MessagePrinter.h"
+
 //static MessagePrinter* make_Printer();
 
 /**

@@ -2,7 +2,7 @@
 
 PDF Writer printer driver.
 
-Copyright (c) 2001 OpenBeOS. 
+Copyright (c) 2002 OpenBeOS. 
 
 Authors: 
 	Philippe Houdoin
