@@ -51,6 +51,7 @@ struct ifq {
 	sem_id pop;
 };
 
+#define IFQ_FULL(ifq)   (ifq->len >= ifq->maxlen)
 
 #define IFQ_ENQUEUE(ifq, m) { \
 	acquire_sem((ifq)->lock); \
@@ -146,7 +147,6 @@ struct ifnet {
 	int	 (*output)(struct ifnet *, struct mbuf*, 
 			  struct sockaddr*, struct rtentry *); 
 	int	 (*ioctl) (struct ifnet *, int, caddr_t);
-	
 };
 #define if_mtu          ifd.ifi_mtu
 #define if_type         ifd.ifi_type
