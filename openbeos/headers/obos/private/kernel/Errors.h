@@ -70,8 +70,7 @@ enum {
 	B_NOT_ALLOWED,                      /* EPERM */
 };
 
-/*-------------------------------------------------------------*/
-/*----- Kernel Kit Errors -------------------------------------*/
+/* Kernel Kit Errors */
 enum {
 	B_BAD_SEM_ID = B_OS_ERROR_BASE,	
 	B_NO_MORE_SEMS,				
@@ -94,9 +93,7 @@ enum {
 	B_DEBUGGER_ALREADY_INSTALLED = B_OS_ERROR_BASE + 0x400
 };
 
-
-/*-------------------------------------------------------------*/
-/*----- Application Kit Errors --------------------------------*/
+/* Application Kit Errors */
 enum
 {
 	B_BAD_REPLY = B_APP_ERROR_BASE,
@@ -260,22 +257,5 @@ enum
 /* Elf errors */
 #define ERR_ELF_GENERAL		  -5120
 #define ERR_ELF_RESOLVING_SYMBOL  ERR_ELF_GENERAL -1
-
-/* Ports errors */
-//#define ERR_PORT_GENERAL          -6144
-//#define ERR_PORT_DELETED          ERR_PORT_GENERAL-1
-//#define ERR_PORT_OUT_OF_SLOTS     ERR_PORT_GENERAL-2
-//#define ERR_PORT_NOT_ACTIVE       ERR_PORT_GENERAL-3
-//#define ERR_PORT_CLOSED	          ERR_PORT_GENERAL-4
-//#define ERR_PORT_TIMED_OUT		  ERR_PORT_GENERAL-5
-//#define ERR_PORT_INTERRUPTED      ERR_PORT_GENERAL-6
-//#define ERR_PORT_NOT_FOUND	      ERR_PORT_GENERAL-7
-
-/* Net errors */
-//#define ERR_NET_GENERAL           -7168
-//#define ERR_NET_FAILED_ARP        ERR_NET_GENERAL-1
-//#define ERR_NET_BAD_PACKET        ERR_NET_GENERAL-2
-//#define ERR_NET_ARP_QUEUED        ERR_NET_GENERAL-3
-//#define ERR_NET_NO_ROUTE          ERR_NET_GENERAL-4
 
 #endif /* _ERRORS_H */
