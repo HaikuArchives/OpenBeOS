@@ -95,8 +95,8 @@ CJKFontItem::DrawItem(BView* owner, BRect rect, bool drawEverything)
 static const char* FontName(font_encoding enc) {
 	switch(enc) {
 		case japanese_encoding:     return "Japanese";
-		case chinese_gb1_encoding:  return "Traditional Chinese";
-		case chinese_cns1_encoding: return "Simplified Chinese";
+		case chinese_cns1_encoding: return "Traditional Chinese";
+		case chinese_gb1_encoding:  return "Simplified Chinese";
 		case korean_encoding:       return "Korean"; 
 		default:                    return "invalid font encoding!";
 	}
