@@ -7,7 +7,7 @@ HDRS += "$(TOP)/cppunit/include" ;
 # Compile everything into a big fat CppUnit library
 Library $(TOP)/cppunit/cppunit : Exception.cpp NotEqualException.cpp
 TestAssert.cpp TestFailure.cpp TestSuite.cpp TypeInfoHelper.cpp
-NotEqualException.cpp TestCase.cpp TestRegistry.cpp TextTestResult.cpp
+TestCase.cpp TestRegistry.cpp TextTestResult.cpp
 RepeatedTest.cpp TestFactoryRegistry.cpp TestResult.cpp TextTestRunner.cpp ;
 
 
