@@ -15,6 +15,8 @@
 #define _IOC(inout,group,num,len) \
         (inout | ((len & IOCPARM_MASK) << 16) | ((group) << 8) | (num))
 
+#define IOCGROUP(x)     (((x) >> 8) & 0xff)
+
 #define _IOR(g,n,t)	_IOC(IOC_OUT,   (g), (n), sizeof(t))
 #define _IOW(g,n,t)	_IOC(IOC_IN,    (g), (n), sizeof(t))
 #define _IOWR(g,n,t)	_IOC(IOC_INOUT, (g), (n), sizeof(t))
@@ -43,6 +45,9 @@
 #define SIOCDIFADDR     _IOW('i', 25, struct ifreq)    /* delete IF addr */
 #define SIOCAIFADDR      _IOW('i', 26, struct ifaliasreq)/* add/chg IF alias */
 #define SIOCGIFDATA     _IOWR('i', 27, struct ifreq)    /* get if_data */
+
+#define SIOCGIFMTU      _IOWR('i', 126, struct ifreq)   /* get ifnet MTU */
+#define SIOCSIFMTU      _IOW('i', 127, struct ifreq)    /* set ifnet MTU */
 
 #endif /* SYS_NET_IOCTL_H */
 
