@@ -24,6 +24,7 @@ OBJS=	socket.o \
 	inet_pton.o \
 	inet_ntop.o \
 	gethostnamadr.o \
+	getnameinfo.o \
 	getnetbyaddr.o \
 	getnetbyname.o \
 	getnetnamadr.o \
