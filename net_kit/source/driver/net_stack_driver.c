@@ -31,10 +31,10 @@ extern void notify_select_event(selectsync * sync, uint32 ref);
 
 
 
-#define SHOW_INSANE_DEBUGGING	(0)
-#define SERIAL_DEBUGGING		(0)
+#define SHOW_INSANE_DEBUGGING   (0)
+#define SERIAL_DEBUGGING        (0)
 /* Force the driver to stay loaded in memory */
-#define STAY_LOADED				(1)	
+#define STAY_LOADED             (1)	
 
 /*
  * Local definitions
@@ -328,7 +328,7 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 			/* args->addr == sockaddr to connect to */
 			args->rv = core->soconnect(nsc->socket, (caddr_t) args->addr, args->addrlen);
 			/* restore original settings... */
-			return B_OK;
+			return args->rv;
 		}
 		case NET_STACK_BIND: {
 			struct sockaddr_args * args = (struct sockaddr_args *) data;
