@@ -149,7 +149,8 @@ class Equation : public Term {
 		type_code	fType;
 		size_t		fSize;
 		bool		fIsPattern;
-		
+		bool		fIsSpecialTime;
+
 		int32		fScore;
 		bool		fHasIndex;
 };
@@ -555,6 +556,14 @@ Equation::Equation(char **expr)
 		}
 	}
 
+	// The special time flag is set if the time values are shifted
+	// 64-bit values to reduce the number of duplicates.
+	// We have to be able to compare them against unshifted values
+	// later. The only index which needs this is the last_modified
+	// index, but we may want to open that feature for other indices,
+	// too one day.
+	fIsSpecialTime = !strcmp(fAttribute,"last_modified");
+
 	*expr = string;
 }
 
@@ -696,6 +705,11 @@ Equation::CompareTo(uint8 *value,uint16 size)
 		// here - if something is broken, and matchString() returns an error,
 		// we just don't match
 		compare = matchString(fValue.String,(char *)value) == MATCH_OK ? 0 : 1;
+	} else if (fIsSpecialTime) {
+		// the index is a shifted int64 index, but we have to match
+		// against an unshifted value (i.e. the last_modified index)
+		int64 timeValue = *(int64 *)value >> INODE_TIME_SHIFT;
+		compare = compareKeys(fType,&timeValue,sizeof(int64),&fValue.Int64,sizeof(int64));
 	} else
 		compare = compareKeys(fType,value,size,Value(),fSize);
 
@@ -891,7 +905,7 @@ Equation::PrepareQuery(Volume */*volume*/, Index &index, TreeIterator **iterator
 		// set iterator to the exact position
 
 		int32 keySize = index.KeySize();
-		
+
 		// at this point, fIsPattern is only true if it's a string type, and fOp
 		// is either OP_EQUAL or OP_UNEQUAL
 		if (fIsPattern) {
@@ -909,11 +923,20 @@ Equation::PrepareQuery(Volume */*volume*/, Index &index, TreeIterator **iterator
 			else
 				RETURN_ERROR(B_ENTRY_NOT_FOUND);
 		}
-		status = (*iterator)->Find(Value(),keySize);
-		if (fOp == OP_EQUAL && !fIsPattern)
-			return status;
-		else if (status == B_ENTRY_NOT_FOUND && (fIsPattern || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL))
-			return B_OK;
+
+		if (fIsSpecialTime) {
+			// we have to find the first matching shifted value
+			off_t value = fValue.Int64 << INODE_TIME_SHIFT;
+			status = (*iterator)->Find((uint8 *)&value,keySize);
+			if (status == B_ENTRY_NOT_FOUND)
+				return B_OK;
+		} else {
+			status = (*iterator)->Find(Value(),keySize);
+			if (fOp == OP_EQUAL && !fIsPattern)
+				return status;
+			else if (status == B_ENTRY_NOT_FOUND && (fIsPattern || fOp == OP_GREATER_THAN || fOp == OP_GREATER_THAN_OR_EQUAL))
+				return B_OK;
+		}
 
 		RETURN_ERROR(status);
 	}
