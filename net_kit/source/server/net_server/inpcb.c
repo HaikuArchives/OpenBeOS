@@ -20,6 +20,15 @@
 static struct pool_ctl *pcbpool = NULL;
 static struct in_addr zeroin_addr;
 
+int inetctlerrmap[PRC_NCMDS] = {
+        0,              0,              0,              0,
+        0,              EMSGSIZE,       EHOSTDOWN,      EHOSTUNREACH,
+        EHOSTUNREACH,   EHOSTUNREACH,   ECONNREFUSED,   ECONNREFUSED,
+        EMSGSIZE,       EHOSTUNREACH,   0,              0,
+        0,              0,              0,              0,
+        ENOPROTOOPT
+};
+
 int inpcb_init(void)
 {
 	in_ifaddr = NULL;
@@ -370,6 +379,61 @@ struct rtentry *in_pcbrtentry(struct inpcb *inp)
 		}
 	}
 	return (ro->ro_rt);
+}
+
+int inetctlerr(int cmd)
+{
+	return inetctlerrmap[cmd];
+}
+
+/* remove the route associated with a control block (if there is one)
+ * forcing the route to be allocated next time it's used
+ */
+static void in_rtchange(struct inpcb *inp, int err)
+{
+	if (inp->inp_route.ro_rt) {
+		rtfree(inp->inp_route.ro_rt);
+		inp->inp_route.ro_rt = NULL;
+	}
+}
+
+void in_pcbnotify(struct inpcb *head, struct sockaddr *dst, 
+                  uint16 fport_arg, struct in_addr laddr, 
+                  uint16 lport_arg, int cmd, 
+                  void (*notify)(struct inpcb *, int))
+{
+	struct inpcb *inp, *oinp;
+	struct in_addr faddr;
+	uint16 fport = fport_arg, lport = lport_arg;
+	int err = 0;
+	
+	if ((uint)cmd > PRC_NCMDS || dst->sa_family != AF_INET)
+		return;
+	faddr = satosin(dst)->sin_addr;
+	if (faddr.s_addr == INADDR_ANY)
+		return;
+
+	if (PRC_IS_REDIRECT(cmd) || cmd == PRC_HOSTDEAD) {
+		fport = lport = 0;
+		laddr.s_addr = 0;
+		if (cmd != PRC_HOSTDEAD)
+			notify = in_rtchange;
+	}
+	err = inetctlerrmap[cmd];
+	for (inp = head->inp_next; inp != head;) {
+		if (inp->faddr.s_addr != faddr.s_addr ||
+		    inp->inp_socket == NULL ||
+		    inp->fport != fport ||
+		    inp->lport != lport ||
+		    (laddr.s_addr && inp->laddr.s_addr != laddr.s_addr)) {
+			inp = inp->inp_next;
+			continue;
+		}
+		oinp = inp;
+		inp = inp->inp_next;
+		if (notify)
+			(*notify)(oinp, err);
+	}
 }
 
 void in_setsockaddr(struct inpcb *inp, struct mbuf *nam)
