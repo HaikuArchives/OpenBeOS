@@ -24,6 +24,12 @@
 		
 	#endif
 	
+	#ifndef CACHE_VIEW_H
+	
+		#include "CacheView.h"
+		
+	#endif
+	
 	#ifndef BUTTON_VIEW_H
 	
 		#include "ButtonView.h"

@@ -34,7 +34,8 @@ SRCS= ButtonView.cpp \
             FontSelectionView.cpp \
             FontView.cpp \
             main.cpp \
-            MainWindow.cpp
+            MainWindow.cpp \
+            CacheView.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

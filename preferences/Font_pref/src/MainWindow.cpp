@@ -6,7 +6,7 @@
 
 
 MainWindow::MainWindow(BRect frame)
-				: BWindow(frame, "Fonts", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE ){
+				: BWindow(frame, "Fonts", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE ){
 				
 	BRect r; 
 	BTabView *tabView; 
@@ -18,7 +18,7 @@ MainWindow::MainWindow(BRect frame)
 	r.InsetBy(0, 10); 
 	r.bottom -= buttonViewHeight;
 	
-	tabView = new BTabView(r, "tab_view"); 
+	tabView = new BTabView(r, "tab_view", B_WIDTH_FROM_WIDEST); 
 	tabView->SetViewColor(216,216,216,0); 
 	
 	r = tabView->Bounds(); 
@@ -27,12 +27,10 @@ MainWindow::MainWindow(BRect frame)
 	tab = new BTab(); 
 	tabView->AddTab(fontPanel = new FontView(r), tab); 
 	tab->SetLabel("Fonts"); 
-	/*
 	tab = new BTab(); 
-	tabView->AddTab(new DestView(r), tab); 
-	tab->SetLabel("Obliterate");
-	*/
-	
+	tabView->AddTab(new CacheView(r, 64, 4096, 256), tab); 
+	tab->SetLabel("Cache");
+		
 	r = Bounds();
 	r.top = r.bottom - buttonViewHeight;
 	
