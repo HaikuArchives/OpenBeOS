@@ -7,7 +7,7 @@
 
 
 KeymapListItem::KeymapListItem( BEntry *keymap )
-	: BStringItem( "" )
+	:	BStringItem( "" )
 {
 	char	name[B_FILE_NAME_LENGTH];
 	

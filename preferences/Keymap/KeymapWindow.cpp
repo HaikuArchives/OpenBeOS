@@ -13,21 +13,20 @@
 #include "KeymapWindow.h"
 #include "KeymapListItem.h"
 #include "KeymapApplication.h"
+#include "messages.h"
 
 #include <iostream.h>
 
 KeymapWindow::KeymapWindow( BRect frame )
-	: BWindow( frame, WINDOW_TITLE, B_TITLED_WINDOW,
-	   B_NOT_ZOOMABLE|B_NOT_RESIZABLE|B_ASYNCHRONOUS_CONTROLS )
+	:	BWindow( frame, WINDOW_TITLE, B_TITLED_WINDOW,
+			B_NOT_ZOOMABLE|B_NOT_RESIZABLE|B_ASYNCHRONOUS_CONTROLS )
 {
 	rgb_color	temp_color;
 	BRect		bounds = Bounds();
 	BMenuBar	*menubar;
-	KeymapApplication	*theApplication;
 
-
-	theApplication = (KeymapApplication*) be_app;
-	fSelectedMap = theApplication->CurrentMap();
+	fApplication = (KeymapApplication*) be_app;
+	fSelectedMap = fApplication->CurrentMap();
 	
 	// Add the menu bar
 	menubar = AddMenuBar();
@@ -113,10 +112,6 @@ void KeymapWindow::AddMaps()
 	BList		*entryList;
 	BList		*listItems;
 	KeymapListItem	*currentKeymapItem;
-	KeymapApplication	*theApplication;
-
-
-	theApplication = (KeymapApplication*) be_app;
 
 	// The Maps box
 	bounds = BRect( 9,11, 140, 227 );
@@ -127,7 +122,7 @@ void KeymapWindow::AddMaps()
 	// The System list
 	mapsBox->DrawString( "System", BPoint( 13, 20 ) );
 	bounds = BRect( 13,36, 103,106 );
-	entryList = theApplication->SystemMaps();
+	entryList = fApplication->SystemMaps();
 	fSystemListView = new BListView( bounds, "systemList" );
 	listItems = ListItemsFromEntryList( entryList );
 	fSystemListView->AddList( listItems );
@@ -140,14 +135,12 @@ void KeymapWindow::AddMaps()
 	// The User list
 	mapsBox->DrawString( "User", BPoint( 13, 113 ));
 	bounds = BRect( 13,129, 103,199 );
-	entryList = theApplication->UserMaps();
+	entryList = fApplication->UserMaps();
 	fUserListView = new BListView( bounds, "userList" );
 	// '(Current)'
-	currentKeymapItem = ItemFromEntry( theApplication->CurrentMap() );
+	currentKeymapItem = ItemFromEntry( fApplication->CurrentMap() );
 	if( currentKeymapItem != NULL )
-	{
 		fUserListView->AddItem( currentKeymapItem );
-	}
 	// Saved keymaps
 	listItems = ListItemsFromEntryList( entryList );
 	fUserListView->AddList( listItems );
@@ -186,15 +179,12 @@ KeymapListItem* KeymapWindow::ItemFromEntry( BEntry *entry )
 {
 	KeymapListItem	*item;
 
-	if( entry->Exists() )
-	{
+	if( entry->Exists() ) {
 		item = new KeymapListItem( entry );
 		item->SetText( "(Current)" );
 	}
 	else
-	{
 		item = NULL;
-	}
 
 	return item;
 }
@@ -207,8 +197,7 @@ bool KeymapWindow::QuitRequested()
 
 void KeymapWindow::MessageReceived( BMessage* message )
 {
-	switch( message->what )
-	{
+	switch( message->what ) {
 		case MENU_FILE_OPEN:
 			break;
 		case MENU_FILE_SAVE:
@@ -285,7 +274,7 @@ void KeymapWindow::HandleMapSelected( BMessage *selectionMessage,
 	if( keymapListItem == NULL )
 		return;
 	fSelectedMap = keymapListItem->KeymapEntry();
-	#ifdef DEBUG
+	#if DEBUG
 		char	name[B_FILE_NAME_LENGTH];
 		
 		fSelectedMap->GetName( name );
@@ -298,16 +287,10 @@ void KeymapWindow::HandleMapSelected( BMessage *selectionMessage,
 
 void KeymapWindow::UseKeymap()
 {
-
-	KeymapApplication	*theApplication;
-
 	if( fSelectedMap != NULL )
-	{
-		theApplication = (KeymapApplication*) be_app;
-		theApplication->UseKeymap( fSelectedMap );
-	}
-	else
-	{ // There is no keymap selected!
+		fApplication->UseKeymap( fSelectedMap );
+	else {
+		// There is no keymap selected!
 		BAlert	*alert;
 		alert = new BAlert( "w>noKeymap", "No keymap has been selected", "Bummer",
 			NULL, NULL, B_WIDTH_AS_USUAL, B_WARNING_ALERT );

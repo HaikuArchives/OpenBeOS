@@ -3,27 +3,29 @@
 
 #include <be/storage/Entry.h>
 #include <be/support/List.h>
-#include "KeymapWindow.h"
 
-
-#define APP_SIGNATURE		"application/x-vnd.Keymap"
+#define APP_SIGNATURE		"application/x-vnd.OpenBeOS-Keymap"
 #define COPY_BUFFER_SIZE	1 * 1024
 
 
-class KeymapApplication : public BApplication
-{
-	public:
-		KeymapApplication();
-		void	MessageReceived(BMessage *message);
-		BList*	SystemMaps();
-		BList*	UserMaps();
-		BEntry* CurrentMap();
-		bool	UseKeymap( BEntry *keymap );
+class KeymapWindow;
 
-	protected:
-		KeymapWindow	* fWindow;
-		
-		BList*	EntryList( char *directoryPath );
+class KeymapApplication : public BApplication {
+public:
+	KeymapApplication();
+	void	MessageReceived(BMessage *message);
+	BList*	SystemMaps();
+	BList*	UserMaps();
+	BEntry* CurrentMap();
+	bool	UseKeymap( BEntry *keymap );
+
+protected:
+	KeymapWindow		*fWindow;
+
+	BList*	EntryList( char *directoryPath );
+	bool 	IsValidKeymap( BFile *inFile );
+	int		Copy( BFile *original, BFile *copy );
+	int		NotifyInputServer();
 
 };
 

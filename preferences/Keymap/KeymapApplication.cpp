@@ -2,20 +2,22 @@
 #include <be/storage/File.h>
 #include <be/app/Application.h>
 #include <be/storage/Directory.h>
-#ifdef DEBUG
+#if DEBUG
+	#include <be/interface/Input.h>
 	#include <iostream.h>
 #endif //DEBUG
+#include "KeymapWindow.h"
 #include "KeymapApplication.h"
 
 
 KeymapApplication::KeymapApplication()
-	:BApplication( APP_SIGNATURE )
+	:	BApplication( APP_SIGNATURE )
 {
 	// create the window
 	BRect frame = WINDOW_DIMENSIONS;
 	frame.OffsetTo( WINDOW_LEFT_TOP_POSITION );
 	fWindow = new KeymapWindow( frame );
-	fWindow->Show();	
+	fWindow->Show();
 }
 
 void KeymapApplication::MessageReceived( BMessage * message )
@@ -51,26 +53,21 @@ BList*	KeymapApplication::EntryList( char *directoryPath )
 	directory = new BDirectory();
 
 	if( directory->SetTo( directoryPath ) == B_OK )
-	{
 		// put each files' name in the list
-		while( true )
-		{
+		while( true ) {
 			currentEntry = new BEntry();
-			if( directory->GetNextEntry( currentEntry, true ) != B_OK )
-			{
+			if( directory->GetNextEntry( currentEntry, true ) != B_OK ) {
 				delete currentEntry;
 				break;
 			}
 			entryList->AddItem( currentEntry );
-			#ifdef DEBUG
+			#if DEBUG
 				char	name[B_FILE_NAME_LENGTH];
 				currentEntry->GetName( name );
 				cout << "Found: " << name << endl;
 			#endif //DEBUG
 		}
-	}
-	else
-	{
+	else {
 		// something went wrong; no system keymaps today
 		// TODO: catch error codes and act appropriately
 		
@@ -93,68 +90,138 @@ bool KeymapApplication::UseKeymap( BEntry *keymap )
 { // Copies keymap to ~/config/settings/key_map
 	BFile	*inFile;
 	BFile	*outFile;
-	bool	success = false;
-
 
 	// Open input file
 	if( !keymap->Exists() )
-	{
 		return false;
-	}
-
 	inFile = new BFile( keymap, B_READ_ONLY );
-	if( !inFile->IsReadable() )
-	{
+	if( !inFile->IsReadable() ) {
+		delete inFile;
 		return false;
 	}
 	
 	// Is keymap a valid keymap file?
+	if( !IsValidKeymap( inFile ) ) {
+		delete inFile;
+		return false;
+	}
 	
 	// Open output file
+	// TODO: find a nice constant for the path and use that instead
 	outFile = new BFile( "/boot/home/config/settings/Key_map", B_WRITE_ONLY|B_ERASE_FILE|B_CREATE_FILE );
-	if( !outFile->IsWritable() )
-	{
+	if( !outFile->IsWritable() ) {
+		delete inFile;
+		delete outFile;
 		return false;
 	}
 
 	// Copy file
-	char	*buffer[ COPY_BUFFER_SIZE ];
-	int 	offset = 0;
-	ssize_t	nrBytesRead;
-	ssize_t	nrBytesWritten;
-
-	while( true )
-	{
-		nrBytesRead = inFile->ReadAt( offset, buffer, COPY_BUFFER_SIZE );
-		if( nrBytesRead == 0 )
-		{
-			success = true;
-			break;
-		}
-		nrBytesWritten = outFile->WriteAt( offset, buffer, nrBytesRead );
-		if( nrBytesWritten != nrBytesRead )
-		{
-			success = false;
-			break;
-		}
-		if( nrBytesRead < COPY_BUFFER_SIZE )
-		{
-			success = true;
-			break;
-		}
-		
-		offset += nrBytesRead;
+	if( Copy( inFile, outFile ) != B_OK ) {
+		delete inFile;
+		delete outFile;
+		return false;
 	}
 	delete inFile;
 	delete outFile;
 	
-	// Inform Input Server
-	BMessage	*message;
+	// Tell Input Server there is a new keymap
+	if( NotifyInputServer() != B_OK )
+		return false;
 	
-	message = new BMessage( B_KEY_MAP_CHANGED );
-	// now what?
+	return true;
+}
+
+bool KeymapApplication::IsValidKeymap( BFile *inFile )
+{
+	// TODO: implement this thing
+
+	return true;
+}
+
+int KeymapApplication::Copy( BFile *original, BFile *copy )
+{
+	char	*buffer[ COPY_BUFFER_SIZE ];
+	int 	offset = 0;
+	int		errorCode = B_NO_ERROR;
+	ssize_t	nrBytesRead;
+	ssize_t	nrBytesWritten;
+
+	while( true ) {
+		nrBytesRead = original->ReadAt( offset, buffer, COPY_BUFFER_SIZE );
+		if( nrBytesRead == 0 )
+		{
+			errorCode = B_OK;
+			break;
+		}
+		nrBytesWritten = copy->WriteAt( offset, buffer, nrBytesRead );
+		if( nrBytesWritten != nrBytesRead )
+		{
+			errorCode = B_ERROR;
+			break;
+		}
+		if( nrBytesRead < COPY_BUFFER_SIZE )
+		{
+			errorCode = B_OK;
+			break;
+		}
+		offset += nrBytesRead;
+	}
 	
+	return errorCode;
+}
+
+int KeymapApplication::NotifyInputServer()
+{
+/*
+	BMessage		*message = new BMessage( B_KEY_MAP_CHANGED );
+
+	BInputDevice::Control( B_KEYBOARD_DEVICE, 
+		B_KEY_MAP_CHANGED, message );
+	delete message;
+*/
+
+	// get devices
+	void			*currentThingy;
+	BInputDevice	*currentDevice;
+	BMessage		*message = new BMessage( B_KEY_MAP_CHANGED );
+	BList			*devices = new BList();
+	int				success;
+
+	if( get_input_devices( devices ) != B_OK ) {
+		delete devices;
+		delete message;
+		return B_ERROR;
+	}
+	
+	// inform all keyboard devices
+	int nrDevices = devices->CountItems();
+	for( int index=0; index<nrDevices; index++ ) {
+		currentThingy = devices->ItemAt( index );
+		currentDevice = (BInputDevice*) currentThingy;
+		if( currentDevice->Type() == B_KEYBOARD_DEVICE ) {
+/*
+			#if DEBUG
+				cout << "Notifying keyboard: " << currentDevice->Name();
+			#endif //DEBUG
+
+			// Spread the word
+			success = currentDevice->Control( B_KEY_MAP_CHANGED, message );
+			#if DEBUG
+				cout << "... " << ( success==B_OK?"succeeded":"failed" ) << endl;
+			#endif //DEBUG
+*/
+			#if DEBUG
+				cout << "Notifying keyboard: " << currentDevice->Name() << endl;
+			#endif //DEBUG
+
+			currentDevice->Stop();
+			success = currentDevice->Control( B_KEY_MAP_CHANGED, message );
+			currentDevice->Start();
+		}
+		delete currentDevice;
+	}
+	delete devices;
 	delete message;
 
-	return success;
+	return B_NO_ERROR;
 }

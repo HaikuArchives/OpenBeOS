@@ -1,18 +1,23 @@
 OpenBeOS Keymap preferences
 
-2002-02-15 - Added resource file and 'Use' button, made 'System' and 'User' lists mutually exclusive and implemented keymap file copying.
+2002-02-16 - Moved message definitions to messages.h, chopped KeymapApplication::UseKeymap into smaller pieces, created member variable fApplication in KeymapWindow, applied OT layout
+
+2002-02-15 - Added resource file and 'Use' button, made 'System' and 'User' lists mutually exclusive and implemented keymap file copying
+
+2002-02-09 - Added resource file and 'Use' button and made 'System' and 'User' lists mutually exclusive - sort of
+
+2002-02-08 - Initial checkin
+
 
 This version:
-Actually copies keymap files!
+Actually copies keymap files! 
+
 
 To do (likely in this order):
 - somehow inform Input Server to use new keymap
 - fix map selection
 - implement Revert button
-- move message definitions to messages.h
-- create member variable fApplication in KeymapWindow
 - make the 'System' and 'User' labels show up (or: why are they invisible in the current version?)
-- chop KeymapApplication::UseKeymap into smaller pieces
 - layout the sources to conform to OBOS standards
 - find Be-defined constants for paths and/or files
 - check validity of keymap file before copying

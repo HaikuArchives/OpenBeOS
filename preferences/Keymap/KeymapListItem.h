@@ -10,15 +10,14 @@
 #include <be/storage/Entry.h>
 
 
-class KeymapListItem : public BStringItem
-{
-	public:
-		KeymapListItem( BEntry *keymap );
-		~KeymapListItem();
-		BEntry	*KeymapEntry();
-	
-	protected:
-		BEntry	*fKeymap;
+class KeymapListItem : public BStringItem {
+public:
+	KeymapListItem( BEntry *keymap );
+	~KeymapListItem();
+	BEntry	*KeymapEntry();
+
+protected:
+	BEntry	*fKeymap;
 
 };
 
