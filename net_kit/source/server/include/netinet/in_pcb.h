@@ -18,7 +18,14 @@ enum {
 	INP_RECVRETOPTS = 0x04,
 	INP_RECVSTADDR	= 0x08	/* receive IP destination as control inf. */
 };
-#define INP_CONTROLOPT (INP_RECVOPTS | INP_RECVRETOPTS | INP_RECVDSTADDR);
+#define INP_CONTROLOPT (INP_RECVOPTS | INP_RECVRETOPTS | INP_RECVSTADDR)
+
+/* Constants for in_pcblookup */
+enum {
+	INPLOOKUP_WILDCARD 	= 1,
+	INPLOOKUP_SETLOCAL	= 2,
+	INPLOOKUP_IPV6		= 4
+};
 
 struct inpcb {
 	struct inpcb *inp_next;
@@ -39,8 +46,11 @@ struct inpcb {
 
 int      in_pcballoc (struct socket *, struct inpcb *head);
 int      in_pcbbind (struct inpcb *, struct mbuf *);
-int      in_pcbconnect (void *, struct mbuf *);
+int      in_pcbconnect (struct inpcb *, struct mbuf *);
 void     in_pcbdetach (struct inpcb *);
+struct inpcb *in_pcblookup(struct inpcb *head, struct in_addr faddr,
+			   uint16 fport_a, struct in_addr laddr,
+			   uint16 lport_a, int flags);
 
 /* helpful macro's */
 #define     sotoinpcb(so)   ((struct inpcb *)(so)->so_pcb)

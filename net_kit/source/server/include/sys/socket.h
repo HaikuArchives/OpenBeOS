@@ -61,9 +61,41 @@ struct sockaddr {
 	uint8	sa_data[30];
 };
 
+struct msghdr {
+	caddr_t	msg_name;	/* address we're using (optional) */
+	uint msg_namelen;	/* length of address */
+	struct iovec *msg_iov;	/* scatter/gather array we'll use */
+	uint msg_iovlen;	/* # elements in msg_iov */
+	caddr_t msg_control;	/* extra data */
+	uint msg_controllen;	/* length of extra data */
+	int msg_flags;		/* flags */
+};
+
+/* Defines used in msghdr structure. */
+#define MSG_OOB         0x1             /* process out-of-band data */
+#define MSG_PEEK        0x2             /* peek at incoming message */
+#define MSG_DONTROUTE   0x4             /* send without using routing tables */
+#define MSG_EOR         0x8             /* data completes record */
+#define MSG_TRUNC       0x10            /* data discarded before delivery */
+#define MSG_CTRUNC      0x20            /* control data lost before delivery */
+#define MSG_WAITALL     0x40            /* wait for full request or error */
+#define MSG_DONTWAIT    0x80            /* this message should be nonblocking */
+#define MSG_BCAST       0x100           /* this message rec'd as broadcast */
+#define MSG_MCAST       0x200           /* this message rec'd as multicast */
+
+struct cmsghdr {
+	uint	cmsg_len;
+	int	cmsg_level;
+	int	cmsg_type;
+	/* there now follows uchar[] cmsg_data */
+};
+
 /* Function declarations */
 int     socket (int, int, int);
 int	bind(int, struct sockaddr *, size_t);
+int	sendto(int, caddr_t, size_t, int, struct sockaddr*, size_t);
+int	sendit(int, struct msghdr *, int, size_t *);
+int	recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t);
 
 #endif /* OBOS_SYS_SOCKET_H */
 

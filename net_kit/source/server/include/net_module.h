@@ -25,6 +25,7 @@ typedef struct net_module {
 	int layer;
 	int domain;	/* AF_INET and so on */
 	int sock_type;	/* SOCK_STREAM or SOCK_DGRAM at present */
+	int flags;
 
 	int 	(*init) (loaded_net_module *, int *pt);
 	int 	(*dev_init) (ifnet *);

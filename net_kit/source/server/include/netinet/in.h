@@ -47,7 +47,7 @@ struct sockaddr_in {
         uint8		sin_len;
         uint8		sin_family;
         uint16		sin_port;
-        struct		in_addr sin_addr;
+        struct in_addr 	sin_addr;
         int8		sin_zero[8];
 };
 /* the address is therefore at sin_addr.s_addr */
@@ -64,6 +64,10 @@ struct sockaddr_in {
 #define INADDR_ANY              __IPADDR(0x00000000)
 #define INADDR_LOOPBACK         __IPADDR(0x7f000001)
 
+#define IN_CLASSD(i)		(((uint32)(i) & __IPADDR(0xf0000000)) == \
+				__IPADDR(0xe0000000))
+
+#define IN_MULTICAST(i)		IN_CLASSD(i)
 
 /* some helpful macro's :) */
 #define in_hosteq(s,t)  ((s).s_addr == (t).s_addr)

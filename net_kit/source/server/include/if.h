@@ -102,5 +102,7 @@ struct ifnet {
 	int	(*output)(struct mbuf*, int, struct sockaddr*); 
 };
 
+struct sockaddr *in_ifaddr;	/* this will point to our primary address */
+ 
 #endif /* OBOS_IF_H */
 
