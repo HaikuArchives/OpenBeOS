@@ -56,7 +56,7 @@ status_t
 BNode::SetTo(const char *path) {
 	Unset();	
 	if (path != NULL) {	
-		fCStatus = StorageKit::open(path, StorageKit::READ_WRITE, fFd);
+		fCStatus = StorageKit::open(path, O_RDWR, fFd);
 	}	
 	return fCStatus;
 }
