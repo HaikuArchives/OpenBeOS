@@ -515,7 +515,7 @@ static void scrup()
 	line = SCREEN_HEIGHT - 1;
 }
 
-void puts(const char *str)
+void kputs(const char *str)
 {
 	while (*str) {
 		if (*str == '\n') {
@@ -544,7 +544,7 @@ int dprintf(const char *fmt, ...)
 	ret = vsprintf(temp,fmt,args);
 	va_end(args);
 
-	puts(temp);
+	kputs(temp);
 	return ret;
 }
 
