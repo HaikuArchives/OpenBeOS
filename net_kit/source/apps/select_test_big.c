@@ -16,7 +16,7 @@
 
 int main(int argc, char **argv)
 {
-	int s[SOCKETS];
+	int * s;
 	int rv;
 	struct fd_set fdr, fdw, fde;
 	struct timeval tv;
@@ -34,12 +34,18 @@ int main(int argc, char **argv)
 		err(-1, "Parameters");
 	}
 
+	s = (int *) malloc(nsock * sizeof(int));
+	if (!s)
+		err(-1, "Not enought memory for sockets array");
+
 	printf("\nTest will be run with %d sockets\n\n", nsock);
 		
 	for (i=0;i<nsock;i++) {
 		s[i] = socket(AF_INET, SOCK_DGRAM, 0);
-		if (s[i] < 0)
+		if (s[i] < 0) {
+			free(s);
 			err(errno, "Socket creation failed");
+		}
 	}
 	
 	FD_ZERO(&fdr);
@@ -91,6 +97,8 @@ int main(int argc, char **argv)
 
 	for (i=0;i<nsock;i++)
 		closesocket(s[i]);
+	
+	free(s);
 	
 	printf("Test complete.\n");
 
