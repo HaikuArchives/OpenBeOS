@@ -19,7 +19,7 @@ namespace OpenBeOS {
 
 // Forward declarations
 class BEntry;
-class entry_ref;
+struct entry_ref;
 
 //! Interface for iterating through a list of filesystem entries
 /*! Defines a general interface for iterating through a list of entries (i.e.

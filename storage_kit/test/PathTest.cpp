@@ -9,6 +9,7 @@
 #include <Directory.h>
 #include <Entry.h>
 #include <Path.h>
+#include <TypeConstants.h>
 #include "Test.StorageKit.h"
 
 // Suite
@@ -413,7 +414,8 @@ PathTest::InitTest1()
 	}
 	// bad args (NULL dir)
 // R5: crashs, when passing a NULL BDirectory
-/*	nextSubTest();
+#if !SK_TEST_R5
+	nextSubTest();
 	{
 		BPath path((const BDirectory*)NULL, "test");
 		CPPUNIT_ASSERT( path.InitCheck() == B_BAD_VALUE );
@@ -426,7 +428,7 @@ PathTest::InitTest1()
 		CPPUNIT_ASSERT( path.InitCheck() == B_BAD_VALUE );
 		CPPUNIT_ASSERT( path.Path() == NULL );
 	}
-*/
+#endif
 
 	// 4. BPath(const BEntry*)
 	// existing entry (root dir)
@@ -465,7 +467,6 @@ PathTest::InitTest1()
 		CPPUNIT_ASSERT( path.Path() == NULL );
 	}
 	// bad args (badly initialized BEntry)
-//43
 	nextSubTest();
 	{
 		BEntry entry("/this/doesn't/exist");
@@ -874,7 +875,8 @@ PathTest::InitTest2()
 	path.Unset();
 	dir.Unset();
 // R5: crashs, when passing a NULL BDirectory
-/*	// bad args (NULL dir)
+#if !SK_TEST_R5
+	// bad args (NULL dir)
 	nextSubTest();
 	CPPUNIT_ASSERT( path.SetTo((const BDirectory*)NULL, "test") == B_BAD_VALUE );
 	CPPUNIT_ASSERT( path.InitCheck() == B_BAD_VALUE );
@@ -888,7 +890,7 @@ PathTest::InitTest2()
 	CPPUNIT_ASSERT( path.Path() == NULL );
 	path.Unset();
 	dir.Unset();
-*/
+#endif
 
 	// 4. SetTo(const BEntry*)
 	// existing entry (root dir)
@@ -1074,13 +1076,14 @@ PathTest::ParentTest()
 	BPath path;
 	BPath parent;
 // R5: crashs, when GetParent() is called on uninitialized BPath
-/*	// uninitialized BPath
+#if !SK_TEST_R5
+	// uninitialized BPath
 	nextSubTest();
 	CPPUNIT_ASSERT( path.InitCheck() == B_NO_INIT );
 	CPPUNIT_ASSERT( path.GetParent(&parent) == B_NO_INIT );
 	path.Unset();
 	parent.Unset();
-*/
+#endif
 	// root dir
 	nextSubTest();
 	CPPUNIT_ASSERT( path.SetTo("/") == B_OK );
@@ -1123,13 +1126,14 @@ PathTest::ParentTest()
 	path.Unset();
 	parent.Unset();
 // R5: crashs, when passing a NULL BPath
-/*	// bad args
+#if !SK_TEST_R5
+	// bad args
 	nextSubTest();
 	CPPUNIT_ASSERT( path.SetTo("/non/existing/dir") == B_OK );
 	CPPUNIT_ASSERT( path.GetParent(NULL) == B_BAD_VALUE );
 	path.Unset();
 	parent.Unset();
-*/
+#endif
 }
 
 // ComparisonTest
@@ -1144,8 +1148,10 @@ PathTest::ComparisonTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( path.InitCheck() == B_NO_INIT );
 	CPPUNIT_ASSERT( path2.InitCheck() == B_NO_INIT );
-//	CPPUNIT_ASSERT( (path == path2) == true );
-//	CPPUNIT_ASSERT( (path != path2) == false );
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( (path == path2) == true );
+	CPPUNIT_ASSERT( (path != path2) == false );
+#endif
 	path.Unset();
 	path2.Unset();
 	// uninitialized argument BPath
@@ -1205,12 +1211,16 @@ PathTest::ComparisonTest()
 	nextSubTest();
 	CPPUNIT_ASSERT( path.SetTo("/") == B_OK );
 	pathName = NULL;
-//	CPPUNIT_ASSERT( (path == pathName) == false );
-//	CPPUNIT_ASSERT( (path != pathName) == true );
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( (path == pathName) == false );
+	CPPUNIT_ASSERT( (path != pathName) == true );
+#endif
 	path.Unset();
 	CPPUNIT_ASSERT( path.InitCheck() == B_NO_INIT );
-//	CPPUNIT_ASSERT( (path == pathName) == true );
-//	CPPUNIT_ASSERT( (path != pathName) == false );
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( (path == pathName) == true );
+	CPPUNIT_ASSERT( (path != pathName) == false );
+#endif
 	path.Unset();
 }
 
@@ -1360,10 +1370,11 @@ PathTest::FlattenableTest()
 // R5: crashs, when passing a NULL buffer
 // R5: doesn't check the buffer size
 	CPPUNIT_ASSERT( path.SetTo("/boot/home") == B_OK );
-//	CPPUNIT_ASSERT( path.Flatten(NULL, sizeof(buffer)) == B_BAD_VALUE );
-//	CPPUNIT_ASSERT( path.Flatten(buffer, path.FlattenedSize() - 2)
-//					== B_BAD_VALUE );
+#if !SK_TEST_R5
+	CPPUNIT_ASSERT( path.Flatten(NULL, sizeof(buffer)) == B_BAD_VALUE );
+	CPPUNIT_ASSERT( path.Flatten(buffer, path.FlattenedSize() - 2)
+					== B_BAD_VALUE );
+#endif
 	path.Unset();
-	
 }
 

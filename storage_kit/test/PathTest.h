@@ -35,6 +35,4 @@ public:
 	void FlattenableTest();
 };
 
-
-
 #endif	// __sk_path_test_h__

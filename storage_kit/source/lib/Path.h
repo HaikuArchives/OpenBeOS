@@ -10,10 +10,8 @@
 #ifndef __sk_path_h__
 #define __sk_path_h__
 
-#include <sys/types.h>
 #include <Flattenable.h>
 #include <SupportDefs.h>
-#include <TypeConstants.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
@@ -51,15 +49,17 @@ public:
 
 	status_t SetTo(const entry_ref *ref);	
 	status_t SetTo(const BEntry *entry);
-	status_t SetTo(const char *path, const char *leaf = NULL, bool normalize = false);
-	status_t SetTo(const BDirectory *dir, const char *path, bool normalize = false);
+	status_t SetTo(const char *path, const char *leaf = NULL,
+				   bool normalize = false);
+	status_t SetTo(const BDirectory *dir, const char *path,
+				   bool normalize = false);
 	void Unset();
 	
 	status_t Append(const char *path, bool normalize = false);
 	
 	const char *Path() const;
 	const char *Leaf() const;
-	status_t GetParent(BPath *) const;
+	status_t GetParent(BPath *path) const;
 	
 	bool operator==(const BPath &item) const;
 	bool operator==(const char *path) const;
@@ -77,23 +77,20 @@ public:
 	virtual status_t Unflatten(type_code c, const void *buf, ssize_t size);
 
 private:
-	friend class PathTest;	// for testing only
-
 	virtual void _WarPath1();
 	virtual void _WarPath2();
 	virtual void _WarPath3();
-	
+
 	uint32 _warData[4];
-	
+
 	char *fName;	
 	status_t fCStatus;
 
 	class EBadInput { };
-	
+
 	status_t set_path(const char *path);
-	
+
 	static bool MustNormalize(const char *path);
-	
 };
 
 #ifdef USE_OPENBEOS_NAMESPACE

@@ -33,7 +33,7 @@ BEntryList::~BEntryList()
 	\param entry a pointer to a BEntry to be initialized with the found entry
 	\param traverse specifies whether to follow it, if the found entry
 		   is a symbolic link.
-	\note The iterator used be this method is the same one used by
+	\note The iterator used by this method is the same one used by
 		  GetNextRef(), GetNextDirents(), Rewind() and CountEntries().
 	\return
 	- \c B_OK if successful,
@@ -45,13 +45,10 @@ BEntryList::~BEntryList()
 // GetNextRef
 /*!	\fn status_t BEntryList::GetNextRef(entry_ref *ref)
 	\brief Returns the BEntryList's next entry as an entry_ref.
-	Places an entry_ref to the next entry in the list into \a ref, traversing
-	symlinks if \a traverse is \c true.
+	Places an entry_ref to the next entry in the list into \a ref.
 	\param ref a pointer to an entry_ref to be filled in with the data of the
 		   found entry
-	\param traverse specifies whether to follow it, if the found entry
-		   is a symbolic link.
-	\note The iterator used be this method is the same one used by
+	\note The iterator used by this method is the same one used by
 		  GetNextEntry(), GetNextDirents(), Rewind() and CountEntries().
 	\return
 	- \c B_OK if successful,
@@ -70,7 +67,7 @@ BEntryList::~BEntryList()
 	\param buf a pointer to a buffer to be filled with dirent structures of
 		   the found entries
 	\param length the maximal number of entries to be read.
-	\note The iterator used be this method is the same one used by
+	\note The iterator used by this method is the same one used by
 		  GetNextEntry(), GetNextRef(), Rewind() and CountEntries().
 	\return
 	- The number of dirent structures stored in the buffer, 0 when there are
