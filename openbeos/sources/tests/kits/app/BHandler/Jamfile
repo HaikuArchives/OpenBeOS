@@ -1,0 +1,22 @@
+SubDir OBOS_TOP sources tests kits app BHandler ;
+
+UnitTest BHandlerTester : main.cpp
+		BHandlerTester.cpp
+		IsWatchedTest.cpp
+		LooperTest.cpp
+		SetNextHandlerTest.cpp
+		NextHandlerTest.cpp
+		AddFilterTest.cpp
+		RemoveFilterTest.cpp
+		SetFilterListTest.cpp
+		LockLooperTest.cpp
+		LockLooperTestCommon.cpp
+		LockLooperWithTimeoutTest.cpp
+		UnlockLooperTest.cpp
+	: kits/app ;
+
+LinkSharedOSLibs BHandlerTester :
+	/boot/home/config/lib/libopenbeos.so
+	/boot/home/config/lib/libcppunit.so
+	/boot/develop/lib/x86/libbe.so
+	/boot/develop/lib/x86/libstdc++.r4.so ;
