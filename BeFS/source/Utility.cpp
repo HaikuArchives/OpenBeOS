@@ -12,57 +12,42 @@
 #include <string.h>
 
 
-int32
-sorted_array::Find(off_t value)
+bool
+sorted_array::FindInternal(off_t value, int32 &index) const
 {
-	int32 size = count,first = 0;
-	while (size > 0) {
-		int32 i = size >> 1;
-		off_t cmp = value - values[first + i];
+	int32 min = 0, max = count-1;
+	off_t cmp;
+	while (min <= max) {
+		index = (min + max) / 2;
 
-		if (cmp == 0)
-			return first + i;
-		if (cmp > 0) {
-			first += i + 1;
-			size = (size-1) >> 1;
-		} else
-			size = i;
+		cmp = values[index] - value;
+		if (cmp < 0)
+			min = index + 1;
+		else if (cmp > 0)
+			max = index - 1;
+		else
+			return true;
 	}
-	return -1;
+	return false;
 }
 
 
 void 
 sorted_array::Insert(off_t value)
 {
-	// ToDo: if the value count is greater 8, it should do a binary
-	// search to get the correct insertion point
-	int32 i = 0,size = count,first = 0;
-	while (size > 0) {
-		/*int32*/ i = size >> 1;
-		off_t cmp = value - values[first + i];
-
-		if (cmp == 0) {
-			i = first + i;
-			break; // i;
-		}
-		if (cmp > 0) {
-			first += i + 1;
-			size = (size-1) >> 1;
-		} else
-			size = i;
+	// if there are more than 8 values in this array, use a
+	// binary search, if not, just iterate linearly to find
+	// the insertion point
+	int32 i;
+	if (count > 8 ) {
+		if (!FindInternal(value,i)
+			&& values[i] <= value)
+			i++;
+	} else {
+		for (i = 0;i < count; i++)
+			if (values[i] > value)
+				break;
 	}
-	if (size == 0)
-		i += first;
-	else
-		__out("already in list!\n");
-	int32 j = 0;
-	for (;j < count;j++)
-		if (values[j] > value)
-			break;
-if (j != i-1 && i != j)
-	PRINT(("insert: bin says: %ld, correct is %ld\n",i,j));
-	i = j;
 
 	memmove(&values[i+1],&values[i],(count - i) * sizeof(off_t));
 	values[i] = value;
@@ -128,8 +113,6 @@ BlockArray::Insert(off_t value)
 		fSize += fBlockSize;
 		fMaxBlocks = fSize / sizeof(off_t) - 1;
 	}
-//PRINT(("blockSize = %ld, size = %ld, max blocks = %ld\n",fBlockSize,fSize,fMaxBlocks));
-//PRINT(("array->count == %Ld (before insertion)\n",fArray->count));
 
 	fArray->Insert(value);
 	return B_OK;
