@@ -10,6 +10,8 @@
 #include "TestCase.h"
 #endif
 
+#include <memory>
+
 /* 
  * A test caller provides access to a test case method 
  * on a test case class.  Test callers are useful when 
