@@ -8,9 +8,13 @@
 /* These are the address/protocol families we'll be using... */
 /* NB these should be added to as required... */
 
+/* If we want to have Binary compatability we may need to alter these
+ * to agree with the Be versions...
+ */
 #define	AF_UNSPEC		0
 #define AF_INET			2
 #define AF_ROUTE		3
+#define AF_IMPLINK      4
 #define AF_LINK			18
 #define AF_IPX			23
 #define AF_INET6		24
@@ -23,6 +27,7 @@
 #define PF_LINK			AF_LINK
 #define PF_INET6		AF_INET6	
 #define PF_IPX			AF_IPX
+#define PF_IMPLINK      AF_IMPLINK
 
 /* Types of socket we can create (eventually) */
 #define SOCK_STREAM 	1
@@ -43,6 +48,8 @@
 #define SO_LINGER       0x0080          /* linger on close if data present */
 #define SO_OOBINLINE    0x0100          /* leave received OOB data in line */
 #define SO_REUSEPORT    0x0200          /* allow local address & port reuse */
+
+#define SOL_SOCKET      0xffff
 
 /*
  * Additional options, not kept in so_options.
@@ -185,6 +192,8 @@ int     recvfrom(int, caddr_t, size_t, int, struct sockaddr *, size_t*);
 int     sysctl (int *, uint, void *, size_t *, void *, size_t);
 int     shutdown(int sock, int how);
 int     send(int, caddr_t, int, int);
+int     getsockopt(int, int, int, void *, size_t *);
+int     setsockopt(int, int, int, const void *, size_t);
 
 #endif /* OBOS_SYS_SOCKET_H */
 
