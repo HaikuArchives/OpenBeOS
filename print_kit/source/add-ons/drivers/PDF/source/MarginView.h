@@ -134,7 +134,6 @@ const uint32 MARGIN_CHANGED = 'mchg';
 const uint32 CHANGE_PAGE_SIZE = 'chps';
 const uint32 FLIP_PAGE = 'flip';
 
-
 /**
  * Class MarginView
  */
@@ -155,7 +154,6 @@ private:
 	// GUI components
 	BBox *box;
 	BTextControl *top, *bottom, *left, *right;
-	//BTextView *right;
 	BPopUpMenu *menu;
 	BMenuItem *item;
 	BMenuField *mf;

@@ -431,7 +431,7 @@ void MarginView::SetUnits(uint32 unit)
 		return;
 	}
 	
-	// set the units
+	// set the units Format
 	unitValue = unitFormat[unit];
 
 	// convert the field text to values
