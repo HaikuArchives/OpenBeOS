@@ -1,8 +1,38 @@
 SubDir OBOS_TOP sources os kits kernel core ;
 
-KernelObjects cbuf.c console.c cpu.c debug.c elf.c faults.c gdb.c heap.c int.c khash.c linkhack.c lock.c main.c misc.c module.c port.c queue.c sem.c smp.c syscalls.c thread.c timer.c : -fno-pic  ;
+KernelObjects 
+	<$(SOURCE_GRIST)>cbuf.c 
+	<$(SOURCE_GRIST)>console.c 
+	<$(SOURCE_GRIST)>cpu.c 
+	<$(SOURCE_GRIST)>debug.c 
+	<$(SOURCE_GRIST)>elf.c 
+	<$(SOURCE_GRIST)>faults.c 
+	<$(SOURCE_GRIST)>gdb.c 
+	<$(SOURCE_GRIST)>heap.c 
+	<$(SOURCE_GRIST)>int.c 
+	<$(SOURCE_GRIST)>khash.c 
+	<$(SOURCE_GRIST)>linkhack.c 
+	<$(SOURCE_GRIST)>lock.c 
+	<$(SOURCE_GRIST)>main.c 
+	<$(SOURCE_GRIST)>misc.c 
+	<$(SOURCE_GRIST)>module.c 
+	<$(SOURCE_GRIST)>port.c 
+	<$(SOURCE_GRIST)>queue.c 
+	<$(SOURCE_GRIST)>sem.c 
+	<$(SOURCE_GRIST)>smp.c 
+	<$(SOURCE_GRIST)>syscalls.c 
+	<$(SOURCE_GRIST)>thread.c 
+	<$(SOURCE_GRIST)>timer.c 
+	: 
+	-DNEWOS=1 -fno-pic
+	;
 
-#KernelSharedLibrary linkhack : linkhack.c ;
+KernelLd linkhack.so :
+	<$(SOURCE_GRIST)>linkhack.o
+	:
+	:
+	-shared -Bdynamic
+	;
 
 SubInclude OBOS_TOP sources os kits kernel core addons ;
 SubInclude OBOS_TOP sources os kits kernel core arch ;

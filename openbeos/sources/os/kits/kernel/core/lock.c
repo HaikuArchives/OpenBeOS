@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <arch/cpu.h>
 #include <errors.h>
+#include <atomic.h>
 
 int recursive_lock_get_recursion(recursive_lock *lock)
 {

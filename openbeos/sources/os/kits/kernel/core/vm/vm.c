@@ -20,6 +20,7 @@
 #include <lock.h>
 #include <khash.h>
 #include <errors.h>
+#include <thread.h>
 
 #include <stage2.h>
 
@@ -1393,7 +1394,7 @@ aspace_id vm_get_current_user_aspace_id(void)
 	struct thread *t = thread_get_current_thread();
 
 	if(t)
-		return t->proc->aspace_id;
+		return t->proc->_aspace_id;
 	else
 		return -1;
 }

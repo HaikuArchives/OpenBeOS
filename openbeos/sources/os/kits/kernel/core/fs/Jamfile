@@ -1,3 +1,10 @@
 SubDir OBOS_TOP sources os kits kernel core fs ;
 
-KernelStaticLibrary libfs : bootfs.c devfs.c rootfs.c vfs.c ;
+KernelStaticLibrary libfs : 
+	<$(SOURCE_GRIST)>bootfs.c 
+	<$(SOURCE_GRIST)>devfs.c 
+	<$(SOURCE_GRIST)>rootfs.c 
+	<$(SOURCE_GRIST)>vfs.c 
+	:
+	-fno-pic
+	;

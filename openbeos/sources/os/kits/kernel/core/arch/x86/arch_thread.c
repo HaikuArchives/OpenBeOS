@@ -3,7 +3,6 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel.h>
-#include <arch/kernel.h>
 #include <stage2.h>
 #include <debug.h>
 #include <vm.h>
@@ -97,19 +96,19 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 }
 #endif
 
-	if(t_from->proc->aspace_id >= 0 && t_to->proc->aspace_id >= 0) {
+	if(t_from->proc->_aspace_id >= 0 && t_to->proc->_aspace_id >= 0) {
 		// they are both uspace threads
-		if(t_from->proc->aspace_id == t_to->proc->aspace_id) {
+		if(t_from->proc->_aspace_id == t_to->proc->_aspace_id) {
 			// dont change the pgdir, same address space
 			new_pgdir = NULL;
 		} else {
 			// switching to a new address space
 			new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
 		}
-	} else if(t_from->proc->aspace_id < 0 && t_to->proc->aspace_id < 0) {
+	} else if(t_from->proc->_aspace_id < 0 && t_to->proc->_aspace_id < 0) {
 		// they must both be kspace threads
 		new_pgdir = NULL;
-	} else if(t_to->proc->aspace_id < 0) {
+	} else if(t_to->proc->_aspace_id < 0) {
 		// the one we're switching to is kspace
 		new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->kaspace->translation_map);
 	} else {

@@ -12,10 +12,10 @@
 #include <vm.h>
 #include <thread.h>
 #include <debug.h>
-// #include <heap.h>
-#include <arch/cpu.h>
 #include <memheap.h>
-/* ROUNDDOWN/UP macro's are defined in arch/x86/stage2_priv.h ??? */
+#include <atomic.h>
+
+#include <arch/cpu.h>
 
 #include <elf32.h>
 
@@ -556,7 +556,7 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 			B= ROUNDOWN(B, PAGE_SIZE);
 
 			id= vm_map_file(
-				p->aspace_id,
+				p->_aspace_id,
 				region_name,
 				(void **)&region_addr,
 				REGION_ADDR_EXACT_ADDRESS,
@@ -601,7 +601,7 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 
 				region_addr+= ROUNDUP(pheaders[i].p_filesz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
 				id= vm_create_anonymous_region(
-					p->aspace_id,
+					p->_aspace_id,
 					region_name,
 					(void **)&region_addr,
 					REGION_ADDR_EXACT_ADDRESS,
@@ -620,7 +620,7 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 			 * assume rx segment
 			 */
 			id= vm_map_file(
-				p->aspace_id,
+				p->_aspace_id,
 				region_name,
 				(void **)&region_addr,
 				REGION_ADDR_EXACT_ADDRESS,

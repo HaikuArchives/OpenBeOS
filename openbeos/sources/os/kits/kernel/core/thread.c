@@ -5,18 +5,17 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel.h>
-#include <arch/kernel.h>
 #include <debug.h>
 #include <console.h>
 #include <thread.h>
 #include <arch/thread.h>
 #include <khash.h>
-#include <arch/int.h>
+#include <int.h>
 #include <smp.h>
 #include <timer.h>
 #include <cpu.h>
+#include <arch/int.h>
 #include <arch/cpu.h>
-#include <int.h>
 #include <arch/vm.h>
 #include <sem.h>
 #include <port.h>
@@ -30,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <resource.h>
+#include <atomic.h>
 
 struct proc_key {
 	proc_id id;
@@ -456,7 +456,7 @@ static thread_id _create_thread(const char *name, proc_id pid, addr entry, void 
 		t->user_stack_base = (USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE;
 		while(t->user_stack_base > USER_STACK_REGION) {
 			sprintf(stack_name, "%s_stack%d", p->name, t->id);
-			t->user_stack_region_id = vm_create_anonymous_region(p->aspace_id, stack_name,
+			t->user_stack_region_id = vm_create_anonymous_region(p->_aspace_id, stack_name,
 				(void **)&t->user_stack_base,
 				REGION_ADDR_ANY_ADDRESS, STACK_SIZE, REGION_WIRING_LAZY, LOCK_RW);
 			if(t->user_stack_region_id < 0) {
@@ -632,7 +632,7 @@ static void _dump_proc_info(struct proc *p)
 	dprintf("state:       %d\n", p->state);
 	dprintf("pending_signals: 0x%x\n", p->pending_signals);
 	dprintf("ioctx:       %p\n", p->ioctx);
-	dprintf("aspace_id:   0x%x\n", p->aspace_id);
+	dprintf("aspace_id:   0x%x\n", p->_aspace_id);
 	dprintf("aspace:      %p\n", p->aspace);
 	dprintf("kaspace:     %p\n", p->kaspace);
 	dprintf("main_thread: %p\n", p->main_thread);
@@ -1129,10 +1129,10 @@ void thread_exit(int retcode)
 	thread_set_priority(t->id, THREAD_HIGH_PRIORITY);
 
 	// delete the user stack region first
-	if(p->aspace_id >= 0 && t->user_stack_region_id >= 0) {
+	if(p->_aspace_id >= 0 && t->user_stack_region_id >= 0) {
 		region_id rid = t->user_stack_region_id;
 		t->user_stack_region_id = -1;
-		vm_delete_region(p->aspace_id, rid);
+		vm_delete_region(p->_aspace_id, rid);
 	}
 
 	if(p != kernel_proc) {
@@ -1184,7 +1184,7 @@ void thread_exit(int retcode)
 			}
 		}
 		vm_put_aspace(p->aspace);
-		vm_delete_aspace(p->aspace_id);
+		vm_delete_aspace(p->_aspace_id);
 		port_delete_owned_ports(p->id);
 		sem_delete_owned_sems(p->id);
 		vfs_free_ioctx(p->ioctx);
@@ -1587,7 +1587,7 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 	p->num_threads = 0;
 	p->ioctx = NULL;
-	p->aspace_id = -1;
+	p->_aspace_id = -1;
 	p->aspace = NULL;
 	p->kaspace = vm_get_kernel_aspace();
 	vm_put_aspace(p->kaspace);
@@ -1649,7 +1649,7 @@ static int proc_create_proc2(void *args)
 	tot_top_size = STACK_SIZE + PAGE_ALIGN(get_arguments_data_size(pargs->args,pargs->argc));
 	t->user_stack_base = ((USER_STACK_REGION  - tot_top_size) + USER_STACK_REGION_SIZE);
 	sprintf(ustack_name, "%s_primary_stack", p->name);
-	t->user_stack_region_id = vm_create_anonymous_region(p->aspace_id, ustack_name, (void **)&t->user_stack_base,
+	t->user_stack_region_id = vm_create_anonymous_region(p->_aspace_id, ustack_name, (void **)&t->user_stack_base,
 		REGION_ADDR_EXACT_ADDRESS, tot_top_size, REGION_WIRING_LAZY, LOCK_RW);
 	if(t->user_stack_region_id < 0) {
 		panic("proc_create_proc2: could not create default user stack region\n");
@@ -1748,12 +1748,12 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	}
 
 	// create an address space for this process
-	p->aspace_id = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
-	if(p->aspace_id < 0) {
-		err = p->aspace_id;
+	p->_aspace_id = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
+	if(p->_aspace_id < 0) {
+		err = p->_aspace_id;
 		goto err4;
 	}
-	p->aspace = vm_get_aspace_by_id(p->aspace_id);
+	p->aspace = vm_get_aspace_by_id(p->_aspace_id);
 
 	// create a kernel thread, but under the context of the new process
 	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, pargs, p);
@@ -1768,7 +1768,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 
 err5:
 	vm_put_aspace(p->aspace);
-	vm_delete_aspace(p->aspace_id);
+	vm_delete_aspace(p->_aspace_id);
 err4:
 	vfs_free_ioctx(p->ioctx);
 err3:

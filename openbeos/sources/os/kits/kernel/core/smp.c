@@ -14,6 +14,7 @@
 #include <smp.h>
 #include <memheap.h>
 #include <errors.h>
+#include <atomic.h>
 
 #include <cpu.h>
 #include <arch/cpu.h>

@@ -7,6 +7,11 @@
 #include <ktypes.h>
 #include <debug.h>
 
+/* XXX - keep the compiler happy. */
+uint16 ones_sum16(uint32 sum, const void *_buf, int len);
+uint16 cksum16(void *_buf, int len);
+uint16 cksum16_2(void *buf1, int len1, void *buf2, int len2);
+
 uint16 ones_sum16(uint32 sum, const void *_buf, int len)
 {
 	const uint16 *buf = _buf;

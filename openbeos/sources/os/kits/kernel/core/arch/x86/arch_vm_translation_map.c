@@ -2,15 +2,13 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <arch/x86/kernel.h>
-#include <arch/vm_translation_map.h>
+#include <kernel.h>
 #include <memheap.h>
 #include <int.h>
 #include <smp.h>
 #include <vm.h>
 #include <vm_page.h>
 #include <vm_priv.h>
-#include <arch/cpu.h>
 #include <debug.h>
 #include <lock.h>
 #include <sem.h>
@@ -18,6 +16,9 @@
 #include <string.h>
 #include <stage2.h>
 #include <errors.h>
+
+#include <arch/cpu.h>
+#include <arch/vm_translation_map.h>
 
 
 // 256 MB of iospace

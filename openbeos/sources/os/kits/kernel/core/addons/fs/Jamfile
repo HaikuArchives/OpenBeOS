@@ -1,11 +1,4 @@
 SubDir OBOS_TOP sources os kits kernel core addons fs ;
 
-KernelStaticLibrary libaddons_fs :
-	<$(SOURCE_GRIST)>iso9660/isofs.c
-	<$(SOURCE_GRIST)>zfs/zfs.c
-	:
-	-fno-pic
-	;
-
-#SubInclude OBOS_TOP sources os kits kernel core addons fs zfs ;
-#SubInclude OBOS_TOP sources os kits kernel core addons fs iso9660 ;
+SubInclude OBOS_TOP sources os kits kernel core addons fs zfs ;
+SubInclude OBOS_TOP sources os kits kernel core addons fs iso9660 ;

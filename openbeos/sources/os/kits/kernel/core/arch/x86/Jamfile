@@ -12,6 +12,7 @@ KernelStaticLibrary libx86 :
 	<$(SOURCE_GRIST)>arch_vm.c 
 	<$(SOURCE_GRIST)>arch_vm_translation_map.c 
 	<$(SOURCE_GRIST)>arch_x86.S
+	<$(SOURCE_GRIST)>arch_interrupts.S
 	:
 	-fno-pic
 	;
