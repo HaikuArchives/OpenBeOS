@@ -1,6 +1,3 @@
-/*	$OpenBSD: show.c,v 1.20 2001/07/07 18:26:20 deraadt Exp $	*/
-/*	$NetBSD: show.c,v 1.1 1996/11/15 18:01:41 gwr Exp $	*/
-
 /*
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,14 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-#if 0
-static char sccsid[] = "from: @(#)route.c	8.3 (Berkeley) 3/9/94";
-#else
-static char *rcsid = "$OpenBSD: show.c,v 1.20 2001/07/07 18:26:20 deraadt Exp $";
-#endif
-#endif /* not lint */
-
 #include <sys/param.h>
 #include <kernel/OS.h>
 #include "mbuf.h"
@@ -54,13 +43,10 @@ static char *rcsid = "$OpenBSD: show.c,v 1.20 2001/07/07 18:26:20 deraadt Exp $"
 #include "net/if_types.h"
 #include "net/route.h"
 #include "netinet/in.h"
-//#include <netns/ns.h>
-//#include <netinet/ip_ipsp.h>
 #include "arpa/inet.h"
 
 #include "keywords.h"
 
-//#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,7 +55,6 @@ static char *rcsid = "$OpenBSD: show.c,v 1.20 2001/07/07 18:26:20 deraadt Exp $"
 /* XXX: things from route.c */
 extern char *routename __P((struct sockaddr *));
 extern char *netname __P((struct sockaddr *));
-//extern char *ns_print __P((struct sockaddr_ns *));
 extern int nflag;
 
 #define ROUNDUP(a) \
