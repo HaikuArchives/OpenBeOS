@@ -180,6 +180,10 @@ void ScreenSaverApp::goBlank(void)
 // Unblank. Only works for direct draws.
 void ScreenSaverApp::unBlank(void)
 { 
+	if (passwordTime > 0)
+		{
+
+		}
 	resetTimer();
 	if (win  && (nextAction == DIRECTDRAW))
 		{
@@ -208,12 +212,17 @@ void setOnValue(BMessage *msg, char *name, int &result)
 	int32 value;
 	if (B_OK == msg->FindInt32(name,&value)) // If screen saving is even enabled
 		result=value;
-	printf ("Read parameter %s, setting it to:%d\n",name,result);
+	// printf ("Read parameter %s, setting it to:%d\n",name,result);
 }
 
 void ScreenSaverApp::parseSettings (BMessage *msg)
 {
 	int temp;
+	const char *strPtr,*passwordPointer;
+	char pathAndFile[1024]; // Yes, this is very long...
+	BPath path;
+
+	passwordPointer=password;
 	setOnValue(msg,"timeflags",temp);
 	if (temp) // If screen saver is enabled, set blanktime. 
 		setOnValue(msg,"timefade",blankTime);
@@ -222,12 +231,31 @@ void ScreenSaverApp::parseSettings (BMessage *msg)
 	// timestandby is not used, for now.
 	setOnValue(msg,"cornernow",cornerNow);
 	setOnValue(msg,"cornernever",cornerNever);
+	passwordTime=-1; // This is pessimistic - assume that password is off OR that a settings load will fail.
 	setOnValue(msg,"lockenable",temp);
-	if (temp)
+	if (temp && (B_OK == msg->FindString("lockmethod",&strPtr)))
+		{ // Get the password. Either from the settings file (that's secure) or the networking file (also secure).
+		if (strcmp(strPtr,"network")) // Not network, therefore from the settings file
+			if (B_OK == msg->FindString("lockpassword",&passwordPointer))
+				setOnValue(msg,"lockdelay",passwordTime);
+		else // Get from the network file
+			{
+			status_t found=find_directory(B_USER_SETTINGS_DIRECTORY,&path);
+			if (found==B_OK)
+				{
+				FILE *networkFile=NULL;
+				char buffer[512],*start;
+				strncpy(pathAndFile,path.Path(),1023);
+				strncat(pathAndFile,"/network",1023);
+				// This ugly piece opens the networking file and reads the password, if it exists.
+				if (networkFile=fopen(pathAndFile,"r"))
+					while (buffer==fgets(buffer,512,networkFile))
+						if (start=strstr(buffer,"PASSWORD ="))
+							strncpy(password, start+10,strlen(start-11));
+				}
+			}
 		setOnValue(msg,"lockdelay",passwordTime);
-	else 
-		passwordTime=-1;
-	const char *strPtr;
+		}
 	if (B_OK != msg->FindString("modulename",&strPtr)) 
 		blankTime=-1; // If the module doesn't exist, never blank.
 	strcpy(moduleName,strPtr);

@@ -26,10 +26,10 @@ private:
 	int currentTime;
 	int cornerNow;
 	int cornerNever;
-	int passwordLocked;
 	int passwordTime;
 	bool disabled;
 	char moduleName[1024];
+	char password[1024];
 	thread_id threadID;
 	image_id addon_image;
 };

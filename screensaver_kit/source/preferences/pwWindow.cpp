@@ -78,14 +78,14 @@ void pwWindow::MessageReceived(BMessage *message)
 		break;
 	case POPULATE:
 		message->ReplaceString("lockpassword", ((useNetPassword)?"":thePassword)); 
-		message->ReplaceString("lockmethod", (useNetPassword?"Network":"Custom")); 
+		message->ReplaceString("lockmethod", (useNetPassword?"network":"custom")); 
 		message->SendReply(message);
 		break;
 	case UTILIZE:
 		{
 		BString temp;
 		message->FindString("lockmethod",&temp);
-		useNetPassword=(temp=="Custom");
+		useNetPassword=(temp=="custom");
 		if (!useNetPassword)
 			{
 			message->FindString("lockpassword",&temp);
