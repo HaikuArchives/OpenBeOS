@@ -322,7 +322,7 @@ Inode::RemoveSmallData(Transaction *transaction,const char *name)
  *	section.
  *	Note that you need to write back the inode yourself after having called that
  *	method - it's a bad API decision that it needs a transaction but enforces you
- *	to write back the inode automatically, but it's just more efficient in most
+ *	to write back the inode all by yourself, but it's just more efficient in most
  *	cases...
  */
 
@@ -631,7 +631,6 @@ Inode::WriteAttribute(Transaction *transaction,const char *name,int32 type,off_t
 
 	if (attribute != NULL) {
 		if (attribute->Lock().LockWrite() == B_OK) {
-	
 			// save the old attribute data (if this fails, oldLength will reflect it)
 			if (hasIndex) {
 				oldLength = BPLUSTREE_MAX_KEY_LENGTH;
@@ -867,8 +866,6 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 	if (data->max_direct_range > 0 && pos >= data->max_direct_range) {
 		if (data->max_double_indirect_range > 0 && pos >= data->max_indirect_range) {
 			// access to double indirect blocks
-
-			//printf("find double indirect block: %ld,%d!\n",Node()->data.double_indirect.allocation_group,Node()->data.double_indirect.start);
 
 			CachedBlock cached(fVolume);
 
@@ -1466,9 +1463,62 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 
 
 status_t
-Inode::FreeStaticStreamArray(Transaction *transaction,int32 level,block_run *array,uint32 arrayLength,off_t size,off_t &offset,off_t &max)
+Inode::FreeStaticStreamArray(Transaction *transaction,int32 level,block_run run,off_t size,off_t offset,off_t &max)
 {
-	/* ToDo: implement me... */
+	int32 indirectSize;
+	if (level == 0)
+		indirectSize = (16 << fVolume->BlockShift()) * (fVolume->BlockSize() / sizeof(block_run));
+	else if (level == 1)
+		indirectSize = 4 << fVolume->BlockShift();
+
+	off_t start;
+	if (size > offset)
+		start = size - offset;
+	else
+		start = 0;
+
+	int32 index = start / indirectSize;
+	int32 runsPerBlock = fVolume->BlockSize() / sizeof(block_run);
+
+	CachedBlock cached(fVolume);
+	off_t blockNumber = fVolume->ToBlock(run);
+
+	// set the file offset to the current block run
+	offset += (off_t)index * indirectSize;
+
+	for (int32 i = index / runsPerBlock;i < run.length;i++) {
+		block_run *array = (block_run *)cached.SetTo(blockNumber + i);
+		if (array == NULL)
+			RETURN_ERROR(B_ERROR);
+
+		for (index = index % runsPerBlock;index < runsPerBlock;index++) {
+			if (array[index].IsZero()) {
+				// we also want to break out of the outer loop
+				i = run.length;
+				break;
+			}
+
+			status_t status = B_OK;
+			if (level == 0)
+				status = FreeStaticStreamArray(transaction,1,array[index],size,offset,max);
+			else if (offset >= size)
+				status = fVolume->Free(transaction,array[index]);
+			else
+				max = offset + indirectSize;
+
+			if (status < B_OK)
+				RETURN_ERROR(status);
+
+			if (offset >= size)
+				array[index].SetTo(0,0,0);
+
+			offset += indirectSize;
+		}
+		index = 0;
+
+		cached.WriteBack(transaction);
+	}
+	return B_OK;
 }
 
 
@@ -1527,8 +1577,13 @@ Inode::ShrinkStream(Transaction *transaction, off_t size)
 	data_stream *data = &Node()->data;
 
 	if (data->max_double_indirect_range > size) {
-		// ToDo: implement shrinking the double indirect range, please!
-		FATAL(("the double indirect range cannot yet be shrinked...\n"));
+		FreeStaticStreamArray(transaction,0,data->double_indirect,size,data->max_indirect_range,data->max_double_indirect_range);
+		
+		if (size <= data->max_indirect_range) {
+			fVolume->Free(transaction,data->double_indirect);
+			data->double_indirect.SetTo(0,0,0);
+			data->max_double_indirect_range = 0;
+		}
 	}
 	if (data->max_indirect_range > size) {
 		CachedBlock cached(fVolume);
