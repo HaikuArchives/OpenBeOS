@@ -128,11 +128,13 @@ class Inode : public CachedBlock {
 
 		mode_t Mode() const { return Node()->mode; }
 		int32 Flags() const { return Node()->flags; }
-		bool IsDirectory() const { return Mode() & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR); }
+		bool IsDirectory() const { return Mode() & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR) & S_IFMT; }
 		bool IsIndex() const { return (Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR; }
 			// that's a stupid check, but AFAIK the only possible method...
 
 		bool IsSymLink() const { return S_ISLNK(Mode()); }
+		bool HasUserAccessableStream() const { return S_ISREG(Mode()); }
+			// currently only files can be accessed with bfs_read()/bfs_write()
 
 		off_t Size() const { return Node()->data.size; }
 
@@ -197,6 +199,7 @@ class Inode : public CachedBlock {
 		void AddIterator(AttributeIterator *iterator);
 		void RemoveIterator(AttributeIterator *iterator);
 
+		status_t FreeStaticStreamArray(Transaction *transaction, int32 level, block_run *array, uint32 arrayLength, off_t size, off_t &offset, off_t &max);
 		status_t FreeStreamArray(Transaction *transaction, block_run *array, uint32 arrayLength, off_t size, off_t &offset, off_t &max);
 		status_t GrowStream(Transaction *transaction,off_t size);
 		status_t ShrinkStream(Transaction *transaction,off_t size);

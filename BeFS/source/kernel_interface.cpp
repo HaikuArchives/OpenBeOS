@@ -1076,7 +1076,7 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 	//FUNCTION();
 	Inode *inode = (Inode *)_node;
 	
-	if (inode->IsSymLink() || inode->IsDirectory()) {
+	if (!inode->HasUserAccessableStream()) {
 		*_length = 0;
 		RETURN_ERROR(B_BAD_VALUE);
 	}
@@ -1097,7 +1097,7 @@ bfs_write(void *_ns, void *_node, void *_cookie, off_t pos, const void *buffer, 
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
-	if (inode->IsSymLink()) {
+	if (!inode->HasUserAccessableStream()) {
 		*_length = 0;
 		RETURN_ERROR(B_BAD_VALUE);
 	}
