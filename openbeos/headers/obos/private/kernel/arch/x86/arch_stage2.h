@@ -7,6 +7,7 @@
 
 #include <stage2_struct.h>
 
+
 #define MAX_BOOT_PTABLES 4
 
 // kernel args
