@@ -162,7 +162,7 @@ static void attach_device(int devid, char *driver, char *devno)
 		return;
 	}
 	
-	ifp->devid = devid;
+	ifp->devid = -1;
 	ifp->if_type = IFT_ETHER;
 	ifp->name = strdup(driver);
 	ifp->if_unit = atoi(devno);
@@ -220,13 +220,10 @@ static void open_device(char *driver, char *devno)
 	}
 
 	status = ioctl(dev, IF_INIT, NULL, 0);
-	if (status < B_OK) {
-		printf("Unable to init card %s, %ld [%s]\n", path,
-			status, strerror(status));
-		close(dev);
-		return;
-	} else 
+	if (status == B_OK)
 		attach_device(dev, driver, devno);
+
+	close(dev);
 };
 
 static void find_devices(void)
@@ -552,13 +549,14 @@ typedef void timer;
 static int32 arptimer(timer *t)
 {
 	struct llinfo_arp *la = llinfo_arp.la_next;
-	
+printf("--> arptimer\n");	
 	while (la != &llinfo_arp) {
 		struct rtentry *rt = la->la_rt;
 		la = la->la_next;
 		if (rt->rt_expire && rt->rt_expire <= real_time_clock())
 			arptfree(la->la_prev);
 	}
+printf("<-- arptimer\n");
 	return 0;
 }
 
@@ -786,13 +784,16 @@ void arp_init(void)
 {
 	llinfo_arp.la_next = llinfo_arp.la_prev = &llinfo_arp;
 	
+
 #ifdef _KERNEL_MODE
+	printf("adding arp timer\n");
 	add_timer(&arp_timer, arptimer, 
 	          arpt_prune * 1000000,
 			  B_PERIODIC_TIMER);
 #else
 	net_add_timer(&arptimer, NULL, arpt_prune * 1000000);
 #endif
+
 }
 
 int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
@@ -800,6 +801,17 @@ int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 	struct arpcom *ac = (struct arpcom *)ifp;
 	struct ifaddr *ifa = (struct ifaddr*)data;
 
+	if (ifp->devid == -1) {
+		char path[PATH_MAX];
+		sprintf(path, "%s/%s/%d", DRIVER_DIRECTORY, ifp->name, ifp->if_unit);
+		printf("opening %s\n", path);	
+		ifp->devid = open(path, O_RDWR);
+		if (ifp->devid < 0) {
+			ifp->devid = -1;
+			return -1;
+		}
+	}
+	
 	if ((ifp->if_flags & IFF_UP) == 0 &&
 	    (ifp->rx_thread > 0 || ifp->tx_thread > 0)) {
 		/* shutdown our threads and remove the IFF_RUNNING flag... */
@@ -841,7 +853,11 @@ int ether_ioctl(struct ifnet *ifp, int cmd, caddr_t data)
 			start_tx_thread(ifp);
 		ifp->if_flags |= IFF_RUNNING;
 	}
-
+	/* close and reset the devid so we don't try to use it again */
+	if ((ifp->if_flags & IFF_UP) == 0) {
+		close(ifp->devid);
+		ifp->devid = -1;
+	}
 	return 0;
 }
 
