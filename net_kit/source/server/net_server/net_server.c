@@ -226,21 +226,15 @@ static void merge_devices(void)
 static void start_devices(void) 
 {
 	ifnet *d = NULL;
-	ifnet *old = NULL;
 
-	merge_devices();
+//	merge_devices();
 
 	if (devices == NULL)
 		return;
 
 	d = devices;
 	while (d) {
-		if (d->start(d) != 0) {
-			/* if we had a problem, remove the device... */
-			if (old)
-				old->next = d->next;
-		} else 
-			old = d;
+		d->start(d);
 		d = d->next;
 	}
 }
@@ -343,6 +337,7 @@ static void find_interface_modules(void)
 	struct dirent *fe;
 	struct device_info *di;
 	status_t status;
+printf("find_interface modules\n");
 	
 	getcwd(cdir, PATH_MAX);
 	sprintf(cdir, "%s/modules/interface", cdir);
@@ -355,7 +350,6 @@ static void find_interface_modules(void)
 			|| strcmp(fe->d_name, "CVS") == 0)
                         continue;
 		sprintf(path, "%s/%s", cdir, fe->d_name);
-        printf("checking %s\n", path);              
 		id = load_add_on(path);
 		if (id > 0) {
 			
@@ -365,8 +359,7 @@ static void find_interface_modules(void)
 				di->init();
 		}
 	}
-	
-	printf("finished getting interface modules...\n");
+printf("done findinf interfaces\n");
 }
 		
 static void find_protocol_modules(void)
@@ -725,7 +718,7 @@ int main(int argc, char **argv)
 	if (net_init_timer() < B_OK)
 		printf("timer service won't work!\n");
 
-	if (ndevs == 0) {
+	if (devices == NULL) {
 		printf("\nFATAL: no devices configured!\n");
 		exit (-1);
 	}
