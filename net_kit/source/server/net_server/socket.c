@@ -255,6 +255,9 @@ int soconnect(void *sp, caddr_t data, int len)
 	if (!nam)
 		return ENOMEM;
 
+	if ((so->so_state & SS_NBIO) && (so->so_state & SS_ISCONNECTING))
+		return EALREADY;
+
 	if ((so->so_options & SO_ACCEPTCONN))
 		return (EOPNOTSUPP);
 
@@ -269,12 +272,13 @@ int soconnect(void *sp, caddr_t data, int len)
 	 */
 	if ((so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING)) &&
 	    ((so->so_proto->pr_flags & PR_CONNREQUIRED) ||
-	    (error = sodisconnect(so))))
+	    (error = sodisconnect(so)))) {
 		error = EISCONN;
-	else
+	} else {
 		error = so->so_proto->pr_userreq(so, PRU_CONNECT,
 		                                 NULL, nam, NULL);
-
+	}
+	
 	if (error) {
 		goto bad;
 	}
@@ -968,6 +972,10 @@ int soclose(void *sp)
 {
 	struct socket *so = (struct socket*)sp;
 	int error = 0;
+
+	/* we don't want any more events... */
+	so->event_callback = NULL;
+	so->event_callback_cookie = NULL;
 
 	if (so->so_options & SO_ACCEPTCONN) {
 		while (so->so_q0)
