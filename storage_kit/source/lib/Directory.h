@@ -82,22 +82,15 @@ private:
 	virtual void _ReservedDirectory5();
 	virtual void _ReservedDirectory6();
 
-	uint32 _reservedData[7];
+// fDirFd is unused
+//	uint32 _reservedData[7];
+	uint32 _reservedData[8];
 
 private:
 	virtual void close_fd();
-	status_t set_fd(int fd);
-	int get_fd() const;
+	status_t set_fd(StorageKit::FileDescriptor fd);
+	StorageKit::FileDescriptor get_fd() const;
 	void set_status(status_t newStatus);
-
-
-// As I see it, there is no need for this variable. BNode::fFd accessable
-// through set_fd()/get_fd() is fine. But probably I'm missing something --
-// perhaps about directory iteration?!
-//	int fDirFd;
-	/*! The directory this object represents. This member replaces fDirFd
-		from the R5 implementation. */
-	StorageKit::Dir fDir;
 
 	friend class BEntry;
 };

@@ -5,69 +5,81 @@
 //  File Name: Directory.cpp
 //---------------------------------------------------------------------
 #include <Directory.h>
+#include <Entry.h>
+#include <File.h>
+#include <Path.h>
+#include <SymLink.h>
+#include <storage_support.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
 #endif
 
-enum {
-	NOT_IMPLEMENTED	= B_ERROR,
-};
-
 // constructor
 //! Creates an uninitialized Directory object.
-/*! \todo Implement! */
 BDirectory::BDirectory()
+		  : BNode(),
+			BEntryList()
 {
 }
 
 // copy constructor
 //! Creates a copy of the supplied BDirectory.
 /*!	\param dir the BDirectory object to be copied
-	\todo Implement!
 */
 BDirectory::BDirectory(const BDirectory &dir)
+		  : BNode(),
+			BEntryList()
 {
+	*this = dir;
 }
 
 // constructor
 /*! \brief Creates a BDirectory and initializes it to the directory referred
 	to by the supplied entry_ref.
 	\param ref the entry_ref referring to the directory
-	\todo Implement!
 */
 BDirectory::BDirectory(const entry_ref *ref)
+		  : BNode(),
+			BEntryList()
 {
+	SetTo(ref);
 }
 
 // constructor
 /*! \brief Creates a BDirectory and initializes it to the directory referred
 	to by the supplied node_ref.
 	\param nref the node_ref referring to the directory
-	\todo Implement!
 */
 BDirectory::BDirectory(const node_ref *nref)
+		  : BNode(),
+			BEntryList()
 {
+	SetTo(nref);
 }
 
 // constructor
 /*! \brief Creates a BDirectory and initializes it to the directory referred
 	to by the supplied BEntry.
 	\param entry the BEntry referring to the directory
-	\todo Implement!
 */
 BDirectory::BDirectory(const BEntry *entry)
+		  : BNode(),
+			BEntryList()
 {
+	SetTo(entry);
 }
 
 // constructor
 /*! \brief Creates a BDirectory and initializes it to the directory referred
 	to by the supplied path name.
 	\param path the directory's path name 
-	\todo Implement!
 */
 BDirectory::BDirectory(const char *path)
+		  : BNode(),
+			BEntryList()
 {
+	SetTo(path);
 }
 
 // constructor
@@ -76,15 +88,19 @@ BDirectory::BDirectory(const char *path)
 	\param dir the BDirectory, relative to which the directory's path name is
 		   given
 	\param path the directory's path name relative to \a dir
-	\todo Implement!
 */
 BDirectory::BDirectory(const BDirectory *dir, const char *path)
+		  : BNode(),
+			BEntryList()
 {
+	SetTo(dir, path);
 }
 
 // destructor
 //! Frees all allocated resources.
-/*! \todo Implement! */
+/*! If the BDirectory is properly initialized, the directory's file descriptor
+	is closed.
+*/
 BDirectory::~BDirectory()
 {
 }
@@ -103,12 +119,25 @@ BDirectory::~BDirectory()
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
+	\todo Currently implemented using StorageKit::entry_ref_to_path().
+		  Reimplement!
 */
 status_t
 BDirectory::SetTo(const entry_ref *ref)
 {
-	return NOT_IMPLEMENTED;
+//printf("BDirectory::SetTo(const entry_ref *ref)\n");
+	char path[B_PATH_NAME_LENGTH];
+	status_t error = (ref ? B_OK : B_BAD_VALUE);
+//printf("  error: %x\n", error);
+	if (error == B_OK)
+		error = StorageKit::entry_ref_to_path(ref, path, B_PATH_NAME_LENGTH);
+//printf("  error: %x\n", error);
+	if (error == B_OK)
+		error = SetTo(path);
+//printf("  error: %x\n", error);
+	set_status(error);
+//printf("BDirectory::SetTo(const entry_ref *ref) done\n");
+	return error;
 }
 
 // SetTo
@@ -125,12 +154,16 @@ BDirectory::SetTo(const entry_ref *ref)
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
 */
 status_t
 BDirectory::SetTo(const node_ref *nref)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (nref ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		entry_ref ref(nref->device, nref->node, ".");
+		error = SetTo(&ref);
+	}
+	return error;
 }
 
 // SetTo
@@ -147,12 +180,28 @@ BDirectory::SetTo(const node_ref *nref)
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
+	\todo Currently implemented using StorageKit::entry_ref_to_path().
+		  Reimplement!
 */
 status_t
 BDirectory::SetTo(const BEntry *entry)
 {
-	return NOT_IMPLEMENTED;
+//printf("BDirectory::SetTo(const BEntry *entry)\n");
+	entry_ref ref;
+	status_t error = (entry ? B_OK : B_BAD_VALUE);
+//printf("  error: %x\n", error);
+	if (error == B_OK && entry->InitCheck() != B_OK)
+		error = B_BAD_VALUE;
+//printf("  error: %x\n", error);
+	if (error == B_OK)
+		error = entry->GetRef(&ref);
+//printf("  error: %x\n", error);
+	if (error == B_OK)
+		error = SetTo(&ref);
+//printf("  error: %x\n", error);
+	set_status(error);
+//printf("BDirectory::SetTo(const BEntry *entry) done\n");
+	return error;
 }
 
 // SetTo
@@ -171,12 +220,24 @@ BDirectory::SetTo(const BEntry *entry)
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	- \c B_NOT_A_DIRECTORY: \a path includes a non-directory.
-	\todo Implement!
 */
 status_t
 BDirectory::SetTo(const char *path)
 {
-	return NOT_IMPLEMENTED;
+	status_t result = (path ? B_OK : B_BAD_VALUE);
+	Unset();	
+	StorageKit::FileDescriptor newFd = -1;
+	if (result == B_OK)
+		result = StorageKit::open_dir(path, newFd);
+	// set the new file descriptor
+	if (result == B_OK) {
+		result = set_fd(newFd);
+		if (result != B_OK)
+			StorageKit::close_dir(newFd);
+	}
+	// finally set the BNode status
+	set_status(result);
+	return result;
 }
 
 // SetTo
@@ -197,12 +258,21 @@ BDirectory::SetTo(const char *path)
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	- \c B_NOT_A_DIRECTORY: \a path includes a non-directory.
-	\todo Implement!
+	\todo Implemented using SetTo(BEntry*). Check, if necessary to reimplement!
 */
 status_t
 BDirectory::SetTo(const BDirectory *dir, const char *path)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (dir && path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && StorageKit::is_absolute_path(path))
+		error = B_BAD_VALUE;
+	BEntry entry;
+	if (error == B_OK)
+		error = entry.SetTo(dir, path);
+	if (error == B_OK)
+		error = SetTo(&entry);
+	set_status(error);
+	return error;
 }
 
 // GetEntry
@@ -220,12 +290,23 @@ BDirectory::SetTo(const BDirectory *dir, const char *path)
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
+	\todo Implemented using StorageKit::dir_to_self_entry_ref(). Check, if
+		  there is a better alternative.
 */
 status_t
 BDirectory::GetEntry(BEntry *entry) const
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (entry ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && InitCheck() != B_OK) {
+		entry->Unset();
+		error = B_NO_INIT;
+	}
+	entry_ref ref;
+	if (error == B_OK)
+		error = StorageKit::dir_to_self_entry_ref(get_fd(), &ref);
+	if (error == B_OK)
+		error = entry->SetTo(&ref);
+	return error;
 }
 
 // IsRootDirectory
@@ -235,19 +316,41 @@ BDirectory::GetEntry(BEntry *entry) const
 	- \c true, if the BDirectory is properly initialized and represents a
 	  root directory of some volume,
 	- \c false, otherwise.
-	\todo Implement!
+	\todo Implemented using StorageKit::dir_to_self_entry_ref(). Check, if
+		  there is a better alternative.
 */
 bool
 BDirectory::IsRootDirectory() const
 {
-	return false;	// not implemented
+	// check first, if we are "/"
+	BEntry entry;
+	bool result = (GetEntry(&entry) == B_OK);
+	bool isRootRoot = false;
+	entry_ref ref;
+	if (result)
+		result = (entry.GetRef(&ref) == B_OK);
+	if (result)
+		isRootRoot = StorageKit::entry_ref_is_root_dir(ref);
+	if (result && !isRootRoot) {
+		// Get our own and out parent's stat and compare the device IDs.
+		StorageKit::Stat ourStat, parentStat;
+		result = (GetStat(&ourStat) == B_OK);
+		if (result) {
+			result = (GetStatFor("..", &parentStat) == B_OK);
+			result &= (ourStat.st_dev != parentStat.st_dev);
+		}
+	}
+	return result;
 }
 
 // FindEntry
 /*! \brief Finds an entry referred to by a path relative to the directory
 	represented by this BDirectory.
+	\a path may be absolute. If the BDirectory is not properly initialized,
+	the entry is search relative to the current directory.
 	If the entry couldn't be found, \a entry is Unset().
-	\param path a path name relative to the directory
+	\param path the entry's path name. May be relative to this directory or
+		   absolute.
 	\param entry a pointer to a BEntry to be initialized with the found entry
 	\param traverse specifies whether to follow it, if the found entry
 		   is a symbolic link.
@@ -267,12 +370,25 @@ BDirectory::IsRootDirectory() const
 		  BEntry::SetTo(BDirectory *, const char *, bool) in that the
 		  latter doesn't require the entry to be existent, whereas this
 		  function does.
-	\todo Implement!
 */
 status_t
 BDirectory::FindEntry(const char *path, BEntry *entry, bool traverse) const
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (path && entry ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		// init a potentially abstract entry
+		if (InitCheck() == B_OK)
+			error = entry->SetTo(this, path, traverse);
+		else
+			error = entry->SetTo(path, traverse);
+		// fail, if entry is abstract
+		if (error == B_OK && !entry->Exists())
+			error = B_ENTRY_NOT_FOUND;
+	}
+	// unset entry on error
+	if (error != B_OK && entry)
+		entry->Unset();
+	return error;
 }
 
 // Contains
@@ -280,6 +396,9 @@ BDirectory::FindEntry(const char *path, BEntry *entry, bool traverse) const
 	at any level contains the entry referred to by the supplied path name.
 	Only entries that match the node flavor specified by \a nodeFlags are
 	considered.
+	If the BDirectory is not properly initialized, the method returns \c true,
+	if the entry exists and has its kind does match. A non-absolute path is
+	considered relative to the current directory.
 	\param path the entry's path name. May be relative to this directory or
 		   absolute.
 	\param nodeFlags Any of the following:
@@ -288,15 +407,27 @@ BDirectory::FindEntry(const char *path, BEntry *entry, bool traverse) const
 		   - \c B_SYMLINK_NODE: The entry must be a symbolic link.
 		   - \c B_ANY_NODE: The entry may be of any kind.
 	\return
-	- \c true, if the BDirectory is properly initialized and the entry of the
-	  matching kind could be found,
+	- \c true, if the entry exists, its kind does match \nodeFlags and the
+	  BDirectory is either not properly initialized or it does contain the
+	  entry at any level,
 	- \c false, otherwise
-	\todo Implement!
 */
 bool
 BDirectory::Contains(const char *path, int32 nodeFlags) const
 {
-	return false;	// not implemented
+	bool result = true;
+	if (path) {
+		BEntry entry;
+		if (InitCheck() == B_OK && !StorageKit::is_absolute_path(path))
+			entry.SetTo(this, path);
+		else
+			entry.SetTo(path);
+		result = Contains(&entry, nodeFlags);
+	} else {
+		// R5 behavior
+		result = (InitCheck() == B_OK);
+	}
+	return result;
 }
 
 // Contains
@@ -314,12 +445,52 @@ BDirectory::Contains(const char *path, int32 nodeFlags) const
 	- \c true, if the BDirectory is properly initialized and the entry of the
 	  matching kind could be found,
 	- \c false, otherwise
-	\todo Implement!
 */
 bool
 BDirectory::Contains(const BEntry *entry, int32 nodeFlags) const
 {
-	return false;	// not implemented
+	bool result = (entry);
+	// check, if the entry exists at all
+	if (result)
+		result = entry->Exists();
+	// test the node kind
+	if (result) {
+		switch (nodeFlags) {
+			case B_FILE_NODE:
+				result = entry->IsFile();
+				break;
+			case B_DIRECTORY_NODE:
+				result = entry->IsDirectory();
+				break;
+			case B_SYMLINK_NODE:
+				result = entry->IsSymLink();
+				break;
+			case B_ANY_NODE:
+				break;
+			default:
+				result = false;
+				break;
+		}
+	}
+	// If the directory is initialized, get the canonical paths of the dir and
+	// the entry and check, if the latter is a prefix of the first one.
+	if (result && InitCheck() == B_OK) {
+		char dirPath[B_PATH_NAME_LENGTH];
+		char entryPath[B_PATH_NAME_LENGTH];
+		result = (StorageKit::dir_to_path(get_fd(), dirPath,
+										  B_PATH_NAME_LENGTH) == B_OK);
+		entry_ref ref;
+		if (result)
+			result = (entry->GetRef(&ref) == B_OK);
+		if (result) {
+			result = (StorageKit::entry_ref_to_path(&ref, entryPath,
+													B_PATH_NAME_LENGTH)
+					  == B_OK);
+		}
+		if (result)
+			result = !strncmp(dirPath, entryPath, strlen(dirPath));
+	}
+	return result;
 }
 
 // GetStatFor
@@ -340,12 +511,27 @@ BDirectory::Contains(const BEntry *entry, int32 nodeFlags) const
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	- \c B_NOT_A_DIRECTORY: \a path includes a non-directory.
-	\todo Implement!
 */
 status_t
 BDirectory::GetStatFor(const char *path, struct stat *st) const
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (st ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && InitCheck() != B_OK)
+		error = B_NO_INIT;
+	if (error == B_OK) {
+		if (path) {
+			if (strlen(path) == 0)
+				error = B_ENTRY_NOT_FOUND;
+			else {
+				BEntry entry(this, path);
+				error == entry.InitCheck();
+				if (error == B_OK)
+					error = entry.GetStat(st);
+			}
+		} else
+			error = GetStat(st);
+	}
+	return error;
 }
 
 // GetNextEntry
@@ -366,12 +552,18 @@ BDirectory::GetStatFor(const char *path, struct stat *st) const
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
 */
 status_t
 BDirectory::GetNextEntry(BEntry *entry, bool traverse)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (entry ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		entry_ref ref;
+		error = GetNextRef(&ref);
+		if (error == B_OK)
+			entry->SetTo(&ref, traverse);
+	}
+	return error;
 }
 
 // GetNextRef
@@ -393,12 +585,28 @@ BDirectory::GetNextEntry(BEntry *entry, bool traverse)
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
 */
 status_t
 BDirectory::GetNextRef(entry_ref *ref)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (ref ? B_OK : B_BAD_VALUE);
+	if (error == B_OK && InitCheck() != B_OK)
+		error = B_FILE_ERROR;
+	if (error == B_OK) {
+		StorageKit::LongDirEntry entry;
+		bool next = true;
+		while (error == B_OK && next) {
+			if (StorageKit::read_dir(get_fd(), &entry, sizeof(entry), 1) != 1)
+				error = B_ENTRY_NOT_FOUND;
+			if (error == B_OK) {
+				next = (!strcmp(entry.d_name, ".")
+						|| !strcmp(entry.d_name, ".."));
+			}
+		}
+		if (error == B_OK)
+			*ref = entry_ref(entry.d_pdev, entry.d_pino, entry.d_name);
+	}
+	return error;
 }
 
 // GetNextDirents
@@ -422,12 +630,16 @@ BDirectory::GetNextRef(entry_ref *ref)
 	- \c B_BUSY: A node was busy.
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
 */
 int32
 BDirectory::GetNextDirents(dirent *buf, size_t bufSize, int32 count)
 {
-	return NOT_IMPLEMENTED;
+	int32 result = (buf ? B_OK : B_BAD_VALUE);
+	if (result == B_OK && InitCheck() != B_OK)
+		result = B_FILE_ERROR;
+	if (result == B_OK)
+		result = StorageKit::read_dir(get_fd(), buf, bufSize, count);
+	return result;
 }
 
 // Rewind
@@ -441,12 +653,16 @@ BDirectory::GetNextDirents(dirent *buf, size_t bufSize, int32 count)
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	\see GetNextEntry(), GetNextRef(), GetNextDirents(), CountEntries()
-	\todo Implement!
 */
 status_t
 BDirectory::Rewind()
 {
-	return NOT_IMPLEMENTED;
+	status_t error = B_OK;
+	if (error == B_OK && InitCheck() != B_OK)
+		error = B_FILE_ERROR;
+	if (error == B_OK)
+		error = StorageKit::rewind_dir(get_fd());
+	return error;
 }
 
 // CountEntries
@@ -463,12 +679,26 @@ BDirectory::Rewind()
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
 	\see GetNextEntry(), GetNextRef(), GetNextDirents(), Rewind()
-	\todo Implement!
 */
 int32
 BDirectory::CountEntries()
 {
-	return NOT_IMPLEMENTED;
+	status_t error = Rewind();
+	int32 count = 0;
+	if (error == B_OK) {
+		StorageKit::LongDirEntry entry;
+		while (error == B_OK) {
+			if (StorageKit::read_dir(get_fd(), &entry, sizeof(entry), 1) != 1)
+				error = B_ENTRY_NOT_FOUND;
+			if (error == B_OK
+				&& strcmp(entry.d_name, ".") && strcmp(entry.d_name, ".."))
+				count++;
+		}
+		if (error == B_ENTRY_NOT_FOUND)
+			error = B_OK;
+	}
+	Rewind();
+	return (error == B_OK ? count : error);
 }
 
 // CreateDirectory
@@ -489,12 +719,28 @@ BDirectory::CountEntries()
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_FILE_EXISTS: An entry with that name does already exist.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
 */
 status_t
 BDirectory::CreateDirectory(const char *path, BDirectory *dir)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		// get the actual (absolute) path using BEntry's help
+		BEntry entry;
+		if (InitCheck() == B_OK && !StorageKit::is_absolute_path(path))
+			entry.SetTo(this, path);
+		else
+			entry.SetTo(path);
+		error = entry.InitCheck();
+		BPath realPath;
+		if (error == B_OK)
+			error = entry.GetPath(&realPath);
+		if (error == B_OK)
+			error = StorageKit::create_dir(realPath.Path());
+		if (error == B_OK && dir)
+			error = dir->SetTo(realPath.Path());
+	}
+	return error;
 }
 
 // CreateFile
@@ -523,12 +769,25 @@ BDirectory::CreateDirectory(const char *path, BDirectory *dir)
 	- \c B_IS_A_DIRECTORY: A directory with the supplied name does already
 	  exist.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
 */
 status_t
 BDirectory::CreateFile(const char *path, BFile *file, bool failIfExists)
 {
-	return NOT_IMPLEMENTED;
+	status_t error (path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		// Let BFile do the dirty job.
+		uint32 openMode = B_READ_WRITE | B_CREATE_FILE
+						  | (failIfExists ? B_FAIL_IF_EXISTS : 0);
+		BFile tmpFile;
+		BFile *realFile = (file ? file : &tmpFile);
+		if (InitCheck() == B_OK && !StorageKit::is_absolute_path(path))
+			error = realFile->SetTo(this, path, openMode);
+		else
+			error = realFile->SetTo(path, openMode);
+		if (error != B_OK)
+			realFile->Unset();
+	}
+	return error;
 }
 
 // CreateSymLink
@@ -550,13 +809,29 @@ BDirectory::CreateFile(const char *path, BFile *file, bool failIfExists)
 	- \c B_FILE_ERROR: A general file error.
 	- \c B_FILE_EXISTS: An entry with that name does already exist.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
 */
 status_t
 BDirectory::CreateSymLink(const char *path, const char *linkToPath,
 						  BSymLink *link)
 {
-	return NOT_IMPLEMENTED;
+	status_t error = (path && linkToPath ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		// get the actual (absolute) path using BEntry's help
+		BEntry entry;
+		if (InitCheck() == B_OK && !StorageKit::is_absolute_path(path))
+			entry.SetTo(this, path);
+		else
+			entry.SetTo(path);
+		error = entry.InitCheck();
+		BPath realPath;
+		if (error == B_OK)
+			error = entry.GetPath(&realPath);
+		if (error == B_OK)
+			error = StorageKit::create_link(realPath.Path(), linkToPath);
+		if (error == B_OK && link)
+			error = link->SetTo(realPath.Path());
+	}
+	return error;
 }
 
 // =
@@ -565,11 +840,23 @@ BDirectory::CreateSymLink(const char *path, const char *linkToPath,
 	it will refer to the same directory, unless an error occurs.
 	\param dir the original BDirectory
 	\return a reference to this BDirectory
-	\todo Implement!
 */
 BDirectory &
 BDirectory::operator=(const BDirectory &dir)
 {
+	Unset();
+	if (dir.InitCheck() == B_OK) {
+		// duplicate the file descriptor
+		StorageKit::FileDescriptor fd = -1;
+		status_t status = StorageKit::dup(dir.get_fd(), fd);
+		// set it
+		if (status == B_OK) {
+			status = set_fd(fd);
+			if (status != B_OK)
+				StorageKit::close(fd);
+		}
+		set_status(status);
+	}
 	return *this;
 }
 
@@ -583,19 +870,18 @@ void BDirectory::_ReservedDirectory6() {}
 
 // close_fd
 //! Closes the BDirectory's file descriptor.
-/*! \todo Implement! */
 void
 BDirectory::close_fd()
 {
+	BNode::close_fd();
 }
 
 // set_fd
 //! Sets the file descriptor for the BDirectory.
 /*!	\param fd the new file descriptor, may be -1.
-	\todo Implement!
 */
 status_t
-BDirectory::set_fd(int fd)
+BDirectory::set_fd(StorageKit::FileDescriptor fd)
 {
 	return BNode::set_fd(fd);
 }
@@ -603,24 +889,22 @@ BDirectory::set_fd(int fd)
 //! Returns the BDirectory's file descriptor.
 /*! To be used instead of accessing the BNode's private \c fFd member directly.
 	\return the file descriptor, or -1, if not properly initialized.
-	\todo Implement!
 */
-int
+StorageKit::FileDescriptor
 BDirectory::get_fd() const
 {
-	return -1;	// not implemented
+	return fFd;
 }
 
 //! Sets the BNode's status.
 /*! To be used instead of accessing the BNode's private \c fCStatus member
 	directly.
 	\param newStatus the new status to be set.
-	\todo Implement!
 */
 void
 BDirectory::set_status(status_t newStatus)
 {
-	// not implemented
+	fCStatus = newStatus;
 }
 
 
@@ -643,12 +927,52 @@ BDirectory::set_status(status_t newStatus)
 	- \c B_FILE_EXISTS: An entry other than a directory with that name does
 	  already exist.
 	- \c B_NO_MORE_FDS: The application has run out of file descriptors.
-	\todo Implement!
+	\todo Check for efficency.
 */
 status_t
 create_directory(const char *path, mode_t mode)
 {
-	return NOT_IMPLEMENTED;
+printf("create_directory(`%s')\n", path);
+	status_t error = (path ? B_OK : B_BAD_VALUE);
+	if (error == B_OK) {
+		BEntry entry(path);
+		switch (entry.InitCheck()) {
+			case B_OK:
+printf("  B_OK\n");
+				// If an entry with this name exists, it should be a directory.
+				// If none exists, create the directory.
+				if (entry.Exists()) {
+					if (!entry.IsDirectory())
+						error = B_BAD_VALUE;
+				} else
+					error = StorageKit::create_dir(path, mode);
+				break;
+			case B_ENTRY_NOT_FOUND:
+			{
+printf("  B_ENTRY_NOT_FOUND\n");
+/* Must not be used until BPath::GetParent() is implemented.
+				// The parent dir doesn't exist. Create it first.
+				BPath leafPath(path);
+				error = leafPath.InitCheck();
+printf("  entry\n");
+				if (error == B_OK)
+					error = leafPath.GetParent(&leafPath);
+				if (error == B_OK)
+					error = create_directory(leafPath.Path(), mode);
+				if (error)
+					error = StorageKit::create_dir(path, mode);
+*/
+error = B_ERROR;
+				break;
+			}
+			default:
+printf("  default\n");
+				error = entry.InitCheck();
+				break;
+		}
+	}
+printf("create_directory(`%s') done\n", path);
+	return error;
 }
 
 
