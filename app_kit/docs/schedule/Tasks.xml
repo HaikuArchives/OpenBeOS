@@ -5791,7 +5791,7 @@
 		</section>
 	</group>
 	<group name="Integration">
-		<section name="Archiving">
+		<section name="BArchivable">
 			<class name="BArchivable">
 				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					BArchivable();
@@ -5812,7 +5812,7 @@
 					virtual status_t Perform(perform_code d, void* arg); ???
 				</task>
 			</class>
-			<functions name="Archiving Functions">
+			<functions name="BArchivable">
 				<task cases="false" fspec="true" impl="true" owner="Erik Jakowatz" tests="true" tspec="true">
 					BArchivable* instantiate_object(BMessage* from, image_id* id);
 				</task>
