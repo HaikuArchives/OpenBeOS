@@ -1,5 +1,9 @@
 OpenBeOS Keymap preferences
 
+2002-05-16 - The input_server is restarted when a keymap is 'use'd. Hooray!
+
+2002-05-11 - Ok, I have found the 'move keys around with the right mouse button' feature. Now I see  the Revert button make sense. Sorry I doubted you JLG :)
+
 2002-05-08 - Fixed switching from user- to system maps and vice versa and added revert button. Just like the original, it does abolutely nothing. Makes one wonder why it is there in the first place.
 
 2002-02-16 - Moved message definitions to messages.h, chopped KeymapApplication::UseKeymap into smaller pieces, created member variable fApplication in KeymapWindow, applied OpenTracker guidelines
@@ -16,8 +20,8 @@ Copies keymap files but doesn't do much else - you even have to restart the Inpu
 
 
 To do (likely in this order):
-- preselect 'Current'
 - somehow inform Input Server to use the newly chosen keymap, or else restart the Input Server
+- preselect 'Current'
 - make the 'System' and 'User' labels show up (or: why are they invisible in the current version?)
 - layout the sources to conform to OBOS standards
 - find Be-defined constants for paths and/or files

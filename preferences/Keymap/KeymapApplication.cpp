@@ -8,6 +8,7 @@
 #endif //DEBUG
 #include "KeymapWindow.h"
 #include "KeymapApplication.h"
+#include <stdlib.h>
 
 
 KeymapApplication::KeymapApplication()
@@ -172,56 +173,10 @@ int KeymapApplication::Copy( BFile *original, BFile *copy )
 
 int KeymapApplication::NotifyInputServer()
 {
-/*
-	BMessage		*message = new BMessage( B_KEY_MAP_CHANGED );
-
-	BInputDevice::Control( B_KEYBOARD_DEVICE, 
-		B_KEY_MAP_CHANGED, message );
-	delete message;
-*/
-
-	// get devices
-	void			*currentThingy;
-	BInputDevice	*currentDevice;
-	BMessage		*message = new BMessage( B_KEY_MAP_CHANGED );
-	BList			*devices = new BList();
-	int				success;
-
-	if( get_input_devices( devices ) != B_OK ) {
-		delete devices;
-		delete message;
-		return B_ERROR;
-	}
-	
-	// inform all keyboard devices
-	int nrDevices = devices->CountItems();
-	for( int index=0; index<nrDevices; index++ ) {
-		currentThingy = devices->ItemAt( index );
-		currentDevice = (BInputDevice*) currentThingy;
-		if( currentDevice->Type() == B_KEYBOARD_DEVICE ) {
-/*
-			#if DEBUG
-				cout << "Notifying keyboard: " << currentDevice->Name();
-			#endif //DEBUG
-
-			// Spread the word
-			success = currentDevice->Control( B_KEY_MAP_CHANGED, message );
-			#if DEBUG
-				cout << "... " << ( success==B_OK?"succeeded":"failed" ) << endl;
-			#endif //DEBUG
-*/
-			#if DEBUG
-				cout << "Notifying keyboard: " << currentDevice->Name() << endl;
-			#endif //DEBUG
-
-			currentDevice->Stop();
-			success = currentDevice->Control( B_KEY_MAP_CHANGED, message );
-			currentDevice->Start();
-		}
-		delete currentDevice;
-	}
-	delete devices;
-	delete message;
-
+	// This took me days to find out. Go figure.
+	// Be didn't need to restart the thing - they prolly used
+	// a proprietary interface to notify it. Coordinate with
+	// the input_server guys.
+	system("kill -KILL input_server");
 	return B_NO_ERROR;
 }

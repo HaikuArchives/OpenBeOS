@@ -151,20 +151,35 @@ void KeymapWindow::AddMaps()
 	mapsBox->SetFont( font );
 */
 	// The System list
-	bounds = BRect( 9,20, 70,35 );
+	bounds = BRect( 209,20, 370,135 );
 /*
 	BView	*textSystem = new BView( bounds, NULL, B_NOT_RESIZABLE, 0 );
 	rgb_color	tempColor;
-//	tempColor = ui_color( B_MENU_BACKGROUND_COLOR );
+	tempColor = ui_color( B_MENU_BACKGROUND_COLOR );
+*/
+/*
+	tempColor.red   = 0;
+	tempColor.green = 0;
+	tempColor.blue  = 0;
+	tempColor.alpha = 0;
+*/
 //	textSystem->SetViewColor( tempColor );
+//	textSystem->SetLowColor( tempColor );
+/*
 	tempColor.red   = 0;
 	tempColor.green = 0;
 	tempColor.blue  = 0;
 	tempColor.alpha = 0;
 	textSystem->SetHighColor( tempColor );
+
+ 	tempColor.red   = 0;
+	tempColor.green = 0;
+	tempColor.blue  = 0;
+	tempColor.alpha = 0;
 	textSystem->SetLowColor( tempColor );
-	textSystem->DrawString( "System", BPoint( 0, 20 ) );
-	mapsBox->AddChild( textSystem );
+
+	textSystem->DrawString( "System", BPoint( 0, 14 ) );
+	fPlaceholderView->AddChild( textSystem );
 */
 	bounds = BRect( 13,36, 103,106 );
 	entryList = fApplication->SystemMaps();
