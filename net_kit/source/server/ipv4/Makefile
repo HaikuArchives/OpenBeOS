@@ -5,7 +5,7 @@ INSTALL_DIR=../modules/protocol
 TGT=$(INSTALL_DIR)/$(TARGET)
 OBJS=$(TARGET).o
 
-KCFLAGS=-Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
+KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
 KLOBJS=../net_server/cksum.o ../net_server/misc.o
 

@@ -13,6 +13,8 @@
 #include "sys/protosw.h"
 #include "sys/domain.h"
 
+#include "net_malloc.h"
+
 #ifdef _KERNEL_MODE
 #include <module.h>
 #include "net_server/core_module.h"
@@ -26,11 +28,6 @@ struct core_module_info *core = NULL;
 #endif
 
 #include "net_module.h"
-
-#ifdef USE_DEBUG_MALLOC
-#define malloc dbg_malloc
-#define free   dbg_free
-#endif
 
 static struct protosw *proto[IPPROTO_MAX];
 

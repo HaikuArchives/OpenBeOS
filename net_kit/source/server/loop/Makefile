@@ -4,9 +4,9 @@ CFLAGS+=-nostart
 LOBJS=../_APP_ ../util/misc.o
 OBJS=loop.o
 
-KCFLAGS=-no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
+KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
 KLDFLAGS=-nostdlib /boot/develop/lib/x86/_KERNEL_
-KLOBJS=
+KLOBJS=#./net_server/area_malloc.o
 
 all:	$(TARGET)
 
