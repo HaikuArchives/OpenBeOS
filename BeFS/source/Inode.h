@@ -141,7 +141,7 @@ class Inode : public CachedBlock {
 		status_t CheckPermissions(int accessMode) const;
 
 		// small_data access methods
-		status_t MakeSpaceForSmallData(Transaction *transaction,const char *name, uint32 length);
+		status_t MakeSpaceForSmallData(Transaction *transaction,const char *name, int32 length);
 		status_t RemoveSmallData(Transaction *transaction,const char *name,small_data *item = NULL);
 		status_t AddSmallData(Transaction *transaction,const char *name,uint32 type,const uint8 *data,size_t length,bool force = false);
 		status_t GetNextSmallData(small_data **smallData) const;
@@ -150,6 +150,7 @@ class Inode : public CachedBlock {
 		status_t SetName(Transaction *transaction,const char *name);
 
 		// high-level attribute methods
+		status_t ReadAttribute(const char *name, int32 type, off_t pos, uint8 *buffer, size_t *_length);
 		status_t WriteAttribute(Transaction *transaction, const char *name, int32 type, off_t pos, const uint8 *buffer, size_t *_length);
 		status_t RemoveAttribute(Transaction *transaction, const char *name);
 

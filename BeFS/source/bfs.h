@@ -269,7 +269,10 @@ small_data::Next()
 inline bool
 small_data::IsLast(bfs_inode *inode)
 {
-	return name_size == 0 || (uint32)this > (uint32)inode + inode->inode_size - sizeof(small_data);
+	// we need to check the location first, because if name_size is already beyond
+	// the block, we would touch invalid memory (although that can't cause wrong
+	// results)
+	return (uint32)this > (uint32)inode + inode->inode_size - sizeof(small_data) || name_size == 0;
 }
 
 #endif	/* BFS_H */

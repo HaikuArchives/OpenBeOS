@@ -43,8 +43,6 @@ BPlusTree
 
 Inode
 
- - Inode::MakeSpaceForSmallData() needs to be implemented
-
 
 Indices
 

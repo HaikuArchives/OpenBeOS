@@ -1429,42 +1429,19 @@ bfs_write_attr(void *_ns, void *_node, const char *name, int type,const void *bu
 
 
 int
-bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, size_t *_length, off_t pos)
+bfs_read_attr(void *_ns, void *_node, const char *name, int type,void *buffer, size_t *_length, off_t pos)
 {
+	FUNCTION();
 	Inode *inode = (Inode *)_node;
-	FUNCTION_START(("id = %Ld, name = \"%s\", len = %ld\n",inode->ID(),name,*_length));
-	
-	if (inode == NULL || inode->Node() == NULL)
-		RETURN_ERROR(B_ERROR);
 
-	if (pos < 0)
-		pos = 0;
+	if (inode == NULL || name == NULL || *name == '\0' || buffer == NULL)
+		RETURN_ERROR(B_BAD_VALUE);
 
-	// search in the small_data section
-	small_data *smallData = inode->FindSmallData(name);
-	if (smallData != NULL) {
-		size_t length = *_length;
-		if (pos > smallData->data_size) {
-			*_length = 0;
-			return B_OK;
-		}
-		if (length + pos > smallData->data_size)
-			length = smallData->data_size - pos;
+	status_t status = inode->CheckPermissions(R_OK);
+	if (status < B_OK)
+		return status;
 
-		memcpy(buffer,smallData->Data() + pos,length);
-		*_length = length;
-		return B_OK;
-	}
-	// search in the attribute directory
-	Inode *attribute;
-	status_t status = inode->GetAttribute(name,&attribute);
-	if (status == B_OK) {
-		status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
-		inode->ReleaseAttribute(attribute);
-		RETURN_ERROR(status);
-	}
-
-	RETURN_ERROR(status);
+	return inode->ReadAttribute(name,type,pos,(uint8 *)buffer,_length);
 }
 
 

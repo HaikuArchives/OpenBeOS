@@ -160,30 +160,44 @@ Inode::CheckPermissions(int accessMode) const
 
 
 status_t
-Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,uint32 bytes)
+Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,int32 bytes)
 {
 	while (bytes > 0) {
 		small_data *item = Node()->small_data_start,*max = NULL;
-		while (!item->IsLast(Node())) {
-			// should not remove that one
-			if (*item->Name() == FILE_NAME_NAME)
+		for (;!item->IsLast(Node());item = item->Next()) {
+			// should not remove those
+			if (*item->Name() == FILE_NAME_NAME || !strcmp(name,item->Name()))
 				continue;
-			
+
 			if (max == NULL || max->Size() < item->Size())
 				max = item;
-			
+
 			// remove the first one large enough to free the needed amount of bytes
 			if (bytes < item->Size())
 				break;
 		}
-		
-		if (item->IsLast(Node()) && item->Size() < bytes)
+
+		if (item->IsLast(Node()) || item->Size() < bytes)
 			return B_ERROR;
 
 		bytes -= max->Size();
-		
-		// ToDo: implement me!
-		// -> move the attribute to a real attribute file
+
+		// Move the attribute to a real attribute file
+		// Luckily, this doesn't cause any index updates
+
+		Inode *attribute;
+		status_t status = CreateAttribute(transaction,item->Name(),item->type,&attribute);
+		if (status < B_OK)
+			RETURN_ERROR(status);
+
+		size_t length = item->data_size;
+		status = attribute->WriteAt(transaction,0,item->Data(),&length);
+
+		ReleaseAttribute(attribute);
+
+		if (status < B_OK)
+			// ToDo: remove the attribute file!
+			RETURN_ERROR(status);
 
 		RemoveSmallData(transaction,NULL,max);
 	}
@@ -199,6 +213,7 @@ Inode::MakeSpaceForSmallData(Transaction *transaction,const char *name,uint32 by
 status_t
 Inode::RemoveSmallData(Transaction *transaction,const char *name,small_data *item)
 {
+	// search for the small_data item if it's not given
 	if (item == NULL) {
 		if (name == NULL)
 			return B_BAD_VALUE;
@@ -207,30 +222,26 @@ Inode::RemoveSmallData(Transaction *transaction,const char *name,small_data *ite
 		while (!item->IsLast(Node()) && strcmp(item->Name(),name))
 			item = item->Next();
 
-		if (strcmp(item->Name(),name))
+		if (item->IsLast(Node()))
 			return B_ENTRY_NOT_FOUND;
 	}
 
-	if (!item->IsLast(Node())) {
+	small_data *next = item->Next();
+	if (!next->IsLast(Node())) {
 		// find the last attribute
-		small_data *next = item->Next();
 		small_data *last = next;
 		while (!last->IsLast(Node()))
 			last = last->Next();
 
-		int32 size = (uint8 *)last - (uint8 *)next + last->Size();
-		//printf("size = %ld, max = %ld\n",size,(uint8 *)Node() + fVolume->BlockSize() - (uint8 *)next);
+		int32 size = (uint8 *)last - (uint8 *)next;
 		if (size < 0 || size > (uint8 *)Node() + fVolume->BlockSize() - (uint8 *)next)
 			return B_BAD_DATA;
 
 		memmove(item,next,size);
 
-		// move the "last" one to its new location
+		// Move the "last" one to its new location and
+		// correctly terminate the small_data section
 		last = (small_data *)((uint8 *)last - ((uint8 *)next - (uint8 *)item));
-
-		// correctly terminate the small_data section if needed
-		if (!last->IsLast(Node()))
-			last = last->Next();
 		memset(last,0,(uint8 *)Node() + fVolume->BlockSize() - (uint8 *)last);
 	} else
 		memset(item,0,item->Size());
@@ -269,7 +280,7 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 
 	// is the attribute already in the small_data section?
 	// then just replace the data part of that one
-	if (!strcmp(item->Name(),name)) {
+	if (!item->IsLast(Node())) {
 		// find last attribute
 		small_data *last = item;
 		while (!last->IsLast(Node()))
@@ -278,7 +289,7 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 		// try to change the attributes value
 		if (item->data_size > length
 			|| force
-			|| ((uint8 *)last + length - item->data_size) < ((uint8 *)Node() + fVolume->InodeSize())) {
+			|| ((uint8 *)last + length - item->data_size) <= ((uint8 *)Node() + fVolume->InodeSize())) {
 			// make room for the new attribute if needed (and we are forced to do so)
 			if (force
 				&& ((uint8 *)last + length - item->data_size) > ((uint8 *)Node() + fVolume->InodeSize())) {
@@ -287,13 +298,28 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 				// at the end of the section into account...
 				if (MakeSpaceForSmallData(transaction,name,length - item->data_size) < B_OK)
 					return B_ERROR;
+				
+				// reset our pointers
+				item = Node()->small_data_start;
+				while (!item->IsLast(Node()) && strcmp(item->Name(),name))
+					item = item->Next();
+
+				last = item;
+				while (!last->IsLast(Node()))
+					last = last->Next();
 			}
 
 			// move the attributes after the current one
-			if (!item->IsLast(Node())) {
-				small_data *next = item->Next();
-				memmove((uint8 *)item + spaceNeeded,next,(uint8 *)last - (uint8 *)next + last->Size());
-			}
+			small_data *next = item->Next();
+			if (!next->IsLast(Node()))
+				memmove((uint8 *)item + spaceNeeded,next,(uint8 *)last - (uint8 *)next);
+
+			// Move the "last" one to its new location and
+			// correctly terminate the small_data section
+			last = (small_data *)((uint8 *)last - ((uint8 *)next - ((uint8 *)item + spaceNeeded)));
+			if ((uint8 *)last < (uint8 *)Node() + fVolume->BlockSize())
+				memset(last,0,(uint8 *)Node() + fVolume->BlockSize() - (uint8 *)last);
+
 			item->type = type;
 			item->data_size = length;
 			memcpy(item->Data(),data,length);
@@ -302,7 +328,8 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 			return B_OK;
 		}
 
-		// could not replace the old attribute, so remove it!
+		// Could not replace the old attribute, so remove it to let
+		// let the calling function create an attribute file for it
 		if (RemoveSmallData(transaction,name,item) < B_OK)
 			return B_ERROR;
 
@@ -311,7 +338,7 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 
 	// try to add the new attribute!
 
-	if (item->type != 0 || (uint8 *)item + spaceNeeded > (uint8 *)Node() + fVolume->InodeSize()) {
+	if ((uint8 *)item + spaceNeeded > (uint8 *)Node() + fVolume->InodeSize()) {
 		// there is not enough space for it!
 		if (!force)
 			return B_DEVICE_FULL;
@@ -334,10 +361,9 @@ Inode::AddSmallData(Transaction *transaction,const char *name,uint32 type,const 
 	memcpy(item->Data(),data,length);
 
 	// correctly terminate the small_data section
-	if (!item->IsLast(Node())) {
-		item = item->Next();
-		memset(item,0,sizeof(small_data));
-	}
+	item = item->Next();
+	if (!item->IsLast(Node()))
+		memset(item,0,(uint8 *)Node() + fVolume->InodeSize() - (uint8 *)item);
 
 	return B_OK;
 }
@@ -418,6 +444,45 @@ Inode::SetName(Transaction *transaction,const char *name)
 	const char nameTag[2] = {FILE_NAME_NAME, 0};
 
 	return AddSmallData(transaction,nameTag,FILE_NAME_TYPE,(uint8 *)name,strlen(name),true);
+}
+
+
+/**	Reads data from the specified attribute.
+ *	This is a high-level attribute function that understands attributes
+ *	in the small_data section as well as real attribute files.
+ */
+
+status_t
+Inode::ReadAttribute(const char *name,int32 type,off_t pos,uint8 *buffer,size_t *_length)
+{
+	if (pos < 0)
+		pos = 0;
+
+	// search in the small_data section
+	small_data *smallData = FindSmallData(name);
+	if (smallData != NULL) {
+		size_t length = *_length;
+		if (pos > smallData->data_size) {
+			*_length = 0;
+			return B_OK;
+		}
+		if (length + pos > smallData->data_size)
+			length = smallData->data_size - pos;
+
+		memcpy(buffer,smallData->Data() + pos,length);
+		*_length = length;
+		return B_OK;
+	}
+	// search in the attribute directory
+	Inode *attribute;
+	status_t status = GetAttribute(name,&attribute);
+	if (status == B_OK) {
+		status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
+		ReleaseAttribute(attribute);
+		RETURN_ERROR(status);
+	}
+
+	RETURN_ERROR(status);
 }
 
 
