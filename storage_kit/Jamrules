@@ -1,1 +1,11 @@
+rule LinkSharedOSLibs 
+{ 
+        # LinkSharedOSLibs <name> : <libs> ; 
+        
+        for i in $(>) 
+        { 
+				LINKFLAGS on $(<) += $(i) ;
+#                LINKLIBS on $(<) += $(i) ; 
+        } 
+}
 

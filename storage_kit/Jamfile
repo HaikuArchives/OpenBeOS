@@ -2,5 +2,7 @@
 
 SubDir TOP ;
 
-#SubInclude TOP cppunit ;
+SubInclude TOP cppunit ;
 SubInclude TOP source ;
+SubInclude TOP test ;
+
