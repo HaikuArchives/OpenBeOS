@@ -116,6 +116,9 @@ public:
 	void LibInterface_TypeItemOp(BMessage *);
 	void LibInterface_FormatOp(BMessage *);
 
+	void LibInterface_SetVolume(BMessage *);
+	void LibInterface_GetVolume(BMessage *);
+
 /* functionality not yet implemented
 00014a00 T _ServerApp::_ServerApp(void)
 00014e1c T _ServerApp::~_ServerApp(void)
@@ -140,6 +143,10 @@ public:
 private:
 	CAppManager *mAppManager;
 	CNodeManager *mNodeManager;
+	BLocker *mLocker;
+	
+	float mVolumeLeft;
+	float mVolumeRight;
 
 	void MessageReceived(BMessage *msg);
 	typedef BApplication inherited;
@@ -148,14 +155,21 @@ private:
 CServerApp::CServerApp()
  	: BApplication(NEW_MEDIA_SERVER_SIGNATURE),
 	mAppManager(new CAppManager),
-	mNodeManager(new CNodeManager)
+	mNodeManager(new CNodeManager),
+	mLocker(new BLocker),
+	mVolumeLeft(0.0),
+	mVolumeRight(0.0)
 {
+	//load volume settings from config file
+	//mVolumeLeft = ???;
+	//mVolumeRight = ???;
 }
 
 CServerApp::~CServerApp()
 {
 	delete mAppManager;
 	delete mNodeManager;
+	delete mLocker;
 }
 
 
@@ -340,6 +354,38 @@ void CServerApp::LibInterface_FormatOp(BMessage *msg)
 {
 }
 
+void CServerApp::LibInterface_SetVolume(BMessage *msg)
+{
+	float left;
+	float right;
+	msg->FindFloat("left", &left);
+	msg->FindFloat("right", &right);
+
+	mLocker->Lock();
+	mVolumeLeft = left;
+	mVolumeRight = right;
+	mLocker->Unlock();
+
+	//save volume settings to config file
+	// ??? = left;
+	// ??? = right;
+
+	BMessage reply(B_OK);
+	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
+}
+
+void CServerApp::LibInterface_GetVolume(BMessage *msg)
+{
+	BMessage reply(B_OK);
+
+	mLocker->Lock();
+	reply.AddFloat("left", mVolumeLeft);
+	reply.AddFloat("right", mVolumeRight);
+	mLocker->Unlock();
+
+	msg->SendReply(&reply,(BHandler*)NULL,REPLY_TIMEOUT);
+}
+
 
 void CServerApp::MessageReceived(BMessage *msg)
 {
@@ -378,6 +424,8 @@ void CServerApp::MessageReceived(BMessage *msg)
 		case MEDIA_SERVER_SET_RUNNING_DEFAULT: LibInterface_SetRunningDefault(msg); break;
 		case MEDIA_SERVER_TYPE_ITEM_OP: LibInterface_TypeItemOp(msg); break;
 		case MEDIA_SERVER_FORMAT_OP: LibInterface_FormatOp(msg); break;
+		case MEDIA_SERVER_SET_VOLUME: LibInterface_SetVolume(msg); break;
+		case MEDIA_SERVER_GET_VOLUME: LibInterface_GetVolume(msg); break;
 		default:
 			printf("\nnew media server: unknown message received\n");
 			msg->PrintToStream();

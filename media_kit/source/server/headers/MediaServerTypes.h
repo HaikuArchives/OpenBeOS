@@ -58,6 +58,8 @@ enum MediaServerMessage_Type {
 								MEDIA_SERVER_HAS_DIED,
 								MEDIA_SERVER_OPEN_WINDOW,
 								MEDIA_SERVER_CLOSE_WINDOW,
+								MEDIA_SERVER_SET_VOLUME,
+								MEDIA_SERVER_GET_VOLUME,
 							};
 
 
