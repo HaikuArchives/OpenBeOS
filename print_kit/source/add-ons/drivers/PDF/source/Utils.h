@@ -71,6 +71,7 @@ template <class T>
 class TList {
 private:
 	BList fList;
+	typedef int (*sort_func)(const void*, const void*);
 	
 public:
 	virtual ~TList();
@@ -79,7 +80,7 @@ public:
 	T*       ItemAt(int32 index) const;
 	void     AddItem(T* p);
 	T*       Items();
-	void     SortItems(int (*comp)(const T*, const T*));
+	void     SortItems(int (*comp)(const T**, const T**));
 };
 
 // TList
@@ -124,8 +125,9 @@ T* TList<T>::Items() {
 
 
 template<class T>
-void TList<T>::SortItems(int (*comp)(const T*, const T*)) {
-	fList.SortItems(comp);
+void TList<T>::SortItems(int (*comp)(const T**, const T**)) {
+	sort_func sort = (sort_func)comp;
+	fList.SortItems(sort);
 }
 
 // PDF coordinate system
