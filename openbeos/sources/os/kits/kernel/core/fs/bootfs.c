@@ -619,6 +619,7 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	ssize_t err = 0;
 
 	TRACE(("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+dprintf("bootfs_read %s\n", v->name);
 
 	mutex_lock(&fs->lock);
 
@@ -655,7 +656,7 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 			}
 			if(pos >= cookie->s->u.file.len) {
 				*len = 0;
-				/* XXX - we should set an error here */
+				err = ESPIPE;
 				break;
 			}
 			if(pos + *len > cookie->s->u.file.len) {
@@ -670,7 +671,8 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 			err = 0;
 			break;
 		default:
-			err = ERR_INVALID_ARGS;
+			*len = 0;
+			err = EINVAL;
 	}
 err:
 	mutex_unlock(&fs->lock);
@@ -682,7 +684,7 @@ static ssize_t bootfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const 
 {
 	TRACE(("bootfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, *len));
 
-	return ERR_VFS_READONLY_FS;
+	return EROFS;
 }
 
 static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
@@ -705,13 +707,13 @@ static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
 					} else {
-						err = ERR_INVALID_ARGS;
+						err = ESPIPE;
 					}
 					break;
 				case SEEK_CUR:
 				case SEEK_END:
 				default:
-					err = ERR_INVALID_ARGS;
+					err = ESPIPE;
 			}
 			break;
 		case STREAM_TYPE_FILE:
