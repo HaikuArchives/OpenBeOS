@@ -167,7 +167,9 @@ BBuffer::Size()
 /* explicit */
 BBuffer::BBuffer(const buffer_clone_info & info) : 
 	fBufferList(0), // must be 0 if not correct initialized
-	fData(0) // must be 0 if not correct initialized
+	fData(0), // must be 0 if not correct initialized
+	fSize(0), // should be 0 if not correct initialized
+	fBufferID(0) // must be 0 if not registered
 {
 	CALLED();
 	
