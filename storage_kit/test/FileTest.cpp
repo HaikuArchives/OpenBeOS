@@ -4,6 +4,9 @@
 #include <File.h>
 #include <SupportKit.h>		
 
+#include <cppunit/TestCaller.h>
+#include <cppunit/TestSuite.h>
+
 #include "Test.StorageKit.h"	// For "shell" global variable
 #include "FileTest.h"
 
@@ -14,6 +17,8 @@ FileTest::Suite()
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 	typedef CppUnit::TestCaller<FileTest> TC;
 	
+	NodeTest::AddBaseClassTests<FileTest>("BFile::", suite);
+
 	suite->addTest( new TC("BFile::Init Test 1", &FileTest::InitTest1) );
 	suite->addTest( new TC("BFile::Init Test 2", &FileTest::InitTest2) );
 	suite->addTest( new TC("BFile::IsRead-/IsWriteable Test",
@@ -23,24 +28,47 @@ FileTest::Suite()
 	suite->addTest( new TC("BFile::Size Test", &FileTest::SizeTest) );
 	suite->addTest( new TC("BFile::Assignment Test",
 						   &FileTest::AssignmentTest) );
-	
 	return suite;
 }		
+
+// CreateRONodes
+void
+FileTest::CreateRONodes(TestNodes& testEntries)
+{
+	testEntries.clear();
+	const char *filename;
+	filename = existingFilename;
+	testEntries.add(new BFile(filename, B_READ_ONLY), filename);
+}
+
+// CreateRWNodes
+void
+FileTest::CreateRWNodes(TestNodes& testEntries)
+{
+	testEntries.clear();
+	const char *filename;
+	filename = existingFilename;
+	testEntries.add(new BFile(filename, B_READ_WRITE), filename);
+}
+
+// CreateUninitializedNodes
+void
+FileTest::CreateUninitializedNodes(TestNodes& testEntries)
+{
+	testEntries.clear();
+	testEntries.add(new BFile, "");
+}
 
 // setUp
 void FileTest::setUp()
 {
-	BasicTest::setUp();
-	execCommand(string("touch ") + existingFilename);
+	NodeTest::setUp();
 }
 
 // tearDown
 void FileTest::tearDown()
 {
-	BasicTest::tearDown();
-	// cleanup
-	for (int32 i = 0; i < allFilenameCount; i++)
-		execCommand(string("rm -rf ") + allFilenames[i]);
+	NodeTest::tearDown();
 }
 
 // InitTest1
@@ -651,14 +679,11 @@ FileTest::AssignmentTest()
 
 
 
-// some filenames to be used in tests
-const char *FileTest::existingFilename		= "/tmp/existing-file";
-const char *FileTest::nonExistingFilename	= "/tmp/non-existing-file";
-const char *FileTest::testFilename1			= "/tmp/test-file1";
-const char *FileTest::allFilenames[]		=  {
-	FileTest::existingFilename,
-	FileTest::nonExistingFilename,
-	FileTest::testFilename1,
+// entries created in tests
+const char *FileTest::allFilenames[] = {
+	existingFilename,
+	nonExistingFilename,
+	testFilename1,
 };
 const int32 FileTest::allFilenameCount
 	= sizeof(allFilenames) / sizeof(const char*);

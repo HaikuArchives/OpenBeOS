@@ -22,6 +22,8 @@ SymLinkTest::Suite()
 	CppUnit::TestSuite *suite = new CppUnit::TestSuite();
 	typedef CppUnit::TestCaller<SymLinkTest> TC;
 	
+	NodeTest::AddBaseClassTests<SymLinkTest>("BSymLink::", suite);
+
 	suite->addTest( new TC("BSymLink::Init Test 1", &SymLinkTest::InitTest1) );
 	suite->addTest( new TC("BSymLink::Init Test 2", &SymLinkTest::InitTest2) );
 	suite->addTest( new TC("BSymLink::ReadLink Test",
@@ -36,30 +38,54 @@ SymLinkTest::Suite()
 	return suite;
 }		
 
+// CreateRONodes
+void
+SymLinkTest::CreateRONodes(TestNodes& testEntries)
+{
+	testEntries.clear();
+	const char *filename;
+	filename = "/tmp";
+	testEntries.add(new BSymLink(filename), filename);
+	filename = dirLinkname;
+	testEntries.add(new BSymLink(filename), filename);
+	filename = fileLinkname;
+	testEntries.add(new BSymLink(filename), filename);
+	filename = badLinkname;
+	testEntries.add(new BSymLink(filename), filename);
+	filename = cyclicLinkname1;
+	testEntries.add(new BSymLink(filename), filename);
+}
+
+// CreateRWNodes
+void
+SymLinkTest::CreateRWNodes(TestNodes& testEntries)
+{
+	testEntries.clear();
+	const char *filename;
+	filename = dirLinkname;
+	testEntries.add(new BSymLink(filename), filename);
+	filename = fileLinkname;
+	testEntries.add(new BSymLink(filename), filename);
+}
+
+// CreateUninitializedNodes
+void
+SymLinkTest::CreateUninitializedNodes(TestNodes& testEntries)
+{
+	testEntries.clear();
+	testEntries.add(new BSymLink, "");
+}
+
 // setUp
 void SymLinkTest::setUp()
 {
-	BasicTest::setUp();
-	execCommand(string("touch ") + existingFilename);
-	execCommand(string("mkdir ") + existingDirname);
-	execCommand(string("mkdir ") + existingSubDirname);
-	execCommand(string("ln -s ") + existingDirname + " " + dirLinkname);
-	execCommand(string("ln -s ") + existingFilename + " " + fileLinkname);
-	execCommand(string("ln -s ") + existingRelDirname + " " + relDirLinkname);
-	execCommand(string("ln -s ") + existingRelFilename + " "
-				+ relFileLinkname);
-	execCommand(string("ln -s ") + nonExistingDirname + " " + badLinkname);
-	execCommand(string("ln -s ") + cyclicLinkname1 + " " + cyclicLinkname2);
-	execCommand(string("ln -s ") + cyclicLinkname2 + " " + cyclicLinkname1);
+	NodeTest::setUp();
 }
 
 // tearDown
 void SymLinkTest::tearDown()
 {
-	BasicTest::tearDown();
-	// cleanup
-	for (int32 i = 0; i < allFilenameCount; i++)
-		execCommand(string("rm -rf ") + allFilenames[i]);
+	NodeTest::tearDown();
 }
 
 
@@ -933,61 +959,19 @@ SymLinkTest::AssignmentTest()
 
 
 
-
-// some filenames to be used in tests
-const char *SymLinkTest::existingFilename		= "/tmp/existing-file";
-const char *SymLinkTest::existingSuperFilename	= "/tmp";
-const char *SymLinkTest::existingRelFilename	= "existing-file";
-const char *SymLinkTest::existingDirname		= "/tmp/existing-dir";
-const char *SymLinkTest::existingSuperDirname	= "/tmp";
-const char *SymLinkTest::existingRelDirname		= "existing-dir";
-const char *SymLinkTest::existingSubDirname
-	= "/tmp/existing-dir/existing-subdir";
-const char *SymLinkTest::existingRelSubDirname	= "existing-subdir";
-const char *SymLinkTest::nonExistingDirname		= "/tmp/non-existing-dir";
-const char *SymLinkTest::nonExistingSuperDirname	= "/tmp";
-const char *SymLinkTest::nonExistingRelDirname	= "non-existing-dir";
-const char *SymLinkTest::testDirname1			= "/tmp/test-dir1";
-const char *SymLinkTest::tooLongEntryname		=
-	"/tmp/This is an awfully long name for an entry. It is that kind of entry "
-	"that just can't exist due to its long name. In fact its path name is not "
-	"too long -- a path name can contain 1024 characters -- but the name of "
-	"the entry itself is restricted to 256 characters, which this entry's "
-	"name does exceed.";
-const char *SymLinkTest::tooLongSuperEntryname	= "/tmp";
-const char *SymLinkTest::tooLongRelEntryname	=
-	"This is an awfully long name for an entry. It is that kind of entry "
-	"that just can't exist due to its long name. In fact its path name is not "
-	"too long -- a path name can contain 1024 characters -- but the name of "
-	"the entry itself is restricted to 256 characters, which this entry's "
-	"name does exceed.";
-const char *SymLinkTest::fileDirname			= "/tmp/test-file1/some-dir";
-const char *SymLinkTest::fileSuperDirname		= "/tmp";
-const char *SymLinkTest::fileRelDirname			= "test-file1/some-dir";
-const char *SymLinkTest::dirLinkname			= "/tmp/link-to-dir1";
-const char *SymLinkTest::dirSuperLinkname		= "/tmp";
-const char *SymLinkTest::dirRelLinkname			= "link-to-dir1";
-const char *SymLinkTest::fileLinkname			= "/tmp/link-to-file1";
-const char *SymLinkTest::fileSuperLinkname		= "/tmp";
-const char *SymLinkTest::fileRelLinkname		= "link-to-file1";
-const char *SymLinkTest::relDirLinkname			= "/tmp/rel-link-to-dir1";
-const char *SymLinkTest::relFileLinkname		= "/tmp/rel-link-to-file1";
-const char *SymLinkTest::badLinkname			= "/tmp/link-to-void";
-const char *SymLinkTest::cyclicLinkname1		= "/tmp/cyclic-link1";
-const char *SymLinkTest::cyclicLinkname2		= "/tmp/cyclic-link2";
-
-const char *SymLinkTest::allFilenames[]			=  {
-	SymLinkTest::existingFilename,
-	SymLinkTest::existingDirname,
-	SymLinkTest::nonExistingDirname,
-	SymLinkTest::testDirname1,
-	SymLinkTest::dirLinkname,
-	SymLinkTest::fileLinkname,
-	SymLinkTest::relDirLinkname,
-	SymLinkTest::relFileLinkname,
-	SymLinkTest::badLinkname,
-	SymLinkTest::cyclicLinkname1,
-	SymLinkTest::cyclicLinkname2,
+// entries created in tests
+const char *SymLinkTest::allFilenames[] = {
+	existingFilename,
+	existingDirname,
+	nonExistingDirname,
+	testDirname1,
+	dirLinkname,
+	fileLinkname,
+	relDirLinkname,
+	relFileLinkname,
+	badLinkname,
+	cyclicLinkname1,
+	cyclicLinkname2,
 };
 const int32 SymLinkTest::allFilenameCount
 	= sizeof(allFilenames) / sizeof(const char*);
