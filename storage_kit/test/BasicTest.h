@@ -28,8 +28,11 @@ public:
 
 	static void execCommand(const string &command);
 
+	static void dumpStat(struct stat &st);
+
 protected:	
 	int32 fSubTestNumber;
+	int32 fAvailableFDs;
 };
 
 

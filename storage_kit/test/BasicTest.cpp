@@ -1,14 +1,31 @@
 // BasicTest.cpp
 
 #include <stdio.h>
+#include <unistd.h>
 #include <string>
 
 #include "BasicTest.h"
 
+// count_available_fds
+#include <set>
+static
+int32
+count_available_fds()
+{
+	set<int> fds;
+	int fd;
+	while ((fd = dup(1)) != -1)
+		fds.insert(fd);
+	for (set<int>::iterator it = fds.begin(); it != fds.end(); it++)
+		close(*it);
+	return fds.size();
+}
+
 // constructor
 BasicTest::BasicTest()
 		 : StorageKit::TestCase(),
-		   fSubTestNumber(0)
+		   fSubTestNumber(0),
+		   fAvailableFDs(0)
 {
 }
 
@@ -16,6 +33,7 @@ BasicTest::BasicTest()
 void
 BasicTest::setUp()
 {
+	fAvailableFDs = count_available_fds();
 	SaveCWD();
 	fSubTestNumber = 0;
 }
@@ -26,6 +44,12 @@ BasicTest::tearDown()
 {
 	RestoreCWD();
 	nextSubTestBlock();
+	int32 availableFDs = count_available_fds();
+	if (availableFDs != fAvailableFDs) {
+		printf("WARNING: Number of available file descriptors has changed "
+			   "during test: %ld -> %ld\n", fAvailableFDs, availableFDs);
+		fAvailableFDs = availableFDs;
+	}
 }
 
 // nextSubTest
@@ -54,5 +78,24 @@ void
 BasicTest::execCommand(const string &cmdLine)
 {
 	system(cmdLine.c_str());
+}
+
+// dumpStat
+void
+BasicTest::dumpStat(struct stat &st)
+{
+	printf("stat:\n");
+	printf("  st_dev    : %x\n", st.st_dev);
+	printf("  st_ino    : %Lx\n", st.st_ino);
+	printf("  st_mode   : %x\n", st.st_mode);
+	printf("  st_nlink  : %x\n", st.st_nlink);
+	printf("  st_uid    : %x\n", st.st_uid);
+	printf("  st_gid    : %x\n", st.st_gid);
+	printf("  st_size   : %Ld\n", st.st_size);
+	printf("  st_blksize: %d\n", st.st_blksize);
+	printf("  st_atime  : %x\n", st.st_atime);
+	printf("  st_mtime  : %x\n", st.st_mtime);
+	printf("  st_ctime  : %x\n", st.st_ctime);
+	printf("  st_crtime : %x\n", st.st_crtime);
 }
 
