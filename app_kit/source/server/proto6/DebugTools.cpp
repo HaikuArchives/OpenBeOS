@@ -1,12 +1,16 @@
 #include <iostream.h>
 #include <stdio.h>
-#include <String.h>
 #include "DebugTools.h"
 
 void PrintStatusToStream(status_t value)
 {
 	// Function which simply translates a returned status code into a string
 	// and dumps it to stdout
+	cout << "Status: " << TranslateStatusToString(value).String() << endl << flush;
+}
+
+BString TranslateStatusToString(status_t value)
+{
 	BString outstr;
 	switch(value)
 	{
@@ -41,8 +45,7 @@ void PrintStatusToStream(status_t value)
 			outstr="undefined status value in debugtools::PrintStatusToStream() ";
 			break;
 	}
-	cout << "Status: " << outstr.String() << endl << flush;
-	
+	return BString(outstr);
 }
 
 void PrintColorSpaceToStream(color_space value)
