@@ -17,20 +17,16 @@
 #include "net_timer.h"
 #include "ethernet/ethernet.h"
 #include "netinet/in_var.h"
-
+#include "arp_module.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
 #include "net_server/core_module.h"
-#include "arp_module.h"
 
 struct core_module_info *core = NULL;
 struct timer clean_timer;
-
+status_t arp_ops(int32 op, ...);
 #endif
-
-loaded_net_module *global_modules;
-int *prot_table;
 
 /* arp cache */
 static net_hash *arphash;
@@ -52,11 +48,11 @@ static int arp_maxtries = 5;    /* max tries before a pause */
 static int32 arp_inuse = 0;	/* how many entries do we have? */
 static int32 arp_allocated = 0;	/* how many arp entries have we created? */
 
+struct in_ifaddr *primary_addr;
+
 #ifndef _KERNEL_MODE
-extern struct in_ifaddr *primary_addr;
 static net_timer_id arpq_timer;
 #else
-static struct in_ifaddr *primary_addr;
 static timer arpq_timer;
 #endif
 
@@ -456,16 +452,9 @@ static int32 arpq_run(struct timer *t)
 #endif
 }
 
-#ifndef _KERNEL_MODE
-int arp_init(loaded_net_module *ln, int *pt)
-#else
 int arp_init(void)
-#endif
 {
-#ifndef _KERNEL_MODE
-	global_modules = ln;
-	prot_table = pt;
-#else
+#ifdef _KERNEL_MODE
 	int rv;
 dprintf("arp_init!\n");
 
@@ -474,6 +463,8 @@ dprintf("arp_init!\n");
 
 	primary_addr = core->get_primary_addr();
 dprintf("primary_addr = %p\n", primary_addr);
+#else
+	primary_addr = get_primary_addr();
 #endif
 
 	if (!arphash)
@@ -577,27 +568,24 @@ static int arp_resolve(struct mbuf *buf, struct rtentry *rt,
 	return ARP_LOOKUP_QUEUED;
 }
 
-#ifndef _KERNEL_MODE
-
-net_module net_module_data = {
-	"ARP module",
-	NS_ARP,
-	NET_LAYER1,
-	0, 	/* users can't create sockets in this module! */
-	0,
-	0,
-
+struct arp_module_info arp_module_info = {
+#ifdef _KERNEL_MODE
+	{
+		ARP_MODULE_PATH,
+		B_KEEP_LOADED,
+		arp_ops
+	},
+#else
 	&arp_init,
-	NULL,
-	&arp_input, 
-	NULL,
-	&arp_resolve,
-	NULL
+#endif
+
+	&arp_input,
+	&arp_resolve
 };
 
-#else /* kernel stuff */
+#ifdef _KERNEL_MODE
 
-static status_t arp_ops(int32 op, ...)
+status_t arp_ops(int32 op, ...)
 {
 	switch(op) {
 		case B_MODULE_INIT:
@@ -611,19 +599,8 @@ static status_t arp_ops(int32 op, ...)
 	return B_OK;
 }
 
-static struct arp_module_info my_module = {
-	{
-		ARP_MODULE_PATH,
-		B_KEEP_LOADED,
-		arp_ops
-	},
-
-	arp_input,
-	arp_resolve
-};
-
 _EXPORT module_info *modules[] = {
-	(module_info *)&my_module,
+	(module_info *)&arp_module_info,
 	NULL
 };
 
