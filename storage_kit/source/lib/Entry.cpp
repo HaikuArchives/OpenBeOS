@@ -9,6 +9,7 @@
 
 #include <Entry.h>
 
+#include <new>
 #include <string.h>
 
 #include <Directory.h>
@@ -113,7 +114,7 @@ status_t entry_ref::set_name(const char *name)
 	if (name == NULL) {
 		this->name = NULL;
 	} else {
-		this->name = new char[strlen(name)+1];
+		this->name = new(nothrow) char[strlen(name)+1];
 		if (this->name == NULL)
 			return B_NO_MEMORY;
 		strcpy(this->name, name);
@@ -874,7 +875,7 @@ BEntry::set_name(const char *name)
 		delete [] fName;
 	}
 	
-	fName = new char[strlen(name)+1];
+	fName = new(nothrow) char[strlen(name)+1];
 	if (fName == NULL)
 		return B_NO_MEMORY;
 		

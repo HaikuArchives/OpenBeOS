@@ -10,6 +10,7 @@
 #include "ResourceFile.h"
 
 #include <algobase.h>
+#include <new>
 #include <stdio.h>
 
 #include "Elf.h"
@@ -820,9 +821,14 @@ ResourceFile::_ReadIndexEntry(resource_parse_info &parseInfo, int32 index,
 	}
 	// add the entry
 	if (result) {
-		ResourceItem *item = new ResourceItem;
+		ResourceItem *item = new(nothrow) ResourceItem;
+		if (!item)
+			throw Exception(B_NO_MEMORY);
 		item->SetLocation(offset, size);
-		parseInfo.container->AddResource(item, index, false);
+		if (!parseInfo.container->AddResource(item, index, false)) {
+			delete item;
+			throw Exception(B_NO_MEMORY);
+		}
 	}
 	return result;
 }
@@ -834,16 +840,22 @@ ResourceFile::_ReadInfoTable(resource_parse_info &parseInfo)
 	int32 &resourceCount = parseInfo.resource_count;
 	// read the info table
 	status_t error = B_OK;
-	char *tableData = new char[parseInfo.info_table_size];
+	// alloc memory for the table
+	char *tableData = new(nothrow) char[parseInfo.info_table_size];
+	if (!tableData)
+		throw Exception(B_NO_MEMORY);
 	int32 dataSize = parseInfo.info_table_size;
-	parseInfo.info_table = tableData;
+	parseInfo.info_table = tableData;	// freed by the info owner
 	read_exactly(fFile, parseInfo.info_table_offset, tableData, dataSize,
 				 "Failed to read resource info table.");
 	//
-	bool *readIndices = new bool[resourceCount + 1];	// + 1 => always > 0
+	bool *readIndices = new(nothrow) bool[resourceCount + 1];
+		// + 1 => always > 0
+	if (!readIndices)
+		throw Exception(B_NO_MEMORY);
+	AutoDeleter<bool> readIndicesDeleter(readIndices, true);
 	for (int32 i = 0; i < resourceCount; i++)
 		readIndices[i] = false;
-	AutoDeleter<bool> deleter(readIndices, true);
 	MemArea area(tableData, dataSize);
 	const void *data = tableData;
 	// check the table end/check sum
@@ -1062,7 +1074,9 @@ ResourceFile::_WriteResources(ResourcesContainer &container)
 		// write...
 		// set the file size
 		fFile.SetSize(size);
-		buffer = new char[bufferSize];
+		buffer = new(nothrow) char[bufferSize];
+		if (!buffer)
+			throw Exception(B_NO_MEMORY);
 		void *data = buffer;
 		// header
 		resources_header *resourcesHeader = (resources_header*)data;

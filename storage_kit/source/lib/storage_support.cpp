@@ -7,6 +7,7 @@
 	Implementations of miscellaneous internal Storage Kit support functions.
 */
 
+#include <new>
 #include <string.h>
 
 #include <StorageDefs.h>
@@ -106,68 +107,75 @@ split_path(const char *fullPath, char **path, char **leaf)
 	int leafStart, leafEnd, pathEnd, len;
 	parse_path(fullPath, leafStart, leafEnd, pathEnd);
 
-	// Tidy up/handle special cases
-	if (leafEnd == -1) {
+	try {
+		// Tidy up/handle special cases
+		if (leafEnd == -1) {
 	
-		// Handle special cases 
-		if (fullPath[0] == '/') {
-			// Handle "/"
-			if (path) {
+			// Handle special cases 
+			if (fullPath[0] == '/') {
+				// Handle "/"
+				if (path) {
+					*path = new char[2];
+					(*path)[0] = '/';
+					(*path)[1] = 0;
+				}
+				if (leaf) {
+					*leaf = new char[2];
+					(*leaf)[0] = '.';
+					(*leaf)[1] = 0;
+				}
+				return true;	
+			} else if (fullPath[0] == 0) {
+				// Handle "", which we'll treat as "./"
+				if (path) {
+					*path = new char[1];
+					(*path)[0] = 0;
+				}
+				if (leaf) {
+					*leaf = new char[2];
+					(*leaf)[0] = '.';
+					(*leaf)[1] = 0;
+				}
+				return true;	
+			}
+	
+		} else if (leafStart == -1) {
+			// fullPath is just an entry name, no parent directories specified
+			leafStart = 0;
+		} else if (pathEnd == -1) {
+			// The path is '/' (since pathEnd would be -2 if we had
+			// run out of characters before hitting a '/')
+			pathEnd = 0;
+		}
+	
+		// Alloc new strings and copy the path and leaf over
+		if (path) {
+			if (pathEnd == -2) {
+				// empty path
 				*path = new char[2];
-				(*path)[0] = '/';
+				(*path)[0] = '.';
 				(*path)[1] = 0;
+			} else {
+				// non-empty path
+				len = pathEnd + 1;
+				*path = new char[len+1];
+				memcpy(*path, fullPath, len);
+				(*path)[len] = 0;
 			}
-			if (leaf) {
-				*leaf = new char[2];
-				(*leaf)[0] = '.';
-				(*leaf)[1] = 0;
-			}
-			return true;	
-		} else if (fullPath[0] == 0) {
-			// Handle "", which we'll treat as "./"
-			if (path) {
-				*path = new char[1];
-				(*path)[0] = 0;
-			}
-			if (leaf) {
-				*leaf = new char[2];
-				(*leaf)[0] = '.';
-				(*leaf)[1] = 0;
-			}
-			return true;	
 		}
-	
-	} else if (leafStart == -1) {
-		// fullPath is just an entry name, no parent directories specified
-		leafStart = 0;
-	} else if (pathEnd == -1) {
-		// The path is '/' (since pathEnd would be -2 if we had
-		// run out of characters before hitting a '/')
-		pathEnd = 0;
-	}
-	
-	// Alloc new strings and copy the path and leaf over
-	if (path) {
-		if (pathEnd == -2) {
-			// empty path
-			*path = new char[2];
-			(*path)[0] = '.';
-			(*path)[1] = 0;
-		} else {
-			// non-empty path
-			len = pathEnd + 1;
-			*path = new char[len+1];
-			memcpy(*path, fullPath, len);
-			(*path)[len] = 0;
+		if (leaf) {
+			len = leafEnd - leafStart + 1;
+			*leaf = new char[len+1];
+			memcpy(*leaf, fullPath + leafStart, len);
+			(*leaf)[len] = 0;
 		}
+	} catch (bad_alloc exception) {
+		if (path)
+			delete[] *path;
+		if (leaf)
+			delete[] *leaf;
+		return false;
 	}
-	if (leaf) {
-		len = leafEnd - leafStart + 1;
-		*leaf = new char[len+1];
-		memcpy(*leaf, fullPath + leafStart, len);
-		(*leaf)[len] = 0;
-	}
-	
 	return true;
 }
 
@@ -222,9 +230,12 @@ parse_first_path_component(const char *path, char *&component,
 	int32 length;
 	status_t error = parse_first_path_component(path, length, nextComponent);
 	if (error == B_OK) {
-		component = new char[length + 1];
-		strncpy(component, path, length);
-		component[length] = '\0';
+		component = new(nothrow) char[length + 1];
+		if (component) {
+			strncpy(component, path, length);
+			component[length] = '\0';
+		} else
+			error = B_NO_MEMORY;
 	}
 	return error;
 }

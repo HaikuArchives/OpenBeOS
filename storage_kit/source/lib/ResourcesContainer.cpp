@@ -29,6 +29,8 @@ ResourcesContainer::~ResourcesContainer()
 }
 
 // AddResource
+//
+// Returns false, if item is NULL or memory is insufficient, true otherwise.
 bool
 ResourcesContainer::AddResource(ResourceItem *item, int32 index,
 								bool replace)
@@ -41,7 +43,7 @@ ResourcesContainer::AddResource(ResourceItem *item, int32 index,
 		int32 count = CountResources();
 		if (index < 0 || index > count)
 			index = count;
-		result = fResources.AddItem(item);
+		result = fResources.AddItem(item, count);
 		SetModified(true);
 	}
 	return result;

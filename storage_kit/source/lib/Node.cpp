@@ -8,6 +8,7 @@
 */
 
 #include <fs_attr.h> // for struct attr_info
+#include <new>
 #include <string.h>
 
 #include <Node.h>
@@ -417,7 +418,7 @@ BNode::RenameAttr(const char *oldname, const char *newname) {
 		return B_BAD_VALUE;	// This is what R5::BNode returns...
 		
 	// Alloc a buffer
-	void *data = new char[info.size];
+	void *data = new(nothrow) char[info.size];
 	if (data == NULL)
 		return B_NO_MEMORY;
 		

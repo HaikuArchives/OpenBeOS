@@ -73,7 +73,7 @@ private:
 private:
 	void _Cleanup();
 	void _MakeEmpty();
-	void _Rehash(int32 newSize);
+	status_t _Rehash(int32 newSize);
 	_string_id_hash *_AddString(char *str, int32 id, bool wasMalloced);
 
 	virtual _string_id_hash *_FindString(int32 id);

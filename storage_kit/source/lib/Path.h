@@ -90,7 +90,7 @@ private:
 
 	class EBadInput { };
 	
-	void set_path(const char *path);
+	status_t set_path(const char *path);
 	
 	static bool MustNormalize(const char *path);
 	

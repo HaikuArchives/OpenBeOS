@@ -7,6 +7,8 @@
 	BPath implementation.
 */
 
+#include <new>
+
 #include <Path.h>
 #include <Directory.h>
 #include <Entry.h>
@@ -125,7 +127,7 @@ BPath::SetTo(const entry_ref *ref)
 		char path[B_PATH_NAME_LENGTH + 1];
 		error = StorageKit::entry_ref_to_path(ref, path, sizeof(path));
 		if (error == B_OK)
-			set_path(path);	// the path is already normalized
+			error = set_path(path);	// the path is already normalized
 	}
 	fCStatus = error;
 	return error;
@@ -212,9 +214,9 @@ BPath::SetTo(const char *path, const char *leaf, bool normalize)
 				error = StorageKit::get_canonical_path(newPath, normalizedPath,
 													   sizeof(normalizedPath));
 				if (error == B_OK)
-					set_path(normalizedPath);
+					error = set_path(normalizedPath);
 			} else
-				set_path(newPath);
+				error = set_path(newPath);
 		}
 	}
 	// cleanup, if something went wrong
@@ -578,19 +580,27 @@ void BPath::_WarPath3() {}
 	The path is copied. If \c NULL, the object's path is set to NULL as well.
 	The object's old path is deleted.
 	\param path the path to be set
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_NO_MEMORY: Insufficient memory.
 */
-void
+status_t
 BPath::set_path(const char *path)
 {
+	status_t error = B_OK;
 	const char *oldPath = fName;
 	// set the new path
 	if (path) {
-		fName = new char[strlen(path) + 1];
-		strcpy(fName, path);
+		fName = new(nothrow) char[strlen(path) + 1];
+		if (fName)
+			strcpy(fName, path);
+		else
+			error = B_NO_MEMORY;
 	} else
 		fName = NULL;
 	// delete the old one
 	delete[] oldPath;
+	return error;
 }
 
 

@@ -7,6 +7,8 @@
 	BSymLink implementation.
 */
 
+#include <new>
+
 #include <SymLink.h>
 #include <Directory.h>
 #include <Entry.h>
@@ -26,7 +28,7 @@ enum {
 BSymLink::BSymLink()
 		: BNode()
 	// WORKAROUND
-		, fSecretEntry(new BEntry)
+		, fSecretEntry(new(nothrow) BEntry)
 {
 }
 
@@ -37,7 +39,7 @@ BSymLink::BSymLink()
 BSymLink::BSymLink(const BSymLink &link)
 		: BNode()
 	// WORKAROUND
-		, fSecretEntry(new BEntry)
+		, fSecretEntry(new(nothrow) BEntry)
 {
 	*this = link;
 }
@@ -50,7 +52,7 @@ BSymLink::BSymLink(const BSymLink &link)
 BSymLink::BSymLink(const entry_ref *ref)
 		: BNode()
 	// WORKAROUND
-		, fSecretEntry(new BEntry)
+		, fSecretEntry(new(nothrow) BEntry)
 {
 	SetTo(ref);
 }
@@ -63,7 +65,7 @@ BSymLink::BSymLink(const entry_ref *ref)
 BSymLink::BSymLink(const BEntry *entry)
 		: BNode()
 	// WORKAROUND
-		, fSecretEntry(new BEntry)
+		, fSecretEntry(new(nothrow) BEntry)
 {
 	SetTo(entry);
 }
@@ -76,7 +78,7 @@ BSymLink::BSymLink(const BEntry *entry)
 BSymLink::BSymLink(const char *path)
 		: BNode()
 	// WORKAROUND
-		, fSecretEntry(new BEntry)
+		, fSecretEntry(new(nothrow) BEntry)
 {
 	SetTo(path);
 }
@@ -91,7 +93,7 @@ BSymLink::BSymLink(const char *path)
 BSymLink::BSymLink(const BDirectory *dir, const char *path)
 		: BNode()
 	// WORKAROUND
-		, fSecretEntry(new BEntry)
+		, fSecretEntry(new(nothrow) BEntry)
 {
 	SetTo(dir, path);
 }
@@ -112,9 +114,12 @@ status_t
 BSymLink::SetTo(const entry_ref *ref)
 {
 	status_t error = BNode::SetTo(ref);
-	fSecretEntry->Unset();
-	if (error == B_OK)
-		fSecretEntry->SetTo(ref);
+	if (fSecretEntry) {
+		fSecretEntry->Unset();
+		if (error == B_OK)
+			fSecretEntry->SetTo(ref);
+	} else
+		error = B_NO_MEMORY;
 	return error;
 }
 
@@ -123,9 +128,12 @@ status_t
 BSymLink::SetTo(const BEntry *entry)
 {
 	status_t error = BNode::SetTo(entry);
-	fSecretEntry->Unset();
-	if (error == B_OK)
-		*fSecretEntry = *entry;
+	if (fSecretEntry) {
+		fSecretEntry->Unset();
+		if (error == B_OK)
+			*fSecretEntry = *entry;
+	} else
+		error = B_NO_MEMORY;
 	return error;
 }
 
@@ -134,9 +142,12 @@ status_t
 BSymLink::SetTo(const char *path)
 {
 	status_t error = BNode::SetTo(path);
-	fSecretEntry->Unset();
-	if (error == B_OK)
-		fSecretEntry->SetTo(path);
+	if (fSecretEntry) {
+		fSecretEntry->Unset();
+		if (error == B_OK)
+			fSecretEntry->SetTo(path);
+	} else
+		error = B_NO_MEMORY;
 	return error;
 }
 
@@ -145,9 +156,12 @@ status_t
 BSymLink::SetTo(const BDirectory *dir, const char *path)
 {
 	status_t error = BNode::SetTo(dir, path);
-	fSecretEntry->Unset();
-	if (error == B_OK)
-		fSecretEntry->SetTo(dir, path);
+	if (fSecretEntry) {
+		fSecretEntry->Unset();
+		if (error == B_OK)
+			fSecretEntry->SetTo(dir, path);
+	} else
+		error = B_NO_MEMORY;
 	return error;
 }
 
@@ -156,7 +170,8 @@ void
 BSymLink::Unset()
 {
 	BNode::Unset();
-	fSecretEntry->Unset();
+	if (fSecretEntry)
+		fSecretEntry->Unset();
 }
 
 
@@ -185,6 +200,7 @@ BSymLink::ReadLink(char *buf, size_t size)
 // WORKAROUND
 	status_t error = (buf ? B_OK : B_BAD_VALUE);
 	if (error == B_OK && (InitCheck() != B_OK
+		|| !fSecretEntry
 		|| fSecretEntry->InitCheck() != B_OK)) {
 		error = B_FILE_ERROR;
 	}
@@ -301,7 +317,8 @@ BSymLink::operator=(const BSymLink &link)
 	if (&link != this) {	// no need to assign us to ourselves
 		Unset();
 		static_cast<BNode&>(*this) = link;
-		*fSecretEntry = *link.fSecretEntry;
+		if (fSecretEntry && link.fSecretEntry)
+			*fSecretEntry = *link.fSecretEntry;
 	}
 	return *this;
 }

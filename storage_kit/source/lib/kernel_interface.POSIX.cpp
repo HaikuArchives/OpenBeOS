@@ -26,6 +26,7 @@
 #include <errno.h>
 	// errno
 
+#include <new>
 #include <string.h>
 	// strerror()
 	
@@ -893,11 +894,15 @@ StorageKit::get_canonical_path(const char *path, char *&result)
 {
 	status_t error = (path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
-		result = new char[B_PATH_NAME_LENGTH];
-		error = get_canonical_path(path, result, B_PATH_NAME_LENGTH);
-		if (error != B_OK) {
-			delete[] result;
-			result = NULL;
+		result = new(nothrow) char[B_PATH_NAME_LENGTH];
+		if (!result)
+			error = B_NO_MEMORY;
+		if (error == B_OK) {
+			error = get_canonical_path(path, result, B_PATH_NAME_LENGTH);
+			if (error != B_OK) {
+				delete[] result;
+				result = NULL;
+			}
 		}
 	}
 	return error;
@@ -934,11 +939,15 @@ StorageKit::get_canonical_dir_path(const char *path, char *&result)
 {
 	status_t error = (path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
-		result = new char[B_PATH_NAME_LENGTH];
-		error = get_canonical_dir_path(path, result, B_PATH_NAME_LENGTH);
-		if (error != B_OK) {
-			delete[] result;
-			result = NULL;
+		result = new(nothrow) char[B_PATH_NAME_LENGTH];
+		if (!result)
+			error = B_NO_MEMORY;
+		if (error == B_OK) {
+			error = get_canonical_dir_path(path, result, B_PATH_NAME_LENGTH);
+			if (error != B_OK) {
+				delete[] result;
+				result = NULL;
+			}
 		}
 	}
 	return error;

@@ -39,6 +39,7 @@ public:
 
 	status_t SetTo(const BFile *file, bool clobber = false);
 	void Unset();
+	status_t InitCheck() const;
 
 	const BFile &File() const;
 

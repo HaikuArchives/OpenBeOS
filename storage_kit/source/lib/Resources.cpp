@@ -17,6 +17,7 @@
 */
 #include <Resources.h>
 
+#include <new>
 #include <stdlib.h>
 
 #include "ResourceFile.h"
@@ -38,7 +39,7 @@ BResources::BResources()
 			fResourceFile(NULL),
 			fReadOnly(false)
 {
-	fContainer = new ResourcesContainer();
+	fContainer = new(nothrow) ResourcesContainer;
 }
 
 // constructor
@@ -60,7 +61,7 @@ BResources::BResources(const BFile *file, bool clobber)
 			fResourceFile(NULL),
 			fReadOnly(false)
 {
-	fContainer = new ResourcesContainer();
+	fContainer = new(nothrow) ResourcesContainer;
 	SetTo(file, clobber);
 }
 
@@ -108,16 +109,24 @@ BResources::SetTo(const BFile *file, bool clobber)
 		}
 		if (error == B_OK) {
 			fReadOnly = !fFile.IsWritable();
-			fResourceFile = new ResourceFile;
-			error = fResourceFile->SetTo(&fFile, clobber);
+			fResourceFile = new(nothrow) ResourceFile;
+			if (fResourceFile)
+				error = fResourceFile->SetTo(&fFile, clobber);
+			else
+				error = B_NO_MEMORY;
 		}
-		if (error == B_OK)
-			error = fResourceFile->InitContainer(*fContainer);
+		if (error == B_OK) {
+			if (fContainer)
+				error = fResourceFile->InitContainer(*fContainer);
+			else
+				error = B_NO_MEMORY;
+		}
 	}
 	if (error != B_OK) {
 		delete fResourceFile;
 		fResourceFile = NULL;
-		fContainer->MakeEmpty();
+		if (fContainer)
+			fContainer->MakeEmpty();
 	}
 	return error;
 }
@@ -131,13 +140,33 @@ BResources::SetTo(const BFile *file, bool clobber)
 void
 BResources::Unset()
 {
-	if (fContainer->IsModified())
+	if (fContainer && fContainer->IsModified())
 		Sync();
 	delete fResourceFile;
 	fResourceFile = NULL;
 	fFile.Unset();
-	fContainer->MakeEmpty();
+	if (fContainer)
+		fContainer->MakeEmpty();
+	else
+		fContainer = new(nothrow) ResourcesContainer;
 	fReadOnly = false;
+}
+
+// InitCheck
+/*!	Returns the current initialization status.
+	Unlike other Storage Kit classes a BResources object is always properly
+	initialized, unless it couldn't allocate memory for some important
+	internal structures. Thus even after a call to SetTo() that reported an
+	error, InitCheck() is likely to return \c B_OK.
+	\return
+	- \c B_OK, if the objects is properly initialized,
+	- \c B_NO_MEMORY otherwise.
+	\note This method extends the BeOS R5 API.
+*/
+status_t
+BResources::InitCheck() const
+{
+	return (fContainer ? B_OK : B_NO_MEMORY);
 }
 
 // File
@@ -168,11 +197,13 @@ const void *
 BResources::LoadResource(type_code type, int32 id, size_t *outSize)
 {
 	// find the resource
-	status_t error = B_OK;
-	ResourceItem *resource
-		= fContainer->ResourceAt(fContainer->IndexOf(type, id));
-	if (!resource)
-		error = B_ENTRY_NOT_FOUND;
+	status_t error = InitCheck();
+	ResourceItem *resource = NULL;
+	if (error == B_OK) {
+		resource = fContainer->ResourceAt(fContainer->IndexOf(type, id));
+		if (!resource)
+			error = B_ENTRY_NOT_FOUND;
+	}
 	// load it, if necessary
 	if (error == B_OK && !resource->IsLoaded() && fResourceFile)
 		error = fResourceFile->ReadResource(*resource);
@@ -207,11 +238,13 @@ const void *
 BResources::LoadResource(type_code type, const char *name, size_t *outSize)
 {
 	// find the resource
-	status_t error = B_OK;
-	ResourceItem *resource
-		= fContainer->ResourceAt(fContainer->IndexOf(type, name));
-	if (!resource)
-		error = B_ENTRY_NOT_FOUND;
+	status_t error = InitCheck();
+	ResourceItem *resource = NULL;
+	if (error == B_OK) {
+		resource = fContainer->ResourceAt(fContainer->IndexOf(type, name));
+		if (!resource)
+			error = B_ENTRY_NOT_FOUND;
+	}
 	// load it, if necessary
 	if (error == B_OK && !resource->IsLoaded() && fResourceFile)
 		error = fResourceFile->ReadResource(*resource);
@@ -238,8 +271,8 @@ BResources::LoadResource(type_code type, const char *name, size_t *outSize)
 status_t
 BResources::PreloadResourceType(type_code type)
 {
-	status_t error = B_OK;
-	if (fResourceFile) {
+	status_t error = InitCheck();
+	if (error == B_OK && fResourceFile) {
 		if (type == 0)
 			error = fResourceFile->ReadResources(*fContainer);
 		else {
@@ -279,7 +312,9 @@ BResources::PreloadResourceType(type_code type)
 status_t
 BResources::Sync()
 {
-	status_t error = fFile.InitCheck();
+	status_t error = InitCheck();
+	if (error == B_OK)
+		error = fFile.InitCheck();
 	if (error == B_OK) {
 		if (fReadOnly)
 			error = B_NOT_ALLOWED;
@@ -307,6 +342,8 @@ status_t
 BResources::MergeFrom(BFile *fromFile)
 {
 	status_t error = (fromFile ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = InitCheck();
 	if (error == B_OK) {
 		ResourceFile resourceFile;
 		error = resourceFile.SetTo(fromFile);
@@ -336,6 +373,8 @@ status_t
 BResources::WriteTo(BFile *file)
 {
 	status_t error = (file ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = InitCheck();
 	// make sure, that all resources are loaded
 	if (error == B_OK && fResourceFile) {
 		error = fResourceFile->ReadResources(*fContainer);
@@ -344,10 +383,12 @@ BResources::WriteTo(BFile *file)
 	// set the new file, but keep the old container
 	if (error == B_OK) {
 		ResourcesContainer *container = fContainer;
-		fContainer = new ResourcesContainer;
-//		error = SetTo(file, true);
-		error = SetTo(file, false);
-		delete fContainer;
+		fContainer = new(nothrow) ResourcesContainer;
+		if (fContainer) {
+			error = SetTo(file, false);
+			delete fContainer;
+		} else
+			error = B_NO_MEMORY;
 		fContainer = container;
 	}
 	// write the resources
@@ -380,18 +421,26 @@ BResources::AddResource(type_code type, int32 id, const void *data,
 {
 	status_t error = (data ? B_OK : B_BAD_VALUE);
 	if (error == B_OK)
+		error = InitCheck();
+	if (error == B_OK)
 		error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
 	if (error == B_OK) {
-		ResourceItem *item = new ResourceItem;
-		item->SetIdentity(type, id, name);
-		ssize_t written = item->WriteAt(0, data, length);
-		if (written < 0)
-			error = written;
-		else if (written != length)
-			error = B_ERROR;
-		if (error == B_OK)
-			fContainer->AddResource(item);
-		else
+		ResourceItem *item = new(nothrow) ResourceItem;
+		if (!item)
+			error = B_NO_MEMORY;
+		if (error == B_OK) {
+			item->SetIdentity(type, id, name);
+			ssize_t written = item->WriteAt(0, data, length);
+			if (written < 0)
+				error = written;
+			else if (written != length)
+				error = B_ERROR;
+		}
+		if (error == B_OK) {
+			if (!fContainer->AddResource(item))
+				error = B_NO_MEMORY;
+		}
+		if (error != B_OK)
 			delete item;
 	}
 	return error;
@@ -407,7 +456,7 @@ BResources::AddResource(type_code type, int32 id, const void *data,
 bool
 BResources::HasResource(type_code type, int32 id)
 {
-	return (fContainer->IndexOf(type, id) >= 0);
+	return (InitCheck() == B_OK && fContainer->IndexOf(type, id) >= 0);
 }
 
 // HasResource
@@ -420,7 +469,7 @@ BResources::HasResource(type_code type, int32 id)
 bool
 BResources::HasResource(type_code type, const char *name)
 {
-	return (fContainer->IndexOf(type, name) >= 0);
+	return (InitCheck() == B_OK && fContainer->IndexOf(type, name) >= 0);
 }
 
 // GetResourceInfo
@@ -441,7 +490,9 @@ BResources::GetResourceInfo(int32 byIndex, type_code *typeFound,
 							int32 *idFound, const char **nameFound,
 							size_t *lengthFound)
 {
-	ResourceItem *item = fContainer->ResourceAt(byIndex);
+	ResourceItem *item = NULL;
+	if (InitCheck() == B_OK)
+		item = fContainer->ResourceAt(byIndex);
 	if (item) {
 		if (typeFound)
 			*typeFound = item->Type();
@@ -472,8 +523,11 @@ bool
 BResources::GetResourceInfo(type_code byType, int32 andIndex, int32 *idFound,
 							const char **nameFound, size_t *lengthFound)
 {
-	ResourceItem *item
-		= fContainer->ResourceAt(fContainer->IndexOfType(byType, andIndex));
+	ResourceItem *item = NULL;
+	if (InitCheck() == B_OK) {
+		item = fContainer->ResourceAt(fContainer->IndexOfType(byType,
+															  andIndex));
+	}
 	if (item) {
 		if (idFound)
 			*idFound = item->ID();
@@ -499,8 +553,9 @@ bool
 BResources::GetResourceInfo(type_code byType, int32 andID,
 							const char **nameFound, size_t *lengthFound)
 {
-	ResourceItem *item
-		= fContainer->ResourceAt(fContainer->IndexOf(byType, andID));
+	ResourceItem *item = NULL;
+	if (InitCheck() == B_OK)
+		item = fContainer->ResourceAt(fContainer->IndexOf(byType, andID));
 	if (item) {
 		if (nameFound)
 			*nameFound = item->Name();
@@ -525,8 +580,9 @@ bool
 BResources::GetResourceInfo(type_code byType, const char *andName,
 							int32 *idFound, size_t *lengthFound)
 {
-	ResourceItem *item
-		= fContainer->ResourceAt(fContainer->IndexOf(byType, andName));
+	ResourceItem *item = NULL;
+	if (InitCheck() == B_OK)
+		item = fContainer->ResourceAt(fContainer->IndexOf(byType, andName));
 	if (item) {
 		if (idFound)
 			*idFound = item->ID();
@@ -555,8 +611,9 @@ BResources::GetResourceInfo(const void *byPointer, type_code *typeFound,
 							int32 *idFound, size_t *lengthFound,
 							const char **nameFound)
 {
-	ResourceItem *item
-		= fContainer->ResourceAt(fContainer->IndexOf(byPointer));
+	ResourceItem *item = NULL;
+	if (InitCheck() == B_OK)
+		item = fContainer->ResourceAt(fContainer->IndexOf(byPointer));
 	if (item) {
 		if (typeFound)
 			*typeFound = item->Type();
@@ -587,6 +644,8 @@ BResources::RemoveResource(const void *resource)
 {
 	status_t error = (resource ? B_OK : B_BAD_VALUE);
 	if (error == B_OK)
+		error = InitCheck();
+	if (error == B_OK)
 		error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
 	if (error == B_OK) {
 		ResourceItem *item
@@ -613,7 +672,9 @@ BResources::RemoveResource(const void *resource)
 status_t
 BResources::RemoveResource(type_code type, int32 id)
 {
-	status_t error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
+	status_t error = InitCheck();
+	if (error == B_OK)
+		error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
 	if (error == B_OK) {
 		ResourceItem *item
 			= fContainer->RemoveResource(fContainer->IndexOf(type, id));
@@ -652,6 +713,8 @@ BResources::WriteResource(type_code type, int32 id, const void *data,
 						  off_t offset, size_t length)
 {
 	status_t error = (data && offset >= 0 ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = InitCheck();
 	if (error == B_OK)
 		error = (fReadOnly ? B_NOT_ALLOWED : B_OK);
 	ResourceItem *item = NULL;
@@ -699,6 +762,8 @@ BResources::ReadResource(type_code type, int32 id, void *data, off_t offset,
 						 size_t length)
 {
 	status_t error = (data && offset >= 0 ? B_OK : B_BAD_VALUE);
+	if (error == B_OK)
+		error = InitCheck();
 	ResourceItem *item = NULL;
 	if (error == B_OK) {
 		item = fContainer->ResourceAt(fContainer->IndexOf(type, id));

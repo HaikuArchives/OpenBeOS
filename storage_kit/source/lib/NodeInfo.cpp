@@ -9,10 +9,12 @@
 
 #include <NodeInfo.h>
 
+#include <new>
+
 #include <Node.h>
 #include <AppFileInfo.h>
 
-#include <be/kernel/fs_attr.h>
+#include <fs_attr.h>
 
 #define NI_BEOS "BEOS"
 // I've added a BEOS hash-define incase we wish to change to OBOS
@@ -127,13 +129,16 @@ BNodeInfo::GetPreferredApp(char *signature,
 			error = fNode->ReadAttr(NI_PREF, attrInfo.type, 0, 
 									signature, attrInfo.size);
 			if(error < B_OK) {
-			  char *mimetpye = new char[B_MIME_TYPE_LENGTH];
-			  if( GetMineType(mimetype) >= B_OK ) {
-				BMimeType mime(mimetype);
-				error = mine.GetPreferredApp(signature, verb);
-			  }
+			  char *mimetpye = new(nothrow) char[B_MIME_TYPE_LENGTH];
+			  if (mimetype) {
+				  if( GetMineType(mimetype) >= B_OK ) {
+					BMimeType mime(mimetype);
+					error = mine.GetPreferredApp(signature, verb);
+				  }
 			  
-			  delete minetype;
+				  delete minetype;
+			  } else
+			  	error = B_NO_MEMORY;
 			}
 		}
 
@@ -170,13 +175,16 @@ BNodeInfo::GetAppHint(entry_ref *ref) const
 			error = fNode->ReadAttr(NI_HINT, attrInfo.type, 0, 
 									ref, attrInfo.size);
 			if(error < B_OK) {
-			  char *mimetype = new char[B_MIME_TYPE_LENGTH];
-			  if( GetMineType(mimetype) >= B_OK ) {
-				BMimeType mime(mimetype);
-				error = mime.GetAppHint(ref);
-			  }
+			  char *mimetype = new(nothrow) char[B_MIME_TYPE_LENGTH];
+			  if (mimetype) {
+				  if( GetMineType(mimetype) >= B_OK ) {
+					BMimeType mime(mimetype);
+					error = mime.GetAppHint(ref);
+				  }
 			  
-			  delete minetype;
+				  delete minetype;
+			  } else
+			  	error = B_NO_MEMORY;
 			}
 		}
 

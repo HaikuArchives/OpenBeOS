@@ -9,6 +9,7 @@
 
 #include <ResourceStrings.h>
 
+#include <new>
 #include <string.h>
 
 #include <Entry.h>
@@ -87,7 +88,7 @@ BResourceStrings::NewString(int32 id)
 //	_string_lock.Lock();
 	BString *result = NULL;
 	if (const char *str = FindString(id))
-		result = new BString(str);
+		result = new(nothrow) BString(str);
 //	_string_lock.Unlock();
 	return result;
 }
@@ -146,8 +147,11 @@ BResourceStrings::SetStringFile(const entry_ref *ref)
 		BFile file(&fileRef, B_READ_ONLY);
 		error = file.InitCheck();
 		if (error == B_OK) {
-			fResources = new BResources;
-			error = fResources->SetTo(&file);
+			fResources = new(nothrow) BResources;
+			if (fResources)
+				error = fResources->SetTo(&file);
+			else
+				error = B_NO_MEMORY;
 		}
 	}
 	// read the strings
@@ -163,7 +167,7 @@ BResourceStrings::SetStringFile(const entry_ref *ref)
 		}
 		// allocate a hash table with a nice size
 		// I don't have a heuristic at hand, so let's simply take the count.
-		_Rehash(fStringCount);
+		error = _Rehash(fStringCount);
 		// load the resources
 		for (int32 i = 0; error == B_OK && i < fStringCount; i++) {
 			if (!fResources->GetResourceInfo(RESOURCE_TYPE, i, &id, &name,
@@ -260,30 +264,39 @@ BResourceStrings::_MakeEmpty()
 // _Rehash
 /*!	\brief Resizes the id->string hash table to the supplied size.
 	\param newSize the new hash table size
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_NO_MEMORY: Insuffient memory.
 */
-void
+status_t
 BResourceStrings::_Rehash(int32 newSize)
 {
+	status_t error = B_OK;
 	if (newSize > 0 && newSize != fHashTableSize) {
 		// alloc a new table and fill it with NULL
-		_string_id_hash **newHashTable = new _string_id_hash*[newSize];
-		memset(newHashTable, 0, sizeof(_string_id_hash*) * newSize);
-		// move the entries to the new table
-		if (fHashTable && fHashTableSize > 0 && fStringCount > 0) {
-			for (int32 i = 0; i < fHashTableSize; i++) {
-				while (_string_id_hash *entry = fHashTable[i]) {
-					fHashTable[i] = entry->next;
-					int32 newPos = entry->id % newSize;
-					entry->next = newHashTable[newPos];
-					newHashTable[newPos] = entry;
+		_string_id_hash **newHashTable
+			= new(nothrow) _string_id_hash*[newSize];
+		if (newHashTable) {
+			memset(newHashTable, 0, sizeof(_string_id_hash*) * newSize);
+			// move the entries to the new table
+			if (fHashTable && fHashTableSize > 0 && fStringCount > 0) {
+				for (int32 i = 0; i < fHashTableSize; i++) {
+					while (_string_id_hash *entry = fHashTable[i]) {
+						fHashTable[i] = entry->next;
+						int32 newPos = entry->id % newSize;
+						entry->next = newHashTable[newPos];
+						newHashTable[newPos] = entry;
+					}
 				}
 			}
-		}
-		// set the new table
-		delete[] fHashTable;
-		fHashTable = newHashTable;
-		fHashTableSize = newSize;
+			// set the new table
+			delete[] fHashTable;
+			fHashTable = newHashTable;
+			fHashTableSize = newSize;
+		} else
+			error = B_NO_MEMORY;
 	}
+	return error;
 }
 
 // _AddString
@@ -299,8 +312,9 @@ BResourceStrings::_string_id_hash *
 BResourceStrings::_AddString(char *str, int32 id, bool wasMalloced)
 {
 	_string_id_hash *entry = NULL;
-	if (fHashTable && fHashTableSize > 0) {
-		entry = new _string_id_hash;
+	if (fHashTable && fHashTableSize > 0)
+		entry = new(nothrow) _string_id_hash;
+	if (entry) {
 		entry->assign_string(str, false);
 		entry->id = id;
 		entry->data_alloced = wasMalloced;

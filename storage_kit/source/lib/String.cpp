@@ -2,6 +2,7 @@
 // complete. Just here to allow for a complete BNode implementation.
 // To be replaced by the OpenBeOS version to be provided by the IK Team.
 
+#include <new>
 #include <stdio.h>
 #include <string.h>
 
@@ -133,12 +134,14 @@ BString::_Init(const char *str, int32 len)
 		str = "";
 	if (len < 0)
 		len = strlen(str);
-	newData = new char[len + 1];
-	strncpy(newData, str, len);
-	newData[len] = 0;
-	// delete the old data and set the new
-	delete[] fData;
-	fData = newData;
+	newData = new(nothrow) char[len + 1];
+	if (newData) {
+		strncpy(newData, str, len);
+		newData[len] = 0;
+		// delete the old data and set the new
+		delete[] fData;
+		fData = newData;
+	}
 //printf("BString::_Init() done\n");
 }
 
