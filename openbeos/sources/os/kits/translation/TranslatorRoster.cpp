@@ -560,7 +560,7 @@ BTranslatorRoster::Identify(BPositionIO *inSource,
 			float weight = 0.0;
 			bool addmatch = false;
 				// eliminates need for a goto
-
+				
 			result = inSource->Seek(0, SEEK_SET);
 			if (result == B_OK) {
 			
@@ -583,13 +583,30 @@ BTranslatorRoster::Identify(BPositionIO *inSource,
 					addmatch = true;
 				
 				if (addmatch) {
-					tmpInfo.translator = pTranNode->id;
 					weight = tmpInfo.quality * tmpInfo.capability;
+					
+					// Since many kinds of data can look like text,
+					// don't choose the text format if it has been identified
+					// as belonging to a different group.
+					if (bFoundMatch && outInfo->group == B_TRANSLATOR_TEXT &&
+						tmpInfo.group != B_TRANSLATOR_TEXT)
+						bestWeight = 0.0;
+					else if (bFoundMatch && tmpInfo.group == B_TRANSLATOR_TEXT &&
+						outInfo->group != B_TRANSLATOR_TEXT)
+						weight = 0.0;
 
 					if (weight > bestWeight) {
 						bFoundMatch = true;
 						bestWeight = weight;
-						*outInfo = tmpInfo;
+						
+						tmpInfo.translator = pTranNode->id;
+						outInfo->type = tmpInfo.type;
+						outInfo->translator = tmpInfo.translator;
+						outInfo->group = tmpInfo.group;
+						outInfo->quality = tmpInfo.quality;
+						outInfo->capability = tmpInfo.capability;
+						strcpy(outInfo->name, tmpInfo.name);
+						strcpy(outInfo->MIME, tmpInfo.MIME);
 					}
 				}
 			} // if (result == B_OK)
@@ -1020,8 +1037,9 @@ BTranslatorRoster::Translate(BPositionIO *inSource,
 	
 	if (result >= B_OK && acquire_sem(fSem) == B_OK) {
 		translator_node *pTranNode = FindTranslatorNode(inInfo->translator);
-		if (!pTranNode)
+		if (!pTranNode) {
 			result = B_NO_TRANSLATOR;
+		}
 		else {
 			result = inSource->Seek(0, SEEK_SET);
 			if (result == B_OK)
@@ -1064,7 +1082,7 @@ status_t
 BTranslatorRoster::Translate(translator_id inTranslator,
 	BPositionIO *inSource, BMessage *ioExtension,
 	BPositionIO *outDestination, uint32 inWantOutType)
-{
+{	
 	if (!inSource || !outDestination)
 		return B_BAD_VALUE;
 
