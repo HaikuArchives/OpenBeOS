@@ -308,11 +308,7 @@ void udp_init(void)
 	memset(&udpstat, 0, sizeof(udpstat));
 		
 	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
-#ifndef _KERNEL_MODE
 	add_protosw(proto, NET_LAYER2);
-#else
-	core->add_protosw(proto, NET_LAYER2);
-#endif
 }
 
 static struct protosw my_proto = {
