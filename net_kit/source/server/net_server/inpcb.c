@@ -13,7 +13,8 @@
 #include "if.h"
 #include "net_module.h"
 #include "netinet/in_var.h"
- 
+#include "sys/protosw.h"
+
 static struct pool_ctl *pcbpool;
 static struct in_addr zeroin_addr;
 
@@ -91,7 +92,7 @@ int in_pcbbind(struct inpcb *inp, struct mbuf *nam)
 	 * us to use wildcard searches.
 	 */
 	if (((so->so_options & (SO_REUSEADDR | SO_REUSEPORT)) == 0) &&
-	    ((so->so_proto->flags & PR_CONNREQUIRED) == 0 ||
+	    ((so->so_proto->pr_flags & PR_CONNREQUIRED) == 0 ||
 	    (so->so_options & SO_ACCEPTCONN) == 0))
 		wild = INPLOOKUP_WILDCARD;
 
