@@ -460,8 +460,6 @@ int sysctl_dumpentry(struct radix_node *rn, void *data)
 	struct rt_addrinfo info;
 	struct walkarg *w = (struct walkarg *)data;
 	
-printf("sysctl_dumpentry!\n");	
-
 	if (w->w_op == NET_RT_FLAGS && !(rt->rt_flags & w->w_arg))
 		return 0;
 	memset((caddr_t)&info, 0, sizeof(info));
@@ -495,8 +493,6 @@ int sysctl_iflist(int af, struct walkarg *w)
 	struct rt_addrinfo info;
 	int len;
 	struct ifnet *interfaces = get_interfaces();
-
-printf("sysctl_iflist\n");	
 
 	memset(&info, 0, sizeof(info));
 	for (ifp = interfaces; ifp; ifp = ifp->if_next) {
@@ -552,8 +548,6 @@ int sysctl_rtable(int *name, uint namelen, void *where, size_t *given, void *new
 	struct radix_node_head *rnh;
 	struct radix_node_head **rt_tables;
 
-printf("sysctl_rtable\n");
-
 	if (newp)
 		return EPERM;
 	
@@ -574,9 +568,7 @@ printf("sysctl_rtable\n");
 	
 	switch(w.w_op) {
 		case NET_RT_DUMP:
-			printf("NET_RT_DUMP\n");
 		case NET_RT_FLAGS:
-			printf("NET_RT_FLAGS\n");
 			for(i=1 ; i <= AF_MAX; i++) {
 				rnh = rt_tables[i];
 				if (rnh && (af == 0 || af == i) &&
