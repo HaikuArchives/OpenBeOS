@@ -12,8 +12,8 @@ public:
 	click_type Clicked(BPoint pt, uint32 buttons);
 	void Resize(BRect rect);
 	void MoveBy(BPoint pt);
-	BRegion *GetBorderSize(void);
 	BPoint GetMinimumSize(void);
+	BRegion *GetFootprint(void);
 	void SetTitle(const char *newtitle);
 	void SetFlags(uint32 flags);
 	void SetLook(uint32 wlook);

@@ -103,13 +103,6 @@ void YMakDecorator::Resize(BRect rect){
 }
 
 /*******************************************************
-*   @description  
-*******************************************************/
-BRegion *YMakDecorator::GetBorderSize(void){
-	return new BRegion(layer->Bounds());
-}
-
-/*******************************************************
 *   @description
 *******************************************************/
 BPoint YMakDecorator::GetMinimumSize(void){

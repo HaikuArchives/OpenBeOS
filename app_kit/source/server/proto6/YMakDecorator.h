@@ -10,7 +10,6 @@ public:
    
    click_type Clicked(BPoint pt, uint32 buttons);
    void Resize(BRect rect);
-   BRegion *GetBorderSize(void);
    BPoint GetMinimumSize(void);
    void SetTitle(const char *newtitle);
    void SetFlags(uint32 flags);

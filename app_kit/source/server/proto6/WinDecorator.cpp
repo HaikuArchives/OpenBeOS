@@ -45,12 +45,6 @@ printf("WinDecorator()\n");
 
 	Resize(lay->frame);
 	
-	// We need to modify the visible rectangle because we have tabbed windows
-	if(lay->visible)
-	{
-		delete lay->visible;
-		lay->visible=GetBorderSize();
-	}
 	textoffset=5;
 }
 
@@ -175,17 +169,6 @@ void WinDecorator::MoveBy(BPoint pt)
 	borderrect.OffsetBy(pt);
 	zoomrect.OffsetBy(pt);
 	minrect.OffsetBy(pt);
-}
-
-BRegion *WinDecorator::GetBorderSize(void)
-{
-	// Decorators basically paint pretty pictures around a client's
-	// rectangle and can (theoretically) be any size, so we need
-	// to create a region which will encompass all visible regions of
-	// the decorator
-	BRegion *r=new BRegion(borderrect);
-	r->Include(tabrect);
-	return r;
 }
 
 BPoint WinDecorator::GetMinimumSize(void)

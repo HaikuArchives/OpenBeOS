@@ -33,14 +33,19 @@ void Decorator::MoveBy(BPoint pt)
 {
 }
 
-BRegion *Decorator::GetBorderSize(void)
+BRect Decorator::GetBorderSize(void)
 {
-	return NULL;
+	return bsize;
 }
 
 BPoint Decorator::GetMinimumSize(void)
 {
 	return BPoint(0,0);
+}
+
+BRegion * Decorator::GetFootprint(void)
+{
+	return NULL;
 }
 
 void Decorator::SetFlags(uint32 flags)

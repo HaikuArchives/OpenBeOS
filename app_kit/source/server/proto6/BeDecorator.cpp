@@ -46,7 +46,7 @@ printf("BeDecorator()\n");
 	if(lay->visible)
 	{
 		delete lay->visible;
-		lay->visible=GetBorderSize();
+		lay->visible=GetFootprint();
 	}
 
 	// This flag is used to determine whether or not we're moving the tab
@@ -196,22 +196,22 @@ void BeDecorator::MoveBy(BPoint pt)
 	zoomrect.OffsetBy(pt);
 }
 
-BRegion *BeDecorator::GetBorderSize(void)
-{
-	// Decorators basically paint pretty pictures around a client's
-	// rectangle and can (theoretically) be any size, so we need
-	// to create a region which will encompass all visible regions of
-	// the decorator
-	BRegion *r=new BRegion(borderrect);
-	r->Include(tabrect);
-	return r;
-}
-
 BPoint BeDecorator::GetMinimumSize(void)
 {
 	// This is currently unused, but minsize is the minimum size the
 	// window may take.
 	return minsize;
+}
+
+BRegion * BeDecorator::GetFootprint(void)
+{
+	// This function calculates the decorator's footprint in coordinates
+	// relative to the layer. This is most often used to set a WindowBorder
+	// object's visible region.
+	
+	BRegion *reg=new BRegion(borderrect);
+	reg->Include(tabrect);
+	return reg;
 }
 
 void BeDecorator::SetFlags(uint32 wflags)
