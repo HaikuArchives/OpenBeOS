@@ -13,28 +13,77 @@ enum {
 };
 
 // constructor
+/*!	\brief Creates an unitialized BResources object.
+*/
 BResources::BResources()
 {
 }
 
 // constructor
+/*!	\brief Creates a BResources object that represents the resources of the
+	supplied file.
+	If the \a clobber argument is \c true, the data of the file are erased
+	and it is turned into an empty resource file. Otherwise \a file
+	must refer either to a resource file or to an executable (ELF or PEF
+	binary). If the file has been opened \c B_READ_ONLY, only read access
+	to its resources is possible.
+	The BResources object makes a copy of \a file, that is the caller remains
+	owner of the BFile object.
+	\param file the file
+	\param clobber if \c true, the \a file is truncated to size 0
+*/
 BResources::BResources(BFile *file, bool clobber)
 {
 }
 
 // destructor
+/*!	\brief Frees all resources associated with this object
+	Calls Sync() before doing so to make sure that the changes are written
+	back to the file.
+*/
 BResources::~BResources()
 {
 }
 
 // SetTo
+/*!	\brief Re-initialized the BResources object to represent the resources of
+	the supplied file.
+	If the \a clobber argument is \c true, the data of the file are erased
+	and it is turned into an empty resource file. Otherwise \a file
+	must refer either to a resource file or to an executable (ELF or PEF
+	binary). If the file has been opened \c B_READ_ONLY, only read access
+	to its resources is possible.
+	The BResources object makes a copy of \a file, that is the caller remains
+	owner of the BFile object.
+	\param file the file
+	\param clobber if \c true, the \a file is truncated to size 0
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL or uninitialized \a file.
+	- \c B_ERROR: Failed to initialize the object (for whatever reason).
+*/
 status_t
 BResources::SetTo(BFile *file, bool clobber)
 {
 	return NOT_IMPLEMENTED;
 }
 
+// InitCheck
+/*!	\brief Returns the result of the last initialization (via constructor or
+	SetTo()).
+	\return The result of the last initialization (\see SetTo()).
+	\note This method extends the BeOS R5 API.
+*/
+status_t
+BResources::InitCheck() const
+{
+	return NOT_IMPLEMENTED;
+}
+
 // File
+/*!	\brief Returns a reference to the BResources' BFile object.
+	\return a reference to the object's BFile.
+*/
 const BFile &
 BResources::File() const
 {
@@ -42,6 +91,19 @@ BResources::File() const
 }
 
 // LoadResource
+/*!	\brief Loads a resource identified by type and ID into memory.
+	A resource is loaded into memory only once. A second call with the same
+	parameters will result in the same pointer. The BResources object is the
+	owner of the allocated memory and the pointer to it will be valid until
+	the object is destroyed or the resource is removed or modified.
+	\param type the type of the resource to be loaded
+	\param id the ID of the resource to be loaded
+	\param outSize a pointer to a variable into which the size of the resource
+		   shall be written
+	\return A pointer to the resource data, if everything went fine, or
+			\c NULL, if the file does not have a resource that matchs the
+			parameters or an error occured.
+*/
 const void *
 BResources::LoadResource(type_code type, int32 id, size_t *outSize)
 {
@@ -49,6 +111,22 @@ BResources::LoadResource(type_code type, int32 id, size_t *outSize)
 }
 
 // LoadResource
+/*!	\brief Loads a resource identified by type and name into memory.
+	A resource is loaded into memory only once. A second call with the same
+	parameters will result in the same pointer. The BResources object is the
+	owner of the allocated memory and the pointer to it will be valid until
+	the object is destroyed or the resource is removed or modified.
+	\param type the type of the resource to be loaded
+	\param name the name of the resource to be loaded
+	\param outSize a pointer to a variable into which the size of the resource
+		   shall be written
+	\return A pointer to the resource data, if everything went fine, or
+			\c NULL, if the file does not have a resource that matches the
+			parameters or an error occured.
+	\note Since a type and name pair may not identify a resource uniquely,
+		  this method always returns the first resource that matches the
+		  parameters, that is the one with the least index.
+*/
 const void *
 BResources::LoadResource(type_code type, const char *name, size_t *outSize)
 {
@@ -56,6 +134,15 @@ BResources::LoadResource(type_code type, const char *name, size_t *outSize)
 }
 
 // PreloadResourceType
+/*!	\brief Loads all resources of a certain type into memory.
+	For performance reasons it might be useful to do that. If \a type is
+	0, all resources are loaded.
+	\param type of the resources to be loaded
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_FILE: The resource map is empty???
+	- The negative of the number of errors occured.
+*/
 status_t
 BResources::PreloadResourceType(type_code type)
 {
@@ -63,6 +150,18 @@ BResources::PreloadResourceType(type_code type)
 }
 
 // Sync
+/*!	\brief Writes all changes to the resources to the file.
+	Since AddResource() and RemoveResource() may change the resources only in
+	memory, this method can be used to make sure, that all changes are
+	actually written to the file.
+	The BResources object's destructor calls Sync() before cleaning up.
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_FILE: The resource map is empty???
+	- \c B_NOT_ALLOWED: The file is opened read only.
+	- \c B_FILE_ERROR: A file error occured.
+	- \c B_IO_ERROR: An error occured while writing the resources.
+*/
 status_t
 BResources::Sync()
 {
@@ -70,6 +169,15 @@ BResources::Sync()
 }
 
 // MergeFrom
+/*!	\brief Adds the resources of the supplied file to this file's resources.
+	\param fromFile the file whose resources shall be copied
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a fromFile.
+	- \c B_BAD_FILE: The resource map is empty???
+	- \c B_FILE_ERROR: A file error occured.
+	- \c B_IO_ERROR: An error occured while writing the resources.
+*/
 status_t
 BResources::MergeFrom(BFile *fromFile)
 {
@@ -77,6 +185,14 @@ BResources::MergeFrom(BFile *fromFile)
 }
 
 // WriteTo
+/*!	\brief Writes the resources to a new file.
+	The resources formerly contained in the target file (if any) are erased.
+	After the method returns, the BResources object refers to the new file.
+	\param file the file the resources shall be written to.
+	\return
+	- \c B_OK: Everything went fine.
+	- a specific error code.
+*/
 status_t
 BResources::WriteTo(BFile *file)
 {
@@ -84,6 +200,23 @@ BResources::WriteTo(BFile *file)
 }
 
 // AddResource
+/*!	\brief Adds a new resource to the file.
+	If a resource with the same type and ID does already exist, it is
+	replaced. The caller keeps the ownership of the supplied chunk of memory
+	containing the resource data.
+	Supplying an empty name (\c "") is equivalent to supplying a \c NULL name.
+	\param type the type of the resource
+	\param id the ID of the resource
+	\param data the resource data
+	\param length the size of the data in bytes
+	\param name the name of the resource (may be \c NULL)
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL \a data
+	- \c B_NOT_ALLOWED: The file is opened read only.
+	- \c B_FILE_ERROR: A file error occured.
+	- \c B_NO_MEMORY: Not enough memory for that operation.
+*/
 status_t
 BResources::AddResource(type_code type, int32 id, const void *data,
 						size_t length, const char *name)
@@ -92,6 +225,12 @@ BResources::AddResource(type_code type, int32 id, const void *data,
 }
 
 // HasResource
+/*!	\brief Returns whether the file contains a resource with a certain
+	type and ID.
+	\param type the resource type
+	\param id the ID of the resource
+	\return \c true, if the file contains a matching resource, \false otherwise
+*/
 bool
 BResources::HasResource(type_code type, int32 id)
 {
@@ -99,6 +238,12 @@ BResources::HasResource(type_code type, int32 id)
 }
 
 // HasResource
+/*!	\brief Returns whether the file contains a resource with a certain
+	type and name.
+	\param type the resource type
+	\param name the name of the resource
+	\return \c true, if the file contains a matching resource, \false otherwise
+*/
 bool
 BResources::HasResource(type_code type, const char *name)
 {
@@ -106,6 +251,18 @@ BResources::HasResource(type_code type, const char *name)
 }
 
 // GetResourceInfo
+/*!	\brief Returns information about a resource identified by an index.
+	\param byIndex the index of the resource in the file
+	\param typeFound a pointer to a variable the type of the found resource
+		   shall be written into
+	\param idFound a pointer to a variable the ID of the found resource
+		   shall be written into
+	\param nameFound a pointer to a variable the name pointer of the found
+		   resource shall be written into
+	\param lengthFound a pointer to a variable the data size of the found
+		   resource shall be written into
+	\return \c true, if a matching resource could be found, false otherwise
+*/
 bool
 BResources::GetResourceInfo(int32 byIndex, type_code *typeFound,
 							int32 *idFound, const char **nameFound,
@@ -115,6 +272,18 @@ BResources::GetResourceInfo(int32 byIndex, type_code *typeFound,
 }
 
 // GetResourceInfo
+/*!	\brief Returns information about a resource identified by a type and an
+	index.
+	\param byType the resource type
+	\param andIndex the index into a array of resources of type \a byType
+	\param idFound a pointer to a variable the ID of the found resource
+		   shall be written into
+	\param nameFound a pointer to a variable the name pointer of the found
+		   resource shall be written into
+	\param lengthFound a pointer to a variable the data size of the found
+		   resource shall be written into
+	\return \c true, if a matching resource could be found, false otherwise
+*/
 bool
 BResources::GetResourceInfo(type_code byType, int32 andIndex, int32 *idFound,
 							const char **nameFound, size_t *lengthFound)
@@ -123,6 +292,15 @@ BResources::GetResourceInfo(type_code byType, int32 andIndex, int32 *idFound,
 }
 
 // GetResourceInfo
+/*!	\brief Returns information about a resource identified by a type and an ID.
+	\param byType the resource type
+	\param andID the resource ID
+	\param nameFound a pointer to a variable the name pointer of the found
+		   resource shall be written into
+	\param lengthFound a pointer to a variable the data size of the found
+		   resource shall be written into
+	\return \c true, if a matching resource could be found, false otherwise
+*/
 bool
 BResources::GetResourceInfo(type_code byType, int32 andID,
 							const char **nameFound, size_t *lengthFound)
@@ -131,6 +309,16 @@ BResources::GetResourceInfo(type_code byType, int32 andID,
 }
 
 // GetResourceInfo
+/*!	\brief Returns information about a resource identified by a type and a
+	name.
+	\param byType the resource type
+	\param andName the resource name
+	\param idFound a pointer to a variable the ID of the found resource
+		   shall be written into
+	\param lengthFound a pointer to a variable the data size of the found
+		   resource shall be written into
+	\return \c true, if a matching resource could be found, false otherwise
+*/
 bool
 BResources::GetResourceInfo(type_code byType, const char *andName,
 							int32 *idFound, size_t *lengthFound)
@@ -139,6 +327,19 @@ BResources::GetResourceInfo(type_code byType, const char *andName,
 }
 
 // GetResourceInfo
+/*!	\brief Returns information about a resource identified by a data pointer.
+	\param byPointer the pointer to the resource data (formely returned by
+		   LoadResource())
+	\param typeFound a pointer to a variable the type of the found resource
+		   shall be written into
+	\param idFound a pointer to a variable the ID of the found resource
+		   shall be written into
+	\param lengthFound a pointer to a variable the data size of the found
+		   resource shall be written into
+	\param nameFound a pointer to a variable the name pointer of the found
+		   resource shall be written into
+	\return \c true, if a matching resource could be found, false otherwise
+*/
 bool
 BResources::GetResourceInfo(const void *byPointer, type_code *typeFound,
 							int32 *idFound, size_t *lengthFound,
@@ -148,6 +349,17 @@ BResources::GetResourceInfo(const void *byPointer, type_code *typeFound,
 }
 
 // RemoveResource
+/*!	\brief Removes a resource identified by its data pointer.
+	\param resource the pointer to the resource data (formely returned by
+		   LoadResource())
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \c NULL or invalid (not pointing to any resource data of
+	  this file) \a resource.
+	- \c B_NOT_ALLOWED: The file is opened read only.
+	- \c B_FILE_ERROR: A file error occured.
+	- \c B_ERROR: An error occured while removing the resource.
+*/
 status_t
 BResources::RemoveResource(const void *resource)
 {
@@ -155,6 +367,16 @@ BResources::RemoveResource(const void *resource)
 }
 
 // RemoveResource
+/*!	\brief Removes a resource identified by type and ID.
+	\param type the type of the resource
+	\param id the ID of the resource
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: No such resource.
+	- \c B_NOT_ALLOWED: The file is opened read only.
+	- \c B_FILE_ERROR: A file error occured.
+	- \c B_ERROR: An error occured while removing the resource.
+*/
 status_t
 BResources::RemoveResource(type_code type, int32 id)
 {
@@ -165,6 +387,24 @@ BResources::RemoveResource(type_code type, int32 id)
 // deprecated
 
 // WriteResource
+/*!	\brief Writes data into an existing resource.
+	If writing the data would exceed the bounds of the resource, it is
+	enlarged respectively. If \a offset is beyond the end of the resource,
+	0 bytes padding is inserted.
+	\param type the type of the resource
+	\param id the ID of the resource
+	\param data the data to be written
+	\param offset the byte offset relative to the beginning of the resource at
+		   which the data shall be written
+	\param length the size of the data to be written
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \a type and \a id do not identify an existing resource or
+	  \c NULL \a data.
+	- \c B_NO_MEMORY: Not enough memory for this operation.
+	- other error codes.
+	\deprecated Always use AddResource().
+*/
 status_t
 BResources::WriteResource(type_code type, int32 id, const void *data,
 						  off_t offset, size_t length)
@@ -173,6 +413,25 @@ BResources::WriteResource(type_code type, int32 id, const void *data,
 }
 
 // ReadResource
+/*!	\brief Reads data from an existing resource.
+	If more data than existing are requested, this method does not fail. It
+	will then read only the existing data. As a consequence an offset beyond
+	the end of the resource will not cause the method to fail, but no data
+	will be read at all.
+	\param type the type of the resource
+	\param id the ID of the resource
+	\param data a pointer to a buffer into which the data shall be read
+	\param offset the byte offset relative to the beginning of the resource
+		   from which the data shall be read
+	\param length the size of the data to be read
+	\return
+	- \c B_OK: Everything went fine.
+	- \c B_BAD_VALUE: \a type and \a id do not identify an existing resource or
+	  \c NULL \a data.
+	- \c B_NO_MEMORY: Not enough memory for this operation.
+	- other error codes.
+	\deprecated Use LoadResource() only.
+*/
 status_t
 BResources::ReadResource(type_code type, int32 id, void *data, off_t offset,
 						 size_t length)
@@ -181,6 +440,17 @@ BResources::ReadResource(type_code type, int32 id, void *data, off_t offset,
 }
 
 // FindResource
+/*!	\brief Finds a resource by type and ID and returns a copy of its data.
+	The caller is responsible for free()ing the returned memory.
+	\param type the type of the resource
+	\param id the ID of the resource
+	\param lengthFound a pointer to a variable into which the size of the
+		   resource data shall be written
+	\return
+	- a pointer to the resource data, if everything went fine,
+	- \c NULL, if an error occured.
+	\deprecated Use LoadResource().
+*/
 void *
 BResources::FindResource(type_code type, int32 id, size_t *lengthFound)
 {
@@ -188,6 +458,17 @@ BResources::FindResource(type_code type, int32 id, size_t *lengthFound)
 }
 
 // FindResource
+/*!	\brief Finds a resource by type and name and returns a copy of its data.
+	The caller is responsible for free()ing the returned memory.
+	\param type the type of the resource
+	\param name the name of the resource
+	\param lengthFound a pointer to a variable into which the size of the
+		   resource data shall be written
+	\return
+	- a pointer to the resource data, if everything went fine,
+	- \c NULL, if an error occured.
+	\deprecated Use LoadResource().
+*/
 void *
 BResources::FindResource(type_code type, const char *name, size_t *lengthFound)
 {
