@@ -865,6 +865,13 @@ void BDirectory::_ReservedDirectory6() {}
 void
 BDirectory::close_fd()
 {
+	StorageKit::FileDescriptor fd = get_fd();
+	if (fd != StorageKit::NullFd) {
+		StorageKit::close_dir(fd);
+		// Set the BNode's fFd directly -- otherwise BNode::close_fd()
+		// would try to close() it.
+		fFd = StorageKit::NullFd;
+	}
 	BNode::close_fd();
 }
 
@@ -924,46 +931,45 @@ BDirectory::set_status(status_t newStatus)
 status_t
 create_directory(const char *path, mode_t mode)
 {
-printf("create_directory(`%s')\n", path);
+	// That's the strategy: We start with the first component of the supplied
+	// path, create a BPath object from it and successively add the following
+	// components. Each time we get a new path, we check, if the entry it
+	// refers to exists and is a directory. If it doesn't exist, then we try
+	// to create it. This goes on, until we're done with the input path or
+	// an error occurs.
 	status_t error = (path ? B_OK : B_BAD_VALUE);
 	if (error == B_OK) {
-		BEntry entry(path);
-		switch (entry.InitCheck()) {
-			case B_OK:
-printf("  B_OK\n");
-				// If an entry with this name exists, it should be a directory.
-				// If none exists, create the directory.
-				if (entry.Exists()) {
-					if (!entry.IsDirectory())
-						error = B_BAD_VALUE;
-				} else
-					error = StorageKit::create_dir(path, mode);
-				break;
-			case B_ENTRY_NOT_FOUND:
-			{
-printf("  B_ENTRY_NOT_FOUND\n");
-/* Must not be used until BPath::GetParent() is implemented.
-				// The parent dir doesn't exist. Create it first.
-				BPath leafPath(path);
-				error = leafPath.InitCheck();
-printf("  entry\n");
+		BPath dirPath;
+		char *component;
+		int32 nextComponent;
+		do {
+			// get the next path component
+			error = StorageKit::parse_first_path_component(path, component,
+														   nextComponent);
+			if (error == B_OK) {
+				// append it to the BPath
+				if (dirPath.InitCheck() == B_NO_INIT)	// first component
+					error = dirPath.SetTo(component);
+				else
+					error = dirPath.Append(component);
+				delete[] component;
+				path += nextComponent;
+				// create a BEntry from the BPath
+				BEntry entry;
 				if (error == B_OK)
-					error = leafPath.GetParent(&leafPath);
-				if (error == B_OK)
-					error = create_directory(leafPath.Path(), mode);
-				if (error)
-					error = StorageKit::create_dir(path, mode);
-*/
-error = B_ERROR;
-				break;
+					error = entry.SetTo(dirPath.Path(), true);
+				// check, if it exists
+				if (error == B_OK) {
+					if (entry.Exists()) {
+						// yep, it exists
+						if (!entry.IsDirectory())	// but is no directory
+							error = B_NOT_A_DIRECTORY;
+					} else	// it doesn't exists -- create it
+						error = StorageKit::create_dir(dirPath.Path(), mode);
+				}
 			}
-			default:
-printf("  default\n");
-				error = entry.InitCheck();
-				break;
-		}
+		} while (error == B_OK && nextComponent != 0);
 	}
-printf("create_directory(`%s') done\n", path);
 	return error;
 }
 
