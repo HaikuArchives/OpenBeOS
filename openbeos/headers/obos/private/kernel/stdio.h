@@ -1,17 +1,12 @@
-/*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
-** Copyright 2002, Manuel J. Petit. All rights reserved.
-** Distributed under the terms of the NewOS License.
-*/
+/* stdio.h
+ */
 
-#ifndef __newos__nulibc_stdio__hh__
-#define __newos__nulibc_stdio__hh__
-
+#ifndef _STDIO_H
+#define _STDIO_H
 
 #include <ktypes.h>
 #include <cdefs.h>
 #include <stdarg.h>
-
 
 #ifdef __cplusplus
 extern "C"
@@ -52,10 +47,10 @@ struct __sbuf {
  */ 
 typedef struct __FILE {
         unsigned char *_p;/* current position in (some) buffer */
-        int     _r;/* read space left for getc() */
-        int     _w;/* write space left for putc() */
-        short   _flags;/* flags, below; this FILE is free if 0 */
-        short   _file;/* fileno, if Unix descriptor, else -1 */
+        int     _r;       /* read space left for getc() */
+        int     _w;       /* write space left for putc() */
+        short   _flags;   /* flags, below; this FILE is free if 0 */
+        short   _file;    /* fileno, if Unix descriptor, else -1 */
         struct  __sbuf _bf;     /* the buffer (at least 1 byte, if !NULL) */
         int     _lbfsize;/* 0 or -_bf._size, for inline putc */
 
@@ -127,9 +122,7 @@ extern FILE __sF[];
 #define SEEK_END 2
 #endif
 
-
 #define EOF -1
-
 
 int printf(char const *format, ...) __PRINTFLIKE(1,2);
 int fprintf(FILE *stream, char const *format, ...) __PRINTFLIKE(2,3);
@@ -142,37 +135,51 @@ int vsprintf(char *str, char const *format, va_list ap);
 int vsnprintf(char *str, size_t size, char const *format, va_list ap);
 int vasprintf(char **ret, char const *format, va_list ap);
 
-FILE *fopen(char const *, char const *);
-
-int  fclose(FILE *);
-int  fflush(FILE *);
-
+void   clearerr(FILE *);
+int    fclose(FILE *);
+int    feof(FILE *);
+int    fflush(FILE *);
+int    fgetc(FILE *);
+char  *fgetln(FILE *, size_t *);
+int    fgetpos(FILE *, fpos_t);
+char  *fgets(char *, int, FILE *);
+void   flockfile(FILE *);
+FILE  *fopen(char const *, char const *);
+int    fputc(int, FILE *);
+int    fputs(const char *, FILE*);
 size_t fread(void *, size_t, size_t, FILE *);
+int    fscanf(FILE *stream, char const *format, ...);
+int    fseek(FILE *, long, int);
+int    fseeko(FILE *, off_t, int);
 size_t fwrite(const void *, size_t, size_t, FILE *);
+void   funlockfile(FILE *);
+int    getc(FILE *);
+char  *gets(char *);
+int    getw(FILE *);
+int    getchar(void);
+int    putc(int, FILE *);
+int    puts(const char *);
+int    putw(int, FILE *);
+void   rewind(FILE *);
+int    scanf(char const *format, ...);
+int    sscanf(char const *str, char const *format, ...);
+int    ungetc(int, FILE *);
+int    vscanf(char const *format, va_list ap);
+int    vsscanf(char const *str, char const *format, va_list ap);
+int    vfscanf(FILE *stream, char const *format, va_list ap);
 
-int   feof(FILE *);
-char *fgets(char *, int, FILE *);
-void  clearerr(FILE *);
-int   getc(FILE *);
-int   ungetc(int, FILE *);
+
 int   __srget(FILE *);
-
-
-int scanf(char const *format, ...);
-int fscanf(FILE *stream, char const *format, ...);
-int sscanf(char const *str, char const *format, ...);
-int vscanf(char const *format, va_list ap);
-int vsscanf(char const *str, char const *format, va_list ap);
-int vfscanf(FILE *stream, char const *format, va_list ap);
-
-int __svfscanf(FILE *, char const *, va_list ap);
-
-void flockfile(FILE *);
-void funlockfile(FILE *);
-
-int getchar(void);
+int   __svfscanf(FILE *, char const *, va_list ap);
+int	  __swbuf(int c, FILE* fp);
 
 #define __sgetc(p)    (--(p)->_r < 0 ? __srget(p) : (int)(*(p)->_p++))
+static __inline int __sputc(int _c, FILE *_p) { 
+	if (--_p->_w >= 0 || (_p->_w >= _p->_lbfsize && (char)_c != '\n'))
+		return (*_p->_p++ = _c);
+	else
+		return (__swbuf(_c, _p));
+}
 
 #define __sfeof(x)    (((x)->_flags & __SEOF) != 0)
 #define __sferror(x)  (((x)->_flags & __SERR) != 0)
@@ -184,5 +191,4 @@ int getchar(void);
 }
 #endif
 
-
-#endif
+#endif /* _STDIO_H */
