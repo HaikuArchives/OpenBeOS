@@ -85,7 +85,9 @@ public:
 //	virtual void GetBlendingMode(source_alpha *srcmode, alpha_function *funcmode);
 //	virtual drawing_mode GetDrawingMode(void);
 	virtual void HideCursor(void);
+	rgb_color HighColor(void);
 	virtual bool IsCursorHidden(void);
+	rgb_color LowColor(void);
 	virtual void MoveCursorTo(float x, float y);
 	virtual void MovePenTo(BPoint pt);
 	virtual void ObscureCursor(void);

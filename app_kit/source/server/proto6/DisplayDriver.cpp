@@ -144,9 +144,25 @@ void DisplayDriver::HideCursor(void)
 {
 }
 
+rgb_color DisplayDriver::HighColor(void)
+{
+	locker->Lock();
+	rgb_color col=highcol;
+	locker->Unlock();
+	return col;
+}
+
 bool DisplayDriver::IsCursorHidden(void)
 {
 	return false;
+}
+
+rgb_color DisplayDriver::LowColor(void)
+{
+	locker->Lock();
+	rgb_color col=lowcol;
+	locker->Unlock();
+	return col;
 }
 
 void DisplayDriver::ObscureCursor(void)
