@@ -58,6 +58,8 @@ public:
 		LINK_BORDER_MSG      = 'lnkb',
 		CREATE_BOOKMARKS_MSG = 'cbmk',
 		DEFINITION_MSG       = 'defi',
+		CREATE_XREFS_MSG     = 'cxrf',
+		XREFS_MSG            = 'xref',
 	};
 			
 	// Virtual function overrides
@@ -71,6 +73,8 @@ private:
 	float                   fLinkBorderWidth;
 	bool                    fCreateBookmarks;
 	BString                 fBookmarkDefinition;
+	bool                    fCreateXRefs;
+	BString                 fXRefs;
 	
 	void                    UpdateSettings();
 };

@@ -178,6 +178,8 @@ PrinterSettings::GetDefaults(BMessage *msg)
 		msg->AddFloat("link_border_width", LINK_BORDER_WIDTH);
 		msg->AddBool("create_bookmarks", CREATE_BOOKMARKS);
 		msg->AddString("bookmark_definition_file", BOOKMARK_DEFINITION_FILE);
+		msg->AddBool("create_xrefs", CREATE_XREFS);
+		msg->AddString("xrefs_file", XREFS_FILE);
 		
 		// create pdf_printer_settings file
 		prefs->SaveSettings(msg);
@@ -245,6 +247,12 @@ PrinterSettings::Validate(const BMessage *msg)
 		return B_ERROR;
 	}
 	if (msg->FindString("bookmark_definition_file", &s) != B_OK) {
+		return B_ERROR;
+	}
+	if (msg->FindBool("create_xrefs", &b) != B_OK) {
+		return B_ERROR;
+	}
+	if (msg->FindString("xrefs_file", &s) != B_OK) {
 		return B_ERROR;
 	}
 	// message ok

@@ -468,6 +468,22 @@ PageSetupWindow::UpdateSetupMessage()
 		}
 	}
 
+	if (fAdvancedSettings.FindBool("create_xrefs", &b) == B_OK) {
+		if (fSetupMsg->HasBool("create_xrefs")) {
+			fSetupMsg->ReplaceBool("create_xrefs", b);
+		} else {
+			fSetupMsg->AddBool("create_xrefs", b);
+		}
+	}
+
+	if (fAdvancedSettings.FindString("xrefs_file", &s) == B_OK) {
+		if (fSetupMsg->HasString("xrefs_file")) {
+			fSetupMsg->ReplaceString("xrefs_file", s.String());
+		} else {
+			fSetupMsg->AddString("xrefs_file", s.String());
+		}
+	}
+
 	// save the settings to be new defaults
 	PrinterSettings *ps = new PrinterSettings(fPrinterDirName.String());
 	if (ps->InitCheck() == B_OK) {

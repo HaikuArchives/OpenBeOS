@@ -1,7 +1,7 @@
 #include <Debug.h>
 #include "PDFWriter.h"
 #include "Bookmark.h"
-
+#include "Scanner.h"
 
 Bookmark::Definition::Definition(int level, BFont* font)
 	: fLevel(level)
@@ -32,14 +32,6 @@ Bookmark::Bookmark(PDFWriter* writer)
 	}
 }
 
-Bookmark::~Bookmark()
-{
-	for (int i = 0; i < fDefinitions.CountItems(); i ++) {
-		Definition* d = (Definition*)fDefinitions.ItemAt(i);
-		delete d;
-	}
-}
-
 bool Bookmark::Find(BFont* font, int& level) const
 {
 	font_family family;
@@ -50,7 +42,7 @@ bool Bookmark::Find(BFont* font, int& level) const
 	size = font->Size();
 	
 	for (int i = 0; i < fDefinitions.CountItems(); i++) {
-		Definition* d = (Definition*) fDefinitions.ItemAt(i);
+		Definition* d = fDefinitions.ItemAt(i);
 		if (d->Matches(&family, &style, size)) {
 			level = d->fLevel;
 			return true;
@@ -67,15 +59,15 @@ void Bookmark::AddDefinition(int level, BFont* font)
 	}
 }
 
-void Bookmark::AddBookmark(BString* text, BFont* font)
+void Bookmark::AddBookmark(const char* text, BFont* font)
 {
 	int level;
 	if (Find(font, level)) {
-		fprintf(fWriter->fLog, "Bookmark: %s\n", text->String());
+		fprintf(fWriter->fLog, "Bookmark: %s\n", text);
 		int bookmark;
 		BString ucs2;
 		
-		fWriter->ToPDFUnicode(text->String(), ucs2);
+		fWriter->ToPDFUnicode(text, ucs2);
 
 		bookmark = PDF_add_bookmark(fWriter->fPdf, ucs2.String(), fLevels[level-1], 1);
 		
@@ -85,4 +77,54 @@ void Bookmark::AddBookmark(BString* text, BFont* font)
 			fLevels[i] = bookmark;
 		} 
 	}
+}
+
+
+// Reads bookmark definitions from file
+
+/*
+File Format: Definition.
+Line comment starts with '#'.
+
+Definition = Version { Font }.
+Version    = "Bookmarks" "1.0".
+Font       = Level Family Style Size.
+Level      = int.
+Family     = String.
+Style      = String.
+Size       = float.
+String     = '"' string '"'.
+*/
+
+bool Bookmark::Read(const char* name) {
+	Scanner scnr(name);
+#define BAILOUT goto Error	
+	if (scnr.InitCheck() == B_OK) {
+		BString s; float f; bool ok;
+		ok = scnr.ReadName(&s) && scnr.ReadFloat(&f);
+		if (!ok || strcmp(s.String(), "Bookmarks") != 0 || f != 1.0) BAILOUT;
+		
+		while (!scnr.IsEOF()) {
+			float   level, size;
+			BString family, style;
+			ok = scnr.ReadFloat(&level) && scnr.ReadString(&family) &&
+				scnr.ReadString(&style) && scnr.ReadFloat(&size) &&
+				level >= 1.0 && level <= 10.0;
+			
+			if (!ok) BAILOUT;
+			
+			BFont font;
+			font.SetFamilyAndStyle(family.String(), style.String());
+			font.SetSize(size);
+			
+			AddDefinition((int)level, &font);
+			
+			scnr.SkipSpaces();
+		}
+		return true;
+	}
+
+#undef BAILOUT	
+Error:	
+	return false;
 }

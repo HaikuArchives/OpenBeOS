@@ -50,45 +50,41 @@ THE SOFTWARE.
 #include "Log.h"
 #include "pdflib.h"
 #include "Bookmark.h"
+#include "XReferences.h"
 
 // Constructor & destructor
 // ------------------------
 
 PDFWriter::PDFWriter()
 	:	PrinterDriver()
+	,   fTextLine(this)
 {
 	fFontSearchOrder[0] = japanese_encoding;
 	fFontSearchOrder[1] = chinese_cns1_encoding;
 	fFontSearchOrder[2]	= chinese_gb1_encoding;
 	fFontSearchOrder[3]	= korean_encoding;
 	
+	fPage             = 0;
 	fEmbedMaxFontSize = 250 * 1024;
-	fScreen = new BScreen();
-	fFonts = NULL;
-	fBookmark = new Bookmark(this);
+	fScreen           = new BScreen();
+	fFonts            = NULL;
+	fBookmark         = new Bookmark(this);
+	fXRefs            = new XRefDefs();
+	fXRefDests        = NULL;
 }
 
 
 // --------------------------------------------------
 PDFWriter::~PDFWriter()
-{
-	const int n = fFontCache.CountItems();
-	for (int i = 0; i < n; i++) {
-		delete (Font*)fFontCache.ItemAt(i);
-	}
-	fFontCache.MakeEmpty();
-	
-	for (int i = 0; i < fPatterns.CountItems(); i++) {
-		delete (Pattern*)fPatterns.ItemAt(i);
-	}
-	fPatterns.MakeEmpty();
-	
+{	
 	if (Transport())
 		CloseTransport();
 
 	delete fScreen;
 	delete fFonts;
 	delete fBookmark;
+	delete fXRefs;
+	delete fXRefDests;
 }
 
 
@@ -116,6 +112,8 @@ PDFWriter::PrintPage(int32	pageNumber, int32 pageCount)
 	int32       orientation;
 	
 	status = B_OK;
+	
+	fPage = pageNumber;
 
 	if (pageNumber == 1) {
 		if (MakesPattern()) 
@@ -170,7 +168,7 @@ status_t
 PDFWriter::BeginJob() 
 {
 	fLog = fopen("/tmp/pdf_writer.log", "w");
-
+	
 	PDF_boot();
 
 	fPdf = PDF_new2(_ErrorHandler, NULL, NULL, NULL, this);	// set *this* as pdf cookie
@@ -294,6 +292,7 @@ PDFWriter::InitWriter()
 
 	LOG((fLog, "End of fonts declaration.\n"));	
 
+	// Links
 	float width;
 	if (JobMsg()->FindFloat("link_border_width", &width) != B_OK) {
 		width = 1;
@@ -303,7 +302,8 @@ PDFWriter::InitWriter()
 	if (JobMsg()->FindBool("create_web_links", &fCreateWebLinks) != B_OK) {
 		fCreateWebLinks = false;
 	}
-	
+
+	// Bookmarks	
 	if (JobMsg()->FindBool("create_bookmarks", &fCreateBookmarks) != B_OK) {
 		fCreateBookmarks = false;
 	}
@@ -315,7 +315,20 @@ PDFWriter::InitWriter()
 			fCreateBookmarks = false;
 		}
 	}	
-	fprintf(fLog, "create_bookmarks %d\n", fCreateBookmarks);
+
+	// Cross References
+	if (JobMsg()->FindBool("create_xrefs", &fCreateXRefs) != B_OK) {
+		fCreateXRefs = false;
+	}
+
+	if (fCreateXRefs) {
+		BString name;
+		if (JobMsg()->FindString("xrefs_file", &name) == B_OK && LoadXRefsDefinitions(name.String())) {
+		} else {
+			fprintf(fLog, "Could not read xrefs file!\n");
+			fCreateXRefs = false;
+		}
+	}	
 
 	fState = NULL;
 	fStateDepth = 0;
@@ -356,132 +369,28 @@ PDFWriter::DeclareFonts()
 	return B_OK;
 }
 
-static void SkipSpaces(FILE* f) 
-{
-	int c = fgetc(f);
-	for(;;) {
-		while (!feof(f) && isspace(c)) c = fgetc(f);
-		if (!feof(f) && c == '#') { // line comment; skip to end of line
-			while (!feof(f) && c != '\n') c = fgetc(f);
-		} else {
-			ungetc(c, f); return;
-		}
-	}
-}
-
-static bool ReadName(FILE* f, BString *s) 
-{
-	SkipSpaces(f);
-	*s = "";
-
-	int c = fgetc(f);
-	if (isalpha(c)) {
-		do {
-			s->Append((char)c, 1);
-			c = fgetc(f);
-		} while (!feof(f) && isalpha(c));
-		ungetc(c, f);
-		return true;
-	}
-	return false;		
-}
-
-static bool ReadString(FILE* f, BString *s) 
-{
-	SkipSpaces(f);
-	*s = "";
-
-	int c = fgetc(f);
-	if (c == '"') {
-		c = fgetc(f);
-		while (!feof(f) && c != '"') {
-			s->Append((char)c, 1);
-			c = fgetc(f);
-		}
-		if (c == '"') return true;
-	}	
-	return false;
-}
-
-static bool ReadFloat(FILE* f, float *value) 
-{
-	SkipSpaces(f);
-	BString s = "";
-	*value = 0.0;
-	
-	int c = fgetc(f);
-	if (isdigit(c) || c == '.') {
-		do {
-			s.Append((char)c, 1);
-			c = fgetc(f);
-		} while(isdigit(c) || c == '.');	
-		if (EOF != sscanf(s.String(), "%f", value)) {
-			ungetc(c, f);
-			return true;
-		}
-	}
-	return false;
-}
-
-// Reads bookmark definitions from file
-
-// File Format
-// -----------
-// Line comment starts with '#'.
-//
-// First line in file (mandatory):
-// Bookmarks 1.0
-// Remaining file contents: Fields may repeat.
-// Fields: level "family" "style" size
-// Types:  int   string   string  float
-
-
 bool
 PDFWriter::LoadBookmarkDefinitions(const char* name)
 {
 	// TODO: use B_USER_SETTINGS_DIRECTORY instead of hard coded constant
 	BString path("/boot/home/config/settings/PDF Writer/bookmarks/");
 	path.Append(name);
-	
-	FILE* file = fopen(path.String(), "r");
 
-#define BAILOUT goto Error
-	
-	LOG((fLog, "Reading bookmark definition file '%s'\n", name));
-	
-	if (file) {
-		BString s; float f; bool ok;
-		ok = ReadName(file, &s) && ReadFloat(file, &f);
-		if (!ok || strcmp(s.String(), "Bookmarks") != 0 || f != 1.0) BAILOUT;
-		
-		while (!feof(file)) {
-			float   level, size;
-			BString family, style;
-			ok = ReadFloat(file, &level) && ReadString(file, &family) &&
-				ReadString(file, &style) && ReadFloat(file, &size) &&
-				level >= 1.0 && level <= 10.0;
-			
-			if (!ok) BAILOUT;
-			
-			BFont font;
-			font.SetFamilyAndStyle(family.String(), style.String());
-			font.SetSize(size);
-			
-			LOG((fLog, "level %d family %s style %s size %f\n",
-				(int)level, family.String(), style.String(), size));
-			
-			fBookmark->AddDefinition((int)level, &font);
-			
-			SkipSpaces(file);
-		}
-		
-		fclose(file);
+	return fBookmark->Read(path.String());
+}
+
+
+bool
+PDFWriter::LoadXRefsDefinitions(const char* name)
+{
+	// TODO: use B_USER_SETTINGS_DIRECTORY instead of hard coded constant
+	BString path("/boot/home/config/settings/PDF Writer/xrefs/");
+	path.Append(name);
+
+	if (fXRefs->Read(path.String())) {
+		fXRefDests = new XRefDests(fXRefs->Count());
 		return true;
 	}
-
-#undef BAILOUT	
-Error:	
-	fclose(file);
 	return false;
 }
 
@@ -496,20 +405,16 @@ PDFWriter::BeginPage(BRect paperRect, BRect printRect)
 	fMode = kDrawingMode;
 	
 	ASSERT(fState == NULL);
-	fState = new State();
-	fState->height = height;
-    if (MakesPDF())
-    	PDF_begin_page(fPdf, width, fState->height);
+	fState = new State(height, printRect.left, printRect.top);
 
-	LOG((fLog, ">>>> PDF_begin_page [%f, %f]\n", width, fState->height));
+    if (MakesPDF())
+    	PDF_begin_page(fPdf, width, height);
+
+	LOG((fLog, ">>>> PDF_begin_page [%f, %f]\n", width, height));
 	
 	if (MakesPDF())
 		PDF_initgraphics(fPdf);
 	
-	fState->fontChanged 	= true;
-
-	fState->x0 = printRect.left;
-	fState->y0 = printRect.top;
 	fState->penX = 0;
 	fState->penY = 0;
 
@@ -524,7 +429,9 @@ PDFWriter::BeginPage(BRect paperRect, BRect printRect)
 // --------------------------------------------------
 status_t 
 PDFWriter::EndPage()
-{
+{	
+	fTextLine.Flush();
+
 	while (fState->prev != NULL) PopState();
 
     if (MakesPDF())
@@ -581,7 +488,7 @@ PDFWriter::PopInternalState()
 		State* s = fState; fStateDepth --;
 		fState = fState->prev;
 		delete s;
-		LOG((fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0));
+//		LOG((fLog, "height = %f x0 = %f y0 = %f\n", pdfSystem->Height(), pdfSystem->Origin().x, pdfSystem.Origin().y));
 		return true;
 	} else {
 		LOG((fLog, "State stack underflow!\n"));
@@ -615,7 +522,7 @@ PDFWriter::FindPattern()
 	// TODO: use hashtable instead of BList for fPatterns
 	const int n = fPatterns.CountItems();
 	for (int i = 0; i < n; i ++) {
-		Pattern* p = (Pattern*)fPatterns.ItemAt(i);
+		Pattern* p = fPatterns.ItemAt(i);
 		if (p->Matches(fState->pattern, fState->backgroundColor, fState->foregroundColor)) return p->patternId;
 	}
 	return -1;
@@ -1904,7 +1811,7 @@ PDFWriter::PushState()
 {
 	LOG((fLog, "PushState\n"));
 	PushInternalState();
-	LOG((fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0));
+//	LOG((fLog, "height = %f x0 = %f y0 = %f\n", fState->height, fState->x0, fState->y0));
 	if (!MakesPDF()) return;
 	PDF_save(fPdf);
 }
@@ -1967,8 +1874,11 @@ PDFWriter::SetOrigin(BPoint pt)
 
 	// XXX scale pt with current scaling factor or with
 	//     scaling factor of previous state? (fState->prev->scale)			
-	fState->x0 = fState->prev->x0 + fState->scale*pt.x;
-	fState->y0 = fState->prev->y0 + fState->scale*pt.y;
+	BPoint o = fState->prev->pdfSystem.Origin();
+	pdfSystem()->SetOrigin(
+		o.x + pdfSystem()->scale(pt.x),
+		o.y + pdfSystem()->scale(pt.y)
+	);
 }
 
 
@@ -2090,7 +2000,7 @@ void
 PDFWriter::SetScale(float scale)
 {
 	LOG((fLog, "SetScale scale=%f\n", scale));
-	fState->scale = scale * fState->prev->scale;
+	pdfSystem()->SetScale(scale * fState->prev->pdfSystem.Scale());
 }
 
 
@@ -2100,7 +2010,6 @@ PDFWriter::SetFontFamily(char *family)
 {
 	LOG((fLog, "SetFontFamily family=\"%s\"\n", family));
 	
-	fState->fontChanged = true;
 	fState->beFont.SetFamilyAndStyle(family, NULL);
 }
 
@@ -2111,7 +2020,6 @@ PDFWriter::SetFontStyle(char *style)
 {
 	LOG((fLog, "SetFontStyle style=\"%s\"\n", style));
 
-	fState->fontChanged = true;
 	fState->beFont.SetFamilyAndStyle(NULL, style);
 }
 
@@ -2179,7 +2087,6 @@ PDFWriter::SetFontFace(int32 flags)
 {
 	LOG((fLog, "SetFontFace flags=%ld (0x%lx)\n", flags, flags));
 //	fState->beFont.SetFace(flags);
-//	fState->fontChanged = true;
 }
 
 #ifdef CODEWARRIOR

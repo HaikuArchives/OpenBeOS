@@ -62,6 +62,7 @@ AdvancedSettingsWindow::AdvancedSettingsWindow(BMessage *settings)
 
 	x = 5; y = 5; w = r.Width(); h = r.Height();
 
+	// web links
 	cb = new BCheckBox(BRect(x, y, x+w-10, y+14), "create_links", "Create links for URLs", new BMessage(CREATE_LINKS_MSG));
 	panel->AddChild(cb);
 	if (settings->FindBool("create_web_links", &fCreateLinks) != B_OK) fCreateLinks = false;
@@ -82,8 +83,9 @@ AdvancedSettingsWindow::AdvancedSettingsWindow(BMessage *settings)
 	mf = new BMenuField(BRect(x, y, x+w-10, y+14), "link_border_width_menu", "Link Border Width:", m);
 	mf->ResizeToPreferred();
 	panel->AddChild(mf);
-	y += mf->Bounds().Height() + 5;
+	y += mf->Bounds().Height() + 15;
 	
+	// bookmarks
 	if (settings->FindBool("create_bookmarks", &fCreateBookmarks) != B_OK) fCreateBookmarks = false;
 	cb = new BCheckBox(BRect(x, y, x+w-10, y+14), "create_bookmarks", "Create bookmarks", new BMessage(CREATE_BOOKMARKS_MSG));
 	cb->SetValue(fCreateBookmarks ? B_CONTROL_ON : B_CONTROL_OFF);
@@ -94,6 +96,7 @@ AdvancedSettingsWindow::AdvancedSettingsWindow(BMessage *settings)
 	m->SetRadioMode(true);
 	mf = new BMenuField(BRect(x, y, x+w-10, y+14), "definition_menu", "Bookmark Definition File:", m);
 	panel->AddChild(mf);
+	y += mf->Bounds().Height() + 15;
 
 	if (settings->FindString("bookmark_definition_file", &fBookmarkDefinition) != B_OK) fBookmarkDefinition = "";
 
@@ -108,6 +111,32 @@ AdvancedSettingsWindow::AdvancedSettingsWindow(BMessage *settings)
 			if (entry.GetName(name) == B_NO_ERROR)
 				m->AddItem (item = new BMenuItem(name, new BMessage(DEFINITION_MSG)));
 				if (strcmp(name, fBookmarkDefinition.String()) == 0) item->SetMarked(true);
+		}
+	}	
+
+	// cross references
+	if (settings->FindBool("create_xrefs", &fCreateXRefs) != B_OK) fCreateXRefs = false;
+
+	cb = new BCheckBox(BRect(x, y, x+w-10, y+14), "create_xrefs", "Create cross references", new BMessage(CREATE_XREFS_MSG));
+	cb->SetValue(fCreateXRefs ? B_CONTROL_ON : B_CONTROL_OFF);
+	panel->AddChild(cb);
+	y += cb->Bounds().Height() + 5;
+
+	m = new BPopUpMenu("cross references");
+	m->SetRadioMode(true);
+	mf = new BMenuField(BRect(x, y, x+w-10, y+14), "xrefs_menu", "Cross References File:", m);
+	panel->AddChild(mf);
+
+	if (settings->FindString("xrefs_file", &fXRefs) != B_OK) fXRefs = "";
+
+	// XXX: B_USER_SETTINGS_DIRECTORY
+	Folder.SetTo ("/boot/home/config/settings/PDF Writer/xrefs/");
+	if (Folder.InitCheck() == B_OK) {	
+		while (Folder.GetNextEntry(&entry) != B_ENTRY_NOT_FOUND) {
+			char name[B_FILE_NAME_LENGTH];
+			if (entry.GetName(name) == B_NO_ERROR)
+				m->AddItem (item = new BMenuItem(name, new BMessage(XREFS_MSG)));
+				if (strcmp(name, fXRefs.String()) == 0) item->SetMarked(true);
 		}
 	}	
 
@@ -166,6 +195,18 @@ AdvancedSettingsWindow::UpdateSettings()
 	} else {
 		fSettings->AddString("bookmark_definition_file", fBookmarkDefinition.String());
 	}
+
+	if (fSettings->HasBool("create_xrefs")) {
+		fSettings->ReplaceBool("create_xrefs", fCreateXRefs);
+	} else {
+		fSettings->AddBool("create_xrefs", fCreateXRefs);
+	}
+
+	if (fSettings->HasString("xrefs_file")) {
+		fSettings->ReplaceString("xrefs_file", fXRefs.String());
+	} else {
+		fSettings->AddString("xrefs_file", fXRefs.String());
+	}
 }
 
 
@@ -209,6 +250,20 @@ AdvancedSettingsWindow::MessageReceived(BMessage *msg)
 			if (source) {
 				BMenuItem* item = (BMenuItem*)source;
 				fBookmarkDefinition = item->Label();
+			}
+			break;
+			
+		case CREATE_XREFS_MSG:
+			if (source) {
+				BCheckBox* cb = (BCheckBox*)source;
+				fCreateXRefs = cb->Value() == B_CONTROL_ON;
+			}
+			break;
+		
+		case XREFS_MSG:
+			if (source) {
+				BMenuItem* item = (BMenuItem*)source;
+				fXRefs = item->Label();
 			}
 			break;
 			

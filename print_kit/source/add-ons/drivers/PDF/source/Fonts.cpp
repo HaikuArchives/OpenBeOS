@@ -101,16 +101,6 @@ Fonts::Fonts()
 }
 
 
-// --------------------------------------------------
-Fonts::~Fonts() 
-{
-	for (int i = 0; i < fFontFiles.CountItems(); i++) {
-		delete (FontFile*)fFontFiles.ItemAt(i);
-	}
-	fFontFiles.MakeEmpty();
-}	
-
-
 void
 Fonts::SetDefaultCJKOrder()
 {

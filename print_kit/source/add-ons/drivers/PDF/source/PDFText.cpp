@@ -42,6 +42,7 @@ THE SOFTWARE.
 #include "Link.h"
 #include "Bookmark.h"
 #include "DrawShape.h"
+#include "XReferences.h"
 #include "Log.h"
 #include "pdflib.h"
 
@@ -220,7 +221,7 @@ PDFWriter::FindFont(char* fontName, bool embed, font_encoding encoding)
 	Font *f = NULL;
 	const int n = fFontCache.CountItems();
 	for (int i = 0; i < n; i++) {
-		f = (Font*)fFontCache.ItemAt(i);
+		f = fFontCache.ItemAt(i);
 		if (f->encoding == encoding && strcmp(f->name.String(), fontName) == 0) {
 			cache = f;
 			return f->font;
@@ -318,6 +319,13 @@ PDFWriter::CodePointSize(const char* s)
 }
 
 
+void PDFWriter::RecordDests(const char* s) {
+	::RecordDests record(fXRefDests, fPage);
+	fXRefs->Matches(s, &record, true);
+}
+
+
+
 // --------------------------------------------------
 void
 PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
@@ -372,7 +380,6 @@ PDFWriter::DrawChar(uint16 unicode, const char* utf8, int16 size)
 	}
 
 	fState->font = font;
-	fState->fontChanged = false;
 
 	uint16 face = fState->beFont.Face();
 	PDF_set_parameter(fPdf, "underline", (face & B_UNDERSCORE_FACE) != 0 ? "true" : "false");
@@ -459,8 +466,6 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 	if (IsDrawing()) {
 		SetColor();
 	}
-	if (!MakesPDF()) return;
-
 	// convert string to UTF8
 	BString utf8;
 	if (fState->beFont.Encoding() == B_UNICODE_UTF8) {
@@ -468,12 +473,6 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 	} else {
 		ToUtf8(fState->beFont.Encoding()-1, string, utf8);
 	}
-
-	// simple link handling for now
-	Link link(this, &utf8, &fState->beFont);
-
-	// simple bookmark adding
-	if (fCreateBookmarks) fBookmark->AddBookmark(&utf8, &fState->beFont);
 	
 	// convert string in UTF8 to unicode UCS2
 	BString unicode;
@@ -487,6 +486,9 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 	const double cos1 = rotate ? cos(rotation) : 1;
 	const double sin1 = rotate ? -sin(rotation) : 0;
 
+	BPoint start(fState->penX, fState->penY);
+
+	// If !MakesPDF() all the effort below just for the bounding box!
 	// draw each character
 	const char *c = utf8.String();
 	const unsigned char *u = (unsigned char*)unicode.String();
@@ -495,14 +497,14 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 
 		float w = font.StringWidth(c, s);
 
-		if (IsClipping()) {
-			ClipChar(&font, (char*)u, c, s, w);
-		} else {
-			DrawChar(u[0]*256+u[1], c, s);		
+		if (MakesPDF()) {
+			if (IsClipping()) {
+				ClipChar(&font, (char*)u, c, s, w);
+			} else {
+				DrawChar(u[0]*256+u[1], c, s);		
+			}
 		}
-		
-		if (fCreateWebLinks) link.NextChar(s, fState->penX, fState->penY, w);
-		
+				
 		// position of next character
 		if (*(unsigned char*)c <= 0x20) { // should test if c is a white-space!
 			w += escapement_space;
@@ -516,6 +518,25 @@ PDFWriter::DrawString(char *string, float escapement_nospace, float escapement_s
 		// next character
 		c += s; u += 2;
 	}
+
+	// text line processing (for non rotated text only!)
+	BPoint        end(fState->penX, fState->penY);
+	BRect         bounds;
+	font_height   height;
+	
+	font.GetHeight(&height);
+	
+	bounds.left   = start.x;
+	bounds.right  = end.x;
+	bounds.top    = start.y - height.ascent;
+	bounds.bottom = end.y   + height.descent;
+	
+	TextSegment* segment = new TextSegment(
+		utf8.String(), start, 
+		escapement_space, escapement_nospace,
+		&bounds, &font, pdfSystem());
+		
+	fTextLine.Add(segment);
 }
 
 

@@ -134,3 +134,5 @@ HWindow::AboutRequested()
 	};
 	about->Go();
 }
+
+

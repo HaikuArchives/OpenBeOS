@@ -25,30 +25,35 @@ TYPE= SHARED
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
 #
-SRCS= Driver.cpp \
-	  PrinterDriver.cpp \
-	  Utils.cpp \
-	  PageSetupWindow.cpp \
-	  JobSetupWindow.cpp \
-	  PrinterSetupWindow.cpp \
-	  StatusWindow.cpp \
-	  DocInfoWindow.cpp \
-	  Fonts.cpp \
-	  FontsWindow.cpp \
-	  MarginView.cpp \
-	  PrinterSettings.cpp \
-	  PrinterPrefs.cpp \
-	  PictureIterator.cpp \
-	  PDFText.cpp \
-	  DrawShape.cpp \
-	  LinePathBuilder.cpp \
-	  PDFLinePathBuilder.cpp \
-	  SubPath.cpp \
-	  Bezier.cpp \
-	  Link.cpp \
-	  Bookmark.cpp \
-	  AdvancedSettingsWindow.cpp \
-	  PDFWriter.cpp
+SRCS= \
+	AdvancedSettingsWindow.cpp \
+	Bezier.cpp \
+	Bookmark.cpp \
+	DocInfoWindow.cpp \
+	DrawShape.cpp \
+	Driver.cpp \
+	Fonts.cpp \
+	FontsWindow.cpp \
+	JobSetupWindow.cpp \
+	LinePathBuilder.cpp \
+	Link.cpp \
+	MarginView.cpp \
+	PDFLinePathBuilder.cpp \
+	PDFText.cpp \
+	PDFWriter.cpp \
+	PageSetupWindow.cpp \
+	PictureIterator.cpp \
+	PrinterDriver.cpp \
+	PrinterPrefs.cpp \
+	PrinterSettings.cpp \
+	PrinterSetupWindow.cpp \
+	RegExp.cpp \
+	Scanner.cpp \
+	StatusWindow.cpp \
+	SubPath.cpp \
+	Utils.cpp \
+	XReferences.cpp
+
 		
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -110,7 +115,7 @@ SYMBOLS =
 DEBUGGER = 
 
 #	specify additional compiler flags for all files
-COMPILER_FLAGS = -DPATTERN_SUPPORT=0 -DLOGGING=1
+COMPILER_FLAGS = -DPATTERN_SUPPORT=1 -DLOGGING=1
 
 #	specify additional linker flags
 LINKER_FLAGS =

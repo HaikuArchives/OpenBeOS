@@ -43,6 +43,8 @@ THE SOFTWARE.
 #include "PictureIterator.h"
 #include "Fonts.h"
 #include "SubPath.h"
+#include "Utils.h"
+#include "Link.h"
 
 #include "pdflib.h"
 
@@ -55,16 +57,21 @@ THE SOFTWARE.
 #define DEGREE2RAD(d) (PI * d / 180.0)
 
 class DrawShape;
-class Link;
+class WebLink;
 class Bookmark;
+class XRefDefs;
+class XRefDests;
 
 class PDFWriter : public PrinterDriver, public PictureIterator
 {
 	
 	friend class DrawShape;
 	friend class PDFLinePathBuilder;
+	friend class WebLink;
 	friend class Link;
 	friend class Bookmark;
+	friend class LocalLink;
+	friend class TextLine;
 	
 	public:
 		// constructors / destructor
@@ -80,6 +87,8 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		status_t	EndPage();
 
 		bool        LoadBookmarkDefinitions(const char* name);
+		bool        LoadXRefsDefinitions(const char* name);
+		void        RecordDests(const char* s);
 		
 		// PDFLib callbacks
 		size_t		WriteData(void *data, size_t size);
@@ -126,7 +135,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 		BBitmap		*ConvertBitmap(BRect src, int32 bytesPerRow, int32 pixelFormat, int32 flags, void *data);
 
 		// String handling
-		bool		BeginsChar(char byte) { return (byte & 0xc0) != 0x80; }
+		bool		BeginsChar(char byte) { return BEGINS_CHAR(byte); }
 		void		ToUtf8(uint32 encoding, const char *string, BString &utf8);
 		void		ToUnicode(const char *string, BString &unicode);
 		void		ToPDFUnicode(const char *string, BString &unicode);
@@ -194,11 +203,7 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 			State			*prev;
 			BFont           beFont;
 			int				font;
-			bool			fontChanged;
-			float			height;
-			float			x0;
-			float			y0;
-			float           scale;
+			PDFSystem       pdfSystem;
 			float			penX;
 			float			penY;
 			drawing_mode 	drawingMode;
@@ -213,17 +218,14 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 			int32           fontSpacing;
 			
 			// initialize with defalt values
-			State() 
+			State(float h = a4_height, float x = 0, float y = 0) 
 			{
 				static rgb_color white    = {255, 255, 255, 255};
 				static rgb_color black    = {0, 0, 0, 255};
 				prev = NULL;
 				font             = 0;
-				fontChanged      = false;
-				height           = a4_height;
-				x0               = 0;
-				y0               = 0;
-				scale            = 1.0;
+				pdfSystem.SetHeight(h);
+				pdfSystem.SetOrigin(x, y);
 				penX             = 0;
 				penY             = 0;
 				drawingMode      = B_OP_COPY; 
@@ -275,17 +277,22 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 	
 		FILE			*fLog;
 		PDF				*fPdf;
+		int32           fPage;
 		State			*fState;
 		int32           fStateDepth;
-		BList           fFontCache;
-		BList           fPatterns;
+		TList<Font>     fFontCache;
+		TList<Pattern>  fPatterns;
 		int64           fEmbedMaxFontSize;
 		BScreen         *fScreen;
 		Fonts           *fFonts;
 		bool            fCreateWebLinks;
 		bool            fCreateBookmarks;
 		Bookmark        *fBookmark;
+		bool            fCreateXRefs;
+		XRefDefs        *fXRefs;
+		XRefDests       *fXRefDests;
 		font_encoding   fFontSearchOrder[no_of_cjk_encodings];
+		TextLine        fTextLine;
 		
 		enum 
 		{
@@ -293,9 +300,11 @@ class PDFWriter : public PrinterDriver, public PictureIterator
 			kClippingMode
 		}				fMode;
 
-		inline float tx(float x)    { return fState->x0 + fState->scale*x; }
-		inline float ty(float y)    { return fState->height - (fState->y0 + fState->scale*y); }
-		inline float scale(float f) { return fState->scale * f; }
+		inline float tx(float x)    { return fState->pdfSystem.tx(x); }
+		inline float ty(float y)    { return fState->pdfSystem.ty(y); }
+		inline float scale(float f) { return fState->pdfSystem.scale(f); }
+
+		PDFSystem* pdfSystem() const { return &fState->pdfSystem; }
 
 		enum
 		{

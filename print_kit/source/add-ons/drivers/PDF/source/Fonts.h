@@ -35,7 +35,7 @@ THE SOFTWARE.
 #include <Archivable.h>
 #include <String.h>
 #include <List.h>
-
+#include "Utils.h"
 
 enum font_encoding 
 {
@@ -106,7 +106,7 @@ public:
 
 class Fonts : public BArchivable {
 private:
-	BList       fFontFiles;
+	TList<FontFile>  fFontFiles;
 
 	struct {
 		font_encoding encoding;
@@ -118,7 +118,6 @@ private:
 public:
 	Fonts();
 	Fonts(BMessage *archive);
-	~Fonts();
 	
 	static BArchivable* Instantiate(BMessage *archive);
 	status_t Archive(BMessage *archive, bool deep = true) const;
@@ -126,7 +125,7 @@ public:
 	status_t	CollectFonts();
 	void        SetTo(BMessage *archive);
 
-	FontFile*	At(int i) const { return (FontFile*)fFontFiles.ItemAt(i); }
+	FontFile*	At(int i) const { return fFontFiles.ItemAt(i); }
 	int32		Length() const  { return fFontFiles.CountItems(); }
 
 	void        SetDefaultCJKOrder();

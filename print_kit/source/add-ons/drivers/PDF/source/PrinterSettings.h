@@ -54,6 +54,8 @@ const bool  CREATE_WEB_LINKS  = false;
 const float LINK_BORDER_WIDTH = 1.0;
 const bool CREATE_BOOKMARKS = false;
 const char BOOKMARK_DEFINITION_FILE[] = "";
+const bool CREATE_XREFS = false;
+const char XREFS_FILE[] = "";
 
 /**
  * Class

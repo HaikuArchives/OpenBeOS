@@ -10,9 +10,6 @@ class PDFWriter;
 const int kMaxBookmarkLevels = 10;
 
 class Bookmark {
-	PDFWriter* fWriter;
-	BList      fDefinitions;
-	
 	class Definition {
 	public:
 		int   fLevel;
@@ -21,18 +18,21 @@ class Bookmark {
 		bool  Matches(font_family* family, font_style* style, float size) const;
 	};
 	
-	int fLevels[kMaxBookmarkLevels+1];
+	PDFWriter*         fWriter;
+	TList<Definition>  fDefinitions;	
+
+	int                fLevels[kMaxBookmarkLevels+1];
 
 	bool Find(BFont* font, int &level) const;
 
 public:
 	
 	Bookmark(PDFWriter* writer);
-	~Bookmark();
 
 	// level starts with 1	
 	void AddDefinition(int level, BFont* font);
-	void AddBookmark(BString* text, BFont* font);
+	void AddBookmark(const char* text, BFont* font);
+	bool Read(const char* name); // adds definitions from file
 };
 
 #endif

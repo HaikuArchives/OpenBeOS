@@ -27,13 +27,67 @@ THE SOFTWARE.
 
 */
 
+#define DEBUG 1
+#include <Debug.h>
 #include <ctype.h>
 #include "Link.h"
+#include "XReferences.h"
+#include "Bookmark.h"
 #include "PDFWriter.h"
 #include "Log.h"
 
+
+Link::Link(PDFWriter* writer, BString* utf8, BFont* font)
+	: fWriter(writer)
+	, fUtf8(utf8)
+	, fFont(font)
+	, fPos(0)
+	, fContainsLink(false)
+{
+}
+
+
+// create link from fStartPos to fEndPos and fStart to end
+void 
+Link::CreateLink(BPoint end)
+{
+	if (fFont->Rotation() != 0.0) {
+		LOG((fWriter->fLog, "Warning: Can not create link for rotated font!\n"));
+		return;
+	}
+	
+	// calculate rectangle for url
+	font_height height;
+	fFont->GetHeight(&height);
+
+	float llx, lly, urx, ury;	
+
+	llx = fWriter->tx(fStart.x);
+	urx = fWriter->tx(end.x);
+	lly = fWriter->ty(fStart.y + height.descent);
+	ury = fWriter->ty(end.y - height.ascent);
+
+	CreateLink(llx, lly, urx, ury);
+}
+
+
+void
+Link::NextChar(int cps, float x, float y, float w)
+{
+	if (fContainsLink) {
+		if (fPos == fStartPos) {
+			fStart.Set(x, y);
+		}
+		if (fPos == fEndPos) {
+			CreateLink(BPoint(x + w, y));
+			DetectLink(fPos + cps);
+		}
+		fPos += cps;
+	}
+}
+
 // TODO: check this list and add more prefixes
-char* Link::fURLPrefix[] = {
+char* WebLink::fURLPrefix[] = {
 	"http://",
 	"https://",
 	"ftp://",
@@ -51,26 +105,15 @@ char* Link::fURLPrefix[] = {
 };
 
 
-Link::Link(PDFWriter* writer, BString* utf8, BFont* font)
-	: fWriter(writer)
-	, fUtf8(utf8)
-	, fFont(font)
-	, fPos(0)
-	, fContainsLink(false)
-{
-	DetectUrl(0);
-}
-
-
 // TODO: check for valid characters in url
 bool
-Link::IsValidCodePoint(const char* cp, int cps) {
+WebLink::IsValidCodePoint(const char* cp, int cps) {
 	return ' ' < *cp && cps == 1; 
 }
 
 
 bool 
-Link::DetectUrlWithPrefix(int start)
+WebLink::DetectUrlWithPrefix(int start)
 {
 	int pos = INT_MAX;
 	char* prefix = NULL;
@@ -124,13 +167,13 @@ Link::DetectUrlWithPrefix(int start)
 
 
 bool
-Link::IsValidStart(const char* cp)
+WebLink::IsValidStart(const char* cp)
 {
 	return *cp != '.' && *cp != '@' && isalpha(*cp);
 }
 
 bool
-Link::IsValidChar(const char* cp)
+WebLink::IsValidChar(const char* cp)
 {
 	return !isspace(*cp); // isalnum(*cp) || *cp == '-' || *cp == '.' || *cp == '@';
 }
@@ -140,7 +183,7 @@ Link::IsValidChar(const char* cp)
 //   domain/~user
 //   domain/page.html?value=key
 bool
-Link::DetectUrlWithoutPrefix(int start)
+WebLink::DetectUrlWithoutPrefix(int start)
 {
 	const char* utf8 = fUtf8->String();	
 
@@ -190,7 +233,7 @@ Link::DetectUrlWithoutPrefix(int start)
 }
 
 void 
-Link::DetectUrl(int start)
+WebLink::DetectLink(int start)
 {
 	fContainsLink = true;
 	fKind         = kUnknownKind;
@@ -202,13 +245,8 @@ Link::DetectUrl(int start)
 
 // create link from fStartPos to fEndPos and fStart to end
 void 
-Link::CreateLink(BPoint end)
+WebLink::CreateLink(float llx, float lly, float urx, float ury)
 {
-	if (fFont->Rotation() != 0.0) {
-		LOG((fWriter->fLog, "Warning: Can not create link for rotated font!\n"));
-		return;
-	}
-
 	BString url;
 
 	// prepend protocol if required
@@ -222,39 +260,168 @@ Link::CreateLink(BPoint end)
 	}
 
 	// append url	
-	fEndPos += fWriter->CodePointSize(&fUtf8->String()[fEndPos]);
+	int endPos = fEndPos + fWriter->CodePointSize(&fUtf8->String()[fEndPos]);
 	
-	for (int i = fStartPos; i < fEndPos; i ++) {
+	for (int i = fStartPos; i < endPos; i ++) {
 		url.Append(fUtf8->ByteAt(i), 1);
 	}		
-
-	// calculate rectangle for url
-	font_height height;
-	fFont->GetHeight(&height);
-
-	float llx, lly, urx, ury;	
-
-	llx = fWriter->tx(fStart.x);
-	urx = fWriter->tx(end.x);
-	lly = fWriter->ty(fStart.y + height.descent);
-	ury = fWriter->ty(end.y - height.ascent);
 
 	// XXX: url should be in 7-bit ascii encoded!
 	PDF_add_weblink(fWriter->fPdf, llx, lly, urx, ury, url.String());
 }
 
 
-void
-Link::NextChar(int cps, float x, float y, float w)
+WebLink::WebLink(PDFWriter* writer, BString* utf8, BFont* font)
+	: Link(writer, utf8, font)
 {
-	if (fContainsLink) {
-		if (fPos == fStartPos) {
-			fStart.Set(x, y);
-		} else if (fPos == fEndPos) {
-			CreateLink(BPoint(x + w, y));
-			DetectUrl(fPos + cps);
-		}
-		fPos += cps;
+}
+
+
+// TextSegment
+
+TextSegment::TextSegment(const char* text, BPoint start, float escpSpace, float escpNoSpace, BRect* bounds, BFont* font, PDFSystem* system)
+	: fText(text)
+	, fStart(start)
+	, fEscpSpace(escpSpace)
+	, fEscpNoSpace(escpNoSpace)
+	, fBounds(*bounds)
+	, fFont(*font)
+	, fSystem(*system)
+	, fSpaces(0)
+{
+}
+
+
+void TextSegment::PrependSpaces(int32 n) {
+	ASSERT(fSpaces == 0);
+	fSpaces = n;
+	BString spaces;
+	spaces.Append(' ', n);
+	fText.Prepend(spaces.String());
+}
+
+
+// TextLine
+
+TextLine::TextLine(PDFWriter* writer)
+	: fWriter(writer)
+{
+}
+
+
+void TextLine::Add(TextSegment* segment) {
+	// simply skip rotated text
+	if (segment->Font()->Rotation() != 0.0) {
+		delete segment; return;
 	}
+
+	if (!Follows(segment)) {
+		Flush();
+	}
+
+	fSegments.AddItem(segment);
+}
+
+
+bool TextLine::Follows(TextSegment* segment) const {
+	const int32 n = fSegments.CountItems();
+	if (n == 0) return true;
+	TextSegment* s = fSegments.ItemAt(n-1);
+	// ATM segments must have same PDFSystem!
+	PDFSystem* os = s->System();
+	PDFSystem* ns = segment->System();
+	if (os->Origin() != ns->Origin() || os->Scale() != ns->Scale() || os->Height() != ns->Height()) return false;
+
+	// follows the new segment the latest one?	
+	BPoint start = segment->Start();
+	BRect  b = s->Bounds();
+	float w = segment->Font()->StringWidth(" ", 1);
+	if (b.top <= start.y && start.y <= b.bottom && (b.right-w/2.0) <= start.x) {
+		// insert spaces
+		if (w > 0.0) {
+			int n = (int)((start.x - b.right) / w);
+			if (n > 200) n = 200; // santiy check
+			if (n > 0) {
+				segment->PrependSpaces(n);
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+
+void TextLine::Flush() {
+	const int32 n = fSegments.CountItems();
+	if (n == 0) return;
+
+	// build the text in the line	
+	BString line;
+	for (int32 i = 0; i < n; i ++) {
+		line << fSegments.ItemAt(i)->Text();
+	}	 
+
+	const char* c = line.String();
+	fprintf(fWriter->fLog, "==== TextLine\n\t\t'%s'\n", c);
+
+	if (!fWriter->MakesPDF()) {
+		if (fWriter->fCreateXRefs) fWriter->RecordDests(c);
+	} else {
+		// XXX
+		BFont* f = fSegments.ItemAt(0)->Font();
+
+		// simple link handling for now
+		WebLink webLink(fWriter, &line, f);
+		if (fWriter->fCreateWebLinks) webLink.Init();
+	
+		// local links
+		LocalLink localLink(fWriter->fXRefs, fWriter->fXRefDests, fWriter, &line, f, fWriter->fPage);
+		if (fWriter->fCreateXRefs) localLink.Init();
+	
+		// simple bookmark adding
+		if (fWriter->fCreateBookmarks) fWriter->fBookmark->AddBookmark(c, f);
+	
+
+		for (int32 i = 0; i < n; i ++) {
+		
+			TextSegment* seg         = fSegments.ItemAt(i);
+			BPoint       pos         = seg->Start();
+			BFont*       font        = seg->Font();
+			const char*  sc          = seg->Text();
+			float        escpSpace   = seg->EscpSpace();
+			float        escpNoSpace = seg->EscpNoSpace();
+			int32        spaces      = seg->Spaces();
+			
+			while (*sc != 0) {
+				ASSERT(*sc == *c);
+				
+				int s = fWriter->CodePointSize((char*)c);
+		
+				float w = font->StringWidth(c, s);
+		
+				if (fWriter->fCreateWebLinks) webLink.NextChar(s,   pos.x, pos.y, w);
+				if (fWriter->fCreateXRefs)    localLink.NextChar(s, pos.x, pos.y, w);
+				
+				if (spaces == 0) {
+					// position of next character
+					if (*(unsigned char*)c <= 0x20) { // should test if c is a white-space!
+						w += escpSpace;
+					} else {
+						w += escpNoSpace;
+					}
+		
+					pos.x += w;
+				} else {
+					// skip over the prepended spaces
+					spaces --;
+				}
+					
+				// next character
+				c += s; sc += s;
+			}
+		}
+	}
+	
+	fSegments.MakeEmpty();
 }
 
