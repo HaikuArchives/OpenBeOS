@@ -331,3 +331,9 @@ Description: MIME Type strings are converted to lowercase before being used
              as filenames in the MIME database.
              
            
+OS:          BeOS R5
+Module:      BMimeType
+Location:    Start/StopWatching()
+Description: An invalid messenger (BMessenger::Invalid()) is fine as parameter.
+
+
