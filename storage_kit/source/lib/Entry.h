@@ -129,8 +129,6 @@ private:
 	
 	status_t set_name(const char *name);
 
-	static bool SplitPathInTwain(const char* fullPath, char *&path, char *&leaf);
-	
 	void Dump(const char *name = NULL);
 };
 
