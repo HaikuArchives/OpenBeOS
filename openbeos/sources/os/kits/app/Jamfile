@@ -1,6 +1,7 @@
 SubDir OBOS_TOP sources os kits app ;
 
 UsePrivateHeaders app ;
+UsePrivateHeaders interface ;
 
 if ! $(LOCAL_SOURCE)
 {
