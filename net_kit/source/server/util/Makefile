@@ -1,4 +1,4 @@
-OBJS=cksum.o misc.o
+OBJS=cksum.o misc.o net_timer.o
 INCLUDES=-I. -I.. -I../include
 CFLAGS=-Wall -g -O2
 

@@ -18,6 +18,7 @@
 #include "net_server/net_server.h"
 #include "protocols.h"
 #include "net_module.h"
+#include "net_timer.h"
 #include "net_misc.h"
 
 /* horrible hack to get this building... */
@@ -166,8 +167,8 @@ static void list_devices(void)
 
 static void close_devices(void)
 {
-        int i;
-        for (i=0;i<ndevs;i++) {
+	int i;
+	for (i=0;i<ndevs;i++) {
 		close(devices[i].dev);
 	}
 }
@@ -238,8 +239,12 @@ int main(int argc, char **argv)
 	int i;
 
 	mbinit();
+
 	printf( "Net Server Test App!\n"
 		"====================\n\n");
+
+	if (net_init_timer() < B_OK)
+		printf("timer service won't work!\n");
 
 	devices = malloc(sizeof(ifnet) * MAX_DEVICES);
 	if (!devices) {
@@ -271,6 +276,8 @@ printf("\n");
 	}
 
 	close_devices();
+
+	net_shutdown_timer();
 
 	return 0;
 }
