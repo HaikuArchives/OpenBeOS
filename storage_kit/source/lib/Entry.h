@@ -13,7 +13,7 @@
 #include <SupportDefs.h>
 
 #include <Statable.h>
-#include "kernel_interface.h"
+#include <StorageDefs.Private.h>
 
 #ifdef USE_OPENBEOS_NAMESPACE
 namespace OpenBeOS {
@@ -113,27 +113,21 @@ private:
 	/*! Currently unused. */
 	uint32 _pennyData[4];
 
+	/*! BEntry implementation of BStatable::set_stat() */
 	virtual	status_t set_stat(struct stat &st, uint32 what);
-	status_t move(int fd, const char *path);
-//	status_t set(int fd, const char *path, bool traverse);
-	status_t set(StorageKit::FileDescriptor dirFd, const char *path,
-				 bool traverse);
-	status_t clear();
+	
+	status_t set(StorageKit::FileDescriptor dir, const char *path, bool traverse);
 
-//	/*! File descriptor for the entry's parent directory. */
+	/*! File descriptor for the entry's parent directory. */
 	StorageKit::FileDescriptor fDirFd;
 	
-	/*! The entry's parent directory. This may replace fDfd once we
-		get the new kernel. */
-//	StorageKit::Dir fDir;
-
 	/*! Leaf name of the entry. */
 	char *fName;
 	
-	/*! Probably the status_t result of the most recent function call */
+	/*! The object's initialization status. */
 	status_t fCStatus;
 	
-	status_t SetName(const char *name);
+	status_t set_name(const char *name);
 
 	static bool SplitPathInTwain(const char* fullPath, char *&path, char *&leaf);
 	

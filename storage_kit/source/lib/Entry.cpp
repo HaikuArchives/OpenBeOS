@@ -9,6 +9,8 @@
 
 #include <Directory.h>
 #include <Path.h>
+#include "kernel_interface.h"
+#include "storage_support.h"
 
 #ifdef USE_OPENBEOS_NAMESPACE
 using namespace OpenBeOS;
@@ -218,7 +220,7 @@ BEntry::SetTo(const char *path, bool traverse = false) {
 		// Get the path and leaf portions of the given path
 		char *pathStr, *leafStr;
 		pathStr = leafStr = NULL;
-		if (SplitPathInTwain(path, pathStr, leafStr)) {
+		if (StorageKit::split_path(path, pathStr, leafStr)) {
 //			printf("path == '%s'\n", pathStr);
 //			printf("leaf == '%s'\n", leafStr);
 			
@@ -357,8 +359,13 @@ BEntry::GetParent(BDirectory *dir) const {
 		// Verify we aren't an entry representing "/"
 		status = StorageKit::entry_ref_is_root_dir(ref) ? B_ENTRY_NOT_FOUND : B_OK ;
 		if (status == B_OK) {
-			dir->SetTo(&ref);
-			return dir->InitCheck();
+
+			// Now point the entry_ref to the parent directory (instead of ourselves)
+			status = ref.set_name(".");
+			if (status == B_OK) {
+				dir->SetTo(&ref);
+				return dir->InitCheck();
+			}
 		}
 	}
 	
@@ -393,11 +400,9 @@ BEntry::GetName(char *buffer) const {
 /*! Renames the BEntry to path, replacing an existing entry if clobber is true. */
 status_t
 BEntry::Rename(const char *path, bool clobber = false) {
+//	printf("Rename( '%s' )\n", path);
 	if (fCStatus != B_OK)
 		return fCStatus;
-		
-//	if (!Exists())
-//		return B_ENTRY_NOT_FOUND;
 		
 	status_t status;
 	
@@ -430,9 +435,6 @@ BEntry::Rename(const char *path, bool clobber = false) {
 	
 		return status;
 	} else {
-		// Haven't implemented this yet
-		return B_ERROR;
-	
 		// Get our parent directory
 		BDirectory dir;
 		status = GetParent(&dir);
@@ -440,6 +442,11 @@ BEntry::Rename(const char *path, bool clobber = false) {
 			// Apparently we are a BEntry representing the root directory,
 			// which you're not allowed to rename.
 			return B_NOT_ALLOWED;
+		} else if (status == B_OK) {
+			// Let MoveTo() handle the dirty work
+			return MoveTo(&dir, path, clobber);		
+		} else {
+			return status;
 		}
 	}
 		
@@ -449,19 +456,49 @@ BEntry::Rename(const char *path, bool clobber = false) {
 /*! Moves the BEntry to path or dir path combination, replacing an existing entry if clober is true. */
 status_t
 BEntry::MoveTo(BDirectory *dir, const char *path = NULL, bool clobber = false) {
+//	printf("MoveTo(dir, '%s')\n", path);
 	if (fCStatus != B_OK)
 		return fCStatus;
+	else if (dir == NULL)
+		return B_BAD_VALUE;
+	else if (dir->InitCheck() != B_OK)
+		return dir->InitCheck();
+
+	// NULL path simply means move without renaming
+	if (path == NULL)
+		MoveTo(dir, fName);
+	else if (path[0] == '/')
+		return B_BAD_VALUE;
+	
+	status_t status;
 		
-	return B_ERROR;
+	// Convert our directory to an absolute pathname
+	char fullPath[B_PATH_NAME_LENGTH];
+	status = StorageKit::dir_to_path(dir->get_fd(), fullPath, B_PATH_NAME_LENGTH);
+	if (status != B_OK)
+		return status;
+		
+	// Concatenate our pathname to it
+	sprintf(fullPath, "%s/%s", fullPath, path);
+	
+	// Now let rename do the dirty work
+	return Rename(fullPath, clobber);
 };
 
-/*! Removes the entry from the file system */
+/*! Removes the entry from the file system. */
 status_t
 BEntry::Remove() {
 	if (fCStatus != B_OK)
 		return fCStatus;
-
-	return B_ERROR;
+		
+	BPath path;
+	status_t status;
+	
+	status = GetPath(&path);
+	if (status != B_OK)
+		return status;
+		
+	return StorageKit::remove(path.Path());
 };
 
 
@@ -505,34 +542,40 @@ BEntry::operator=(const BEntry &item) {
 	if (item.fCStatus == B_OK) {
 		fCStatus = StorageKit::dup_dir(item.fDirFd, fDirFd);
 		if (fCStatus == B_OK) {
-			fCStatus = SetName(item.fName);
+			fCStatus = set_name(item.fName);
 		}
 	}
 	
 	return *this;
 };
 
-/*! Currently unused. */
+/*! Reserved for future use. */
 void BEntry::_PennyEntry1(){};
-/*! Currently unused. */
+/*! Reserved for future use. */
 void BEntry::_PennyEntry2(){};
-/*! Currently unused. */
+/*! Reserved for future use. */
 void BEntry::_PennyEntry3(){};
-/*! Currently unused. */
+/*! Reserved for future use. */
 void BEntry::_PennyEntry4(){};
-/*! Currently unused. */
+/*! Reserved for future use. */
 void BEntry::_PennyEntry5(){};
-/*! Currently unused. */
+/*! Reserved for future use. */
 void BEntry::_PennyEntry6(){};
 
 /*! Updates the BEntry with the data from the stat structure according to the mask. */
 status_t
 BEntry::set_stat(struct stat &st, uint32 what){
-};
-
-/*! Probably called by MoveTo. */
-status_t
-BEntry::move(int fd, const char *path){
+	if (fCStatus != B_OK)
+		return B_FILE_ERROR;
+	
+	BPath path;
+	status_t status;
+	
+	status = GetPath(&path);
+	if (status != B_OK)
+		return status;
+	
+	return StorageKit::set_stat(path.Path(), st, what);
 };
 
 /*! Sets the Entry to point to the entry named by path in the given directory. If traverse
@@ -656,18 +699,13 @@ BEntry::set(StorageKit::FileDescriptor dirFd, const char *leaf, bool traverse) {
 	*/
 	
 	fDirFd = dirFd;
-	SetName(leaf);
+	set_name(leaf);
 	return B_OK;
-};
-
-/*! Possibly called by Unset() */
-status_t
-BEntry::clear(){
 };
 
 /*! Handles string allocation, deallocation, and copying for our leaf name. */
 status_t
-BEntry::SetName(const char *name) {
+BEntry::set_name(const char *name) {
 	if (name == NULL)
 		return B_BAD_VALUE;	
 	
