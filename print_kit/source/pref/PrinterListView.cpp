@@ -146,14 +146,14 @@ void PrinterItem::DrawItem(BView *owner, BRect /*bounds*/, bool complete)
 
 		BRect bounds = list->ItemFrame(list->IndexOf(this));
 		
-		rgb_color color = IsSelected() ? ::ui_color(B_MENU_SELECTION_BACKGROUND_COLOR) : 
-										owner->ViewColor();
-										
+		rgb_color color = owner->ViewColor();
+		if ( IsSelected() ) 
+			color = tint_color(color, B_HIGHLIGHT_BACKGROUND_TINT);
+								
 		rgb_color oldviewcolor = owner->ViewColor();
 		rgb_color oldlowcolor = owner->LowColor();
 		rgb_color oldcolor = owner->HighColor();
 		owner->SetViewColor( color );
-
 		owner->SetHighColor( color );
 		owner->SetLowColor( color );
 		owner->FillRect(bounds);

@@ -142,13 +142,15 @@ void PrintersWindow::BuildGUI()
 	BRect r(Bounds());
 
 // ------------------------ First of all, create a nice grey backdrop
-	BView* backdrop = new BView(Bounds(), "backdrop", B_FOLLOW_ALL, B_WILL_DRAW);
-	backdrop->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	BBox * backdrop = new BBox(Bounds(), "backdrop", B_FOLLOW_ALL_SIDES,
+						B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
+						B_PLAIN_BORDER);
 	AddChild(backdrop);
 
 // ------------------------ Next, build the printers overview box
 	BBox* printersBox = new BBox(BRect(boxInset, boxInset, r.Width()-boxInset, (r.Height()/2) - (boxInset/2)),
 		"printersBox", B_FOLLOW_ALL);
+	printersBox->SetFont(be_bold_font);
 	printersBox->SetLabel("Printers:");
 	backdrop->AddChild(printersBox);
 
@@ -200,12 +202,13 @@ void PrintersWindow::BuildGUI()
 					printersBox->Bounds().Height()-boxInset);
 	fPrinterListView = new PrinterListView(listBounds);
 	BScrollView* pscroller = new BScrollView("printer_scroller", fPrinterListView,
-								B_FOLLOW_ALL, 0, false, true);
+								B_FOLLOW_ALL, B_WILL_DRAW | B_FRAME_EVENTS, false, true, B_FANCY_BORDER);
 	printersBox->AddChild(pscroller);
 
 // ------------------------ Lastly, build the jobs overview box
 	fJobsBox = new BBox(BRect(boxInset, (r.Height()/2)+(boxInset/2), Bounds().Width()-10, Bounds().Height() - boxInset),
 		"jobsBox", B_FOLLOW_LEFT_RIGHT+B_FOLLOW_BOTTOM);
+	fJobsBox->SetFont(be_bold_font);
 	fJobsBox->SetLabel("Print Jobs: No printer selected");
 	backdrop->AddChild(fJobsBox);
 
@@ -241,7 +244,7 @@ void PrintersWindow::BuildGUI()
 					fJobsBox->Bounds().Height()-boxInset);
 	fJobListView = new BListView(listBounds, "jobs_list", B_SINGLE_SELECTION_LIST, B_FOLLOW_ALL);
 	BScrollView* jscroller = new BScrollView("jobs_scroller", fJobListView,
-								B_FOLLOW_ALL, 0, false, true);
+								B_FOLLOW_ALL, B_WILL_DRAW | B_FRAME_EVENTS, false, true, B_FANCY_BORDER);
 	fJobsBox->AddChild(jscroller);
 
 		// Determine min width
@@ -252,4 +255,6 @@ void PrintersWindow::BuildGUI()
 		// Resize boxes to the same size
 	jscroller->ResizeTo(width, jscroller->Bounds().Height());
 	pscroller->ResizeTo(width, pscroller->Bounds().Height());
+	
+	SetSizeLimits(Bounds().Width(), Bounds().Width(), Bounds().Height(), 20000);	
 }
