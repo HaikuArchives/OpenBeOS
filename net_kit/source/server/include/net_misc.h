@@ -33,6 +33,7 @@ typedef struct ether_addr {
 } ether_addr;
 
 typedef	uint32	ipv4_addr;
+typedef uint32	in_addr_t; /* this for commonality with BSD code */
 
 /* XXX - add some macro's for inserting various types of address
  */

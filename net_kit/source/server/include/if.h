@@ -92,8 +92,10 @@ struct ifnet {
 	int flags;		/* flags */
 	int mtu;		/* mtu */
 
+	thread_id if_thread;
+	ifq *rxq;
+	thread_id rx_thread;
 	ifq *txq;
-	thread_id rx_thread;	
 	thread_id tx_thread;
 
 	int	(*input)(struct mbuf*);

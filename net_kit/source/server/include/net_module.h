@@ -21,6 +21,8 @@ typedef struct net_module {
 	char *name;
 	int proto;
 	int layer;
+	int domain;	/* AF_INET and so on */
+	int sock_type;	/* SOCK_STREAM or SOCK_DGRAM at present */
 
 	int 			(*init) (loaded_net_module *, int *pt);
 	int 			(*dev_init) (ifnet *);
@@ -37,9 +39,10 @@ struct loaded_net_module {
 };
 
 enum {
-	NET_LAYER1	= 1,
-	NET_LAYER2,
-	NET_LAYER3
+	NET_LAYER1	= 1, /* link layer */
+	NET_LAYER2,	/* network layer */
+	NET_LAYER3,	/* transport layer */
+	NET_LAYER4	/* socket layer */
 };
 
 #endif /* OBOS_NET_MODULE_H */
