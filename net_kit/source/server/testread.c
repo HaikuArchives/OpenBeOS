@@ -9,13 +9,14 @@
 #include "mbuf.h"
 #include "ethernet/ethernet.h"
 
+/* Not currently being used! */
+/*
 static void dump_buffer(char *buffer) {
-	/* just dump first 32 bytes... */
 	uint8 *b = (uint8 *)buffer;
 	int i;
 	
 	printf ("  ");
-	for (i=0;i<32;i+=2) {
+	for (i=0;i<128;i+=2) {
 		if (i%16 == 0)
 			printf("\n  ");
 		printf(" %02x", b[i]);
@@ -23,6 +24,7 @@ static void dump_buffer(char *buffer) {
 	}
 	printf("\n\n");
 }
+*/
 
 /* Very much hardcoded device address! Change to point at your
  * card's device driver.
