@@ -52,13 +52,15 @@ InodeAllocator::New(block_run *parentRun, mode_t mode, block_run &run, Inode **i
 	Volume *volume = fTransaction->fVolume;
 
 	status_t status = volume->AllocateForInode(fTransaction,parentRun,mode,fRun);
-	if (status < B_OK)
-		return status;
+	if (status < B_OK) {
+		fTransaction = NULL;
+		RETURN_ERROR(status);
+	}
 
 	run = fRun;
 	fInode = new Inode(volume,volume->ToVnode(run),true);
 	if (fInode == NULL)
-		return B_NO_MEMORY;
+		RETURN_ERROR(B_NO_MEMORY);
 
 	*inode = fInode;
 	return B_OK;
@@ -551,7 +553,7 @@ Inode::ReadAttribute(const char *name,int32 type,off_t pos,uint8 *buffer,size_t 
 		small_data *smallData = FindSmallData(name);
 		if (smallData != NULL) {
 			size_t length = *_length;
-			if (pos > smallData->data_size) {
+			if (pos >= smallData->data_size) {
 				*_length = 0;
 				return B_OK;
 			}
