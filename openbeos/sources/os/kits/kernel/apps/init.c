@@ -29,9 +29,11 @@ int main()
 		proc_id pid;
 
 		pid = sys_proc_create_proc("/boot/bin/fortune", "/boot/bin/fortune", NULL, 0, 5);
-		if(pid >= 0) {
+		if (pid >= 0) {
 			int retcode;
 			sys_proc_wait_on_proc(pid, &retcode);
+		} else {
+			printf("Failed to create a proc for fortune.\n");
 		}
 	}
 
@@ -45,6 +47,8 @@ int main()
 			printf("init: spawned shell, pid 0x%x\n", pid);
 			sys_proc_wait_on_proc(pid, &retcode);
 			printf("init: shell exited with return code %d\n", retcode);
+		} else {
+			printf("Failed to start a shell :(\n");
 		}
 	}
 

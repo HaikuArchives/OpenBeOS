@@ -58,7 +58,7 @@ int main(int argc,char *argv[])
 		if(af_exit_after_script) sys_exit(0);
 	}
 
-	printf("Welcome to the NewOS shell\n");
+	printf("Welcome to the OpenBeOS shell\n");
 
 	for(;;) {
 		int chars_read;
