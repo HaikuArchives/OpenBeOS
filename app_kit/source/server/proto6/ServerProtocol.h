@@ -16,6 +16,11 @@
 #define SERVER_PORT_NAME "OBappserver"
 #define SERVER_INPUT_PORT "OBinputport"
 
+
+// This will be modified. Currently a kludge for the input server until
+// BScreens are implemented by the IK Taeam
+#define GET_SCREEN_MODE 'gsmd'
+
 #define SET_UI_COLORS 'suic'
 #define GET_UI_COLOR 'guic'
 #define SET_DECORATOR 'sdec'
