@@ -5,20 +5,7 @@ SubDir TOP test ;
 # Point the compiler to location of the CppUnit headers
 HDRS += "$(TOP)/cppunit/include" ;
 
-# NOTE: This line makes the compiler use our OpenBeOS headers
-#		when compiling Test.StorageKit.cpp; that means they *must*
-#		be compatible with the R5 libraries, because for
-#		Test.StorageKit.R5, we're linking in R5 libraries to
-# 		a program compiled using our headers. Shouldn't be
-# 		a problem since we're going for source compatibility
-#		anyway, but I thought I'd mention it. There ought to
-#		be a way to compile Test.StorageKit.cpp to two different
-#		object files using two different sets of headers (ours
-#		and Be's), but I haven't dug one up yet... :-)
-HDRS += "$(TOP)/source/lib" ;
-
-# All of our test code smashed together into a library
-Library $(TOP)/test/libstoragetest : 
+SOURCE_FILES =
 	TestUtils.cpp
 	DirectoryTest.cpp
 	EntryTest.cpp
@@ -28,22 +15,12 @@ Library $(TOP)/test/libstoragetest :
 	SymLinkTest.cpp
 ;
 
-# Version of our test suite that links with OpenBeOS libraries
-Main Test.StorageKit.OpenBeOS : Test.StorageKit.cpp ;
-LinkLibraries Test.StorageKit.OpenBeOS : 
-	$(TOP)/test/libstoragetest.a 
-	$(TOP)/cppunit/cppunit.a 
-	$(TOP)/source/lib/libstorage.a
-;
-LinkSharedOSLibs Test.StorageKit.OpenBeOS :
-	/boot/develop/lib/x86/libstdc++.r4.so
-;
-
-
 # Version of our test suite that links with Be's R5 libraries
+
+LibraryFromR5Sources $(TOP)/test/libstoragetest.R5.a : $(SOURCE_FILES) ;
 Main Test.StorageKit.R5 : Test.StorageKit.cpp ;
 LinkLibraries Test.StorageKit.R5 : 
-	$(TOP)/test/libstoragetest.a
+	$(TOP)/test/libstoragetest.R5.a
 	$(TOP)/cppunit/cppunit.a 
 ;
 LinkSharedOSLibs Test.StorageKit.R5 :
@@ -51,3 +28,18 @@ LinkSharedOSLibs Test.StorageKit.R5 :
 	/boot/develop/lib/x86/libbe.so
 ;
 
+
+# Version of our test suite that links with OpenBeOS libraries
+
+HDRS += "$(TOP)/source/lib" ;
+
+LibraryFromPOSIXSources $(TOP)/test/libstoragetest.POSIX.a :  $(SOURCE_FILES) ;
+Main Test.StorageKit.OpenBeOS : Test.StorageKit.cpp ;
+LinkLibraries Test.StorageKit.OpenBeOS : 
+	$(TOP)/test/libstoragetest.POSIX.a 
+	$(TOP)/cppunit/cppunit.a 
+	$(TOP)/source/lib/libstorage.a
+;
+LinkSharedOSLibs Test.StorageKit.OpenBeOS :
+	/boot/develop/lib/x86/libstdc++.r4.so
+;
