@@ -5,7 +5,7 @@
 #ifndef _NEWOS_KERNEL_ARCH_THREAD_STRUCT_H
 #define _NEWOS_KERNEL_ARCH_THREAD_STRUCT_H
 
-#ifdef ARCH_i386
+#ifdef ARCH_x86
 #include <arch/x86/thread_struct.h>
 #endif
 #ifdef ARCH_sh4

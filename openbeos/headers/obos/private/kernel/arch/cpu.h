@@ -38,7 +38,7 @@ int arch_cpu_user_strcpy(char *to, const char *from, addr *fault_handler);
 int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr *fault_handler);
 int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler);
 
-#ifdef ARCH_i386
+#ifdef ARCH_x86
 #include <arch/x86/cpu.h>
 #endif
 #ifdef ARCH_sh4

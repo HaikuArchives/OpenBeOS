@@ -5,7 +5,7 @@
 #ifndef _STAGE2_PRIV_H
 #define _STAGE2_PRIV_H
 
-#include <boot/stage2.h>
+#include <stage2.h>
 
 extern void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr);
 extern void clearscreen(void);

@@ -6,7 +6,7 @@
 // this file declares stuff like addr_range, MAX_*, etc.
 #include <stage2_struct.h>
 
-#ifdef ARCH_i386
+#ifdef ARCH_x86
 #include <arch/x86/stage2.h>
 #endif
 #ifdef ARCH_sh4
