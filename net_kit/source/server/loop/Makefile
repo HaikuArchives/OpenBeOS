@@ -22,6 +22,7 @@ clean:
 	rm ../modules/interface/$(TARGET) *.o; \
 	fi
 	@if test -e $(TARGET); then rm $(TARGET) *.o ; fi
+	@if test -e $(OBJS); then rm $(OBJS); fi
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o ../modules/interface/$(TARGET)
