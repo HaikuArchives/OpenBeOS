@@ -97,6 +97,7 @@ class Inode : public CachedBlock
 		vnode_id ID() const { return fVolume->ToVnode(fBlockNumber); }
 
 		mode_t Mode() const { return Node()->mode; }
+		int32 Flags() const { return Node()->flags; }
 		bool IsDirectory() const { return S_ISDIR(Node()->mode); }
 		bool IsSymLink() const { return S_ISLNK(Node()->mode); }
 

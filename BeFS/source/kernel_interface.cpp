@@ -303,7 +303,8 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id
 {
 	FUNCTION_START(("file = %s\n",file));
 	Volume *volume = (Volume *)_ns;
-
+	char * np;
+	
 	Inode *directory = (Inode *)_directory;
 	BPlusTree *tree;
 	if (directory->GetTree(&tree) != B_OK)
@@ -320,7 +321,35 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **newpath, vnode_id
 		return B_ENTRY_NOT_FOUND;
 	}
 
-	// if "inode" is a symlink, we have to do some more stuff here...
+	// is inode a symlink?
+	if (inode->IsSymLink() && newpath) {
+		if (inode->Flags() & INODE_LONG_SYMLINK) {
+			size_t readBytes = inode->Node()->data.size;
+			char *data = (char *)malloc(readBytes);
+			if (data == NULL) {
+				put_vnode(volume->ID(), inode->ID());
+				RETURN_ERROR(B_NO_MEMORY);
+			} else {
+				status = inode->ReadAt(0, data, &readBytes);
+				if ((status == B_OK) && (readBytes == inode->Node()->data.size)) {
+					status = new_path(data, &np);
+				} else {
+					free(data);
+					put_vnode(volume->ID(), inode->ID());
+					RETURN_ERROR(status);
+				}
+				free(data);		
+			}
+		} else {
+			status = new_path((char *)&inode->Node()->data, &np);
+			if (status != B_OK) {
+				put_vnode(volume->ID(), inode->ID());
+				RETURN_ERROR(status);
+			}
+		}
+		put_vnode(volume->ID(), inode->ID());
+		*newpath = np;
+	}
 
 	return B_OK;
 }
