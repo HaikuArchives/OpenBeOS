@@ -137,6 +137,8 @@ BPlusTree::BPlusTree()
 
 BPlusTree::~BPlusTree()
 {
+	if (fHeader != NULL)
+		free(fHeader);
 }
 
 
