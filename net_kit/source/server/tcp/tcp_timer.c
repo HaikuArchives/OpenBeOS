@@ -162,7 +162,7 @@ int32 tcp_fasttimer(timer *t)
 {
 	struct inpcb *inp;
 	struct tcpcb *tp;
-	
+
 	inp = tcb.inp_next;
 	if (inp) {
 		for (; inp != &tcb; inp = inp->inp_next) {

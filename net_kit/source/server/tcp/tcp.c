@@ -357,7 +357,14 @@ static int tcp_attach(struct socket *so)
 	inp = sotoinpcb(so);
 	tp = tcp_newtcpcb(inp);
 	if (tp == NULL) {
+		/* we don't want to free the socket just yet, so
+		 * record the setting of SS_NOFDREF, then clear the bit,
+		 * detach and then reset the bit.
+		 */
+		int nofd = so->so_state & SS_NOFDREF;
+		so->so_state &= ~SS_NOFDREF;
 		in_pcbdetach(inp);
+		so->so_state |= nofd;
 		return ENOBUFS;
 	}
 	tp->t_state = TCPS_CLOSED;
