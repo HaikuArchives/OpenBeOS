@@ -53,6 +53,8 @@ InodeAllocator::New(block_run *parentRun, mode_t mode, block_run &run, Inode **i
 
 	status_t status = volume->AllocateForInode(fTransaction,parentRun,mode,fRun);
 	if (status < B_OK) {
+		// don't free the space in the destructor, because
+		// the allocation failed
 		fTransaction = NULL;
 		RETURN_ERROR(status);
 	}

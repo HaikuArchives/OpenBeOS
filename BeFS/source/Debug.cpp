@@ -137,7 +137,7 @@ dump_bplustree_header(bplustree_header *header)
 
 
 void
-dump_bplustree_node(bplustree_node *node)
+dump_bplustree_node(bplustree_node *node,bplustree_header *header,Volume *volume)
 {
 	Print("bplustree_node:\n");
 	Print("  left_link      = %Ld\n",node->left_link);
@@ -145,7 +145,62 @@ dump_bplustree_node(bplustree_node *node)
 	Print("  overflow_link  = %Ld\n",node->overflow_link);
 	Print("  all_key_count  = %u\n",node->all_key_count);
 	Print("  all_key_length = %u\n",node->all_key_length);
+	
+	if (header == NULL)
+		return;
+
+	if (node->all_key_count > node->all_key_length
+		|| uint32(node->all_key_count * 10) > (uint32)header->node_size) {
+		Print("\n");
+		dump_block((char *)node,header->node_size/*,sizeof(off_t)*/);
+		return;
+	}
+
+	Print("\n");
+	for (int32 i = 0;i < node->all_key_count;i++) {
+		uint16 length;
+		char buffer[256],*key = (char *)node->KeyAt(i,&length);
+		if (length > 255 || length == 0) {
+			Print("  %2ld. Invalid length (%u)!!\n",i,length);
+			dump_block((char *)node,header->node_size/*,sizeof(off_t)*/);
+			break;
+		}
+		memcpy(buffer,key,length);
+		buffer[length] = '\0';
+
+		off_t *value = node->Values() + i;
+		if ((uint32)value < (uint32)node || (uint32)value > (uint32)node + header->node_size)
+			Print("  %2ld. Invalid Offset!!\n",i);
+		else {
+			Print("  %2ld. ",i);
+			if (header->data_type == BPLUSTREE_STRING_TYPE)
+				Print("\"%s\"",buffer);
+			else if (header->data_type == BPLUSTREE_INT32_TYPE)
+				Print("int32 = %ld (0x%lx)",*(int32 *)&buffer,*(int32 *)&buffer);
+			else if (header->data_type == BPLUSTREE_UINT32_TYPE)
+				Print("uint32 = %lu (0x%lx)",*(uint32 *)&buffer,*(uint32 *)&buffer);
+			else if (header->data_type == BPLUSTREE_INT64_TYPE)
+				Print("int64 = %Ld (0x%Lx)",*(int64 *)&buffer,*(int64 *)&buffer);
+			else
+				Print("???");
+
+			off_t offset = *value & 0x3fffffffffffffffLL;
+			Print(" (%d bytes) -> %Ld",length,offset);
+			if (volume != NULL)
+			{
+				block_run run = volume->ToBlockRun(offset);
+				Print(" (%ld, %d)",run.allocation_group,run.start);
+			}
+			if (bplustree_node::LinkType(*value) == BPLUSTREE_DUPLICATE_FRAGMENT)
+				Print(" (duplicate fragment %Ld)\n",*value & 0x3ff);
+			else if (bplustree_node::LinkType(*value) == BPLUSTREE_DUPLICATE_NODE)
+				Print(" (duplicate node)\n");
+			else
+				Print("\n");
+		}
+	}
 }
+
 
 #define DUMPED_BLOCK_SIZE 16
 

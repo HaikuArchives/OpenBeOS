@@ -445,16 +445,20 @@ BlockAllocator::Free(Transaction *transaction,block_run &run)
 	Locker lock(fLock);
 
 	int32 group = run.allocation_group;
+	uint16 start = run.start;
+	uint16 length = run.length;
+
 	if (group < 0 || group >= fNumGroups
-		|| run.start > fGroups[group].fNumBits
-		|| run.length == 0)
+		|| start > fGroups[group].fNumBits
+		|| start + length > fGroups[group].fNumBits
+		|| length == 0) {
+		FATAL(("someone tried to free an invalid block_run (%ld, %u, %u)\n",group,start,length));
 		return B_BAD_VALUE;
+	}
 
 	AllocationBlock cached(fVolume);
 
-	uint16 start = run.start;
 	uint32 block = run.start / (fVolume->BlockSize() << 3);
-	uint16 length = run.length;
 
 	if (fGroups[group].fFirstFree > start)
 		fGroups[group].fFirstFree = start;

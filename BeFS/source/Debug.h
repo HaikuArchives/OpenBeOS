@@ -10,6 +10,7 @@
 #	include <stdio.h>
 #	define __out printf
 #else
+#	include <null.h>
 #	define __out dprintf
 #endif
 
@@ -56,6 +57,7 @@
 	struct data_stream;
 	struct bfs_inode;
 	struct disk_super_block;
+	class Volume;
 	
 	// some structure dump functions
 	extern void dump_block_run(const char *prefix, block_run &run);
@@ -63,7 +65,7 @@
 	extern void dump_data_stream(data_stream *stream);
 	extern void dump_inode(bfs_inode *inode);
 	extern void dump_bplustree_header(bplustree_header *header);
-	extern void dump_bplustree_node(bplustree_node *node);
+	extern void dump_bplustree_node(bplustree_node *node,bplustree_header *header = NULL,Volume *volume = NULL);
 	extern void dump_block(const char *buffer, int size);
 #endif
 

@@ -508,7 +508,11 @@ BPlusTree::FindKey(bplustree_node *node,const uint8 *key,uint16 keyLength,uint16
 
 		uint16 searchLength;
 		uint8 *searchKey = node->KeyAt(i,&searchLength);
-		
+		if (searchKey + searchLength + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fNodeSize) {
+			fStream->GetVolume()->Panic();
+			RETURN_ERROR(B_BAD_DATA);
+		}
+
 		int32 cmp = CompareKeys(key,keyLength,searchKey,searchLength);
 		if (cmp < 0)
 		{
@@ -799,7 +803,7 @@ BPlusTree::SplitNode(bplustree_node *node,off_t nodeOffset,bplustree_node *other
 	off_t *inKeyValues = node->Values();
 	uint8 *inKeys = node->Keys();
 	uint8 *outKeys = other->Keys();
-	uint16 keyIndex = *_keyIndex;
+	int32 keyIndex = *_keyIndex;	// can become less than zero!
 
 	// how many keys will fit in one (half) page?
 	// that loop will find the answer to this question and
@@ -1028,8 +1032,7 @@ BPlusTree::Insert(Transaction *transaction,const uint8 *key,uint16 keyLength,off
 	bplustree_node *node;
 
 	CachedNode cached(this);
-	while (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
-	{
+	while (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL) {
 		if (node->IsLeaf())	{
 			// first round, check for duplicate entries
 			status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
@@ -1238,8 +1241,10 @@ void
 BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 {
 	// should never happen, but who knows?
-	if (index > node->all_key_count && node->all_key_count > 0)
+	if (index > node->all_key_count && node->all_key_count > 0) {
+		FATAL(("Asked me to remove key outer limits: %u\n",index));
 		return;
+	}
 
 	off_t *values = node->Values();
 
@@ -1251,8 +1256,12 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 
 	uint16 length;
 	uint8 *key = node->KeyAt(index,&length);
-	if (length > BPLUSTREE_MAX_KEY_LENGTH)
+	if (length > BPLUSTREE_MAX_KEY_LENGTH
+		|| key + length + sizeof(off_t) + sizeof(uint16) > (uint8 *)node + fNodeSize) {
+		FATAL(("Key length to long: %s, %u (inode at %ld,%u [%s])\n",key,length,fStream->BlockRun().allocation_group,fStream->BlockRun().start,fStream->Name()));
+		fStream->GetVolume()->Panic();
 		return;
+	}
 
 	uint16 *keyLengths = node->KeyLengths();
 	uint8 *keys = node->Keys();
@@ -1265,7 +1274,7 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 
 	// move key data
 	memmove(key,key + length,node->all_key_length - (key - keys));
-	
+
 	// move and update key lengths
 	if (index > 0 && newKeyLengths != keyLengths)
 		memmove(newKeyLengths,keyLengths,index * sizeof(uint16));
@@ -1275,7 +1284,8 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 	// move values
 	if (index > 0)
 		memmove(newValues,values,index * sizeof(off_t));
-	memmove(newValues + index,values + index + 1,(node->all_key_count - index) * sizeof(off_t));
+	if (node->all_key_count > index)
+		memmove(newValues + index,values + index + 1,(node->all_key_count - index) * sizeof(off_t));
 }
 
 
@@ -1763,7 +1773,7 @@ bplustree_node::KeyAt(int32 index,uint16 *keyLength) const
 	*keyLength = keyLengths[index] - (index != 0 ? keyLengths[index - 1] : 0);
 	if (index > 0)
 		keyStart += keyLengths[index - 1];
-	
+
 	return keyStart;
 }
 

@@ -58,7 +58,7 @@ Volume::IsValidSuperBlock()
 void 
 Volume::Panic()
 {
-	FATAL(("we have to panic... switch to read-only mode!"));
+	FATAL(("we have to panic... switch to read-only mode!\n"));
 	fFlags |= VOLUME_READ_ONLY;
 }
 
