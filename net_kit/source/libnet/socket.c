@@ -150,14 +150,18 @@ int connect(int sock, const struct sockaddr *name, int namelen)
 	return (rv < 0) ? rv : ca.rv;
 }
 
+/* These need to be adjusted to take account of the MSG_PEEK
+ * flag, but old R5 doesn't use it...
+ */
+int recv(int sock, caddr_t data, int buflen, int flags)
+{
+	/* flags gets ignored here... */
+	return read(sock, data, buflen);
+}
+
 int send(int sock, const caddr_t data, int buflen, int flags)
 {
-	int rv = 0;
-//	printf("send: %d bytes from %p (flags = %d)\n", buflen, data, flags);
-	/* flags gets ignored here... */
-	rv = write(sock, data, buflen);
-//	printf("send (write) gave %d\n", rv);
-	return rv;
+	return write(sock, data, buflen);
 }
 
 int getsockopt(int sock, int level, int optnum, void * val, size_t *valsize)
@@ -186,5 +190,40 @@ int setsockopt(int sock, int level, int optnum, const void *val, size_t valsize)
 	
 	ioctl(sock, NET_SOCKET_SETSOCKOPT, &sa, sizeof(sa));
 	return sa.rv;
+}
+
+int getpeername(int sock, struct sockaddr *name, uint32 *namelen)
+{
+	struct getname_args ga;
+	
+	ga.rv = 0;
+	ga.name = name;
+	ga.namelen = namelen;
+	
+	ioctl(sock, NET_SOCKET_GETPEERNAME, &ga, sizeof(ga));
+	return ga.rv;
+}
+
+int getsockname(int sock, struct sockaddr *name, uint32 *namelen)
+{
+	struct getname_args ga;
+	
+	ga.rv = 0;
+	ga.name = name;
+	ga.namelen = namelen;
+	
+	ioctl(sock, NET_SOCKET_GETSOCKNAME, &ga, sizeof(ga));
+	return ga.rv;
+}
+
+int listen(int sock, int backlog)
+{
+	struct listen_args la;
+	
+	la.rv = 0;
+	la.backlog = backlog;
+	
+	ioctl(sock, NET_SOCKET_LISTEN, &la, sizeof(la));
+	return la.rv;
 }
 

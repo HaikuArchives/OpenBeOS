@@ -73,6 +73,12 @@ struct setopt_args {
 	size_t valsize;
 };
 
+struct getname_args {
+	int rv;
+	struct sockaddr *name;
+	uint32 *namelen;
+};
+
 /* To simplify the addition of ones it's an enum! */
 enum {
 	NET_SOCKET_CREATE = B_DEVICE_OP_CODES_END + 0x100,
@@ -80,12 +86,15 @@ enum {
 	NET_SOCKET_RECVFROM,
 	NET_SOCKET_SENDTO,
 	NET_SOCKET_LISTEN,
+	NET_SOCKET_ACCEPT,
 	NET_SOCKET_CONNECT,
 	NET_SOCKET_SELECT,
 	NET_SOCKET_SHUTDOWN,
 	NET_SOCKET_SYSCTL,
 	NET_SOCKET_GETSOCKOPT,
-	NET_SOCKET_SETSOCKOPT
+	NET_SOCKET_SETSOCKOPT,
+	NET_SOCKET_GETSOCKNAME,
+	NET_SOCKET_GETPEERNAME
 };
 
 

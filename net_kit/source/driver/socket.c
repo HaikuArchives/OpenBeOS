@@ -44,7 +44,7 @@ typedef struct {
 	} selectinfo[3];
 } net_socket_cookie;
 
-#define SHOW_INSANE_DEBUGGING     1
+#define SHOW_INSANE_DEBUGGING     0
 #define SERIAL_DEBUGGING          1
 
 /* Prototypes of device hooks functions */
@@ -111,9 +111,10 @@ _EXPORT status_t init_hardware (void)
 {
 	bool safemode = false;
 	void *sfmptr;
-	int rv;
 
 #if SERIAL_DEBUGGING	
+	int rv;
+
 	/* XXX - switch on/off at top of file... */
 	set_dprintf_enabled(true);
 	rv = load_driver_symbols("socket");
@@ -354,6 +355,19 @@ static status_t net_socket_control(void *cookie,
 			return sa->rv;
 		}		
 
+		case NET_SOCKET_GETSOCKNAME: {
+			struct getname_args *ga = (struct getname_args*)data;
+
+			ga->rv = core->sogetsockname(nsc->socket, ga->name, ga->namelen);
+			return ga->rv;
+		}
+		case NET_SOCKET_GETPEERNAME: {
+			struct getname_args *ga = (struct getname_args*)data;
+
+			ga->rv = core->sogetpeername(nsc->socket, ga->name, ga->namelen);
+			return ga->rv;
+		}
+
 /*
 		case NET_STACK_RESTART:
 			core->stop();
@@ -389,11 +403,8 @@ static status_t net_socket_read(void *cookie,
 	iov.iov_len = *readlen;
 	
 	error = core->readit(nsc->socket, &iov, &flags);
-	if (error < 0)
-		return error;
 	*readlen = error;
-
-    return B_OK;
+    return error;
 }
 
 static status_t net_socket_write(void *cookie,
@@ -412,11 +423,9 @@ static status_t net_socket_write(void *cookie,
 	iov.iov_len = *writelen;
 	
 	error = core->writeit(nsc->socket, &iov, 0);
-//	dprintf("writeit gave %d\n", error);
-	if (error < 0)
-		return error;
+	dprintf("writeit gave %d\n", error);
 	*writelen = error;
-	return B_OK;	
+	return error;	
 }
 
 static status_t net_socket_select(void * cookie, 
