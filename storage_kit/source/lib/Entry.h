@@ -143,4 +143,4 @@ private:
 };		// namespace OpenBeOS
 #endif
 
-#endif	// __sk_path_h__
+#endif	// __sk_entry_h__
