@@ -25,7 +25,7 @@ static int null_freecookie(void * cookie)
 	return 0;
 }
 
-static int null_seek(void * cookie, off_t pos, seek_type st)
+static int null_seek(void * cookie, off_t pos, int st)
 {
 	return EPERM;
 }

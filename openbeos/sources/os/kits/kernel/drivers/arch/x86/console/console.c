@@ -161,11 +161,11 @@ static int console_freecookie(void * cookie)
 	return 0;
 }
 
-static int console_seek(void * cookie, off_t pos, seek_type st)
+static int console_seek(void * cookie, off_t pos, int st)
 {
 //	dprintf("console_seek: entry\n");
 
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static int console_close(void * cookie)

@@ -143,9 +143,9 @@ static int mouse_freecookie(void * cookie)
 /*
  * mouse_seek:
  */
-static int mouse_seek(void * cookie, off_t pos, seek_type st)
+static int mouse_seek(void * cookie, off_t pos, int st)
 {
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 } // mouse_seek
 
 /*

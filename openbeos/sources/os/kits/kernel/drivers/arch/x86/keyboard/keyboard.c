@@ -244,9 +244,9 @@ static int keyboard_freecookie(void * cookie)
 	return 0;
 }
 
-static int keyboard_seek(void * cookie, off_t pos, seek_type st)
+static int keyboard_seek(void * cookie, off_t pos, int st)
 {
-	return ERR_NOT_ALLOWED;
+	return EPERM;
 }
 
 static ssize_t keyboard_read(void * cookie, off_t pos, void *buf, size_t *len)
