@@ -1,10 +1,10 @@
 SubDir OBOS_TOP sources os kits kernel boot arch x86 ;
 
 KernelObjects 
-	stage2.c 
-	stage2_asm.S 
-	smp_boot.c  
-	smp_trampoline.S 
+	<$(SOURCE_GRIST)>stage2.c 
+	<$(SOURCE_GRIST)>stage2_asm.S 
+	<$(SOURCE_GRIST)>smp_boot.c  
+	<$(SOURCE_GRIST)>smp_trampoline.S 
 	: 
 	-fno-pic 
 	;

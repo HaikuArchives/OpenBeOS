@@ -4,6 +4,4 @@ SystemMain bootmaker : bootmaker.c ;
 SystemMain bin2h : bin2h.c ;
 SystemMain bin2asm : bin2asm.c ;
 
-KernelObjects false_main.c fibo_main.c kinit.c ;
-
 SubInclude OBOS_TOP sources os kits kernel boot arch ;
