@@ -30,4 +30,4 @@ CppUnitLibrary CppUnitShell.cpp
 	TextTestRunner.cpp ;
 
 LinkSharedOSLibs libcppunit.so :
-	/boot/develop/lib/x86/libstdc++.r4.so ;
+	stdc++.r4 ;

@@ -16,7 +16,6 @@ UnitTest BHandlerTester : main.cpp
 	: kits/app ;
 
 LinkSharedOSLibs BHandlerTester :
-	/boot/home/config/lib/libopenbeos.so
-	/boot/home/config/lib/libcppunit.so
-	/boot/develop/lib/x86/libbe.so
-	/boot/develop/lib/x86/libstdc++.r4.so ;
+	libopenbeos.so
+	be
+	stdc++.r4 ;
