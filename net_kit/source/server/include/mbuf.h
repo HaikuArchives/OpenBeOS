@@ -3,12 +3,12 @@
  *
  * Based on BSD's mbuf principal.
  */
- 
-#ifndef OBOS_MBUF_H
-#define OBOS_MBUF_H
 
 #include "pools.h"
 #include "if.h"
+ 
+#ifndef OBOS_MBUF_H
+#define OBOS_MBUF_H
 
 /* MBuf's are all of a single size, MSIZE bytes. If we have more data
  * than can be fitted we can add a single "MBuf cluster" which is of
@@ -165,7 +165,7 @@ enum {
 	
 /* fill in an mbuf */
 #define MGET(n, type) \
-	n = (struct mbuf*)pool_get(mbpool); \
+	n = (struct mbuf*) pool_get(mbpool); \
 	if (n) { \
 		(n)->m_type = (type); \
 		(n)->m_next = (struct mbuf*)NULL; \
@@ -176,7 +176,7 @@ enum {
 	}
 
 #define MGETHDR(n, type) \
-        n = (struct mbuf*)pool_get(mbpool); \
+        n = (struct mbuf*) pool_get(mbpool); \
         if (n) { \
                 (n)->m_type = (type); \
                 (n)->m_next = (struct mbuf*)NULL; \
