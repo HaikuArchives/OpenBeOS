@@ -212,7 +212,25 @@ BMimeType::GetIcon(BBitmap *icon, icon_size) const
 	return NOT_IMPLEMENTED;
 }
 
-// GetPreferredApp
+//! Fetches the signature of the MIME type's preferred application from the MIME database
+/*! The preferred app is the application that's used to access a file when, for example, the user
+	double-clicks the file in a Tracker window. Unless the file identifies in its attributes a
+	"custom" preferred app, Tracker will ask the file type database for the preferred app
+	that's associated with the file's type.
+	
+	The string pointed to by \c signature must be long enough to
+	hold the preferred applications signature; a length of \c B_MIME_TYPE_LENGTH+1 is
+	recommended.
+	
+	\param signature Pointer to a pre-allocated string into which the signature of the preferred app is copied. If
+	                   the function fails, the contents of the string are undefined.
+	\param verb \c app_verb value that specifies the type of access for which you are requesting the preferred app.
+	            Currently, the only supported app verb is \c B_OPEN.
+	\return
+	- B_OK: Success
+	- B_ENTRY_NOT_FOUND: No preferred app exists for the given type and app_verb
+	- "error code": Failure
+*/
 status_t
 BMimeType::GetPreferredApp(char *signature, app_verb verb) const
 {
@@ -283,7 +301,25 @@ BMimeType::SetIcon(const BBitmap *icon, icon_size)
 	return NOT_IMPLEMENTED;
 }
 
-// SetPreferredApp
+//! Sets the preferred application for the MIME type
+/*! The preferred app is the application that's used to access a file when, for example, the user
+	double-clicks the file in a Tracker window. Unless the file identifies in its attributes a
+	"custom" preferred app, Tracker will ask the file type database for the preferred app
+	that's associated with the file's type.
+	
+	The string pointed to by \c signature must be of
+	length less than or equal to \c B_MIME_TYPE_LENGTH characters.
+	
+	\note If the MIME type is not installed, it will first be installed, and then
+	the preferred app will be set.
+
+	\param signature Pointer to a pre-allocated string containing the signature of the new preferred app.
+	\param verb \c app_verb value that specifies the type of access for which you are setting the preferred app.
+	            Currently, the only supported app verb is \c B_OPEN.
+	\return
+	- B_OK: Success
+	- "error code": Failure
+*/
 status_t
 BMimeType::SetPreferredApp(const char *signature, app_verb verb)
 {
