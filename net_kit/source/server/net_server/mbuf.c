@@ -205,6 +205,7 @@ void m_cat(struct mbuf *m, struct mbuf *n)
 {
 	while (m->m_next)
 		m = m->m_next;
+	
 	while (n) {
 		if (m->m_flags & M_EXT || 
 		    m->m_data + m->m_len + n->m_len >= &m->m_dat[MLEN]) {
@@ -212,7 +213,7 @@ void m_cat(struct mbuf *m, struct mbuf *n)
 			m->m_next = n;
 			return;
 		}
-		memcpy(mtod(m, void*) + m->m_len, mtod(n, void*), n->m_len);
+		memcpy((void*)(mtod(m, char *) + m->m_len), mtod(n, void*), n->m_len);
 		m->m_len += n->m_len;
 		n = m_free(n);
 	}
@@ -397,14 +398,12 @@ nospace:
  * If there is room, it will add up to max_protohdr-len extra bytes to the
  * contiguous region in an attempt to avoid being called next time.
  */
-int MPFail;
-
+int MPFail = 0;
 struct mbuf *m_pullup(struct mbuf *n, int len)
 {
 	struct mbuf *m;
 	int count;
 	int space;
-printf("m_pullup!\n");
 
 	/*
 	 * If first mbuf has no cluster, and has room for len bytes
@@ -425,34 +424,33 @@ printf("m_pullup!\n");
 		if (m == NULL)
 			goto bad;
 		m->m_len = 0;
-		if (n->m_flags & M_PKTHDR)
+		if (n->m_flags & M_PKTHDR) {
 			M_MOVE_PKTHDR(m, n);
+		}
 	}
-        space = &m->m_dat[MLEN] - (m->m_data + m->m_len);
-        do {
-                count = min(min(max(len, max_protohdr), space), n->m_len);
-                memcpy(mtod(m, caddr_t), mtod(n, caddr_t) + m->m_len,
-                    (unsigned)count);
-                len -= count;
-                m->m_len += count;
-                n->m_len -= count;
-                space -= count;
-                if (n->m_len)
-                        n->m_data += count;
-                else
-                        n = m_free(n);
-        } while (len > 0 && n);
-        if (len > 0) {
-                (void)m_free(m);
-                goto bad;
-        }
-        printf("m_pullup: setting m->m_next = %p\n", n);
-        m->m_next = n;
-        return (m);
+	space = &m->m_dat[MLEN] - (m->m_data + m->m_len);
+	do {
+		count = min(min(max(len, max_protohdr), space), n->m_len);
+		memcpy((void *)(mtod(m, caddr_t) + m->m_len), mtod(n, void *), (uint)count);
+		len -= count;
+		m->m_len += count;
+		n->m_len -= count;
+		space -= count;
+		if (n->m_len)
+			n->m_data += count;
+		else
+			n = m_free(n);
+	} while (len > 0 && n);
+	if (len > 0) {
+		(void)m_free(m);
+		goto bad;
+	}
+	m->m_next = n;
+	return (m);
 bad:
-        m_freem(n);
-        MPFail++;
-        return (NULL);
+	m_freem(n);
+	MPFail++;
+	return (NULL);
 }
 
 /*
