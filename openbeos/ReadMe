@@ -11,7 +11,14 @@ Unzip the executable and copy it to /boot/home/config/bin.
 To build the whole source tree, launch a Terminal, cd into the openbeos root
 directory and just type:
 
+  $ ./configure
   $ jam
+
+The configure script generates a file named BuildConfig. As long as configure
+is not modified (!), there is no need to call it again. That is for
+re-building you only need to invoke Jam. If you don't update the source tree
+very frequently, you may want to execute configure after each update just to
+be on the safe side.
 
 NOTE: If you have checked out the latest CVS version, it is not unlikely that
 some parts of the tree won't build.
