@@ -70,9 +70,20 @@ int getpassword(char *password, size_t passlen);
 struct netent   *getnetbyaddr (in_addr_t, int);
 struct netent   *getnetbyname (const char *);
 struct netent   *getnetent (void);
+struct protoent *getprotoent (void);
 struct protoent *getprotobyname (const char *);
 struct protoent *getprotobynumber (int);
 struct hostent  *gethostbyname2 (const char *, int);
+
+void sethostent (int);
+void setnetent (int);
+void setprotoent (int);
+void setservent (int);    
+
+void endhostent (void);
+void endnetent (void);
+void endprotoent (void);
+void endservent (void);  
 
 #define _PATH_HEQUIV    "/etc/hosts.equiv"
 #define _PATH_HOSTS     "/etc/hosts"
