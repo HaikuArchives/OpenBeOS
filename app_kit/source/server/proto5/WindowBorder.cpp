@@ -96,6 +96,10 @@ printf("WindowBorder(): MoveToFront\n");
 printf("WindowBorder(): SetCloseButton\n");
 #endif
 			decor->SetCloseButton(true);
+			swin->SetFocus(true);
+			decor->SetFocus(true);
+			decor->Draw();
+			activeborder=this;
 			break;
 		}
 		case CLICK_ZOOM:
@@ -104,6 +108,10 @@ printf("WindowBorder(): SetCloseButton\n");
 printf("WindowBorder(): SetZoomButton\n");
 #endif
 			decor->SetZoomButton(true);
+			swin->SetFocus(true);
+			decor->SetFocus(true);
+			decor->Draw();
+			activeborder=this;
 			break;
 		}
 		case CLICK_MINIMIZE:
@@ -145,22 +153,38 @@ printf("WindowBorder()::MouseDown: Undefined click type\n");
 
 void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 {
+	click_type click=decor->Clicked(pt, mbuttons);
+	if(click!=CLICK_CLOSE && decor->GetCloseButton())
+	{
+		decor->SetCloseButton(false);
+		decor->Draw();
+	}	
+
+	if(click!=CLICK_ZOOM && decor->GetZoomButton())
+	{
+		decor->SetZoomButton(false);
+		decor->Draw();
+	}	
+
 	if(is_moving_window==true)
 	{
 		float dx=pt.x-mousepos.x,
 			dy=pt.y-mousepos.y;
-		
-		clientframe.OffsetBy(pt);
-
-		swin->Lock();
-		swin->frame.OffsetBy(dx,dy);
-		swin->Unlock();
-
-		layerlock->Lock();
-		MoveBy(dx,dy);
-		layerlock->Unlock();
-		decor->MoveBy(BPoint(dx, dy));
-		decor->Draw();
+		if(dx!=0 || dy!=0)
+		{
+			clientframe.OffsetBy(pt);
+	
+			swin->Lock();
+			swin->frame.OffsetBy(dx,dy);
+			swin->Unlock();
+	
+			layerlock->Lock();
+			MoveBy(dx,dy);
+			parent->RequestDraw();
+			layerlock->Unlock();
+			decor->MoveBy(BPoint(dx, dy));
+			decor->Draw();
+		}
 	}
 	mousepos=pt;
 }
@@ -171,6 +195,28 @@ void WindowBorder::MouseUp(BPoint pt, uint32 buttons)
 	mbuttons=buttons;
 	activeborder=NULL;
 	is_moving_window=false;
+
+	click_type click=decor->Clicked(pt, mbuttons);
+
+	switch(click)
+	{
+		case CLICK_CLOSE:
+		{
+			decor->SetCloseButton(false);
+			decor->Draw();
+			break;
+		}
+		case CLICK_ZOOM:
+		{
+			decor->SetZoomButton(false);
+			decor->Draw();
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
 }
 
 void WindowBorder::Draw(BRect update_rect)
