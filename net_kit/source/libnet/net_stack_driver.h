@@ -43,22 +43,22 @@ struct int_args {	// used by NET_STACK_LISTEN/_SHUTDOWN
 };
 
 struct sockaddr_args {	// used by NET_STACK_CONNECT/_BIND/_GETSOCKNAME/_GETPEERNAME
-	struct sockaddr * addr;
+	struct sockaddr *addr;
 	int addrlen;
 };
 
 struct sockopt_args {	// used by NET_STACK_SETSOCKOPT/_GETSOCKOPT
 	int   	level;
 	int   	option;
-	void  *	optval;
+	void  *optval;
 	int   	optlen;
 };
 
 struct data_xfer_args {	// used by NET_STACK_SEND/_SENDTO/_RECV/_RECVFROM
-	void * data;
+	void *data;
 	size_t datalen;
 	int flags;
-	struct sockaddr * addr;	// unused in *_SEND and *_RECV cases
+	struct sockaddr *addr;	// unused in *_SEND and *_RECV cases
 	int addrlen;			// unused in *_SEND and *_RECV cases
 };
 
@@ -69,25 +69,25 @@ struct socket_args {	// used by NET_STACK_SOCKET
 };
 
 struct accept_args {	// used by NET_STACK_ACCEPT
-	void * cookie;
-	struct sockaddr * addr;
+	void *cookie;
+	struct sockaddr *addr;
 	int addrlen;
 };
 
 struct select_args {	// used by NET_STACK_SELECT
 	int nbits;
-	struct fd_set * rbits;
-	struct fd_set * wbits;
-	struct fd_set * ebits;
-	struct timeval * timeout;
+	struct fd_set *rbits;
+	struct fd_set *wbits;
+	struct fd_set *ebits;
+	struct timeval *timeout;
 };
 
 struct sysctl_args {	// used by NET_STACK_SYSCTL
-	int * name;
+	int *name;
 	uint namelen;
-	void * oldp;
-	size_t * oldlenp;
-	void * newp;
+	void *oldp;
+	size_t *oldlenp;
+	void *newp;
 	size_t newlen;
 };
 
