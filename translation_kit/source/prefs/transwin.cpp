@@ -11,13 +11,15 @@
 #include "transwin.h"
 #endif
 
+#include <stdlib.h>
+
 
 
 DATWindow::DATWindow(BRect frame)
 				: BWindow(frame, "Data Translations2", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE )
 {
 	newIcon = false;
-	
+
 	BRect   r( 300, 250, 380, 270 );   		// Pos: Info-Button
 	BRect all( 0, 0, 400, 300);       		// Fenster-Groesse
 	BRect  cv( 150, 13, 387, 245);     		// ConfigView & hosting Box
@@ -26,7 +28,7 @@ DATWindow::DATWindow(BRect frame)
 	BRect ic ( 156 , 245, 188 , 277);		// Pos: TrackerIcon
 
 	Konf = new BView(cv, "KONF", B_NOT_RESIZABLE, B_WILL_DRAW );
-	Konf->SetViewColor(217,217,217);
+	// Konf->SetViewColor(217,217,217);
 
 	rBox = new BBox(cv, "Right_Side");
 	gBox = new BBox(mau, "Grau");
@@ -40,8 +42,9 @@ DATWindow::DATWindow(BRect frame)
 	
 	dButton = new BButton(r, "STD", "Info. . .", new BMessage(BUTTON_MSG));
 
-	fBox = new BBox(all, "All_Window");
-	fBox->SetBorder(B_NO_BORDER);
+	fBox = new BBox(all, "All_Window", B_FOLLOW_ALL_SIDES,
+						B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
+						B_PLAIN_BORDER);
 
     r.Set( 10, 10, 120, 288);  // List View
         
@@ -142,7 +145,12 @@ void DATWindow::Trans_by_ID(int32 id)
 	
 	rBox->RemoveChild(Konf);
 	if (roster->MakeConfigurationView( translators[id], new BMessage() , &Konf, new BRect( 0, 0, 200, 233)) != B_OK )
-		be_app->PostMessage(B_QUIT_REQUESTED);		
+		{
+		BString text;
+		text << "The translator '" << translator_name << "' has no settings";
+		Konf = new BStringView(BRect(0, 0, 200, 233), "no_settings", text.String()); 
+		};
+		
 	// ( 171, 11, 391, 284)
 	Konf->SetViewColor(217,217,217);
 	Konf->ResizeTo(230, 233);
@@ -197,7 +205,8 @@ void DATWindow::MessageReceived(BMessage* message)
 			// Yes => Show Translator info.
 			Trans_by_ID(selected);
 			archiv.FindString("be:translator_path", selected, &pfad);
-			tex << "Name :" << translator_name << "\nVersion: " << (int32)translator_version << "\nInfo: " << translator_info << "\nPath: " << pfad << "\n"; 
+			tex.SetTo("");
+			tex << "Name: " << translator_name << "\nVersion: " << (int32)translator_version << "\nInfo: " << translator_info << "\nPath: " << pfad << "\n"; 
 			(new BAlert("yo!", tex.String(), "OK"))->Go();
 			tex.SetTo("");
 			DrawIcon();
