@@ -16,26 +16,16 @@
 #include <sys/stat.h>		// For struct stat
 #include <fcntl.h>			// For flock
 
-#include "Error.h"
-
-typedef struct attr_info;
-
 // Forward Declarations
-struct entry_ref;
+typedef struct attr_info;
+typedef struct entry_ref;
 
 //! Private Storage Kit Namespace
 /*! Private Storage Kit Namespace */
 namespace StorageKit {
 
-// Specialized Exceptions
-class EEntryNotFound : public Error {
-public:
-	EEntryNotFound() : Error(ENOENT, "Entry not found") {};
-};
-
-// File descriptor type -- POSIX versions
+// Type aliases
 typedef int FileDescriptor;
-typedef DIR* Dir;
 typedef dirent DirEntry;
 typedef flock FileLock;
 typedef struct stat Stat;
@@ -45,36 +35,12 @@ typedef int OpenFlags;			// open() flags
 typedef mode_t CreationFlags;	// open() mode
 typedef int SeekMode;			// lseek() mode
 
-// for convenience:
+// For convenience:
 struct LongDirEntry : DirEntry { char _buffer[B_FILE_NAME_LENGTH]; };
 
 // Constants -- POSIX versions
 const FileDescriptor NullFd = -1;
-const Dir NullDir = NULL;
 
-//----------------------------------------------------------------------
-// user_* functions pulled from NewOS's vfs.h (with the "user_" part removed)
-//----------------------------------------------------------------------
-//int mount(const char *path, const char *device, const char *fs_name, void *args);
-//int unmount(const char *path);
-//int sync(void); 
-//int open(const char *path, stream_type st, int omode);
-//int close(int fd);
-//int fsync(int fd);
-//ssize_t read(int fd, void *buf, off_t pos, ssize_t len);
-//ssize_t write(int fd, const void *buf, off_t pos, ssize_t len);
-//int seek(int fd, off_t pos, seek_type seek_type);
-//int ioctl(int fd, int op, void *buf, size_t len);
-//int create(const char *path, stream_type stream_type);
-//int unlink(const char *path);
-//int rename(const char *oldpath, const char *newpath);
-//int rstat(const char *path, struct file_stat *stat);
-//int wstat(const char *path, struct file_stat *stat, int stat_mask);
-//int getcwd(char *buf, size_t size);
-//int setcwd(const char* path);
-//int dup(int fd);
-//int dup2(int ofd, int nfd);
-//----------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // File Functions
@@ -127,6 +93,12 @@ status_t dup( FileDescriptor file, FileDescriptor& result );
 	and then returns. */
 status_t sync( FileDescriptor file );
 
+/*! Locks the given file so it may not be accessed by anyone else. */
+status_t lock( FileDescriptor file, OpenFlags mode, FileLock *lock );
+
+/*! Unlocks a file previously locked with lock(). */
+status_t unlock( FileDescriptor file, FileLock *lock );
+
 /*! Returns statistical information for the given file. */
 status_t get_stat(const char *path, Stat *s);
 status_t get_stat(FileDescriptor file, Stat *s);
@@ -134,12 +106,6 @@ status_t get_stat(entry_ref &ref, Stat *s);
 
 /*! Modifies a given portion of the file's statistical information. */
 status_t set_stat( FileDescriptor file, Stat &s, StatMember what );
-
-/*! Locks the given file so it may not be accessed by anyone else. */
-status_t lock( FileDescriptor file, OpenFlags mode, FileLock *lock );
-
-/*! Unlocks a file previously locked with lock(). */
-status_t unlock( FileDescriptor file, FileLock *lock );
 
 
 //------------------------------------------------------------------------------
@@ -166,20 +132,16 @@ status_t stat_attr( FileDescriptor file, const char *name, AttrInfo *ai );
 // Attribute Directory Functions
 //------------------------------------------------------------------------------
 /*! Opens the attribute directory of a given file. */
-Dir dopen_attr_dir( FileDescriptor file );
 FileDescriptor open_attr_dir( FileDescriptor file );
 
 /*! Rewinds the given attribute directory. */
-void drewind_attr_dir( Dir dir );
 void rewind_attr_dir( FileDescriptor dirFd );
 
 /*! Returns the next item in the given attribute directory, or
 	B_ENTRY_NOT_FOUND if at the end of the list. */
-DirEntry* dread_attr_dir( Dir dir );
 DirEntry* read_attr_dir( FileDescriptor dirFd );
 
 /*! Closes an attribute directory previously opened with open_attr_dir(). */
-status_t dclose_attr_dir( Dir dir );
 status_t close_attr_dir( FileDescriptor dirFd );
 
 
@@ -188,7 +150,6 @@ status_t close_attr_dir( FileDescriptor dirFd );
 //------------------------------------------------------------------------------
 /*! Opens the given directory. Sets result to a properly "unitialized" directory
 	if the function fails. */
-status_t dopen_dir( const char *path, Dir &result );
 status_t open_dir( const char *path, FileDescriptor &result );
 
 //! Creates a new directory.
@@ -200,12 +161,10 @@ status_t create_dir( const char *path, FileDescriptor &result,
 					 mode_t mode = S_IRWXU | S_IRWXG | S_IRWXU);
 
 //! \brief Returns the next entries in the given directory.
-DirEntry* dread_dir( Dir dir );
 int32 read_dir( FileDescriptor dir, DirEntry *buffer, size_t length,
 				int32 count = INT_MAX);
 
 /*! Rewindes the directory to the first entry in the list. */
-status_t drewind_dir( Dir dir );
 status_t rewind_dir( FileDescriptor dir );
 
 /*! Iterates through the given directory searching for an entry whose name
@@ -214,23 +173,19 @@ status_t rewind_dir( FileDescriptor dir );
 	StorageKit::NullDir.
 	
 	<b>Note:</b> This call modifies the internal position marker of dir. */
-status_t dfind_dir( Dir dir, const char *name, DirEntry *&result );
 status_t find_dir( FileDescriptor dir, const char *name, DirEntry *result,
 				   size_t length );
 
 /*! Calls the other version of StorageKit::find_dir() and stores the results
 	in the given entry_ref. */
-status_t dfind_dir( Dir dir, const char *name, entry_ref &result );
 status_t find_dir( FileDescriptor dir, const char *name, entry_ref *result );
 
 /*! Creates a duplicated of the given directory and places it in result if successful,
 	returning B_OK. Returns an error code and sets result to -1 if
 	unsuccessful. */
-status_t ddup_dir( Dir dir, Dir &result );
 status_t dup_dir( FileDescriptor dir, FileDescriptor &result );
 
 /*! Closes the given directory. */
-status_t dclose_dir( Dir dir );
 status_t close_dir( FileDescriptor dir );
 
 //------------------------------------------------------------------------------
@@ -278,7 +233,6 @@ status_t entry_ref_to_path( dev_t device, ino_t directory, const char *name, cha
 	If dir is < 0 or result is NULL, B_BAD_VALUE is returned.
 	Otherwise, an appropriate error code is returned.
  */
-status_t ddir_to_self_entry_ref( Dir dir, entry_ref *result );
 status_t dir_to_self_entry_ref( FileDescriptor dir, entry_ref *result );
 
 

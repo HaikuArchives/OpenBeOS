@@ -89,6 +89,9 @@ dir_to_fd( DIR *dir ) {
 	}
 }
 
+//------------------------------------------------------------------------------
+// File Functions
+//------------------------------------------------------------------------------
 
 status_t
 StorageKit::open( const char *path, OpenFlags flags, FileDescriptor &result ) {
@@ -260,113 +263,12 @@ StorageKit::dup( FileDescriptor file, FileDescriptor& result )
 	return error;
 }
 
-
-ssize_t
-StorageKit::read_attr ( StorageKit::FileDescriptor file, const char *attribute, 
-				 uint32 type, off_t pos, void *buf, size_t count ) {
-	if (attribute == NULL || buf == NULL)
-		return B_BAD_VALUE;
-			
-	return fs_read_attr ( file, attribute, type, pos, buf, count );
-}
-
-ssize_t
-StorageKit::write_attr ( StorageKit::FileDescriptor file, const char *attribute, 
-				  uint32 type, off_t pos, const void *buf, 
-				  size_t count ) {
-	if (attribute == NULL || buf == NULL)
-		return B_BAD_VALUE;
-			
-	return fs_write_attr ( file, attribute, type, pos, buf, count );
-}
-
 status_t
-StorageKit::remove_attr ( StorageKit::FileDescriptor file, const char *attr ) {
-	if (attr == NULL)
-		return B_BAD_VALUE;	
-
-	// fs_remove_attr is supposed to set errno properly upon failure,
-	// but currently does not appear to. It isn't set consistent
-	// with what is returned by R5::BNode::RemoveAttr(), and it isn't
-	// set consistent with what the BeBook's claims it is set to either.
-	return fs_remove_attr ( file, attr ) == -1 ? errno : B_OK ;
+StorageKit::sync( FileDescriptor file ) {
+	return (fsync(file) == -1) ? errno : B_OK ;
 }
 
-StorageKit::Dir
-StorageKit::dopen_attr_dir( FileDescriptor file ) {
-	return fs_fopen_attr_dir( file );
-}
-
-StorageKit::FileDescriptor
-StorageKit::open_attr_dir( FileDescriptor file ) {
-	// Open the dir and convert it to a plain file descriptor.
-	return dir_to_fd( fs_fopen_attr_dir( file ) );
-}
-
-
-void
-StorageKit::drewind_attr_dir( Dir dir ) {
-	if (dir != NULL)
-		fs_rewind_attr_dir( dir );
-}
-
-void
-StorageKit::rewind_attr_dir( FileDescriptor dirFd ) {
-	DIR *dir = fd_to_dir( dirFd );
-	if (dir != NULL)
-		fs_rewind_attr_dir( dir );
-//	free(dir);
-}
-
-StorageKit::DirEntry*
-StorageKit::dread_attr_dir( Dir dir ) {
-	return (dir == NullDir) ? NULL : fs_read_attr_dir( dir );
-}
-
-StorageKit::DirEntry*
-StorageKit::read_attr_dir( FileDescriptor dirFd ) {
-	DIR* dir = fd_to_dir(dirFd);
-	if (dir == NULL)
-		return NULL;
-
-	DirEntry *result = fs_read_attr_dir( dir );
-//	free(dir);
-	return result;
-}
-
-status_t
-StorageKit::dclose_attr_dir ( Dir dir )
-{
-	if (dir == NULL)
-		return B_BAD_VALUE;
-	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
-}
-
-status_t
-StorageKit::close_attr_dir ( FileDescriptor dirFd )
-{
-	if (dirFd == StorageKit::NullFd)
-		return B_BAD_VALUE;
-		
-	// Allocate a new DIR*, set it up with the proper file descriptor,
-	// and then close it.
-	DIR *dir = fd_to_dir(dirFd);
-	if (dir == NULL)
-		return B_NO_MEMORY;
-		
-	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
-}
-
-status_t
-StorageKit::stat_attr( FileDescriptor file, const char *name, AttrInfo *ai )
-{
-	if (name == NULL || ai == NULL)
-		return B_BAD_VALUE;
-		
-	return (fs_stat_attr( file, name, ai ) == -1) ? errno : B_OK ;
-}
-
-
+//! /todo Get rid of DumpLock() at some point (it's only for debugging)
 void DumpLock(StorageKit::FileLock &lock) {
 	cout << endl;
 	cout << "type   == ";
@@ -531,17 +433,104 @@ StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
 	return (result == -1) ? errno : B_OK ;
 }
 
-status_t
-StorageKit::sync( FileDescriptor file ) {
-	return (fsync(file) == -1) ? errno : B_OK ;
+
+//------------------------------------------------------------------------------
+// Attribute Functions
+//------------------------------------------------------------------------------
+
+
+
+ssize_t
+StorageKit::read_attr ( StorageKit::FileDescriptor file, const char *attribute, 
+				 uint32 type, off_t pos, void *buf, size_t count ) {
+	if (attribute == NULL || buf == NULL)
+		return B_BAD_VALUE;
+			
+	return fs_read_attr ( file, attribute, type, pos, buf, count );
+}
+
+ssize_t
+StorageKit::write_attr ( StorageKit::FileDescriptor file, const char *attribute, 
+				  uint32 type, off_t pos, const void *buf, 
+				  size_t count ) {
+	if (attribute == NULL || buf == NULL)
+		return B_BAD_VALUE;
+			
+	return fs_write_attr ( file, attribute, type, pos, buf, count );
 }
 
 status_t
-StorageKit::dopen_dir( const char *path, Dir &result ) {
-//	cout << endl << "open_dir()" << endl;
-	result = ::opendir( path );
-	return (result == NullDir) ? errno : B_OK ;
+StorageKit::remove_attr ( StorageKit::FileDescriptor file, const char *attr ) {
+	if (attr == NULL)
+		return B_BAD_VALUE;	
+
+	// fs_remove_attr is supposed to set errno properly upon failure,
+	// but currently does not appear to. It isn't set consistent
+	// with what is returned by R5::BNode::RemoveAttr(), and it isn't
+	// set consistent with what the BeBook's claims it is set to either.
+	return fs_remove_attr ( file, attr ) == -1 ? errno : B_OK ;
 }
+
+status_t
+StorageKit::stat_attr( FileDescriptor file, const char *name, AttrInfo *ai )
+{
+	if (name == NULL || ai == NULL)
+		return B_BAD_VALUE;
+		
+	return (fs_stat_attr( file, name, ai ) == -1) ? errno : B_OK ;
+}
+
+
+//------------------------------------------------------------------------------
+// Attribute Directory Functions
+//------------------------------------------------------------------------------
+
+StorageKit::FileDescriptor
+StorageKit::open_attr_dir( FileDescriptor file ) {
+	// Open the dir and convert it to a plain file descriptor.
+	return dir_to_fd( fs_fopen_attr_dir( file ) );
+}
+
+
+void
+StorageKit::rewind_attr_dir( FileDescriptor dirFd ) {
+	DIR *dir = fd_to_dir( dirFd );
+	if (dir != NULL)
+		fs_rewind_attr_dir( dir );
+//	free(dir);
+}
+
+StorageKit::DirEntry*
+StorageKit::read_attr_dir( FileDescriptor dirFd ) {
+	DIR* dir = fd_to_dir(dirFd);
+	if (dir == NULL)
+		return NULL;
+
+	DirEntry *result = fs_read_attr_dir( dir );
+//	free(dir);
+	return result;
+}
+
+status_t
+StorageKit::close_attr_dir ( FileDescriptor dirFd )
+{
+	if (dirFd == StorageKit::NullFd)
+		return B_BAD_VALUE;
+		
+	// Allocate a new DIR*, set it up with the proper file descriptor,
+	// and then close it.
+	DIR *dir = fd_to_dir(dirFd);
+	if (dir == NULL)
+		return B_NO_MEMORY;
+		
+	return (fs_close_attr_dir( dir ) == -1) ? errno : B_OK ;
+}
+
+
+
+//------------------------------------------------------------------------------
+// Directory Functions
+//------------------------------------------------------------------------------
 
 status_t
 StorageKit::open_dir( const char *path, FileDescriptor &result ) {
@@ -586,11 +575,6 @@ StorageKit::create_dir( const char *path, FileDescriptor &result,
 	return error;
 }
 
-StorageKit::DirEntry*
-StorageKit::dread_dir( Dir dir ) {
-	return (dir == NullDir) ? NULL : readdir(dir) ;
-}
-
 /*!	\param dir the directory
 	\param buffer the dirent structure to be filled
 	\param length the size of the dirent structure
@@ -629,16 +613,6 @@ StorageKit::read_dir( FileDescriptor dir, DirEntry *buffer, size_t length,
 }
 
 status_t
-StorageKit::drewind_dir( Dir dir ) {
-	if (dir == NullDir)
-		return B_BAD_VALUE;
-	else {
-		::rewinddir(dir);
-		return B_OK;
-	}
-}
-
-status_t
 StorageKit::rewind_dir( FileDescriptor dir ) {
 	if (dir < 0)
 		return B_BAD_VALUE;
@@ -649,29 +623,6 @@ StorageKit::rewind_dir( FileDescriptor dir ) {
 		::rewinddir(&dirDir);
 		return B_OK;
 	}
-}
-
-status_t
-StorageKit::dfind_dir( Dir dir, const char *name, DirEntry *&result ) {
-	if (dir == NullDir || name == NULL)
-		return B_BAD_VALUE;
-	
-	status_t status;
-	
-	status = StorageKit::drewind_dir(dir);
-	if (status == B_OK) {
-		for (	result = StorageKit::dread_dir(dir);
-				result != NULL;
-				result = StorageKit::dread_dir(dir)	)
-		{
-			if (strcmp(result->d_name, name) == 0)
-				return B_OK;
-		}
-		status = B_ENTRY_NOT_FOUND;
-	}
-	
-	result = NULL;
-	return status;
 }
 
 status_t
@@ -696,18 +647,6 @@ StorageKit::find_dir( FileDescriptor dir, const char *name,
 }
 
 status_t
-StorageKit::dfind_dir( Dir dir, const char *name, entry_ref &result ) {
-	DirEntry *entry;
-	status_t status = StorageKit::dfind_dir(dir, name, entry);
-	if (status != B_OK)
-		return status;
-		
-	result.device = entry->d_pdev;
-	result.directory = entry->d_pino;
-	return result.set_name(entry->d_name);
-}
-
-status_t
 StorageKit::find_dir( FileDescriptor dir, const char *name, entry_ref *result )
 {
 	LongDirEntry entry;
@@ -720,88 +659,9 @@ StorageKit::find_dir( FileDescriptor dir, const char *name, entry_ref *result )
 }
 
 status_t
-StorageKit::ddup_dir( Dir dir, Dir &result ) {
-	status_t status = B_ERROR;
-
-	if (dir == NullDir) {
-		status = B_BAD_VALUE;
-	} else {
-
-		// We need to find the entry for "." in the
-		// given directory, get its full path, and
-		// open it as a directory.
-
-		// Find "."
-		DirEntry *entry;
-		status = StorageKit::dfind_dir(dir, ".", entry);
-
-		if (status == B_OK) {
-		
-			// Convert it to an absolute pathname
-			char path[B_PATH_NAME_LENGTH+1];
-			status = StorageKit::entry_ref_to_path(entry->d_pdev,
-				entry->d_pino, ".", path, B_PATH_NAME_LENGTH+1);
-				
-			if (status == B_OK) {			
-				// Open it
-				status = StorageKit::dopen_dir( path, result );				
-			}			
-		}		
-	}
-	
-	
-	if (status != B_OK) {
-		result = NullDir;
-	}
-
-	return status;		 	
-}
-
-status_t
 StorageKit::dup_dir( FileDescriptor dir, FileDescriptor &result )
 {
-/*	status_t status = B_ERROR;
-
-	if (dir == NullDir) {
-		status = B_BAD_VALUE;
-	} else {
-
-		// We need to find the entry for "." in the
-		// given directory, get its full path, and
-		// open it as a directory.
-
-		// Find "."
-		DirEntry *entry;
-		status = StorageKit::find_dir(dir, ".", entry);
-
-		if (status == B_OK) {
-		
-			// Convert it to an absolute pathname
-			char path[B_PATH_NAME_LENGTH+1];
-			status = StorageKit::entry_ref_to_path(entry->d_pdev,
-				entry->d_pino, ".", path, B_PATH_NAME_LENGTH+1);
-				
-			if (status == B_OK) {			
-				// Open it
-				status = StorageKit::open_dir( path, result );				
-			}			
-		}		
-	}
-	
-	
-	if (status != B_OK) {
-		result = NullDir;
-	}
-
-	return status;		 	
-*/
 	return StorageKit::dup(dir, result);
-}
-
-
-status_t
-StorageKit::dclose_dir( Dir dir ) {
-	return (::closedir(dir) == -1) ? errno : B_OK;	
 }
 
 status_t
@@ -811,6 +671,10 @@ StorageKit::close_dir( FileDescriptor dir ) {
 	dirDir->fd = dir;
 	return (::closedir(dirDir) == -1) ? errno : B_OK;	
 }
+
+//------------------------------------------------------------------------------
+// SymLink functions
+//------------------------------------------------------------------------------
 
 /*!	The parent directory must already exist.
 	\param path the link's path name
@@ -860,6 +724,9 @@ StorageKit::read_link( const char *path, char *result, int size ) {
 	
 }
 
+//------------------------------------------------------------------------------
+// Miscellaneous Functions
+//------------------------------------------------------------------------------
 
 status_t
 StorageKit::entry_ref_to_path( const struct entry_ref *ref, char *result, int size ) {
@@ -999,13 +866,6 @@ StorageKit::entry_ref_to_path( dev_t device, ino_t directory, const char *name, 
 	result[0] = 0;
 	return -13;
 	
-}
-
-status_t
-StorageKit::ddir_to_self_entry_ref( Dir dir, entry_ref *result ) {
-	if (dir == StorageKit::NullDir || result == NULL)
-		return B_BAD_VALUE;
-	return dfind_dir(dir, ".", *result);
 }
 
 status_t
