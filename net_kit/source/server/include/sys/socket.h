@@ -194,10 +194,10 @@ int 	accept(int, struct sockaddr *, int *);
 int     closesocket(int);
 int     shutdown(int sock, int how);
 
-int     send(int, const void *, int, int);
-int     recv(int, void *, int, int);
-int     sendto(int, const void *, size_t, int, const struct sockaddr *, size_t);
-int     recvfrom(int, void *, size_t, int, struct sockaddr *, size_t *);
+ssize_t send(int, const void *, size_t, int);
+ssize_t recv(int, void *, size_t, int);
+ssize_t sendto(int, const void *, size_t, int, const struct sockaddr *, size_t);
+ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, size_t *);
 
 int     setsockopt(int, int, int, const void *, size_t);
 int     getsockopt(int, int, int, void *, size_t *);
