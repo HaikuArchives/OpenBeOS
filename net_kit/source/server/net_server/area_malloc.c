@@ -3,37 +3,41 @@
  * This will abort on a buffer overrun and warn on a buffer underrun.
  */
 
+#include <string.h>
+#include "net_malloc.h"
 
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-
-#define printf dprintf
-
 int32 where = B_ANY_KERNEL_ADDRESS;
 #else
 #include <stdio.h>
 #include <kernel/OS.h>
 int32 where = B_ANY_ADDRESS;
 
-#endif
-
-#ifndef _KERNEL_MODE
 void panic(char*p)
 {
 	printf("%s\n",p);
 	fflush(0);
-	// exit(-1); //commented out to see all tests 
+	exit(-1); //commented out to see all tests 
 }
 #endif
 
 	
-void *dbg_malloc(size_t size)
+void *dbg_malloc(char *file, int line, size_t size)
 {
 	static char *startaddr = 0;
 	char *adr;
 	size_t realsize;
+	char name[64];
 	area_id id;
+	char *p;
 
+	p = strrchr(file, '/');
+	p = (p == NULL) ? file : p + 1;
+	sprintf(name, "%s, %d",p,line);
+
+	printf("MALLOC: %s: %d bytes requested\n", name, size);
+			
 	//aquire lock sem here
 
 	if (startaddr == 0) {
@@ -41,16 +45,16 @@ void *dbg_malloc(size_t size)
 		area_id id1;
 		area_id id2;
 		void *adr1;
-		size_t size1 = 1000 * B_PAGE_SIZE; // about 4 MB
-		size_t size2 = 20000 * B_PAGE_SIZE; // about 80 MB
+		size_t size1 = 4000 * B_PAGE_SIZE; // about 16 MB
+		size_t size2 = 30000 * B_PAGE_SIZE; // about 120 MB
 		id1 = create_area("", (void **)&adr1, where,
 			size1, B_NO_LOCK, B_READ_AREA | B_WRITE_AREA);
 		id2 = create_area("", (void **)&startaddr, where,
 			size2, B_NO_LOCK, B_READ_AREA | B_WRITE_AREA);
 		if (id1 < 0 || id2 < 0)
 			panic("out of memory in init code");
-			delete_area(id1); 
-			delete_area(id2);
+		delete_area(id1); 
+		delete_area(id2);
 	}
 
 	size += 4;
@@ -61,7 +65,7 @@ void *dbg_malloc(size_t size)
 	// next start address is one unmapped page away
 	startaddr += realsize + B_PAGE_SIZE;
 
-	id = create_area("memory", (void **)&adr, B_EXACT_ADDRESS,
+	id = create_area(name, (void **)&adr, B_EXACT_ADDRESS,
 		realsize, B_NO_LOCK, B_READ_AREA | B_WRITE_AREA);
 	if (id < 0)
 		panic("out of memory or address space");
@@ -77,20 +81,28 @@ void *dbg_malloc(size_t size)
 	return adr;
 }
 
-void dbg_free(void *ptr)
+void dbg_free(char *file, int line, void *ptr)
 {
 	char *p = (char *)ptr;
 	area_id id;
-
+	char text[64];
+	char *t;
+	
 	p -= 4;
 
-	if (*(uint32*)p != 0xDEADC0DE) 
-		panic("buffer underrun");
+	t = strrchr(file, '/');
+	t = (t == 0) ? file : t + 1;
+	sprintf(text,"%s, %d buffer underrun",t,line);
 
-	p = (char *) (((int)p) & ~(B_PAGE_SIZE - 1));
+	printf("FREE: %s: free'ing %p\n", text, ptr);
+	
+	if (*(uint32*)p != 0xDEADC0DE)
+		panic(text);
+	
 	id = area_for(p);
 	if (id < 0)
-		panic("no area for buffer");
+		panic(text);
+	
 	delete_area(id);
 }
 
