@@ -129,7 +129,33 @@ entry_ref::operator=(const entry_ref &ref) {
 // BEntry
 //----------------------------------------------------------------------------
 
-/*! Creates an uninitialized BEntry object. */
+/*!
+	\class BEntry
+	\brief A location in the filesystem
+	
+	The BEntry class defines objects that represent "locations" in the file system
+	hierarchy.  Each location (or entry) is given as a name within a directory. For
+	example, when you create a BEntry thus.
+	
+	BEntry entry("/boot/home/fido");
+	
+	...you're telling the BEntry object to represent the location of the file
+	called fido within the directory "/boot/home".
+	
+	\author <a href='mailto:tylerdauwalder@users.sf.net'>Tyler Dauwalder</a>
+	\author <a href='mailto:scusack@users.sf.net'>Simon Cusack</a>
+	
+	\version 0.0.0
+*/
+
+//! Creates an uninitialized BEntry object.
+/*!	Should be followed by a	call to one of the SetTo functions,
+	or an assignment:
+	- SetTo(const BDirectory*, const char*, bool)
+	- SetTo(const entry_ref*, bool)
+	- SetTo(const char*, bool)
+	- operator=(const BEntry&)
+*/
 BEntry::BEntry() :
 	fCStatus(B_NO_INIT),
 	fDirFd(StorageKit::NullFd),
@@ -137,8 +163,16 @@ BEntry::BEntry() :
 {
 }
 
-/*! Creates a BEntry object initialized to path or a dir path combination,
-	resolves symlinks if traverse is true */
+//! Creates a BEntry initialized to the given directory and path combination.
+/*!	If traverse is true and \c dir/path refers to a symlink, the BEntry will
+	refer to the linked file; if false,	the BEntry will refer to the symlink itself.
+	
+	\param dir directory in which \a path resides
+	\param path relative path reckoned off of \a dir
+	\param traverse whether or not to traverse symlinks
+	\see SetTo(const BDirectory*, const char *, bool)
+
+*/
 BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false) :
 	fCStatus(B_NO_INIT),
 	fDirFd(StorageKit::NullFd),
@@ -147,8 +181,16 @@ BEntry::BEntry(const BDirectory *dir, const char *path, bool traverse = false) :
 	SetTo(dir, path, traverse);
 };
 
-/*! Creates a BEntry object initialized to the entry_ref, resolves
-	symlinks if traverse is true */
+//! Creates a BEntry for the file referred to by the given entry_ref.
+/*!	If traverse is true and \a ref refers to a symlink, the BEntry
+	will refer to the linked file; if false, the BEntry will refer
+	to the symlink itself.
+	
+	\param ref the entry_ref referring to the given file
+	\param traverse whether or not symlinks are to be traversed
+	\see SetTo(const entry_ref*, bool)
+*/
+
 BEntry::BEntry(const entry_ref *ref, bool traverse = false) :
 	fCStatus(B_NO_INIT),
 	fDirFd(StorageKit::NullFd),
@@ -157,8 +199,17 @@ BEntry::BEntry(const entry_ref *ref, bool traverse = false) :
 	SetTo(ref, traverse);
 };
 
-/*! Creates a BEntry object initialized to the path, resolves
-	symlinks if traverse is true */
+//! Creates a BEntry initialized to the given path.
+/*!	If \a path is relative, it will
+	be reckoned off the current working directory. If \a path refers to a symlink and
+	traverse is true, the BEntry will refer to the linked file. If traverse is false,
+	the BEntry will refer to the symlink itself.
+	
+	\param path the file of interest
+	\param traverse whether or not symlinks are to be traversed	
+	\see SetTo(const char*, bool)
+	
+*/
 BEntry::BEntry(const char *path, bool traverse = false) :
 	fCStatus(B_NO_INIT),
 	fDirFd(StorageKit::NullFd),
@@ -167,7 +218,10 @@ BEntry::BEntry(const char *path, bool traverse = false) :
 	SetTo(path, traverse);
 };
 
-/*! Copy constructor; creates a BEntry object initialized as a duplicate of another entry. */
+//! Creates a copy of the given BEntry.
+/*! \param entry the entry to be copied
+	\see operator=(const BEntry&)
+*/
 BEntry::BEntry(const BEntry &entry) :
 	fCStatus(B_NO_INIT),
 	fDirFd(StorageKit::NullFd),

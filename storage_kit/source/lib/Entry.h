@@ -43,25 +43,6 @@ struct entry_ref {
 	char				*name;
 };
 
-/*!
-	@class BEntry
-	@brief An Entry represents a location in a file system.
-	
-	The BEntry class defines objects that represent "locations" in the file system
-	hierarchy.  Each location (or entry) is given as a name within a directory. For
-	example, when you create a BEntry thus.
-	
-	BEntry entry("/boot/home/fido");
-	
-	...you're telling the BEntry object to represent the location of the file 	called fido within the directory "/
-	boot/home".
-	
-	@author <a href='mailto:tylerdauwalder@users.sf.net'>Tyler Dauwalder</a>
-	@author <a href='mailto:scusack@users.sf.net'>Simon Cusack</a>
-	@author Be Inc.
-	
-	@version 0.0.0
-*/
 class BEntry : public BStatable {
 public:
 	BEntry();
