@@ -32,6 +32,9 @@ SRCS= Driver.cpp \
 	  JobSetupWindow.cpp \
 	  PrinterSetupWindow.cpp \
 	  StatusWindow.cpp \
+	  DocInfoWindow.cpp \
+	  Fonts.cpp \
+	  FontsWindow.cpp \
 	  MarginView.cpp \
 	  PrinterSettings \
 	  PrinterPrefs \
@@ -99,7 +102,7 @@ SYMBOLS =
 DEBUGGER = 
 
 #	specify additional compiler flags for all files
-COMPILER_FLAGS =
+COMPILER_FLAGS = -DPATTERN_SUPPORT=0
 
 #	specify additional linker flags
 LINKER_FLAGS =
