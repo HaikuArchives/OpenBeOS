@@ -2,3 +2,4 @@ CVS
 *.o
 socket
 *.xMAP
+net_stack_driver
