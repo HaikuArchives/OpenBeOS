@@ -80,9 +80,12 @@ _shared_buffer_list::Terminate(sem_id group_reclaim_sem)
 		if (info[i].reclaim_sem == group_reclaim_sem) {
 			// delete the associated buffer
 			delete info[i].buffer;
+			// decrement buffer count by one
+			buffercount--;
 			// fill the gap in the list with the last element
-			// and adjust i and buffercount 
-			info[i--] = info[--buffercount]; // XXX is this correct?
+			if (buffercount > 0)
+				info[i] = info[buffercount];
+			i--; // make sure we check this entry again
 		}
 	}
 	
@@ -133,8 +136,11 @@ _shared_buffer_list::AddBuffer(sem_id group_reclaim_sem, BBuffer *buffer)
 	info[buffercount].reclaim_sem = group_reclaim_sem;
 	info[buffercount].reclaimed = true;
 	buffercount++;
-	
-	return Unlock();
+
+	status_t status1 = release_sem_etc(group_reclaim_sem,1,B_DO_NOT_RESCHEDULE);
+	status_t status2 = Unlock();
+
+	return (status1 == B_OK && status2 == B_OK) ? B_OK : B_ERROR;
 }
 
 status_t	
@@ -146,19 +152,28 @@ _shared_buffer_list::RequestBuffer(sem_id group_reclaim_sem, int32 buffers_in_gr
 	// if "wantID" != 0, we search for a buffer with this id
 	// if "*buffer" != NULL, we search for a buffer at this address
 	// if we found a buffer, we also need to mark it in all other groups as requested
-	// and also once need to release the reclaim_sem of the other groups
+	// and also once need to acquire the reclaim_sem of the other groups
 	
 	status_t status;
+	uint32 acquire_flags;
 	int32 count;
 
-	if (timeout != B_INFINITE_TIMEOUT)	
+	if (timeout <= 0) {
+		timeout = 0;
+		acquire_flags = B_RELATIVE_TIMEOUT;
+	} else if (timeout != B_INFINITE_TIMEOUT) {
 		timeout += system_time();
+		acquire_flags = B_ABSOLUTE_TIMEOUT;
+	} else {
+	 	//timeout is B_INFINITE_TIMEOUT
+		acquire_flags = B_RELATIVE_TIMEOUT;
+	}
 		
 	// with each itaration we request one more buffer, since we need to skip the buffers that don't fit the request
 	count = 1;
 	
 	do {
-		while (B_INTERRUPTED == (status = acquire_sem_etc(group_reclaim_sem, count, (timeout != B_INFINITE_TIMEOUT) ? B_ABSOLUTE_TIMEOUT : 0, timeout)))
+		while (B_INTERRUPTED == (status = acquire_sem_etc(group_reclaim_sem, count, acquire_flags, timeout)))
 			;
 		if (status != B_OK)
 			return status;
