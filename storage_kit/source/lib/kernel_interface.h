@@ -12,8 +12,9 @@
 #include <SupportKit.h>
 
 // For typedefs
-#include <dirent.h>
-#include <fcntl.h>
+#include <sys/dirent.h>		// For dirent
+#include <sys/stat.h>		// For struct stat
+#include <fcntl.h>			// For flock
 
 #include "Error.h"
 
@@ -22,11 +23,11 @@ typedef struct attr_info;
 namespace StorageKit {
 
 // Modes for opening files
-typedef enum {
+enum Mode {
 	READ,
 	WRITE,
 	READ_WRITE
-} Mode;
+};
 
 // Specialized Exceptions
 class EEntryNotFound : public Error {
@@ -39,6 +40,8 @@ typedef int FileDescriptor;
 typedef DIR Dir;
 typedef dirent DirEntry;
 typedef flock FileLock;
+typedef struct stat Stat;
+typedef uint32 StatMember;
 
 //----------------------------------------------------------------------
 // user_* functions pulled from NewOS's vfs.h (with the "user_" part removed)
@@ -64,23 +67,26 @@ typedef flock FileLock;
 //int dup2(int ofd, int nfd);
 //----------------------------------------------------------------------
 
-FileDescriptor open(const char *path, Mode mode);
-status_t close(FileDescriptor file);
-FileDescriptor dup(FileDescriptor file);
+// File Functions
+FileDescriptor open( const char *path, Mode mode );
+status_t close( FileDescriptor file );
+FileDescriptor dup( FileDescriptor file );
 
+status_t get_stat( FileDescriptor file, Stat *s );
+status_t set_stat( FileDescriptor file, Stat &s, StatMember what );
 
-status_t unlock(FileDescriptor file, FileLock *lock);
-status_t lock(FileDescriptor file, Mode mode, FileLock *lock);
+status_t unlock( FileDescriptor file, FileLock *lock );
+status_t lock( FileDescriptor file, Mode mode, FileLock *lock );
 
+// Attribute Functions
+ssize_t read_attr( FileDescriptor file, const char *attribute, uint32 type, 
+						off_t pos, void *buf, size_t count );
+ssize_t write_attr ( FileDescriptor file, const char *attribute, uint32 type, 
+						off_t pos, const void *buf, size_t count );
+status_t remove_attr( FileDescriptor file, const char *attr );
+status_t stat_attr( FileDescriptor file, const char *name, attr_info *ai );
 
-ssize_t read_attr(FileDescriptor file, const char *attribute, uint32 type, 
-				off_t pos, void *buf, size_t count);
-ssize_t write_attr (FileDescriptor file, const char *attribute, uint32 type, 
-             off_t pos, const void *buf, size_t count );
-status_t remove_attr(FileDescriptor file, const char *attr );
-int stat_attr( FileDescriptor file, const char *name, attr_info *ai );
-
-
+// Attribute Directory Functions
 Dir* open_attr_dir( FileDescriptor file );
 void rewind_attr_dir( Dir *dir );
 DirEntry* read_attr_dir( Dir *dir ); 

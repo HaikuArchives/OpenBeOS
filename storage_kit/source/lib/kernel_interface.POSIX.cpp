@@ -13,6 +13,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fsproto.h>
+
 #include <stdio.h>
 	// open, close
 	
@@ -25,14 +27,29 @@
 #include <fs_attr.h>
 	//  BeOS's C-based attribute functions
 
-
-
 #include "Error.h"
-	// SKError
+	// StorageKit::Error
 	
 // This is just for cout while developing; shouldn't need it
 // when all is said and done.
 #include <iostream>
+
+// Converts the given error code into a BeOS status_t error code
+status_t ErrnoToBeOSError() {
+	switch (errno) {
+		case ENOMEM:
+			return B_NO_MEMORY;
+				
+		case EFAULT:
+			return B_BAD_ADDRESS;
+				
+		case EACCES:
+			return B_PERMISSION_DENIED;
+			
+		default:
+			return B_FILE_ERROR;		
+	}	
+}
 
 #define ERROR_CASE(number,string) \
 case number: \
@@ -164,14 +181,10 @@ StorageKit::close_attr_dir ( Dir* dir )
 	return result;
 }
 
-int
+status_t
 StorageKit::stat_attr( FileDescriptor file, const char *name, attr_info *ai )
 {
-  int result = fs_stat_attr( file, name, ai );
-  if ( result < B_OK ) {
-    ThrowError();
-  }
-  return result;
+	return (fs_stat_attr( file, name, ai ) != -1) ? B_OK : errno ;
 }
 
 // This doesn't work right yet
@@ -224,3 +237,47 @@ StorageKit::lock(FileDescriptor file, Mode mode, FileLock *lock) {
 		ThrowError();
 }
 
+status_t
+StorageKit::get_stat(FileDescriptor file, Stat *s) {
+	if (s == NULL)
+		return B_BAD_VALUE;
+		
+	return (::fstat(file, s) == -1) ? ErrnoToBeOSError() : B_OK ;
+}
+
+
+status_t
+StorageKit::set_stat(FileDescriptor file, Stat &s, StatMember what) {
+	int result;
+	
+	switch (what) {
+		case WSTAT_MODE:
+			// For some stupid reason, BeOS R5 has no fchmod function, just
+			// chmod(char *filename, ...), so for the moment we're screwed.
+//			result = fchmod(file, s.st_mode);
+//			break;
+			return B_BAD_VALUE;
+			
+		case WSTAT_UID:
+			result = ::fchown(file, s.st_uid, 0xFFFFFFFF);
+			break;
+			
+		case WSTAT_GID:
+			result = ::fchown(file, 0xFFFFFFFF, s.st_gid);
+			break;
+			
+		// These would all require a call to utime(char *filename, ...), but
+		// we have no filename, only a file descriptor, so they'll have to
+		// wait until our new kernel shows up (or we decide to try calling
+		// into the R5 kernel ;-)
+		case WSTAT_ATIME:
+		case WSTAT_MTIME:
+		case WSTAT_CRTIME:
+			return B_BAD_VALUE;
+			
+		default:
+			return B_BAD_VALUE;	
+	}
+	
+	return (result == -1) ? ErrnoToBeOSError() : B_OK ;
+}
