@@ -453,8 +453,17 @@ BPlusTree::SeekDown(Stack<node_and_key> &stack,uint8 *key,uint16 keyLength)
 }
 
 
+status_t
+BPlusTree::InsertDuplicate(bplustree_node */*node*/,uint16 /*index*/,off_t /*value*/)
+{
+	PRINT(("INSERT DUPLICATE ENTRY - that's not yet implemented!!\n"));
+
+	RETURN_ERROR(B_ERROR);
+}
+
+
 void
-BPlusTree::InsertKey(bplustree_node *node,uint8 *key,uint16 keyLength,off_t value,uint16 index)
+BPlusTree::InsertKey(bplustree_node *node,uint16 index,uint8 *key,uint16 keyLength,off_t value)
 {
 	// should never happen, but who knows?
 	if (index > node->all_key_count)
@@ -490,15 +499,6 @@ BPlusTree::InsertKey(bplustree_node *node,uint8 *key,uint16 keyLength,off_t valu
 		memmove(keys + newKeyLengths[index],keys + newKeyLengths[index] - keyLength,size);
 
 	memcpy(keys + keyStart,key,keyLength);
-}
-
-
-status_t
-BPlusTree::InsertDuplicate(bplustree_node */*node*/,uint16 /*index*/)
-{
-	PRINT(("DUPLICATE ENTRY - that's not yet implemented!!\n"));
-
-	return B_OK;
 }
 
 
@@ -720,15 +720,14 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 	CachedNode cached(this);
 	while (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
 	{
-		if (node->IsLeaf())	// first round, check for duplicate entries
-		{
+		if (node->IsLeaf())	{
+			// first round, check for duplicate entries
 			status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
 
 			// is this a duplicate entry?
-			if (status == B_OK && node->overflow_link == BPLUSTREE_NULL)
-			{
+			if (status == B_OK) {
 				if (fAllowDuplicates)
-					return InsertDuplicate(node,nodeAndKey.keyIndex);
+					return InsertDuplicate(node,nodeAndKey.keyIndex,value);
 				else
 					RETURN_ERROR(B_NAME_IN_USE);
 			}
@@ -738,11 +737,9 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 		if (int32(round_up(sizeof(bplustree_node) + node->all_key_length + keyLength)
 			+ (node->all_key_count + 1) * (sizeof(uint16) + sizeof(off_t))) < fNodeSize)
 		{
-			InsertKey(node,keyBuffer,keyLength,value,nodeAndKey.keyIndex);
+			InsertKey(node,nodeAndKey.keyIndex,keyBuffer,keyLength,value);
 			return cached.WriteBack(transaction);
-		}
-		else
-		{
+		} else {
 			CachedNode cachedNewRoot(this);
 			CachedNode cachedOther(this);
 
@@ -794,7 +791,7 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 			if (newRoot != BPLUSTREE_NULL) {
 				bplustree_node *rootNode = cachedNewRoot.Node();
 
-				InsertKey(rootNode,keyBuffer,keyLength,node->left_link,0);
+				InsertKey(rootNode,0,keyBuffer,keyLength,node->left_link);
 				rootNode->overflow_link = nodeAndKey.nodeOffset;
 
 				if (cachedNewRoot.WriteBack(transaction) < B_OK)
@@ -807,6 +804,114 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 				return fCachedHeader.WriteBack(transaction);
 			}
 		}
+	}
+	RETURN_ERROR(B_ERROR);
+}
+
+
+status_t
+BPlusTree::RemoveDuplicate(bplustree_node */*node*/,uint16 /*index*/)
+{
+	PRINT(("REMOVE DUPLICATE ENTRY - that's not yet implemented!!\n"));
+
+	RETURN_ERROR(B_ERROR);
+}
+
+
+void
+BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
+{
+	// should never happen, but who knows?
+	if (index >= node->all_key_count)
+		return;
+
+	uint16 length;
+	uint8 *key = node->KeyAt(index,&length);
+	
+	if (length > BPLUSTREE_MAX_KEY_LENGTH)
+		return;
+
+	off_t *values = node->Values();
+	uint16 *keyLengths = node->KeyLengths();
+	uint8 *keys = node->Keys();
+
+	node->all_key_count--;
+	node->all_key_length -= length;
+
+	off_t *newValues = node->Values();
+	uint16 *newKeyLengths = node->KeyLengths();
+
+	// move key data
+	memmove(key,key + length,node->all_key_length - (key - keys));
+	
+	// move and update key lengths
+	for (uint16 i = index;i < node->all_key_count;)
+		newKeyLengths[i] = keyLengths[i + 1] - length;
+
+	// move values
+	if (index > 0)
+		memmove(newValues,values,index * sizeof(off_t));
+	for (uint16 i = node->all_key_count;i-- > index;)
+		newValues[i] = values[i + 1];
+}
+
+
+status_t
+BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength)
+{
+	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	// lock access to stream
+	WriteLocked locked(fStream->Lock());
+
+	Stack<node_and_key> stack;
+	if (SeekDown(stack,key,keyLength) != B_OK)
+		RETURN_ERROR(B_ERROR);
+
+	// ToDo: update all tree iterators after the tree has changed!
+
+	node_and_key nodeAndKey;
+	bplustree_node *node;
+
+	CachedNode cached(this);
+	while (stack.Pop(&nodeAndKey) && (node = cached.SetTo(nodeAndKey.nodeOffset)) != NULL)
+	{
+		if (node->IsLeaf())	// first round, check for duplicate entries
+		{
+			status_t status = FindKey(node,key,keyLength,&nodeAndKey.keyIndex);
+
+			if (status < B_OK)
+				RETURN_ERROR(status); 
+
+			// is this a duplicate entry?
+			if (bplustree_node::IsDuplicate(node->Values()[nodeAndKey.keyIndex])) {
+				if (fAllowDuplicates)
+					return RemoveDuplicate(node,nodeAndKey.keyIndex);
+				else
+					RETURN_ERROR(B_NAME_IN_USE);
+			}
+		}
+
+		RemoveKey(node,nodeAndKey.keyIndex);
+		
+		// ToDo: do something here if the node is empty!
+		// I think we will follow the original implementation and
+		// don't implement merging of nodes that use too less
+		// space.
+		// In any way, we should free the node - and enter the loop
+		// again; the correct key indices are on the stack
+
+		/*
+		if (node->all_key_count == 0
+			&& nodeAndKey.nodeOffset != fHeader->root_node_pointer
+			&& node->IsLeaf()) {
+			cached.Free(transaction);
+			continue;
+		}
+		*/
+
+		return B_OK;
 	}
 	RETURN_ERROR(B_ERROR);
 }

@@ -68,6 +68,7 @@ struct bplustree_node
 	off_t DuplicateAt(off_t offset,bool isFragment,int8 index) const;
 
 	static inline uint8 LinkType(off_t link);
+	static inline bool IsDuplicate(off_t link);
 	static inline off_t FragmentOffset(off_t link);
 };
 
@@ -187,9 +188,12 @@ class BPlusTree
 		status_t	FindKey(bplustree_node *node, uint8 *key, uint16 keyLength, uint16 *index = NULL, off_t *next = NULL);
 		status_t	SeekDown(Stack<node_and_key> &stack, uint8 *key, uint16 keyLength);
 
-		void		InsertKey(bplustree_node *node, uint8 *key, uint16 keyLength, off_t value, uint16 index);
-		status_t	InsertDuplicate(bplustree_node *node,uint16 index);
+		status_t	InsertDuplicate(bplustree_node *node,uint16 index,off_t value);
+		void		InsertKey(bplustree_node *node, uint16 index, uint8 *key, uint16 keyLength, off_t value);
 		status_t	SplitNode(bplustree_node *node, off_t nodeOffset, bplustree_node *other, off_t otherOffset, uint16 *_keyIndex, uint8 *key, uint16 *_keyLength, off_t *_value);
+
+		status_t	RemoveDuplicate(bplustree_node *, uint16);
+		void		RemoveKey(bplustree_node *node, uint16 index);
 
 	private:
 		friend TreeIterator;
@@ -361,6 +365,12 @@ inline uint8
 bplustree_node::LinkType(off_t link)
 {
 	return *(uint64 *)&link >> 62;
+}
+
+inline bool 
+bplustree_node::IsDuplicate(off_t link)
+{
+	return (LinkType(link) & (BPLUSTREE_DUPLICATE_NODE | BPLUSTREE_DUPLICATE_FRAGMENT)) > 0;
 }
 
 inline off_t
