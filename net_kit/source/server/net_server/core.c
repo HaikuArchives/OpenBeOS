@@ -698,9 +698,11 @@ static struct core_module_info core_info = {
 	
 	soreserve,
 	sbappendaddr,
+	sbflush,
 	sowakeup,
 	soisconnected,
 	soisdisconnected,
+	soisdisconnecting,
 	socantsendmore,
 	
 	in_pcballoc,

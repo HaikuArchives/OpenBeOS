@@ -1321,6 +1321,15 @@ void soisconnected(struct socket *so)
 	}
 }
 
+void soisdisconnecting(struct socket *so)
+{
+        so->so_state &= ~SS_ISCONNECTING;
+        so->so_state |= (SS_ISDISCONNECTING|SS_CANTRCVMORE|SS_CANTSENDMORE);
+        wakeup(so->so_timeo);
+        sowwakeup(so);
+        sorwakeup(so);
+}
+
 void soisdisconnected(struct socket *so)
 {
 	so->so_state &= ~(SS_ISCONNECTING|SS_ISCONNECTED|SS_ISDISCONNECTING);

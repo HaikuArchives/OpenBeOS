@@ -33,9 +33,11 @@ struct core_module_info {
 	int (*soreserve)(struct socket *, uint32, uint32);
 	int (*sbappendaddr)(struct sockbuf *, struct sockaddr *, 
 		 				struct mbuf *, struct mbuf *);
+	void (*sbflush)(struct sockbuf *sb);
 	void (*sowakeup)(struct socket *, struct sockbuf *);
 	void (*soisconnected)(struct socket *);
 	void (*soisdisconnected)(struct socket *);
+	void (*soisdisconnecting)(struct socket *);
 	void (*socantsendmore)(struct socket *);
 	
 	/* pcb options */
