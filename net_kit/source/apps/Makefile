@@ -5,12 +5,20 @@ LIBNET_PATH=`pwd`/../libnet
 LDFLAGS=-nostdlib -lroot -Wl,-rpath,$(LIBNET_PATH) -L$(LIBNET_PATH) -lnet $(START_DYN)
 OBJS = ufunc.o
 
+SUBDIRS=ifconfig route ping arp traceroute
+
 TGTS=	test1 test2 test3 select_test tcp_test at_srv at_client
 
 all:	$(TGTS)
+	@for i in $(SUBDIRS); do \
+		(cd $$i && $(MAKE)) || exit 1; \
+	done;
 
 clean:
 	@rm $(TGTS) *.o
+	@for i in $(SUBDIRS); do \
+		(cd $$i && $(MAKE) clean) || exit 1; \
+	done;
 
 test1:	libnet $(OBJS) test1.o
 	@$(CC) $(LDFLAGS) -o test1 $(OBJS) test1.o
