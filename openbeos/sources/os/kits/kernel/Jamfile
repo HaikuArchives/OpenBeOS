@@ -3,13 +3,14 @@ SubDir OBOS_TOP sources os kits kernel ;
 KernelStaticLibraryObjects libkern.a :
 	<$(SOURCE_GRIST)!libc!locale>ctype.o
 
-	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>kvsprintf.o
 
 	<$(SOURCE_GRIST)!libc!stdlib>assert.o
 	<$(SOURCE_GRIST)!libc!stdlib>atoi.o
 	<$(SOURCE_GRIST)!libc!stdlib>bsearch.o
 	<$(SOURCE_GRIST)!libc!stdlib>heapsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>merge.o
+	<$(SOURCE_GRIST)!libc!stdlib>multibyte.o
 	<$(SOURCE_GRIST)!libc!stdlib>qsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>rand.o
 	<$(SOURCE_GRIST)!libc!stdlib>random.o
@@ -282,6 +283,7 @@ KernelLd libm.so
 
 KernelStaticLibraryObjects libc.a :
 	<$(SOURCE_GRIST)!libc>nulibc_init.o
+	<$(SOURCE_GRIST)!libc>errno.o
 
 	<$(SOURCE_GRIST)!libc!hoard>arch-specific.o
 	<$(SOURCE_GRIST)!libc!hoard>heap.o
@@ -292,18 +294,46 @@ KernelStaticLibraryObjects libc.a :
 
 	<$(SOURCE_GRIST)!libc!locale>ctype.o
 
-	<$(SOURCE_GRIST)!libc!stdio>stdio.o
-	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>fclose.o
+	<$(SOURCE_GRIST)!libc!stdio>feof.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fflush.o
+	<$(SOURCE_GRIST)!libc!stdio>findfp.o
+	<$(SOURCE_GRIST)!libc!stdio>flags.o
+	<$(SOURCE_GRIST)!libc!stdio>flockfile.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fopen.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>fread.o
+	<$(SOURCE_GRIST)!libc!stdio>fwrite.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fvwrite.o
+	<$(SOURCE_GRIST)!libc!stdio>fwalk.o
+	<$(SOURCE_GRIST)!libc!stdio>getc.o
+	<$(SOURCE_GRIST)!libc!stdio>getchar.o
+ 	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
+	<$(SOURCE_GRIST)!libc!stdio>printf.o
+	<$(SOURCE_GRIST)!libc!stdio>refill.o
+	<$(SOURCE_GRIST)!libc!stdio>rget.o
+	<$(SOURCE_GRIST)!libc!stdio>sscanf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>sprintf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>stdio.o
+	<$(SOURCE_GRIST)!libc!stdio>ungetc.o
+	<$(SOURCE_GRIST)!libc!stdio>vfscanf.o
+	<$(SOURCE_GRIST)!libc!stdio>vscanf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>wbuf.o
+	<$(SOURCE_GRIST)!libc!stdio>wsetup.o
 
 	<$(SOURCE_GRIST)!libc!stdlib>assert.o
 	<$(SOURCE_GRIST)!libc!stdlib>atoi.o
 	<$(SOURCE_GRIST)!libc!stdlib>bsearch.o
 	<$(SOURCE_GRIST)!libc!stdlib>heapsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>merge.o
+	<$(SOURCE_GRIST)!libc!stdlib>multibyte.o
 	<$(SOURCE_GRIST)!libc!stdlib>qsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>radixsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>rand.o
 	<$(SOURCE_GRIST)!libc!stdlib>random.o
+	<$(SOURCE_GRIST)!libc!stdlib>strtoq.o
+	<$(SOURCE_GRIST)!libc!stdlib>strtouq.o
 
 	<$(SOURCE_GRIST)!libc!string>bcopy.o
 	<$(SOURCE_GRIST)!libc!string>bzero.o
@@ -355,6 +385,7 @@ KernelLd libc.so :
 	libglue.o
 
 	<$(SOURCE_GRIST)!libc>nulibc_init.o
+	<$(SOURCE_GRIST)!libc>errno.o
 
 	<$(SOURCE_GRIST)!libc!hoard>arch-specific.o
 	<$(SOURCE_GRIST)!libc!hoard>heap.o
@@ -365,18 +396,47 @@ KernelLd libc.so :
 	
 	<$(SOURCE_GRIST)!libc!locale>ctype.o
 
-	<$(SOURCE_GRIST)!libc!stdio>stdio.o
-	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>fclose.o
+	<$(SOURCE_GRIST)!libc!stdio>feof.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fflush.o
+	<$(SOURCE_GRIST)!libc!stdio>findfp.o
+	<$(SOURCE_GRIST)!libc!stdio>flags.o
+	<$(SOURCE_GRIST)!libc!stdio>flockfile.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fopen.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>fread.o
+	<$(SOURCE_GRIST)!libc!stdio>fwrite.o
+ 	<$(SOURCE_GRIST)!libc!stdio>fvwrite.o
+	<$(SOURCE_GRIST)!libc!stdio>fwalk.o
+	<$(SOURCE_GRIST)!libc!stdio>getc.o
+	<$(SOURCE_GRIST)!libc!stdio>getchar.o
+ 	<$(SOURCE_GRIST)!libc!stdio>makebuf.o
+	<$(SOURCE_GRIST)!libc!stdio>printf.o
+	<$(SOURCE_GRIST)!libc!stdio>refill.o
+	<$(SOURCE_GRIST)!libc!stdio>rget.o
+	<$(SOURCE_GRIST)!libc!stdio>sscanf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>sprintf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>stdio.o
+	<$(SOURCE_GRIST)!libc!stdio>ungetc.o
+	<$(SOURCE_GRIST)!libc!stdio>vfprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>vfscanf.o
+	<$(SOURCE_GRIST)!libc!stdio>vscanf.o
+ 	<$(SOURCE_GRIST)!libc!stdio>vsprintf.o
+	<$(SOURCE_GRIST)!libc!stdio>wbuf.o
+	<$(SOURCE_GRIST)!libc!stdio>wsetup.o
 
 	<$(SOURCE_GRIST)!libc!stdlib>assert.o
 	<$(SOURCE_GRIST)!libc!stdlib>atoi.o
 	<$(SOURCE_GRIST)!libc!stdlib>bsearch.o
 	<$(SOURCE_GRIST)!libc!stdlib>heapsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>merge.o
+	<$(SOURCE_GRIST)!libc!stdlib>multibyte.o
 	<$(SOURCE_GRIST)!libc!stdlib>qsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>radixsort.o
 	<$(SOURCE_GRIST)!libc!stdlib>rand.o
 	<$(SOURCE_GRIST)!libc!stdlib>random.o
+	<$(SOURCE_GRIST)!libc!stdlib>strtoq.o
+	<$(SOURCE_GRIST)!libc!stdlib>strtouq.o
 
 	<$(SOURCE_GRIST)!libc!string>bcopy.o
 	<$(SOURCE_GRIST)!libc!string>bzero.o
@@ -713,6 +773,18 @@ KernelLd thread_test :
         :
         :
         bin/thread_test
+        ; 
+
+KernelLd fops_test :
+	libglue2.o
+        <$(SOURCE_GRIST)!apps!tests>fops_test.o
+        libc.so
+        :
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+        :
+        :
+        :
+        bin/fops_test
         ; 
 
 
