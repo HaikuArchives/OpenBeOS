@@ -41,6 +41,7 @@ private:
    
    BTextView *tvConnectionProfile;
    BTextView *tvCallWaiting;
+   BTextView *tvConnection;
 };
 
 #endif

@@ -90,6 +90,11 @@ void DUNWindow::InitWindow(void) {
    BRect tvCWLocation(40,113,300,10);
    tvCallWaiting = new BTextView(r, "Call waiting", tvCWLocation, B_FOLLOW_ALL, B_WILL_DRAW);
    tvCallWaiting->SetText("Call waiting may be enabled.");
+   
+   // Displays - No Connection
+   BRect tvNCLocation(21,168,300,10);
+   tvConnection = new BTextView(r, "No Connection", tvNCLocation, B_FOLLOW_ALL, B_WILL_DRAW);
+   tvConnection->SetText("No Connection");
         
    // Outline List View - Fake ones really as we're only using them as an indicator.
    BListItem *conitem;
@@ -136,6 +141,7 @@ void DUNWindow::InitWindow(void) {
    AddChild(bottomframe);
    AddChild(tvConnectionProfile);
    AddChild(tvCallWaiting);
+   AddChild(tvConnection);
    //AddChild(connectionmenufield);
 
      
