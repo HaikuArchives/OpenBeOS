@@ -6,6 +6,7 @@ Copyright (c) 2001 OpenBeOS.
 
 Authors: 
 	Philippe Houdoin
+	Simon Gauvin	
 	Michael Pfeiffer
 	
 Permission is hereby granted, free of charge, to any person obtaining a copy of

@@ -2,12 +2,15 @@
 
 PDF Writer printer driver.
 
+Version: 12.19.2000
+
 Copyright (c) 2001 OpenBeOS. 
 
 Authors: 
 	Philippe Houdoin
+	Simon Gauvin	
 	Michael Pfeiffer
-	
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
@@ -33,6 +36,9 @@ THE SOFTWARE.
 #include "pdflib.h"				// for pageFormat constants 
 #include "PrinterDriver.h"
 #include "PageSetupWindow.h"
+
+// Simon: added
+#include "MarginView.h"
 
 // static global variables
 static struct {
@@ -67,9 +73,9 @@ static struct {
 
 static	const char * pdf_compatibility[] = {"1.2", "1.3", "1.4", NULL};
 
-
+// Simon changed: window size 200,200 -> 400,250
 PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
-	:	BWindow(BRect(0,0,200,200), "Page Setup", B_TITLED_WINDOW_LOOK,
+	:	BWindow(BRect(0,0,400,220), "Page Setup", B_TITLED_WINDOW_LOOK,
  			B_MODAL_APP_WINDOW_FEEL, B_NOT_RESIZABLE | B_NOT_MINIMIZABLE |
  			B_NOT_ZOOMABLE)
 {
@@ -84,7 +90,11 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 		SetTitle(title.String());
 	}
 	
-#define MARGIN 6
+// Simon changed 6 -> 10
+#define MARGIN 10
+
+// Simon added
+#define OFFSET 200 
 
 	// ---- Ok, build a default page setup user interface
 	BRect		r;
@@ -95,12 +105,14 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	BMenuItem	*item;
 	float       width, height;
 	int32       orient;
+	BRect		margin, page;
 	
 	if (B_OK == fSetupMsg->FindRect("paper_rect", &r)) {
 		width = r.Width(); height = r.Height();
 	} else {
 		width = a4_width; height = a4_height;
 	}		
+	page = r;
 	
 	// if (B_OK != fSetupMsg->FindInt32("orientation", &orient)) orient = 0;
 	orient = PrinterDriver::PORTRAIT_ORIENTATION;
@@ -112,25 +124,52 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
 					B_PLAIN_BORDER);
 
-	// add page format menu
-	x = r.left + MARGIN; y = r.top + MARGIN;
+	// Create the margin view
+
+	if (B_OK == fSetupMsg->FindRect("printable_rect", &margin)) 
+	{
+		// re-calculate the margin from the printable rect
+		//margin.top -= page.top;
+		margin.left -= page.left;
+		margin.right = page.right - margin.right;
+		margin.bottom = page.bottom - margin.bottom;
+
+		marginView = new MarginView(BRect(20,20,200,160), width, height,
+			margin, UNIT_POINT);
+	} else {
+		marginView = new MarginView(BRect(20,20,200,160), width, height);
+	}
+	panel->AddChild(marginView);
 	
+	// add page format menu
+	//x = r.left + MARGIN; y = r.top + MARGIN;
+	// Simon Changed to OFFSET popups
+	x = r.left + MARGIN * 2 + OFFSET; y = r.top + MARGIN * 2;
+		
 	BMenu* m = new BMenu("popupmenu");
 	m->SetRadioMode(true);
-	BMenuField * mf = new BMenuField(BRect(x, y, x + 200, y + 20), "page_size", 
+
+	// Simon changed width 200->140
+	BMenuField * mf = new BMenuField(BRect(x, y, x + 140, y + 20), "page_size", 
 		"Page Size:", m);
 	fPageSizeMenu = mf;
 	mf->ResizeToPreferred();
 	mf->GetPreferredSize(&w, &h);
+
+	// Simon added: SetDivider
+	mf->SetDivider(be_plain_font->StringWidth("Page Size#"));
+
 	panel->AddChild(mf);
 
 	item = NULL;
-	for (i = 0; pageFormat[i].label != NULL; i++) {
+	for (i = 0; pageFormat[i].label != NULL; i++) 
+	{
 		BMessage* msg = new BMessage('pgsz');
 		msg->AddFloat("width", pageFormat[i].width);
 		msg->AddFloat("height", pageFormat[i].height);
 		BMenuItem* mi = new BMenuItem(pageFormat[i].label, msg);
 		m->AddItem(mi);
+	
 		if (width == pageFormat[i].width && height == pageFormat[i].height) {
 			item = mi; orient = PrinterDriver::PORTRAIT_ORIENTATION;
 		}
@@ -149,17 +188,25 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	 
 	m = new BMenu("orientation");
 	m->SetRadioMode(true);
-	mf = new BMenuField(BRect(x, y, x + 200, y + 20), "orientation", "Orientation:", m);
+	
+	// Simon changed 200->140
+	mf = new BMenuField(BRect(x, y, x + 140, y + 20), "orientation", "Orientation:", m);
+	
+	// Simon added: SetDivider
+	mf->SetDivider(be_plain_font->StringWidth("Orientation#"));
+		
 	fOrientationMenu = mf;
 	mf->ResizeToPreferred();
 	panel->AddChild(mf);
 	r.top += h;
 	item = NULL;
-	for (int i = 0; orientation[i].label != NULL; i++) {
-		BMessage* msg = new BMessage('ornt');
+	for (int i = 0; orientation[i].label != NULL; i++) 
+	{
+	 	BMessage* msg = new BMessage('ornt');		
 		msg->AddInt32("orientation", orientation[i].orientation);
 		BMenuItem* mi = new BMenuItem(orientation[i].label, msg);
 		m->AddItem(mi);
+		
 		if (orient == orientation[i].orientation) item = mi;
 	}
 	mf->Menu()->SetLabelFromMarked(true);
@@ -268,7 +315,7 @@ PageSetupWindow::UpdateSetupMessage()
 	if (item) {
 		BMessage *msg = item->Message();
 		msg->FindInt32("orientation", &orientation);
-		fSetupMsg->ReplaceInt32("orientation", 0);
+		fSetupMsg->ReplaceInt32("orientation", orientation);
 	}
 
 	item = fPDFCompatibilityMenu->Menu()->FindMarked();
@@ -296,7 +343,22 @@ PageSetupWindow::UpdateSetupMessage()
 		else
 			r.Set(0, 0, h, w);
 		fSetupMsg->ReplaceRect("paper_rect", r);
-		r.InsetBy(10,10);
+		
+	// Simon Todo: Add Margin values to setup message
+	/*
+		Philippe: not sure what to do here, what it the 
+			printable_rect supposed to be? I also need a way
+			to save the units in the message, and assume that
+			all your calculations are performed by PDFLib
+			in points?...
+	*/
+		// calculate the printable_rect like this?
+		
+		BRect margin = marginView->GetMargin();
+		r.top += margin.top;
+		r.right -= margin.right;
+		r.left += margin.left;
+		r.bottom -= margin.bottom;
 		fSetupMsg->ReplaceRect("printable_rect", r);
 	}
 }
@@ -316,7 +378,48 @@ PageSetupWindow::MessageReceived(BMessage *msg)
 			fResult = B_ERROR;
 			release_sem(fExitSem);
 			break;
-					
+
+		// Simon added
+		case 'pgsz':
+			{
+				float w, h;
+				msg->FindFloat("width", &w);
+				msg->FindFloat("height", &h);
+				BMenuItem *item = fOrientationMenu->Menu()->FindMarked();
+				if (item) {
+					int32 orientation = 0;
+					BMessage *m = item->Message();
+					m->FindInt32("orientation", &orientation);
+					if (orientation == PrinterDriver::PORTRAIT_ORIENTATION) {
+						marginView->SetPageSize(w, h);
+					} else {
+						marginView->SetPageSize(h, w);
+					}
+					marginView->UpdateView();
+				}
+			}
+			break;
+
+		// Simon added
+		case 'ornt':
+			{	
+				BPoint p = marginView->GetPageSize();
+				int32 orientation;
+				msg->FindInt32("orientation", &orientation);
+				if (orientation == PrinterDriver::LANDSCAPE_ORIENTATION
+					&& p.x > p.y) { 
+					marginView->SetPageSize(p.y, p.x);
+					marginView->UpdateView();
+				}
+				if (orientation == PrinterDriver::PORTRAIT_ORIENTATION
+					&& p.y > p.x) {
+					marginView->SetPageSize(p.y, p.x);
+					marginView->UpdateView();
+				}
+			}
+			break;
+
+	
 		default:
 			inherited::MessageReceived(msg);
 			break;
