@@ -4,7 +4,6 @@
 #include <stdio.h>
 
 #include "net_misc.h"
-#include "net_module.h"
 #include "protocols.h"
 #include "netinet/in_systm.h"
 #include "netinet/in_var.h"
@@ -16,18 +15,20 @@
 #include "netinet/udp.h"
 #include "netinet/udp_var.h"
 
+#include "core_module.h"
+#include "net_module.h"
+#include "core_funcs.h"
+
 #ifdef _KERNEL_MODE
 #include <KernelExport.h>
-#include "net_server/core_module.h"
-#include "net_server/core_funcs.h"
-
-static struct core_module_info *core = NULL;
 
 #define UDP_MODULE_PATH		"network/protocol/udp"
 
 #else	/* _KERNEL_MODE */
 #define UDP_MODULE_PATH	    "modules/protocol/udp"
 #endif
+
+static struct core_module_info *core = NULL;
 
 struct protosw *proto[IPPROTO_MAX];
 static struct inpcb udb;	/* head of the UDP PCB list! */
@@ -341,8 +342,9 @@ static struct protosw my_proto = {
 };
 
 #ifndef _KERNEL_MODE
-static void udp_protocol_init(void)
+static void udp_protocol_init(struct core_module_info *cp)
 {
+	core = cp;
 	add_domain(NULL, AF_INET);
 	add_protocol(&my_proto, AF_INET);
 }
@@ -359,8 +361,8 @@ static status_t k_init(void)
 	if (!core)
 		get_module(CORE_MODULE_PATH, (module_info**)&core);
 	
-	core->add_domain(NULL, AF_INET);
-	core->add_protocol(&my_proto, AF_INET);
+	add_domain(NULL, AF_INET);
+	add_protocol(&my_proto, AF_INET);
 	
 	return 0;
 }

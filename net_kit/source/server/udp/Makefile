@@ -1,7 +1,7 @@
 INCLUDES=-I. -I.. -I../include
 TARGET=udp
 TGT=../modules/protocol/$(TARGET)
-LOBJS=../_APP_
+LOBJS=../net_server/cksum.o
 OBJS=udp.o
 
 KCFLAGS=-g -Wall -no-fpic -D_KERNEL_MODE -D_NETWORK_STACK
@@ -23,7 +23,7 @@ installkernel:	kernel
 	@cp udp /boot/home/config/add-ons/kernel/network/protocol/udp
 
 udp: $(OBJS)
-	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
