@@ -42,8 +42,8 @@ _EXPORT int select(int nbits, struct fd_set * rbits,
 }
 
 	
-static int r5_select(int nbits, struct fd_set * rbits, struct fd_set * wbits,
-					  struct fd_set * ebits, struct timeval * tv)
+static int r5_select(int nbits, struct fd_set *rbits, struct fd_set *wbits,
+					  struct fd_set *ebits, struct timeval *tv)
 {
 	int fd;
 	int n;
@@ -52,16 +52,19 @@ static int r5_select(int nbits, struct fd_set * rbits, struct fd_set * wbits,
 	status_t status;
 	struct fd_set r, w, e;
 
-	memcpy(&r, rbits, sizeof(r));
-	memcpy(&w, rbits, sizeof(w));
-	memcpy(&e, rbits, sizeof(e));
 
-	if (rbits)
+	if (rbits) {
+		memcpy(&r, rbits, sizeof(r));
 		FD_ZERO(rbits);
-	if (wbits)
+	}
+	if (wbits){
+		memcpy(&w, wbits, sizeof(w));
 		FD_ZERO(wbits);
-	if (ebits)
+	}
+	if (ebits) {
+		memcpy(&e, ebits, sizeof(e));
 		FD_ZERO(ebits);
+	}
 
 	rss.lock = create_sem(1, "r5_select_lock");
 	rss.wait = create_sem(0, "r5_select_wait");
@@ -72,24 +75,25 @@ static int r5_select(int nbits, struct fd_set * rbits, struct fd_set * wbits,
 
 	args.sync = (struct selectsync *) &rss;
 
-	// call, indirectly, net_stack_select() for each event to monitor
-	// as we are not the vfs, we can't call this device hook ourself, but 
-	// our NET_STACK_SELECT opcode would do it for us...
+	/* call, indirectly, net_stack_select() for each event to monitor
+	 * as we are not the vfs, we can't call this device hook ourself, but 
+	 * our NET_STACK_SELECT opcode would do it for us...
+	 */
 	n = 0;
 	for(fd = 1; fd < nbits; fd++) {
 		if (FD_ISSET(fd, &r)) {
 			args.ref = (fd << 8) | 1;
-			if ( ioctl(fd, NET_STACK_SELECT, &args, sizeof(args)) >= 0)
+			if (ioctl(fd, NET_STACK_SELECT, &args, sizeof(args)) >= 0)
 				n++;
     	};
 		if (FD_ISSET(fd, &w)) {
 			args.ref = (fd << 8) | 2;
-			if ( ioctl(fd, NET_STACK_SELECT, &args, sizeof(args)) >= 0)
+			if (ioctl(fd, NET_STACK_SELECT, &args, sizeof(args)) >= 0)
 				n++;
     	};
 		if (FD_ISSET(fd, &e)) {
 			args.ref = (fd << 8) | 3;
-			if ( ioctl(fd, NET_STACK_SELECT, &args, sizeof(args)) >= 0)
+			if (ioctl(fd, NET_STACK_SELECT, &args, sizeof(args)) >= 0)
 				n++;
     	};
 	}
