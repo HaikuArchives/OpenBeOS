@@ -645,7 +645,7 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 	
 	if (mask & WSTAT_MODE) {
 		PRINT(("original mode = %ld, stat->st_mode = %ld\n",node->mode,stat->st_mode));
-		node->mode = node->mode & ~0777 | stat->st_mode & 0777;
+		node->mode = node->mode & ~S_IUMSK | stat->st_mode & S_IUMSK;
 	}
 
 	if (mask & WSTAT_UID)
@@ -982,7 +982,10 @@ bfs_open(void *_ns, void *_node, int omode, void **_cookie)
 	Volume *volume = (Volume *)_ns;
 	Inode *inode = (Inode *)_node;
 
-	// ToDo: do we have to check here if someone tries to open a directory?
+	// opening a directory read-only is allowed, although you can't read
+	// any data from it.
+	if (inode->IsDirectory() && omode & O_RWMASK)
+		return B_IS_A_DIRECTORY;
 
 	status_t status = inode->CheckPermissions(oModeToAccess(omode));
 	if (status < B_OK)
@@ -1025,7 +1028,7 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 	//FUNCTION();
 	Inode *inode = (Inode *)_node;
 	
-	if (inode->IsSymLink()) {
+	if (inode->IsSymLink() || inode->IsDirectory()) {
 		*_length = 0;
 		RETURN_ERROR(B_BAD_VALUE);
 	}
@@ -1099,6 +1102,8 @@ bfs_close(void *_ns, void *_node, void *cookie)
 
 		if (status == B_OK)
 			transaction.Done();
+
+		notify_listener(B_STAT_CHANGED,volume->ID(),0,0,inode->ID(),NULL);
 	}
 
 	return B_OK;

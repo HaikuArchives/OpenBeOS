@@ -1629,7 +1629,8 @@ Inode::Create(Transaction *transaction,Inode *parent, const char *name, int32 mo
 	node->parent = parentRun;
 
 	node->uid = geteuid();
-	node->gid = getegid();
+	node->gid = parent ? parent->Node()->gid : getegid();
+		// the group ID is inherited from the parent, if available
 	node->mode = mode;
 	node->flags = INODE_IN_USE;
 	node->type = type;
