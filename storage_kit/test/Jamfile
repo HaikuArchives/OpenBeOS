@@ -12,6 +12,7 @@ SOURCE_FILES =
 	EntryTest.cpp
 	FileTest.cpp
 	FindDirectoryTest.cpp
+	MimeTypeTest.cpp
 	NodeTest.cpp
 	PathTest.cpp
 	QueryTest.cpp
