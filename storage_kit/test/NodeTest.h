@@ -19,6 +19,8 @@ public:
 		
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Init Test", &NodeTest::InitTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Directory Test", &NodeTest::AttrDirTest) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Test", &NodeTest::AttrTest) );
+//		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Locking Test", &NodeTest::LockTest) );
 		
 		return suite;
 	}		
@@ -44,26 +46,51 @@ public:
 		BNode node;
 		CPPUNIT_ASSERT( node.RewindAttrs() == B_BAD_ADDRESS );
 		
-		BNode node2("./");
+		node.SetTo("./");
 		
 		char str[B_ATTR_NAME_LENGTH];
 		status_t result;
-		CPPUNIT_ASSERT( node2.GetNextAttrName(str) == B_OK );
+		CPPUNIT_ASSERT( node.GetNextAttrName(str) == B_OK );
 
 		// Get to the end of the list
-		while( (result = node2.GetNextAttrName(str)) == B_OK ) {
+		while( (result = node.GetNextAttrName(str)) == B_OK ) {
 //			cout << str << endl;	// Uncomment to list off the attribute names
 		}
 			
 		CPPUNIT_ASSERT( result == B_ENTRY_NOT_FOUND );
 			// End of the list
 			
-		CPPUNIT_ASSERT( node2.RewindAttrs() == B_OK );
+		CPPUNIT_ASSERT( node.RewindAttrs() == B_OK );
 			// Rewind
 
 		// The following crashes on R5. Our implementation just returns B_BAD_VALUE
-		//CPPUNIT_ASSERT( node2.GetNextAttrName(NULL) != B_OK );
+		//CPPUNIT_ASSERT( node.GetNextAttrName(NULL) != B_OK );
 		
+	}
+	
+	void AttrTest() {
+		const int len = 1024;
+	 	unsigned char data[len];
+	 	const char attr[] = "StorageKit::TestAttribute";
+	 	const char attrToBeRemoved[] = "StorageKit::ThisAttributeShouldHaveBeenRemoved";
+	 	const char str[] = "This is a string all right";
+	
+		BNode node;
+		CPPUNIT_ASSERT( node.ReadAttr(attr, B_STRING_TYPE, 0, data, len) == B_FILE_ERROR );
+		
+		node.SetTo("./");
+		CPPUNIT_ASSERT( node.WriteAttr(attr, B_STRING_TYPE, 0, str, strlen(str)) == strlen(str) );
+		CPPUNIT_ASSERT( node.ReadAttr(attr, B_STRING_TYPE, 0, data, len) > 0 );
+		CPPUNIT_ASSERT( node.RemoveAttr(attr) == B_OK );
+		CPPUNIT_ASSERT( node.ReadAttr(attr, B_STRING_TYPE, 0, data, len) == B_ENTRY_NOT_FOUND );
+	}
+
+	void LockTest() {
+		BNode node;
+		
+		BNode node2("./");
+		CPPUNIT_ASSERT( DecodeResult(node2.Lock()) == B_OK );
+	
 	}
 	
 };
