@@ -47,6 +47,15 @@ THE SOFTWARE.
 
 #define fmin(x, y) ( (x < y) ? x : y);
 
+#define TRUETYPE_VERSION		0x00010000
+#define OPENTYPE_CFF_VERSION	'OTTO'
+
+#define TRUETTYPE_TABLE_NAME_TAG	'name'
+
+static status_t declare_fonts(PDF * pdf, FILE * log);
+static uint16 ttf_get_uint16(FILE * ttf);
+static uint32 ttf_get_uint32(FILE *ttf);
+static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_size);
 
 // Private Variables
 // -----------------
@@ -252,13 +261,19 @@ PDFWriter::InitWriter()
 	PDF_set_parameter(fPdf, "fontwarning", "false");
 	// PDF_set_parameter(fPdf, "native-unicode", "true");
 
-	PDF_set_parameter(fPdf, "resourcefile", "/boot/home/config/settings/pdflib.upr");
+	fprintf(fLog, "Start of fonts declaration:\n");	
 /*
+	PDF_set_parameter(fPdf, "resourcefile", "/boot/home/config/settings/pdflib.upr");
+	
 	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Roman==/boot/beos/etc/fonts/ttfonts/Swiss721.ttf");
 	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Bold==/boot/beos/etc/fonts/ttfonts/Swiss721_Bold.ttf");
 	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Italic==/boot/beos/etc/fonts/ttfonts/Swiss721_Italic.ttf");
 	PDF_set_parameter(fPdf, "FontOutline", "Swis721 BT-Bold Italic==/boot/beos/etc/fonts/ttfonts/Swiss721_BoldItalic.ttf");
 */
+	declare_fonts(fPdf, fLog);
+
+	fprintf(fLog, "End of fonts declaration.\n");	
+
 	fState = NULL;
 	fStateDepth = 0;
 
@@ -311,6 +326,232 @@ PDFWriter::EndPage()
 	delete fState; fState = NULL;
 	
 	return B_OK;
+}
+
+
+#ifdef CODEWARRIOR
+	#pragma mark [TrueType fonts handling]
+#endif
+
+
+// --------------------------------------------------
+static status_t declare_fonts(PDF * pdf, FILE * log)
+{
+	char 				fn[512];
+	char				buffer[1024];
+	BDirectory *		dir;
+    BEntry 				entry;
+	BPath				path;
+	directory_which	*	which_dir;
+	directory_which		lookup_dirs[] =
+		{
+		B_BEOS_FONTS_DIRECTORY,
+		// B_COMMON_FONTS_DIRECTORY,	// seem to be the same directory than B_USER_FONTS_DIRECTORY!!!
+		B_USER_FONTS_DIRECTORY,
+		(directory_which) -1
+		};
+
+	which_dir = lookup_dirs;
+	while (*which_dir >= 0)
+		{
+		if ( find_directory(*which_dir, &path) == B_OK )
+			{		
+			path.Append("ttfonts");
+			
+			dir = new BDirectory(path.Path());
+			if ( dir->InitCheck() == B_OK )
+				{
+				fprintf(log, "--- From %s\n", path.Path());
+				while ( dir->GetNextEntry(&entry) == B_OK )
+					{
+					if (! entry.IsFile())
+						continue;
+	
+					entry.GetPath(&path);
+	
+					fn[0] = 0;
+					if ( ttf_get_fontname(path.Path(), fn, sizeof(fn)) != B_OK )
+						continue;
+						
+					snprintf(buffer, sizeof(buffer), "%s==%s", fn, path.Path());
+
+					fprintf(log, "%s\n", buffer);
+					PDF_set_parameter(pdf, "FontOutline", buffer);
+					};
+				};
+			delete dir;
+			};
+			
+		which_dir++;
+		};
+		
+	return B_OK;
+}
+
+
+// --------------------------------------------------
+static uint16 ttf_get_uint16(FILE * ttf)
+{
+    uint16 v;
+
+	if (fread(&v, 1, 2, ttf) != 2)
+		return 0;
+
+	return B_BENDIAN_TO_HOST_INT16(v);
+}
+
+// --------------------------------------------------
+static uint32 ttf_get_uint32(FILE *ttf)
+{
+    uint32 buf;
+
+    if (fread(&buf, 1, 4, ttf) != 4)
+		return 0;
+
+	return B_BENDIAN_TO_HOST_INT32(buf);
+}
+
+
+// --------------------------------------------------
+static status_t ttf_get_fontname(const char * path, char * fontname, size_t fn_size)
+{
+	FILE *		ttf;
+	status_t	status;
+	uint16		nb_tables, nb_records;
+	uint16		i;
+	uint32		tag;
+	uint32		checksum, table_offset, length;
+	uint32		strings_offset;
+	char		family_name[256];
+	char		face_name[256];
+	int			names_found;
+
+	status = B_ERROR;
+	
+	ttf = fopen(path, "rb");
+	if (! ttf) 
+		return status;
+
+    tag = ttf_get_uint32(ttf);		/* version */
+	switch(tag)
+		{
+		case TRUETYPE_VERSION:
+		case OPENTYPE_CFF_VERSION:
+			break;
+			
+		default:
+			goto exit;
+		};
+
+    /* set up table directory */
+    nb_tables = ttf_get_uint16(ttf);
+
+	fseek(ttf, 12, SEEK_SET);
+	
+	table_offset = 0;	// quiet the compiler...
+
+    for (i = 0; i < nb_tables; ++i)
+		{
+		tag				= ttf_get_uint32(ttf);
+		checksum		= ttf_get_uint32(ttf);
+		table_offset	= ttf_get_uint32(ttf);
+		length			= ttf_get_uint32(ttf);
+	    
+		if (tag == TRUETTYPE_TABLE_NAME_TAG)
+			break;
+		};
+
+	if (tag != TRUETTYPE_TABLE_NAME_TAG)
+		// Mandatory name table not found!
+		goto exit;
+		
+	// move to name table start
+	fseek(ttf, table_offset, SEEK_SET);
+		
+	ttf_get_uint16(ttf);	// name table format (must be 0!)
+    nb_records		= ttf_get_uint16(ttf);
+	strings_offset	= table_offset + ttf_get_uint16(ttf); // string storage offset is from table offset
+
+	//    offs = ttf->dir[idx].offset + tp->offsetStrings;
+
+	// printf("  pid   eid   lid   nid   len offset value\n");
+        //  65536 65536 65536 65536 65536 65536  ......
+
+	family_name[0] = 0;
+	face_name[0] = 0;
+	names_found = 0;
+
+	for (i = 0; i < nb_records; ++i)
+		{
+		uint16	platform_id, encoding_id, language_id, name_id;
+		uint16	string_len, string_offset;
+
+		platform_id		= ttf_get_uint16(ttf);
+		encoding_id		= ttf_get_uint16(ttf);
+		language_id		= ttf_get_uint16(ttf);
+		name_id			= ttf_get_uint16(ttf);
+		string_len		= ttf_get_uint16(ttf);
+		string_offset	= ttf_get_uint16(ttf);
+
+		if ( name_id != 1 && name_id != 2 )
+			continue;
+
+		// printf("%5d %5d %5d %5d %5d %5d ", 
+		// 	platform_id, encoding_id, language_id, name_id, string_len, string_offset);
+
+		if (string_len != 0)
+			{
+			long	pos;
+			char *	buffer;
+
+			pos = ftell(ttf);
+			fseek(ttf, strings_offset + string_offset, SEEK_SET);
+
+			buffer = (char *) malloc(string_len + 16);
+
+			fread(buffer, 1, string_len, ttf); 
+			buffer[string_len] = '\0';
+
+			fseek(ttf, pos, SEEK_SET);
+			
+			if ( (platform_id == 3 && encoding_id == 1) || // Windows Unicode
+				 (platform_id == 0) )// Unicode
+				{
+				// dirty unicode -> ascii conversion
+				int k;
+
+				for (k=0; k < string_len/2; k++)
+					buffer[k] = buffer[2*k + 1];
+				buffer[k] = '\0';
+				};
+
+			// printf("%s\n", buffer);
+			
+			if (name_id == 1)
+				strncpy(family_name, buffer, sizeof(family_name));
+			else if (name_id == 2)
+				strncpy(face_name, buffer, sizeof(face_name));
+
+			names_found += name_id;
+
+			free(buffer);
+			}
+		// else
+			// printf("<null>\n");
+
+		if (names_found == 3)
+			break;
+		};
+		
+	if (names_found == 3)
+		{
+		snprintf(fontname, fn_size, "%s-%s", family_name, face_name);
+		status = B_OK;
+		};
+		
+exit:;
+	fclose(ttf);
+	return status;
 }
 
 
