@@ -137,6 +137,9 @@ _SoundPlayNode::_SoundPlayNode(const char *name, const media_multi_audio_format 
 	}
 
 	driver = open("/dev/audio/old/awe64/1", O_RDWR);
+	if (driver <= 0)
+		debugger("couldn't open soundcard device driver\n");
+		
 	sem = create_sem(0,"sem");
 	ioctl(driver,SOUND_SET_PARAMS,&setup);
 	ioctl(driver,SOUND_SET_PLAYBACK_COMPLETION_SEM,&sem);
@@ -309,7 +312,7 @@ _SoundPlayNode::AddOn(int32 * internal_id) const
 	return NULL;
 }
 
-/* virtual */ void 
+void 
 _SoundPlayNode::Start()
 {
 	TRACE("_SoundPlayNode::Start\n");
@@ -321,7 +324,7 @@ _SoundPlayNode::Start()
 	resume_thread(fThreadId);
 }
 
-/* virtual */ void 
+void 
 _SoundPlayNode::Stop()
 {
 	TRACE("_SoundPlayNode::Stop\n");

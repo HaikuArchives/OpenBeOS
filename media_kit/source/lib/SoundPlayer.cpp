@@ -361,7 +361,7 @@ BSoundPlayer::SetHasData(bool has_data)
 {
 	CALLED();
 	_m_lock.Lock();
-	_m_has_data = 1;
+	_m_has_data = has_data ? 1 : 0;
 	_m_lock.Unlock();
 }
 
@@ -476,6 +476,11 @@ BSoundPlayer::Init(
 		fmt.byte_order = B_MEDIA_HOST_ENDIAN;
 	if (fmt.buffer_size == media_multi_audio_format::wildcard.buffer_size)
 		fmt.buffer_size = 4096;
+		
+	if (fmt.channel_count != 1 && fmt.channel_count != 2)
+		debugger("BSoundPlayer: not a 1 or 2 channel audio format\n");
+	if (fmt.frame_rate <= 0.0f)
+		debugger("BSoundPlayer: framerate must be > 0\n");
 
 	_m_bufsize = fmt.buffer_size;
 	_m_buf = new char[_m_bufsize];
