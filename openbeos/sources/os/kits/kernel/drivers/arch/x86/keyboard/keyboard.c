@@ -97,7 +97,7 @@ static ssize_t _keyboard_read(void *_buf, size_t len)
 
 retry:
 	// block here until data is ready
-	rc = sem_acquire_etc(keyboard_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+	rc = acquire_sem_etc(keyboard_sem, 1, B_CAN_INTERRUPT, 0);
 	if(rc == ERR_SEM_INTERRUPTED) {
 		return 0;
 	}
@@ -129,7 +129,7 @@ retry:
 	}
 	if(head != saved_tail) {
 		// we did not empty the keyboard queue
-		sem_release_etc(keyboard_sem, 1, SEM_FLAG_NO_RESCHED);
+		release_sem_etc(keyboard_sem, 1, B_DO_NOT_RESCHEDULE);
 	}
 
 	mutex_unlock(&keyboard_read_mutex);
@@ -150,7 +150,7 @@ static void insert_in_buf(char c)
 	}
 	keyboard_buf[tail] = c;
 	tail = temp_tail;
-	sem_release_etc(keyboard_sem, 1, SEM_FLAG_NO_RESCHED);
+	release_sem_etc(keyboard_sem, 1, B_DO_NOT_RESCHEDULE);
 }
 
 static int handle_keyboard_interrupt(void* data)
@@ -287,7 +287,7 @@ device_hooks keyboard_hooks = {
 
 static int setup_keyboard(void)
 {
-	keyboard_sem = sem_create(0, "keyboard_sem");
+	keyboard_sem = create_sem(0, "keyboard_sem");
 	if(keyboard_sem < 0)
 		panic("could not create keyboard sem!\n");
 

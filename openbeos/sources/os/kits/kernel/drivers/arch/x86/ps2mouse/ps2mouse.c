@@ -104,7 +104,7 @@ static int handle_mouse_interrupt(void* data)
          memcpy(&md_read, &md_int, sizeof(mouse_data));
 			memset(&md_int, 0, sizeof(mouse_data));
 			in_read = false;
-	      sem_release_etc(mouse_sem, 1, SEM_FLAG_NO_RESCHED);
+	      release_sem_etc(mouse_sem, 1, B_DO_NOT_RESCHEDULE);
 		} // if
 		break;
 	} // switch
@@ -164,7 +164,7 @@ static ssize_t mouse_read(void * cookie, off_t pos, void* buf, size_t *len)
    in_read = true;
 
    // wait until there is data to read
-	if(sem_acquire_etc(mouse_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL) ==
+	if(acquire_sem_etc(mouse_sem, 1, B_CAN_INTERRUPT, 0) ==
 	   ERR_SEM_INTERRUPTED) {
 		return 0;
 	} // if
@@ -330,7 +330,7 @@ int mouse_dev_init(kernel_args *ka)
 
 	// create the mouse semaphore, used for synchronization between
 	// the interrupt handler and the read() operation
-	mouse_sem = sem_create(0, "ps2_mouse_sem");
+	mouse_sem = create_sem(0, "ps2_mouse_sem");
 	if(mouse_sem < 0)
 	   panic("failed to create PS/2 mouse semaphore!\n");
 

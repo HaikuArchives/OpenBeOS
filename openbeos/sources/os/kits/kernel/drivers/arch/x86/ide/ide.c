@@ -101,7 +101,7 @@ static int ide_ioctl(void * _cookie, uint32 op, void *buf, size_t len)
 	ide_ident* cookie = (ide_ident*)_cookie;
 	int err = 0;
 
-	sem_acquire(ide_sem, 1);
+	acquire_sem(ide_sem);
 
 	switch(op) {
 		case DISK_GET_GEOMETRY:
@@ -137,7 +137,7 @@ static int ide_ioctl(void * _cookie, uint32 op, void *buf, size_t len)
 			err = ERR_INVALID_ARGS;
 	}
 
-	sem_release(ide_sem, 1);
+	release_sem(ide_sem);
 
 	return err;
 }
@@ -156,7 +156,7 @@ static ssize_t ide_read(void * _cookie, off_t pos, void *buf, size_t *len)
 	}
 
 	// Make sure noone else is doing IDE
-	sem_acquire(ide_sem, 1);
+	acquire_sem(ide_sem);
 
 	// Calculate start block and number of blocks to read
 	block = pos / cookie->block_size;
@@ -168,7 +168,7 @@ static ssize_t ide_read(void * _cookie, off_t pos, void *buf, size_t *len)
 
 	// If it goes beyond the disk/partition, exit
 	if (block + sectors > cookie->block_start + cookie->block_count) {
-		sem_release(ide_sem, 1);
+		release_sem(ide_sem);
 		*len = 0;
 		/* XXX - should be returning an error */
 		return 0;
@@ -182,7 +182,7 @@ static ssize_t ide_read(void * _cookie, off_t pos, void *buf, size_t *len)
 
 		// If the read fails, exit with I/O error
 		if (ide_read_block(cookie->dev, buf, block, sectorsToRead) != 0) {
-			sem_release(ide_sem, 1);
+			release_sem(ide_sem);
 			return ERR_IO_ERROR;
 		}
 
@@ -192,7 +192,7 @@ static ssize_t ide_read(void * _cookie, off_t pos, void *buf, size_t *len)
 	}
 
 	// Give up
-	sem_release(ide_sem, 1);
+	release_sem(ide_sem);
 
 	return 0;
 }
@@ -212,7 +212,7 @@ static ssize_t ide_write(void * _cookie, off_t pos, const void *buf, size_t *len
 	}
 
 	// Make sure no other I/O is done
-	sem_acquire(ide_sem, 1);
+	acquire_sem(ide_sem);
 
 	// Get the start pos and block count to write
 	block = pos / cookie->block_size + cookie->block_start;
@@ -221,7 +221,7 @@ static ssize_t ide_write(void * _cookie, off_t pos, const void *buf, size_t *len
 	// If we're writing more than the disk/partition size
 	if (block + sectors > cookie->block_start + cookie->block_count) {
 		// exit without writing
-		sem_release(ide_sem, 1);
+		release_sem(ide_sem);
 		return 0;
 	}
 
@@ -235,7 +235,7 @@ static ssize_t ide_write(void * _cookie, off_t pos, const void *buf, size_t *len
 		if (ide_write_block(cookie->dev, buf, block, sectorsToWrite) != 0) {
 			//	  dprintf("ide_write: ide_block returned %d\n", rc);
 			*len = currentSector * cookie->block_size;
-			sem_release(ide_sem, 1);
+			release_sem(ide_sem);
 			return ERR_IO_ERROR;
 		}
 
@@ -243,7 +243,7 @@ static ssize_t ide_write(void * _cookie, off_t pos, const void *buf, size_t *len
 		currentSector += sectorsToWrite;
 	}
 
-	sem_release(ide_sem, 1);
+	release_sem(ide_sem);
 
 	return 0;
 }
@@ -370,7 +370,7 @@ static bool ide_attach_buses(unsigned int bus)
 int ide_bus_init(kernel_args *ka)
 {
 	// Create our top-level semaphore
-	ide_sem = sem_create(1, "ide_sem");
+	ide_sem = create_sem(1, "ide_sem");
 	if (ide_sem < 0) {
 		// We failed, so tell caller
 		return ide_sem;
