@@ -128,7 +128,7 @@ class Inode : public CachedBlock {
 
 		mode_t Mode() const { return Node()->mode; }
 		int32 Flags() const { return Node()->flags; }
-		bool IsDirectory() const { return Mode() & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR) & S_IFMT; }
+		bool IsDirectory() const { return Mode() & (S_DIRECTORY | S_INDEX_DIR | S_ATTR_DIR); }
 		bool IsIndex() const { return (Mode() & (S_INDEX_DIR | 0777)) == S_INDEX_DIR; }
 			// that's a stupid check, but AFAIK the only possible method...
 
