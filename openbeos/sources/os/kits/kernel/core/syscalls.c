@@ -19,6 +19,7 @@
 
 #define _KERNEL_
 #include <sysctl.h>
+#include <socket.h>
 
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
 
@@ -270,6 +271,9 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_sysctl((int *)arg0, (uint)arg1, (void *)arg2, 
 			                        (size_t *)arg3, (void *)arg4, 
 			                        (size_t)arg5);
+			break;
+		case SYSCALL_SOCKET:
+			*call_ret = socket((int)arg0, (int)arg1, (int)arg2, false);
 			break;
 		default:
 			*call_ret = -1;
