@@ -5,81 +5,56 @@
 
 #endif
 
-FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
-	   	   : BView(rect, name, B_FOLLOW_ALL, B_WILL_DRAW)
-{
+void FontSelectionView::emptyMenu(BPopUpMenu *m){
+
+	int32 cnt;
+	int32 numItemsInMenu = m->CountItems();
 	
-	BBox *testTextBox;
-	float x;
-	float y;
-	BRect viewSize = Bounds();
-	BMenuField *fontListField;
-	BMenuField *sizeListField;
+	for(cnt = 0;cnt < numItemsInMenu;cnt++){
+	
+		BMenu *tmp;
+		BMenuItem *tmpI;
+		int32 cnt2;
+		int32 numItemsInSubmenu;
+		
+		tmpI = m->RemoveItem((int32) 0);
+		tmp = tmpI->Submenu();
+		
+		if(tmp != NULL){
+		
+			numItemsInSubmenu = tmp->CountItems();
+			for(cnt2 = 0;cnt2 < numItemsInSubmenu;cnt2++){
+			
+				BMenuItem *tmpItem;
+				
+				tmpItem = tmp->RemoveItem((int32) 0);
+				delete tmpItem;
+				
+			}//for
+		
+		}//if
+		
+		delete tmpI;
+	
+	}//for
+
+}//emptyMenu
+
+void FontSelectionView::emptyMenus(){
+
+	//empty font menu
+	emptyMenu(fontList);
+	
+	//empty size menu
+	emptyMenu(sizeList);
+	
+}//emptyMenus
+
+void FontSelectionView::buildMenus(){
+
 	int32 numFamilies;
-	char typeLabel[30];
-	BFont defaultFont;
-	BFont workingFont;
 	int counter;
-	uint32 setSizeChangedMessage = 'nul';
-	uint32 setFontChangedMessage = 'nul';
-	uint32 setStyleChangedMessage = 'nul';
 	
-	x = viewSize.Width() / 37;
-	y = viewSize.Height() / 8;
-	
-	minSizeIndex = 9;
-	maxSizeIndex = 12;
-	
-	switch(type){
-	
-		case PLAIN_FONT_SELECTION_VIEW:
-		
-			sprintf(typeLabel, "Plain font");
-			defaultFont = be_plain_font;
-			workingFont = be_plain_font;
-			setSizeChangedMessage = PLAIN_SIZE_CHANGED_MSG;
-			setFontChangedMessage = PLAIN_FONT_CHANGED_MSG;
-			setStyleChangedMessage = PLAIN_STYLE_CHANGED_MSG;
-			
-			break;
-			
-		case BOLD_FONT_SELECTION_VIEW:
-		
-			sprintf(typeLabel, "Bold font");
-			defaultFont = be_bold_font;
-			workingFont = be_bold_font;
-			setSizeChangedMessage = BOLD_SIZE_CHANGED_MSG;
-			setFontChangedMessage = BOLD_FONT_CHANGED_MSG;
-			setStyleChangedMessage = BOLD_STYLE_CHANGED_MSG;
-			
-			break;
-			
-		case FIXED_FONT_SELECTION_VIEW:
-		
-			sprintf(typeLabel, "Fixed font");
-			defaultFont = be_fixed_font;
-			workingFont = be_fixed_font;
-			setSizeChangedMessage = FIXED_SIZE_CHANGED_MSG;
-			setFontChangedMessage = FIXED_FONT_CHANGED_MSG;
-			setStyleChangedMessage = FIXED_STYLE_CHANGED_MSG;
-			
-			break;
-			
-	}//switch
-	
-	sizeList = new BPopUpMenu("sizeList", true, true, B_ITEMS_IN_COLUMN);
-	fontList = new BPopUpMenu("fontList", true, true, B_ITEMS_IN_COLUMN);
-	fontListField = new BMenuField(*(new BRect(x, y, (25 * x), (3 * y))), "fontField", typeLabel, fontList);
-	fontListField->SetDivider(7 * x);
-	sizeListField = new BMenuField(*(new BRect((27 * x), y, (36 * x), (3 * y))), "fontField", "Size", sizeList);
-	sizeListField->SetDivider(31 * x);
-	testText = new BStringView(*(new BRect((8 * x), (5 * y), (35 * x), (8 * y))), "testText", "The quick brown fox jumped over the lazy dog.", B_FOLLOW_ALL, B_WILL_DRAW);
-	testText->SetFont(&workingFont);
-	testTextBox = new BBox(*(new BRect((8 * x), (5 * y), (36 * x), (8 * y))), "TestTextBox", B_FOLLOW_ALL, B_WILL_DRAW, B_FANCY_BORDER);
-	
-	fontList->SetLabelFromMarked(true);
-	
-	//Build font menu
 	numFamilies = count_font_families(); 
 	for ( int32 i = 0; i < numFamilies; i++ ) { 
 		
@@ -148,6 +123,76 @@ FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
 		
 	}//for
 	
+}//buildMenus
+
+FontSelectionView::FontSelectionView(BRect rect, const char *name, int type)
+	   	   : BView(rect, name, B_FOLLOW_ALL, B_WILL_DRAW)
+{
+	
+	BBox *testTextBox;
+	float x;
+	float y;
+	BRect viewSize = Bounds();
+	BMenuField *fontListField;
+	BMenuField *sizeListField;
+	
+	x = viewSize.Width() / 37;
+	y = viewSize.Height() / 8;
+	
+	minSizeIndex = 9;
+	maxSizeIndex = 12;
+	
+	switch(type){
+	
+		case PLAIN_FONT_SELECTION_VIEW:
+		
+			sprintf(typeLabel, "Plain font");
+			defaultFont = be_plain_font;
+			workingFont = be_plain_font;
+			setSizeChangedMessage = PLAIN_SIZE_CHANGED_MSG;
+			setFontChangedMessage = PLAIN_FONT_CHANGED_MSG;
+			setStyleChangedMessage = PLAIN_STYLE_CHANGED_MSG;
+			
+			break;
+			
+		case BOLD_FONT_SELECTION_VIEW:
+		
+			sprintf(typeLabel, "Bold font");
+			defaultFont = be_bold_font;
+			workingFont = be_bold_font;
+			setSizeChangedMessage = BOLD_SIZE_CHANGED_MSG;
+			setFontChangedMessage = BOLD_FONT_CHANGED_MSG;
+			setStyleChangedMessage = BOLD_STYLE_CHANGED_MSG;
+			
+			break;
+			
+		case FIXED_FONT_SELECTION_VIEW:
+		
+			sprintf(typeLabel, "Fixed font");
+			defaultFont = be_fixed_font;
+			workingFont = be_fixed_font;
+			setSizeChangedMessage = FIXED_SIZE_CHANGED_MSG;
+			setFontChangedMessage = FIXED_FONT_CHANGED_MSG;
+			setStyleChangedMessage = FIXED_STYLE_CHANGED_MSG;
+			
+			break;
+			
+	}//switch
+	
+	sizeList = new BPopUpMenu("sizeList", true, true, B_ITEMS_IN_COLUMN);
+	fontList = new BPopUpMenu("fontList", true, true, B_ITEMS_IN_COLUMN);
+	fontListField = new BMenuField(*(new BRect(x, y, (25 * x), (3 * y))), "fontField", typeLabel, fontList);
+	fontListField->SetDivider(7 * x);
+	sizeListField = new BMenuField(*(new BRect((27 * x), y, (36 * x), (3 * y))), "fontField", "Size", sizeList);
+	sizeListField->SetDivider(31 * x);
+	testText = new BStringView(*(new BRect((8 * x), (5 * y), (35 * x), (8 * y))), "testText", "The quick brown fox jumped over the lazy dog.", B_FOLLOW_ALL, B_WILL_DRAW);
+	testText->SetFont(&workingFont);
+	testTextBox = new BBox(*(new BRect((8 * x), (5 * y), (36 * x), (8 * y))), "TestTextBox", B_FOLLOW_ALL, B_WILL_DRAW, B_FANCY_BORDER);
+	
+	fontList->SetLabelFromMarked(true);
+	
+	buildMenus();
+
 	SetViewColor(216, 216, 216, 0);
 	
 	AddChild(testTextBox);

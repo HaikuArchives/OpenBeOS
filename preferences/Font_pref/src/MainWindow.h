@@ -57,6 +57,7 @@
 			void updateFont(FontSelectionView *theView);
 			void updateStyle(FontSelectionView *theView);
 			ButtonView *buttonView;
+			CacheView *cachePanel;
 	
 	};
 

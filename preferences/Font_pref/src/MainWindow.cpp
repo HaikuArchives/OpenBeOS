@@ -28,7 +28,7 @@ MainWindow::MainWindow(BRect frame)
 	tabView->AddTab(fontPanel = new FontView(r), tab); 
 	tab->SetLabel("Fonts"); 
 	tab = new BTab(); 
-	tabView->AddTab(new CacheView(r, 64, 4096, 256), tab); 
+	tabView->AddTab(cachePanel = new CacheView(r, 64, 4096, 256, 256), tab); 
 	tab->SetLabel("Cache");
 		
 	r = Bounds();
@@ -52,6 +52,8 @@ bool MainWindow::QuitRequested()
 
 void MainWindow::MessageReceived(BMessage *message){
 
+	char msg[100];
+	
 	switch(message->what){
 	
 		case PLAIN_SIZE_CHANGED_MSG:
@@ -101,7 +103,12 @@ void MainWindow::MessageReceived(BMessage *message){
 		
 		case RESCAN_FONTS_MSG:
 		
-			printf("rescan fonts message\n");
+			update_font_families(false);
+			fontPanel->emptyMenus();
+			fontPanel->buildMenus();
+			updateFont(fontPanel->plainSelectionView);
+			updateFont(fontPanel->boldSelectionView);
+			updateFont(fontPanel->fixedSelectionView);
 			break;
 			
 		case RESET_FONTS_MSG:
@@ -121,7 +128,9 @@ void MainWindow::MessageReceived(BMessage *message){
 			
 		case PRINT_FCS_MODIFICATION_MSG:
 		
-			printf("print mod msg\n");
+			sprintf(msg, "Printing font cache size : %d kB", cachePanel->getPrintFCSValue());
+			cachePanel->updatePrintFCS(msg);
+			
 			break;
 		
 		case SCREEN_FCS_UPDATE_MSG:
@@ -131,7 +140,8 @@ void MainWindow::MessageReceived(BMessage *message){
 				
 		case SCREEN_FCS_MODIFICATION_MSG:
 		
-			printf("screen mod msg\n");
+			sprintf(msg, "Screen font cache size : %d kB", cachePanel->getScreenFCSValue());
+			cachePanel->updateScreenFCS(msg);
 			break;
 		
 		default:

@@ -39,7 +39,11 @@
 	
 		public:
 			
-			CacheView(BRect frame, int minVal, int maxVal, int currVal);
+			CacheView(BRect frame, int minVal, int maxVal, int printCurrVal, int screenCurrVal);
+			void updatePrintFCS(const char* txt);
+			void updateScreenFCS(const char* txt);
+			int getPrintFCSValue();
+			int getScreenFCSValue();
 			
 		private:
 		

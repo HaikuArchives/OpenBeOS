@@ -72,6 +72,8 @@
 			void GetSelectedStyle(font_style *style);
 			void UpdateFontSelectionFromStyle();
 			void UpdateFontSelection();
+			void buildMenus();
+			void emptyMenus();
 			
 		private:
 		
@@ -80,6 +82,13 @@
 			BPopUpMenu *sizeList;
 			int minSizeIndex;
 			int maxSizeIndex;
+			uint32 setSizeChangedMessage;
+			uint32 setFontChangedMessage;
+			uint32 setStyleChangedMessage;
+			char typeLabel[30];
+			BFont defaultFont;
+			BFont workingFont;
+			void emptyMenu(BPopUpMenu *m);
 	
 	};
 	

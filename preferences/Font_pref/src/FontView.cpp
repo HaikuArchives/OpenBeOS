@@ -27,3 +27,19 @@ FontView::FontView(BRect rect)
 	
 }
 
+void FontView::buildMenus(){
+
+	plainSelectionView->buildMenus();
+	boldSelectionView->buildMenus();
+	fixedSelectionView->buildMenus();
+
+}//buildMenus
+
+void FontView::emptyMenus(){
+
+	plainSelectionView->emptyMenus();
+	boldSelectionView->emptyMenus();
+	fixedSelectionView->emptyMenus();
+
+}//buildMenus
+

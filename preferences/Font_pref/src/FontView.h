@@ -29,6 +29,8 @@
 			FontSelectionView *plainSelectionView;
 			FontSelectionView *boldSelectionView;
 			FontSelectionView *fixedSelectionView;
+			void buildMenus();
+			void emptyMenus();
 			
 	};
 	

@@ -4,7 +4,7 @@
 
 #endif
 
-CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
+CacheView::CacheView(BRect rect, int minVal, int maxVal, int printCurrVal, int screenCurrVal)
 	   	   : BView(rect, "CacheView", B_FOLLOW_ALL, B_WILL_DRAW)
 {
 	
@@ -13,6 +13,7 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
 	BRect viewSize = Bounds();
 	char sliderMinLabel[10];
 	char sliderMaxLabel[10];
+	char msg[100];
 	
 	SetViewColor(216, 216, 216, 0);
 	
@@ -23,9 +24,11 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
 	
 	viewSize.InsetBy(15, 10);
 	
+	sprintf(msg, "Screen font cache size : %d kB", screenCurrVal);
+	
 	screenFCS = new BSlider(*(new BRect(viewSize.left, viewSize.top, viewSize.right, viewSize.top + 25.0)),
 							"screenFontCache",
-							"Screen font cache size: ",
+							msg,
 							new BMessage(SCREEN_FCS_UPDATE_MSG),
 							minVal,
 							maxVal,
@@ -37,13 +40,15 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
 	sprintf(sliderMaxLabel, "%d kB", maxVal);
 	screenFCS->SetLimitLabels(sliderMinLabel, sliderMaxLabel);
 	screenFCS->UseFillColor(TRUE, &fillColor);
-	screenFCS->SetValue(currVal);
+	screenFCS->SetValue(screenCurrVal);
 	
 	viewSize.top = viewSize.top + 65.0;
 	
+	sprintf(msg, "Printing font cache size : %d kB", printCurrVal);
+	
 	printFCS = new BSlider(*(new BRect(viewSize.left, viewSize.top, viewSize.right, viewSize.top + 25.0)),
 							"printFontCache",
-							"Printing font cache size: ",
+							msg,
 							new BMessage(PRINT_FCS_UPDATE_MSG),
 							minVal,
 							maxVal,
@@ -53,7 +58,7 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
 	
 	printFCS->SetLimitLabels(sliderMinLabel, sliderMaxLabel);
 	printFCS->UseFillColor(TRUE, &fillColor);
-	printFCS->SetValue(currVal);
+	printFCS->SetValue(printCurrVal);
 	
 	viewSize.top = viewSize.top + 70.0;
 	
@@ -70,3 +75,27 @@ CacheView::CacheView(BRect rect, int minVal, int maxVal, int currVal)
 	AddChild(saveCache);  
 	
 }
+
+void CacheView::updatePrintFCS(const char* txt){
+
+	printFCS->SetLabel(txt);
+
+}//updatePrintFCS
+
+void CacheView::updateScreenFCS(const char* txt){
+
+	screenFCS->SetLabel(txt);
+
+}//updatePrintFCS
+
+int CacheView::getPrintFCSValue(){
+
+	return int(printFCS->Value());
+
+}//getPrintValue
+
+int CacheView::getScreenFCSValue(){
+
+	return int(screenFCS->Value());
+
+}//getPrintValue
