@@ -1,4 +1,4 @@
-BFS - ToDo, June 3rd, 2002
+BFS - ToDo, June 5th, 2002
 -----
 
 BlockAllocator
@@ -19,7 +19,6 @@ Queries
 
  - There shouldn't be any cases where you can speed up a query with reordering the query expression - test it
  - Check permissions of the parent directories
- - Live-Queries aren't implemented yet
  - Add protection against crashing applications which had a query open - at least the original BeOS kernel does not free the cookie (which throws some memory away *and* prevents unmounting the disk)
 
 
@@ -47,7 +46,6 @@ Inode
 
 Indices
 
- - Support for Live-Queries is on the way...
 
 
 Attributes

@@ -330,8 +330,16 @@ Journal::FlushLogEntry(uint32 start)
 		}
 
 		for (;index < valuesInBlock && count-- > 0;index++) {
-			// ToDo: batch following blocks together
-			flush_blocks(fVolume->Device(),array[index],1);
+			// batch following near blocks together
+			off_t first = array[index];
+			int32 numBlocks = 1;
+			while (count > 0 && array[index + 1] - array[index] < 16) {
+				numBlocks += array[index + 1] - array[index];
+				index++;
+				count--;
+			}
+
+			flush_blocks(fVolume->Device(),first,numBlocks);
 		}
 		arrayBlock++;
 		if (arrayBlock > fVolume->ToBlock(fVolume->Log()) + fLogSize)

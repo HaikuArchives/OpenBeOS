@@ -259,14 +259,14 @@ Volume::WriteSuperBlock()
 
 
 void
-Volume::UpdateLiveQueries(Inode *inode,int32 op,char *attribute)
+Volume::UpdateLiveQueries(Inode *inode,const char *attribute,int32 type,const uint8 *oldKey,size_t oldLength,const uint8 *newKey,size_t newLength)
 {
 	if (fQueryLock.Lock() < B_OK)
 		return;
 
 	Query *query = NULL;
 	while ((query = fQueries.Next(query)) != NULL)
-		query->LiveUpdate(inode,op,attribute);
+		query->LiveUpdate(inode,attribute,type,oldKey,oldLength,newKey,newLength);
 
 	fQueryLock.Unlock();
 }

@@ -90,7 +90,8 @@ class Term {
 		void		SetParent(Term *parent) { fParent = parent; }
 		Term		*Parent() const { return fParent; }
 
-		virtual status_t Match(Inode *inode) = 0;
+		virtual status_t Match(Inode *inode,const char *attribute = NULL,int32 type = 0,
+				const uint8 *key = NULL,size_t size = 0) = 0;
 		virtual void Complement() = 0;
 
 		virtual void CalculateScore(Index &index) = 0;
@@ -126,7 +127,7 @@ class Equation : public Term {
 		status_t	ParseQuotedString(char **_start,char **_end);
 		char		*CopyString(char *start, char *end);
 
-		virtual status_t Match(Inode *inode);
+		virtual status_t Match(Inode *inode,const char *attribute = NULL,int32 type = 0,const uint8 *key = NULL,size_t size = 0);
 		virtual void Complement();
 
 		status_t	PrepareQuery(Volume *volume, Index &index, TreeIterator **iterator);
@@ -141,8 +142,9 @@ class Equation : public Term {
 
 	private:
 		status_t	ConvertValue(type_code type);
-		bool		CompareTo(uint8 *value, uint16 size);
+		bool		CompareTo(const uint8 *value, uint16 size);
 		uint8		*Value() const { return (uint8 *)&fValue; }
+		status_t	MatchEmptyString();
 
 		char		*fAttribute;
 		char		*fString;
@@ -164,7 +166,7 @@ class Operator : public Term {
 		Term		*Left() const { return fLeft; }
 		Term		*Right() const { return fRight; }
 
-		virtual status_t Match(Inode *inode);
+		virtual status_t Match(Inode *inode,const char *attribute = NULL,int32 type = 0,const uint8 *key = NULL,size_t size = 0);
 		virtual void Complement();
 		
 		virtual void CalculateScore(Index &index);
@@ -696,7 +698,7 @@ Equation::ConvertValue(type_code type)
  */
 
 bool
-Equation::CompareTo(uint8 *value,uint16 size)
+Equation::CompareTo(const uint8 *value,uint16 size)
 {
 	int32 compare;
 
@@ -747,21 +749,48 @@ Equation::Complement()
 }
 
 
+status_t
+Equation::MatchEmptyString()
+{
+	// there is no matching attribute, we will just bail out if we
+	// already know that our value is not of a string type.
+	// If not, it will be converted to a string - and then be compared with "".
+	// That's why we have to call ConvertValue() here - but it will be
+	// a cheap call for the next time
+	// Should we do this only for OP_UNEQUAL?
+	if (fType != 0 && fType != B_STRING_TYPE)
+		return NO_MATCH;
+
+	status_t status = ConvertValue(B_STRING_TYPE);
+	if (status == B_OK)
+		status = CompareTo((const uint8 *)"",fSize) ? MATCH_OK : NO_MATCH;
+
+	return status;
+}
+
+
 /**	Matches the inode's attribute value with the equation.
  *	Returns MATCH_OK if it matches, NO_MATCH if not, < 0 if something went wrong
  */
 
 status_t
-Equation::Match(Inode *inode)
+Equation::Match(Inode *inode,const char *attributeName,int32 type,const uint8 *key,size_t size)
 {
 	// get a pointer to the attribute in question
 	union value value;
 	uint8 *buffer;
-	int32 type;
-	size_t size;
 	
-	// first, check for "fake" attributes, "name", "size", "last_modified",
-	if (!strcmp(fAttribute,"name")) {
+	// first, check if we are matching for a live query and use that value
+	if (attributeName != NULL && !strcmp(fAttribute,attributeName)) {
+		if (key == NULL) {
+			if (type == B_STRING_TYPE)
+				return MatchEmptyString();
+
+			return NO_MATCH;
+		}
+		buffer = const_cast<uint8 *>(key);
+	} else if (!strcmp(fAttribute,"name")) {
+		// if not, check for "fake" attributes, "name", "size", "last_modified",
 		buffer = (uint8 *)inode->Name();
 		if (buffer == NULL)
 			return B_ERROR;
@@ -803,24 +832,8 @@ Equation::Match(Inode *inode)
 					return B_IO_ERROR;
 				}
 				inode->ReleaseAttribute(attribute);
-			} else {
-				// there is no matching attribute, we will just bail out if we
-				// already know that our value is not of a string type.
-				// If not, it will be converted to a string - and then be compared with "".
-				// That's why we have to call ConvertValue() here - but it will be
-				// a cheap call for the next time
-				// Should we do this only for OP_UNEQUAL?
-				if (fType != 0 && fType != B_STRING_TYPE)
-					return NO_MATCH;
-	
-				if (ConvertValue(B_STRING_TYPE) < B_OK)
-					RETURN_ERROR(B_BAD_VALUE);
-	
-				value.String[0] = '\0';	// create an empty string
-				buffer = (uint8 *)&value;
-				type = fType;
-				size = fSize;
-			}
+			} else
+				return MatchEmptyString();
 		}
 	}
 	// prepare own value for use, if it is possible to convert it
@@ -1066,23 +1079,23 @@ Operator::~Operator()
 }
 
 
-status_t 
-Operator::Match(Inode *inode)
+status_t
+Operator::Match(Inode *inode,const char *attribute,int32 type,const uint8 *key,size_t size)
 {
 	if (fOp == OP_AND) {
-		status_t status = fLeft->Match(inode);
+		status_t status = fLeft->Match(inode,attribute,type,key,size);
 		if (status != MATCH_OK)
 			return status;
 
-		return fRight->Match(inode);
+		return fRight->Match(inode,attribute,type,key,size);
 	} else {
 		// choose the term with the better score for OP_OR
 		if (fRight->Score() > fLeft->Score()) {
-			status_t status = fRight->Match(inode);
+			status_t status = fRight->Match(inode,attribute,type,key,size);
 			if (status != NO_MATCH)
 				return status;
 		}
-		return fLeft->Match(inode);
+		return fLeft->Match(inode,attribute,type,key,size);
 	}
 }
 
@@ -1457,17 +1470,30 @@ Query::SetLiveMode(port_id port,int32 token)
 
 
 void 
-Query::LiveUpdate(Inode *inode,int32 op,char *attribute)
+Query::LiveUpdate(Inode *inode,const char *attribute,int32 type,const uint8 *oldKey,size_t oldLength,const uint8 *newKey,size_t newLength)
 {
-	if (fPort < 0)
+	if (fPort < 0 || fExpression == NULL || attribute == NULL)
 		return;
 
 	// ToDo: check if the attribute is part of the query at all...
 
-	//if (op == B_ENTRY_REMOVED) {
+	status_t oldStatus = fExpression->Root()->Match(inode,attribute,type,oldKey,oldLength);
+	status_t newStatus = fExpression->Root()->Match(inode,attribute,type,newKey,newLength);
+	int32 op;
+	if (oldStatus == MATCH_OK && newStatus == MATCH_OK
+		|| oldStatus != MATCH_OK && newStatus != MATCH_OK) {
+		// nothing has changed
+		return;
+	} else if (oldStatus == MATCH_OK && newStatus != MATCH_OK)
+		op = B_ENTRY_REMOVED;
+	else
+		op = B_ENTRY_CREATED;
 
-	// if "name" is NULL, send_notification() crashes...
-	send_notification(fPort,fToken,B_QUERY_UPDATE,op /* op */,fVolume->ID(),fVolume->ID(), /*nsidb */
-			inode->ID(),inode->ID() /* vnidb */,inode->ID() /* vnidc */,"whatever" /*name*/);
+	// if "value" is NULL, send_notification() crashes...
+	const char *value = (const char *)newKey;
+	if (type != B_STRING_TYPE || value == NULL)
+		value = "";
+
+	send_notification(fPort,fToken,B_QUERY_UPDATE,op,fVolume->ID(),0,inode->ID(),0,0,value);
 }
 

@@ -90,7 +90,7 @@ class Volume {
 
 		status_t			WriteSuperBlock();
 
-		void				UpdateLiveQueries(Inode *inode,int32 op,char *attribute);
+		void				UpdateLiveQueries(Inode *inode,const char *attribute,int32 type,const uint8 *oldKey,size_t oldLength,const uint8 *newKey,size_t newLength);
 		void				AddQuery(Query *query);
 		void				RemoveQuery(Query *query);
 

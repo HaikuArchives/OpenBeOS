@@ -236,10 +236,8 @@ Index::Update(Transaction *transaction,const char *name,int32 type,const uint8 *
 	if (newKey != NULL)
 		status = tree->Insert(transaction,(const uint8 *)newKey,newLength,id);
 
-	// ToDo: the query update mechanism does not work that way...
-	// We have to make sure that B_ENTRY_REMOVED & B_ENTRY_CREATED are
-	// send out correctly
-	fVolume->UpdateLiveQueries(fNode,B_ENTRY_CREATED,"whatever");
+	// finally, update all live queries about the change
+	fVolume->UpdateLiveQueries(fNode,name,type,oldKey,oldLength,newKey,newLength);
 
 	return status;
 }
