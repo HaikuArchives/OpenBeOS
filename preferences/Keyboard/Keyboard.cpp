@@ -16,7 +16,10 @@
 #ifndef KEYBOARD_MESSAGES_H
 #include "KeyboardMessages.h"
 #endif
-
+#ifndef KEYBOARD_SETTINGS_H
+#include "KeyboardSettings.h"
+#endif
+#include <stdio.h>
 int main(int, char**)
 {//main	
 	KeyboardApplication	myApplication;
@@ -29,9 +32,15 @@ int main(int, char**)
 KeyboardApplication::KeyboardApplication():BApplication("application/x-vnd.OpenBeOS-KYBD")
 {//KeyboardApplication::KeyboardApplication()
 	BRect				aRect;
+	
+	//Create the settings object
+	theseSettings = new KeyboardSettings();
 
 	// set up a rectangle and instantiate a new window
-	aRect.Set(50, 200, 279, 421);
+	aRect.left=theseSettings->corner.x;
+	aRect.top=theseSettings->corner.y;
+	aRect.right=aRect.left+229;
+	aRect.bottom=aRect.top+221;
 	aWindow = new KeyboardWindow(aRect);
 			
 	// make window visible
@@ -55,3 +64,8 @@ void KeyboardApplication::MessageReceived(BMessage *message)
 			break;
 	}//Switch
 }//KeyboardApplication::MessageReceived
+
+KeyboardApplication::~KeyboardApplication()
+{//KeyboardApplication::~KeyboardApplication
+		delete theseSettings;
+}//KeyboardApplication::~KeyboardApplication

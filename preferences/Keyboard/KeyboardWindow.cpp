@@ -19,17 +19,11 @@
 #ifndef _BUTTON_H
 #include <Button.h>
 #endif
-#ifndef KEYBOARD_SETTINGS_H
-#include "KeyboardSettings.h"
-#endif
 
 KeyboardWindow::KeyboardWindow(BRect frame)
 				: BWindow(frame, "Keyboard", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_NOT_ZOOMABLE )
 {//KeyboardWindow::KeyboardWindow
 	// set up a rectangle and instantiate a new view
-	KeyboardSettings *theseSettings;
-	
-	theseSettings = new KeyboardSettings();
 	
 	BRect aRect( Bounds() );
 	aView = new KeyboardView(aRect);

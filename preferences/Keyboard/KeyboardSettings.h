@@ -12,10 +12,11 @@ class KeyboardSettings{
 public :
 	KeyboardSettings();
 	virtual ~KeyboardSettings();
+	BPoint		corner;
+	kb_settings	settings;
 private:
 	static const char kKeyboardSettingsFile[];
-	BPoint		*corner;
-	kb_settings	*settings;
+
 };
 
 #endif
