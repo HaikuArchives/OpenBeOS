@@ -1,4 +1,10 @@
-OBJS=cksum.o misc.o net_timer.o
+OBJS=   cksum.o \
+	misc.o \
+	net_timer.o \
+	mbuf.o \
+	nhash.o \
+	pools.o
+
 INCLUDES=-I. -I.. -I../include
 CFLAGS=-Wall -g -O2
 
