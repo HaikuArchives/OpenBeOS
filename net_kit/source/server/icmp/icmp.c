@@ -127,6 +127,7 @@ struct protosw my_proto = {
 	&icmp_input,
 	NULL,//&icmp_output,
 	NULL,
+	NULL,         /* pr_sysctl */
 	
 	NULL,
 	NULL

@@ -413,6 +413,9 @@ printf("arp_cleanse!!\n");
 	printf("ARP: cache has been cleaned\n");
 	walk_arp_cache();
 #endif
+#ifdef _KERNEL_MODE
+	return 0;
+#endif
 }
 
 #ifndef _KERNEL_MODE
@@ -426,7 +429,11 @@ static int32 arpq_run(struct timer *t)
 
 	/* if the q is empty, don't bother locking etc, just return */
 	if (!arp_lookup_q)
+#ifndef _KERNEL_MODE
 		return;
+#else
+		return -1;
+#endif
 
 	acquire_sem(arpq_lock);
 	while (aqe) {
@@ -469,6 +476,9 @@ static int32 arpq_run(struct timer *t)
 
 #if ARP_DEBUG
 	printf("ARP: lookup queue was run (%ld)\n", arpq_timer);
+#endif
+#ifdef _KERNEL_MODE
+	return 0;
 #endif
 }
 
