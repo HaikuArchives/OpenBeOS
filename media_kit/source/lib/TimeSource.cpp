@@ -6,13 +6,18 @@
 #include <TimeSource.h>
 #include "debug.h"
 
+// XXX This BTimeSource only works for realtime, nothing else is implemented
+
+// XXX The bebook says that the latency is always calculated in realtime
+// XXX This is not currently done in this code
+
 /*************************************************************
  * protected BTimeSource
  *************************************************************/
 
 BTimeSource::~BTimeSource()
 {
-	UNIMPLEMENTED();
+	CALLED();
 }
 
 /*************************************************************
@@ -24,30 +29,29 @@ BTimeSource::SnoozeUntil(bigtime_t performance_time,
 						 bigtime_t with_latency,
 						 bool retry_signals)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
+	CALLED();
 
-	return dummy;
+	return B_ERROR;
 }
 
 
 bigtime_t
 BTimeSource::Now()
 {
-	UNIMPLEMENTED();
-	bigtime_t dummy;
-
-	return dummy;
+	CALLED();
+	return PerformanceTimeFor(RealTime());
 }
 
 
 bigtime_t
 BTimeSource::PerformanceTimeFor(bigtime_t real_time)
 {
-	UNIMPLEMENTED();
-	bigtime_t dummy;
+	CALLED();
+	bigtime_t performanceTime; 
+	float drift; 
 
-	return dummy;
+	while (GetTime(&performanceTime, &real_time, &drift) != B_OK); 
+	return (bigtime_t)(performanceTime + (RealTime() - real_time) * drift);
 }
 
 
@@ -55,20 +59,17 @@ bigtime_t
 BTimeSource::RealTimeFor(bigtime_t performance_time,
 						 bigtime_t with_latency)
 {
-	UNIMPLEMENTED();
-	bigtime_t dummy;
+	CALLED();
 
-	return dummy;
+	return performance_time + with_latency;
 }
 
 
 bool
 BTimeSource::IsRunning()
 {
-	UNIMPLEMENTED();
-	bool dummy;
-
-	return dummy;
+	CALLED();
+	return !fStopped;
 }
 
 
@@ -77,30 +78,28 @@ BTimeSource::GetTime(bigtime_t *performance_time,
 					 bigtime_t *real_time,
 					 float *drift)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
+	CALLED();
+	*performance_time = *real_time;
+	*drift = 1.0f;
 
-	return dummy;
+	return B_OK;
 }
 
 
 bigtime_t
 BTimeSource::RealTime()
 {
-	UNIMPLEMENTED();
-	bigtime_t dummy;
-
-	return dummy;
+	CALLED();
+	return system_time();
 }
 
 
 status_t
 BTimeSource::GetStartLatency(bigtime_t *out_latency)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	*out_latency = 0;
+	return B_OK;
 }
 
 /*************************************************************
@@ -108,10 +107,11 @@ BTimeSource::GetStartLatency(bigtime_t *out_latency)
  *************************************************************/
 
 
-BTimeSource::BTimeSource()
-	: BMediaNode("XXX fixme")
+BTimeSource::BTimeSource() : 
+	BMediaNode("called by BTimeSource"),
+	fStopped(false)
 {
-	UNIMPLEMENTED();
+	CALLED();
 
 	AddNodeKind(B_TIME_SOURCE);
 }
@@ -122,10 +122,8 @@ BTimeSource::HandleMessage(int32 message,
 						   const void *data,
 						   size_t size)
 {
-	UNIMPLEMENTED();
-	status_t dummy;
-
-	return dummy;
+	CALLED();
+	return BMediaNode::HandleMessage(message,data,size);
 }
 
 
@@ -156,7 +154,8 @@ BTimeSource::SendRunMode(run_mode mode)
 void
 BTimeSource::SetRunMode(run_mode mode)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	BMediaNode::SetRunMode(mode);
 }
 /*************************************************************
  * private BTimeSource
@@ -176,10 +175,13 @@ status_t BTimeSource::_Reserved_TimeSource_4(void *) { return 0; }
 status_t BTimeSource::_Reserved_TimeSource_5(void *) { return 0; }
 
 /* explicit */
-BTimeSource::BTimeSource(media_node_id id)
-	: BMediaNode("XXX fixme")
+BTimeSource::BTimeSource(media_node_id id) :
+	BMediaNode("called by BTimeSource", id, 0),
+	fStopped(false)
 {
-	UNIMPLEMENTED();
+	CALLED();
+
+	AddNodeKind(B_TIME_SOURCE);
 }
 
 

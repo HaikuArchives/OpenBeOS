@@ -114,7 +114,7 @@ virtual		status_t _Reserved_TimeSource_3(void *);
 virtual		status_t _Reserved_TimeSource_4(void *);
 virtual		status_t _Reserved_TimeSource_5(void *);
 
-		bool _mStopped;
+		bool fStopped;
 
 		area_id _mArea;
 volatile	_time_transmit_buf * _mBuf;
