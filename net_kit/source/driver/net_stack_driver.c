@@ -68,6 +68,8 @@ typedef struct {
 		selectsync *	sync;
 		uint32			ref;
 	} selectinfo[3];
+	struct r5_selectsync sync;
+	fd_set r, w, e;
 } net_stack_cookie;
 
 #if STAY_LOADED
@@ -261,7 +263,7 @@ static status_t net_stack_open(const char * name,
 	nsc = (net_stack_cookie *) malloc(sizeof(*nsc));
 	if (!nsc)
 		return B_NO_MEMORY;
-	
+printf("net_stack_open\n");	
 	memset(nsc, 0, sizeof(*nsc));
 	nsc->socket = NULL; /* the socket will be allocated in NET_STACK_SOCKET ioctl */
 	nsc->open_flags = flags;
@@ -435,15 +437,32 @@ static status_t net_stack_control(void *cookie, uint32 op, void * data, size_t l
 			return B_OK;
 		}
 		case NET_STACK_SELECT: {
-			struct select_args * args = (struct select_args *) data;
-			/* if we get this opcode, we aren't using the r5 kernel select() call,
-			   so we can't use his notify_select_event() too. Let's do it ourself! */
+			struct select_args *args = (struct select_args *) data;
+			/* if we get this opcode, we are using the r5 kernel select() call,
+			 * so we can't use his notify_select_event() too. Let's do it ourself! */
 			g_nse = r5_notify_select_event;
-			return net_stack_select(cookie, (args->ref & 0x0F), args->ref, args->sync);
+			memcpy(&nsc->sync, args->sync, sizeof(nsc->sync));
+			nsc->sync.rbits = &nsc->r;
+			nsc->sync.wbits = &nsc->w;
+			nsc->sync.ebits = &nsc->e;
+			if (((struct r5_selectsync *)args->sync)->rbits)
+				memcpy(&nsc->r, ((struct r5_selectsync *)args->sync)->rbits, sizeof(fd_set));
+			if (((struct r5_selectsync *)args->sync)->wbits)
+				memcpy(&nsc->w, ((struct r5_selectsync *)args->sync)->wbits, sizeof(fd_set));
+			if (((struct r5_selectsync *)args->sync)->ebits)
+				memcpy(&nsc->e, ((struct r5_selectsync *)args->sync)->ebits, sizeof(fd_set));
+			return net_stack_select(cookie, (args->ref & 0x0F), args->ref, (selectsync *)&nsc->sync);
 		}
 		case NET_STACK_DESELECT: {
 			struct select_args * args = (struct select_args *) data;
-			return net_stack_deselect(cookie, (args->ref & 0x0F), args->sync);
+			if (((struct r5_selectsync *)args->sync)->rbits)
+				memcpy(((struct r5_selectsync *)args->sync)->rbits, &nsc->r, sizeof(fd_set));
+			if (((struct r5_selectsync *)args->sync)->wbits)
+				memcpy(((struct r5_selectsync *)args->sync)->wbits, &nsc->w, sizeof(fd_set));
+			if (((struct r5_selectsync *)args->sync)->ebits)
+				memcpy(((struct r5_selectsync *)args->sync)->ebits, &nsc->e, sizeof(fd_set));
+			((struct r5_selectsync *)args->sync)->nfd = nsc->sync.nfd;
+			return net_stack_deselect(cookie, (args->ref & 0x0F), (selectsync *)&nsc->sync);
 		}
 		default:
 			if (nsc->socket)
@@ -520,7 +539,7 @@ static status_t net_stack_write(void *cookie,
 }
 
 
-static status_t net_stack_select(void * cookie, uint8 event, uint32 ref, selectsync * sync)
+static status_t net_stack_select(void * cookie, uint8 event, uint32 ref, selectsync *sync)
 {
 	net_stack_cookie *	nsc = (net_stack_cookie *) cookie;
 
@@ -561,7 +580,7 @@ static status_t net_stack_deselect(void* cookie, uint8 event, selectsync* sync)
 	};
 
 	/* no need to monitor socket events anymore */
-	return B_OK;//core->set_socket_event_callback(nsc->socket, NULL, NULL, event);
+	return B_OK;
 }
 
 /* 
@@ -597,13 +616,15 @@ static void on_socket_event(void *socket, uint32 event, void *cookie)
 
 static void r5_notify_select_event(selectsync * sync, uint32 ref)
 {
-	struct r5_selectsync * rss = (struct r5_selectsync *) sync;
-	
+	struct r5_selectsync *rss = (struct r5_selectsync *) sync;
+			
 #if SHOW_INSANE_DEBUGGING
 	dprintf(LOGID "r5_notify_select_event(%p, %ld)\n", sync, ref);
 #endif
+	if (!rss)
+		return;
 
-	if (acquire_sem(rss->lock) != B_OK) {
+	if (acquire_sem_etc(rss->lock, 1, B_CAN_INTERRUPT, 0) != B_OK) {
 		/* if we can't acquire the lock, it's that select() is done,
 		   or whatever it can be, we can do anything more about it here...
 		*/
@@ -613,10 +634,10 @@ static void r5_notify_select_event(selectsync * sync, uint32 ref)
 
 		return;
 	};
-	
+
 	switch (ref & 0x0F) {
 		case 1:
-			if (rss->rbits) { 
+			if (rss->rbits) {
 				FD_SET((ref >> 8), rss->rbits);
 				rss->nfd++;
 			} 
