@@ -73,11 +73,9 @@ main(int argc , char *argv[])
 		}
 		(void)printf("%s", argv[0]);
 		if (*++argv)
-		//	putchar(' ');
-		printf(" ");
+			putchar(' ');
 	}
 	if (!nflag)
-		// putchar('\n');
-		printf("\n");
+		putchar('\n');
 	return 0;
 }
