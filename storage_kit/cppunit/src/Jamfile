@@ -1,0 +1,13 @@
+# This is $(TOP)/test/cppunit/src/Jamfile
+SubDir TOP cppunit src ;
+
+# Point the compiler to location of the headers
+HDRS += "$(TOP)/cppunit/include" ;
+
+# Compile everything into a big fat CppUnit library
+Library $(TOP)/cppunit/cppunit : Exception.cpp NotEqualException.cpp
+TestAssert.cpp TestFailure.cpp TestSuite.cpp TypeInfoHelper.cpp
+NotEqualException.cpp TestCase.cpp TestRegistry.cpp TextTestResult.cpp
+RepeatedTest.cpp TestFactoryRegistry.cpp TestResult.cpp TextTestRunner.cpp ;
+
+

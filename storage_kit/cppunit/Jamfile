@@ -1,0 +1,6 @@
+# This is $(TOP)/cppunit/Jamfile
+
+SubDir TOP cppunit ;
+
+SubInclude TOP cppunit src ;
+
