@@ -7,6 +7,18 @@
 	
 	#define MAIN_WINDOW_H
 	
+	#define MOUNT_MOUNT_ALL_MSG 'mall'
+	#define MOUNT_MOUNT_SELECTED_MSG 'msel'
+	#define UNMOUNT_UNMOUNT_SELECTED_MSG 'usel'
+	#define SETUP_FORMAT_MSG 'sfor'
+	#define SETUP_PARTITION_APPLE_MSG 'spaa'
+	#define SETUP_PARTITION_INTEL_MSG 'spai'
+	#define SETUP_INITIALIZE_MSG 'sini'
+	#define OPTIONS_EJECT_MSG 'oeje'
+	#define OPTIONS_SURFACE_TEST_MSG 'osut'
+	#define RESCAN_IDE_MSG 'ride'
+	#define RESCAN_SCSI_MSG 'rscs'
+	
 	#ifndef _APPLICATION_H
 
 		#include <Application.h>

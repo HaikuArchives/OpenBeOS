@@ -29,7 +29,7 @@ MainWindow::MainWindow(BRect frame, PosSettings *Settings)
 	rootMenu = new BMenuBar(bRect, "root menu");
 	//Setup Mount menu
 	menu = new BMenu("Mount");
-	menu->AddItem(new BMenuItem("Mount All Partitions", NULL, 'M'));
+	menu->AddItem(new BMenuItem("Mount All Partitions", new BMessage(MOUNT_MOUNT_ALL_MSG), 'M'));
 	//add menu items for list of partitions
 	rootMenu->AddItem(menu);
 	
@@ -40,10 +40,10 @@ MainWindow::MainWindow(BRect frame, PosSettings *Settings)
 	
 	//Setup Setup menu
 	menu = new BMenu("Setup");
-	menu->AddItem(new BMenuItem("Format", NULL, 'F'));
+	menu->AddItem(new BMenuItem("Format", new BMessage(SETUP_FORMAT_MSG), 'F'));
 	tmpMenu = new BMenu("Partition");
-	tmpMenu->AddItem(new BMenuItem("apple...", NULL));
-	tmpMenu->AddItem(new BMenuItem("intel...", NULL));
+	tmpMenu->AddItem(new BMenuItem("apple...", new BMessage(SETUP_PARTITION_APPLE_MSG)));
+	tmpMenu->AddItem(new BMenuItem("intel...", new BMessage(SETUP_PARTITION_INTEL_MSG)));
 	menu->AddItem(tmpMenu);
 	tmpMenu = new BMenu("Initialize");
 	//add menu items for list of partitions
@@ -53,14 +53,14 @@ MainWindow::MainWindow(BRect frame, PosSettings *Settings)
 	
 	//Setup Options menu
 	menu = new BMenu("Options");
-	menu->AddItem(new BMenuItem("Eject", NULL, 'E'));
-	menu->AddItem(new BMenuItem("Surface Test", NULL, 'T'));
+	menu->AddItem(new BMenuItem("Eject", new BMessage(OPTIONS_EJECT_MSG), 'E'));
+	menu->AddItem(new BMenuItem("Surface Test", new BMessage(OPTIONS_SURFACE_TEST_MSG), 'T'));
 	rootMenu->AddItem(menu);
 	
 	//Setup Rescan menu
 	menu = new BMenu("Rescan");
-	menu->AddItem(new BMenuItem("IDE", NULL));
-	menu->AddItem(new BMenuItem("SCSI", NULL));
+	menu->AddItem(new BMenuItem("IDE", new BMessage(RESCAN_IDE_MSG)));
+	menu->AddItem(new BMenuItem("SCSI", new BMessage(RESCAN_SCSI_MSG)));
 	rootMenu->AddItem(menu);
 		
 	AddChild(rootMenu);
