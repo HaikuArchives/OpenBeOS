@@ -1,7 +1,8 @@
 CFLAGS=-O2 -g -Wall 
 INCLUDES=-I../server/include
 START_DYN=/boot/develop/lib/x86/start_dyn.o
-LDFLAGS=-nostdlib -lroot -Xlinker -rpath /boot/home/openbeos/net_kit/source/libnet -lnet $(START_DYN)
+LIBNET_PATH=/boot/home/openbeos/net_kit/source/libnet
+LDFLAGS=-nostdlib -lroot -Wl,-rpath,$(LIBNET_PATH) -L$(LIBNET_PATH) -lnet $(START_DYN)
 
 TGTS=	test1
 
