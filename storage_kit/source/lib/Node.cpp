@@ -6,8 +6,10 @@
 //---------------------------------------------------------------------
 
 #include <Node.h>
+#include <errno.h>
 #include "kernel_interface.h"
 #include "Error.h"
+
 
 #include <iostream>
 
@@ -82,7 +84,18 @@ BNode::Unset() {
 
 status_t
 BNode::Lock() {
-	return B_ERROR;
+	if (fCStatus == B_NO_INIT)
+		return B_NO_INIT;
+
+	StorageKit::FileLock lock;
+	try {
+		StorageKit::lock(fFd, StorageKit::READ, &lock);
+	} catch (StorageKit::Error *e) {
+		delete e;
+		return B_BUSY;
+	}
+	
+	return B_OK;
 }
 
 status_t
@@ -98,18 +111,31 @@ BNode::Sync() {
 ssize_t
 BNode::WriteAttr(const char *attr, type_code type, off_t offset,
 const void *buffer, size_t len) {
-	return 0;
+	if (fCStatus == B_NO_INIT)
+		return B_FILE_ERROR;
+	else {
+		ssize_t result = StorageKit::write_attr(fFd, attr, type, offset, buffer, len);
+		return (result >= 0) ? result : errno ;
+	}
 }
 
 ssize_t
 BNode::ReadAttr(const char *attr, type_code type, off_t offset,
 void *buffer, size_t len) const {
-	return 0;
+	if (fCStatus == B_NO_INIT)
+		return B_FILE_ERROR;
+	else {
+		ssize_t result = StorageKit::read_attr(fFd, attr, type, offset, buffer, len);
+		return (result >= 0) ? result : errno ;
+	}
 }
 
 status_t
 BNode::RemoveAttr(const char *name) {
-	return B_ERROR;
+	if (fCStatus == B_NO_INIT)
+		return B_FILE_ERROR;
+	else
+		return StorageKit::remove_attr(fFd, name);
 }
 
 
@@ -148,7 +174,7 @@ BNode::GetNextAttrName(char *buffer) {
 status_t
 BNode::RewindAttrs() {
 	if (InitAttrDir() != B_OK)
-		return B_BAD_ADDRESS;	// This is what R5::BNode returns. Go figure...	
+		return B_BAD_ADDRESS;	// This is what R5::BNode actually returns. Go figure...	
 	
 	StorageKit::rewind_attr_dir(fAttrDir);
 
