@@ -376,7 +376,7 @@ void BeDecorator::DrawBlendedRect(BRect r, bool down)
 		endcol=button_lowcol;
 	}
 
-	halfcol=MakeBlendColor(button_lowcol,button_highcol,0.5);
+	halfcol=MakeBlendColor(startcol,endcol,0.5);
 
 	rstep=float(startcol.red-halfcol.red)/steps;
 	gstep=float(startcol.green-halfcol.green)/steps;

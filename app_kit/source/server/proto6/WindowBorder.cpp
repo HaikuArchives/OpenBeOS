@@ -8,7 +8,7 @@
 #include "Decorator.h"
 #include "Desktop.h"
 
-//#define DEBUG_WINBORDER
+#define DEBUG_WINBORDER
 
 #ifdef DEBUG_WINBORDER
 #include <stdio.h>
@@ -19,7 +19,7 @@ bool is_resizing_window=false;
 extern ServerWindow *active_serverwindow;
 
 WindowBorder::WindowBorder(ServerWindow *win, const char *bordertitle)
- : Layer((win==NULL)?BRect(0,0,0,0):win->frame,
+ : Layer((win==NULL)?BRect(0,0,1,1):win->frame,
    (win==NULL)?NULL:win->title->String())
 {
 #ifdef DEBUG_WINBORDER
@@ -68,6 +68,7 @@ void WindowBorder::MouseDown(BPoint pt, uint32 buttons)
 printf("WindowBorder(): SetCloseButton\n");
 #endif
 			decor->SetCloseButton(true);
+			decor->Draw();
 			break;
 		}
 		case CLICK_ZOOM:
@@ -76,6 +77,7 @@ printf("WindowBorder(): SetCloseButton\n");
 printf("WindowBorder(): SetZoomButton\n");
 #endif
 			decor->SetZoomButton(true);
+			decor->Draw();
 			break;
 		}
 		case CLICK_MINIMIZE:
@@ -84,6 +86,7 @@ printf("WindowBorder(): SetZoomButton\n");
 printf("WindowBorder(): SetMinimizeButton\n");
 #endif
 			decor->SetMinimizeButton(true);
+			decor->Draw();
 			break;
 		}
 		case CLICK_DRAG:
@@ -156,18 +159,21 @@ void WindowBorder::MouseMoved(BPoint pt, uint32 buttons)
 			dy=pt.y-mousepos.y;
 		if(dx!=0 || dy!=0)
 		{
+			BRect oldmoveframe=swin->frame;
 			clientframe.OffsetBy(pt);
 	
 			swin->Lock();
 			swin->frame.OffsetBy(dx,dy);
 			swin->Unlock();
-	
+			
 			layerlock->Lock();
+//			InvalidateLowerSiblings(oldmoveframe);
+			parent->Invalidate(oldmoveframe);
 			MoveBy(dx,dy);
 			parent->RequestDraw();
-			layerlock->Unlock();
 			decor->MoveBy(BPoint(dx, dy));
 			decor->Draw();
+			layerlock->Unlock();
 		}
 	}
 	if(is_resizing_window==true)
@@ -263,25 +269,45 @@ void WindowBorder::SetDecorator(Decorator *newdecor)
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder::SetDecorator(%p)\n",newdecor);
 #endif
-	decor=newdecor;
+	if(newdecor)
+	{
+		decor=newdecor;
+//		if(visible)
+//			delete visible;
+//		visible=decor->GetFootprint();
+	}
 }
 
 ServerWindow *WindowBorder::Window(void) const
 {
 	return swin;
 }
-
 void WindowBorder::RequestDraw(void)
 {
-/*	if(invalid)
+	if(invalid)
 	{
-		for(int32 i=0; i<invalid->CountRects();i++)
-			decor->Draw(ConvertToTop(invalid->RectAt(i)));
+//		for(int32 i=0; i<invalid->CountRects();i++)
+//			decor->Draw(ConvertToTop(invalid->RectAt(i)));
+			decor->Draw();
 		delete invalid;
 		invalid=NULL;
 		is_dirty=false;
 	}
-*/
+
+}
+
+void WindowBorder::InvalidateLowerSiblings(BRect r)
+{
+	// this is used to update the other windows when a window border
+	// is moved or resized.
+	Layer *lay;
+	BRect toprect=ConvertToTop(r);	
+	
+	for(lay=uppersibling;lay!=NULL;lay=lay->uppersibling)
+	{
+		lay->Invalidate(toprect);
+		lay->RequestDraw();
+	}
 }
 
 void WindowBorder::MoveToBack(void)
@@ -289,7 +315,6 @@ void WindowBorder::MoveToBack(void)
 #ifdef DEBUG_WINBORDER
 printf("WindowBorder(): MoveToBack\n");
 #endif
-
 	Layer *temp=NULL;
 	if(uppersibling)
 		temp=uppersibling;
@@ -315,7 +340,6 @@ void WindowBorder::MoveToFront(void)
 #ifdef DEBUG_WINBORDER
 printf("MoveToFront: \n");
 #endif
-
 	// Move the window to the front by making it the bottom
 	// child of the root layer
 	Layer *top=GetRootLayer();
