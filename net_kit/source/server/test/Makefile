@@ -7,6 +7,8 @@ TIMER_OBJS = ../net_server/net_timer.o
 POOL_OBJS=	../net_server/pools.o
 HASH_OBJS=	../net_server/nhash.o ../net_server/pools.o
 
+LDFLAGS = 
+
 INCLUDES=-I. -I../include
 
 all: test_mbuf timer_test test_cpy test_pools test_hash

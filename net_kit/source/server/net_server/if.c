@@ -107,7 +107,7 @@ void dump_sockaddr(void *ptr)
 			if (sdl->sdl_type == IFT_ETHER) {
 				printf("\t\tETHERNET: ");
 				printf("Interface ");
-				d = &sdl->sdl_data[0];
+				d = (unsigned char *)&sdl->sdl_data[0];
 				for (i=0;i<sdl->sdl_nlen;i++, d++) {
 					printf("%c", *d);
 				}
@@ -185,9 +185,9 @@ struct ifaddr *ifaof_ifpforaddr(struct sockaddr *addr,
                                 return (ifa);
                         continue;
                 }
-                cp = addr->sa_data;
-                cp2 = ifa->ifa_addr->sa_data;
-                cp3 = ifa->ifa_netmask->sa_data;
+                cp = (char *)addr->sa_data;
+                cp2 = (char *)ifa->ifa_addr->sa_data;
+                cp3 = (char *)ifa->ifa_netmask->sa_data;
                 cplim = ifa->ifa_netmask->sa_len + (char *)ifa->ifa_netmask;
                 for (; cp3 < cplim; cp3++)
                         if ((*cp++ ^ *cp2++) & *cp3)
@@ -246,7 +246,7 @@ struct ifaddr *ifa_ifwithnet(struct sockaddr *addr)
 	struct ifaddr *ifa;
 	struct ifaddr *ifa_maybe = NULL;
 	uint af = addr->sa_family;
-	char *addr_data = addr->sa_data, *cplim;
+	char *addr_data = (char *)addr->sa_data, *cplim;
 
 	if (af == AF_LINK) {
 		struct sockaddr_dl *sdl = (struct sockaddr_dl *)addr;
@@ -262,8 +262,8 @@ struct ifaddr *ifa_ifwithnet(struct sockaddr *addr)
 next: 
 								continue;
                         cp = addr_data;
-                        cp2 = ifa->ifa_addr->sa_data;
-                        cp3 = ifa->ifa_netmask->sa_data;
+                        cp2 = (char *)ifa->ifa_addr->sa_data;
+                        cp3 = (char *)ifa->ifa_netmask->sa_data;
                         cplim = (char *)ifa->ifa_netmask +
                                 ifa->ifa_netmask->sa_len;
                         while (cp3 < cplim)

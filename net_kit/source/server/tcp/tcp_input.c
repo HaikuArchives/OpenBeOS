@@ -506,7 +506,7 @@ findpcb:
 	 * else do it below (after getting remote address).
 	 */
 	if (optp && tp->t_state != TCPS_LISTEN)
-		tcp_dooptions(tp, optp, optlen, ti,	&ts_present, &ts_val, &ts_ecr);
+		tcp_dooptions(tp, (unsigned char *)optp, optlen, ti,	&ts_present, &ts_val, &ts_ecr);
 
 	/* 
 	 * Header prediction: check for the two common cases
@@ -694,7 +694,7 @@ findpcb:
 				goto drop;
 			}
 			if (optp)
-				tcp_dooptions(tp, optp, optlen, ti,
+				tcp_dooptions(tp, (unsigned char *)optp, optlen, ti,
 				              &ts_present, &ts_val, &ts_ecr);
 
 			if (iss)
@@ -1667,7 +1667,7 @@ void tcp_mss_update(struct tcpcb *tp)
 			/* default variation is +- 1 rtt */
 			tp->t_rttvar =
 			    tp->t_srtt * TCP_RTTVAR_SCALE / TCP_RTT_SCALE;
-		TCPT_RANGESET((long) tp->t_rxtcur,
+		TCPT_RANGESET(/*(long)*/tp->t_rxtcur,
 		    ((tp->t_srtt >> 2) + tp->t_rttvar) >> 1,
 		    tp->t_rttmin, TCPTV_REXMTMAX);
 	}

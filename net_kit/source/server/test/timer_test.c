@@ -41,7 +41,7 @@ int main(void)
 	gStart = real_time_clock();
 
 	for (i = 0;i < TIMERS;i++)
-		timer[i] = net_add_timer(hook,(void *)i + 1,gIntervals[i] * 1000000LL);
+		timer[i] = net_add_timer(hook,(void *)((uint32)i + 1UL),gIntervals[i] * 1000000LL);
 
 	puts("snoozing...");
 	snooze(SNOOZE * 1000000LL);

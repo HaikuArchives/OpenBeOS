@@ -152,6 +152,7 @@ void tcp_slowtimer(void *data)
 		if (tp->t_rtt)
 			tp->t_rtt++;
 tpgone:
+	; /* mwcc wants a ; here, so it gets one */
 	}
 	tcp_iss += TCP_ISSINCR / PR_SLOWHZ;
 	tcp_now++;

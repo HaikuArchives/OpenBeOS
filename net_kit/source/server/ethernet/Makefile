@@ -35,7 +35,7 @@ installkernel:  kernel
 	fi
 
 $(TARGET): $(OBJS)
-	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

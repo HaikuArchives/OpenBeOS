@@ -7,6 +7,7 @@ ifeq ($(USERLAND), true)
 else
 	TGT=$(TARGET)
 endif
+
 OBJS=$(TARGET).o
 
 all:	$(TARGET)

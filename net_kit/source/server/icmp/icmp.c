@@ -290,7 +290,7 @@ badcode:
 
 raw:
 	if (raw)
-		return raw->input(buf, 0);
+		return; /* raw->input(buf, 0);*/
 
 freeit:
 	m_freem(buf);
@@ -458,7 +458,7 @@ void set_core(struct core_module_info *cp)
 }
 #endif
 
-struct icmp_module_info protocol_info = {
+_EXPORT struct icmp_module_info protocol_info = {
 	{
 		{
 			ICMP_MODULE_PATH,

@@ -241,7 +241,7 @@ static int32 tx_thread(void *data)
 {
 	struct ifnet *i = (struct ifnet *)data;
 	struct mbuf *m;
-	char buffer[i->if_mtu + i->if_hdrlen];
+	char *buffer = malloc(i->if_mtu + i->if_hdrlen); //--- mwcc doesn't allow dynamically sized arrays
 	size_t len = 0, maxlen = i->if_mtu + i->if_hdrlen;
 	status_t status;
 #if SHOW_DEBUG
@@ -279,6 +279,7 @@ static int32 tx_thread(void *data)
 		}
 	}
 	printf("%s: terminating tx_thread\n", i->if_name);
+	free(buffer);
 	return 0;
 }
 	

@@ -280,9 +280,9 @@ void udp_input(struct mbuf *buf, int hdrlen)
 			udp_last_inpcb = inp;
 	}
 	if (!inp) {
-		atomic_add(&udpstat.udps_noport, 1);
+		atomic_add((vint32 *)&udpstat.udps_noport, 1);
 		if (buf->m_flags & (M_BCAST | M_MCAST)) {
-			atomic_add(&udpstat.udps_noportbcast, 1);
+			atomic_add((vint32 *)&udpstat.udps_noportbcast, 1);
 			goto bad;
 		}
 		*ip = saved_ip;

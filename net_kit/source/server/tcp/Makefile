@@ -30,7 +30,7 @@ clean:
 #	@cp $(TARGET) /boot/home/config/add-ons/kernel/network/protocol/$(TARGET)
 
 $(TARGET): $(OBJS)
-	@$(CC) -nostart $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
+	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

@@ -1,10 +1,16 @@
 # compiler flags
-CFLAGS = -g -Wall -no-fpic -D_KERNEL_MODE -D_KERNEL_ -D_NETWORK_STACK
-LDFLAGS = -nostdlib /boot/develop/lib/x86/_KERNEL_
-INCLUDES = -I../server/ -I../server/include -I.
 
 # build target
 TARGET = net_stack_driver
+ifeq ($(BE_CPLUS_COMPILER),mwcc)
+	CFLAGS = -g -w all -D_KERNEL_MODE -D_KERNEL_ -D_NETWORK_STACK
+	LDFLAGS = -nodefaults -export all -G /boot/develop/lib/ppc/glue-noinit.a /boot/develop/lib/ppc/_KERNEL_ -map $(TARGET).xMAP
+else
+	CFLAGS = -g -Wall -no-fpic -D_KERNEL_MODE -D_KERNEL_ -D_NETWORK_STACK
+	LDFLAGS = -nostdlib -export pragma /boot/develop/lib/$(BE_HOST_CPU)/_KERNEL_  -Wl,-M=$(TARGET).xMAP
+endif
+INCLUDES = -I../server/ -I../server/include -I.
+
 DRIVER_BIN = /boot/home/config/add-ons/kernel/drivers/bin/$(TARGET)
 DRIVER_LINK = /boot/home/config/add-ons/kernel/drivers/dev/net/$(TARGET)
 INSTALL_OBJS = $(DRIVER_LINK) $(DRIVER_BIN) $(DRIVER_LINK).xMAP
@@ -35,7 +41,7 @@ install: $(TARGET)
 	@sync
 
 $(TARGET): $(SRC_BASE).o
-	$(CC) $(LDFLAGS) -o $(TARGET) $(SRC_BASE).o -Wl,-M=$(TARGET).xMAP
+	$(CC) $(LDFLAGS) -o $(TARGET) $(SRC_BASE).o
 
 .c.o:
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<

@@ -777,7 +777,7 @@ found:
 
 	ipstat.ips_delivered++;
 	if (proto[ip->ip_p] && proto[ip->ip_p]->pr_input) {
-		return proto[ip->ip_p]->pr_input(m, hlen);
+		return; /* proto[ip->ip_p]->pr_input(m, hlen);*/
 	} else {
 		printf("proto[%d] = %p\n", ip->ip_p, proto[ip->ip_p]);
 		goto bad;
@@ -890,7 +890,7 @@ int ipv4_output(struct mbuf *m0, struct mbuf *opt, struct route *ro,
 
 		ia = ifatoia(ro->ro_rt->rt_ifa);
 		ifp = ro->ro_rt->rt_ifp;
-		atomic_add(&ro->ro_rt->rt_use, 1);
+		atomic_add((volatile long *)&ro->ro_rt->rt_use, 1);
 		if (ro->ro_rt->rt_flags & RTF_GATEWAY)
 			dst = (struct sockaddr_in *) ro->ro_rt->rt_gateway;
 	}

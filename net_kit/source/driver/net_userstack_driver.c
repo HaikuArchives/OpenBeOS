@@ -278,7 +278,7 @@ static status_t
 execute_command(net_stack_cookie *cookie,int32 op,void *data,uint32 length)
 {
 	uint32 commandIndex;
-	net_command *command = get_command(cookie,&commandIndex);
+	net_command *command = get_command(cookie,(long *)&commandIndex);
 	int32 maxTries = 200;
 	status_t status;
 	ssize_t bytes;

@@ -59,7 +59,7 @@ void loop_input(struct mbuf *buf)
 	buf->m_pkthdr.rcvif = me;
 	
 	if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
-		return proto[IPPROTO_IP]->pr_input(buf, 0);
+		return;/* proto[IPPROTO_IP]->pr_input(buf, 0);*/
 	else
 		printf("No input tourtine found for IP\n");
 

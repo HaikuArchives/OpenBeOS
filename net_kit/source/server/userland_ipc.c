@@ -327,14 +327,14 @@ connection_runner(void *_cookie)
 				struct ifconf *ifc = (struct ifconf *)data;
 				ifc->ifc_buf = convert_to_local(&command->area[1],&area[1],ifc->ifc_buf);
 
-				status = core->soo_ioctl(cookie->socket,command->op,data);
+				status = core->soo_ioctl(cookie->socket,command->op,(char *)data);
 
 				ifc->ifc_buf = convert_to_foreign(&command->area[1],&area[1],ifc->ifc_buf);
 				break;
 			}
 
 			default:
-				status = core->soo_ioctl(cookie->socket,command->op,data);
+				status = core->soo_ioctl(cookie->socket,command->op,(char *)data);
 				break;
 		}
 		// mark the command as done

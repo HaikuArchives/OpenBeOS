@@ -10,8 +10,13 @@ INTERFACE_MODULES=ethernet loop
 # decides whether to build a kernel or a userland stack
 ifeq ($(USERLAND), true)
 	## CFLAGS = -O0 -fcheck-memory-usage -D_KERNEL_MODE -g -Wall -DUSER -fPIC -DPIC
-	CFLAGS = -O0 -g -Wall -DUSER -fPIC -DPIC
-	LDFLAGS = -nostart
+	ifeq ($(BE_CPLUS_COMPILER),mwcc)
+		CFLAGS = -O0 -g -w all -DUSER
+		LDFLAGS = -xms -export pragma -L$(BELIBRARIES) -lroot -lglue-noinit.a -linit_term_dyn.o
+	else	
+		CFLAGS = -O0 -g -Wall -DUSER -fPIC -DPIC
+		LDFLAGS = -nostart
+	endif
 	SUBDIRS+= test
 	USERLAND_BUILD=userland_server net_srv
 	INSTALL_TGT=installuser

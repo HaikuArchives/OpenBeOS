@@ -6,6 +6,10 @@ else
 	TGT=$(TARGET)
 endif
 
+ifeq ($(BE_CPLUS_COMPILER),mwcc)
+	LDFLAGS += -f core.exp
+endif
+
 CORE_OBJS= 	socket.o \
 		sockbuf.o \
 		inpcb.o \
