@@ -3,7 +3,9 @@
  * released under the MIT licence.
  *
  * ChangeLog:
- * 04-25-2002 v1.0
+ * 04-26-2002 v1.2
+ *  fixed a typo on error (Priority changed failed.)
+ * 04-25-2002 v1.1
  *  Initial. Used my renice.c code to rewrite 'prio' BeOS command for OpenBeOS.
  * 
  * prio is a stripped-down version of renice
@@ -31,7 +33,7 @@ int main(int argc, char **argv)
 	ret = set_thread_priority(th, prio);
 	if (ret >= B_OK)
 		return 0;
-	puts("Priority changed failed.");
+	puts("Priority change failed.");
 	return 1;
 }
 
