@@ -374,7 +374,7 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 				run.allocation_group = group;
 				run.start = rangeStart;
 				run.length = numBlocks;
-				
+
 				fVolume->SuperBlock().used_blocks += numBlocks;
 					// We are not writing back the disk's super block - it's
 					// either done by the journaling code, or when the disk
@@ -471,6 +471,15 @@ BlockAllocator::Free(Transaction *transaction,block_run &run)
 		FATAL(("someone tried to free an invalid block_run (%ld, %u, %u)\n",group,start,length));
 		return B_BAD_VALUE;
 	}
+	// check if someone tries to free reserved areas at the beginning of the drive
+	if (group == 0 && start < fVolume->Log().start + fVolume->Log().length) {
+		FATAL(("someone tried to free a reserved block_run (%ld, %u, %u)\n",group,start,length));
+		return B_BAD_VALUE;
+	}
+#ifdef DEBUG	
+	if (CheckBlockRun(run) < B_OK)
+		return B_BAD_DATA;
+#endif
 
 	AllocationBlock cached(fVolume);
 
