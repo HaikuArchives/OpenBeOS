@@ -1,0 +1,33 @@
+SubDir OBOS_TOP sources tools cppunit ;
+
+
+rule CppUnitLibrary
+{
+	# CppUnitLibrary <sources> ;
+	local _lib = libcppunit.so ;
+	
+	UseCppUnitHeaders ;
+	SetupObjectsDir ;
+	MakeLocateObjects $(<) ;
+	Main $(_lib) : $(<) ;
+	MakeLocate $(_lib) : /boot/home/config/lib ;
+	LINKFLAGS on $(_lib) = $(LINKFLAGS) -nostart -Xlinker -soname=\"$(_lib)\" ;
+}
+
+CppUnitLibrary CppUnitShell.cpp 
+	Exception.cpp 
+	NotEqualException.cpp
+	TestAssert.cpp 
+	TestFailure.cpp 
+	TestSuite.cpp 
+	TypeInfoHelper.cpp
+	TestCase.cpp 
+	TestRegistry.cpp 
+	TextTestResult.cpp
+	RepeatedTest.cpp 
+	TestFactoryRegistry.cpp 
+	TestResult.cpp 
+	TextTestRunner.cpp ;
+
+LinkSharedOSLibs libcppunit.so :
+	/boot/develop/lib/x86/libstdc++.r4.so ;
