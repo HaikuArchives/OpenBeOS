@@ -48,15 +48,12 @@ typedef struct ether_addr {
 
 typedef	uint32	ipv4_addr;
 
-#ifdef _KERNEL_MODE
 
 /* These should be in KernelExport.h */
 #define B_SELECT_READ        1
 #define B_SELECT_WRITE       2
 #define B_SELECT_EXCEPTION   3
 //extern notify_select_event(selectsync *sync, uint32 ref);
-
-#endif
 
 /* XXX - add some macro's for inserting various types of address
  */
