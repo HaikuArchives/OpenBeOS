@@ -34,24 +34,26 @@ THE SOFTWARE.
 #include <Box.h>
 
 
+// --------------------------------------------------
 StatusWindow::StatusWindow(int32 pages, PrinterDriver *pd) 
-	:	BWindow(BRect(100, 100, 400, 185), "PDF Writer", 
+	:	HWindow(BRect(100, 100, 400, 185), "PDF Writer", 
 			B_TITLED_WINDOW, 
-			B_NOT_RESIZABLE|B_NOT_ZOOMABLE|B_NOT_CLOSABLE) 
+			B_NOT_RESIZABLE|B_NOT_ZOOMABLE|B_NOT_CLOSABLE,
+			B_CURRENT_WORKSPACE, 'cncl') 
 {
-	printerDriver = pd;
-	pageCount = 0;
-//	copyCount = 0;
+	fPrinterDriver = pd;
+	fPageCount = 0;
+//	fPopyCount = 0;
 	BRect r(0, 0, Frame().Width(), Frame().Height());
 
 	// view for the background color
-	BView *panel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
+	BView *fPanel = new BBox(r, "top_panel", B_FOLLOW_ALL, 
 					B_WILL_DRAW | B_FRAME_EVENTS | B_NAVIGABLE_JUMP,
 					B_PLAIN_BORDER);
-	AddChild(panel);
+	AddChild(fPanel);
 /*
-	if (copies > 1) {
-		pages *= copies;
+	if (fCopies > 1) {
+		pages *= fCopies;
 	}
 	
 	r.Set(10, 0, Frame().Width(), 50);
@@ -65,14 +67,14 @@ StatusWindow::StatusWindow(int32 pages, PrinterDriver *pd)
 	panel->AddChild(copyStatus);
 */	
 	r.Set(10, 12, Frame().Width()-5, 22);
-	pageLabel = new BStringView(r, "page_text", "Page");
-	panel->AddChild(pageLabel);
+	fPageLabel = new BStringView(r, "page_text", "Page");
+	fPanel->AddChild(fPageLabel);
 
 	r.Set(10, 15, Frame().Width()-10, 10);
-	pageStatus = new BStatusBar(r, "pageStatus");
-	pageStatus->SetMaxValue(pages);
-	pageStatus->SetBarHeight(12);
-	panel->AddChild(pageStatus);
+	fPageStatus = new BStatusBar(r, "pageStatus");
+	fPageStatus->SetMaxValue(pages);
+	fPageStatus->SetBarHeight(12);
+	fPanel->AddChild(fPageStatus);
 
 	// Cancel button
 	// add a separator line...
@@ -83,15 +85,17 @@ StatusWindow::StatusWindow(int32 pages, PrinterDriver *pd)
 	// add a "Cancel button
 	int32 x = 110;
 	int32 y = 55;
-	cancel 	= new BButton(BRect(x, y, x + 100, y + 20), NULL, "Cancel", 
+	fCancel 	= new BButton(BRect(x, y, x + 100, y + 20), NULL, "Cancel", 
 				new BMessage('cncl'), B_FOLLOW_RIGHT | B_FOLLOW_TOP);
-	cancel->ResizeToPreferred();
-	panel->AddChild(cancel);
+	fCancel->ResizeToPreferred();
+	fPanel->AddChild(fCancel);
 
 	Show();
 }
 
-void StatusWindow::MessageReceived(BMessage *msg) 
+// --------------------------------------------------
+void 
+StatusWindow::MessageReceived(BMessage *msg) 
 {
 	switch (msg->what) {
 /*
@@ -103,15 +107,16 @@ void StatusWindow::MessageReceived(BMessage *msg)
 			break;
 */
 		case 'cncl':
-			printerDriver->StopPrinting();
+			fPrinterDriver->StopPrinting();
+			fCancel->SetEnabled(false);
 			break;
 		case 'page':
-			page = "";
-			page << "Writing Page: " << ++pageCount;
-			pageLabel->SetText(page.String());
-			pageStatus->Update(1);
+			fPage = "";
+			fPage << "Generating Page: " << ++fPageCount;
+			fPageLabel->SetText(fPage.String());
+			fPageStatus->Update(1);
 			break;
 		default:
-			BWindow::MessageReceived(msg);
+			inherited::MessageReceived(msg);
 	}
 }

@@ -41,11 +41,13 @@ THE SOFTWARE.
 #include "PrinterSettings.h"
 
 // static global variables
-static struct {
+static struct 
+{
 	char  *label;
 	float width;
 	float height;
-} pageFormat[] = {
+} pageFormat[] = 
+{
 	{"Letter", letter_width, letter_height },
 	{"Legal",  legal_width,  legal_height  },
 	{"Ledger", ledger_width, ledger_height  },
@@ -62,10 +64,12 @@ static struct {
 };
 
 
-static struct {
+static struct 
+{
 	char  *label;
 	int32 orientation;
-} orientation[] = {
+} orientation[] = 
+{
 	{"Portrait",  PrinterDriver::PORTRAIT_ORIENTATION},
 	{"Landscape", PrinterDriver::LANDSCAPE_ORIENTATION},
 	{NULL, 0}
@@ -80,7 +84,7 @@ static const char *pdf_compatibility[] = {"1.2", "1.3", "1.4", NULL};
  * @return
  */
 PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
-	:	BWindow(BRect(0,0,400,220), "Page Setup", B_TITLED_WINDOW_LOOK,
+	:	HWindow(BRect(0,0,400,220), "Page Setup", B_TITLED_WINDOW_LOOK,
  			B_MODAL_APP_WINDOW_FEEL, B_NOT_RESIZABLE | B_NOT_MINIMIZABLE |
  			B_NOT_ZOOMABLE)
 {
@@ -95,7 +99,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 		SetTitle( title.String() );
 
 		// save the printer name
-		printerDirName = printerName;
+		fPrinterDirName = printerName;
 	}
 
 	// ---- Ok, build a default page setup user interface
@@ -149,13 +153,13 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	margin.right = page.right - margin.right;
 	margin.bottom = page.bottom - margin.bottom;
 
-	marginView = new MarginView(BRect(20,20,200,160), width, height,
+	fMarginView = new MarginView(BRect(20,20,200,160), width, height,
 			margin, units);
-	panel->AddChild(marginView);
+	panel->AddChild(fMarginView);
 	
 	// add page format menu
 	// Simon Changed to OFFSET popups
-	x = r.left + MARGIN * 2 + OFFSET; y = r.top + MARGIN * 2;
+	x = r.left + kMargin * 2 + kOffset; y = r.top + kMargin * 2;
 
 	BPopUpMenu* m = new BPopUpMenu("page_size");
 	m->SetRadioMode(true);
@@ -196,7 +200,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	mf->MenuItem()->SetLabel(item->Label());
 
 	// add orientation menu
-	y += h + MARGIN;
+	y += h + kMargin;
 	 
 	m = new BPopUpMenu("orientation");
 	m->SetRadioMode(true);
@@ -233,7 +237,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	mf->MenuItem()->SetLabel(item->Label());
 
 	// add PDF comptibility  menu
-	y += h + MARGIN;
+	y += h + kMargin;
 	 
 	m = new BPopUpMenu("pdf_compatibility");
 	m->SetRadioMode(true);
@@ -258,7 +262,7 @@ PageSetupWindow::PageSetupWindow(BMessage *msg, const char *printerName)
 	mf->Menu()->SetLabelFromMarked(true);
 
 /// SHOULD BE REMOVED
-if (!item) {
+	if (!item) {
 		item = m->ItemAt(0);
 	}
 ////////////////////
@@ -267,9 +271,9 @@ if (!item) {
 	mf->MenuItem()->SetLabel(item->Label());
 
 	// add PDF compression slider
-	y += h + MARGIN;
+	y += h + kMargin;
 
-	BSlider * slider = new BSlider(BRect(x, y, panel->Bounds().right - MARGIN, y + 20), "pdf_compression",
+	BSlider * slider = new BSlider(BRect(x, y, panel->Bounds().right - kMargin, y + 20), "pdf_compression",
 								"Compression:",
 								NULL, 0, 9);
 	fPDFCompressionSlider = slider;
@@ -312,20 +316,25 @@ if (!item) {
 }
 
 
+// --------------------------------------------------
 PageSetupWindow::~PageSetupWindow()
 {
 	delete_sem(fExitSem);
 }
 
 
-bool PageSetupWindow::QuitRequested()
+// --------------------------------------------------
+bool 
+PageSetupWindow::QuitRequested()
 {
 	release_sem(fExitSem);
 	return true;
 }
 
 
-void PageSetupWindow::UpdateSetupMessage() 
+// --------------------------------------------------
+void 
+PageSetupWindow::UpdateSetupMessage() 
 {
 	BMenuItem *item;
 	int32 orientation = 0;
@@ -365,7 +374,7 @@ void PageSetupWindow::UpdateSetupMessage()
 		fSetupMsg->ReplaceRect("paper_rect", r);
 		
 		// Save the printable_rect 
-		BRect margin = marginView->GetMargin();
+		BRect margin = fMarginView->GetMargin();
 		if (orientation == 0) {
 			margin.right = w - margin.right;
 			margin.bottom = h - margin.bottom;
@@ -376,7 +385,7 @@ void PageSetupWindow::UpdateSetupMessage()
 		fSetupMsg->ReplaceRect("printable_rect", margin);
 
 		// save the units used
-		int32 units = marginView->GetUnits();
+		int32 units = fMarginView->GetUnits();
 		if (fSetupMsg->HasInt32("units")) {
 			fSetupMsg->ReplaceInt32("units", units);
 		} else {
@@ -385,7 +394,7 @@ void PageSetupWindow::UpdateSetupMessage()
 	}
 
 	// save the settings to be new defaults
-	PrinterSettings *ps = new PrinterSettings(printerDirName.String());
+	PrinterSettings *ps = new PrinterSettings(fPrinterDirName.String());
 	if (ps->InitCheck() == B_OK) {
 		ps->WriteSettings(fSetupMsg);
 	}
@@ -393,7 +402,9 @@ void PageSetupWindow::UpdateSetupMessage()
 }
 
 
-void PageSetupWindow::MessageReceived(BMessage *msg)
+// --------------------------------------------------
+void 
+PageSetupWindow::MessageReceived(BMessage *msg)
 {
 	switch (msg->what){
 		case OK_MSG:
@@ -419,11 +430,11 @@ void PageSetupWindow::MessageReceived(BMessage *msg)
 					BMessage *m = item->Message();
 					m->FindInt32("orientation", &orientation);
 					if (orientation == PrinterDriver::PORTRAIT_ORIENTATION) {
-						marginView->SetPageSize(w, h);
+						fMarginView->SetPageSize(w, h);
 					} else {
-						marginView->SetPageSize(h, w);
+						fMarginView->SetPageSize(h, w);
 					}
-					marginView->UpdateView(MARGIN_CHANGED);
+					fMarginView->UpdateView(MARGIN_CHANGED);
 				}
 			}
 			break;
@@ -431,18 +442,18 @@ void PageSetupWindow::MessageReceived(BMessage *msg)
 		// Simon added
 		case 'ornt':
 			{	
-				BPoint p = marginView->GetPageSize();
+				BPoint p = fMarginView->GetPageSize();
 				int32 orientation;
 				msg->FindInt32("orientation", &orientation);
 				if (orientation == PrinterDriver::LANDSCAPE_ORIENTATION
 					&& p.y > p.x) { 
-					marginView->SetPageSize(p.y, p.x);
-					marginView->UpdateView(MARGIN_CHANGED);
+					fMarginView->SetPageSize(p.y, p.x);
+					fMarginView->UpdateView(MARGIN_CHANGED);
 				}
 				if (orientation == PrinterDriver::PORTRAIT_ORIENTATION
 					&& p.x > p.y) {
-					marginView->SetPageSize(p.y, p.x);
-					marginView->UpdateView(MARGIN_CHANGED);
+					fMarginView->SetPageSize(p.y, p.x);
+					fMarginView->UpdateView(MARGIN_CHANGED);
 				}
 			}
 			break;
@@ -454,7 +465,10 @@ void PageSetupWindow::MessageReceived(BMessage *msg)
 	}
 }
 			
-status_t PageSetupWindow::Go()
+
+// --------------------------------------------------
+status_t 
+PageSetupWindow::Go()
 {
 	MoveTo(300,300);
 	Show();

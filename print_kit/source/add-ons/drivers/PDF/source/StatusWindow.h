@@ -36,22 +36,25 @@ THE SOFTWARE.
 
 //class PrinterDriver;
 #include "PrinterDriver.h"
+#include "Utils.h"
 
-class StatusWindow : public BWindow 
+class StatusWindow : public HWindow 
 {
 private:
-//	BString copy;
-	BString page;
-	int32 pageCount;
-//	int copyCount;
-//	BStringView *copyLabel;
-	BStringView *pageLabel;
-	BStatusBar *pageStatus;
-//	BStatusBar *copyStatus;
-	BButton *cancel;
-	PrinterDriver *printerDriver;
+//	BString fCopy;
+	BString fPage;
+	int32 fPageCount;
+//	int fCopyCount;
+//	BStringView *fCopyLabel;
+	BStringView *fPageLabel;
+	BStatusBar *fPageStatus;
+//	BStatusBar *fCopyStatus;
+	BButton *fCancel;
+	PrinterDriver *fPrinterDriver;
 
 public:
+	typedef HWindow inherited;
+	
 	StatusWindow(int32 pages, PrinterDriver *pd);
 	
 	void MessageReceived(BMessage *msg);

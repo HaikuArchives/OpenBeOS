@@ -36,8 +36,9 @@ THE SOFTWARE.
 #include "PrinterDriver.h"
 #include "JobSetupWindow.h"
 
+// --------------------------------------------------
 JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
-	:	BWindow(BRect(0, 0, 320, 160), "Job Setup", B_TITLED_WINDOW_LOOK,
+	:	HWindow(BRect(0, 0, 320, 160), "Job Setup", B_TITLED_WINDOW_LOOK,
  			B_MODAL_APP_WINDOW_FEEL, B_NOT_RESIZABLE | B_NOT_MINIMIZABLE |
  			B_NOT_ZOOMABLE)
 {
@@ -208,7 +209,10 @@ JobSetupWindow::JobSetupWindow(BMessage *msg, const char * printerName)
 	ResizeTo(ok->Frame().right + kMargin, ok->Frame().bottom + kMargin);
 }
 
-void JobSetupWindow::UpdateJobMessage() 
+
+// --------------------------------------------------
+void 
+JobSetupWindow::UpdateJobMessage() 
 {
 //	int32 copies = atoi(fCopies->Text());
 //	if (copies <= 0) 
@@ -231,12 +235,14 @@ void JobSetupWindow::UpdateJobMessage()
 }
 
 
+// --------------------------------------------------
 JobSetupWindow::~JobSetupWindow()
 {
 	delete_sem(fExitSem);
 }
 
 
+// --------------------------------------------------
 bool 
 JobSetupWindow::QuitRequested()
 {
@@ -245,6 +251,7 @@ JobSetupWindow::QuitRequested()
 }
 
 
+// --------------------------------------------------
 void 
 JobSetupWindow::MessageReceived(BMessage *msg)
 {
@@ -263,7 +270,7 @@ JobSetupWindow::MessageReceived(BMessage *msg)
 		case RANGE_TO_MSG:
 			fRange->SetValue(B_CONTROL_ON);
 			break;
-		
+
 		default:
 			inherited::MessageReceived(msg);
 			break;
@@ -271,7 +278,9 @@ JobSetupWindow::MessageReceived(BMessage *msg)
 }
 			
 
-status_t JobSetupWindow::Go()
+// --------------------------------------------------
+status_t 
+JobSetupWindow::Go()
 {
 	MoveTo(300,300);
 	Show();

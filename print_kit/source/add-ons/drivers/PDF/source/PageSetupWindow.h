@@ -39,17 +39,19 @@ THE SOFTWARE.
 #include <FindDirectory.h>
 #include <Path.h>
 #include <String.h>
+#include "Utils.h"
 
 class MarginView;
 
-class PageSetupWindow : public BWindow {
+class PageSetupWindow : public HWindow 
+{
 public:
 	// Constructors, destructors, operators...
 
 							PageSetupWindow(BMessage *msg, const char *printerName = NULL);
 							~PageSetupWindow();
 
-	typedef BWindow 		inherited;
+	typedef HWindow 		inherited;
 
 	// public constantes
 	enum {
@@ -75,14 +77,14 @@ private:
 		
 	void					UpdateSetupMessage();
 
-	MarginView * 			marginView;
+	MarginView * 			fMarginView;
 	
 	// used for saving settings 
-	BString					printerDirName;
+	BString					fPrinterDirName;
 
 	//private class constants
-	static const int MARGIN = 10;
-	static const int OFFSET = 200;
+	static const int kMargin = 10;
+	static const int kOffset = 200;
 };
 
 #endif

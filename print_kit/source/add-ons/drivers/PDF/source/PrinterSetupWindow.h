@@ -33,15 +33,17 @@ THE SOFTWARE.
 #define PRINTERSETUPWINDOW_H
 
 #include <InterfaceKit.h>
+#include "Utils.h"
 
-class PrinterSetupWindow : public BWindow {
+class PrinterSetupWindow : public HWindow 
+{
 public:
 	// Constructors, destructors, operators...
 
 							PrinterSetupWindow(char *printerName);
 							~PrinterSetupWindow();
 
-	typedef BWindow 		inherited;
+	typedef HWindow 		inherited;
 
 	// public constantes
 	enum	{

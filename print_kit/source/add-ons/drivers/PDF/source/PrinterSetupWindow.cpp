@@ -35,8 +35,9 @@ THE SOFTWARE.
 
 #include "PrinterSetupWindow.h"
 
+// --------------------------------------------------
 PrinterSetupWindow::PrinterSetupWindow(char *printerName)
-	:	BWindow(BRect(0,0,300,300), printerName, B_TITLED_WINDOW_LOOK,
+	:	HWindow(BRect(0,0,300,300), printerName, B_TITLED_WINDOW_LOOK,
 			B_MODAL_APP_WINDOW_FEEL, B_NOT_ZOOMABLE)
 {
 	fExitSem 		= create_sem(0, "PrinterSetup");
@@ -154,14 +155,14 @@ PrinterSetupWindow::PrinterSetupWindow(char *printerName)
 }
 
 
-
+// --------------------------------------------------
 PrinterSetupWindow::~PrinterSetupWindow()
 {
 	delete_sem(fExitSem);
 }
 
 
-
+// --------------------------------------------------
 bool 
 PrinterSetupWindow::QuitRequested()
 {
@@ -170,6 +171,7 @@ PrinterSetupWindow::QuitRequested()
 }
 
 
+// --------------------------------------------------
 void 
 PrinterSetupWindow::MessageReceived(BMessage *msg)
 {
@@ -228,6 +230,7 @@ PrinterSetupWindow::MessageReceived(BMessage *msg)
 }
 
 
+// --------------------------------------------------
 status_t 
 PrinterSetupWindow::Go()
 {

@@ -33,15 +33,17 @@ THE SOFTWARE.
 #define JOBSETUPWINDOW_H
 
 #include <InterfaceKit.h>
+#include "Utils.h"
 
-class JobSetupWindow : public BWindow {
+class JobSetupWindow : public HWindow 
+{
 public:
 	// Constructors, destructors, operators...
 
 							JobSetupWindow(BMessage *msg, const char *printer_name = NULL);
 							~JobSetupWindow();
 
-	typedef BWindow 		inherited;
+	typedef HWindow 		inherited;
 
 	// public constantes
 	enum	{
@@ -59,7 +61,7 @@ public:
 	virtual void 			MessageReceived(BMessage *msg);
 	virtual bool 			QuitRequested();
 	status_t 				Go();
-
+	
 	// From here, it's none of your business! ;-)
 private:
 	long 					fExitSem;
