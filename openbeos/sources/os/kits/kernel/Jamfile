@@ -1,5 +1,153 @@
 SubDir OBOS_TOP sources os kits kernel ;
 
+KernelLink stage2 
+	:
+	boot/arch/$(OBOS_ARCH)/stage2.ld 
+	:
+	libboot$(OBOS_ARCH).a
+	libc_init.a
+	libstdio.a
+	libstring.a
+	liblocale.a 
+	:
+	-dN
+	;
+
+KernelLink kernel 
+	:
+	core/arch/$(OBOS_ARCH)/kernel.ld 
+	:
+	libcore.a
+	libbus.a
+	linkhack.so
+	libfs.a
+	libvm.a
+	lib$(OBOS_ARCH).a
+	libdrivers.a
+	libide.a
+	libkeyboard.a
+	libps2mouse.a
+	libdriverscommon.a
+	:
+	-Bdynamic -export-dynamic -dynamic-linker /foo/bar
+	;
+
+KernelLink kernel.so
+	:
+	core/arch/x86/kernel.ld 
+	:
+	libcore.a
+	libbus.a
+	linkhack.so
+	libfs.a
+	libvm.a
+	lib$(OBOS_ARCH).a
+	libdrivers.a
+	libide.a
+	libkeyboard.a
+	libps2mouse.a
+	libdriverscommon.a
+	:
+	-Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar
+	;
+
+KernelLink iso9660
+	:
+	core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
+	:
+	libiso9660.a
+	kernel.so
+	:
+	-Bdynamic -shared
+	;
+
+KernelLink isa
+	:
+	core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
+	:
+	libisa_bus_manager.a
+	kernel.so
+	:
+	-Bdynamic -shared
+	;
+
+KernelLink libglue.o
+	:
+	:
+	libglue_lib0.a
+	:
+	-r
+	;
+
+KernelLink libm.so
+	:
+	ldscripts/$(OBOS_ARCH)/library.ld
+	:
+	libglue.o
+	libmcommon.a
+	libmieee.a
+	libmcommon_source.a
+	libm$(OBOS_ARCH).a
+	:
+	-shared -soname libm.so
+	;
+
+KernelLink libc.so
+	:
+	ldscripts/$(OBOS_ARCH)/library.ld
+	:
+	libglue.o
+	libc_init.a
+	libstdio.a
+	libstdlib.a
+	libsystem.a
+	libunistd.a
+	liblocale.a
+	:
+	-shared -soname libc.so
+	;
+
+KernelLink libglue.o
+	:
+	:
+	libglue_crt0.a
+	:
+	-r
+	;
+
+KernelLink fibo
+	:
+	ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	libglue.o
+	libfibo_main.a
+	libm.so
+	libc.so
+	:
+	;
+	
+KernelLink false
+	:
+	ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	libglue.o
+	libfalse_main.a
+	libm.so
+	libc.so
+	:
+	;
+
+KernelLink init 
+	:
+	ldscripts/$(OBOS_ARCH)/app.ld
+	:
+	libglue.a
+	libkinit.a
+	libm.so
+	libc.so
+	:
+	;
+
 SubInclude OBOS_TOP sources os kits kernel boot ;
 SubInclude OBOS_TOP sources os kits kernel core ;
 SubInclude OBOS_TOP sources os kits kernel drivers ;
@@ -7,4 +155,4 @@ SubInclude OBOS_TOP sources os kits kernel global ;
 SubInclude OBOS_TOP sources os kits kernel glue ;
 SubInclude OBOS_TOP sources os kits kernel libc ;
 SubInclude OBOS_TOP sources os kits kernel libm ;
-SubInclude OBOS_TOP sources os kits kernel prefs ;
+#SubInclude OBOS_TOP sources os kits kernel prefs ;
