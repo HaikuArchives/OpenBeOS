@@ -25,7 +25,7 @@ public:
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Init Test", &NodeTest::InitTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Directory Test", &NodeTest::AttrDirTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Read/Write/Remove Test", &NodeTest::AttrTest) );
-		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Rename Test (this fails with R5 libraries)", &NodeTest::AttrRenameTest) );
+		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Rename Test (NOTE: this fails with R5 libraries)", &NodeTest::AttrRenameTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute Info Test", &NodeTest::AttrInfoTest) );
 //		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Attribute BString Test", &NodeTest::AttrBStringTest) );
 		suite->addTest( new CppUnit::TestCaller<NodeTest>("BNode::Stat Test", &NodeTest::StatTest) );
@@ -56,10 +56,19 @@ public:
 
 
 	void AttrDirTest() {
+		const char attr[] = "StorageKit::ThisIsAGreatAttributeDamnIt";
+		const char data[] = "Testing strings are just way too much fun.";
+		const int len = strlen(data) + 1;
+	
+	
 		BNode node;
 		CPPUNIT_ASSERT( node.RewindAttrs() == B_BAD_ADDRESS );
 		
 		node.SetTo("./");
+
+		// Add an attribute to make sure one exists
+		node.WriteAttr(attr, B_STRING_TYPE, 0, data, len);
+		
 		
 		char str[B_ATTR_NAME_LENGTH];
 		status_t result;
@@ -78,6 +87,8 @@ public:
 
 		// The following crashes on R5. Our implementation just returns B_BAD_VALUE
 		//CPPUNIT_ASSERT( node.GetNextAttrName(NULL) != B_OK );
+		
+		node.RemoveAttr(attr);
 		
 	}
 	
