@@ -35,6 +35,8 @@
 		menuView->AddChild(defaultButton);
 		menuView->AddChild(revertButton);
 		
+		Update();
+		
 	}
 	
 	MenuWindow::~MenuWindow()
@@ -61,38 +63,9 @@
 		
 		case MENU_FONT_FAMILY:
 		{
-			BMenuItem *item;
-			if (item = fontMenu->FindMarked()) {
-				
-				if (!item->Submenu()->FindMarked()) {
-					item->Submenu()->ItemAt(0)->SetMarked(true);
-					font_family *family;
-					//BString family;
-					//msg->FindString("family", &family);
-					//char fam[64];
-					//family.CopyInto(fam, 0, family.Length());
-					//fam[family.Length()] = '\0';
-					//info.f_family = fam;
-					msg->FindPointer("family", (void**)&family);
-					info.f_family = *family;
-				}
-
-				// clear all other style submenus
-				for (int i = 0; i < fontMenu->CountItems(); i++) {
-					
-					// do not clear our style menu
-					if (fontMenu->ItemAt(i)->IsMarked())
-						continue;
-					
-					BMenu *menu = fontMenu->ItemAt(i)->Submenu();
-					for (int j = 0; j < menu->CountItems(); j ++) {
-						BMenuItem *mItem = menu->ItemAt(j);
-						if (mItem->IsMarked())
-							mItem->SetMarked(false);					
-					}
-				}
-			}
-			
+			font_family *family;
+			msg->FindPointer("family", (void**)&family);
+			info.f_family = *family;
 			set_menu_info(&info);
 			Update();
 			break;
@@ -106,29 +79,6 @@
 			msg->FindPointer("style", (void**)&style);
 			info.f_family = *family;
 			info.f_style = *style;
-			
-			BMenuItem *item;
-
-			if (item = fontMenu->FindItem(*family)) {
-				item->SetMarked(true);
-
-				// clear all other style submenus
-				for (int i = 0; i < fontMenu->CountItems(); i++) {
-				
-					// do not clear our style menu
-					if (fontMenu->ItemAt(i)->IsMarked())
-						continue;
-
-					BMenu *menu = fontMenu->ItemAt(i)->Submenu();
-				
-					for (int j = 0; j < menu->CountItems(); j ++) {
-						BMenuItem *mItem = menu->ItemAt(j);
-						if (mItem->IsMarked())
-							mItem->SetMarked(false);					
-					}
-				}
-			}
-			
 			set_menu_info(&info);
 			Update();
 			break;
