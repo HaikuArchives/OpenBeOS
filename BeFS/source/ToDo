@@ -34,6 +34,7 @@ BPlusTree
 
  - BPlusTree::Remove() currently does not free empty pages
  - CachedNode::Free() could free pages at the end of the stream data
+ - inserting/removing duplicates is not yet implemented
 
 Indices
 
@@ -46,9 +47,11 @@ Volume
  - needs a lock to protect the super block
 
 
-... much more stuff for full write capabilities ...
+general stuff
 
-There are also some comments with a leading "ToDo:" directly in the code which may not be mentioned here.
+ - much more stuff for full write capabilities ...
+ - There is still much locking missing
+ - There are also some comments with a leading "ToDo:" directly in the code which may not be mentioned here.
 
 -----
 Axel Dörfler

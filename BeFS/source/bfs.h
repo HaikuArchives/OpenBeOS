@@ -26,6 +26,7 @@ struct block_run
 	inline bool operator==(const block_run &run) const;
 	inline bool operator!=(const block_run &run) const;
 	inline bool IsZero();
+	//inline bool IsValid(Volume *);
 	inline void SetTo(int32 group,uint16 start,uint16 length = 1);
 
 	inline static block_run Run(int32 group,uint16 start,uint16 length = 1);
@@ -155,7 +156,7 @@ enum inode_flags
 
 	INODE_NO_CACHE			= 0x00010000,
 	INODE_WAS_WRITTEN		= 0x00020000,
-	INODE_NO_TRANSACTION	= 0x00040000
+	INODE_NO_TRANSACTION	= 0x00040000,
 };
 
 //**************************************

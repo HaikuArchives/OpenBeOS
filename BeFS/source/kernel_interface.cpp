@@ -328,12 +328,17 @@ bfs_sync(void *ns)
  */
 
 static int
-bfs_read_vnode(void *_ns, vnode_id vnid, char reenter, void **node)
+bfs_read_vnode(void *_ns, vnode_id id, char reenter, void **node)
 {
-	FUNCTION_START(("vnode_id = %Ld\n",vnid));
+	FUNCTION_START(("vnode_id = %Ld\n",id));
 	Volume *volume = (Volume *)_ns;
-	
-	Inode *inode = new Inode(volume,vnid,reenter);
+
+	if (id < 0 || id > volume->NumBlocks()) {
+		FATAL(("inode at %Ld requested!\n",id));
+		return B_ERROR;
+	}
+
+	Inode *inode = new Inode(volume,id,reenter);
 	if (inode->InitCheck() == B_OK) {
 		*node = (void *)inode;
 		return B_OK;
@@ -357,10 +362,20 @@ bfs_release_vnode(void *ns, void *_node, char reenter)
 
 
 int 
-bfs_remove_vnode(void *ns, void *node, char r)
+bfs_remove_vnode(void *_ns, void *_node, char reenter)
 {
 	FUNCTION();
-	return B_ERROR;
+
+	if (_ns == NULL || _node == NULL)
+		return B_BAD_VALUE;
+
+	Inode *inode = (Inode *)_node;
+
+	// ToDo: free data_stream, attributes, inode space etc.
+
+	delete inode;
+
+	return B_OK;
 }
 
 
@@ -420,7 +435,7 @@ bfs_walk(void *_ns, void *_directory, const char *file, char **_resolvedPath, vn
 			size_t readBytes = inode->Node()->data.size;
 			char *data = (char *)malloc(readBytes);
 			if (data != NULL) {
-				status = inode->ReadAt(0, data, &readBytes);
+				status = inode->ReadAt(0, (uint8 *)data, &readBytes);
 				if (status == B_OK && readBytes == inode->Node()->data.size)
 					status = new_path(data, &newPath);
 
@@ -445,10 +460,18 @@ int
 bfs_ioctl(void *_ns, void *_node, void *_cookie, int cmd, void *buffer, size_t bufferLength)
 {
 	FUNCTION_START(("node = %p, cmd = %d, buf = %p, len = %ld\n",_node,cmd,buffer,bufferLength));
-	
+
+	if (_ns == NULL)
+		return B_BAD_VALUE;
+
 	Volume *volume = (Volume *)_ns;
+	Inode *inode = (Inode *)_node;
 
 	switch (cmd) {
+		case IOCTL_FILE_UNCACHED_IO:
+			if (inode != NULL)
+				PRINT(("trying to make access to inode %lx uncached. Not yet implemented!\n",inode->ID()));
+			return B_ERROR;
 #ifdef DEBUG
 		case 56742:
 		{
@@ -642,10 +665,20 @@ bfs_link(void *ns, void *dir, const char *name, void *node)
 
 
 int 
-bfs_unlink(void *ns, void *dir, const char *name)
+bfs_unlink(void *_ns, void *_directory, const char *name)
 {
 	FUNCTION_START(("name = \"%s\"\n",name));
-	return B_ERROR;
+
+	if (_ns == NULL || _directory == NULL || name == NULL || *name == '\0')
+		return B_BAD_VALUE;
+
+	Inode *directory = (Inode *)_directory;
+	
+	status_t status = directory->CheckPermissions(W_OK);
+	if (status < B_OK)
+		return status;
+
+	return directory->Remove(name);
 }
 
 
@@ -716,15 +749,31 @@ bfs_read(void *_ns, void *_node, void *_cookie, off_t pos, void *buffer, size_t 
 	}
 
 	ReadLocked locked(inode->Lock());
-	return inode->ReadAt(pos,buffer,_length);
+	return inode->ReadAt(pos,(uint8 *)buffer,_length);
 }
 
 
 int 
-bfs_write(void *ns, void *node, void *cookie, off_t pos, const void *buf, size_t *len)
+bfs_write(void *_ns, void *_node, void *cookie, off_t pos, const void *buffer, size_t *_length)
 {
-	FUNCTION();
-	return B_ERROR;
+	//FUNCTION();
+	Volume *volume = (Volume *)_ns;
+	Inode *inode = (Inode *)_node;
+
+	if (inode->IsSymLink()) {
+		*_length = 0;
+		RETURN_ERROR(B_BAD_VALUE);
+	}
+
+	WriteLocked locked(inode->Lock());
+	Transaction transaction(volume,inode->BlockNumber());
+
+	status_t status = inode->WriteAt(&transaction,pos,(const uint8 *)buffer,_length);
+	
+	if (status == B_OK)
+		transaction.Done();
+
+	return status;
 }
 
 
@@ -733,9 +782,22 @@ bfs_write(void *ns, void *node, void *cookie, off_t pos, const void *buf, size_t
  */
 
 static int
-bfs_close(void * /*ns*/, void * /*node*/, void * /*cookie*/)
+bfs_close(void * _ns, void * _node, void * /*cookie*/)
 {
 	FUNCTION();
+	
+	if (_ns == NULL || _node == NULL)
+		return B_BAD_VALUE;
+
+	// trim the preallocated blocks here
+	Inode *inode = (Inode *)_node;
+
+	status_t status = inode->Trim();
+	if (status < B_OK)
+		FATAL(("Could not trim preallocated blocks!"));
+
+	// ToDo: update indices (size & co.)
+
 	return B_OK;
 }
 
@@ -782,7 +844,7 @@ bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize)
 		if (inode->Size() > *bufferSize)
 			return B_NAME_TOO_LONG;
 
-		RETURN_ERROR(inode->ReadAt(0, buffer, bufferSize));
+		RETURN_ERROR(inode->ReadAt(0, (uint8 *)buffer, bufferSize));
 	}
 
 	size_t numBytes = strlen((char *)&inode->Node()->short_symlink);
@@ -1139,7 +1201,7 @@ bfs_read_attr(void *ns, void *_node, const char *name, int type,void *buffer, si
 	// search in the attribute directory
 	Inode *attribute = inode->GetAttribute(name);
 	if (attribute != NULL) {
-		status_t status = attribute->ReadAt(pos,buffer,_length);
+		status_t status = attribute->ReadAt(pos,(uint8 *)buffer,_length);
 		inode->ReleaseAttribute(attribute);
 		RETURN_ERROR(status);
 	}

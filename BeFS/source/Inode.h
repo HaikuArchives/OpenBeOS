@@ -152,15 +152,20 @@ class Inode : public CachedBlock {
 
 		// for directories only:
 		status_t GetTree(BPlusTree **);
+		bool IsEmpty();
 
+		// manipulating the data stream
 		status_t FindBlockRun(off_t pos,block_run &run,off_t &offset);
 
-		status_t ReadAt(off_t pos,void *buffer,size_t *length);
-		status_t WriteAt(Transaction *transaction,off_t pos,void *buffer,size_t *length);
+		status_t ReadAt(off_t pos,uint8 *buffer,size_t *length);
+		status_t WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *length);
 
 		status_t SetFileSize(Transaction *transaction,off_t size);
 		status_t Append(Transaction *transaction,off_t bytes);
+		status_t Trim();
 
+		// create/remove inodes
+		status_t Remove(const char *name, bool isDirectory = false);
 		static status_t Create(Inode *directory,const char *name,int32 mode,int omode,off_t *id);
 
 	private:
@@ -170,6 +175,42 @@ class Inode : public CachedBlock {
 		BPlusTree		*fTree;
 		Inode			*fAttributes;
 		ReadWriteLock	fLock;
+};
+
+
+// The Vnode class provides a convenience layer upon get_vnode(), so that
+// you don't have to call put_vnode() anymore, which may make code more
+// readable in some cases
+
+class Vnode {
+	public:
+		Vnode(Volume *volume,vnode_id id)
+			:
+			fVolume(volume),
+			fID(id)
+		{
+		}
+
+		~Vnode()
+		{
+			if (fVolume)
+				put_vnode(fVolume->ID(),fID);
+		}
+
+		status_t Get(Inode **inode)
+		{
+			// should we check inode against NULL here? it should not be necessary
+			return get_vnode(fVolume->ID(),fID,(void **)inode);
+		}
+
+		void Keep()
+		{
+			fVolume = NULL;
+		}
+
+	private:
+		Volume		*fVolume;
+		vnode_id	fID;
 };
 
 

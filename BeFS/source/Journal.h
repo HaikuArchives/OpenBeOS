@@ -46,7 +46,7 @@ class Transaction {
 		{
 		}
 
-		status_t WriteBlocks(off_t blockNumber,uint8 *buffer,size_t numBlocks = 1)
+		status_t WriteBlocks(off_t blockNumber,const uint8 *buffer,size_t numBlocks = 1)
 		{
 			return cached_write(fVolume->Device(),blockNumber,buffer,numBlocks,fVolume->BlockSize());
 		}

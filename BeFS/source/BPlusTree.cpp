@@ -36,10 +36,8 @@
 void 
 CachedNode::Unset()
 {
-	if (fTree == NULL || fTree->fStream == NULL) {
-		REPORT_ERROR(B_BAD_VALUE);
+	if (fTree == NULL || fTree->fStream == NULL)
 		return;
-	}
 
 	if (fBlock != NULL) {
 		release_block(fTree->fStream->GetVolume()->Device(),fBlockNumber);
@@ -169,16 +167,20 @@ CachedNode::Allocate(Transaction *transaction, off_t *_offset)
 	Inode *stream = fTree->fStream;
 	if (stream->Append(transaction,fTree->fNodeSize) < B_OK)
 		return NULL;
-	
-	if (SetTo(fTree->fHeader->maximum_size,false) != NULL) {
-		*_offset = fTree->fHeader->maximum_size;
-		fTree->fHeader->maximum_size += fTree->fNodeSize;
-	
+
+	// the maximum_size has to be changed before the call to SetTo() - or
+	// else it will fail because the requested node is out of bounds
+	off_t offset = fTree->fHeader->maximum_size;
+	fTree->fHeader->maximum_size += fTree->fNodeSize;
+
+	if (SetTo(offset,false) != NULL) {
+		*_offset = offset;
+
 		if (fTree->fCachedHeader.WriteBack(transaction) == B_OK) {
 			fNode->Initialize();
 			return fNode;
 		}
-	}	
+	}
 	return NULL;
 }
 
@@ -811,7 +813,7 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 					// rebuild next time...
 					// But since we will have journaling, that's not a big
 					// problem anyway.
-					RETURN_ERROR(B_NO_MEMORY);
+					RETURN_ERROR(B_DEVICE_FULL);
 				}
 			}
 
@@ -820,7 +822,7 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 			bplustree_node *other = cachedOther.Allocate(transaction,&otherOffset);
 			if (other == NULL) {
 				cachedNewRoot.Free(transaction,newRoot);
-				RETURN_ERROR(B_NO_MEMORY);
+				RETURN_ERROR(B_DEVICE_FULL);
 			}
 
 			if (SplitNode(node,nodeAndKey.nodeOffset,other,otherOffset,&nodeAndKey.keyIndex,keyBuffer,&keyLength,&value) < B_OK) {
@@ -867,7 +869,7 @@ BPlusTree::Insert(Transaction *transaction,uint8 *key,uint16 keyLength,off_t val
 
 
 status_t
-BPlusTree::RemoveDuplicate(bplustree_node */*node*/,uint16 /*index*/)
+BPlusTree::RemoveDuplicate(bplustree_node */*node*/,uint16 /*index*/,off_t /*value*/)
 {
 	PRINT(("REMOVE DUPLICATE ENTRY - that's not yet implemented!!\n"));
 
@@ -902,7 +904,9 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 	memmove(key,key + length,node->all_key_length - (key - keys));
 	
 	// move and update key lengths
-	for (uint16 i = index;i < node->all_key_count;)
+	if (index > 0)
+		memmove(newKeyLengths,keyLengths,index * sizeof(uint16));
+	for (uint16 i = index;i < node->all_key_count;i++)
 		newKeyLengths[i] = keyLengths[i + 1] - length;
 
 	// move values
@@ -914,7 +918,7 @@ BPlusTree::RemoveKey(bplustree_node *node,uint16 index)
 
 
 status_t
-BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength)
+BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength,off_t value)
 {
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH)
 		RETURN_ERROR(B_BAD_VALUE);
@@ -944,14 +948,15 @@ BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength)
 			// is this a duplicate entry?
 			if (bplustree_node::IsDuplicate(node->Values()[nodeAndKey.keyIndex])) {
 				if (fAllowDuplicates)
-					return RemoveDuplicate(node,nodeAndKey.keyIndex);
+					return RemoveDuplicate(node,nodeAndKey.keyIndex,value);
 				else
 					RETURN_ERROR(B_NAME_IN_USE);
 			}
 		}
 
 		RemoveKey(node,nodeAndKey.keyIndex);
-		
+		cached.WriteBack(transaction);
+
 		// ToDo: do something here if the node is empty!
 		// I think we will follow the original implementation and
 		// don't implement merging of nodes that use too less
@@ -981,6 +986,9 @@ BPlusTree::Remove(Transaction *transaction,uint8 *key,uint16 keyLength)
  *	Returns B_OK when the key could be found, B_ENTRY_NOT_FOUND
  *	if not. It can also return other errors to indicate that
  *	something went wrong.
+ *	Note that this doesn't work with duplicates - it will just
+ *	return B_BAD_TYPE if you call this function on a tree where
+ *	duplicates are allowed.
  */
 
 status_t
@@ -989,6 +997,9 @@ BPlusTree::Find(uint8 *key,uint16 keyLength,off_t *_value)
 	if (keyLength < BPLUSTREE_MIN_KEY_LENGTH || keyLength > BPLUSTREE_MAX_KEY_LENGTH
 		|| key == NULL)
 		RETURN_ERROR(B_BAD_VALUE);
+
+	if (fAllowDuplicates)
+		RETURN_ERROR(B_BAD_TYPE);
 
 	// lock access to stream
 	ReadLocked locked(fStream->Lock());
@@ -1063,7 +1074,9 @@ TreeIterator::Goto(int8 to)
 		else {
 			if (node->all_key_length > fTree->fNodeSize
 				|| (uint32)node->Values() > (uint32)node + fTree->fNodeSize - 8 * node->all_key_count)
-			nextOffset = *node->Values();
+				RETURN_ERROR(B_ERROR);
+
+			nextOffset = node->Values()[0];
 		}
 		if (nextOffset == nodeOffset)
 			break;

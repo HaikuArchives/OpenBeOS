@@ -162,7 +162,7 @@ class BPlusTree {
 		status_t	InitCheck();
 		status_t	Validate();
 
-		status_t	Remove(Transaction *transaction,uint8 *key, uint16 keyLength);
+		status_t	Remove(Transaction *transaction,uint8 *key, uint16 keyLength, off_t value);
 		status_t	Insert(Transaction *transaction,uint8 *key, uint16 keyLength, off_t value);
 
 		status_t	Insert(Transaction *transaction,const char *key, off_t value);
@@ -187,7 +187,7 @@ class BPlusTree {
 		void		InsertKey(bplustree_node *node, uint16 index, uint8 *key, uint16 keyLength, off_t value);
 		status_t	SplitNode(bplustree_node *node, off_t nodeOffset, bplustree_node *other, off_t otherOffset, uint16 *_keyIndex, uint8 *key, uint16 *_keyLength, off_t *_value);
 
-		status_t	RemoveDuplicate(bplustree_node *, uint16);
+		status_t	RemoveDuplicate(bplustree_node *node, uint16 keyIndex, off_t value);
 		void		RemoveKey(bplustree_node *node, uint16 index);
 
 	private:

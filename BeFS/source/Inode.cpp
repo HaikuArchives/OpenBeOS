@@ -435,6 +435,14 @@ Inode::GetTree(BPlusTree **tree)
 }
 
 
+bool 
+Inode::IsEmpty()
+{
+	// ToDo: implement me!
+	return false;
+}
+
+
 /** Finds the block_run where "pos" is located in the data_stream of
  *	the inode.
  *	If successful, "offset" will then be set to the file offset
@@ -531,8 +539,8 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 }
 
 
-status_t 
-Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
+status_t
+Inode::ReadAt(off_t pos, uint8 *buffer, size_t *_length)
 {
 	// set/check boundaries for pos/length
 
@@ -554,41 +562,168 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 		*_length = 0;
 		RETURN_ERROR(B_BAD_VALUE);
 	}
-	
+
 	uint32 bytesRead = 0;
-	uint32 block_size = fVolume->BlockSize();
-	uint32 block_shift = fVolume->BlockShift();
+	uint32 blockSize = fVolume->BlockSize();
+	uint32 blockShift = fVolume->BlockShift();
 	uint8 *block;
 
 	// the first block_run we read could not be aligned to the block_size boundary
 	// (read partial block at the beginning)
 
 	// pos % block_size == (pos - offset) % block_size, offset % block_size == 0
-	if (pos % block_size != 0) {
-		run.start += (pos - offset) / block_size;
-		run.length -= (pos - offset) / block_size;
+	if (pos % blockSize != 0) {
+		run.start += (pos - offset) / blockSize;
+		run.length -= (pos - offset) / blockSize;
 
 		CachedBlock cached(fVolume,run);
 		if ((block = cached.Block()) == NULL) {
 			*_length = 0;
 			RETURN_ERROR(B_BAD_VALUE);
 		}
-		
-		bytesRead = block_size - (pos % block_size);
+
+		bytesRead = blockSize - (pos % blockSize);
 		if (length < bytesRead)
 			bytesRead = length;
 
-		memcpy(buffer,block + (pos % block_size),bytesRead);
+		memcpy(buffer,block + (pos % blockSize),bytesRead);
 		pos += bytesRead;
-		
+
 		length -= bytesRead;
 		if (length == 0) {
 			*_length = bytesRead;
 			return B_OK;
 		}
-		
+
 		if (FindBlockRun(pos,run,offset) < B_OK) {
 			*_length = bytesRead;
+			RETURN_ERROR(B_BAD_VALUE);
+		}
+	}
+
+	// the first block_run is already filled it at this point
+	// read the following complete blocks using cached_read(),
+	// the last partial block is read using the CachedBlock class
+
+	bool partial = false;
+
+	while (length > 0) {
+		// offset is the offset to the current pos in the block_run
+		run.start += (pos - offset) >> blockShift;
+		run.length -= (pos - offset) >> blockShift;
+
+		if ((run.length << blockShift) > length) {
+			if (length < blockSize) {
+				CachedBlock cached(fVolume,run);
+				if ((block = cached.Block()) == NULL) {
+					*_length = bytesRead;
+					RETURN_ERROR(B_BAD_VALUE);
+				}
+				memcpy(buffer + bytesRead,block,length);
+				bytesRead += length;
+				break;
+			}
+			run.length = length >> blockShift;
+			partial = true;
+		}
+
+		if (cached_read(fVolume->Device(),fVolume->ToBlock(run),buffer + bytesRead,
+						run.length,blockSize) != B_OK) {
+			*_length = bytesRead;
+			RETURN_ERROR(B_BAD_VALUE);
+		}
+
+		int32 bytes = run.length << blockShift;
+		length -= bytes;
+		bytesRead += bytes;
+		if (length == 0)
+			break;
+
+		pos += bytes;
+
+		if (partial) {
+			// if the last block was read only partially, point block_run
+			// to the remaining part
+			run.start += run.length;
+			run.length = 1;
+			offset = pos;
+		} else if (FindBlockRun(pos,run,offset) < B_OK) {
+			*_length = bytesRead;
+			RETURN_ERROR(B_BAD_VALUE);
+		}
+	}
+
+	*_length = bytesRead;
+	return B_NO_ERROR;
+}
+
+
+status_t 
+Inode::WriteAt(Transaction *transaction,off_t pos,const uint8 *buffer,size_t *_length)
+{
+	size_t length = *_length;
+
+	// set/check boundaries for pos/length
+	if (pos < 0)
+		pos = 0;
+	else if (pos + length > Node()->data.size) {
+		// let's grow the data stream to the size needed
+		status_t status = SetFileSize(transaction,pos + length);
+		if (status < B_OK) {
+			*_length = 0;
+			RETURN_ERROR(status);
+		}
+	}
+
+	block_run run;
+	off_t offset;
+	if (FindBlockRun(pos,run,offset) < B_OK) {
+		*_length = 0;
+		RETURN_ERROR(B_BAD_VALUE);
+	}
+
+	bool logStream = (Flags() & INODE_LOGGED) == INODE_LOGGED;
+	uint32 bytesWritten = 0;
+	uint32 blockSize = fVolume->BlockSize();
+	uint32 blockShift = fVolume->BlockShift();
+	uint8 *block;
+
+	// the first block_run we write could not be aligned to the block_size boundary
+	// (write partial block at the beginning)
+
+	// pos % block_size == (pos - offset) % block_size, offset % block_size == 0
+	if (pos % blockSize != 0) {
+		run.start += (pos - offset) / blockSize;
+		run.length -= (pos - offset) / blockSize;
+
+		CachedBlock cached(fVolume,run);
+		if ((block = cached.Block()) == NULL) {
+			*_length = 0;
+			RETURN_ERROR(B_BAD_VALUE);
+		}
+
+		bytesWritten = blockSize - (pos % blockSize);
+		if (length < bytesWritten)
+			bytesWritten = length;
+
+		memcpy(block + (pos % blockSize),buffer,bytesWritten);
+
+		// either log the stream or write it directly to disk
+		if (logStream)
+			cached.WriteBack(transaction);
+		else
+			cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize);
+
+		pos += bytesWritten;
+		
+		length -= bytesWritten;
+		if (length == 0) {
+			*_length = bytesWritten;
+			return B_OK;
+		}
+
+		if (FindBlockRun(pos,run,offset) < B_OK) {
+			*_length = bytesWritten;
 			RETURN_ERROR(B_BAD_VALUE);
 		}
 	}
@@ -601,63 +736,65 @@ Inode::ReadAt(off_t pos, void *buffer, size_t *_length)
 
 	while (length > 0) {
 		// offset is the offset to the current pos in the block_run
-		run.start += (pos - offset) >> block_shift;
-		run.length -= (pos - offset) >> block_shift;
+		run.start += (pos - offset) >> blockShift;
+		run.length -= (pos - offset) >> blockShift;
 
-		if ((run.length << block_shift) > length) {
-			if (length < block_size) {
+		if ((run.length << blockShift) > length) {
+			if (length < blockSize) {
 				CachedBlock cached(fVolume,run);
 				if ((block = cached.Block()) == NULL) {
-					*_length = bytesRead;
+					*_length = bytesWritten;
 					RETURN_ERROR(B_BAD_VALUE);
 				}
-				memcpy((uint8 *)buffer + bytesRead,block,length);
-				bytesRead += length;
+				memcpy(block,buffer + bytesWritten,length);
+
+				if (logStream)
+					cached.WriteBack(transaction);
+				else
+					cached_write(fVolume->Device(),cached.BlockNumber(),block,1,blockSize);
+
+				bytesWritten += length;
 				break;
 			}
-			run.length = length >> block_shift;
+			run.length = length >> blockShift;
 			partial = true;
 		}
-		
-		if (cached_read(fVolume->Device(),fVolume->ToBlock(run),(uint8 *)buffer + bytesRead,
-						run.length,block_size) != B_OK) {
-			*_length = bytesRead;
+
+		status_t status;
+		if (logStream) {
+			status = transaction->WriteBlocks(fVolume->ToBlock(run),
+						buffer + bytesWritten,run.length);
+		} else {
+			status = cached_write(fVolume->Device(),fVolume->ToBlock(run),
+						buffer + bytesWritten,run.length,blockSize);
+		}
+		if (status != B_OK) {
+			*_length = bytesWritten;
 			RETURN_ERROR(B_BAD_VALUE);
 		}
 
-		int32 bytes = run.length << block_shift;
+		int32 bytes = run.length << blockShift;
 		length -= bytes;
-		bytesRead += bytes;
+		bytesWritten += bytes;
 		if (length == 0)
 			break;
 
 		pos += bytes;
-		
+
 		if (partial) {
-			// if the last block was read only partially, point block_run
+			// if the last block was written only partially, point block_run
 			// to the remaining part
 			run.start += run.length;
 			run.length = 1;
 			offset = pos;
 		} else if (FindBlockRun(pos,run,offset) < B_OK) {
-			*_length = bytesRead;
+			*_length = bytesWritten;
 			RETURN_ERROR(B_BAD_VALUE);
 		}
 	}
-	
-	*_length = bytesRead;
+
+	*_length = bytesWritten;
 	return B_NO_ERROR;
-}
-
-
-status_t 
-Inode::WriteAt(Transaction *transaction,off_t pos,void *buffer,size_t *length)
-{
-	// not yet implemented
-	// should be pretty similar to ReadAt(), as long as the space is
-	// already reserved in the inode's data_stream
-
-	RETURN_ERROR(B_ERROR);
 }
 
 
@@ -693,7 +830,12 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 	if (blocks > fVolume->FreeBlocks())
 		return B_DEVICE_FULL;
 
-	while (blocks > 0) {
+	// should we preallocate some blocks (currently, always 64k)?
+	off_t blocksNeeded = blocks;
+	if (blocks < 65536 / fVolume->BlockSize() && fVolume->FreeBlocks() > 128)
+		blocks = 65536 / fVolume->BlockSize();
+
+	while (blocksNeeded > 0) {
 		// the requested blocks do not need to be returned with a
 		// single allocation, so we need to iterate until we have
 		// enough blocks allocated
@@ -704,7 +846,9 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 		// okay, we have the needed blocks, so just distribute them to the
 		// different ranges of the stream (direct, indirect & double indirect)
 		
-		blocks -= run.length;
+		blocksNeeded -= run.length;
+		// don't preallocate if the first allocation was already too small
+		blocks = blocksNeeded;
 		
 		if (data->size <= data->max_direct_range) {
 			// let's try to put them into the direct block range
@@ -731,6 +875,7 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 		// when we are here, we need to grow into the indirect or double
 		// indirect range - but that's not yet implemented, so bail out!
 
+		FATAL(("growing in the indirect range is not yet implemented!\n"));
 		RETURN_ERROR(B_ERROR);
 	}
 	// update the size of the data stream
@@ -778,6 +923,66 @@ Inode::Append(Transaction *transaction,off_t bytes)
 
 
 status_t 
+Inode::Trim()
+{
+	// ToDo: implement me! -> have to do ShrinkStream() first...
+	return B_OK;
+}
+
+
+status_t
+Inode::Remove(const char *name,bool isDirectory)
+{
+	if (!strcmp(name,".") || !strcmp(name,".."))
+		return B_NOT_ALLOWED;
+
+	BPlusTree *tree;
+	if (GetTree(&tree) != B_OK)
+		RETURN_ERROR(B_BAD_VALUE);
+
+	// does the file even exists?
+	off_t id;
+	if (tree->Find((uint8 *)name,(uint16)strlen(name),&id) < B_OK)
+		return B_ENTRY_NOT_FOUND;
+
+	Vnode vnode(fVolume,id);
+	Inode *inode;
+	status_t status = vnode.Get(&inode);
+	if (status < B_OK) {
+		REPORT_ERROR(status);
+		return B_ENTRY_NOT_FOUND;
+	}
+
+	// if it's not of the correct type, don't delete it!
+	if (inode->IsDirectory() != isDirectory)
+		return isDirectory ? B_NOT_A_DIRECTORY : B_IS_A_DIRECTORY;
+	
+	// only delete empty directories
+	if (isDirectory && !inode->IsEmpty())
+		return B_DIRECTORY_NOT_EMPTY;
+
+	Transaction transaction(fVolume,inode->BlockNumber());
+
+	// remove_vnode() allows the inode to be accessed until the last put_vnode()
+	if (remove_vnode(fVolume->ID(),id) != B_OK)
+		return B_ERROR;
+
+	if (tree->Remove(&transaction,(uint8 *)name,(uint16)strlen(name),id) < B_OK) {
+		unremove_vnode(fVolume->ID(),id);
+		RETURN_ERROR(B_ERROR);
+	}
+
+	// update the inode, so that no one will ever doubt it's deleted :-)
+	inode->Node()->flags |= INODE_DELETED;
+	if (inode->WriteBack(&transaction) < B_OK)
+		return B_ERROR;
+
+	transaction.Done();
+	return B_OK;
+}
+
+
+status_t 
 Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *id)
 {
 	Volume *volume = directory->fVolume;
@@ -793,18 +998,35 @@ Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *
 		if (mode & S_DIRECTORY || omode & O_EXCL)
 			return B_FILE_EXISTS;
 
-		// if it's a directory, bail out!
-		// if omode & O_TRUNC, truncate the existing file
-		if (omode & O_TRUNC) {
-			//Transaction transaction(volume,directory->BlockNumber());
-
-			//status_t status = inode->SetFileSize(&transaction,0);
-			//if (status < B_OK)
-			//	return status;
-
-			//transaction.Done();
+		Vnode vnode(volume,offset);
+		Inode *inode;
+		status_t status = vnode.Get(&inode);
+		if (status < B_OK) {
+			REPORT_ERROR(status);
+			return B_ENTRY_NOT_FOUND;
 		}
 
+		// if it's a directory, bail out!
+		if (inode->IsDirectory())
+			return B_IS_A_DIRECTORY;
+
+		// if omode & O_TRUNC, truncate the existing file
+		if (omode & O_TRUNC) {
+			WriteLocked locked(inode->Lock());
+			Transaction transaction(volume,directory->BlockNumber());
+
+			status_t status = inode->SetFileSize(&transaction,0);
+			if (status < B_OK)
+				return status;
+
+			transaction.Done();
+		}
+
+		// only keep the vnode in memory if the vnode_id pointer is provided
+		if (id) {
+			*id = offset;
+			vnode.Keep();
+		}
 		return B_OK;
 	}
 
@@ -871,6 +1093,8 @@ Inode::Create(Inode *directory, const char *name, int32 mode, int omode, off_t *
 	notify_listener(B_ENTRY_CREATED,volume->ID(),directory->ID(),0,inode->ID(),name);
 	if (id != NULL)
 		*id = inode->ID();
+	else
+		put_vnode(volume->ID(),inode->ID());
 
 	return B_OK;
 }
@@ -968,21 +1192,14 @@ AttributeIterator::GetNext(char *name, size_t *_length, uint32 *_type, vnode_id 
 	if (status < B_OK)
 		return status;
 
+	Vnode vnode(volume,id);
 	Inode *attribute;
-	status = get_vnode(volume->ID(),id,(void **)&attribute);
-		// when we know how get_vnode() is implemented in the kernel, we could
-		// get rid of those checks (if attribute != NULL) - and we will in OpenBeOS :-)
-	if (status == B_OK && attribute != NULL) {
+	if ((status = vnode.Get(&attribute)) == B_OK) {
 		*_type = attribute->Node()->type;
 		*_length = attribute->Node()->data.size;
 		*_id = id;
-	} else if (status == B_OK) {
-		FATAL(("get_vnode() failed in AttributeIterator::GetNext(vnode_id = %Ld,name = \"%s\")\n",fInode->ID(),name));
-		status = B_ERROR;
 	}
 
-	put_vnode(volume->ID(),id);
-	
 	return status;
 }
 
