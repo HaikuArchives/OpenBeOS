@@ -17,7 +17,7 @@ int bus_init(kernel_args *ka)
 {
 	bus_man_init(ka);
 
-#ifdef ARCH_i386
+#ifdef ARCH_x86
 	pci_bus_init(ka);
 #endif
 #ifdef ARCH_sh4
