@@ -80,11 +80,6 @@ VM_pref::VM_pref()
 	 */
 	int maxSwap;
 	
-	fscanf(settingsFile, "%s %s\n", dummy, dummy);
-	fscanf(settingsFile, "%s %d\n", dummy, &currSwap);
-	fclose(settingsFile);
-	currSwap = currSwap / 1048576;
-	
 	/* There's got to be a better way to get the amount of
 	 * installed memory.
 	 */
@@ -97,6 +92,20 @@ VM_pref::VM_pref()
 	
 	physMem = physMem / 1048576;
 	minSwap = physMem + (int)(physMem / 3.0);
+	
+	if(settingsFile != NULL){
+	
+		fscanf(settingsFile, "%s %s\n", dummy, dummy);
+		fscanf(settingsFile, "%s %d\n", dummy, &currSwap);
+		currSwap = currSwap / 1048576;
+	
+	}//if
+	else{
+	
+		currSwap = minSwap;
+		
+	}//else
+	fclose(settingsFile);
 	
 	vol_rost->GetBootVolume(&bootVol);
 	/* maxSwap is defined by the amount of free space on your boot
