@@ -72,8 +72,10 @@ char *pool_get(struct pool_ctl *p)
 		/* woohoo, just grab a block! */
 		rv = p->freelist;
 		p->freelist = ((struct free_blk*)rv)->next;
+		return rv;
 	}
-		
+	
+	/* no free blocks, try to allocate of the top of the memory blocks */
 	do {
 		if (mp->avail >= p->alloc_size) {
 			rv = mp->ptr;
@@ -82,6 +84,9 @@ char *pool_get(struct pool_ctl *p)
 			break;
 		}
 	} while ((mp = mp->next) != NULL);
+
+/* XXX - we should allocate more memory if we get here with rv == NULL */
+
 	return rv;
 }
 

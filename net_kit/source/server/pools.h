@@ -1,5 +1,5 @@
 /* pools.h
- * simple pool type allocator
+ * simple fixed size block allocator
  */
 
 #include <kernel/OS.h>
@@ -24,7 +24,6 @@ struct pool_ctl {
 	struct pool_mem *list;
 	size_t alloc_size;
 	char *freelist;
-	char *tail;
 };
 
 void pool_init(struct pool_ctl **p, size_t sz);
