@@ -877,8 +877,9 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 		// single allocation, so we need to iterate until we have
 		// enough blocks allocated
 		block_run run;
-		if (fVolume->Allocate(transaction,this,blocks,run) < B_OK)
-			return B_DEVICE_FULL;
+		status_t status = fVolume->Allocate(transaction,this,blocks,run);
+		if (status < B_OK)
+			return status;
 
 		// okay, we have the needed blocks, so just distribute them to the
 		// different ranges of the stream (direct, indirect & double indirect)
@@ -905,14 +906,79 @@ Inode::GrowStream(Transaction *transaction, off_t size)
 					data->direct[free] = run;
 				}
 				data->max_direct_range += run.length * fVolume->BlockSize();
+				data->size = blocksNeeded > 0 ? data->max_direct_range : size;
 				continue;
 			}
 		}
-		
-		// when we are here, we need to grow into the indirect or double
-		// indirect range - but that's not yet implemented, so bail out!
 
-		FATAL(("growing in the indirect range is not yet implemented!\n"));
+		if (data->size <= data->max_indirect_range || !data->max_indirect_range) {
+			CachedBlock cached(fVolume);
+			block_run *runs = NULL;
+			int32 free = 0;
+			off_t block;
+
+			// if there is no indirect block yet, create one
+			if (data->indirect.IsZero()) {
+				status = fVolume->Allocate(transaction,this,4,data->indirect,4);
+				if (status < B_OK)
+					return status;
+
+				// make sure those blocks are empty
+				block = fVolume->ToBlock(data->indirect);					
+				for (int32 i = 1;i < data->indirect.length;i++) {
+					block_run *runs = (block_run *)cached.SetToEmpty(block + i);
+					if (runs == NULL)
+						return B_IO_ERROR;
+
+					cached.WriteBack(transaction);
+				}
+				data->max_indirect_range = data->max_direct_range;
+				// insert the block_run in the first block
+				runs = (block_run *)cached.SetToEmpty(block);
+			} else {
+				uint32 numberOfRuns = ((uint32)data->indirect.length << fVolume->BlockShift()) / sizeof(block_run);
+				block = fVolume->ToBlock(data->indirect);
+
+				// search first empty entry
+				int32 i = 0;
+				for (;i < data->indirect.length;i++) {
+					if ((runs = (block_run *)cached.SetTo(block + i)) == NULL)
+						return B_IO_ERROR;
+
+					for (free = 0;free < numberOfRuns;free++)
+						if (runs[free].IsZero())
+							break;
+
+					if (free < numberOfRuns)
+						break;
+				}
+				if (i == data->indirect.length)
+					runs = NULL;
+			}
+
+			if (runs != NULL) {
+				// try to insert the run to the last one - note that this doesn't
+				// take block borders into account, so it could be further optimized
+				int32 last = free - 1;
+				if (free > 0
+					&& runs[last].allocation_group == run.allocation_group
+					&& runs[last].start + runs[last].length == run.start) {
+					runs[last].length += run.length;
+				} else {
+					runs[free] = run;
+				}
+				data->max_indirect_range += run.length * fVolume->BlockSize();
+				data->size = blocksNeeded > 0 ? data->max_indirect_range : size;
+
+				cached.WriteBack(transaction);
+				continue;
+			}
+		}
+
+		// when we are here, we need to grow into the double indirect
+		// range - but that's not yet implemented, so bail out!
+
+		FATAL(("growing in the double indirect range is not yet implemented!\n"));
 		RETURN_ERROR(B_ERROR);
 	}
 	// update the size of the data stream
@@ -972,33 +1038,34 @@ status_t
 Inode::ShrinkStream(Transaction *transaction, off_t size)
 {
 	data_stream *data = &Node()->data;
-	off_t offset = 0;
 
 	if (data->max_double_indirect_range > size) {
 		// ToDo: implement me, please!
+		FATAL(("the double indirect range cannot yet be shrinked...\n"));
 	}
 	if (data->max_indirect_range > size) {
 		CachedBlock cached(fVolume);
-		off_t num = fVolume->ToBlock(data->indirect);
-		bool freeArray = false;
-
-		offset = data->max_direct_range;
+		off_t block = fVolume->ToBlock(data->indirect);
+		off_t offset = data->max_direct_range;
 
 		for (int32 i = 0;i < data->indirect.length;i++) {
-			block_run *array = (block_run *)cached.SetTo(num + i);
+			block_run *array = (block_run *)cached.SetTo(block + i);
 			if (array == NULL)
 				break;
 
-			if (FreeStreamArray(transaction,array,fVolume->BlockSize() / sizeof(block_run),size,offset,data->max_indirect_range) == B_OK) {
-				if (i == 0 && array[0].IsZero())
-					freeArray = true;
-			}
+			if (FreeStreamArray(transaction,array,fVolume->BlockSize() / sizeof(block_run),size,offset,data->max_indirect_range) == B_OK)
+				cached.WriteBack(transaction);
 		}
-		if (freeArray)
+		if (data->max_direct_range == data->max_indirect_range) {
 			fVolume->Free(transaction,data->indirect);
+			data->indirect.SetTo(0,0,0);
+			data->max_indirect_range = 0;
+		}
 	}
-	if (data->max_direct_range > size)
+	if (data->max_direct_range > size) {
+		off_t offset = 0;
 		FreeStreamArray(transaction,data->direct,NUM_DIRECT_BLOCKS,size,offset,data->max_direct_range);
+	}
 
 	data->size = size;
 	return B_OK;

@@ -1,4 +1,4 @@
-BFS - ToDo, March 31th, 2002
+BFS - ToDo, April 10th, 2002
 -----
 
 BlockAllocator
@@ -12,9 +12,8 @@ BlockAllocator
 
 DataStream
 
- - shrinking the stream size is not completely implemented (indirect range is untested, double indirect range is not yet implemented)
- - growing does only work for the direct range
-
+ - growing/shrinking the stream size is not implemented for the double indirect range
+ - if something fails, the stream is not trimmed back
 
 Queries
 
@@ -53,6 +52,7 @@ Volume
 
 general stuff
 
+ - if any transaction that changes an inode fails, the changed inode is still in memory and had to be reloaded or the changes be undone...
  - much more stuff for full write capabilities ...
  - There is still much locking missing
  - There are also some comments with a leading "ToDo:" directly in the code which may not be mentioned here.

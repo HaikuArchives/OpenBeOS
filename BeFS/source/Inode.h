@@ -93,6 +93,18 @@ class CachedBlock {
 			return SetTo(fVolume->ToBlock(run));
 		}
 
+		uint8 *SetToEmpty(off_t block)
+		{
+			Unset();
+			fBlockNumber = block;
+			return fBlock = (uint8 *)get_empty_block(fVolume->Device(),block,fVolume->BlockSize());
+		}
+		
+		uint8 *SetToEmpty(block_run run)
+		{
+			return SetToEmpty(fVolume->ToBlock(run));
+		}
+
 		status_t WriteBack(Transaction *transaction)
 		{
 			if (transaction == NULL || fBlock == NULL)

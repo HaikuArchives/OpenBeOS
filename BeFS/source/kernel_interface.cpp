@@ -619,6 +619,7 @@ bfs_write_stat(void *_ns, void *_node, struct stat *stat, long mask)
 	
 	if (mask & WSTAT_MODE) {
 		PRINT(("original mode = %ld, stat->st_mode = %ld\n",node->mode,stat->st_mode));
+		node->mode = node->mode & ~0777 | stat->st_mode & 0777;
 	}
 
 	if (mask & WSTAT_UID)

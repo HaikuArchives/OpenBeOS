@@ -282,8 +282,14 @@ BlockAllocator::AllocateBlocks(Transaction *transaction,int32 group,uint16 start
 //				group,fGroups[group].fNumBits,fGroups[group].fStart,fGroups[group].fFirstFree,
 //				fGroups[group].fLargest,fGroups[group].fLargestFirst,fGroups[group].fIsFull);
 
-		if (i >= fNumGroups)
+		if (i >= fNumGroups) {
+			// if the minimum is the same as the maximum, it's not necessary to
+			// search for in the allocation groups a second time
+			if (maximum == minimum)
+				return B_DEVICE_FULL;
+
 			numBlocks = minimum;
+		}
 
 		// the wanted maximum is smaller than the largest free block in the group
 		// or already smaller than the minimum
@@ -390,8 +396,15 @@ BlockAllocator::AllocateForInode(Transaction *transaction,const block_run *paren
 
 
 status_t 
-BlockAllocator::Allocate(Transaction *transaction,const Inode *inode, uint16 numBlocks, block_run &run, uint16 minimum)
+BlockAllocator::Allocate(Transaction *transaction,const Inode *inode, off_t numBlocks, block_run &run, uint16 minimum)
 {
+	if (numBlocks <= 0)
+		return B_ERROR;
+
+	// one block_run can't hold more data than it is in one allocation group
+	if (numBlocks > fGroups[0].fNumBits)
+		numBlocks = fGroups[0].fNumBits;
+
 	// apply some allocation policies here (AllocateBlocks() will break them
 	// if necessary)
 	uint16 group = inode->BlockRun().allocation_group;
