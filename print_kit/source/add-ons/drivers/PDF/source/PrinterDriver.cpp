@@ -366,9 +366,14 @@ PrinterDriver::OpenTransport()
 	delete msg;
 	delete path;
 
+	// The BeOS "Print To File" transport returns a non-NULL BDataIO *
+	// even after user filepanel cancellation! 
 	BFile* file = dynamic_cast<BFile*>(fTransport);
+	if (file && file->InitCheck() != B_OK)
+		// Quietly return
+		return B_ERROR;
 	
-	if (fTransport == 0 || (file && file->InitCheck() != B_OK)) {
+	if (fTransport == 0) {
 		BAlert *alert = new BAlert("Uh oh!", "Couldn't open transport.", "OK");
 		alert->Go();
 		return B_ERROR;
