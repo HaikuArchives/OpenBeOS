@@ -15,7 +15,7 @@ KernelStaticLibrary libdrivers :
 	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/ide/ide_raw.c
 
 	:
-	-fno-pic
+	-fno-pic -Wno-unused
 	;
 
 #SubInclude OBOS_TOP sources os kits kernel drivers arch ;
