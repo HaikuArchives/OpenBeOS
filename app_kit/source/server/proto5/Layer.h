@@ -27,6 +27,8 @@ public:
 	void RemoveSelf(void);
 	uint32 CountChildren(void);
 	Layer *GetChildAt(BPoint pt, bool recursive=false);
+	BRect Bounds(void);
+	BRect Frame(void);
 
 	void MoveBy(float x, float y);
 	void ResizeBy(float x, float y);
@@ -42,8 +44,10 @@ public:
 
 	BRect ConvertToParent(BRect rect);
 	BPoint ConvertToParent(BPoint point);
+	BRegion ConvertToParent(BRegion *reg);
 	BRect ConvertFromParent(BRect rect);
 	BPoint ConvertFromParent(BPoint point);
+	BRegion ConvertFromParent(BRegion *reg);
 	BRect ConvertToTop(BRect rect);
 	BPoint ConvertToTop(BPoint point);
 	BRect ConvertFromTop(BRect rect);
@@ -69,7 +73,6 @@ public:
 	uint8 hidecount;
 	bool is_dirty;		// true if we need to redraw
 	bool is_updating;
-	sem_id dirty_sem;
 };
 
 class RootLayer : public Layer
@@ -94,6 +97,7 @@ private:
 };
 
 extern BLocker *layerlock;
+extern BLocker *dirtylock;
 extern BList *layerlist;
 extern Layer *rootlayer;
 #endif
