@@ -8,6 +8,10 @@
 
 #include <stdio.h>
 
+// Handy defines :-)
+#define CHK CPPUNIT_ASSERT
+#define RES DecodeResult
+
 class BPath;
 
 namespace StorageKit {
