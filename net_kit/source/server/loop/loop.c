@@ -1,7 +1,7 @@
 /* loop.c - loopback device 
  */
 
-#include<stdio.h>
+#include <stdio.h>
 #include <malloc.h>
 
 #ifdef _KERNEL_MODE
@@ -18,11 +18,15 @@ struct core_module_info *core = NULL;
 #include "protocols.h"
 #include "netinet/in.h"
 #include "ipv4/ipv4.h"
+#include "sys/protosw.h"
+#include "sys/domain.h"
 
-static loaded_net_module *net_modules;
-static int *prot_table;
-static struct ifnet *me = NULL;
+#ifdef USE_DEBUG_MALLOC
+#define malloc dbg_malloc
+#define free   dbg_free
+#endif
 
+static struct protosw *proto[IPPROTO_MAX];
 
 int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 			struct rtentry *rt)
@@ -42,13 +46,12 @@ int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
 
 int loop_input(struct mbuf *buf)
 {
-	int fproto = IPPROTO_IP; /* XXX - Dirty hack :( */
+	int error = 0;
 
-	if (fproto >= 0 && net_modules[prot_table[fproto]].mod->input) {
-		return net_modules[prot_table[fproto]].mod->input(buf, 0);
-	} else {
-		printf("Failed to determine a valid protocol fproto = %d\n", fproto);
-	}
+	if (proto[IPPROTO_IP] && proto[IPPROTO_IP]->pr_input)
+		error = proto[IPPROTO_IP]->pr_input(buf, 0);
+	else
+		printf("No input tourtine found for IP\n");
 
 #ifndef _KERNEL_MODE
 	m_freem(buf);
@@ -56,8 +59,7 @@ int loop_input(struct mbuf *buf)
 	core->m_freem(buf);
 #endif
 
-
-	return 0;
+	return error;
 }
 
 static int loop_dev_stop(ifnet *dev)
@@ -90,21 +92,29 @@ static int loop_init(void)
 	struct ifnet *me = (ifnet*)malloc(sizeof(ifnet));
 	memset(me, 0, sizeof(*me));
 
+	memset(proto, 0, sizeof(struct protosw *) * IPPROTO_MAX);
+
 	me->devid = -1;
 	me->name = "loop";
 	me->unit = 0;
 	me->if_type = IFT_LOOP;
 	me->rx_thread = -1;
 	me->tx_thread = -1;
-
+	me->if_addrlen = 0;
+	me->if_hdrlen = 0;
+	me->flags = IFF_LOOPBACK | IFF_MULTICAST;
 	me->start = &loop_dev_start;
 	me->input = &loop_input;
 	me->output = &loop_output;
-
+	/* XXX - add ioctl */
+	
 #ifndef _KERNEL_MODE
-	net_server_add_device(me);
+	add_protosw(proto, NET_LAYER1);
+	if_attach(me);
 #else
-	core->add_device(me);
+	core->if_attach(me);
+	core->add_protosw(proto, NET_LAYER1);
+
 #endif
 
 	return 0;
