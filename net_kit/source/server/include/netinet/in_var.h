@@ -59,5 +59,6 @@ int in_control(struct socket *so, int cmd, caddr_t data, struct ifnet *ifp);
 int in_ifinit(struct ifnet *dev, struct in_ifaddr *ia, struct sockaddr_in *sin,
                 int scrub);
 int inetctlerr(int cmd);
+struct in_ifaddr *get_primary_addr(void);
 
 #endif /* NETINET_IN_VAR_H */
