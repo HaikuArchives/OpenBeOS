@@ -33,8 +33,8 @@ static struct pool_ctl *clpool;
  * This appears at teh start of every MBuf
  */
 struct m_hdr {
-	struct mbuf *m_next;
-	struct mbuf *m_nxtpkt;
+	struct mbuf *m_next;	/* next mbuf in a chain */
+	struct mbuf *m_nxtpkt;	/* next chain in a packet/queue */
 	char * m_data;		/* pointer to data */
 	uint32 m_len;		/* length data in this mbuf NB NOT total length */
 	uint16 m_type;		/* what sort of data do we have ? */
