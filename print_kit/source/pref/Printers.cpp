@@ -39,6 +39,6 @@ PrintersApp::PrintersApp()
 
 void PrintersApp::ReadyToRun()
 {
-	PrintersWindow* win = new PrintersWindow;
+	PrintersWindow* win = new PrintersWindow(BRect(78.0, 71.0, 561.0, 409.0));
 	win->Show();
 }

@@ -63,6 +63,7 @@ class Printer : public BHandler
 	typedef BHandler Inherited;
 public:
 	Printer(const BNode* node);
+	~Printer();
 	
 		// Static helper functions
 	static Printer* Find(const BString& name);

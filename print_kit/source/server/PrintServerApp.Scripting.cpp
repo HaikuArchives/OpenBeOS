@@ -164,7 +164,7 @@ PrintServerApp::ResolveSpecifier(BMessage* msg, int32 index, BMessage* spec,
 								int32 form, const char* prop)
 {
 	BPropertyInfo prop_info(prop_list);
-	BHandler* rc = this;
+	BHandler* rc = NULL;
 		
 	int32 idx;
 	switch( idx=prop_info.FindMatch(msg,0,spec,form,prop) ) {
@@ -181,6 +181,9 @@ PrintServerApp::ResolveSpecifier(BMessage* msg, int32 index, BMessage* spec,
 			else
 				msg->PopSpecifier();
 			break;
+
+		default:
+			rc = this;
 	}
 	
 	return rc;

@@ -32,8 +32,8 @@
 #include <ScrollView.h>
 #include <Application.h>
 
-PrintersWindow::PrintersWindow()
-	: Inherited(BRect(73.0, 93.0, 556.0, 431.0), "Printers", B_TITLED_WINDOW, 0)
+PrintersWindow::PrintersWindow(BRect frame)
+	: Inherited(BRect(78.0, 71.0, 561.0, 409.0), "Printers", B_TITLED_WINDOW, B_NOT_H_RESIZABLE)
 {
 	BuildGUI();
 }
@@ -41,8 +41,9 @@ PrintersWindow::PrintersWindow()
 bool PrintersWindow::QuitRequested()
 {
 	bool result = Inherited::QuitRequested();
-	if (result)
+	if (result) {
 		be_app->PostMessage(B_QUIT_REQUESTED);
+	}
 
 	return result;
 }
@@ -53,7 +54,7 @@ void PrintersWindow::MessageReceived(BMessage* msg)
 	{
 		case MSG_PRINTER_SELECTED:
 			{
-				int prIndex = fPrinterListView->CurrentSelection();
+				int32 prIndex = fPrinterListView->CurrentSelection();
 				if (prIndex >= 0)
 				{
 					BMessenger msgr;
@@ -103,6 +104,23 @@ void PrintersWindow::MessageReceived(BMessage* msg)
 			break;
 
 		case MSG_MKDEF_PRINTER:
+			{
+				int32 prIndex = fPrinterListView->CurrentSelection();
+				if (prIndex >= 0)
+				{
+					PrinterItem* printer = dynamic_cast<PrinterItem*>(fPrinterListView->ItemAt(prIndex));
+					BMessenger msgr;
+					if (printer != NULL && ::GetPrinterServerMessenger(msgr) == B_OK)
+					{
+						BMessage setActivePrinter(B_SET_PROPERTY);
+						setActivePrinter.AddSpecifier("ActivePrinter");
+						setActivePrinter.AddString("data", printer->Name());
+						msgr.SendMessage(&setActivePrinter);
+						
+						fPrinterListView->Invalidate();
+					}
+				}
+			}
 			break;
 
 
@@ -181,9 +199,9 @@ void PrintersWindow::BuildGUI()
 	BRect listBounds(boxInset, boxInset+5, fMakeDefault->Frame().left - boxInset - B_V_SCROLL_BAR_WIDTH,
 					printersBox->Bounds().Height()-boxInset);
 	fPrinterListView = new PrinterListView(listBounds);
-	BScrollView* scroller = new BScrollView("printer_scroller", fPrinterListView,
+	BScrollView* pscroller = new BScrollView("printer_scroller", fPrinterListView,
 								B_FOLLOW_ALL, 0, false, true);
-	printersBox->AddChild(scroller);
+	printersBox->AddChild(pscroller);
 
 // ------------------------ Lastly, build the jobs overview box
 	fJobsBox = new BBox(BRect(boxInset, (r.Height()/2)+(boxInset/2), Bounds().Width()-10, Bounds().Height() - boxInset),
@@ -222,8 +240,16 @@ void PrintersWindow::BuildGUI()
 	listBounds = BRect(boxInset, boxInset+5, cancelButton->Frame().left - boxInset - B_V_SCROLL_BAR_WIDTH,
 					fJobsBox->Bounds().Height()-boxInset);
 	fJobListView = new BListView(listBounds, "jobs_list", B_SINGLE_SELECTION_LIST, B_FOLLOW_ALL);
-	scroller = new BScrollView("jobs_scroller", fJobListView,
+	BScrollView* jscroller = new BScrollView("jobs_scroller", fJobListView,
 								B_FOLLOW_ALL, 0, false, true);
-	fJobsBox->AddChild(scroller);
+	fJobsBox->AddChild(jscroller);
 
+		// Determine min width
+	float width;
+	width = (jscroller->Bounds().Width() < pscroller->Bounds().Width()) ?
+				jscroller->Bounds().Width() : pscroller->Bounds().Width();
+
+		// Resize boxes to the same size
+	jscroller->ResizeTo(width, jscroller->Bounds().Height());
+	pscroller->ResizeTo(width, pscroller->Bounds().Height());
 }

@@ -120,6 +120,12 @@ Printer::Printer(const BNode* node)
 	be_app->AddHandler(this);
 }
 
+Printer::~Printer()
+{
+	sPrinters.RemoveItem(this);
+	be_app->RemoveHandler(this);
+}
+
 status_t Printer::Remove()
 {
 	status_t rc = B_OK;

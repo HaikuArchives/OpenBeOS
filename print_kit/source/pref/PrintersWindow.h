@@ -28,7 +28,7 @@ class PrintersWindow : public BWindow
 {
 	typedef BWindow Inherited;
 public:
-	PrintersWindow();
+	PrintersWindow(BRect frame);
 	
 	void MessageReceived(BMessage* msg);
 	bool QuitRequested();

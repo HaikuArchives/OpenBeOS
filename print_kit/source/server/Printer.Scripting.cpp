@@ -5,6 +5,7 @@
 
 	// BeOS API
 #include <PropertyInfo.h>
+#include <Messenger.h>
 #include <Message.h>
 #include <AppDefs.h>
 
@@ -24,14 +25,14 @@ static property_info prop_list[] = {
 
 void Printer::HandleScriptingCommand(BMessage* msg)
 {
-	status_t rc = B_OK;
+	status_t rc = B_ERROR;
 	BString propName;
 	BString result;
 	BMessage spec;
 	int32 idx;
 
-	if (msg->GetCurrentSpecifier(&idx,&spec) == B_OK &&
-		spec.FindString("property",&propName) == B_OK) {
+	if ((rc=msg->GetCurrentSpecifier(&idx,&spec)) == B_OK &&
+		(rc=spec.FindString("property",&propName)) == B_OK) {
 		switch(msg->what) {
 			case B_GET_PROPERTY:
 				if (propName == "Name")
@@ -44,12 +45,25 @@ void Printer::HandleScriptingCommand(BMessage* msg)
 					rc = fNode.ReadAttrString(PSRV_PRINTER_ATTR_DRV_NAME, &result);
 				else if (propName == "Comments")
 					rc = fNode.ReadAttrString(PSRV_PRINTER_ATTR_COMMENTS, &result);
+				else { // If unknown scripting request, let superclas handle it
+					Inherited::MessageReceived(msg);
+					break;
+				}
 
 				BMessage reply(B_REPLY);
 				reply.AddString("result", result);
 				reply.AddInt32("error", rc);
 				msg->SendReply(&reply);
 				break;
+		}
+	}
+	else {
+			// If GetSpecifier failed
+		if (idx == -1) {
+			BMessage reply(B_REPLY);
+			reply.AddMessenger("result", BMessenger(this));
+			reply.AddInt32("error", B_OK);
+			msg->SendReply(&reply);
 		}
 	}
 }
@@ -59,8 +73,6 @@ BHandler* Printer::ResolveSpecifier(BMessage* msg, int32 index, BMessage* spec,
 {
 	BPropertyInfo prop_info(prop_list);
 	BHandler* rc = this;
-	
-	spec->PrintToStream();
 	
 	int32 idx;
 	switch( idx=prop_info.FindMatch(msg,0,spec,form,prop) ) {

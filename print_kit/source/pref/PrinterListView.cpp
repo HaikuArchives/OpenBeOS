@@ -66,10 +66,12 @@ void PrinterListView::AttachedToWindow()
 	Inherited::AttachedToWindow();
 
 	SetSelectionMessage(new BMessage(MSG_PRINTER_SELECTED));
+	SetInvocationMessage(new BMessage(MSG_MKDEF_PRINTER));
 	SetTarget(Window());	
 }
 
 BBitmap* PrinterItem::sIcon = NULL;
+BBitmap* PrinterItem::sSelectedIcon = NULL;
 
 PrinterItem::PrinterItem(const BMessenger& thePrinter)
 	: BListItem(0, false),
@@ -82,11 +84,18 @@ PrinterItem::PrinterItem(const BMessenger& thePrinter)
 		type.GetIcon(sIcon, B_LARGE_ICON);
 	}
 
+	if (sSelectedIcon == NULL)
+	{
+		sSelectedIcon = new BBitmap(BRect(0,0,B_LARGE_ICON-1,B_LARGE_ICON-1), B_CMAP8);
+		BMimeType type(PRNT_SIGNATURE_TYPE);
+		type.GetIcon(sSelectedIcon, B_LARGE_ICON);
+	}
+
 		// Get Name of printer
 	GetStringProperty("Name", fName);
 	GetStringProperty("Comments", fComments);
-	GetStringProperty("Transport", fTransport);
-	GetStringProperty("DriverName", fDriverName);
+	GetStringProperty("TransportAddon", fTransport);
+	GetStringProperty("PrinterAddon", fDriverName);
 }
 
 void PrinterItem::GetStringProperty(const char* propName, BString& outString)
@@ -162,7 +171,7 @@ void PrinterItem::DrawItem(BView *owner, BRect /*bounds*/, bool complete)
 		
 		drawing_mode mode = owner->DrawingMode();
 		owner->SetDrawingMode(B_OP_OVER);
-			owner->DrawBitmap(sIcon, iconPt);
+			owner->DrawBitmap(IsActivePrinter() ? sSelectedIcon : sIcon, iconPt);
 		
 			// left of item
 		owner->DrawString(fName.String(), fName.Length(), namePt);
@@ -178,3 +187,25 @@ void PrinterItem::DrawItem(BView *owner, BRect /*bounds*/, bool complete)
 		owner->SetViewColor(oldviewcolor);
 	}
 }
+
+bool PrinterItem::IsActivePrinter()
+{
+	bool rc = false;
+	BMessenger msgr;
+
+	if (::GetPrinterServerMessenger(msgr) == B_OK)
+	{
+		BMessage reply, getNameOfActivePrinter(B_GET_PROPERTY);
+		getNameOfActivePrinter.AddSpecifier("ActivePrinter");
+	
+		BString activePrinterName;
+		if (msgr.SendMessage(&getNameOfActivePrinter, &reply) == B_OK &&
+			reply.FindString("result", &activePrinterName) == B_OK) {
+				// Compare name of active printer with name of 'this' printer item
+			rc = (fName == activePrinterName);
+		}
+	}
+
+	return rc;	
+}
+

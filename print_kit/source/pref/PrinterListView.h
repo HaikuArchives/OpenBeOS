@@ -44,6 +44,10 @@ public:
 	void Update(BView *owner, const BFont *font);
 	
 	void Remove(BListView* view);
+	bool IsActivePrinter();
+	
+	const char* Name() const 
+		{ return fName.String(); }
 private:
 	void GetStringProperty(const char* propName, BString& outString);
 
@@ -53,6 +57,7 @@ private:
 	BString		fDriverName;
 	BString		fName;
 	static BBitmap* sIcon;
+	static BBitmap* sSelectedIcon;
 };
 
 #endif
