@@ -4,7 +4,6 @@
 #include <stdio.h>
 
 #include "mbuf.h"
-#include "udp.h"
 #include "net_misc.h"
 #include "net_module.h"
 #include "protocols.h"
@@ -14,6 +13,8 @@
 #include "netinet/ip.h"
 #include "sys/domain.h"
 #include "sys/protosw.h"
+#include "netinet/ip_var.h"
+#include "netinet/udp.h"
 #include "netinet/udp_var.h"
 
 #ifdef _KERNEL_MODE
@@ -56,7 +57,7 @@ static uint32 udp_recvspace;	/* size of recieve buffer */
 static void dump_udp(struct mbuf *buf)
 {
 	struct ip *ip = mtod(buf, struct ip*);
-	udp_header *udp = (udp_header*)((caddr_t)ip + (ip->ip_hl * 4));
+	struct udphdr *udp = (struct udphdr*)((caddr_t)ip + (ip->ip_hl * 4));
 
 	printf("udp_header  :\n");
 	printf("            : src_port      : %d\n", ntohs(udp->src_port));
@@ -100,22 +101,21 @@ int udp_output(struct inpcb *inp, struct mbuf *m, struct mbuf *addr,struct mbuf 
 	}
 
 	ui = mtod(m, struct udpiphdr *);
-	ui->ip.lead = ui->ip.lead2 = 0;
-	ui->ip.zero = 0;
-	ui->ip.prot = IPPROTO_UDP;
-	ui->ip.length = htons(len + sizeof(struct udp_header));	
-	ui->ip.src = inp->laddr;
-	ui->ip.dest = inp->faddr;
-	ui->udp.src_port = inp->lport;
-	ui->udp.dst_port = inp->fport;
-	ui->udp.length = ui->ip.length;
-	ui->udp.cksum = 0;
+	memset(&ui->ui_x1,0, sizeof(ui->ui_x1));
+	ui->ui_pr = IPPROTO_UDP;
+	ui->ui_len = htons(len + sizeof(struct udphdr));	
+	ui->ui_src = inp->laddr;
+	ui->ui_dst = inp->faddr;
+	ui->ui_sport = inp->lport;
+	ui->ui_dport = inp->fport;
+	ui->ui_ulen = ui->ui_len;
+	ui->ui_sum = 0;
 
 	if (udpcksum)
-		ui->udp.cksum = in_cksum(m, hdrlen, 0);
+		ui->ui_sum = in_cksum(m, hdrlen, 0);
 
-	if (ui->udp.cksum == 0)
-		ui->udp.cksum = 0xffff;
+	if (ui->ui_sum == 0)
+		ui->ui_sum = 0xffff;
 
 	((struct ip*)ui)->ip_len = hdrlen;
 	((struct ip*)ui)->ip_ttl = 64;	/* XXX - Fix this! */
@@ -168,7 +168,7 @@ int udp_userreq(struct socket *so, int req,
 			if (error)
 				break;
 			/* XXX - this is a hack! This should be the default ip TTL */
-			((struct inpcb*) so->so_pcb)->inp_ip.ttl = 64;
+			((struct inpcb*) so->so_pcb)->inp_ip.ip_ttl = 64;
 			break;
 		case PRU_DETACH:
 			/* This should really be protected when in kernel... */
@@ -228,21 +228,18 @@ release:
 int udp_input(struct mbuf *buf, int hdrlen)
 {
 	struct ip *ip = mtod(buf, struct ip*);
-	udp_header *udp = (udp_header*)((caddr_t)ip + hdrlen);
-	pudp_header *p = (pudp_header *)ip;
+	struct udphdr *udp = (struct udphdr*)((caddr_t)ip + hdrlen);
 	uint16 ck = 0;
 	int len;
 	struct ip saved_ip;
 	struct mbuf *opts = NULL;
 	struct inpcb *inp = NULL;
 
-//printf("udp_input: hdrlen = %d\n", hdrlen);
-
 #if SHOW_DEBUG
         dump_udp(buf);
 #endif
 	/* check and adjust sizes as required... */
-	len = ntohs(udp->length);//ip->length - hdrlen;
+	len = ntohs(udp->uh_ulen);//ip->length - hdrlen;
 	if (len + hdrlen != ip->ip_len) {
 		if (len + hdrlen > ip->ip_len)
 			/* we got a corrupt packet as we are missing data... */
@@ -251,28 +248,29 @@ int udp_input(struct mbuf *buf, int hdrlen)
 	}
 	saved_ip = *ip;
 
-	p->length = udp->length;
-	p->zero = 0; /* just to make sure */
-	p->lead = 0;
-	p->lead2 = 0;
-
-	/* XXX - if we have options we need to be careful when calculating the
-	 * checksum here...
-	 */
-	if ((ck = in_cksum(buf, len + sizeof(*ip), 0)) != 0) {
-		printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
-		goto bad;
+	if (udpcksum && udp->uh_sum) {
+		memset(&((struct ipovly*)ip)->ih_x1[0], 0, sizeof(((struct ipovly*)ip)->ih_x1));
+		((struct ipovly*)ip)->ih_len = udp->uh_ulen;
+		/* XXX - if we have options we need to be careful when calculating the
+		 * checksum here...
+		 */
+		if ((ck = in_cksum(buf, len + sizeof(*ip), 0)) != 0) {
+			udpstat.udps_badsum++;
+			m_freem(buf);
+			printf("udp_input: UDP Checksum check failed. (%d over %ld bytes)\n", ck, len + sizeof(*ip));
+			return 0;
+		}
 	}
 	inp = udp_last_inpcb;
 
 	if (inp == NULL ||
-	    inp->lport != udp->dst_port ||
-		inp->fport != udp->src_port ||
+	    inp->lport != udp->uh_dport ||
+		inp->fport != udp->uh_sport ||
 		inp->faddr.s_addr != ip->ip_src.s_addr ||
 		inp->laddr.s_addr != ip->ip_dst.s_addr) {
 
-		inp = in_pcblookup(&udb, ip->ip_src, udp->src_port,
-				   ip->ip_dst, udp->dst_port, INPLOOKUP_WILDCARD);
+		inp = in_pcblookup(&udb, ip->ip_src, udp->uh_sport,
+				   ip->ip_dst, udp->uh_dport, INPLOOKUP_WILDCARD);
 		if (inp)
 			udp_last_inpcb = inp;
 	}
@@ -284,12 +282,12 @@ int udp_input(struct mbuf *buf, int hdrlen)
 		}
 		*ip = saved_ip;
 		ip->ip_len += hdrlen;
-		//printf("UDP: we'd send an ICMP reply...\n");
+		printf("UDP: we'd send an ICMP reply...\n");
 		/* XXX - send ICMP reply... */
 		return 0;
 	}
 
-	udp_in.sin_port = udp->src_port;
+	udp_in.sin_port = udp->uh_sport;
 	udp_in.sin_addr = ip->ip_src;
 
 	if (inp->inp_flags & INP_CONTROLOPT) {
@@ -297,7 +295,7 @@ int udp_input(struct mbuf *buf, int hdrlen)
 		/* XXX - add code to do this... */
 	}
 
-	hdrlen += sizeof(udp_header);
+	hdrlen += sizeof(struct udphdr);
 	buf->m_len -= hdrlen;
 	buf->m_pkthdr.len -= hdrlen;
 	buf->m_data += hdrlen;
@@ -348,7 +346,8 @@ static struct protosw my_proto = {
 	NULL,                  /* pr_output */
 	&udp_userreq,
 	NULL,                  /* pr_sysctl */
-	
+	NULL,                  /* pr_ctloutput */
+		
 	NULL,
 	NULL
 };

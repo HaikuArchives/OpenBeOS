@@ -16,14 +16,14 @@ clean:
 	@if test -e $(TARGET); then rm $(TARGET); fi
 
 kernel:
-	$(CC) $(KCFLAGS) $(INCLUDES) -c udp.c
-	$(CC) $(KLDFLAGS) $(KLOBJS) -o udp udp.o
+	@$(CC) $(KCFLAGS) $(INCLUDES) -c udp.c
+	@$(CC) $(KLDFLAGS) $(KLOBJS) -o udp udp.o
 
 installkernel:	kernel
-	cp udp /boot/home/config/add-ons/kernel/network/protocol/udp
+	@cp udp /boot/home/config/add-ons/kernel/network/protocol/udp
 
 udp: $(OBJS)
 	@$(CC) $(LDFLAGS) $(OBJS) $(LOBJS) -o $(TGT)
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $<
