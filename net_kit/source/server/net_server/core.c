@@ -37,6 +37,8 @@
 #include "sys/protosw.h"
 #include "net/route.h"
 #include "net_malloc.h"
+#include "net/if_arp.h"
+#include "netinet/if_ether.h"
 
 #include "core_module.h"
 #include "net_device.h"
@@ -53,8 +55,8 @@ static int32 if_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
 	status_t status;
-	char buffer[i->if_mtu];
-	size_t len = i->if_mtu;
+	char buffer[ETHER_MAX_LEN];
+	size_t len = ETHER_MAX_LEN;
 	int count = 0;
 
 	while ((status = read(i->devid, buffer, len)) >= B_OK) {
@@ -65,7 +67,7 @@ static int32 if_thread(void *data)
 		
 		atomic_add(&i->if_ipackets, 1);
 		count++;
-		len = i->if_mtu;
+		len = ETHER_MAX_LEN;
 	}
 	dprintf("%s: terminating if_thread\n", i->if_name);
 	return 0;
@@ -101,9 +103,9 @@ static int32 tx_thread(void *data)
 	char buffer[2048];
 	size_t len = 0;
 	status_t status;
-#if SHOW_DEBUG
+//#if SHOW_DEBUG
 	int txc = 0;
-#endif
+//#endif
 
 	while (1) {
 		acquire_sem_etc(i->txq->pop,1,B_CAN_INTERRUPT|B_DO_NOT_RESCHEDULE, 0);
@@ -115,16 +117,16 @@ static int32 tx_thread(void *data)
 			len = m->m_len;
 
 		if (len > i->if_mtu) {
-			dprintf("%s%d: tx_thread: packet was too big!\n", i->name, i->if_unit);
+			dprintf("%s: tx_thread: packet was too big!\n", i->if_name);
 			m_freem(m);
 			continue;
 		}
 
 		m_copydata(m, 0, len, buffer);
 
-#if SHOW_DEBUG
+//#if SHOW_DEBUG
 		dprintf("TXMIT %d: %ld bytes to dev %d\n", txc++, len ,i->devid);
-#endif
+//#endif
 		m_freem(m);
 #if SHOW_DEBUG
 		dump_buffer(buffer, len);
@@ -653,8 +655,8 @@ static struct core_module_info core_info = {
 	sbflush,
 	sowakeup,
 	soisconnected,
+	soisconnecting,	
 	soisdisconnected,
-	soisconnecting,
 	soisdisconnecting,
 	sohasoutofband,
 	socantrcvmore,
