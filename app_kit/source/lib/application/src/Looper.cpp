@@ -40,6 +40,7 @@
 // System Includes -------------------------------------------------------------
 #include <Looper.h>
 #include <Message.h>
+#include <MessageFilter.h>
 
 // Project Includes ------------------------------------------------------------
 
@@ -230,14 +231,24 @@ BMessageQueue* BLooper::MessageQueue() const
 //------------------------------------------------------------------------------
 bool BLooper::IsMessageWaiting() const
 {
+	if (!IsLocked())
+	{
+		// TODO: test
+		debugger("");
+	}
+
 	if (!fQueue->IsEmpty())
 	{
 		return true;
 	}
 
-	int32 count = port_count(fMsgPort);
+	int32 count;
+	do
+	{
+		count = port_buffer_size_etc(fMsgPort, B_TIMEOUT, 0);
+	while (count == B_WOULD_BLOCK);
 
-	return count != 0; // count > 0;
+	return count > 0;
 }
 //------------------------------------------------------------------------------
 void BLooper::AddHandler(BHandler* handler)
@@ -248,6 +259,15 @@ void BLooper::AddHandler(BHandler* handler)
 	{
 		fHandlers.AddItem(handler);
 		handler->SetNextHandler(this);
+		handler->SetLooper(this);
+		BList* Filters = handler->FilterList();
+		if (Filters)
+		{
+			for (int32 i = 0; i < Filters->CountItems(); ++i)
+			{
+				((BMessageFilter*)Filters->ItemAt(i))->SetLooper(this);
+			}
+		}
 	}
 }
 //------------------------------------------------------------------------------
@@ -259,7 +279,13 @@ bool BLooper::RemoveHandler(BHandler* handler)
 	// Need to ensure this algo reflects what actually happens
 	if (handler->Looper() == this && fHandlers.RemoveItem(handler))
 	{
+		if (handler == fPreferred)
+		{
+			fPreferred = NULL;
+		}
+
 		handler->SetNextHandler(NULL);
+		handler->SetLooper(NULL);
 		return true;
 	}
 
@@ -296,7 +322,14 @@ BHandler* BLooper::PreferredHandler() const
 //------------------------------------------------------------------------------
 void BLooper::SetPreferredHandler(BHandler* handler)
 {
-	fPreferred = (handler && handler->Looper() == this) ? handler : NULL;
+	if (handler && handler->Looper() == this && IndexOf(handler) >= 0)
+	{
+		fPreferred = handler;
+	}
+	else
+	{
+		fPreferred = NULL;
+	}
 }
 //------------------------------------------------------------------------------
 thread_id BLooper::Run()
@@ -503,7 +536,19 @@ BHandler* BLooper::ResolveSpecifier(BMessage* msg, int32 index,
 									BMessage* specifier, int32 form,
 									const char* property)
 {
-	// TODO: implement
+	// Straight from the BeBook
+	BPropertyInfo PropertyInfo(gLooperPropInfo);
+	if (PropertyInfo.FindMatch(msg, index, specifier, form, property) >= 0)
+	{
+		return this;
+	}
+
+	BMessage Reply(B_MESSAGE_NOT_UNDERSTOOD);
+	Reply.AddInt32("error", B_BAD_SCRIPT_SYNTAX);
+	Reply.AddString("message", "Didn't understand the specifier(s)");
+	msg->SendReply(&Reply);
+
+	return NULL;
 }
 //------------------------------------------------------------------------------
 status_t BLooper::GetSupportedSuites(BMessage* data)
@@ -518,13 +563,20 @@ void BLooper::AddCommonFilter(BMessageFilter* filter)
 	{
 		fCommonFilters = new BList(FILTER_LIST_BLOCK_SIZE);
 	}
+	filter->SetLooper(this);
 	fCommonFilters->AddItem(filter);
 }
 //------------------------------------------------------------------------------
 bool BLooper::RemoveCommonFilter(BMessageFilter* filter)
 {
 	AssertLocked();
-	return fCommonFilters->RemoveItem(filter);
+	bool result = fCommonFilters->RemoveItem(filter);
+	if (result)
+	{
+		filter->SetLooper(NULL);
+	}
+
+	return result;
 }
 //------------------------------------------------------------------------------
 void BLooper::SetCommonFilterList(BList* filters)
@@ -541,6 +593,13 @@ void BLooper::SetCommonFilterList(BList* filters)
 
 	// Per the BeBook, we take ownership of the list
 	fCommonFilters = filters;
+	if (fCommonFilters)
+	{
+		for (int32 i = 0; i < fCommonFilters->CountItems(); ++i)
+		{
+			((BMessageFilter*)fCommonFilters->ItemAt(i))->SetLooper(this);
+		}
+	}
 }
 //------------------------------------------------------------------------------
 BList* BLooper::CommonFilterList() const
