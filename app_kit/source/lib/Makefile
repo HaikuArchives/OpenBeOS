@@ -1,3 +1,8 @@
+# $Id$
+#
+# Makefile for libopenbeos.so.  It will become libbe.so once it is complete.
+#
+
 ## BeOS Generic Makefile v2.2 ##
 
 ## Fill in this file to specify the project being created, and the referenced

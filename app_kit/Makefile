@@ -1,3 +1,8 @@
+# $Id$
+#
+# Makefile for the app_kit module of OpenBeOS.
+#
+
 all:
 	cd source/lib; make
 	cd test; make

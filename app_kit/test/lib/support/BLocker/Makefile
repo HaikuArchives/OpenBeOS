@@ -1,3 +1,8 @@
+# $Id$
+#
+# Makefile for testing the BLocker implementation for OpenBeOS
+#
+
 ## BeOS Generic Makefile v2.2 ##
 
 ## Fill in this file to specify the project being created, and the referenced

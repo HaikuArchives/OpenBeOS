@@ -1,3 +1,8 @@
+# $Id$
+#
+# Makefile for testing the app_kit module of OpenBeOS.
+#
+
 all:
 	cd lib/support/BLocker; make
 	cd lib/application/BMessageQueue; make
