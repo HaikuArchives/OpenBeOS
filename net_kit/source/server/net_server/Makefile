@@ -11,7 +11,8 @@ CORE_OBJS:= 	socket.o \
 		misc.o \
 		cksum.o \
 		nhash.o \
-		pools.o
+		pools.o \
+		in.o
 
 CORE_C:=	$(CORE_OBJS:.o=.c)
 
