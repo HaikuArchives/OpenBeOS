@@ -427,3 +427,31 @@ int in_broadcast(struct in_addr in, struct ifnet *ifp)
 	return (0);
 #undef ia
 }
+
+#ifndef SUBNETSARELOCAL
+#define SUBNETSARELOCAL 0
+#endif
+int subnetsarelocal = SUBNETSARELOCAL;
+/*
+ * Return 1 if an internet address is for a ``local'' host
+ * (one to which we have a connection).  If subnetsarelocal
+ * is true, this includes other subnets of the local net.
+ * Otherwise, it includes only the directly-connected (sub)nets.
+ */
+int in_localaddr(struct in_addr in)
+{
+	struct in_ifaddr *ia;
+
+	if (subnetsarelocal) {
+		for (ia = in_ifaddr; ia != 0; ia = ia->ia_next)
+			if ((in.s_addr & ia->ia_netmask) == ia->ia_net)
+				return (1);
+	} else {
+		for (ia = in_ifaddr; ia != 0; ia = ia->ia_next)
+			if ((in.s_addr & ia->ia_subnetmask) == ia->ia_subnet)
+				return (1);
+	}
+	return (0);
+}
+
+
