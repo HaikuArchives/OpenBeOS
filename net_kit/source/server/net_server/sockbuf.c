@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <kernel/OS.h>
 
+#ifdef _KERNEL_MODE
+#include <KernelExport.h>
+#endif
+
 #include "sys/socket.h"
 #include "sys/socketvar.h"
 #include "pools.h"
@@ -249,7 +253,7 @@ int sbwait(struct sockbuf *sb)
 	status_t rv = 0;
 	sb->sb_flags |= SB_WAIT;
 	if (sb->sb_pop > 0)
-		rv = acquire_sem(sb->sb_pop);
+		rv = acquire_sem_etc(sb->sb_pop, 1, B_CAN_INTERRUPT, 0);
 	return (int)rv;
 }
 
