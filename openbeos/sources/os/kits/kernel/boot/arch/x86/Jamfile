@@ -1,3 +1,10 @@
 SubDir OBOS_TOP sources os kits kernel boot arch x86 ;
 
-KernelStaticLibrary bootx86 : stage2.c smp_boot.c stage2_asm.S smp_trampoline.S ;
+KernelObjects 
+	stage2.c 
+	stage2_asm.S 
+	smp_boot.c  
+	smp_trampoline.S 
+	: 
+	-fno-pic 
+	;

@@ -1,12 +1,9 @@
 SubDir OBOS_TOP sources os kits kernel boot ;
 
-Main bootmaker : bootmaker.c ;
-Main bin2h : bin2h.c ;
-Main bin2asm : bin2asm.c ;
+SystemMain bootmaker : bootmaker.c ;
+SystemMain bin2h : bin2h.c ;
+SystemMain bin2asm : bin2asm.c ;
 
-KernelStaticLibrary false_main : false_main.c ;
-KernelStaticLibrary fibo_main : fibo_main.c ;
-KernelStaticLibrary kinit : kinit.c ;
-
+KernelObjects false_main.c fibo_main.c kinit.c ;
 
 SubInclude OBOS_TOP sources os kits kernel boot arch ;
