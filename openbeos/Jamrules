@@ -12,14 +12,14 @@ if $(METROWERKS) {
 # include our "OBOS_TARGET" as subdirectory in there (to prevent different
 # builds mixing objects from different targets).
 if ! $(OBOS_OBJECT_TARGET) {
-	OBOS_OBJECT_TARGET ?= $(OBOS_TOP)/objects/$(OBOS_TARGET) ;
+	OBOS_OBJECT_TARGET ?= [ FDirName $(OBOS_TOP) objects $(OBOS_TARGET) ] ;
 }
 
 # If no OBOS_DISTRO_TARGET is not defined yet, use our default directory and
 # include our "OBOS_TARGET" as subdirectory in there (to prevent different
 # builds mixing executables from different targets).
 if ! $(OBOS_DISTRO_TARGET) {
-	OBOS_DISTRO_TARGET ?= $(OBOS_TOP)/distro/$(OBOS_TARGET) ;
+	OBOS_DISTRO_TARGET ?= [ FDirName $(OBOS_TOP) distro $(OBOS_TARGET) ] ;
 }
 
 # Set our version number if not already set and mark it as a developer build
@@ -35,16 +35,18 @@ if ! $(OBOS_BUILD_DESCRIPTION) {
 }
 
 # Relative subdirs for distro dir (these are for *INTERNAL* use by the following rules only!)
-OBOS_PREFS_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/preferences ;
-OBOS_SERVER_DIR ?= $(OBOS_DISTRO_TARGET)/beos/system/servers ;
-OBOS_ADDON_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/system/add-ons ;
-OBOS_SHLIB_DIR  ?= $(OBOS_DISTRO_TARGET)/beos/system/lib ;
+OBOS_PREFS_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos preferences ] ;
+OBOS_SERVER_DIR ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system servers ] ;
+OBOS_ADDON_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system add-ons ] ;
+OBOS_SHLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
+OBOS_STLIB_DIR  ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system lib ] ;
+OBOS_KERNEL_DIR ?= [ FDirName $(OBOS_DISTRO_TARGET) beos system ] ;
 
 OBOS_INCLUDES ?= add-ons app be_apps device drivers game interface kernel mail media midi midi2 net opengl storage support translation ;
 
 for i in $(OBOS_INCLUDES)
 {
-	CCFLAGS += -isystem $(OBOS_TOP)/headers/os/public/$(i) ;
+	CCFLAGS += -isystem [ FDirName $(OBOS_TOP) headers os public $(i) ] ;
 }
 
 C++FLAGS ?= $(CCFLAGS) ;
@@ -86,6 +88,15 @@ rule Addon
 	LINKFLAGS on $(1) = $(LINKFLAGS) -nostart -Xlinker -soname=\"$(1)\" ;
 }
 
+rule StaticLibrary
+{
+	# SharedLibrary <name> : <sources> ;
+	
+	SetupObjectsDir ;
+	Library lib$(<).a : $(>) ;
+	MakeLocate lib$(<).so : $(OBOS_STLIB_DIR) ;
+}
+
 rule SharedLibrary
 {
 	# SharedLibrary <name> : <sources> ;
@@ -93,7 +104,7 @@ rule SharedLibrary
 	SetupObjectsDir ;
 	Main lib$(<).so : $(>) ;
 	MakeLocate lib$(<).so : $(OBOS_SHLIB_DIR) ;
-	#LINKFLAGS on lib$(<).so = $(LINKFLAGS) -nostart -Xlinker -soname=\"lib$(<).so\" ;
+	LINKFLAGS on lib$(<).so = $(LINKFLAGS) -nostart -Xlinker -soname=\"lib$(<).so\" ;
 }
 
 rule LinkSharedOSLibs
@@ -133,16 +144,19 @@ rule AddResources
 
 rule UsePrivateHeaders
 {
-	local extras;
+	local opt;
 
 	# UsePrivateHeaders <group list> ;
+
+	opt = "" ;
+
 	for i in $(<)
 	{
-		extras += -isystem $(OBOS_TOP)/headers/os/private/$(i) ;
+		opt += -isystem [ FDirName $(OBOS_TOP) headers os private $(i) ] ;
 	}
 	
-	SubDirCcFlags $(extras) ;
-	SubDirC++Flags $(extras) ;
+	SubDirCcFlags $(opt)  ;
+	SubDirC++Flags $(opt)  ;
 }
 
 #-------------------------------------------------------------------------------
@@ -155,7 +169,7 @@ rule SetupObjectsDir
 	# Copy subdir tokens except the first, as that will be "sources", and we
 	# do not want to include that :)
 	rel_objectsdir = [ FDirName $(SUBDIR_TOKENS[2-]) ] ;
-	LOCATE_TARGET = $(OBOS_OBJECT_TARGET)/$(rel_objectsdir) ;
+	LOCATE_TARGET = [ FDirName $(OBOS_OBJECT_TARGET) $(rel_objectsdir) ] ;
 }
 
 #-------------------------------------------------------------------------------
@@ -172,8 +186,28 @@ actions Link bind NEEDLIBS
 {
 	$(LINK) $(LINKFLAGS) -o "$(<)" $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) ;
 	xres -o "$(<)" $(RESFILES) ;
-	setversion "$(<)" -system $(OBOS_BUILD_VERSION) -short $(OBOS_BUILD_DESCRIPTION) ;
+	setversion "$(<)" -system $(OBOS_BUILD_VERSION) -short "$(OBOS_BUILD_DESCRIPTION)" ;
 	chmod +x "$(<)" ;
 	settype -t $(OBOS_TARGET_TYPE) "$(<)" ;
 	mimeset -f "$(<)" ;
+}
+
+rule Kernel
+{
+	# Kernel <kernelname> : <sourcefiles> ;
+
+	# Make object go into our objects hierarchy
+	SetupObjectsDir ;
+
+ 	# Set compilation flags to 
+	CCFLAGS on $(>) += -isystem [ FDirName $(OBOS_TOP) my relative include path with spaces iso slashes ] ;
+
+	# We're generating an executable
+	Main $(<) : $(>) ;
+
+	# The end product should go into the kernel directory
+	MakeLocate $(<) : $(OBOS_KERNEL_DIR) ;
+
+	# Specify some extra options for the linker
+	LINKFLAGS on $(<) += -nostart -Xlinker -soname=\"$(<)\" ;
 }
