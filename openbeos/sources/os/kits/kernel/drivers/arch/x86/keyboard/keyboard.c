@@ -228,57 +228,61 @@ static int handle_keyboard_interrupt(void* data)
 	return retval;
 }
 
-static int keyboard_open(dev_ident ident, dev_cookie *cookie)
+static int keyboard_open(const char *name, uint32 flags, void * *cookie)
 {
 	*cookie = NULL;
 	return 0;
 }
 
-static int keyboard_close(dev_cookie cookie)
+static int keyboard_close(void * cookie)
 {
 	return 0;
 }
 
-static int keyboard_freecookie(dev_cookie cookie)
+static int keyboard_freecookie(void * cookie)
 {
 	return 0;
 }
 
-static int keyboard_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int keyboard_seek(void * cookie, off_t pos, seek_type st)
 {
 	return ERR_NOT_ALLOWED;
 }
 
-static ssize_t keyboard_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t keyboard_read(void * cookie, off_t pos, void *buf, size_t *len)
 {
-	if(len < 0)
+	int rv;
+	if (*len < 0)
 		return 0;
 
-	return _keyboard_read(buf, (size_t)len);
+	rv = _keyboard_read(buf, *len);
+	if (rv < 0)
+		return rv;
+	*len = rv;
+	return 0;
 }
 
-static ssize_t keyboard_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t keyboard_write(void * cookie, off_t pos, const void *buf,  size_t *len)
 {
 	return ERR_VFS_READONLY_FS;
 }
 
-static int keyboard_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
+static int keyboard_ioctl(void * cookie, uint32 op, void *buf, size_t len)
 {
-	return ERR_INVALID_ARGS;
+	return EINVAL;
 }
 
-struct dev_calls keyboard_hooks = {
+device_hooks keyboard_hooks = {
 	&keyboard_open,
 	&keyboard_close,
 	&keyboard_freecookie,
-	&keyboard_seek,
 	&keyboard_ioctl,
 	&keyboard_read,
 	&keyboard_write,
-	/* cannot page from keyboard */
 	NULL,
 	NULL,
-	NULL
+//	NULL,
+//	NULL
 };
 
 static int setup_keyboard(void)

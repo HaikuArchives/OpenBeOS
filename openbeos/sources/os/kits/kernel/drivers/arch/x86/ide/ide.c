@@ -44,31 +44,30 @@ typedef struct
 } ide_ident;
 
 //--------------------------------------------------------------------------------
-static int ide_open(dev_ident _ident, dev_cookie *cookie)
+static int ide_open(const char *name, uint32 flags, void **cookie)
 {
-	ide_ident* ident = (ide_ident*)_ident;
-	// We hold our 'ident' structure as cookie, as it contains all we need
+	ide_ident* ident = (ide_ident*)kmalloc(sizeof(ide_ident));
+	/* We hold our 'ident' structure as cookie, as it contains all we need */
 	*cookie = ident;
 
 	return NO_ERROR;
 }
 
 //--------------------------------------------------------------------------------
-static int ide_close(dev_cookie _cookie)
+static int ide_close(void * _cookie)
 {
 	return NO_ERROR;
 }
 
 //--------------------------------------------------------------------------------
-static int ide_freecookie(dev_cookie cookie)
+static int ide_freecookie(void *cookie)
 {
-	// We do not have anything to free here, as our cookie is our
-	//  dev_ident as well :)
+	kfree(cookie);
 	return NO_ERROR;
 }
 
 //--------------------------------------------------------------------------------
-static int ide_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int ide_seek(void * cookie, off_t pos, seek_type st)
 {
 	return ERR_UNIMPLEMENTED;
 }
@@ -97,7 +96,7 @@ static int ide_get_geometry(ide_device* device, void *buf, size_t len)
 
 
 //--------------------------------------------------------------------------------
-static int ide_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
+static int ide_ioctl(void * _cookie, uint32 op, void *buf, size_t len)
 {
 	ide_ident* cookie = (ide_ident*)_cookie;
 	int err = 0;
@@ -144,7 +143,7 @@ static int ide_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 }
 
 //--------------------------------------------------------------------------------
-static ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t ide_read(void * _cookie, off_t pos, void *buf, size_t *len)
 {
 	ide_ident*	cookie = (ide_ident*)_cookie;
 	uint32		sectors;
@@ -162,14 +161,16 @@ static ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 	// Calculate start block and number of blocks to read
 	block = pos / cookie->block_size;
 	block += cookie->block_start;
-	sectors = len / cookie->block_size;
+	sectors = *len / cookie->block_size;
 
 	// correct len to be the actual # of bytes to read
-	len -= len % cookie->block_size;
+	*len -= *len % cookie->block_size;
 
 	// If it goes beyond the disk/partition, exit
 	if (block + sectors > cookie->block_start + cookie->block_count) {
 		sem_release(ide_sem, 1);
+		*len = 0;
+		/* XXX - should be returning an error */
 		return 0;
 	}
 
@@ -193,11 +194,11 @@ static ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 	// Give up
 	sem_release(ide_sem, 1);
 
-	return len;
+	return 0;
 }
 
 //--------------------------------------------------------------------------------
-static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t ide_write(void * _cookie, off_t pos, const void *buf, size_t *len)
 {
 	int			block;
 	ide_ident*	cookie = _cookie;
@@ -205,7 +206,7 @@ static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t
 	uint32		currentSector;
 	uint32		sectorsToWrite;
 
-	dprintf("ide_write: entry buf %p, pos 0x%Lx, *len %Ld\n", buf, pos, (long long)len);
+	dprintf("ide_write: entry buf %p, pos 0x%Lx, *len %ld\n", buf, pos, *len);
 	if(cookie == NULL) {
 		return ERR_INVALID_ARGS;
 	}
@@ -215,7 +216,7 @@ static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t
 
 	// Get the start pos and block count to write
 	block = pos / cookie->block_size + cookie->block_start;
-	sectors = len / cookie->block_size;
+	sectors = *len / cookie->block_size;
 
 	// If we're writing more than the disk/partition size
 	if (block + sectors > cookie->block_start + cookie->block_count) {
@@ -233,7 +234,7 @@ static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t
 		// Write them
 		if (ide_write_block(cookie->dev, buf, block, sectorsToWrite) != 0) {
 			//	  dprintf("ide_write: ide_block returned %d\n", rc);
-			len = currentSector * cookie->block_size;
+			*len = currentSector * cookie->block_size;
 			sem_release(ide_sem, 1);
 			return ERR_IO_ERROR;
 		}
@@ -244,42 +245,39 @@ static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t
 
 	sem_release(ide_sem, 1);
 
-	return len;
+	return 0;
 }
 
 //--------------------------------------------------------------------------------
-static int ide_canpage(dev_ident ident)
+static int ide_canpage(void * ident)
 {
 	return false;
 }
 
 //--------------------------------------------------------------------------------
-static ssize_t ide_readpage(dev_ident ident, iovecs *vecs, off_t pos)
+static ssize_t ide_readpage(void * ident, iovecs *vecs, off_t pos)
 {
 	return ERR_UNIMPLEMENTED;
 }
 
 //--------------------------------------------------------------------------------
-static ssize_t ide_writepage(dev_ident ident, iovecs *vecs, off_t pos)
+static ssize_t ide_writepage(void * ident, iovecs *vecs, off_t pos)
 {
 	return ERR_UNIMPLEMENTED;
 }
 
 //--------------------------------------------------------------------------------
-static struct dev_calls ide_hooks = {
+device_hooks ide_hooks = {
 	ide_open,
 	ide_close,
 	ide_freecookie,
-
-	ide_seek,
 	ide_ioctl,
-
 	ide_read,
 	ide_write,
-
-	ide_canpage,
-	ide_readpage,
-	ide_writepage
+	NULL,
+	NULL,
+//	NULL,
+//	NULL
 };
 
 //--------------------------------------------------------------------------------

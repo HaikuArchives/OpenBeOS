@@ -119,7 +119,7 @@ static int handle_mouse_interrupt(void* data)
 /*
  * mouse_open:
  */
-static int mouse_open(dev_ident ident, dev_cookie *cookie)
+static int mouse_open(const char *name, uint32 flags, void **cookie)
 {
 	*cookie = NULL;
 	return 0;
@@ -128,7 +128,7 @@ static int mouse_open(dev_ident ident, dev_cookie *cookie)
 /*
  * mouse_close:
  */
-static int mouse_close(dev_cookie cookie)
+static int mouse_close(void * cookie)
 {
 	return 0;
 } // mouse_close
@@ -136,7 +136,7 @@ static int mouse_close(dev_cookie cookie)
 /*
  * mouse_freecookie:
  */
-static int mouse_freecookie(dev_cookie cookie)
+static int mouse_freecookie(void * cookie)
 {
 	return 0;
 } // mouse_freecookie
@@ -144,7 +144,7 @@ static int mouse_freecookie(dev_cookie cookie)
 /*
  * mouse_seek:
  */
-static int mouse_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int mouse_seek(void * cookie, off_t pos, seek_type st)
 {
 	return ERR_NOT_ALLOWED;
 } // mouse_seek
@@ -153,13 +153,12 @@ static int mouse_seek(dev_cookie cookie, off_t pos, seek_type st)
  * mouse_read:
  * Gets a mouse data packet.
  * Parameters:
- * dev_cookie, ignored
+ * void *, ignored
  * void*, pointer to a buffer that accepts the data
  * off_t, ignored
  * ssize_t, buffer size, must be at least the size of the data packet
  */
-static ssize_t mouse_read(dev_cookie cookie, void* buf, off_t pos,
-   ssize_t len)
+static ssize_t mouse_read(void * cookie, off_t pos, void* buf, size_t *len)
 {
    // inform interrupt handler that data is being waited for
    in_read = true;
@@ -171,30 +170,34 @@ static ssize_t mouse_read(dev_cookie cookie, void* buf, off_t pos,
 	} // if
 
 	// verify user's buffer is of the right size
-	if(len < PACKET_SIZE)
+	if(*len < PACKET_SIZE) {
+		*len = 0;
+		/* XXX - should return an error here */
 		return 0;
+	}
 
 	// copy data to user's buffer
 	((char*)buf)[0] = md_read.status;
 	((char*)buf)[1] = md_read.delta_x;
 	((char*)buf)[2] = md_read.delta_y;
 
-	return PACKET_SIZE;
+	*len = PACKET_SIZE;
+	return 0;
 } // mouse_read
 
 /*
  * mouse_write:
  */
-static ssize_t mouse_write(dev_cookie cookie, const void *buf, off_t pos,
-   ssize_t len)
+static ssize_t mouse_write(void * cookie, off_t pos, const void *buf, size_t *len)
 {
+	*len = 0;
 	return ERR_VFS_READONLY_FS;
 } // mouse_write
 
 /*
  * mouse_ioctl:
  */
-static int mouse_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
+static int mouse_ioctl(void * cookie, uint32 op, void *buf, size_t len)
 {
 	return ERR_INVALID_ARGS;
 } // mouse_ioctl
@@ -202,18 +205,17 @@ static int mouse_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 /*
  * function structure used for file-op registration
  */
-struct dev_calls ps2_mouse_hooks = {
+device_hooks ps2_mouse_hooks = {
 	&mouse_open,
 	&mouse_close,
 	&mouse_freecookie,
-	&mouse_seek,
 	&mouse_ioctl,
 	&mouse_read,
 	&mouse_write,
-	/* cannot page from mouse */
 	NULL,
 	NULL,
-	NULL
+//	NULL,
+//	NULL
 }; // ps2_mouse_hooks
 
 /////////////////////////////////////////////////////////////////////////

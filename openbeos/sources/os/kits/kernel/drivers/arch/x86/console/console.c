@@ -9,8 +9,9 @@
 #include <int.h>
 #include <vm.h>
 #include <lock.h>
-#include <devfs.h>
+#include <drivers.h>
 #include <errors.h>
+#include <devfs.h>
 
 #include <arch/cpu.h>
 #include <arch/int.h>
@@ -150,33 +151,35 @@ static void tab(void)
 	pos=origin+((y*columns+x)<<1);
 }
 
-static int console_open(dev_ident ident, dev_cookie *cookie)
+static int console_open(const char *name, uint32 flags, void **cookie)
 {
 	return 0;
 }
 
-static int console_freecookie(dev_cookie cookie)
+static int console_freecookie(void * cookie)
 {
 	return 0;
 }
 
-static int console_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int console_seek(void * cookie, off_t pos, seek_type st)
 {
 //	dprintf("console_seek: entry\n");
 
 	return ERR_NOT_ALLOWED;
 }
 
-static int console_close(dev_cookie cookie)
+static int console_close(void * cookie)
 {
 //	dprintf("console_close: entry\n");
 
 	return 0;
 }
 
-static ssize_t console_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t console_read(void * cookie, off_t pos, void *buf, size_t *len)
 {
-	return sys_read(keyboard_fd, buf, 0, len);
+	/* XXX - optimistic!! */
+	*len = sys_read(keyboard_fd, buf, 0, *len);
+	return 0;
 }
 
 static ssize_t _console_write(const void *buf, size_t len)
@@ -209,7 +212,7 @@ static ssize_t _console_write(const void *buf, size_t len)
 	return len;
 }
 
-static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t console_write(void * cookie, off_t pos, const void *buf, size_t *len)
 {
 	ssize_t err;
 
@@ -217,7 +220,14 @@ static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 
 	mutex_lock(&console_lock);
 
-	err = _console_write(buf, len);
+	err = _console_write(buf, *len);
+	if (err < 0)
+		*len = 0;
+	else {
+		*len = err;
+		err = 0;
+	}
+	 
 	update_cursor(x, y);
 
 	mutex_unlock(&console_lock);
@@ -225,7 +235,7 @@ static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 	return err;
 }
 
-static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
+static int console_ioctl(void * cookie, uint32 op, void *buf, size_t len)
 {
 	int err;
 
@@ -254,18 +264,17 @@ static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 	return err;
 }
 
-static struct dev_calls console_hooks = {
+device_hooks console_hooks = {
 	&console_open,
 	&console_close,
 	&console_freecookie,
-	&console_seek,
 	&console_ioctl,
 	&console_read,
 	&console_write,
-	/* cannot page from /dev/console */
 	NULL,
 	NULL,
-	NULL
+//	NULL,
+//	NULL
 };
 
 int console_dev_init(kernel_args *ka)

@@ -13,8 +13,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <errors.h>
+#include <atomic.h>
 
-#ifdef ARCH_i386
+#ifdef 0 //ARCH_x86
 
 // contains a bunch of beos defines
 #include "beos_p.h"
@@ -28,50 +29,21 @@ static uint32 read32(int port);
 static void write32(int port, uint32 data);
 static void unhandled_isa_call(void);
 
-static int translation_open(dev_ident ident, dev_cookie *cookie);
-static int translation_close(dev_cookie cookie);
-static int translation_freecookie(dev_cookie cookie);
-static int translation_seek(dev_cookie cookie, off_t pos, seek_type st);
-static int translation_ioctl(dev_cookie cookie, int op, void *buf, size_t len);
-static ssize_t translation_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len);
-static ssize_t translation_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len);
-static int translation_canpage(dev_ident ident);
-static ssize_t translation_readpage(dev_ident ident, iovecs *vecs, off_t pos);
-static ssize_t translation_writepage(dev_ident ident, iovecs *vecs, off_t pos);
+/*
+static int translation_open(void * ident, void * *cookie);
+static int translation_close(void * cookie);
+static int translation_freecookie(void * cookie);
+static int translation_seek(void * cookie, off_t pos, seek_type st);
+static int translation_ioctl(void * cookie, int op, void *buf, size_t len);
+static ssize_t translation_read(void * cookie, void *buf, off_t pos, ssize_t len);
+static ssize_t translation_write(void * cookie, const void *buf, off_t pos, ssize_t len);
+static int translation_canpage(void * ident);
+static ssize_t translation_readpage(void * ident, iovecs *vecs, off_t pos);
+static ssize_t translation_writepage(void * ident, iovecs *vecs, off_t pos);
+*/
 
 static int newos2beos_err(int err);
 static int beos2newos_err(int err);
-
-/* device translation object */
-struct beos_device_node {
-	struct beos_device_node *next;
-	const char *name;
-
-	beos_device_hooks *beos_hooks;
-};
-
-struct beos_device_node *nodes = NULL;
-
-/* our cookie, which will wrap around the beos cookie */
-struct beos_device_cookie {
-	struct beos_device_node *node;
-	void *beos_cookie;
-	off_t pos;
-};
-
-/* our device hooks structure */
-struct dev_calls translation_hooks = {
-	&translation_open,
-	&translation_close,
-	&translation_freecookie,
-	&translation_seek,
-	&translation_ioctl,
-	&translation_read,
-	&translation_write,
-	&translation_canpage,
-	&translation_readpage,
-	&translation_writepage
-};
 
 isa_module_info isa = {
 	{ /* binfo */
@@ -92,13 +64,13 @@ isa_module_info isa = {
 	(void *)unhandled_isa_call
 };
 
-struct module {
-	const char *name;
-	void *data;
-} modules[] = {
-	{ B_ISA_MODULE_NAME, &isa },
-	{ NULL, NULL }
-};
+//struct module {
+//	const char *name;
+//	void *data;
+//} modules[] = {
+//	{ B_ISA_MODULE_NAME, &isa },
+//	{ NULL, NULL }
+//};
 
 int beos_layer_init(void)
 {
@@ -189,6 +161,7 @@ void _beos_spin(bigtime_t microseconds)
 		;
 }
 
+/*
 int _beos_get_module(const char *path, module_info **vec)
 {
 	struct module *m;
@@ -208,6 +181,7 @@ int _beos_put_module(const char *path)
 	dprintf("put_module: called on '%s'\n", path);
 	return NO_ERROR;
 }
+*/
 
 static uint8 read8(int port)
 {
@@ -296,7 +270,8 @@ static int newos2beos_err(int err)
 	}
 }
 
-static int translation_open(dev_ident ident, dev_cookie *_cookie)
+/*
+static int translation_open(void * ident, void * *_cookie)
 {
 	struct beos_device_node *node = (struct beos_device_node *)ident;
 	struct beos_device_cookie *cookie;
@@ -320,7 +295,7 @@ static int translation_open(dev_ident ident, dev_cookie *_cookie)
 	return NO_ERROR;
 }
 
-static int translation_close(dev_cookie _cookie)
+static int translation_close(void * _cookie)
 {
 	struct beos_device_cookie *cookie = _cookie;
 	int err;
@@ -332,7 +307,7 @@ static int translation_close(dev_cookie _cookie)
 	return NO_ERROR;
 }
 
-static int translation_freecookie(dev_cookie _cookie)
+static int translation_freecookie(void * _cookie)
 {
 	struct beos_device_cookie *cookie = _cookie;
 	int err;
@@ -346,7 +321,7 @@ static int translation_freecookie(dev_cookie _cookie)
 	return NO_ERROR;
 }
 
-static int translation_seek(dev_cookie _cookie, off_t pos, seek_type st)
+static int translation_seek(void * _cookie, off_t pos, seek_type st)
 {
 	struct beos_device_cookie *cookie = _cookie;
 	int err = NO_ERROR;
@@ -371,7 +346,7 @@ static int translation_seek(dev_cookie _cookie, off_t pos, seek_type st)
 	return err;
 }
 
-static int translation_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
+static int translation_ioctl(void * _cookie, int op, void *buf, size_t len)
 {
 	struct beos_device_cookie *cookie = _cookie;
 	int err;
@@ -382,7 +357,7 @@ static int translation_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 	return NO_ERROR;
 }
 
-static ssize_t translation_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t _len)
+static ssize_t translation_read(void * _cookie, void *buf, off_t pos, ssize_t _len)
 {
 	struct beos_device_cookie *cookie = _cookie;
 	int err;
@@ -409,7 +384,7 @@ static ssize_t translation_read(dev_cookie _cookie, void *buf, off_t pos, ssize_
 	return len;
 }
 
-static ssize_t translation_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t _len)
+static ssize_t translation_write(void * _cookie, const void *buf, off_t pos, ssize_t _len)
 {
 	struct beos_device_cookie *cookie = _cookie;
 	int err;
@@ -436,21 +411,22 @@ static ssize_t translation_write(dev_cookie _cookie, const void *buf, off_t pos,
 	return len;
 }
 
-static int translation_canpage(dev_ident ident)
+static int translation_canpage(void * ident)
 {
 	return 0;
 }
 
-static ssize_t translation_readpage(dev_ident ident, iovecs *vecs, off_t pos)
+static ssize_t translation_readpage(void * ident, iovecs *vecs, off_t pos)
 {
 	return ERR_NOT_ALLOWED;
 }
 
-static ssize_t translation_writepage(dev_ident ident, iovecs *vecs, off_t pos)
+static ssize_t translation_writepage(void * ident, iovecs *vecs, off_t pos)
 {
 	return ERR_NOT_ALLOWED;
 }
-
+*/
+/*
 image_id beos_load_beos_driver(const char *name)
 {
 	image_id id;
@@ -523,6 +499,7 @@ image_id beos_load_beos_driver(const char *name)
 
 	return id;
 }
+*/
 #else
 
 int beos_layer_init(void)

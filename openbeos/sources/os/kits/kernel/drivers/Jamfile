@@ -1,10 +1,8 @@
 SubDir OBOS_TOP sources os kits kernel drivers ;
 
 KernelStaticLibrary libdrivers : 
-	<$(SOURCE_GRIST)>beos.c 
 	<$(SOURCE_GRIST)>dev.c 
 	<$(SOURCE_GRIST)>devs.c
-	<$(SOURCE_GRIST)>fb_console/fb_console.c
 	<$(SOURCE_GRIST)>common/null.c
 	<$(SOURCE_GRIST)>common/zero.c
 	<$(SOURCE_GRIST)>arch/$(OBOS_ARCH)/console/console.c
@@ -19,3 +17,4 @@ KernelStaticLibrary libdrivers :
 	;
 
 #SubInclude OBOS_TOP sources os kits kernel drivers arch ;
+SubInclude OBOS_TOP sources os kits kernel drivers common ;
