@@ -27,34 +27,17 @@ enum {
 
 
 // ===========================================================================
-// Evil hack to get a BMessenger's port and token.
+// Hack to get a BMessenger's port and token.
 
-struct messenger_port_token {
-	port_id	port;
-	int32	token;
+class _TRoster_ {
+public:
+	static inline void get_messenger_port_token(const BMessenger &messenger,
+												port_id &port, int32 &token)
+	{
+		port = messenger.fPort;
+		token = messenger.fHandlerToken;
+	}
 };
-
-// _set_message_reply_
-inline
-void
-_set_message_reply_(BMessage *_mpt, BMessenger messenger)
-{
-	messenger_port_token* mpt = (messenger_port_token*)_mpt;
-	mpt->port = messenger.fPort;
-	mpt->token = messenger.fHandlerToken;
-}
-
-// get_messenger_port_token
-inline
-void
-get_messenger_port_token(const BMessenger &messenger, port_id &port,
-						 int32 &token)
-{
-	messenger_port_token mpt;
-	_set_message_reply_((BMessage*)&mpt, messenger);
-	port = mpt.port;
-	token = mpt.token;
-}
 // ===========================================================================
 
 
@@ -422,7 +405,7 @@ BQuery::SetTarget(BMessenger messenger)
 	if (error == B_OK && _HasFetched())
 		error = B_NOT_ALLOWED;
 	if (error == B_OK) {
-		get_messenger_port_token(messenger, fPort, fToken);
+		_TRoster_::get_messenger_port_token(messenger, fPort, fToken);
 		fLive = true;
 	}
 	return error;
