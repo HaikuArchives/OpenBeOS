@@ -20,24 +20,70 @@ using namespace OpenBeOS;
 // struct entry_ref
 //----------------------------------------------------------------------------
 
+/*! \struct entry_ref
+	\brief A filesystem entry represented as a name in a concrete directory.
+	
+	entry_refs may refer to pre-existing (concrete) files, as well as non-existing
+	(abstract) files. However, the parent directory of the file \b must exist.
+	
+	The result of this dichotomy is a blending of the persistence gained by referring
+	to entries with a reference to their internal filesystem node and the flexibility gained
+	by referring to entries by name.
+	
+	For example, if the directory in which the entry resides (or a
+	directory further up in the hierarchy) is moved or renamed, the entry_ref will
+	still refer to the correct file (whereas a pathname to the previous location of the
+	file would now be invalid).
+	
+	On the other hand, say that the entry_ref refers to a concrete file. If the file
+	itself is renamed, the entry_ref now refers to an abstract file with the old name
+	(the upside in this case is that abstract entries may be represented by entry_refs
+	without	preallocating an internal filesystem node for them).
+*/
+
+
+//! Creates an unitialized entry_ref. 
 entry_ref::entry_ref() : device(0), directory(0), name(NULL) {
 }
 
+/*! \brief Creates an entry_ref initialized to the given file name in the given
+	directory on the given device.
+	
+	\p name may refer to either a pre-existing file in the given
+	directory, or a non-existent file. No explicit checking is done to verify validity of the given arguments, but
+	later use of the entry_ref will fail if \p dev is not a valid device or \p dir
+	is a not a directory on \p dev.
+	
+	\param dev the device on which the entry's parent directory resides
+	\param dir the directory in which the entry resides
+	\param name the leaf name of the entry, which is not required to exist
+*/
 entry_ref::entry_ref(dev_t dev, ino_t dir, const char *name) :
 	device(dev), directory(dir), name(NULL) {
 	set_name(name);
 }
 
+/*! \brief Creates a copy of the given entry_ref.
+
+	\param ref a reference to an entry_ref to copy
+*/
 entry_ref::entry_ref(const entry_ref &ref) : device(ref.device), directory(ref.directory),
 	name(NULL) {
 	set_name(ref.name);	
 }
 
+//! Destroys the object and frees the storage allocated for the leaf name, if necessary. 
 entry_ref::~entry_ref() {
 	if (name != NULL)
 		delete [] name;
 }
+
+/*! \brief Set the entry_ref's leaf name, freeing the storage allocated for any previous
+	name and then making a copy of the new name.
 	
+	\param name pointer to a null-terminated string containing the new name for
+	the entry. May be \c NULL.
+*/
 status_t entry_ref::set_name(const char *name) {
 	if (this->name != NULL) {
 		delete [] this->name;
