@@ -9,6 +9,7 @@
 
 #include "mbuf.h"
 #include "net_misc.h"
+#include "netinet/in.h"
 
 typedef struct ipv4_header {
 #if B_HOST_IS_BENDIAN
@@ -25,8 +26,8 @@ typedef struct ipv4_header {
 	uint8	ttl;
 	uint8	prot;
 	uint16	hdr_cksum;
-	ipv4_addr	src;
-	ipv4_addr	dst;
+	struct in_addr	src;
+	struct in_addr 	dst;
 } _PACKED ipv4_header;
 
 #define IPV4_FLAGS(a)		(a)->flags_frag >> 13

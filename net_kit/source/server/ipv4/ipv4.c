@@ -17,6 +17,7 @@
 loaded_net_module *net_modules;
 int *prot_table;
 static struct ipstat	ipstat;
+static uint16 ip_identifier = 0; /* XXX - set this better */
 
 #if SHOW_DEBUG
 static void dump_ipv4_header(struct mbuf *buf)
@@ -61,6 +62,9 @@ int ipv4_input(struct mbuf *buf)
 #if SHOW_DEBUG
 	dump_ipv4_header(buf);
 #endif
+        /* Strip excess data from mbuf */
+        if (buf->m_len > ntohs(ip->length))
+                m_adj(buf, ntohs(ip->length) - buf->m_len);
 
 	atomic_add(&ipstat.ips_total, 1);
 
@@ -87,6 +91,10 @@ int ipv4_output(struct mbuf *buf, int proto, struct sockaddr *tgt)
 {
 	ipv4_header *ip = mtod(buf, ipv4_header*);
 
+	ip->ver = 6;
+	ip->hl = 5; /* XXX - only if we have no options following...hmmm fix this! */
+	ip->id = htons(ip_identifier++);
+
 	switch (proto) {
 		case NS_ICMP:
 			/* assume all filled in correctly...just need to set the 
@@ -97,7 +105,17 @@ int ipv4_output(struct mbuf *buf, int proto, struct sockaddr *tgt)
 	memcpy(&ip->dst, &tgt->sa_data, 4);
 	ip->hdr_cksum = 0;
 	ip->hdr_cksum = in_cksum(buf, (ip->hl * 4), 0);
-	buf->m_pkthdr.rcvif->output(buf, NS_IPV4, tgt);
+
+	if (!buf->m_pkthdr.rcvif) {
+		struct in_addr look;
+		look = ip->src;
+		buf->m_pkthdr.rcvif = interface_for_address(&look, 4);
+	}
+	if (buf->m_pkthdr.rcvif)
+		buf->m_pkthdr.rcvif->output(buf, NS_IPV4, tgt);
+	else
+		printf("Failed to find an interface to send on!\n");
+
 	return 0;
 }
 
@@ -147,6 +165,7 @@ net_module net_module_data = {
 	NET_LAYER2,
         0,      /* users can't create sockets in this module! */
         0,
+	0,
 
 	&ipv4_init,
 	&ipv4_dev_init,
