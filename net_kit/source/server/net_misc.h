@@ -21,6 +21,8 @@ typedef struct netaddr {
 	uint8 addr[30];
 } netaddr;
 
+typedef	uint32	ipv4_addr;
+
 /* XXX - add some macro's for inserting various types of address
  */
 
