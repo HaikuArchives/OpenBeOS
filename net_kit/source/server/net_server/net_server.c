@@ -23,9 +23,6 @@
 #include "nhash.h"
 #include "sys/socket.h"
 
-/* horrible hack to get this building... */
-#include "ethernet/ethernet.h"
-
 static loaded_net_module *global_modules;
 static int nmods = 0;
 static int prot_table[255];
@@ -48,25 +45,50 @@ struct local_address {
 net_hash *localhash;
 struct local_address *local_addrs;
 
-static int32 rx_thread(void *data)
+static int32 if_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
-	int count = 0;
 	status_t status;
-	char buffer[2048];
-	size_t len = 2048;
+	char buffer[i->mtu];
+	size_t len = i->mtu;
+	int count = 0;
 
-	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
-        while ((status = read(i->dev, buffer, len)) >= B_OK && count < RECV_MSGS) {
-                struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
-                global_modules[prot_table[NS_ETHER]].mod->input(mb);
+	while ((status = read(i->dev, buffer, len)) >= B_OK && count < RECV_MSGS) {
+		struct mbuf *mb = m_devget(buffer, status, 0, i, NULL);
+		if (i->input)
+			i->input(mb);
+
 		count++;
-		len = 2048;
-        }
-	printf("%s: terminating rx_thread\n", i->name);
+		len = i->mtu;
+	}
+	printf("%s: terminating if_thread\n", i->name);
 	return 0;
 }
 
+/* This is used when we don't have a dev to read/write from as we're using
+ * a virtual device, e.g. a loopback driver!
+ *
+ * It simply queue's the buf's and drgas them off as normal in the tx thread.
+ */
+static int32 rx_thread(void *data)
+{
+	ifnet *i = (ifnet *)data;
+	struct mbuf *m;
+
+	printf("%s%d: starting rx_thread...\n", i->name, i->unit);
+        while (1) {
+		acquire_sem(i->rxq->pop);
+		IFQ_DEQUEUE(i->rxq, m);
+		if (i->input)
+                	i->input(m);
+		else
+			printf("%s%d: no input function!\n", i->name, i->unit);
+        }
+	printf("%s%d: terminating rx_thread\n", i->name, i->unit);
+	return 0;
+}
+
+/* This is the same regardless of either method of getting the packets... */
 static int32 tx_thread(void *data)
 {
 	ifnet *i = (ifnet *)data;
@@ -131,7 +153,6 @@ void net_server_add_device(ifnet *ifn)
 {
 	if (!ifn)
 		return;
-
 	if (devices)
 		ifn->next = devices;
 	ifn->id = ndevs;
@@ -142,9 +163,19 @@ void net_server_add_device(ifnet *ifn)
 static void start_devices(void)
 {
 	ifnet *d = devices;
+	char tname[32];
+	int priority = B_REAL_TIME_DISPLAY_PRIORITY;
+
 	while (d) {
-		d->rx_thread = spawn_thread(rx_thread, "net_rx_thread", B_NORMAL_PRIORITY,
-						d);
+		sprintf(tname, "%s%d_rx_thread", d->name, d->unit);
+		if (d->type == IFD_ETHERNET) {
+			d->rx_thread = spawn_thread(if_thread, tname, priority,
+							d);
+		} else {
+			d->rxq = start_ifq();
+			d->rx_thread = spawn_thread(rx_thread, tname, priority,
+							d);
+		}
 		if (d->rx_thread < 0) {
 			printf("Failed to start the rx_thread for %s%d\n", d->name, d->unit);
 			continue;
@@ -158,7 +189,7 @@ static void start_devices(void)
 			continue;
 		}
 
-		d->tx_thread = spawn_thread(tx_thread, "net_tx_thread", B_NORMAL_PRIORITY,
+		d->tx_thread = spawn_thread(tx_thread, "net_tx_thread", priority,
 						d);
                 if (d->tx_thread < 0) {
                         printf("Failed to start the tx_thread for %s%d\n", d->name, d->unit);
@@ -169,6 +200,7 @@ static void start_devices(void)
                 }
 		d = d->next; 
 	}
+	printf("\n");
 }
 
 static void list_devices(void)
@@ -180,7 +212,11 @@ static void list_devices(void)
 	
 	while (d) {
 		printf("%2d  %s%d       %4d ", i++, d->name, d->unit, d->mtu);
-		print_ether_addr((ether_addr*)&d->link_addr->sa_data);
+		if (d->link_addr) {
+			print_ether_addr((ether_addr*)&d->link_addr->sa_data);
+		} else {
+			printf("                 ");
+		}
 		if (d->flags & IFF_UP)
 			printf(" UP");
 		if (d->flags & IFF_RUNNING)
@@ -340,6 +376,7 @@ int main(int argc, char **argv)
 {
 	status_t status;
 	int i;
+	ifnet *d;
 
 	mbinit();
 	localhash = nhash_make();
@@ -368,18 +405,16 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
-/* These 2 printf's are just for "pretty" display... */
-printf("\n");
-
 	list_devices();
 	list_modules();
 
-printf("\n");
-
-	for (i=0;i<ndevs;i++) {
-		if (devices[i].rx_thread > 0) {
-			wait_for_thread(devices[i].rx_thread, &status);
+	d = devices;
+	while (d) {
+		if (d->rx_thread  && d->type == IFD_ETHERNET) {
+			printf("waiting on thread for %s%d\n", d->name, d->unit);
+			wait_for_thread(d->rx_thread, &status);
 		}
+		d = d->next; 
 	}
 
 	close_devices();
