@@ -12,7 +12,7 @@
 class _SoundPlayNode : public BBufferProducer
 {
 public:
-	_SoundPlayNode(const char *name, const media_multi_audio_format *format);
+	_SoundPlayNode(const char *name, const media_multi_audio_format *format, BSoundPlayer *player);
 	~_SoundPlayNode();
 
 	media_multi_audio_format Format() const;
@@ -73,9 +73,23 @@ private:
 
 	virtual	BMediaAddOn* AddOn(
 				int32 * internal_id) const;
+
+public:
+	void Start();
+	void Stop();
 				
 private:
+	bool fChangeSampleformat;
+	bool fChangeSamplingrate;
+	bool fChangeChannelcount;
+
+	int fFramesPerBuffer;
+	thread_id fThreadId;
+	volatile bool fStopThread;
+	static int32 threadstart(void *arg);
+	void PlayThread();
 	media_multi_audio_format fFormat;
+	BSoundPlayer *fPlayer;
 };
 
 #endif

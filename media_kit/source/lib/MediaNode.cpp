@@ -4,6 +4,7 @@
  *  DESCR: 
  ***********************************************************************/
 #include <MediaNode.h>
+#include <TimeSource.h>
 #include "debug.h"
 
 /*************************************************************
@@ -165,8 +166,8 @@ BMediaNode::RunMode() const
 BTimeSource *
 BMediaNode::TimeSource() const
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return _mTimeSource;
 }
 
 
@@ -318,29 +319,31 @@ BMediaNode::AddNodeKind(uint64 kind)
 void *
 BMediaNode::operator new(size_t size)
 {
-	UNIMPLEMENTED();
-	return NULL;
+	CALLED();
+	return ::operator new(size);
 }
 
 void *
 BMediaNode::operator new(size_t size,
 						 const nothrow_t &) throw()
 {
-	UNIMPLEMENTED();
-	return 0;
+	CALLED();
+	return ::operator new(size,nothrow);
 }
 
 void
 BMediaNode::operator delete(void *ptr)
 {
-	UNIMPLEMENTED();
+	CALLED();
+	::operator delete(ptr);
 }
 
 void 
 BMediaNode::operator delete(void * ptr, 
 							const nothrow_t &) throw()
 {
-	UNIMPLEMENTED();
+	CALLED();
+	::operator delete(ptr,nothrow);
 }
 
 /*************************************************************
