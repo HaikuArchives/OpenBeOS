@@ -3,7 +3,8 @@ OBJS=   cksum.o \
 	net_timer.o \
 	mbuf.o \
 	nhash.o \
-	pools.o
+	pools.o \
+	if.o
 
 INCLUDES=-I. -I.. -I../include
 CFLAGS=-Wall -g -O2 -fPIC -DPIC

@@ -6,12 +6,13 @@
 #define ADDCARRY(x)	(x > 65535 ? x -= 65535 : x)
 #define REDUCE	{l_util.l = sum; sum = l_util.s[0] + l_util.s[1];ADDCARRY(sum);}
 
-int in_cksum(struct mbuf *m, int len)
+int in_cksum(struct mbuf *m, int len, int off)
 {
 	uint16 *w;
 	int sum = 0;
 	int mlen = 0;
 	int byte_swapped = 0;
+	struct mbuf *orig_m = m;
 
 	union {
 		uint8	c[2];
@@ -21,6 +22,13 @@ int in_cksum(struct mbuf *m, int len)
 		uint16 s[2];
 		long	l;
 	} l_util;
+
+	if (off) {
+		m->m_len -= off;
+		m->m_data += off;
+		if (m->m_flags & M_PKTHDR)
+			m->m_pkthdr.len -= off;
+	}
 
 	for (; m && len; m=m->m_next) {
 		if (m->m_len == 0)
@@ -97,6 +105,13 @@ int in_cksum(struct mbuf *m, int len)
 		sum += s_util.s;
 	}
 	REDUCE;
+
+	if (off) {
+		orig_m->m_len += off;
+		orig_m->m_data -= off;
+		if (orig_m->m_flags & M_PKTHDR)
+			orig_m->m_pkthdr.len += off;
+	}	
 	return (~sum & 0xffff);	
 }
 
