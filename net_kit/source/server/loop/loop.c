@@ -12,74 +12,73 @@
 
 static loaded_net_module *net_modules;
 static int *prot_table;
+static struct ifnet *me = NULL;
 
-static int loop_output(struct mbuf *m, int prot, struct sockaddr *tgt)
+
+int loop_output(ifnet *ifp, struct mbuf *m, struct sockaddr *sa,
+			struct rtentry *rt)
 {
 	/* turn it straight back... */
 	/* This is lame as we should be detecting the protocol, but it gets
 	 * us working.
 	 * XXX - fix me!
 	 */
-	ipv4_header *ip;
-	struct in_addr ia;
+	ipv4_header *ip = mtod(m, ipv4_header *);
 
-	ip = mtod(m, ipv4_header *);
-	ia = ip->dst;
 	ip->dst = ip->src;
-	ip->src = ia;
+	ip->src.s_addr = INADDR_LOOPBACK;
 
-	IFQ_ENQUEUE(m->m_pkthdr.rcvif->rxq, m);
+	IFQ_ENQUEUE(ifp->rxq, m);
 }
 
-static int loop_input(struct mbuf *buf)
+int loop_input(struct mbuf *buf, int hdrlen)
 {
 	int fproto = IPPROTO_IP; /* XXX - Dirty hack :( */
+
 	if (fproto >= 0 && net_modules[prot_table[fproto]].mod->input) {
-		return net_modules[prot_table[fproto]].mod->input(buf);
+		return net_modules[prot_table[fproto]].mod->input(buf, 0);
 	} else {
 		printf("Failed to determine a valid protocol fproto = %d\n", fproto);
 	}
 
 	m_freem(buf);
+
 	return 0;
 }
 
 int loop_init(loaded_net_module *ln, int *pt)
 {
-	ifnet *ifn = (ifnet*)malloc(sizeof(ifnet));
+	me = (ifnet*)malloc(sizeof(ifnet));
 
         net_modules = ln;
         prot_table = pt;
 
-	ifn->dev = -1;
-	ifn->name = "loop";
-	ifn->unit = 0;
-        ifn->type = IFD_LOOPBACK;
-	ifn->rxq = NULL;
-        ifn->rx_thread = -1;
-        ifn->tx_thread = -1;
-        ifn->txq = NULL;
-        ifn->if_addrlist = NULL;
+	me->devid = -1;
+        me->name = "loop";
+        me->unit = 0;
+        me->if_type = IFT_LOOP;
+        me->rxq = NULL;
+        me->rx_thread = -1;
+        me->txq = NULL;
+        me->tx_thread = -1;
+        me->if_addrlist = NULL;
 
-	ifn->input = &loop_input;
-	ifn->output = &loop_output;
-//	ifn->ioctl = NULL;
+	me->input = &loop_input;
+	me->output = &loop_output;
+	me->ioctl = NULL;
 
-	net_server_add_device(ifn);
+	net_server_add_device(me);
 
         return 0;
 }
 
 int loop_dev_init(ifnet *dev)
 {
-	if (!dev)
+	if (!dev || dev->if_type != IFT_LOOP)
 		return EINVAL;
 
-	if (dev->type != IFD_LOOPBACK)
-		return EINVAL;
-
-	dev->mtu = 16384; /* can be as large as we want */
-       	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_MULTICAST);
+	dev->if_mtu = 16384; /* can be as large as we want */
+       	dev->flags |= (IFF_UP|IFF_RUNNING|IFF_MULTICAST|IFF_LOOPBACK);
 
 	return 0;
 }
@@ -94,10 +93,8 @@ net_module net_module_data = {
 
 	&loop_init,
 	&loop_dev_init,
-	&loop_input,
-	&loop_output,
 	NULL,
-//	NULL,
+	NULL,
 	NULL
 };
 
