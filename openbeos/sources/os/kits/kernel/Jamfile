@@ -208,22 +208,6 @@ KernelLd iso9660
 	addons/fs/iso9660
 	;
 
-KernelLd zfs
-	:
-	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs.o
-	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs_dir.o
-	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs_file.o
-	<$(SOURCE_GRIST)!core!addons!fs!zfs>zfs_vnode.o
-	kernel.so
-	:
-	$(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
-	:
-	-Bdynamic -shared
-	:
-	:
-	addons/fs/zfs
-	;
-
 KernelLd isa
 	:
 	<$(SOURCE_GRIST)!core!addons!bus_managers!isa>isa.o
@@ -640,7 +624,7 @@ KernelLd filetest :
 	bin/filetest
 	;
 
-KernelLd sockettesttest :
+KernelLd sockettest :
 	libglue2.o
 	<$(SOURCE_GRIST)!apps!sockettest>main.o
 	libc.so
@@ -664,6 +648,47 @@ KernelLd loop :
 	:
 	addons/network/interface/loop
 	;
+
+KernelLd digit :
+        <$(SOURCE_GRIST)!drivers!common>digit.o
+        kernel.so
+        :
+        $(SUBDIR)/core/addons/ldscripts/$(OBOS_ARCH)/addon.ld
+        :
+        -Bdynamic -shared
+        :
+        :
+        addons/drivers/dev/misc/digit
+        ; 
+
+KernelConfigSection addons/drivers/dev/misc/speaker : elf32 : /boot/beos/system/add-ons/kernel/drivers/bin/speaker ;
+KernelConfigSection addons/drivers/dev/misc/pcspeaker : elf32 : /boot/home/config/add-ons/kernel/drivers/bin/pcspeaker ;
+KernelConfigSection addons/drivers/dev/net/tulip : elf32 : /boot/beos/system/add-ons/kernel/drivers/bin/tulip ;
+
+KernelLd testdigit :
+	libglue2.o
+        <$(SOURCE_GRIST)!apps!testdigit>main.o
+        libc.so
+        :
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+        :
+        :
+        :
+        bin/testdigit
+        ; 
+ 
+KernelLd sine_test :
+	libglue2.o
+        <$(SOURCE_GRIST)!apps!sine_test>main.o
+        libc.so
+	libm.so
+        :
+	$(SUBDIR)/ldscripts/$(OBOS_ARCH)/app.ld
+        :
+        :
+        :
+        bin/sine_test
+        ; 
 
 WriteKernelConfig $(OBOS_KERNEL_CONFIG) ;
 
