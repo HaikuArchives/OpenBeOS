@@ -29,8 +29,8 @@ void DUNView::Draw (BRect updateRect) {
    //MovePenTo(BPoint(40,124));
    //DrawString ("Call waiting may be enabled.");
          
-   MovePenTo(BPoint(22,178));
-   DrawString ("No Connection");
+   //MovePenTo(BPoint(22,178));
+   //DrawString ("No Connection");
    
    MovePenTo(BPoint(249,178));
    DrawString ("00:00:00");
