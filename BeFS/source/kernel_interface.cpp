@@ -1198,21 +1198,21 @@ bfs_read_link(void *_ns, void *_node, char *buffer, size_t *bufferSize)
 		RETURN_ERROR(B_BAD_VALUE);
 
 	if (inode->Flags() & INODE_LONG_SYMLINK) {
-		if (inode->Size() > *bufferSize)
-			return B_NAME_TOO_LONG;
-
-		RETURN_ERROR(inode->ReadAt(0, (uint8 *)buffer, bufferSize));
+		status_t status = inode->ReadAt(0, (uint8 *)buffer, bufferSize);
+		if (status < B_OK)
+			RETURN_ERROR(status);
+		
+		*bufferSize = inode->Size();
+		return B_OK;
 	}
 
 	size_t numBytes = strlen((char *)&inode->Node()->short_symlink);
+	uint32 bytes = numBytes;
+	if (bytes > *bufferSize)
+		bytes = *bufferSize;
 
-	if (numBytes > *bufferSize) {
-		FATAL(("link size is greater than buffer size, %ld > %ld\n",numBytes,*bufferSize));
-		return B_NAME_TOO_LONG;
-	} else
-		*bufferSize = numBytes;
-
-	memcpy(buffer, inode->Node()->short_symlink, numBytes);
+	memcpy(buffer, inode->Node()->short_symlink, bytes);
+	*bufferSize = numBytes;
 
 	return B_OK;
 }
