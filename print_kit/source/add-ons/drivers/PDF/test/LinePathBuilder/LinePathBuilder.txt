@@ -10,5 +10,5 @@ Copying-policy: BSD/MIT
                 Use right mouse button to add points to path and
                 left mouse button to move a point.
                 The black line is a stroked BShape.
-                The right outline is calculated by LinePathBuilder.
+                The red outline is calculated by LinePathBuilder.
          Notes: 
