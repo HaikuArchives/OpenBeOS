@@ -308,7 +308,7 @@ static status_t net_socket_control(void *cookie,
 			return B_OK;
 		}
 		case NET_SOCKET_GET_COOKIE: {
-			// this is needed by libnet.so accept() call, to be able to pass 
+			// this is needed by accept() call, to be able to pass back
 			// in NET_STACK_ACCEPT opcode the cookie of the filedescriptor to 
 			// use for the new accepted socket
 dprintf("net_stack: net_socket_control %p: NET_SOCKET_GET_COOKIE.\n", nsc);
