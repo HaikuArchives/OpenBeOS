@@ -383,7 +383,7 @@ rule Link
 	Chmod $(<) ;
 }
 
-if $(BEOS)
+if $(OS) = BEOS
 {
 actions Link bind NEEDLIBS
 {
