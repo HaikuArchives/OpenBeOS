@@ -40,6 +40,7 @@ private:
    BMenu *conmenufield;
    
    BTextView *tvConnectionProfile;
+   BTextView *tvCallWaiting;
 };
 
 #endif
