@@ -114,12 +114,26 @@ Layer::~Layer(void)
 	}
 }
 
+// Tested for adding children with 1 and 2 child cases, but not more
 void Layer::AddChild(Layer *layer)
 {
 	// Adds a layer to the top of the layer's children
 #ifdef DEBUG_LAYERS
 printf("AddChild %s\n",layer->name->String());
+printf("Before AddChild: \n");
+PrintNode();
+if(parent)
+	parent->PrintNode();
+if(uppersibling)
+	uppersibling->PrintNode();
+if(lowersibling)
+	lowersibling->PrintNode();
+if(topchild)
+	topchild->PrintNode();
+if(bottomchild)
+	bottomchild->PrintNode();
 #endif
+
 
 	if(layer->parent!=NULL)
 	{
@@ -157,13 +171,41 @@ printf("AddChild %s\n",layer->name->String());
 		bottomchild=layer;
 	topchild=layer;
 	layer->level=level+1;
+
+#ifdef DEBUG_LAYERS
+printf("After AddChild: \n");
+PrintNode();
+if(parent)
+	parent->PrintNode();
+if(uppersibling)
+	uppersibling->PrintNode();
+if(lowersibling)
+	lowersibling->PrintNode();
+if(topchild)
+	topchild->PrintNode();
+if(bottomchild)
+	bottomchild->PrintNode();
+#endif
 }
 
+// Tested for cases with 1 and 2 children, but no more than that
 void Layer::RemoveChild(Layer *layer)
 {
 	// Remove a layer from the tree
 #ifdef DEBUG_LAYERS
-	cout << "RemoveChild " << layer->name->String() << endl << flush;
+printf("RemoveChild %s\n",layer->name->String());
+printf("Before RemoveChild: \n");
+PrintNode();
+if(parent)
+	parent->PrintNode();
+if(uppersibling)
+	uppersibling->PrintNode();
+if(lowersibling)
+	lowersibling->PrintNode();
+if(topchild)
+	topchild->PrintNode();
+if(bottomchild)
+	bottomchild->PrintNode();
 #endif
 	
 	if(layer->parent==NULL)
@@ -195,17 +237,32 @@ void Layer::RemoveChild(Layer *layer)
 	if(layer->uppersibling!=NULL)
 		layer->uppersibling->lowersibling=layer->lowersibling;
 	if(layer->lowersibling!=NULL)
-		layer->lowersibling->lowersibling=layer->uppersibling;
+		layer->lowersibling->uppersibling=layer->uppersibling;
 	layer->SetLevel(0);
 	layer->uppersibling=NULL;
 	layer->lowersibling=NULL;
+
+#ifdef DEBUG_LAYERS
+printf("After RemoveChild: \n");
+PrintNode();
+if(parent)
+	parent->PrintNode();
+if(uppersibling)
+	uppersibling->PrintNode();
+if(lowersibling)
+	lowersibling->PrintNode();
+if(topchild)
+	topchild->PrintNode();
+if(bottomchild)
+	bottomchild->PrintNode();
+#endif
 }
 
 void Layer::RemoveSelf(void)
 {
 	// A Layer removes itself from the tree (duh)
 #ifdef DEBUG_LAYERS
-	cout << "RemoveChild " << name->String() << endl;
+	cout << "RemoveSelf " << name->String() << endl;
 #endif
 	if(parent==NULL)
 	{
@@ -571,6 +628,31 @@ void Layer::PrintToStream(void)
 	else
 		printf("Visible Areas: NULL\n");
 	printf("Is updating = %s\n",(is_updating)?"yes":"no");
+}
+
+void Layer::PrintNode(void)
+{
+	printf("-----------\nLayer %s\n",name->String());
+	if(parent)
+		printf("Parent: %s (%p)\n",parent->name->String(), parent);
+	else
+		printf("Parent: NULL\n");
+	if(uppersibling)
+		printf("Upper sibling: %s (%p)\n",uppersibling->name->String(), uppersibling);
+	else
+		printf("Upper sibling: NULL\n");
+	if(lowersibling)
+		printf("Lower sibling: %s (%p)\n",lowersibling->name->String(), lowersibling);
+	else
+		printf("Lower sibling: NULL\n");
+	if(topchild)
+		printf("Top child: %s (%p)\n",topchild->name->String(), topchild);
+	else
+		printf("Top child: NULL\n");
+	if(bottomchild)
+		printf("Bottom child: %s (%p)\n",bottomchild->name->String(), bottomchild);
+	else
+		printf("Bottom child: NULL\n");
 }
 
 // Tested
