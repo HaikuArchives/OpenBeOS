@@ -859,32 +859,36 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 
 			//printf("find double indirect block: %ld,%d!\n",Node()->data.double_indirect.allocation_group,Node()->data.double_indirect.start);
 
-			CachedBlock cached(fVolume,data->indirect);
-			block_run *indirect = (block_run *)cached.Block();
-			if (indirect == NULL)
-				RETURN_ERROR(B_ERROR);
+			CachedBlock cached(fVolume);
 
 			off_t start = pos - data->max_indirect_range;
 			int32 indirectSize = (16 << fVolume->BlockShift()) * (fVolume->BlockSize() / sizeof(block_run));
 			int32 directSize = 4 << fVolume->BlockShift();
 			int32 index = start / indirectSize;
-			
+			int32 runsPerBlock = fVolume->BlockSize() / sizeof(block_run);
+
+			block_run *indirect = (block_run *)cached.SetTo(
+					fVolume->ToBlock(data->double_indirect) + index / runsPerBlock);
+			if (indirect == NULL)
+				RETURN_ERROR(B_ERROR);
+
 			//printf("\tstart = %Ld, indirectSize = %ld, directSize = %ld, index = %ld\n",start,indirectSize,directSize,index);
 			//printf("\tlook for indirect block at %ld,%d\n",indirect[index].allocation_group,indirect[index].start);
 
-			indirect = (block_run *)cached.SetTo(indirect[index]);
-			if (indirect == NULL)
-				RETURN_ERROR(B_ERROR);
-			
 			int32 current = (start % indirectSize) / directSize;
 
-			run = indirect[current];
+			indirect = (block_run *)cached.SetTo(
+					fVolume->ToBlock(indirect[index % runsPerBlock]) + current / runsPerBlock);
+			if (indirect == NULL)
+				RETURN_ERROR(B_ERROR);
+
+			run = indirect[current % runsPerBlock];
 			offset = data->max_indirect_range + (index * indirectSize) + (current * directSize);
 			//printf("\tfCurrent = %ld, fRunFileOffset = %Ld, fRunBlockEnd = %Ld, fRun = %ld,%d\n",fCurrent,fRunFileOffset,fRunBlockEnd,fRun.allocation_group,fRun.start);
 		} else {
 			// access to indirect blocks
 
-			int32 indirectRuns = fVolume->BlockSize() / sizeof(block_run);
+			int32 runsPerBlock = fVolume->BlockSize() / sizeof(block_run);
 			off_t runBlockEnd = data->max_direct_range;
 
 			CachedBlock cached(fVolume);
@@ -896,7 +900,7 @@ Inode::FindBlockRun(off_t pos,block_run &run,off_t &offset)
 					RETURN_ERROR(B_IO_ERROR);
 
 				int32 current = -1;
-				while (++current < indirectRuns) {
+				while (++current < runsPerBlock) {
 					if (indirect[current].IsZero())
 						break;
 
